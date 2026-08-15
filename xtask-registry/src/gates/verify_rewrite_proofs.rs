@@ -1,114 +1,104 @@
-//! N3  -  `cargo xtask verify-rewrite-proofs`.
+//! `verify-rewrite-proofs` - discharge every shipped optimizer rewrite obligation.
 //!
 //! Walks `vyre_foundation::optimizer::rewrite_proof_registry::shipped_obligations`,
-//! emits each as SMT-LIB v2, and runs `z3 -smt2` on the script. Reports
-//! per-obligation `unsat` / `sat` / `unknown` plus an exit code: 0 if
-//! every obligation is `unsat` (proven), 1 otherwise.
-//!
-//! When the `z3` binary is not installed the runner is gracefully
-//! advisory: it emits every script to disk under
-//! `target/rewrite-proofs/<rewrite>.smt2` and exits 0 with a notice.
-//! CI installs z3 explicitly; local dev does not have to.
+//! emits each obligation as SMT-LIB v2 under `target/rewrite-proofs/<rewrite>.smt2`,
+//! and runs `z3 -smt2` on the script. An obligation is discharged only when z3
+//! answers `unsat`. Every other verdict is a finding. A missing `z3` binary is a
+//! gate error rather than a pass, because a gate that cannot decide has not
+//! judged the tree.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub(crate) fn run(_args: &[String]) {
-    let obligations = vyre_foundation::optimizer::rewrite_proof_registry::shipped_obligations();
-    eprintln!(
-        "vyre xtask verify-rewrite-proofs  -  {} obligation(s)",
-        obligations.len()
-    );
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
-    let out_dir = PathBuf::from("target").join("rewrite-proofs");
-    if let Err(e) = fs::create_dir_all(&out_dir) {
-        eprintln!("error: failed to create {}: {e}", out_dir.display());
-        std::process::exit(1);
+/// Verifies every optimizer rewrite proof obligation with an SMT solver.
+pub struct VerifyRewriteProofs;
+
+impl Gate for VerifyRewriteProofs {
+    fn name(&self) -> &'static str {
+        "verify-rewrite-proofs"
     }
 
-    let z3_present = which("z3");
-    if !z3_present {
-        eprintln!(
-            "note: z3 not found on PATH. Emitting SMT2 scripts to {} \
-             without verification (advisory mode).",
-            out_dir.display()
-        );
+    fn help(&self) -> &'static str {
+        "Verify every optimizer rewrite proof fixture"
     }
 
-    let mut proven = 0usize;
-    let mut sat = 0usize;
-    let mut unknown = 0usize;
-    let mut emit_only = 0usize;
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let obligations = vyre_foundation::optimizer::rewrite_proof_registry::shipped_obligations();
+        let out_dir = ctx.root.join("target").join("rewrite-proofs");
+        fs::create_dir_all(&out_dir).map_err(|error| {
+            GateError::new(
+                format!("failed to create {}: {error}", out_dir.display()),
+                "make the target directory writable, then run the gate again",
+            )
+        })?;
+        let solver = solver_path().ok_or_else(|| {
+            GateError::new(
+                "z3 is not on PATH, so no rewrite obligation can be discharged",
+                "install z3 and run the gate again; an undecided obligation is not a proven one",
+            )
+        })?;
 
-    for o in &obligations {
-        let script = o.to_smt2();
-        let script_path = out_dir.join(format!("{}.smt2", o.rewrite));
-        if let Err(e) = fs::write(&script_path, script.as_bytes()) {
-            eprintln!("error: failed to write {}: {e}", script_path.display());
-            std::process::exit(1);
-        }
-
-        if !z3_present {
-            emit_only += 1;
-            continue;
-        }
-
-        let result = Command::new("z3").arg("-smt2").arg(&script_path).output();
-        match result {
-            Ok(out) => {
-                let stdout = String::from_utf8_lossy(&out.stdout);
-                let verdict = stdout.lines().next().unwrap_or("").trim();
-                match verdict {
-                    "unsat" => {
-                        eprintln!("PROVEN  {}", o.rewrite);
-                        proven += 1;
-                    }
-                    "sat" => {
-                        eprintln!("FAILED  {}  (z3 found a counter-model)", o.rewrite);
-                        sat += 1;
-                    }
-                    "unknown" => {
-                        eprintln!("UNKNOWN {}  (z3 could not decide)", o.rewrite);
-                        unknown += 1;
-                    }
-                    other => {
-                        eprintln!("???     {}  (unexpected z3 verdict: {other:?})", o.rewrite);
-                        unknown += 1;
-                    }
-                }
-            }
-            Err(e) => {
-                eprintln!("error: failed to spawn z3: {e}");
-                std::process::exit(1);
+        let mut report = Report::clean();
+        report.note(format!("{} shipped obligation(s)", obligations.len()));
+        let mut proven = 0usize;
+        for obligation in &obligations {
+            let script_path = out_dir.join(format!("{}.smt2", obligation.rewrite));
+            fs::write(&script_path, obligation.to_smt2().as_bytes()).map_err(|error| {
+                GateError::new(
+                    format!("failed to write {}: {error}", script_path.display()),
+                    "make the target directory writable, then run the gate again",
+                )
+            })?;
+            match verdict(&solver, &script_path)?.as_str() {
+                "unsat" => proven += 1,
+                "sat" => report.find(Finding::new(
+                    format!(
+                        "rewrite `{}` is unsound: z3 found a counter-model",
+                        obligation.rewrite
+                    ),
+                    format!(
+                        "repair the rewrite in vyre-foundation or narrow its guard, then re-run; the counter-model is reproducible with `z3 -smt2 {}`",
+                        script_path.display()
+                    ),
+                )),
+                other => report.find(Finding::new(
+                    format!(
+                        "rewrite `{}` is undischarged: z3 answered `{other}`",
+                        obligation.rewrite
+                    ),
+                    format!(
+                        "strengthen the obligation until z3 decides it, or narrow the rewrite; the script is at {}",
+                        script_path.display()
+                    ),
+                )),
             }
         }
-    }
-
-    eprintln!();
-    eprintln!("==> rewrite-proofs summary");
-    if z3_present {
-        eprintln!("    proven  : {proven}");
-        eprintln!("    failed  : {sat}");
-        eprintln!("    unknown : {unknown}");
-        if sat > 0 {
-            std::process::exit(1);
-        }
-    } else {
-        eprintln!("    emitted : {emit_only} scripts (z3 absent)");
+        report.note(format!("{proven} obligation(s) proven unsat"));
+        Ok(report)
     }
 }
 
-fn which(bin: &str) -> bool {
-    let path = match std::env::var_os("PATH") {
-        Some(p) => p,
-        None => return false,
-    };
-    for entry in std::env::split_paths(&path) {
-        let candidate = entry.join(bin);
-        if candidate.is_file() {
-            return true;
-        }
-    }
-    false
+fn verdict(solver: &Path, script: &Path) -> Result<String, GateError> {
+    let output = Command::new(solver)
+        .arg("-smt2")
+        .arg(script)
+        .output()
+        .map_err(|error| {
+            GateError::new(
+                format!("failed to spawn {}: {error}", solver.display()),
+                "repair the z3 installation, then run the gate again",
+            )
+        })?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.lines().next().unwrap_or("").trim().to_string())
+}
+
+fn solver_path() -> Option<PathBuf> {
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path)
+        .map(|entry| entry.join("z3"))
+        .find(|candidate| candidate.is_file())
 }

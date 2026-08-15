@@ -1,90 +1,120 @@
-//! `cargo xtask print-composition <op_id>`  -  walk an op's Program
-//! body and print its Region decomposition chain.
+//! `print-composition` - walk the Region decomposition chain of every
+//! registered operation.
 //!
-//! Spec: `docs/region-chain.md` (Phase J).
-//!
-//! Walks the linked canonical operation registry, finds the matching
-//! `SemanticOperation`, calls its builder, and recurses into every
-//! `Node::Region` in the Program's entry body extracting the generator
-//! name. Output is an indented tree showing how a public op
-//! decomposes through its composition chain down to the leaves.
+//! The chain is what makes a public operation a composition of registered
+//! primitives rather than a hand-written body, so an operation that cannot be
+//! walked has no chain to audit. The gate resolves the Program of every
+//! registered operation and recurses into every `Node::Region` in its entry
+//! body. A registered operation whose builder yields no Program is a finding,
+//! and so is a Region that composes nothing, because an empty composition
+//! boundary claims a decomposition step that does not exist. `--op-id ID`
+//! narrows the corpus to one operation. The tree itself is context, so it is
+//! reported as notes and never counted.
 
-use std::process;
+use vyre::ir::Node;
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
-use vyre::ir::{Node, Program};
+/// Walks the composition chain of the registered operations.
+pub struct PrintComposition;
 
-/// Entry point for the `print-composition` subcommand.
-pub(crate) fn run(args: &[String]) {
-    let op_id = match args.get(2) {
-        Some(s) => s.as_str(),
-        None => {
-            eprintln!("Fix: usage: cargo_full run --bin xtask -- print-composition <op_id>");
-            process::exit(1);
+impl Gate for PrintComposition {
+    fn name(&self) -> &'static str {
+        "print-composition"
+    }
+
+    fn help(&self) -> &'static str {
+        "Walk the decomposition chain of every registered operation; --op-id ID narrows to one"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let selected = ctx.flag("--op-id");
+        let mut report = Report::clean();
+        let mut walked = 0usize;
+        let mut matched = false;
+        for entry in vyre_registry_link::operation::live_operation_registry().iter() {
+            if let Some(op_id) = selected {
+                if entry.id != op_id {
+                    continue;
+                }
+            }
+            matched = true;
+            let Some(program) = entry.program() else {
+                report.find(Finding::new(
+                    format!(
+                        "registered operation `{}` provides no neutral builder, so its composition chain cannot be walked",
+                        entry.id
+                    ),
+                    "give the canonical registration a neutral builder, or withdraw the registration",
+                ));
+                continue;
+            };
+            walked += 1;
+            report.note(format!(
+                "{}  [{} top-level Nodes]",
+                entry.id,
+                program.entry().len()
+            ));
+            for node in program.entry() {
+                walk(entry.id, node, 1, &mut report);
+            }
         }
-    };
-
-    let program = match resolve_program(op_id) {
-        Some(p) => p,
-        None => {
-            eprintln!(
-                "Fix: op id '{op_id}' not found in any inventory registry. \
-                 Known id prefixes: vyre-primitives::hardware::*, \
-                 vyre-primitives::*, \
-                 vyre-libs::math::*, vyre-libs::math::atomic::*, \
-                 vyre-libs::hash::*, vyre-libs::logical::*, vyre-libs::nn::*, \
-                 vyre-libs::matching::*."
-            );
-            process::exit(1);
+        if let Some(op_id) = selected {
+            if !matched {
+                return Err(GateError::new(
+                    format!("op id `{op_id}` is not registered"),
+                    "run the gate without --op-id to list every registered operation",
+                ));
+            }
         }
-    };
-
-    println!("{op_id}  [{} top-level Nodes]", program.entry().len());
-    for node in program.entry() {
-        print_node(node, 1);
+        report.note(format!("{walked} composition chain(s) walked"));
+        Ok(report)
     }
 }
 
-fn resolve_program(op_id: &str) -> Option<Program> {
-    vyre_registry_link::operation::live_operation_registry()
-        .get(op_id)
-        .and_then(|entry| entry.program())
-}
-
-fn print_node(node: &Node, depth: usize) {
+fn walk(op_id: &str, node: &Node, depth: usize, report: &mut Report) {
     let indent = "  ".repeat(depth);
     match node {
         Node::Region {
             generator, body, ..
         } => {
-            println!("{indent}├─ {}  [{} Nodes]", generator.as_str(), body.len());
+            report.note(format!(
+                "{indent}{}  [{} Nodes]",
+                generator.as_str(),
+                body.len()
+            ));
+            if body.is_empty() {
+                report.find(Finding::new(
+                    format!(
+                        "operation `{op_id}` opens region `{}` with an empty body",
+                        generator.as_str()
+                    ),
+                    "emit the region body from its generator, or drop the region so the chain reports what it really composes",
+                ));
+            }
             for child in body.iter() {
-                print_node(child, depth + 1);
+                walk(op_id, child, depth + 1, report);
             }
         }
         Node::Block(children) => {
             for child in children {
-                print_node(child, depth);
+                walk(op_id, child, depth, report);
             }
         }
         Node::If {
             then, otherwise, ..
         } => {
             for child in then {
-                print_node(child, depth);
+                walk(op_id, child, depth, report);
             }
             for child in otherwise {
-                print_node(child, depth);
+                walk(op_id, child, depth, report);
             }
         }
         Node::Loop { body, .. } => {
             for child in body {
-                print_node(child, depth);
+                walk(op_id, child, depth, report);
             }
         }
-        _ => {
-            // Leaf node (Let, Assign, Store, Barrier, Return, …)  -  no
-            // composition below. We only print at Region boundaries and
-            // composite control-flow structures.
-        }
+        _ => {}
     }
 }

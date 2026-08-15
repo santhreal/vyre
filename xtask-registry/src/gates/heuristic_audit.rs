@@ -12,7 +12,8 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process;
+
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 const VYRE_ROOT: &str = "libs/performance/matching/vyre";
 const MAX_HEURISTIC_AUDIT_SOURCE_BYTES: u64 = 2_097_152;
@@ -77,60 +78,55 @@ const MARKERS: &[(&str, &str)] = &[
     ),
 ];
 
-pub(crate) fn run(args: &[String]) {
-    let strict = args.iter().any(|a| a == "--strict");
-    let workspace_root = locate_workspace_root();
-    let vyre_dir = resolve_vyre_dir(&workspace_root);
+/// Reports hand-rolled heuristics that should be self-consumer calls.
+pub struct HeuristicAudit;
 
-    let mut findings: Vec<(PathBuf, usize, &str, &str)> = Vec::new();
-    let mut scan_errors = Vec::new();
-    for crate_name in CRATES {
-        let src = vyre_dir.join(crate_name).join("src");
-        if !src.exists() {
-            scan_errors.push(format!(
-                "heuristic audit crate source root `{}` does not exist",
-                src.display()
-            ));
-            continue;
-        }
-        scan_dir(&src, &mut findings, &mut scan_errors);
+impl Gate for HeuristicAudit {
+    fn name(&self) -> &'static str {
+        "heuristic-audit"
     }
 
-    if !scan_errors.is_empty() {
-        eprintln!(
-            "heuristic-audit: {} scan/read error(s) make heuristic evidence incomplete:",
-            scan_errors.len()
-        );
+    fn help(&self) -> &'static str {
+        "Report hand-rolled heuristics that should be self-consumer calls"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let vyre_dir = resolve_vyre_dir(&ctx.root);
+
+        let mut hits: Vec<(PathBuf, usize, &str, &str)> = Vec::new();
+        let mut scan_errors = Vec::new();
+        for crate_name in CRATES {
+            let src = vyre_dir.join(crate_name).join("src");
+            if !src.exists() {
+                scan_errors.push(format!(
+                    "heuristic audit crate source root `{}` does not exist",
+                    src.display()
+                ));
+                continue;
+            }
+            scan_dir(&src, &mut hits, &mut scan_errors);
+        }
+
+        let mut report = Report::clean();
+        report.note(format!("{} crate(s) audited", CRATES.len()));
         for error in &scan_errors {
-            eprintln!("  - {error}");
+            report.find(Finding::new(
+                format!("{error}, so the heuristic audit is incomplete"),
+                "make every audited production source root and file readable, then run the gate again",
+            ));
         }
-        eprintln!("Fix: make every audited production source root/file readable before release.");
-        process::exit(1);
-    }
-
-    if findings.is_empty() {
-        println!(
-            "heuristic-audit: zero hand-rolled heuristics flagged across {} crate(s).",
-            CRATES.len()
-        );
-        return;
-    }
-
-    eprintln!(
-        "heuristic-audit: {} hand-rolled heuristic(s) flagged for self-consumer replacement.",
-        findings.len()
-    );
-    for (path, line, marker, fix) in &findings {
-        eprintln!("  {}:{}  -  {} → {}", path.display(), line, marker, fix);
-    }
-
-    if strict {
-        eprintln!("\n--strict mode: build gate failed.");
-        process::exit(1);
-    } else {
-        eprintln!("\n(non-strict mode: warning only; pass --strict to gate the build)");
+        for (path, line, marker, fix) in &hits {
+            report.find(Finding::at(
+                path.clone(),
+                *line as u32,
+                format!("hand-rolled heuristic `{marker}`"),
+                format!("replace it with {fix}"),
+            ));
+        }
+        Ok(report)
     }
 }
+
 
 fn scan_dir(
     dir: &Path,
@@ -198,33 +194,6 @@ fn resolve_vyre_dir(workspace_root: &Path) -> PathBuf {
         workspace_root.to_path_buf()
     } else {
         workspace_root.join(VYRE_ROOT)
-    }
-}
-
-fn locate_workspace_root() -> PathBuf {
-    let mut cur = std::env::current_dir()
-        .expect("Fix: cargo_full run --bin xtask -- must be runnable from a directory.");
-    loop {
-        let manifest = cur.join("Cargo.toml");
-        if manifest.exists() {
-            match is_workspace_root(&cur) {
-                Ok(true) => return cur,
-                Ok(false) => {}
-                Err(error) => {
-                    eprintln!(
-                        "Fix: could not read workspace candidate `{}`: {error}",
-                        manifest.display()
-                    );
-                    process::exit(2);
-                }
-            }
-        }
-        if !cur.pop() {
-            eprintln!(
-                "Fix: could not locate a Cargo.toml containing [workspace] and members from the current directory."
-            );
-            process::exit(2);
-        }
     }
 }
 

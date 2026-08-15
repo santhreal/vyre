@@ -167,7 +167,7 @@ pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateE
         }
         entry.duplicate_lines += duplicated.len();
     }
-    counts
+    Ok(counts)
 }
 
 /// Files a shingle was seen in, held inline so the index allocates nothing.
@@ -303,7 +303,7 @@ pub(crate) fn report_for(root: &Path, only: Option<&str>) -> Result<Vec<FileRepo
             .cmp(&left.duplicate_lines)
             .then_with(|| left.path.cmp(&right.path))
     });
-    reports
+    Ok(reports)
 }
 
 fn hash(window: &[String]) -> u64 {

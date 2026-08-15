@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use vyre_driver::backend::backend_dispatches;
 use xtask::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
@@ -144,8 +145,23 @@ const REQUIRED_SCAN_CONFORMANCE_ENGINES: &[&str] = &[
 const ALLOWED_SCAN_ENGINE_SUPPORT: &[&str] =
     &["supported", "unsupported", "not_applicable", "experimental"];
 
-pub(crate) fn run(args: &[String]) {
-    let (output, check) = xtask::output_arg::parsed_or_exit(parse_args(args));
+/// Holds release op and backend conformance coverage to the recorded matrix.
+pub struct ConformanceMatrix;
+
+impl Gate for ConformanceMatrix {
+    fn name(&self) -> &'static str {
+        "conformance-matrix"
+    }
+
+    fn help(&self) -> &'static str {
+        "Hold release op and backend conformance coverage to the recorded matrix; --write regenerates it"
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
     let operations = vyre_registry_link::operation::live_operation_registry()
         .iter()
         .collect::<Vec<_>>();
@@ -360,14 +376,30 @@ pub(crate) fn run(args: &[String]) {
         entries,
         blockers,
     };
-    if check {
-        check_against_disk(&matrix, &output);
-        return;
-    }
 
-    xtask::output_arg::write_json(&output, &matrix);
-    xtask::output_arg::report_evidence_artifact("conformance-matrix", &output, &matrix.blockers);
+        let output = default_output();
+        let relative = output
+            .strip_prefix(&ctx.root)
+            .unwrap_or(output.as_path())
+            .display()
+            .to_string();
+        let mut inspection = xtask::artifact_gate::Inspection::new();
+        for blocker in &matrix.blockers {
+            inspection.find(Finding::new(
+                blocker.clone(),
+                "close the conformance gap this blocker names, then run the gate again",
+            ));
+        }
+        inspection.generates(&relative, &matrix);
+        let mut report = xtask::artifact_gate::settle_inspection(ctx, self.name(), inspection);
+        report.note(format!(
+            "{} registered conformance op entry(ies)",
+            matrix.op_count
+        ));
+        Ok(report)
+    }
 }
+
 
 fn release_backend_case_rows(
     specs: &[OpMatrixReleaseBackendSpec],

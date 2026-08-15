@@ -6,60 +6,85 @@
 //! enough to remain leaves or mostly composed from registered children.
 
 use std::collections::BTreeSet;
-use std::process;
 
 use vyre::ir::{Node, Program};
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 const LOOP_BUDGET: usize = 4;
 const NODE_BUDGET: usize = 200;
 const COMPOSED_FRACTION_THRESHOLD: f64 = 0.6;
 
 /// Entry point for the `abstraction-gate` subcommand.
-pub(crate) fn run(_args: &[String]) {
-    let ops = collect_ops();
-    let ids: BTreeSet<String> = ops.iter().map(|op| op.id.clone()).collect();
-    let mut failures = BTreeSet::new();
+/// Enforces the registered building-block boundaries of every registered operation.
+pub struct AbstractionGate;
 
-    for op in &ops {
-        let mut state = WalkState::default();
-        for node in op.program.entry() {
-            walk(node, false, &ids, &mut state, &mut failures, &op.id);
-        }
-
-        if !within_budget(&state) {
-            failures.insert(format!(
-                "ABSTRACTION-BUDGET: `{}` has loops={} nodes={} registered-composed={:.1}%. Fix: extract reusable phases into registered Tier 2.5 primitives and wrap them with `region::wrap_child`.",
-                op.id,
-                state.loops,
-                state.total_nodes,
-                state.composed_fraction_pct(),
-            ));
-        }
-
-        if op.id.starts_with("vyre-primitives::")
-            && (op.test_inputs_missing || op.expected_output_missing)
-        {
-            failures.insert(format!(
-                "PRIMITIVE-FIXTURE: `{}` must ship standalone test_inputs and expected_output. Fix: add an inventory fixture so the building block can be tested without its parent pipeline.",
-                op.id
-            ));
-        }
+impl Gate for AbstractionGate {
+    fn name(&self) -> &'static str {
+        "abstraction-gate"
     }
 
-    if failures.is_empty() {
-        println!(
-            "abstraction-gate: {} registered building blocks checked",
+    fn help(&self) -> &'static str {
+        "Enforce registered building-block boundaries"
+    }
+
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        let ids: BTreeSet<String> = ops.iter().map(|op| op.id.clone()).collect();
+        let mut failures = BTreeSet::new();
+
+        for op in &ops {
+            let mut state = WalkState::default();
+            for node in op.program.entry() {
+                walk(node, false, &ids, &mut state, &mut failures, &op.id);
+            }
+
+            if !within_budget(&state) {
+                failures.insert(format!(
+                    "ABSTRACTION-BUDGET: `{}` has loops={} nodes={} registered-composed={:.1}%. Fix: extract reusable phases into registered Tier 2.5 primitives and wrap them with `region::wrap_child`.",
+                    op.id,
+                    state.loops,
+                    state.total_nodes,
+                    state.composed_fraction_pct(),
+                ));
+            }
+
+            if op.id.starts_with("vyre-primitives::")
+                && (op.test_inputs_missing || op.expected_output_missing)
+            {
+                failures.insert(format!(
+                    "PRIMITIVE-FIXTURE: `{}` must ship standalone test_inputs and expected_output. Fix: add an inventory fixture so the building block can be tested without its parent pipeline.",
+                    op.id
+                ));
+            }
+        }
+
+        report.note(format!(
+            "{} registered building block(s) checked",
             ops.len()
-        );
-        return;
+        ));
+        for failure in &failures {
+            report.find(violation(failure));
+        }
+        Ok(report)
     }
-
-    eprintln!("abstraction-gate: {} violation(s)", failures.len());
-    for failure in &failures {
-        eprintln!("  - {failure}");
-    }
-    process::exit(1);
 }
+
+/// Splits one violation into the problem and its corrective action.
+///
+/// Every violation class states the fix in the same sentence, which is how the
+/// gate printed them; the contract keeps the two in separate fields so a single
+/// finding read on its own is still actionable.
+fn violation(text: &str) -> Finding {
+    match text.split_once(" Fix: ") {
+        Some((problem, fix)) => Finding::new(problem.trim(), fix),
+        None => Finding::new(
+            text,
+            "submit the building block this violation names from its owning crate, or stop citing it as a registered child",
+        ),
+    }
+}
+
 
 struct OpInfo {
     id: String,
@@ -68,15 +93,19 @@ struct OpInfo {
     expected_output_missing: bool,
 }
 
-fn collect_ops() -> Vec<OpInfo> {
+fn collect_ops(report: &mut Report) -> Vec<OpInfo> {
     let mut ops = Vec::new();
     for entry in vyre_registry_link::operation::live_operation_registry().iter() {
-        let program = entry.program().unwrap_or_else(|| {
-            panic!(
-                "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",
-                entry.id
-            )
-        });
+        let Some(program) = entry.program() else {
+            report.find(Finding::new(
+                format!(
+                    "registered operation `{}` provides no neutral builder, so its composition cannot be audited",
+                    entry.id
+                ),
+                "register a neutral builder for it, or withdraw the registration",
+            ));
+            continue;
+        };
         ops.push(OpInfo {
             id: entry.id.to_string(),
             program,

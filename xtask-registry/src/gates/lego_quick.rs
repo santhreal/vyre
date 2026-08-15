@@ -28,7 +28,8 @@
 use std::collections::BTreeSet;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{self, Command};
+use std::process::Command;
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
 /// Line count at which a source file is *flagged for a split-by-responsibility
@@ -38,100 +39,68 @@ use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 const LARGE_FILE_ADVISORY_LINES: usize = 500;
 const MAX_LEGO_QUICK_SOURCE_BYTES: u64 = 2_097_152;
 
-pub(crate) fn run(args: &[String]) {
-    let staged_only = !args.iter().any(|a| a == "--all");
-    let root = match workspace_root() {
-        Some(r) => r,
-        None => {
-            eprintln!(
-                "Fix: cargo_full run --bin xtask -- lego-quick must run from a git checkout of the vyre workspace."
-            );
-            process::exit(1);
+/// Runs the fast composition boundary checks over the Rust sources of the tree.
+pub struct LegoQuick;
+
+impl Gate for LegoQuick {
+    fn name(&self) -> &'static str {
+        "lego-quick"
+    }
+
+    fn help(&self) -> &'static str {
+        "Composition boundary checks over every Rust source in the tree; --staged narrows to the staged set"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let root = workspace_root().ok_or_else(|| {
+            GateError::new(
+                "lego-quick found no git checkout of the vyre workspace to scan",
+                "run it inside a checkout of the workspace",
+            )
+        })?;
+        let files = if ctx.has("--staged") {
+            staged_rust_files(&root).map_err(|error| {
+                GateError::new(
+                    format!("`git diff --cached --name-only` failed: {error}"),
+                    "repair the git checkout, or run the gate without --staged to scan the whole tree",
+                )
+            })?
+        } else {
+            all_rust_files(&root)
+        };
+        if files.is_empty() {
+            return Err(GateError::new(
+                "lego-quick found no Rust source to scan, so it judged nothing",
+                "run it without --staged to scan the whole tree",
+            ));
         }
-    };
 
-    let files = if staged_only {
-        match staged_rust_files(&root) {
-            Ok(files) => files,
-            Err(err) => {
-                eprintln!(
-                    "Fix: failed to list staged files via `git diff --cached --name-only`: {err}"
-                );
-                process::exit(1);
-            }
+        let mut hits: Vec<Hit> = Vec::new();
+        hits.extend(check_raw_ir(&root, &files));
+        hits.extend(check_cross_dialect(&root, &files));
+        hits.extend(check_god_files(&root, &files));
+        hits.sort_by_key(|hit| (hit.file.clone(), hit.line, hit.category.clone()));
+
+        let mut report = Report::clean();
+        report.note(format!(
+            "{} Rust file(s) scanned by 3 composition checks",
+            files.len()
+        ));
+        for hit in &hits {
+            report.find(Finding::at(
+                &hit.file,
+                hit.line,
+                format!("{}: {}", hit.category, hit.message),
+                hit.fix.clone(),
+            ));
         }
-    } else {
-        all_rust_files(&root)
-    };
-
-    if files.is_empty() {
-        println!("lego-quick: no staged Rust files; nothing to check.");
-        return;
+        Ok(report)
     }
-
-    let mut findings: Vec<Finding> = Vec::new();
-    findings.extend(check_raw_ir(&root, &files));
-    findings.extend(check_cross_dialect(&root, &files));
-    findings.extend(check_god_files(&root, &files));
-
-    let check_count = 3;
-
-    // `large-file` findings are advisory: they flag a split-by-responsibility
-    // review, they do not fail the gate. Everything else is a hard law.
-    let sort_key = |f: &Finding| (f.file.clone(), f.line, f.category.clone());
-    let (mut advisories, mut blockers): (Vec<Finding>, Vec<Finding>) = findings
-        .into_iter()
-        .partition(|f| f.category == "large-file");
-    advisories.sort_by_key(|finding| sort_key(finding));
-    blockers.sort_by_key(|finding| sort_key(finding));
-
-    if blockers.is_empty() && advisories.is_empty() {
-        println!(
-            "lego-quick: ✓ {} staged Rust file(s) clean ({} checks).",
-            files.len(),
-            check_count
-        );
-        return;
-    }
-
-    for f in &blockers {
-        println!(
-            "  ✗ {}:{} | {} | {} | fix: {}",
-            f.file, f.line, f.category, f.message, f.fix
-        );
-    }
-    for f in &advisories {
-        println!(
-            "  • {}:{} | {} | {} | {}",
-            f.file, f.line, f.category, f.message, f.fix
-        );
-    }
-    println!();
-
-    if blockers.is_empty() {
-        println!(
-            "lego-quick: ✓ {} staged Rust file(s) pass ({} checks); \
-             {} large-file advisory note(s) for review (non-blocking).",
-            files.len(),
-            check_count,
-            advisories.len()
-        );
-        return;
-    }
-
-    println!(
-        "lego-quick: FAILED  -  {} blocking finding(s) ({} advisory) across {} staged file(s). \
-         Resolve the blocking findings before commit, or run \
-         `cargo_full run --bin xtask -- lego-quick --all` to scan the whole tree.",
-        blockers.len(),
-        advisories.len(),
-        files.len()
-    );
-    process::exit(1);
 }
 
+
 #[derive(Debug)]
-struct Finding {
+struct Hit {
     file: String,
     line: u32,
     category: String,
@@ -191,7 +160,7 @@ fn all_rust_files(root: &Path) -> Vec<PathBuf> {
     out
 }
 
-fn check_raw_ir(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
+fn check_raw_ir(root: &Path, files: &[PathBuf]) -> Vec<Hit> {
     let allowlist_path = root.join("vyre-lints").join("allowlist.toml");
     let allow = match vyre_lints::allowlist::load(&allowlist_path) {
         Ok(a) => a,
@@ -221,7 +190,7 @@ fn check_raw_ir(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
     violations
         .into_iter()
         .filter(|violation| considered.contains(&violation.file))
-        .map(|violation| Finding {
+        .map(|violation| Hit {
             file: violation.file,
             line: violation.line,
             category: "raw-ir".to_string(),
@@ -270,7 +239,7 @@ fn workspace_relative(path: &str, marker: &str) -> String {
 /// Check 4 (file-only): a Tier-3 dialect under `vyre-libs/src/<X>/`
 /// must not import `crate::<Y>::...` or `vyre_libs::<Y>::...` for
 /// `Y != X`. The cross-dialect coupling belongs in `vyre-primitives`.
-fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
+fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Hit> {
     let libs_root = root.join("vyre-libs").join("src");
     let dialects: Vec<String> = match std::fs::read_dir(&libs_root) {
         Ok(rd) => rd
@@ -307,7 +276,7 @@ fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
             continue;
         };
         let Ok(file) = syn::parse_file(&text) else {
-            out.push(Finding {
+            out.push(Hit {
                 file: workspace_relative(&path_str, "vyre-libs/"),
                 line: 0,
                 category: "parse".to_string(),
@@ -325,7 +294,7 @@ fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
                     continue;
                 }
                 if use_path.imports_dialect(other) {
-                    out.push(Finding {
+                    out.push(Hit {
                         file: workspace_relative(&path_str, "vyre-libs/"),
                         line: use_path.line as u32,
                         category: "cross-dialect".to_string(),
@@ -343,7 +312,7 @@ fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
     out
 }
 
-fn check_god_files(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
+fn check_god_files(root: &Path, files: &[PathBuf]) -> Vec<Hit> {
     let mut out = Vec::new();
     for path in files {
         let Ok(text) = read_text_bounded(path) else {
@@ -357,7 +326,7 @@ fn check_god_files(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
             .strip_prefix(root)
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|_| path.to_string_lossy().to_string());
-        out.push(Finding {
+        out.push(Hit {
             file: rel,
             line: line_count as u32,
             category: "large-file".to_string(),

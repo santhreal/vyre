@@ -41,7 +41,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io;
 use std::path::PathBuf;
-use std::process;
 
 const MAX_LEGO_AUDIT_SOURCE_BYTES: u64 = 2_097_152;
 const PRIMITIVE_ADMISSION_PATH: &str = "docs/optimization/PRIMITIVE_ADMISSION.toml";
@@ -63,6 +62,7 @@ struct PrimitiveAdmissionException {
 }
 
 use vyre::ir::{Expr, Node, Program};
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 use xtask::gates::dedup_report::{
     duplicate_family_report, duplicate_report_generator_command, duplicate_report_json_path,
@@ -84,102 +84,121 @@ const LARGE_FILE_ADVISORY_LINES: usize = 500;
 const MIN_CALLERS_FOR_PRIMITIVE: usize = 2;
 
 /// Entry point for the `lego-audit` subcommand.
-pub(crate) fn run(args: &[String]) {
-    let with_repo = args.iter().any(|arg| arg == "--with-repo");
-    let report_only = args.iter().any(|arg| arg == "--report-only");
-    let write_baseline = args.iter().any(|arg| arg == "--write-baseline");
-    let duplicate_report_json = duplicate_report_json_arg(args);
-    let ops = collect_ops();
-    if write_baseline {
-        let Some(root) = workspace_root() else {
-            eprintln!("Fix: workspace root not reachable from xtask.");
-            process::exit(1);
-        };
-        if let Err(error) = write_composition_baseline(&root, &ops) {
-            eprintln!("Fix: failed to write composition baseline: {error}");
-            process::exit(1);
-        }
-        return;
-    }
-    if let Some(path) = duplicate_report_json.as_ref() {
-        let prefix = if report_only {
-            "lego-audit --report-only"
-        } else {
-            "lego-audit"
-        };
-        let generator_command = duplicate_report_generator_command(prefix, path);
-        let report = lego_duplicate_report(&ops, &generator_command);
-        if let Err(error) = write_duplicate_report_json(path, &report) {
-            eprintln!(
-                "Fix: lego-audit could not write duplicate family report `{}`: {error}",
-                path.display()
-            );
-            process::exit(1);
-        }
-    }
-    println!("=== vyre LEGO-block audit ===");
-    println!("Ops audited: {}", ops.len());
-    println!(
-        "Repo checks: {}",
-        if with_repo {
-            "enabled"
-        } else {
-            "not requested; pass --with-repo for file-shape and trend checks"
-        }
-    );
-    println!();
+/// Audits registered composition against the ten LEGO-block laws.
+pub struct LegoAudit;
 
-    let mut failures: usize = 0;
-
-    failures += check_1_no_reinvention(&ops);
-    failures += check_2_depth_of_composition(&ops);
-    failures += check_3_primitive_coverage(&ops);
-    failures += check_4_cross_dialect_reachthrough();
-    if with_repo {
-        failures += check_5_god_files();
-    }
-    failures += check_6_composition_chain_coverage(&ops);
-    if with_repo {
-        failures += check_7_trend(&ops);
-    }
-    failures += check_8_composability(&ops);
-    failures += check_9_name_stem_collision(&ops);
-    failures += check_10_operand_shape_duplicate(&ops);
-
-    if !with_repo {
-        println!();
-        println!("Checks requiring repo context (5, 7) did not run. Fix: invoke `cargo_full run --bin xtask -- lego-audit --with-repo` from a git checkout for release gates.");
+impl Gate for LegoAudit {
+    fn name(&self) -> &'static str {
+        "lego-audit"
     }
 
-    if failures > 0 {
-        println!();
-        println!("LEGO-block audit FAILED: {failures} finding(s). Gate 1 is the floor, this is the ceiling  -  bring composed_fraction up or extract shared pieces to Tier 2.5.");
-        if !report_only {
-            process::exit(1);
-        }
-        println!("LEGO-block audit report-only mode: findings were reported without failing the process.");
-        return;
+    fn help(&self) -> &'static str {
+        "Hold registered composition to the ten composition laws; --write records the composition baseline"
     }
-    println!();
-    println!("LEGO-block audit ✓");
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops();
+        report.note(format!("{} op(s) audited", ops.len()));
+        if ctx.write {
+            write_composition_baseline(&ctx.root, &ops).map_err(|error| {
+                GateError::new(
+                    format!("failed to write the composition baseline: {error}"),
+                    "make audits/lego-composition.tsv writable, then run the gate again",
+                )
+            })?;
+            report.note("wrote the composition baseline");
+        }
+        if let Some(path) = ctx.flag("--duplicate-report-json") {
+            let path = duplicate_report_json_path(
+                "--duplicate-report-json",
+                Some(path),
+                "--duplicate-report-json requires a path",
+            )
+            .map_err(|error| {
+                GateError::new(
+                    error,
+                    "pass a writable path after --duplicate-report-json",
+                )
+            })?;
+            let generator_command =
+                duplicate_report_generator_command("lego-audit", &path);
+            let duplicates = lego_duplicate_report(&ops, &generator_command);
+            write_duplicate_report_json(&path, &duplicates).map_err(|error| {
+                GateError::new(
+                    format!(
+                        "could not write the duplicate family report `{}`: {error}",
+                        path.display()
+                    ),
+                    "pass a writable path after --duplicate-report-json",
+                )
+            })?;
+            report.note(format!("wrote the duplicate family report to {}", path.display()));
+        }
+
+        check_1_no_reinvention(&mut report, &ops);
+        check_2_depth_of_composition(&mut report, &ops);
+        check_3_primitive_coverage(&mut report, &ops);
+        check_4_cross_dialect_reachthrough(&mut report);
+        check_5_god_files(&mut report);
+        check_6_composition_chain_coverage(&mut report, &ops);
+        check_7_trend(&mut report, &ops);
+        check_8_composability(&mut report, &ops);
+        check_9_name_stem_collision(&mut report, &ops);
+        check_10_operand_shape_duplicate(&mut report, &ops);
+        Ok(report)
+    }
 }
 
-fn duplicate_report_json_arg(args: &[String]) -> Option<PathBuf> {
-    let index = args
-        .iter()
-        .position(|arg| arg == "--duplicate-report-json")?;
-    match duplicate_report_json_path(
-        "--duplicate-report-json",
-        args.get(index + 1).map(String::as_str),
-        "--duplicate-report-json requires a path",
-    ) {
-        Ok(path) => Some(path),
-        Err(error) => {
-            eprintln!("Fix: {error}.");
-            process::exit(1);
-        }
+/// Enforces canonical primitive adoption and its recorded exceptions.
+pub struct PrimitiveAdmissionGate;
+
+impl Gate for PrimitiveAdmissionGate {
+    fn name(&self) -> &'static str {
+        "primitive-admission-gate"
+    }
+
+    fn help(&self) -> &'static str {
+        "Enforce canonical primitive adoption and its recorded exceptions"
+    }
+
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops();
+        report.note(format!("{} op(s) audited", ops.len()));
+        check_3_primitive_coverage(&mut report, &ops);
+        Ok(report)
     }
 }
+
+/// Splits one violation line into the problem and its corrective action.
+///
+/// Every law states the corrective action in the same line, either after `Fix:`
+/// or as the final sentence, so the split keeps one finding actionable when it is
+/// read on its own.
+fn violation(text: String) -> Finding {
+    let body = text
+        .trim_start()
+        .trim_start_matches(|character: char| {
+            character == '\u{2717}' || character == '\u{26a0}' || character == ' '
+        })
+        .to_string();
+    if let Some((problem, fix)) = body.split_once(" Fix: ") {
+        return Finding::new(problem.trim(), fix.trim());
+    }
+    match body.rsplit_once(". ") {
+        Some((problem, fix)) => Finding::new(problem, fix),
+        None => Finding::new(
+            body,
+            "extract the shared work into a registered primitive and compose it through region::wrap_child",
+        ),
+    }
+}
+
 
 /// One registered op with everything the audit needs.
 pub(crate) struct OpInfo {
@@ -563,19 +582,17 @@ fn fingerprint_name(name: &str) -> [u8; 4] {
 ///
 /// Uses bigram-frequency cosine similarity  -  captures ordered
 /// structure, not just node-kind sets.
-fn check_1_no_reinvention(ops: &[OpInfo]) -> usize {
-    println!("[1/10] No-reinvention check (bigram cosine ≥ {FINGERPRINT_SIM_THRESHOLD:.2})");
+fn check_1_no_reinvention(report: &mut Report, ops: &[OpInfo]) -> usize {
+    report.note(format!("[1/10] No-reinvention check (bigram cosine ≥ {FINGERPRINT_SIM_THRESHOLD:.2})"));
     let pairs = no_reinvention_pairs(ops);
     for (sim, a, b) in &pairs {
-        println!(
-            "  ✗ reinvention: `{}` and `{}` are {:.0}% structurally similar (cross-dialect) but neither composes the other. Extract the shared body into a Tier 2.5 primitive.",
+        report.find(violation(format!("  ✗ reinvention: `{}` and `{}` are {:.0}% structurally similar (cross-dialect) but neither composes the other. Extract the shared body into a Tier 2.5 primitive.",
             a.id,
             b.id,
-            sim * 100.0
-        );
+            sim * 100.0)));
     }
     if pairs.is_empty() {
-        println!("  ✓ no cross-dialect duplication");
+        report.note(format!("  ✓ no cross-dialect duplication"));
     }
     pairs.len()
 }
@@ -702,9 +719,9 @@ fn same_subdialect(a: &str, b: &str) -> bool {
 
 /// Check 2: per-op composition depth  -  for Tier 3 ops, composed_nodes
 /// should dominate own_nodes.
-fn check_2_depth_of_composition(ops: &[OpInfo]) -> usize {
+fn check_2_depth_of_composition(report: &mut Report, ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
-    println!("[2/10] Depth-of-composition (Tier 3 ops compose ≥25% registered child nodes or declare a pure-IR leaf)");
+    report.note(format!("[2/10] Depth-of-composition (Tier 3 ops compose ≥25% registered child nodes or declare a pure-IR leaf)"));
     for op in ops {
         if op.tier != Tier::T3 {
             continue;
@@ -720,15 +737,13 @@ fn check_2_depth_of_composition(ops: &[OpInfo]) -> usize {
             continue; // Small ops are allowed to be flat.
         }
         if op.children.is_empty() || op.composed_nodes.saturating_mul(4) < total {
-            println!(
-                "  ✗ {} Tier 3 op has own={} composed={} and {} child op(s)  -  registered child composition is below 25%. Wrap sub-bodies in region::wrap_child(<primitive_id>, ...), or explicitly classify an irreducible pure-IR leaf.",
-                op.id, op.own_nodes, op.composed_nodes, op.children.len()
-            );
+            report.find(violation(format!("  ✗ {} Tier 3 op has own={} composed={} and {} child op(s)  -  registered child composition is below 25%. Wrap sub-bodies in region::wrap_child(<primitive_id>, ...), or explicitly classify an irreducible pure-IR leaf.",
+                op.id, op.own_nodes, op.composed_nodes, op.children.len())));
             flagged += 1;
         }
     }
     if flagged == 0 {
-        println!("  ✓ Tier 3 ops meet registered-child depth or declare reviewed pure-IR leaves");
+        report.note(format!("  ✓ Tier 3 ops meet registered-child depth or declare reviewed pure-IR leaves"));
     }
     flagged
 }
@@ -782,7 +797,7 @@ fn load_primitive_admission_registry() -> Result<PrimitiveAdmissionRegistry, Str
     Ok(registry)
 }
 
-fn validate_primitive_admission(
+fn validate_primitive_admission(report: &mut Report, 
     ops: &[OpInfo],
     caller_counts: &HashMap<String, usize>,
     registry: PrimitiveAdmissionRegistry,
@@ -795,10 +810,8 @@ fn validate_primitive_admission(
             || exception.reason.trim().is_empty()
             || exception.review_boundary.trim().is_empty()
         {
-            println!(
-                "  ✗ primitive admission exception `{}` has an empty family, owner, reason, or review boundary",
-                exception.family
-            );
+            report.find(violation(format!("  ✗ primitive admission exception `{}` has an empty family, owner, reason, or review boundary",
+                exception.family)));
             flagged += 1;
             continue;
         }
@@ -806,7 +819,7 @@ fn validate_primitive_admission(
             .insert(exception.family.clone(), exception)
             .is_some()
         {
-            println!("  ✗ duplicate primitive admission exception family");
+            report.find(violation(format!("  ✗ duplicate primitive admission exception family")));
             flagged += 1;
         }
     }
@@ -821,28 +834,22 @@ fn validate_primitive_admission(
             continue;
         }
         let Some(family) = primitive_family(&op.id) else {
-            println!(
-                "  ✗ {} has no canonical primitive family. Fix: use `vyre-primitives::<family>::...`.",
-                op.id
-            );
+            report.find(violation(format!("  ✗ {} has no canonical primitive family. Fix: use `vyre-primitives::<family>::...`.",
+                op.id)));
             flagged += 1;
             continue;
         };
         under_adopted_families.insert(family.to_string());
         if !exceptions.contains_key(family) {
-            println!(
-                "  ✗ {} has only {} caller(s) and family `{family}` has no owner-reviewed exception in {PRIMITIVE_ADMISSION_PATH}.",
-                op.id, callers
-            );
+            report.find(violation(format!("  ✗ {} has only {} caller(s) and family `{family}` has no owner-reviewed exception in {PRIMITIVE_ADMISSION_PATH}.",
+                op.id, callers)));
             flagged += 1;
         }
     }
 
     for family in exceptions.keys() {
         if !under_adopted_families.contains(family) {
-            println!(
-                "  ✗ primitive admission exception `{family}` is stale because every family member meets the caller floor"
-            );
+            report.find(violation(format!("  ✗ primitive admission exception `{family}` is stale because every family member meets the caller floor")));
             flagged += 1;
         }
     }
@@ -851,61 +858,45 @@ fn validate_primitive_admission(
 
 /// Check 3: every Tier 2.5 primitive needs at least two independent callers
 /// or an explicit owner-reviewed exception for its current family.
-fn check_3_primitive_coverage(ops: &[OpInfo]) -> usize {
+fn check_3_primitive_coverage(report: &mut Report, ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
     let mut exceptions_used = 0usize;
-    println!(
-        "[3/10] Primitive coverage (Tier 2.5 primitives need ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers)"
-    );
+    report.note(format!("[3/10] Primitive coverage (Tier 2.5 primitives need ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers)"));
     for op in ops
         .iter()
         .filter(|op| is_synthetic_catalog_consumer(&op.id))
     {
-        println!(
-            "  ✗ {} is a synthetic catalog consumer. Fix: exercise the primitive directly and record only product composition edges.",
-            op.id
-        );
+        report.find(violation(format!("  ✗ {} is a synthetic catalog consumer. Fix: exercise the primitive directly and record only product composition edges.",
+            op.id)));
         flagged += 1;
     }
 
     let registry = match load_primitive_admission_registry() {
         Ok(registry) => registry,
         Err(error) => {
-            println!("  ✗ primitive admission registry is invalid: {error}");
+            report.find(violation(format!("  ✗ primitive admission registry is invalid: {error}")));
             return flagged + 1;
         }
     };
     let caller_counts = primitive_caller_counts(ops);
     let (admission_failures, reviewed_families) =
-        validate_primitive_admission(ops, &caller_counts, registry);
+        validate_primitive_admission(report, ops, &caller_counts, registry);
     flagged += admission_failures;
     exceptions_used += reviewed_families;
     if flagged == 0 {
-        println!(
-            "  ✓ no synthetic consumers; under-adopted primitives are covered by {exceptions_used} owner-reviewed family exception(s)"
-        );
+        report.note(format!("  ✓ no synthetic consumers; under-adopted primitives are covered by {exceptions_used} owner-reviewed family exception(s)"));
     }
     flagged
 }
 
 /// Enforce only the canonical primitive adoption and exception contract.
-pub(crate) fn run_primitive_admission_gate() {
-    let ops = collect_ops();
-    let failures = check_3_primitive_coverage(&ops);
-    if failures != 0 {
-        eprintln!("primitive-admission-gate: {failures} hard failure(s)");
-        process::exit(1);
-    }
-    println!("primitive-admission-gate: canonical caller and exception evidence agrees");
-}
-
 /// Check 6: composition-chain coverage  -  every non-leaf op should have
 /// at least one child Region with a `source_region` pointing at
 /// another registered op. Ops that explicitly declare leaf status in the
 /// canonical operation contract are exempt.
-fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
+fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
-    println!("[6/10] Composition-chain coverage (non-leaf ops must have ≥ 1 child Region with source_region)");
+    report.note(format!("[6/10] Composition-chain coverage (non-leaf ops must have ≥ 1 child Region with source_region)"));
     for op in ops {
         // Tier 2 intrinsics and Tier 2.5 primitives are leaves unless
         // their own bodies choose to compose deeper primitives.
@@ -923,15 +914,13 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
             continue;
         }
         if op.children.is_empty() {
-            println!(
-                "  ⚠ {} has no registered child Regions  -  either mark it a leaf primitive or wrap inlined sub-bodies via region::wrap_child(<child_op_id>, ...).",
-                op.id
-            );
+            report.find(violation(format!("  ⚠ {} has no registered child Regions  -  either mark it a leaf primitive or wrap inlined sub-bodies via region::wrap_child(<child_op_id>, ...).",
+                op.id)));
             flagged += 1;
         }
     }
     if flagged == 0 {
-        println!("  ✓ every non-leaf op names at least one child op in its Region chain");
+        report.note(format!("  ✓ every non-leaf op names at least one child op in its Region chain"));
     }
     flagged
 }
@@ -948,28 +937,26 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
 ///
 /// Generic byte-range ordering lives in `vyre_libs::range_ordering`; Tier 3
 /// dialects must not regain private sibling dependencies.
-fn check_4_cross_dialect_reachthrough() -> usize {
-    println!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)");
+fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
+    report.note(format!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)"));
     let libs_root = Some(
         xtask::checkout::checkout_root()
             .join("vyre-libs")
             .join("src"),
     );
     let Some(libs_root) = libs_root.filter(|p| p.is_dir()) else {
-        println!(
-            "  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root."
-        );
+        report.find(violation(format!("  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root.")));
         return 0;
     };
     let (dialects, list_errors) = list_dialect_dirs(&libs_root);
     if !list_errors.is_empty() {
         for error in &list_errors {
-            println!("  ✗ {error}");
+            report.find(violation(format!("  ✗ {error}")));
         }
         return list_errors.len();
     }
     if dialects.len() < 2 {
-        println!("  ✓ fewer than 2 dialects present; nothing to cross.");
+        report.note(format!("  ✓ fewer than 2 dialects present; nothing to cross."));
         return 0;
     }
     let mut flagged = 0usize;
@@ -980,10 +967,8 @@ fn check_4_cross_dialect_reachthrough() -> usize {
             let read_dir = match std::fs::read_dir(&dir) {
                 Ok(read_dir) => read_dir,
                 Err(error) => {
-                    println!(
-                        "  ✗ {}: failed to read dialect directory: {error}. Fix: make the checked source tree fully readable.",
-                        dir.display()
-                    );
+                    report.find(violation(format!("  ✗ {}: failed to read dialect directory: {error}. Fix: make the checked source tree fully readable.",
+                        dir.display())));
                     flagged += 1;
                     continue;
                 }
@@ -992,10 +977,8 @@ fn check_4_cross_dialect_reachthrough() -> usize {
                 let entry = match entry {
                     Ok(entry) => entry,
                     Err(error) => {
-                        println!(
-                            "  ✗ {}: failed to read dialect directory entry: {error}. Fix: make the checked source tree fully readable.",
-                            dir.display()
-                        );
+                        report.find(violation(format!("  ✗ {}: failed to read dialect directory entry: {error}. Fix: make the checked source tree fully readable.",
+                            dir.display())));
                         flagged += 1;
                         continue;
                     }
@@ -1014,20 +997,16 @@ fn check_4_cross_dialect_reachthrough() -> usize {
                 let text = match read_text_bounded(&path) {
                     Ok(text) => text,
                     Err(error) => {
-                        println!(
-                            "  ✗ {}: failed to read Rust source for reach-through audit: {error}. Fix: make the checked source tree fully readable.",
-                            path.display()
-                        );
+                        report.find(violation(format!("  ✗ {}: failed to read Rust source for reach-through audit: {error}. Fix: make the checked source tree fully readable.",
+                            path.display())));
                         flagged += 1;
                         continue;
                     }
                 };
                 let Ok(file) = syn::parse_file(&text) else {
-                    println!(
-                        "  ✗ {}/{}: failed to parse Rust source for reach-through audit. Fix: keep checked-in Rust source syntactically parseable.",
+                    report.find(violation(format!("  ✗ {}/{}: failed to parse Rust source for reach-through audit. Fix: keep checked-in Rust source syntactically parseable.",
                         dialect_name,
-                        path.file_name().and_then(|n| n.to_str()).unwrap_or("?")
-                    );
+                        path.file_name().and_then(|n| n.to_str()).unwrap_or("?"))));
                     flagged += 1;
                     continue;
                 };
@@ -1041,8 +1020,7 @@ fn check_4_cross_dialect_reachthrough() -> usize {
                             continue;
                         }
                         if use_path.imports_dialect(other_name) {
-                            println!(
-                                "  ✗ {}/{} line {}: `{}` → imports `{other_name}` dialect privately. \
+                            report.note(format!("  ✗ {}/{} line {}: `{}` → imports `{other_name}` dialect privately. \
                                  Fix: hoist the shared piece into vyre-primitives, or route via a \
                                  public re-export at crate root.",
                                 dialect_name,
@@ -1050,8 +1028,7 @@ fn check_4_cross_dialect_reachthrough() -> usize {
                                     .and_then(|n| n.to_str())
                                     .unwrap_or("?"),
                                 use_path.line,
-                                use_path.segments.join("::")
-                            );
+                                use_path.segments.join("::")));
                             flagged += 1;
                         }
                     }
@@ -1060,7 +1037,7 @@ fn check_4_cross_dialect_reachthrough() -> usize {
         }
     }
     if flagged == 0 {
-        println!("  ✓ no Tier-3 dialect imports another Tier-3 dialect privately");
+        report.note(format!("  ✓ no Tier-3 dialect imports another Tier-3 dialect privately"));
     }
     flagged
 }
@@ -1112,14 +1089,12 @@ fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathBuf>, Vec<St
     (out, errors)
 }
 
-fn check_5_god_files() -> usize {
-    println!(
-        "[5/10] Large-file advisory (files over {LARGE_FILE_ADVISORY_LINES} lines flagged for split-by-responsibility review; non-blocking)"
-    );
+fn check_5_god_files(report: &mut Report) -> usize {
+    report.note(format!("[5/10] Large-file advisory (files over {LARGE_FILE_ADVISORY_LINES} lines flagged for split-by-responsibility review; non-blocking)"));
     let Some(root) = workspace_root() else {
         // A missing workspace root is a real environment failure, not a
         // size advisory, so it still fails the audit.
-        println!("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.");
+        report.find(violation(format!("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.")));
         return 1;
     };
 
@@ -1138,9 +1113,7 @@ fn check_5_god_files() -> usize {
         let entry = match entry {
             Ok(entry) => entry,
             Err(error) => {
-                println!(
-                    "  ✗ walkdir failed while scanning source files: {error}. Fix: make the checked source tree fully readable."
-                );
+                report.find(violation(format!("  ✗ walkdir failed while scanning source files: {error}. Fix: make the checked source tree fully readable.")));
                 errors += 1;
                 continue;
             }
@@ -1155,31 +1128,23 @@ fn check_5_god_files() -> usize {
         let text = match read_text_bounded(path) {
             Ok(text) => text,
             Err(error) => {
-                println!(
-                    "  ✗ {} could not be read for the large-file advisory: {error}. Fix: make the checked source tree fully readable.",
-                    path.strip_prefix(&root).unwrap_or(path).display()
-                );
+                report.find(violation(format!("  ✗ {} could not be read for the large-file advisory: {error}. Fix: make the checked source tree fully readable.",
+                    path.strip_prefix(&root).unwrap_or(path).display())));
                 errors += 1;
                 continue;
             }
         };
         let line_count = text.lines().count();
         if line_count > LARGE_FILE_ADVISORY_LINES {
-            println!(
-                "  • {} has {line_count} lines. Review: does this file carry more than one responsibility? If so, split it (advisory, not a failure).",
-                path.strip_prefix(&root).unwrap_or(path).display()
-            );
+            report.note(format!("  • {} has {line_count} lines. Review: does this file carry more than one responsibility? If so, split it (advisory, not a failure).",
+                path.strip_prefix(&root).unwrap_or(path).display()));
             advisories += 1;
         }
     }
     if advisories == 0 {
-        println!(
-            "  ✓ no Rust source file is over the {LARGE_FILE_ADVISORY_LINES}-line review guideline"
-        );
+        report.note(format!("  ✓ no Rust source file is over the {LARGE_FILE_ADVISORY_LINES}-line review guideline"));
     } else {
-        println!(
-            "  • {advisories} file(s) over the {LARGE_FILE_ADVISORY_LINES}-line guideline flagged for review (non-blocking)"
-        );
+        report.note(format!("  • {advisories} file(s) over the {LARGE_FILE_ADVISORY_LINES}-line guideline flagged for review (non-blocking)"));
     }
     // Only genuine I/O errors fail this check; the size guideline is advisory.
     errors
@@ -1195,14 +1160,14 @@ fn composition_regressed(old_fraction: f64, new_fraction: f64) -> bool {
     new_fraction + COMPOSITION_REGRESSION_EPSILON < old_fraction
 }
 
-fn check_7_trend(ops: &[OpInfo]) -> usize {
-    println!("[7/10] Composition trend (current composed_fraction must not regress from the latest available baseline)");
+fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
+    report.note(format!("[7/10] Composition trend (current composed_fraction must not regress from the latest available baseline)"));
     let Some(root) = workspace_root() else {
-        println!("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.");
+        report.find(violation(format!("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.")));
         return 1;
     };
     let Some(tag) = previous_tag(&root) else {
-        println!("  ✓ no previous git tag found; trend check has no baseline");
+        report.note(format!("  ✓ no previous git tag found; trend check has no baseline"));
         return 0;
     };
     let (previous, baseline_name) = if let Some(previous) =
@@ -1210,14 +1175,10 @@ fn check_7_trend(ops: &[OpInfo]) -> usize {
     {
         (previous, tag.clone())
     } else if let Some(current_baseline) = current_composition_baseline(&root) {
-        println!(
-                "  • previous tag `{tag}` predates composition baselines; comparing against the checked-in bootstrap baseline"
-            );
+        report.note(format!("  • previous tag `{tag}` predates composition baselines; comparing against the checked-in bootstrap baseline"));
         (current_baseline, "audits/lego-composition.tsv".to_string())
     } else {
-        println!(
-                "  ✗ previous tag `{tag}` has no composition baseline and no bootstrap baseline is checked in. Fix: run `cargo run -p xtask --bin xtask -- lego-audit --write-baseline` and commit audits/lego-composition.tsv."
-            );
+        report.find(violation(format!("  ✗ previous tag `{tag}` has no composition baseline and no bootstrap baseline is checked in. Fix: run `cargo run -p xtask --bin xtask -- lego-audit --write-baseline` and commit audits/lego-composition.tsv.")));
         return 1;
     };
 
@@ -1228,16 +1189,14 @@ fn check_7_trend(ops: &[OpInfo]) -> usize {
             continue;
         };
         if composition_regressed(old_fraction, *new_fraction) {
-            println!(
-                "  ✗ {op_id} composed_fraction regressed from {:.1}% to {:.1}%. Fix: restore Region composition or extract shared work to Tier 2.5.",
+            report.find(violation(format!("  ✗ {op_id} composed_fraction regressed from {:.1}% to {:.1}%. Fix: restore Region composition or extract shared work to Tier 2.5.",
                 old_fraction * 100.0,
-                new_fraction * 100.0
-            );
+                new_fraction * 100.0)));
             flagged += 1;
         }
     }
     if flagged == 0 {
-        println!("  ✓ no composed_fraction regressions against `{baseline_name}`");
+        report.note(format!("  ✓ no composed_fraction regressions against `{baseline_name}`"));
     }
     flagged
 }
@@ -1272,7 +1231,6 @@ fn write_composition_baseline(root: &std::path::Path, ops: &[OpInfo]) -> io::Res
         rendered.push_str(&format!("{op_id}\t{fraction:.12}\n"));
     }
     std::fs::write(&path, rendered)?;
-    println!("wrote composition baseline {}", path.display());
     Ok(())
 }
 
@@ -1343,8 +1301,8 @@ fn previous_composition_baseline(
 
 const ISLAND_MIN_NODES: usize = 20;
 
-fn check_8_composability(ops: &[OpInfo]) -> usize {
-    println!("[8/10] Composability (every non-leaf op must be composed by ≥ 1 caller OR compose ≥ 1 child op)");
+fn check_8_composability(report: &mut Report, ops: &[OpInfo]) -> usize {
+    report.note(format!("[8/10] Composability (every non-leaf op must be composed by ≥ 1 caller OR compose ≥ 1 child op)"));
     let mut callers: HashMap<String, usize> = HashMap::new();
     for op in ops {
         for child in &op.children {
@@ -1368,18 +1326,16 @@ fn check_8_composability(ops: &[OpInfo]) -> usize {
         let upstream = callers.get(&op.id).copied().unwrap_or(0);
         let downstream = op.children.len();
         if upstream == 0 && downstream == 0 {
-            println!(
-                "  ⚠ {} is an island: {} upstream caller(s), {} child op(s), {} total nodes. Fix: either wire it as a child of a caller, or wrap its body via region::wrap_child(<existing_primitive>, ...).",
+            report.find(violation(format!("  ⚠ {} is an island: {} upstream caller(s), {} child op(s), {} total nodes. Fix: either wire it as a child of a caller, or wrap its body via region::wrap_child(<existing_primitive>, ...).",
                 op.id,
                 upstream,
                 downstream,
-                op.own_nodes + op.composed_nodes
-            );
+                op.own_nodes + op.composed_nodes)));
             flagged += 1;
         }
     }
     if flagged == 0 {
-        println!("  ✓ no island ops");
+        report.note(format!("  ✓ no island ops"));
     }
     flagged
 }
@@ -1417,8 +1373,8 @@ fn is_known_stem_family(stem: &str) -> bool {
     )
 }
 
-fn check_9_name_stem_collision(ops: &[OpInfo]) -> usize {
-    println!("[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)");
+fn check_9_name_stem_collision(report: &mut Report, ops: &[OpInfo]) -> usize {
+    report.note(format!("[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)"));
     let mut buckets: HashMap<String, Vec<String>> = HashMap::new();
     for op in ops {
         if is_internal_phase_op(&op.id) {
@@ -1454,15 +1410,13 @@ fn check_9_name_stem_collision(ops: &[OpInfo]) -> usize {
         {
             continue;
         }
-        println!(
-            "  ⚠ {} ops share leaf-stem `{stem}`: {}. Fix: namespace the family (e.g. `{stem}::tiled`, `{stem}::strassen`), merge near-duplicates, or add a stem allowlist entry.",
+        report.find(violation(format!("  ⚠ {} ops share leaf-stem `{stem}`: {}. Fix: namespace the family (e.g. `{stem}::tiled`, `{stem}::strassen`), merge near-duplicates, or add a stem allowlist entry.",
             ids.len(),
-            ids.join(", ")
-        );
+            ids.join(", "))));
         flagged += 1;
     }
     if flagged == 0 {
-        println!("  ✓ no leaf-stem collisions ≥ {STEM_COLLISION_MIN}");
+        report.note(format!("  ✓ no leaf-stem collisions ≥ {STEM_COLLISION_MIN}"));
     }
     flagged
 }
@@ -1490,21 +1444,17 @@ fn leaf_stem(leaf: &str) -> &str {
 const PREFIX_LEN: usize = 16;
 const OPERAND_DUP_MIN_COSINE: f64 = 0.55;
 
-fn check_10_operand_shape_duplicate(ops: &[OpInfo]) -> usize {
-    println!(
-        "[10/10] Operand-shape advisory (same fingerprint prefix + cosine ≥ {OPERAND_DUP_MIN_COSINE:.2})"
-    );
+fn check_10_operand_shape_duplicate(report: &mut Report, ops: &[OpInfo]) -> usize {
+    report.note(format!("[10/10] Operand-shape advisory (same fingerprint prefix + cosine ≥ {OPERAND_DUP_MIN_COSINE:.2})"));
     let pairs = operand_shape_duplicate_pairs(ops);
     for (cos, a, b) in &pairs {
-        println!(
-            "  ⚠ shape-duplicate: `{}` and `{}` share fingerprint prefix and {:.0}% cosine. Fix: confirm the two ops are doing distinct work, or extract the shared body to vyre-primitives.",
+        report.find(violation(format!("  ⚠ shape-duplicate: `{}` and `{}` share fingerprint prefix and {:.0}% cosine. Fix: confirm the two ops are doing distinct work, or extract the shared body to vyre-primitives.",
             a.id,
             b.id,
-            cos * 100.0
-        );
+            cos * 100.0)));
     }
     if pairs.is_empty() {
-        println!("  ✓ no operand-shape duplicates");
+        report.note(format!("  ✓ no operand-shape duplicates"));
     }
     0
 }
@@ -1728,7 +1678,7 @@ mod dedup_contract_tests {
         assert!(ops
             .iter()
             .any(|op| primitive_family(&op.id) == Some("math")));
-        assert_eq!(check_3_primitive_coverage(&ops), 0);
+        assert_eq!(check_3_primitive_coverage(&mut Report::clean(), &ops), 0);
     }
 
     /// A newly under-adopted family fails closed until its owner records a
@@ -1745,7 +1695,7 @@ mod dedup_contract_tests {
             .exception
             .retain(|exception| exception.family == "unreviewed");
         assert_eq!(
-            validate_primitive_admission(&ops, &primitive_caller_counts(&ops), exceptions).0,
+            validate_primitive_admission(&mut Report::clean(), &ops, &primitive_caller_counts(&ops), exceptions).0,
             1
         );
     }
@@ -1759,7 +1709,7 @@ mod dedup_contract_tests {
             Tier::T3,
             &["vyre-primitives::math::new_primitive"],
         ));
-        assert_eq!(check_3_primitive_coverage(&ops), 1);
+        assert_eq!(check_3_primitive_coverage(&mut Report::clean(), &ops), 1);
     }
 
     /// This boundary test locks the minimum material composition ratio at exactly 25%.
@@ -1772,7 +1722,7 @@ mod dedup_contract_tests {
         );
         composed.own_nodes = 75;
         composed.composed_nodes = 25;
-        assert_eq!(check_2_depth_of_composition(&[composed]), 0);
+        assert_eq!(check_2_depth_of_composition(&mut Report::clean(), &[composed]), 0);
     }
 
     /// This negative twin prevents a nominal child edge from hiding an almost entirely inlined Tier-3 implementation.
@@ -1785,7 +1735,7 @@ mod dedup_contract_tests {
         );
         inlined.own_nodes = 76;
         inlined.composed_nodes = 24;
-        assert_eq!(check_2_depth_of_composition(&[inlined]), 1);
+        assert_eq!(check_2_depth_of_composition(&mut Report::clean(), &[inlined]), 1);
     }
 
     /// This discoverability test preserves explicit acknowledgement of intentional operation families.
