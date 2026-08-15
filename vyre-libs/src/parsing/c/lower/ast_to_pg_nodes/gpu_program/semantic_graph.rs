@@ -235,7 +235,7 @@ pub(super) fn c_lower_ast_to_pg_semantic_graph_impl(
                 Expr::lt(t.clone(), num_nodes.clone()),
                 vec![child_phase(
                     SEMANTIC_OP_ID,
-                    "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph::node_edge_pass",
+                    "anonymous::semantic_graph_node_edge_pass",
                     loop_body,
                 )],
             )],

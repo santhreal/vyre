@@ -10,7 +10,10 @@ mod operator;
 mod shunting_witness;
 
 const OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard";
-const STATEMENT_PASS_OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard::statement_pass";
+// Phase boundary inside the one operation, not an operation of its own. The
+// `anonymous::` prefix is what says so: see
+// `vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES`.
+const STATEMENT_PASS_GENERATOR: &str = "anonymous::shunting_yard_statement_pass";
 const MAX_TOK_SCAN: u32 = 65_536;
 const STACK_SLOTS_PER_STATEMENT: u32 = 64;
 
@@ -241,7 +244,7 @@ fn ast_shunting_yard_program(
                         statement_limit,
                     ),
                 ),
-                vec![child_phase(OP_ID, STATEMENT_PASS_OP_ID, loop_body)],
+                vec![child_phase(OP_ID, STATEMENT_PASS_GENERATOR, loop_body)],
             )],
         )],
     )

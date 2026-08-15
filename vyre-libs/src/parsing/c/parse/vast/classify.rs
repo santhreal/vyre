@@ -195,7 +195,7 @@ fn c11_classify_vast_node_kinds_impl(
                 Expr::lt(t.clone(), num_nodes),
                 vec![child_phase(
                     CLASSIFY_VAST_OP_ID,
-                    "vyre-libs::parsing::c11_classify_vast_node_kinds::node_classification_pass",
+                    "anonymous::vast_node_classification_pass",
                     loop_body,
                 )],
             )],

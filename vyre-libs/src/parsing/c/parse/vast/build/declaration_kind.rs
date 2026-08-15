@@ -72,7 +72,7 @@ fn decl_kind_phase_program(op_id: &str, packed_haystack: bool) -> Program {
         BufferDecl::storage(NUM_NODES, 4, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         BufferDecl::output(RESULT, 5, DataType::U32).with_count(1),
     ];
-    let implementation = child_phase(op_id, &format!("{op_id}::declaration_scan"), body);
+    let implementation = child_phase(op_id, "anonymous::typedef_declaration_scan", body);
     Program::wrapped(
         buffers,
         [256, 1, 1],

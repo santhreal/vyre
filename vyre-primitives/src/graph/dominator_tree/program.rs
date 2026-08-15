@@ -34,10 +34,12 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::dominator_tree";
-const INIT_PHASE_OP_ID: &str = "vyre-primitives::graph::dominator_tree::init_state";
-const DEPTH_PHASE_OP_ID: &str = "vyre-primitives::graph::dominator_tree::recompute_depth";
-const INTERSECT_PHASE_OP_ID: &str =
-    "vyre-primitives::graph::dominator_tree::intersect_predecessors";
+// Phase boundaries inside the one operation, not operations of their own. The
+// `anonymous::` prefix is what says so: see
+// `vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES`.
+const INIT_PHASE_GENERATOR: &str = "anonymous::dominator_tree_init_state";
+const DEPTH_PHASE_GENERATOR: &str = "anonymous::dominator_tree_recompute_depth";
+const INTERSECT_PHASE_GENERATOR: &str = "anonymous::dominator_tree_intersect_predecessors";
 
 /// Sentinel stored in `idom_out` for unreachable nodes.
 pub const IDOM_NONE: u32 = u32::MAX;
@@ -144,7 +146,7 @@ pub fn try_dominator_tree_program(
     // depth[0] = 0; depth[v] = 0 for all others (will be fixed on first update)
     let depth_buf = "dt_depth";
     let init_state = child_phase(
-        INIT_PHASE_OP_ID,
+        INIT_PHASE_GENERATOR,
         vec![
             // idom_out[v] = NONE for all v
             Node::loop_for(
@@ -167,7 +169,7 @@ pub fn try_dominator_tree_program(
     // Outer fixpoint: at most node_count iterations.
     // Each step: recompute depths, then for each v != entry intersect preds via LCA.
     let recompute_depth = child_phase(
-        DEPTH_PHASE_OP_ID,
+        DEPTH_PHASE_GENERATOR,
         vec![Node::loop_for(
             "v",
             Expr::u32(0),
@@ -208,7 +210,7 @@ pub fn try_dominator_tree_program(
         recompute_depth.clone(),
         // for v in 0..node_count
         child_phase(
-            INTERSECT_PHASE_OP_ID,
+            INTERSECT_PHASE_GENERATOR,
             vec![Node::loop_for(
                 "v",
                 Expr::u32(0),
