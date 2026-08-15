@@ -1,3 +1,4 @@
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
@@ -103,19 +104,7 @@ fn linear_closure_with_scratch(
     next: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    bidirectional_closure_via_with_scratch_into(
-        dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        seed,
-        0xFFFF_FFFF,
-        max_iters,
-        scratch,
-        current,
-        next,
-    )
+    bidirectional_closure_via_with_scratch_into(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, seed, scratch, current, next)
 }
 
 #[test]
@@ -168,27 +157,17 @@ fn allow_mask_filters_out_wrong_edge_kinds() {
 #[test]
 fn closure_reaches_full_chain() {
     let (off, tgt, msk) = linear_graph();
-    let out = reference_bidirectional_closure(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 5);
+    let out = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &[0b0001]);
     assert_eq!(out, vec![0b1111]);
 }
 
 #[test]
 fn closure_into_matches_owned_closure() {
     let (off, tgt, msk) = linear_graph();
-    let owned = reference_bidirectional_closure(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 5);
+    let owned = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &[0b0001]);
     let mut current = Vec::new();
     let mut next = Vec::new();
-    reference_bidirectional_closure_into(
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0xFFFF_FFFF,
-        5,
-        &mut current,
-        &mut next,
-    );
+    reference_bidirectional_closure_into(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &[0b0001], &mut current, &mut next);
     assert_eq!(current, owned);
 }
 
@@ -196,8 +175,8 @@ fn closure_into_matches_owned_closure() {
 fn closure_matches_primitive_directly() {
     let (off, tgt, msk) = linear_graph();
     let seed = [0b0001];
-    let via_substrate = reference_bidirectional_closure(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, 5);
-    let via_primitive = reference_csr_bidir_closure(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, 5);
+    let via_substrate = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &seed);
+    let via_primitive = reference_csr_bidir_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &seed);
     assert_eq!(via_substrate, via_primitive);
 }
 
@@ -426,19 +405,7 @@ fn closure_empty_graph_validates_and_returns_empty_without_program_or_dispatch()
     let mut current = vec![0xCAFE_BABE];
     let mut next = vec![0xDEAD_BEEF];
 
-    bidirectional_closure_via_with_scratch_into(
-        &NeverDispatches("empty bidirectional closure must not dispatch"),
-        0,
-        &[0],
-        &[],
-        &[],
-        &[],
-        0xFFFF_FFFF,
-        4,
-        &mut scratch,
-        &mut current,
-        &mut next,
-    )
+    bidirectional_closure_via_with_scratch_into(&NeverDispatches("empty bidirectional closure must not dispatch"), CsrClosureInputs { graph: CsrGraphView { node_count: 0, edge_offsets: &[0], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 4 }, &[], &mut scratch, &mut current, &mut next)
     .expect("Fix: canonical empty closure should validate and short-circuit");
 
     assert!(current.is_empty());

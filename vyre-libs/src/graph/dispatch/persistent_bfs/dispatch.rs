@@ -3,6 +3,7 @@ use super::resident_scratch::{copy_frontier_seed_into, PersistentBfsGpuScratch};
 use crate::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs;
 use vyre_primitives::graph::persistent_bfs::{
     plan_persistent_bfs_dispatch, validate_persistent_bfs_changed_flag,
     validate_persistent_bfs_converged_flag,
@@ -20,84 +21,50 @@ use vyre_primitives::graph::persistent_bfs::{
 ///
 /// Propagates dispatch failures and rejects malformed CSR/frontier
 /// shapes or truncated readback.
-#[allow(clippy::too_many_arguments)]
 pub fn bfs_expand_via(
     dispatcher: &dyn ProgramDispatcher,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
 ) -> Result<(Vec<u32>, u32, u32), DispatchError> {
     let mut frontier = Vec::new();
-    let (changed, converged) = bfs_expand_via_into(
-        dispatcher,
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-        &mut frontier,
-    )?;
+    let (changed, converged) =
+        bfs_expand_via_into(dispatcher, inputs, frontier_in, &mut frontier)?;
     Ok((frontier, changed, converged))
 }
 
 /// Dispatcher-backed persistent BFS expansion into caller-owned frontier storage.
-#[allow(clippy::too_many_arguments)]
+///
+/// # Errors
+///
+/// Propagates dispatch failures and rejects malformed CSR/frontier
+/// shapes or truncated readback.
 pub fn bfs_expand_via_into(
     dispatcher: &dyn ProgramDispatcher,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     frontier_out: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
     let mut scratch = PersistentBfsGpuScratch::default();
-    bfs_expand_via_with_scratch_into(
-        dispatcher,
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-        &mut scratch,
-        frontier_out,
-    )
+    bfs_expand_via_with_scratch_into(dispatcher, inputs, frontier_in, &mut scratch, frontier_out)
 }
 
 /// Dispatcher-backed persistent BFS expansion into caller-owned frontier and dispatch scratch.
-#[allow(clippy::too_many_arguments)]
+///
+/// # Errors
+///
+/// Propagates dispatch failures and rejects malformed CSR/frontier
+/// shapes or truncated readback.
 pub fn bfs_expand_via_with_scratch_into(
     dispatcher: &dyn ProgramDispatcher,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     scratch: &mut PersistentBfsGpuScratch,
     frontier_out: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
-    let plan = plan_persistent_bfs_dispatch(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-    )
-    .map_err(DispatchError::BadInputs)?;
+    let max_iters = inputs.max_iters;
+    let graph = inputs.graph;
+    let plan =
+        plan_persistent_bfs_dispatch(inputs, frontier_in).map_err(DispatchError::BadInputs)?;
     let layout = plan.layout();
     let words = plan.frontier_words();
     if layout.node_count == 0 {
@@ -130,14 +97,14 @@ pub fn bfs_expand_via_with_scratch_into(
         plan.static_input_key(),
         &[
             DispatchInput::zero_u32_words(plan.node_words(), "bfs_expand_via graph nodes"),
-            DispatchInput::u32_slice(edge_offsets),
+            DispatchInput::u32_slice(graph.edge_offsets),
             DispatchInput::u32_slice_or_zero_words(
-                edge_targets,
+                graph.edge_targets,
                 plan.edge_storage_words(),
                 "bfs_expand_via edge_targets",
             ),
             DispatchInput::u32_slice_or_zero_words(
-                edge_kind_mask,
+                graph.edge_kind_mask,
                 plan.edge_storage_words(),
                 "bfs_expand_via edge_kind_mask",
             ),

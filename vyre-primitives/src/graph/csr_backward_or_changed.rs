@@ -7,6 +7,8 @@ use vyre_foundation::ir::{Expr, Node, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::bitset::bitset_words;
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use crate::graph::lane_grid;
 use crate::graph::program_graph::{
@@ -109,7 +111,7 @@ pub fn csr_backward_or_changed_parallel(
 
 /// CPU reference for one reverse-or-changed expansion pass (snapshot semantics): a
 /// source node is added to the frontier when any of its out-neighbors reached by an edge
-/// whose kind passes `edge_kind_mask` is present in the INPUT frontier. Returns the
+/// whose kind passes `allow_mask` is present in the INPUT frontier. Returns the
 /// updated frontier (input bits are monotonically retained) and `1` iff a new bit was set.
 ///
 /// This reads the pre-pass frontier for the neighbor test, so it is the deterministic
@@ -117,15 +119,20 @@ pub fn csr_backward_or_changed_parallel(
 /// live in-place accumulator, so for a multi-hop backward chain a single GPU pass can set
 /// MORE bits than one snapshot pass, but both converge to the identical fixed point (the
 /// op's contract; proven by the generated backward oracle matrix + fixpoint idempotence).
+///
+/// The per-edge kind array is `edge_kind_mask` and the scalar edge filter is
+/// `allow_mask`, matching every sibling CSR reference. This module used to swap
+/// those two names, so `edge_kind_mask` meant the array next door and the scalar
+/// here, and a caller who read a sibling first had the two roles inverted.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn cpu_ref(
     node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-    masks: &[u32],
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
     frontier: &[u32],
-    edge_kind_mask: u32,
+    allow_mask: u32,
 ) -> (Vec<u32>, u32) {
     let words = bitset_words(node_count).max(1) as usize;
     let mut out = frontier.to_vec();
@@ -136,13 +143,13 @@ pub fn cpu_ref(
     };
     let mut changed = 0u32;
     for src in 0..node_count {
-        let start = offsets[src as usize] as usize;
-        let end = offsets[src as usize + 1] as usize;
+        let start = edge_offsets[src as usize] as usize;
+        let end = edge_offsets[src as usize + 1] as usize;
         // Match the program's early-out: stop at the first present, kind-passing out-neighbor.
         let mut hit = false;
         for edge in start..end {
-            if masks[edge] & edge_kind_mask != 0 {
-                let dst = targets[edge];
+            if edge_kind_mask[edge] & allow_mask != 0 {
+                let dst = edge_targets[edge];
                 if dst < node_count && is_set(frontier, dst) {
                     hit = true;
                     break;
@@ -157,26 +164,29 @@ pub fn cpu_ref(
     (out, changed)
 }
 
-/// Iterate [`cpu_ref`] to a fixed point (at most `max_iters` passes): the full set of
-/// nodes that can reach an initial-frontier node along kind-passing edges. Returns the
+/// Iterate [`cpu_ref`] to a fixed point (at most `inputs.max_iters` passes): the full set
+/// of nodes that can reach an initial-frontier node along kind-passing edges. Returns the
 /// converged frontier and `1` iff any pass set a new bit.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn cpu_ref_closure(
-    node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-    masks: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier: &[u32],
-    edge_kind_mask: u32,
-    max_iters: u32,
 ) -> (Vec<u32>, u32) {
-    let words = bitset_words(node_count).max(1) as usize;
+    let graph = inputs.graph;
+    let words = bitset_words(graph.node_count).max(1) as usize;
     let mut out = frontier.to_vec();
     out.resize(words, 0);
     let mut any_changed = 0u32;
-    for _ in 0..max_iters {
-        let (next, changed) = cpu_ref(node_count, offsets, targets, masks, &out, edge_kind_mask);
+    for _ in 0..inputs.max_iters {
+        let (next, changed) = cpu_ref(
+            graph.node_count,
+            graph.edge_offsets,
+            graph.edge_targets,
+            graph.edge_kind_mask,
+            &out,
+            inputs.allow_mask,
+        );
         out = next;
         if changed == 0 {
             break;

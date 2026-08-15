@@ -7,6 +7,10 @@
 //! are argument plumbing. Each closure op used to retype that plumbing, which
 //! is how one op gains a bound, an attribute, or a fix that the others miss.
 //!
+//! Every shape takes [`crate::graph::csr_closure_inputs::CsrClosureInputs`] plus
+//! the seed frontier, so the argument list is two names instead of seven
+//! positions and no pair of CSR slices can transpose at a call site.
+//!
 //! Every macro takes the documentation for each shape it publishes, so an op
 //! keeps documenting its own closure while the argument list is stated once.
 //!
@@ -35,56 +39,24 @@ macro_rules! define_csr_closure_entry_points {
         #[must_use]
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn $alloc(
-            node_count: u32,
-            edge_offsets: &[u32],
-            edge_targets: &[u32],
-            edge_kind_mask: &[u32],
+            inputs: $crate::graph::csr_closure_inputs::CsrClosureInputs<'_>,
             seed: &[u32],
-            allow_mask: u32,
-            max_iters: u32,
         ) -> Vec<u32> {
             let mut current = Vec::new();
             let mut next = Vec::new();
-            $into(
-                node_count,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                seed,
-                allow_mask,
-                max_iters,
-                &mut current,
-                &mut next,
-            );
+            $into(inputs, seed, &mut current, &mut next);
             current
         }
 
         $(#[$into_doc])*
-        #[allow(clippy::too_many_arguments)]
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn $into(
-            node_count: u32,
-            edge_offsets: &[u32],
-            edge_targets: &[u32],
-            edge_kind_mask: &[u32],
+            inputs: $crate::graph::csr_closure_inputs::CsrClosureInputs<'_>,
             seed: &[u32],
-            allow_mask: u32,
-            max_iters: u32,
             current: &mut Vec<u32>,
             next: &mut Vec<u32>,
         ) {
-            $hooked(
-                node_count,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                seed,
-                allow_mask,
-                max_iters,
-                current,
-                next,
-                $step_hook,
-            );
+            $hooked(inputs, seed, current, next, $step_hook);
         }
     };
 }
@@ -103,56 +75,24 @@ macro_rules! define_try_csr_closure_entry_points {
         $(#[$alloc_doc])*
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn $alloc(
-            node_count: u32,
-            edge_offsets: &[u32],
-            edge_targets: &[u32],
-            edge_kind_mask: &[u32],
+            inputs: $crate::graph::csr_closure_inputs::CsrClosureInputs<'_>,
             seed: &[u32],
-            allow_mask: u32,
-            max_iters: u32,
         ) -> Result<Vec<u32>, String> {
             let mut current = Vec::new();
             let mut next = Vec::new();
-            $into(
-                node_count,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                seed,
-                allow_mask,
-                max_iters,
-                &mut current,
-                &mut next,
-            )?;
+            $into(inputs, seed, &mut current, &mut next)?;
             Ok(current)
         }
 
         $(#[$into_doc])*
-        #[allow(clippy::too_many_arguments)]
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn $into(
-            node_count: u32,
-            edge_offsets: &[u32],
-            edge_targets: &[u32],
-            edge_kind_mask: &[u32],
+            inputs: $crate::graph::csr_closure_inputs::CsrClosureInputs<'_>,
             seed: &[u32],
-            allow_mask: u32,
-            max_iters: u32,
             current: &mut Vec<u32>,
             next: &mut Vec<u32>,
         ) -> Result<(), String> {
-            $hooked(
-                node_count,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                seed,
-                allow_mask,
-                max_iters,
-                current,
-                next,
-                $step_hook,
-            )
+            $hooked(inputs, seed, current, next, $step_hook)
         }
     };
 }
@@ -176,84 +116,37 @@ macro_rules! define_panicking_csr_closure_entry_points {
         #[must_use]
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn $alloc(
-            node_count: u32,
-            edge_offsets: &[u32],
-            edge_targets: &[u32],
-            edge_kind_mask: &[u32],
+            inputs: $crate::graph::csr_closure_inputs::CsrClosureInputs<'_>,
             seed: &[u32],
-            allow_mask: u32,
-            max_iters: u32,
         ) -> Vec<u32> {
-            $try_alloc(
-                node_count,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                seed,
-                allow_mask,
-                max_iters,
-            )
-            .unwrap_or_else(|err| panic!("{} {err}", $label))
+            $try_alloc(inputs, seed).unwrap_or_else(|err| panic!("{} {err}", $label))
         }
 
         $(#[$into_doc])*
-        #[allow(clippy::too_many_arguments)]
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn $into(
-            node_count: u32,
-            edge_offsets: &[u32],
-            edge_targets: &[u32],
-            edge_kind_mask: &[u32],
+            inputs: $crate::graph::csr_closure_inputs::CsrClosureInputs<'_>,
             seed: &[u32],
-            allow_mask: u32,
-            max_iters: u32,
             current: &mut Vec<u32>,
             next: &mut Vec<u32>,
         ) {
-            $try_into(
-                node_count,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                seed,
-                allow_mask,
-                max_iters,
-                current,
-                next,
-            )
-            .unwrap_or_else(|err| panic!("{} {err}", $label));
+            $try_into(inputs, seed, current, next)
+                .unwrap_or_else(|err| panic!("{} {err}", $label));
         }
 
         $(#[$hooked_doc])*
-        #[allow(clippy::too_many_arguments)]
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn $hooked<F>(
-            node_count: u32,
-            edge_offsets: &[u32],
-            edge_targets: &[u32],
-            edge_kind_mask: &[u32],
+            inputs: $crate::graph::csr_closure_inputs::CsrClosureInputs<'_>,
             seed: &[u32],
-            allow_mask: u32,
-            max_iters: u32,
             current: &mut Vec<u32>,
             next: &mut Vec<u32>,
             mut on_step: F,
         ) where
             F: $($bound)*,
         {
-            $try_hooked(
-                node_count,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                seed,
-                allow_mask,
-                max_iters,
-                current,
-                next,
-                &mut on_step,
-            )
-            .unwrap_or_else(|err| panic!("{} {err}", $label));
+            $try_hooked(inputs, seed, current, next, &mut on_step)
+                .unwrap_or_else(|err| panic!("{} {err}", $label));
         }
     };
 }

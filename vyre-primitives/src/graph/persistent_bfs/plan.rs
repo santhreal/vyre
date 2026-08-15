@@ -7,6 +7,7 @@ use super::validate::{
     validate_persistent_bfs_batch_frontiers, validate_persistent_bfs_frontier,
     validate_persistent_bfs_inputs,
 };
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 
 /// Validate full non-resident persistent-BFS inputs and derive the dispatch plan.
 ///
@@ -15,31 +16,27 @@ use super::validate::{
 /// Returns an actionable diagnostic when the graph CSR, edge masks, or seed
 /// frontier do not match the primitive contract.
 pub fn plan_persistent_bfs_dispatch(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
 ) -> Result<PersistentBfsDispatchPlan, String> {
+    let graph = inputs.graph;
     let layout = validate_persistent_bfs_inputs(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        graph.node_count,
+        graph.edge_offsets,
+        graph.edge_targets,
+        graph.edge_kind_mask,
         frontier_in,
     )?;
     Ok(PersistentBfsDispatchPlan::new(
         layout,
         persistent_bfs_layout_hash(
             layout.node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
+            graph.edge_offsets,
+            graph.edge_targets,
+            graph.edge_kind_mask,
         ),
-        allow_mask,
-        max_iters,
+        inputs.allow_mask,
+        inputs.max_iters,
     ))
 }
 

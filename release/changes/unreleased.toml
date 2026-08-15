@@ -1114,3 +1114,18 @@ text = "Two CI jobs named cargo test targets that do not exist and would have fa
 id = "ci-workflow-reference-closure-gate"
 category = "Added"
 text = "A gate resolves every name a `run:` step passes to cargo or to a shell against this tree: each `-p` package is a workspace member, each `--test` and `--bin` target is declared or auto-discovered by the package the same command line addresses, and each `scripts/` path is published. Steps are extracted by indentation and each is its own scope, so a target is never resolved against a neighbouring step's package. Nothing is listed in the test: a workflow added tomorrow is judged tomorrow, and renaming a target without updating its workflow is red locally instead of in CI."
+
+[[fragments]]
+id = "csr-arglists-closure-input-bundle"
+category = "Changed"
+text = "CSR closure entry points take the graph as one named bundle. `vyre_primitives::graph::csr_closure_inputs` owns `CsrGraphView { node_count, edge_offsets, edge_targets, edge_kind_mask }` and `CsrClosureInputs { graph, allow_mask, max_iters }`, and every closure entry point in `vyre_primitives::graph::csr_bidirectional`, `vyre_primitives::graph::csr_forward_or_changed`, `vyre_primitives::graph::csr_backward_or_changed` and `vyre_primitives::graph::persistent_bfs` now receives them instead of seven or nine positional slots. Neither struct has a constructor: a struct literal is the only way to build one, so a transposed buffer is a compile error rather than a wrong closure. The dispatcher-backed consumers in `vyre_libs::graph::dispatch::csr_bidirectional`, `vyre_libs::graph::dispatch::csr_forward_or_changed` and `vyre_libs::graph::dispatch::persistent_bfs` take the same bundle, so the flat shape no longer exists at any layer."
+
+[[fragments]]
+id = "csr-arglists-backward-mask-role-names"
+category = "Fixed"
+text = "`vyre_primitives::graph::csr_backward_or_changed` named the per-edge kind array `masks` and the scalar edge-kind filter `edge_kind_mask`, inverting the roles every sibling CSR module gives those two names. A call repointed from a sibling module fed the scalar where the per-edge array belonged. Both parameters now carry the tree-wide role names."
+
+[[fragments]]
+id = "csr-arglists-transposition-gate"
+category = "Added"
+text = "A gate over `vyre_primitives::graph` rejects the argument-transposition class. It walks the module directory and parses every declared signature at run time, so a CSR entry point added later is covered without editing a list: closure entry points must receive the graph as a bundle and must not declare three or more consecutive parameters of one type, and the wider slice-taking family must give each role a single name across the tree."

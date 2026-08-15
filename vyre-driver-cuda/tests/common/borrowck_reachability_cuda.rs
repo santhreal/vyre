@@ -1,3 +1,4 @@
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_foundation::program_dispatch::ProgramDispatcher;
 use vyre_frontend_rust::borrowck::{BorrowFacts, Conflict, ConflictKind, LoanKind};
 use vyre_libs::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
@@ -64,16 +65,7 @@ pub(crate) fn cuda_conflicts(
     for a in 0..loans {
         let mut issue_seed = vec![0u32; words];
         set_bit(&mut issue_seed, facts.loan_issued_at[a]);
-        let forward = forward_closure_via_change_flag_gpu(
-            dispatcher,
-            n,
-            &fwd_off,
-            &fwd_tgt,
-            &fwd_msk,
-            &issue_seed,
-            ALLOW_ALL,
-            max_iters,
-        )
+        let forward = forward_closure_via_change_flag_gpu(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &fwd_off, edge_targets: &fwd_tgt, edge_kind_mask: &fwd_msk }, allow_mask: ALLOW_ALL, max_iters: max_iters }, &issue_seed)
         .expect("forward closure dispatch must succeed on the CUDA device");
 
         let mut use_seed = vec![0u32; words];
@@ -82,9 +74,7 @@ pub(crate) fn cuda_conflicts(
                 set_bit(&mut use_seed, point);
             }
         }
-        let backward = forward_closure_via_change_flag_gpu(
-            dispatcher, n, &rev_off, &rev_tgt, &rev_msk, &use_seed, ALLOW_ALL, max_iters,
-        )
+        let backward = forward_closure_via_change_flag_gpu(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &rev_off, edge_targets: &rev_tgt, edge_kind_mask: &rev_msk }, allow_mask: ALLOW_ALL, max_iters: max_iters }, &use_seed)
         .expect("backward closure dispatch must succeed on the CUDA device");
 
         let live_a: Vec<u32> = forward

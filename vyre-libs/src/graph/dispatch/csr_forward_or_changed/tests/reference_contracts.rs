@@ -1,3 +1,4 @@
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
 
 #[test]
@@ -37,7 +38,7 @@ fn matches_primitive_directly() {
 fn closure_reaches_full_chain_via_change_flag() {
     let (off, tgt, msk) = linear_graph();
     let out =
-        reference_forward_closure_via_change_flag(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 10);
+        reference_forward_closure_via_change_flag(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 10 }, &[0b0001]);
     assert_eq!(out, vec![0b1111]);
 }
 
@@ -62,7 +63,7 @@ fn closure_terminates_with_self_loop_under_max_iters() {
     let tgt = vec![0];
     let msk = vec![1];
     let out =
-        reference_forward_closure_via_change_flag(2, &off, &tgt, &msk, &[0b01], 0xFFFF_FFFF, 50);
+        reference_forward_closure_via_change_flag(CsrClosureInputs { graph: CsrGraphView { node_count: 2, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 50 }, &[0b01]);
     // Self-loop never adds new bits -> terminates immediately.
     assert_eq!(out, vec![0b01]);
 }

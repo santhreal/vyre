@@ -1,3 +1,4 @@
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::super::*;
 use super::linear_graph;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
@@ -92,17 +93,7 @@ fn linear_expand_into(
     frontier: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    bfs_expand_via_into(
-        dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        seed,
-        0xFFFF_FFFF,
-        max_iters,
-        frontier,
-    )
+    bfs_expand_via_into(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, seed, frontier)
 }
 
 /// [`linear_expand_into`] through caller-owned scratch.
@@ -114,18 +105,7 @@ fn linear_expand_with_scratch(
     frontier: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    bfs_expand_via_with_scratch_into(
-        dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        seed,
-        0xFFFF_FFFF,
-        max_iters,
-        scratch,
-        frontier,
-    )
+    bfs_expand_via_with_scratch_into(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, seed, scratch, frontier)
 }
 
 /// [`linear_expand_into`] returning owned frontier storage.
@@ -135,16 +115,7 @@ fn linear_expand(
     max_iters: u32,
 ) -> Result<(Vec<u32>, u32, u32), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    bfs_expand_via(
-        dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        seed,
-        0xFFFF_FFFF,
-        max_iters,
-    )
+    bfs_expand_via(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, seed)
 }
 
 #[test]
@@ -233,17 +204,7 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
     let frontier_in = vec![0u32; words];
     let mut frontier = Vec::new();
 
-    let (changed, converged) = bfs_expand_via_into(
-        &dispatcher,
-        node_count,
-        &edge_offsets,
-        &[],
-        &[],
-        &frontier_in,
-        0xFFFF_FFFF,
-        64,
-        &mut frontier,
-    )
+    let (changed, converged) = bfs_expand_via_into(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: &edge_offsets, edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 64 }, &frontier_in, &mut frontier)
     .expect("Fix: large persistent BFS dispatch should allocate internal active scratch.");
 
     assert_eq!(changed, 0);
@@ -311,18 +272,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
             "Fix: second same-shape persistent BFS dispatch should refresh graph inputs",
         ),
     ] {
-        bfs_expand_via_with_scratch_into(
-            &dispatcher,
-            4,
-            &edge_offsets,
-            edge_targets,
-            &edge_kind_mask,
-            &[0b0001],
-            0xFFFF_FFFF,
-            4,
-            &mut scratch,
-            &mut frontier,
-        )
+        bfs_expand_via_with_scratch_into(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &edge_offsets, edge_targets: edge_targets, edge_kind_mask: &edge_kind_mask }, allow_mask: 0xFFFF_FFFF, max_iters: 4 }, &[0b0001], &mut scratch, &mut frontier)
         .expect(why);
     }
 
@@ -403,16 +353,7 @@ fn via_rejects_mismatched_edge_arrays() {
             u32_slice_to_le_bytes(&[1]),
         ],
     };
-    let err = bfs_expand_via(
-        &dispatcher,
-        2,
-        &[0, 1, 1],
-        &[1],
-        &[],
-        &[0b01],
-        0xFFFF_FFFF,
-        1,
-    )
+    let err = bfs_expand_via(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 2, edge_offsets: &[0, 1, 1], edge_targets: &[1], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 1 }, &[0b01])
     .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));
 }

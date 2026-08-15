@@ -1,3 +1,4 @@
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
 
 /// Adversarial: closure on disjoint components must not bridge
@@ -8,7 +9,7 @@ fn closure_does_not_bridge_disjoint_components() {
     let off = vec![0, 1, 1, 2, 2];
     let tgt = vec![1, 3];
     let msk = vec![1, 1];
-    let out = reference_bidirectional_closure(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 5);
+    let out = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &[0b0001]);
     // Reaches {0, 1} only.
     assert_eq!(out, vec![0b0011]);
 }

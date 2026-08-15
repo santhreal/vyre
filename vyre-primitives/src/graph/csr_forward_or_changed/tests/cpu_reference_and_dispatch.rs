@@ -1,3 +1,4 @@
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::super::*;
 use crate::graph::program_graph::ProgramGraphShape;
 
@@ -17,15 +18,7 @@ fn cpu_ref_expands_in_place_frontier_pass() {
 
 #[test]
 fn cpu_ref_closure_reaches_fixpoint() {
-    let closure = cpu_ref_closure(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
-        &[0b0001],
-        0xFFFF_FFFF,
-        10,
-    );
+    let closure = cpu_ref_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &[0, 1, 2, 3, 3], edge_targets: &[1, 2, 3], edge_kind_mask: &[1, 1, 1] }, allow_mask: 0xFFFF_FFFF, max_iters: 10 }, &[0b0001]);
     assert_eq!(closure, vec![0b1111]);
 }
 
@@ -33,32 +26,12 @@ fn cpu_ref_closure_reaches_fixpoint() {
 fn cpu_ref_closure_into_reuses_buffers() {
     let mut current = Vec::with_capacity(8);
     let mut next = Vec::with_capacity(8);
-    cpu_ref_closure_into(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
-        &[0b0001],
-        0xFFFF_FFFF,
-        10,
-        &mut current,
-        &mut next,
-    );
+    cpu_ref_closure_into(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &[0, 1, 2, 3, 3], edge_targets: &[1, 2, 3], edge_kind_mask: &[1, 1, 1] }, allow_mask: 0xFFFF_FFFF, max_iters: 10 }, &[0b0001], &mut current, &mut next);
     let current_capacity = current.capacity();
     let next_capacity = next.capacity();
     assert_eq!(current, vec![0b1111]);
 
-    cpu_ref_closure_into(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
-        &[0],
-        0xFFFF_FFFF,
-        10,
-        &mut current,
-        &mut next,
-    );
+    cpu_ref_closure_into(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &[0, 1, 2, 3, 3], edge_targets: &[1, 2, 3], edge_kind_mask: &[1, 1, 1] }, allow_mask: 0xFFFF_FFFF, max_iters: 10 }, &[0], &mut current, &mut next);
     assert_eq!(current.capacity(), current_capacity);
     assert_eq!(next.capacity(), next_capacity);
     assert_eq!(current, vec![0]);
@@ -121,7 +94,7 @@ fn empty_offsets_shorthand_is_empty_edge_set_only() {
 #[test]
 fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
     let edge_offsets = vec![0u32; 66];
-    let plan = plan_csr_forward_or_changed_dispatch(65, &edge_offsets, &[], &[], 0xFFFF_FFFF, 8)
+    let plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs { graph: CsrGraphView { node_count: 65, edge_offsets: &edge_offsets, edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 8 })
         .expect("Fix: bounded CSR forward-or-changed plan should validate");
 
     assert_eq!(plan.layout().node_count, 65);
@@ -152,7 +125,7 @@ fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
 
 #[test]
 fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases() {
-    let plan = plan_csr_forward_or_changed_dispatch(0, &[], &[], &[], 0xFFFF_FFFF, 0)
+    let plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs { graph: CsrGraphView { node_count: 0, edge_offsets: &[], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 0 })
         .expect("Fix: zero-node zero-iteration plan should validate");
     assert_eq!(plan.frontier_words(), 1);
     assert_eq!(plan.changed_words(), 1);
@@ -161,7 +134,7 @@ fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases(
     assert_eq!(plan.changed_read_index(99).unwrap(), 0);
     assert_eq!(plan.dispatch_grid(), [1, 1, 1]);
 
-    let long_plan = plan_csr_forward_or_changed_dispatch(1, &[0, 0], &[], &[], 0xFFFF_FFFF, 65)
+    let long_plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs { graph: CsrGraphView { node_count: 1, edge_offsets: &[0, 0], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 65 })
         .expect("Fix: long-running plan should validate without changed history");
     assert_eq!(long_plan.changed_words(), 1);
     assert!(!long_plan.uses_changed_history());

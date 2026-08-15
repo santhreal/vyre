@@ -4,6 +4,7 @@ use vyre_primitives::graph::csr_forward_or_changed::{
     CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey,
 };
 
+use vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::device::scratch::reserve_vec as reserve_graph_vec;
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs,
@@ -62,55 +63,32 @@ impl ForwardChangedGpuScratch {
 /// # Errors
 ///
 /// Propagates any [`DispatchError`] surfaced by the dispatcher.
-#[allow(clippy::too_many_arguments)]
 pub fn forward_closure_via_change_flag_gpu(
     dispatcher: &dyn ProgramDispatcher,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
 ) -> Result<Vec<u32>, DispatchError> {
     let mut frontier = Vec::new();
-    forward_closure_via_change_flag_gpu_into(
-        dispatcher,
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        &mut frontier,
-    )?;
+    forward_closure_via_change_flag_gpu_into(dispatcher, inputs, seed, &mut frontier)?;
     Ok(frontier)
 }
 
 /// Dispatcher-backed closure into caller-owned storage.
-#[allow(clippy::too_many_arguments)]
+///
+/// # Errors
+///
+/// Propagates any [`DispatchError`] surfaced by the dispatcher.
 pub fn forward_closure_via_change_flag_gpu_into(
     dispatcher: &dyn ProgramDispatcher,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     frontier: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let mut scratch = ForwardChangedGpuScratch::default();
     forward_closure_via_change_flag_gpu_with_scratch_into(
         dispatcher,
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        inputs,
         seed,
-        allow_mask,
-        max_iters,
         &mut scratch,
         frontier,
     )
@@ -118,28 +96,20 @@ pub fn forward_closure_via_change_flag_gpu_into(
 
 /// Dispatcher-backed closure using caller-owned dispatch scratch for the seven
 /// input slots and changed flag.
-#[allow(clippy::too_many_arguments)]
+///
+/// # Errors
+///
+/// Propagates any [`DispatchError`] surfaced by the dispatcher.
 pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
     dispatcher: &dyn ProgramDispatcher,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     scratch: &mut ForwardChangedGpuScratch,
     frontier: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    let plan = plan_csr_forward_or_changed_launch(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        allow_mask,
-        max_iters,
-    )
-    .map_err(DispatchError::BadInputs)?;
+    let graph = inputs.graph;
+    let max_iters = inputs.max_iters;
+    let plan = plan_csr_forward_or_changed_launch(inputs).map_err(DispatchError::BadInputs)?;
     let changed_words = plan.changed_words();
     let frontier_words = plan.frontier_words();
 
@@ -163,7 +133,7 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         })
     })?;
     let next_static_input_key = plan
-        .static_input_key(edge_offsets, edge_targets, edge_kind_mask)
+        .static_input_key(graph.edge_offsets, graph.edge_targets, graph.edge_kind_mask)
         .map_err(DispatchError::BadInputs)?;
 
     refresh_forward_changed_inputs(
@@ -171,9 +141,9 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         static_input_key,
         next_static_input_key,
         &plan,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        graph.edge_offsets,
+        graph.edge_targets,
+        graph.edge_kind_mask,
         frontier,
         changed_words,
     )?;

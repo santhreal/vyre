@@ -1,3 +1,4 @@
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
 
 #[test]
@@ -43,15 +44,7 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     let edge_offsets = [0, 1, 2, 3, 3];
     let edge_targets = [1, 2, 3];
     let edge_kind_mask = [1, 1, 1];
-    let plan = plan_persistent_bfs_dispatch(
-        4,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &[0b0001],
-        0xFFFF_FFFF,
-        8,
-    )
+    let plan = plan_persistent_bfs_dispatch(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &edge_offsets, edge_targets: &edge_targets, edge_kind_mask: &edge_kind_mask }, allow_mask: 0xFFFF_FFFF, max_iters: 8 }, &[0b0001])
     .expect("Fix: canonical persistent-BFS dispatch plan should validate");
 
     assert_eq!(plan.layout().node_count, 4);
@@ -104,7 +97,7 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     );
 
     let empty_edge_plan =
-        plan_persistent_bfs_dispatch(2, &[0, 0, 0], &[], &[], &[0], 0xFFFF_FFFF, 1)
+        plan_persistent_bfs_dispatch(CsrClosureInputs { graph: CsrGraphView { node_count: 2, edge_offsets: &[0, 0, 0], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 1 }, &[0])
             .expect("Fix: zero-edge persistent-BFS graph is a valid dispatch shape");
     assert_eq!(empty_edge_plan.layout().edge_count, 0);
     assert_eq!(empty_edge_plan.edge_storage_words(), 1);
@@ -222,15 +215,7 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
         edge_offsets.push(edge_targets.len() as u32);
     }
     let seed = vec![1u32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // 513 bits.
-    let plan = plan_persistent_bfs_dispatch(
-        node_count,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &seed,
-        0xFFFF_FFFF,
-        node_count,
-    )
+    let plan = plan_persistent_bfs_dispatch(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: &edge_offsets, edge_targets: &edge_targets, edge_kind_mask: &edge_kind_mask }, allow_mask: 0xFFFF_FFFF, max_iters: node_count }, &seed)
     .expect("Fix: large persistent-BFS chain should plan");
 
     assert_eq!(plan.dispatch_grid(), [3, 1, 1]);
