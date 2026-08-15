@@ -1,13 +1,9 @@
-//! `vyre-libs::text::char_class`  -  Tier 3 wrapper over the
-//! Tier 2.5 [`vyre_primitives::text::char_class::char_class`] primitive.
+//! `vyre-libs::text::char_class`: the registered composition over
+//! [`vyre_primitives::text::char_class::char_class`].
 //!
-//! First Tier 2.5 migration per `docs/lego-block-rule.md` Step 2
-//! and `docs/lego-block-rule.md`. The op id stays
-//! `vyre-libs::text::char_class` so existing consumers don't break;
-//! the IR-builder + reference oracle + lookup table all live in
-//! `vyre-primitives::text` so future parser dialects (`parse-c`,
-//! `parse-rust`, `parse-go`) consume the exact same byte-classifier
-//! kernel.
+//! The op id is `vyre-libs::text::char_class` and the builder, reference
+//! oracle and lookup table live in `vyre-primitives::text`, so every parser
+//! dialect classifies bytes through one kernel instead of one per dialect.
 
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use vyre_primitives::text::char_class::reference_char_class;

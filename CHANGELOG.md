@@ -3095,6 +3095,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   time regardless of how many cores the host had. Parallelism is declared once,
   in the config file, where it is reviewable and applies to every build
   equally.
+- The backend error-code catalog is generated from the enum that emits it.
+  `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant
+  missing from the catalog a compile error. The previous markdown table, and
+  the seven-variant list that checked it against a nine-variant enum, are gone.
 
 ## [0.7.1] - 2026-08-01
 

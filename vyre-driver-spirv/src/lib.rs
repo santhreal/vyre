@@ -192,34 +192,6 @@ impl VyreBackend for SpirvBackendRegistration {
         self.device.properties.limits.max_storage_buffer_range as u64
     }
 
-    fn supports_grid_sync(&self) -> bool {
-        false
-    }
-
-    fn supports_subgroup_ops(&self) -> bool {
-        false
-    }
-
-    fn supports_f16(&self) -> bool {
-        false
-    }
-
-    fn supports_bf16(&self) -> bool {
-        false
-    }
-
-    fn supports_tensor_cores(&self) -> bool {
-        false
-    }
-
-    fn supports_async_compute(&self) -> bool {
-        false
-    }
-
-    fn supports_indirect_dispatch(&self) -> bool {
-        false
-    }
-
     /// The Vulkan compute path probes four limits and claims nothing else.
     ///
     /// Every remaining field restated `DeviceProfile::conservative`, which is the

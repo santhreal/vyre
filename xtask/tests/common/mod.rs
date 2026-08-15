@@ -10,6 +10,8 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+use proc_macro2::LineColumn;
+
 /// The checkout root, resolved from the working directory at run time.
 ///
 /// Delegates to the one owner of that answer. A root fixed at compile time names
@@ -83,4 +85,18 @@ pub(crate) fn run_python(script: &str, args: &[&OsStr]) -> Output {
 /// Run a generator over a fixture `root` in `mode`, the shape four gates share.
 pub(crate) fn run_generator(script: &str, root: &Path, mode: &str) -> Output {
     run_python(script, &[root.as_os_str(), OsStr::new(mode)])
+}
+
+/// A `path:line:column` violation, with the path relative to `root`.
+///
+/// Column is one-based here and zero-based in `proc_macro2`, because a reader
+/// pastes this into an editor. Two structural gates formatted it identically
+/// and a third would have had to guess which convention they used.
+pub(crate) fn violation_location(root: &Path, path: &Path, location: LineColumn) -> String {
+    format!(
+        "{}:{}:{}",
+        path.strip_prefix(root).unwrap_or(path).display(),
+        location.line,
+        location.column + 1
+    )
 }

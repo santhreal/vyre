@@ -67,8 +67,8 @@ device = []
 graph-dispatch = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/graph"]
 solvers = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/topology"]
 encoding = ["device", "telemetry", "vyre-primitives/matching", "vyre-primitives/math", "vyre-primitives/nn", "vyre-primitives/parsing"]
-reasoning = ["analysis", "vyre-primitives/cat", "vyre-primitives/dnnf", "vyre-primitives/zx"]
-analysis = ["device", "telemetry", "vyre-primitives/effects", "vyre-primitives/math", "vyre-primitives/types"]
+reasoning = ["analysis", "vyre-primitives/graph"]
+analysis = ["device", "telemetry", "vyre-primitives/math"]
 scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/parsing"]
 
 # Every dialect feature whose module invokes `impl_cat_a_builder_options!`

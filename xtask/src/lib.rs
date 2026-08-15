@@ -31,3 +31,4 @@ pub mod shrink;
 pub mod subcommands;
 pub mod text_markers;
 pub mod toml_config;
+pub mod tree_walk;

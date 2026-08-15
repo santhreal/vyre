@@ -184,42 +184,30 @@ fn parse_package(
     path: &Path,
     workspace_package: Option<&toml::value::Table>,
 ) -> Result<Option<PackageMetadata>, String> {
-    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "release metadata")
-        .map_err(|error| {
-        format!(
-            "failed to read package manifest `{}`: {error}",
-            path.display()
-        )
-    })?;
-    let value = toml::from_str::<toml::Value>(&text).map_err(|error| {
-        format!(
-            "failed to parse package manifest `{}`: {error}",
-            path.display()
-        )
-    })?;
-    let Some(table) = value.get("package").and_then(toml::Value::as_table) else {
-        return Ok(None);
-    };
-    let Some(name) = table
-        .get("name")
-        .and_then(toml::Value::as_str)
-        .map(str::to_string)
-    else {
-        return Err(format!(
-            "package manifest `{}` is missing package.name",
-            path.display()
-        ));
-    };
+    crate::manifest_walk::parse_package_manifest(
+        path,
+        "release metadata",
+        "package manifest",
+        |name, _document, table| build_metadata(path, name, table, workspace_package),
+    )
+}
+
+fn build_metadata(
+    path: &Path,
+    name: &str,
+    table: &toml::value::Table,
+    workspace_package: Option<&toml::value::Table>,
+) -> Result<Option<PackageMetadata>, String> {
     let version = inherited_string(table, workspace_package, "version");
     let description = inherited_string(table, workspace_package, "description");
     let license = inherited_string(table, workspace_package, "license");
     let readme = inherited_string(table, workspace_package, "readme");
     let repository = inherited_string(table, workspace_package, "repository");
     let publish = table.get("publish").and_then(toml::Value::as_bool);
-    let release_kind = release_kind(&name, publish);
+    let release_kind = release_kind(name, publish);
     let release_group = release_group(path, release_kind);
-    let release_surface = release_surface(&name, release_group, release_kind);
-    let expected_version = expected_version(&name, release_group, release_kind);
+    let release_surface = release_surface(name, release_group, release_kind);
+    let expected_version = expected_version(name, release_group, release_kind);
     let publish_policy = if release_kind == "internal-tooling" {
         "publish=false allowed for release tooling that is not a crates.io artifact"
     } else {
@@ -284,7 +272,7 @@ fn parse_package(
         }
     }
     Ok(Some(PackageMetadata {
-        name,
+        name: name.to_string(),
         manifest: path.display().to_string(),
         version,
         description,

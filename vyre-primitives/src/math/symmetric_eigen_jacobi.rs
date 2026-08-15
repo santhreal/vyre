@@ -147,9 +147,8 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
 /// Emit [`jacobi_eigen_body`] as a child region of `parent_op_id`.
 ///
 /// The nodes are exactly the body; the `Node::Region` around them records the composition
-/// edge the region chain requires: a body built by calling another
-/// operation's builder carries that operation's generator and a `source_region` naming the
-/// caller. Splicing the body in bare (which is what `tensor_train_decompose_step` used to do)
+/// edge: a body built by calling another operation's builder carries that operation's
+/// generator and a `source_region` naming the caller. Splicing the body in bare (which is what `tensor_train_decompose_step` used to do)
 /// leaves the IR indistinguishable from a hand-rolled eigensolve, so `print-composition`, the
 /// region-inline debug trace, and the Gate 1 composed fraction all report the caller as a
 /// monolith and no audit can tell that the two callers share one spelling.

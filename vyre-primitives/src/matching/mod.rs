@@ -1,11 +1,9 @@
-//! Parked composition (belongs in vyre-libs): byte/text scan primitives (DFA, substring, filters).
+//! Byte and text scan kernels: DFA, substring, filters.
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::matching::bracket_match::bracket_match(...)`  -
 //! explicit paths; no wildcard re-exports.
-//!
-//! A builder lands in this directory once a second dialect needs it; a single
-//! dialect's helper stays with that dialect.
+
 
 /// Anchor-DFA plan shared by software and accelerator experiments.
 pub mod anchor_dfa;

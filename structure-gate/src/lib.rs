@@ -47,6 +47,8 @@ use std::process;
 use toml::Value;
 use walkdir::WalkDir;
 
+pub mod source_scan;
+
 /// Category A owner: every composition. `docs/ARCHITECTURE.md`, "Target
 /// operation crate structure", decided 2026-08-12.
 const CATEGORY_A_CRATE: &str = "vyre-libs";

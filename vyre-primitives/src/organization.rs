@@ -1,10 +1,11 @@
 //! One classification of every `vyre-primitives` Cargo feature.
 //!
-//! The workspace charter admits two things into this crate: marker types
-//! (always on) and uncomposable hardware intrinsics (`hardware`). Every
-//! other domain feature is a composition that belongs in `vyre-libs`.
-//! Paths stay `vyre_primitives::<domain>` until that move. Do not add a
-//! domain feature without putting it in one of these lists.
+//! An operation is admitted here only when it cannot be composed, which means
+//! it needs its own arm in a backend emitter and its own arm in the reference
+//! interpreter. Marker types are always on; `hardware` is the intrinsic domain.
+//! Every other domain feature named below is a composition still resident here,
+//! and each one leaving is a move to `vyre-libs`, not a reclassification. Do not
+//! add a domain feature without putting it in one of these lists.
 //!
 //! `tests/feature_classification.rs` fails if `Cargo.toml` grows a
 //! feature that is not classified here.
@@ -14,16 +15,14 @@
 /// reference-interpreter arm.
 pub const INTRINSIC_FEATURES: &[&str] = &["hardware"];
 
-/// Domain features that are compositions parked in this crate.
+/// Domain features that are compositions still resident in this crate.
 ///
-/// Reuse count is not an admission criterion. Each of these builds a
-/// `Program` from existing IR and belongs in `vyre-libs`.
+/// Reuse count is not an admission criterion. Each of these builds a `Program`
+/// from existing IR and belongs in `vyre-libs`. A name leaves this list only by
+/// the domain moving; `cat`, `zx`, `dnnf`, `types` and `effects` left that way.
 pub const COMPOSITION_FEATURES: &[&str] = &[
     "bitset",
-    "cat",
     "decode",
-    "dnnf",
-    "effects",
     "fixpoint",
     "geom",
     "graph",
@@ -39,9 +38,7 @@ pub const COMPOSITION_FEATURES: &[&str] = &[
     "reduce",
     "text",
     "topology",
-    "types",
     "visual",
-    "zx",
 ];
 
 /// Crate-support features. Not domains.

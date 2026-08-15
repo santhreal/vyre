@@ -5,11 +5,11 @@
 //! compile the DFA once, match brackets on-device, sort region triples, then
 //! emit dedup survivor flags for stream compaction.
 
-use crate::scratch::reserve_vec_capacity;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
+use crate::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::matching::bracket_match::{
     bracket_match, bracket_match_dispatch_grid, pack_u32, CLOSE_BRACE, OPEN_BRACE, OTHER,
