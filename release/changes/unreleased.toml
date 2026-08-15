@@ -1772,3 +1772,8 @@ text = "ZX identity removal no longer splices out a phase-zero spider whose two 
 id = "kan-extension-one-owner"
 category = "Changed"
 text = "`reasoning::finite_category` states each construction once. Left and right Kan extension were four functions differing in whether the fold summed or multiplied and whether it ran per object or over a table; they are now `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the pair and its witness rather than a bool, and `yoneda_natural_iso` is `natural_transformation_count`, because a count is what it returns."
+
+[[fragments]]
+id = "gate-wiring-both-directions"
+category = "Changed"
+text = "The gate sweep's wiring check now runs from gate to workflow as well as from workflow to gate. A registered gate that no workflow names, directly or through a subset a workflow runs, fails the check instead of sitting in the registry as decoration. `file-size` was red on fourteen source files while nothing in CI named it, so its judgement reached nobody who could act on it. Wiring failures are not pinnable."

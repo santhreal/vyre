@@ -10,6 +10,12 @@
 //! baseline row fails, and a baseline row naming no registered gate fails, so
 //! neither list is maintained by hand and neither can quietly fall behind.
 //!
+//! Registration is not wiring. A gate no workflow selects by name, directly or
+//! through a subset a workflow runs, fails the wiring check: `file-size` was
+//! red on fourteen source files while nothing in CI named it, so its judgement
+//! reached nobody who could act on it. Wiring failures are not pinnable and no
+//! baseline row excuses one.
+//!
 //! A gate that reports findings is pinned at its present finding count rather
 //! than excused. The pin ratchets: more findings than the pin fails, fewer is
 //! reported so the pin can be lowered. No pin makes a failing gate legal and no
@@ -172,9 +178,8 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
         }
     }
     if !invoked.iter().any(|name| name == "gates") {
-        failures.push(
-            "no workflow runs `xtask gates`, so no workflow runs the registry".to_string(),
-        );
+        failures
+            .push("no workflow runs `xtask gates`, so no workflow runs the registry".to_string());
     }
     for name in subsets {
         if !SUBSETS.iter().any(|subset| subset.name == name) {
@@ -187,6 +192,19 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
         if name != "gates" && !gate_names.contains(&name.as_str()) {
             failures.push(format!(
                 "a workflow invokes `xtask {name}`, which is not a registered gate"
+            ));
+        }
+    }
+    let mut reachable: Vec<&str> = invoked.iter().map(String::as_str).collect();
+    for subset in SUBSETS {
+        if subsets.iter().any(|named| named == subset.name) {
+            reachable.extend(subset.gates.iter().copied());
+        }
+    }
+    for name in gate_names {
+        if !reachable.contains(name) {
+            failures.push(format!(
+                "no workflow names `{name}` and no subset a workflow runs contains it, so nothing in CI selects it by name; invoke `xtask {name}` from the workflow that owns it, add it to a subset a workflow runs, or delete the gate"
             ));
         }
     }
@@ -421,12 +439,18 @@ mod tests {
     /// WHY: a workflow that invokes a name nobody registered runs nothing under
     /// a name that reads as coverage, and a subset nobody runs is a set of gates
     /// that only the whole-registry sweep reaches. The old scan kept only names
-    /// starting with `vyre`, so it could not see either.
+    /// starting with `vyre`, so it could not see either. The third direction is
+    /// gate to workflow: `file-size` was red on fourteen files while no workflow
+    /// named it, so its redness reached nobody who could act on it. A registered
+    /// gate no workflow selects by name, directly or through a subset, is
+    /// decoration until someone wires it.
     #[test]
     fn workflow_and_registry_disagreement_fails_in_both_directions() {
         let names = ["dep-drift", "op-names", "platform-boundary"];
-        let every_subset: Vec<String> =
-            SUBSETS.iter().map(|subset| subset.name.to_string()).collect();
+        let every_subset: Vec<String> = SUBSETS
+            .iter()
+            .map(|subset| subset.name.to_string())
+            .collect();
         let clean = workflow_failures(
             &names,
             &["gates".to_string(), "dep-drift".to_string()],
@@ -443,19 +467,47 @@ mod tests {
         assert!(unregistered[0].contains("`xtask dep-drfit`"));
 
         let unswept = workflow_failures(&names, &["dep-drift".to_string()], &every_subset);
-        assert!(unswept.iter().any(|failure| failure.contains("no workflow runs `xtask gates`")));
+        assert!(unswept
+            .iter()
+            .any(|failure| failure.contains("no workflow runs `xtask gates`")));
 
         let unrun_subset = workflow_failures(&names, &["gates".to_string()], &[]);
-        assert_eq!(unrun_subset.len(), SUBSETS.len());
+        assert_eq!(unrun_subset.len(), SUBSETS.len() + names.len());
+        assert_eq!(
+            unrun_subset
+                .iter()
+                .filter(|failure| failure.contains("no workflow names"))
+                .count(),
+            names.len(),
+            "a subset nobody runs leaves every gate it holds named by nobody: {unrun_subset:?}"
+        );
+
+        let unnamed = workflow_failures(
+            &["dep-drift", "op-names", "platform-boundary", "file-size"],
+            &["gates".to_string(), "dep-drift".to_string()],
+            &every_subset,
+        );
+        assert_eq!(unnamed.len(), 1);
+        assert!(
+            unnamed[0].contains("no workflow names `file-size`"),
+            "got {unnamed:?}"
+        );
+
+        let named_directly = workflow_failures(
+            &["dep-drift", "op-names", "platform-boundary", "file-size"],
+            &[
+                "gates".to_string(),
+                "dep-drift".to_string(),
+                "file-size".to_string(),
+            ],
+            &every_subset,
+        );
+        assert_eq!(named_directly, Vec::<String>::new());
 
         let unknown_subset = workflow_failures(
             &names,
             &["gates".to_string()],
-            &[
-                every_subset.clone(),
-                vec!["not-a-subset".to_string()],
-            ]
-            .concat(),
+            &[every_subset.clone(), vec!["not-a-subset".to_string()]].concat(),
         );
         assert_eq!(unknown_subset.len(), 1);
         assert!(unknown_subset[0].contains("not-a-subset"));
@@ -479,8 +531,8 @@ mod tests {
             selection(&[]).expect("the whole registry").0.len(),
             subcommands::registry().len()
         );
-        let (selected, what) = selection(&["--subset".to_string(), "cat-a".to_string()])
-            .expect("a registered subset");
+        let (selected, what) =
+            selection(&["--subset".to_string(), "cat-a".to_string()]).expect("a registered subset");
         assert_eq!(what, "subset `cat-a`");
         assert!(!selected.is_empty());
         assert!(selected.len() < subcommands::registry().len());
