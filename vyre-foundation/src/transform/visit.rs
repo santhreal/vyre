@@ -1074,9 +1074,31 @@ pub fn collect_call_op_ids(program: &Program) -> Vec<Arc<str>> {
 /// descends into.
 #[cfg(test)]
 pub(crate) mod fixtures {
-    use crate::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
+    use crate::algebra::composition::mark_self_exclusive_region;
+    use crate::ir::{
+        AtomicOp, BinOp, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, Node,
+        NodeExtension, Program, UnOp,
+    };
+    use crate::ir_inner::model::expr::GeneratorRef;
     use crate::MemoryOrdering;
     use proptest::prelude::*;
+    use std::sync::Arc;
+
+    vyre_test_support::test_node_extension! {
+        WellFormedNodeExtension,
+        kind: "test.node.wellformed",
+        identity: "test.node.wellformed",
+        fingerprint: 0x11,
+    }
+
+    // An extension whose `debug_identity` is empty, so `V031` is reachable from
+    // the corpus rather than only from a hand-written case.
+    vyre_test_support::test_node_extension! {
+        AnonymousNodeExtension,
+        kind: "test.node.anonymous",
+        identity: "",
+        fingerprint: 0x22,
+    }
 
     pub(crate) fn arb_ident() -> BoxedStrategy<String> {
         prop::sample::select(&["x", "y", "idx", "i", "acc"][..])
@@ -1163,48 +1185,169 @@ pub(crate) mod fixtures {
         .boxed()
     }
 
+    pub(crate) fn arb_async_tag() -> BoxedStrategy<String> {
+        // The empty tag is the `V128` case; it belongs in the corpus because
+        // both walks must report it at the same end of the transfer.
+        prop::sample::select(&["stream0", "stream1", ""][..])
+            .prop_map(str::to_string)
+            .boxed()
+    }
+
+    pub(crate) fn arb_generator() -> BoxedStrategy<String> {
+        prop_oneof![
+            prop::sample::select(&["region.a", "region.b"][..]).prop_map(str::to_string),
+            prop::sample::select(&["excl.a", "excl.b"][..])
+                .prop_map(mark_self_exclusive_region),
+        ]
+        .boxed()
+    }
+
+    pub(crate) fn arb_collective_op() -> BoxedStrategy<CollectiveOp> {
+        prop::sample::select(&[CollectiveOp::Sum, CollectiveOp::Max][..]).boxed()
+    }
+
+    pub(crate) fn arb_comm_group() -> BoxedStrategy<CommGroup> {
+        prop::sample::select(&[CommGroup::WORLD, CommGroup(1)][..]).boxed()
+    }
+
     pub(crate) fn arb_node() -> BoxedStrategy<Node> {
         arb_node_with_depth(3)
     }
 
     /// The IR-shape corpus every walk-equivalence property runs on.
     ///
-    /// Covers the eight structural variants. The twelve remaining variants
-    /// (`IndirectDispatch`, the async family, `Trap`, `Resume`, the four
-    /// collectives, `Region`, and `Opaque`) are not generated here yet: the
-    /// validator's fusion-alias rule `V116` has two implementations, a flat
-    /// whole-program pass in `validate::fusion_safety` and a frame-scoped one
-    /// inside `validate::rule_pipeline::PreorderValidator`, and they disagree on
-    /// any program where an atomic access and a non-atomic read of the same
-    /// buffer sit in different frames. Generating an async transfer or a region
-    /// makes that disagreement reachable, so widening this strategy requires
-    /// giving `V116` one owner first.
+    /// Covers every variant `Node` declares. `corpus_generates_every_node_variant`
+    /// is the gate: it samples this strategy, names what came out with
+    /// `crate::ir::node_variant_name`, and compares that against
+    /// `crate::ir::NODE_VARIANT_NAMES`, which the AST registry macro emits from
+    /// the enum body. A variant added to `Node` and not added here turns that
+    /// gate RED, so the corpus cannot silently stop covering the enum.
     pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
-        let leaf = prop_oneof![
-            (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Let {
-                name: name.into(),
-                value,
-            }),
-            (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Assign {
-                name: name.into(),
-                value,
-            }),
-            (arb_buffer_name(), arb_expr(), arb_expr()).prop_map(|(buffer, index, value)| {
-                Node::Store {
+        let leaf = prop::strategy::Union::new(vec![
+            (arb_ident(), arb_expr())
+                .prop_map(|(name, value)| Node::Let {
+                    name: name.into(),
+                    value,
+                })
+                .boxed(),
+            (arb_ident(), arb_expr())
+                .prop_map(|(name, value)| Node::Assign {
+                    name: name.into(),
+                    value,
+                })
+                .boxed(),
+            (arb_buffer_name(), arb_expr(), arb_expr())
+                .prop_map(|(buffer, index, value)| Node::Store {
                     buffer: buffer.into(),
                     index,
                     value,
-                }
-            }),
-            Just(Node::Return),
-            Just(Node::barrier()),
-        ];
+                })
+                .boxed(),
+            (arb_buffer_name(), 0u64..=8)
+                .prop_map(|(count_buffer, count_offset)| Node::IndirectDispatch {
+                    count_buffer: count_buffer.into(),
+                    count_offset,
+                })
+                .boxed(),
+            (
+                arb_buffer_name(),
+                arb_buffer_name(),
+                arb_expr(),
+                arb_expr(),
+                arb_async_tag(),
+            )
+                .prop_map(
+                    |(source, destination, offset, size, tag)| Node::AsyncLoad {
+                        source: source.into(),
+                        destination: destination.into(),
+                        offset: Box::new(offset),
+                        size: Box::new(size),
+                        tag: tag.into(),
+                    },
+                )
+                .boxed(),
+            (
+                arb_buffer_name(),
+                arb_buffer_name(),
+                arb_expr(),
+                arb_expr(),
+                arb_async_tag(),
+            )
+                .prop_map(
+                    |(source, destination, offset, size, tag)| Node::AsyncStore {
+                        source: source.into(),
+                        destination: destination.into(),
+                        offset: Box::new(offset),
+                        size: Box::new(size),
+                        tag: tag.into(),
+                    },
+                )
+                .boxed(),
+            arb_async_tag()
+                .prop_map(|tag| Node::AsyncWait { tag: tag.into() })
+                .boxed(),
+            (arb_expr(), arb_async_tag())
+                .prop_map(|(address, tag)| Node::Trap {
+                    address: Box::new(address),
+                    tag: tag.into(),
+                })
+                .boxed(),
+            arb_async_tag()
+                .prop_map(|tag| Node::Resume { tag: tag.into() })
+                .boxed(),
+            (arb_buffer_name(), arb_collective_op(), arb_comm_group())
+                .prop_map(|(buffer, op, group)| Node::AllReduce {
+                    buffer: buffer.into(),
+                    op,
+                    group,
+                })
+                .boxed(),
+            (arb_buffer_name(), arb_buffer_name(), arb_comm_group())
+                .prop_map(|(input, output, group)| Node::AllGather {
+                    input: input.into(),
+                    output: output.into(),
+                    group,
+                })
+                .boxed(),
+            (
+                arb_buffer_name(),
+                arb_buffer_name(),
+                arb_collective_op(),
+                arb_comm_group(),
+            )
+                .prop_map(|(input, output, op, group)| Node::ReduceScatter {
+                    input: input.into(),
+                    output: output.into(),
+                    op,
+                    group,
+                })
+                .boxed(),
+            (arb_buffer_name(), 0u32..=2, arb_comm_group())
+                .prop_map(|(buffer, root, group)| Node::Broadcast {
+                    buffer: buffer.into(),
+                    root,
+                    group,
+                })
+                .boxed(),
+            Just(Node::Return).boxed(),
+            Just(Node::barrier()).boxed(),
+            prop::bool::ANY
+                .prop_map(|well_formed| {
+                    let extension: Arc<dyn NodeExtension> = if well_formed {
+                        Arc::new(WellFormedNodeExtension)
+                    } else {
+                        Arc::new(AnonymousNodeExtension)
+                    };
+                    Node::Opaque(extension)
+                })
+                .boxed(),
+        ]);
 
         if depth == 0 {
             return leaf.boxed();
         }
 
-        leaf.prop_recursive(2, 32, 2, move |inner| {
+        leaf.prop_recursive(2, 48, 2, move |inner| {
             prop_oneof![
                 (
                     arb_expr(),
@@ -1228,7 +1371,18 @@ pub(crate) mod fixtures {
                         to,
                         body,
                     }),
-                prop::collection::vec(inner, 0..=3).prop_map(Node::Block),
+                prop::collection::vec(inner.clone(), 0..=3).prop_map(Node::Block),
+                (
+                    arb_generator(),
+                    proptest::option::of(arb_generator()),
+                    prop::collection::vec(inner, 0..=3),
+                )
+                    .prop_map(|(generator, source_region, body)| Node::Region {
+                        generator: Ident::from(generator),
+                        source_region: source_region
+                            .map(|name| GeneratorRef { name }),
+                        body: Arc::new(body),
+                    }),
             ]
         })
         .boxed()
@@ -1253,6 +1407,14 @@ pub(crate) mod fixtures {
             })
             .boxed()
     }
+
+    /// `Node` variants the corpus deliberately does not generate, each with the
+    /// reason.
+    ///
+    /// Empty: every declared variant is generated. An entry here is a recorded
+    /// decision, not a shortcut, and `corpus_generates_every_node_variant`
+    /// accepts only variants named here as absent.
+    pub(crate) const CORPUS_EXCLUDED_NODE_VARIANTS: &[(&str, &str)] = &[];
 }
 
 #[cfg(test)]
@@ -1378,5 +1540,72 @@ mod tests {
         assert!(buffers.contains(&Ident::from("rw")));
         assert!(buffers.contains(&Ident::from("counts")));
         assert_eq!(buffers.len(), 2);
+    }
+
+    /// The corpus must reach every `Node` variant the AST registry declares.
+    ///
+    /// The variant set is read from `NODE_VARIANT_NAMES` at run time, so this
+    /// closes the class rather than one instance of it: adding a variant to the
+    /// `Node` declaration turns this RED until the variant is generated by
+    /// `fixtures::arb_node_with_depth` or listed in
+    /// `fixtures::CORPUS_EXCLUDED_NODE_VARIANTS` with a reason. Every corpus
+    /// consumer  -  the traversal properties here and the validator differential
+    /// property in `crate::validate`  -  inherits that coverage.
+    ///
+    /// A hardcoded expectation would not: `arb_node` covered 8 of 20 variants
+    /// while its doc comment claimed the corpus was the union of what its callers
+    /// need, and nothing was red.
+    #[test]
+    fn corpus_generates_every_node_variant() {
+        use crate::ir::{node_variant_name, NODE_VARIANT_NAMES};
+        use fixtures::CORPUS_EXCLUDED_NODE_VARIANTS;
+        use proptest::strategy::{Strategy, ValueTree};
+        use proptest::test_runner::TestRunner;
+        use std::collections::BTreeSet;
+
+        let strategy = fixtures::arb_node_with_depth(3);
+        let mut runner = TestRunner::deterministic();
+        let mut generated = BTreeSet::new();
+        for _ in 0..4096 {
+            let node = strategy
+                .new_tree(&mut runner)
+                .expect("Fix: the IR-shape corpus must produce a value for every sample")
+                .current();
+            for_each_node(std::slice::from_ref(&node), |inner| {
+                generated.insert(node_variant_name(inner));
+            });
+        }
+
+        let declared: BTreeSet<&str> = NODE_VARIANT_NAMES.iter().copied().collect();
+        let excluded: BTreeSet<&str> = CORPUS_EXCLUDED_NODE_VARIANTS
+            .iter()
+            .map(|(variant, _)| *variant)
+            .collect();
+
+        let unknown_exclusions: Vec<&str> = excluded.difference(&declared).copied().collect();
+        assert!(
+            unknown_exclusions.is_empty(),
+            "Fix: CORPUS_EXCLUDED_NODE_VARIANTS names variants Node does not declare: \
+             {unknown_exclusions:?}"
+        );
+
+        let generated_but_excluded: Vec<&str> =
+            generated.intersection(&excluded).copied().collect();
+        assert!(
+            generated_but_excluded.is_empty(),
+            "Fix: these variants are generated and also listed as excluded, so the recorded \
+             reason is stale: {generated_but_excluded:?}"
+        );
+
+        let missing: Vec<&str> = declared
+            .difference(&generated)
+            .copied()
+            .filter(|variant| !excluded.contains(variant))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "Fix: generate these Node variants in fixtures::arb_node_with_depth, or record why \
+             each is excluded in fixtures::CORPUS_EXCLUDED_NODE_VARIANTS: {missing:?}"
+        );
     }
 }

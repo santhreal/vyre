@@ -275,39 +275,26 @@ fn validate_node_inner(
             node_rules::check_collective(node, options, buffers, &mut report.errors);
         }
         Node::Region { body, .. } => {
-            // Region is a tracing / grouping marker (emitted by
-            // `crate::region::wrap_anonymous` / `wrap_child` so traces
-            // and op-id breadcrumbs surface compositionally)  -  NOT a
-            // variable-scoping construct. Builders all over vyre-libs
-            // assume `Node::let_bind("acc", …)` declared at one
-            // if_then level remains visible to a `wrap_child(...)`
-            // sibling that reads `acc` (the gqa_attention max/sum/write
-            // pass split, the python parser per-segment helpers, the
-            // visual::gradient stop-blend chain, every Cat-A reduction
-            // that wraps its hot loop in a named child region).
+            // A region is a grouping marker for traces and op-id breadcrumbs,
+            // but it scopes its body exactly like a `Block`: the pass that
+            // flattens a small region into its parent sequence re-wraps it in a
+            // `Node::Block` when a name would collide, which is sound only while
+            // a region body's bindings die at the region boundary.
             //
-            // Scoping here breaks those compositions: the inner
-            // let_binds die on Region exit and downstream sibling
-            // reads fail with V001/V032/V008. Dispatching through the
-            // same recursive walker WITHOUT a fresh scope frame
-            // restores the visible-across-siblings semantic the
-            // builders depend on.
-            //
-            // True scoping constructs (Block, If/Else branches, Loop
-            // body) keep their `validate_scoped_nested_nodes` call
-            // sites  -  Region is the one that was misclassified.
-            let mut region_bindings = FxHashSet::default();
-            validate_nodes_inner(
+            // This walk passed no scope log at all, so a region-body `let` was
+            // never recorded and never undone: it leaked out of the region, out
+            // of the `If` branch holding the region, and stayed live for the rest
+            // of the program.
+            validate_scoped_nested_nodes(
                 body,
                 buffers,
                 scope,
                 divergent,
-                depth.saturating_add(1),
+                depth,
                 limits,
                 options,
                 report,
-                &mut region_bindings,
-                None,
+                |_, _| {},
             );
         }
         Node::Opaque(extension) => {

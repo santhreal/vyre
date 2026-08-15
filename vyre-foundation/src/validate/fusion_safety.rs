@@ -5,14 +5,22 @@
 //! fused into the same kernel. This pass walks node sequences and rejects
 //! mixed atomic / non-atomic access to the same buffer unless an explicit
 //! `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` separates them.
+//!
+//! # Sole owner of `V116`
+//!
+//! [`validate_fusion_alias_hazards`] is the only implementation of the rule.
+//! The production single-pass walk in `super::rule_pipeline` used to carry a
+//! second, frame-scoped copy threaded through its explicit stack machine, and
+//! the two under-reported against each other: the inline copy recorded only the
+//! `source` and `destination` of an async transfer, never the `offset` and
+//! `size` operands, so an atomic in a transfer size was invisible to it while
+//! this walk rejected it. Both walks now call this function, so the rule cannot
+//! have two answers.
 
 use crate::ir::Expr;
 use crate::ir::Ident;
-#[cfg(test)]
 use crate::ir::Node;
-#[cfg(test)]
 use crate::validate::{err, ValidationError};
-#[cfg(test)]
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;
 
@@ -27,12 +35,10 @@ pub(crate) struct NodeAccesses {
 }
 
 /// Validate fusion hazards caused by mixing non-atomic reads and atomic writes.
-#[cfg(test)]
 pub(crate) fn validate_fusion_alias_hazards(nodes: &[Node], errors: &mut Vec<ValidationError>) {
     validate_sequence(nodes, errors);
 }
 
-#[cfg(test)]
 fn validate_sequence(nodes: &[Node], errors: &mut Vec<ValidationError>) {
     let mut reads_since_barrier = FxHashSet::<Ident>::default();
     let mut atomics_since_barrier = FxHashSet::<Ident>::default();
@@ -97,7 +103,6 @@ fn validate_sequence(nodes: &[Node], errors: &mut Vec<ValidationError>) {
     }
 }
 
-#[cfg(test)]
 fn report_alias_hazards(
     accesses: &NodeAccesses,
     reads_since_barrier: &FxHashSet<Ident>,
@@ -129,7 +134,6 @@ fn report_alias_hazards(
     }
 }
 
-#[cfg(test)]
 pub(crate) fn collect_node_accesses(node: &Node, accesses: &mut NodeAccesses) {
     match node {
         Node::Let { value, .. } | Node::Assign { value, .. } => {
@@ -202,7 +206,6 @@ pub(crate) fn collect_node_accesses(node: &Node, accesses: &mut NodeAccesses) {
     }
 }
 
-#[cfg(test)]
 fn collect_node_sequence_accesses(nodes: &[Node], accesses: &mut NodeAccesses) {
     for node in nodes {
         collect_node_accesses(node, accesses);

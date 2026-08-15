@@ -114,7 +114,6 @@ All validation codes below use diagnostic stage `validate` and retry class
 | `V110` | output buffer `…` uses unsupported element type `…` | Output buffers must use fixed-width scalar or vector element types, not Array or Tensor. |
 | `V111` | malformed validation frame stream: PopScope without matching PushScope | Rebuild the program through the structured IR builder before validation. |
 | `V112` | unreachable statements after `return` | Remove statements after `return` or reorder them. |
-| `V113` | malformed validation frame stream: PopAlias without matching PushAlias | Rebuild the program through the structured IR builder before validation. |
 | `V114` | malformed validation frame stream: loop variable `…` inserted outside any scope | Rebuild the program through the structured IR builder before validation. |
 | `V115` | region `…` is marked non-composable with itself but appears multiple times in one fused program | Split the parser into separate dispatches, or give each instance distinct scratch storage before fusion. |
 | `V116` | Fused nodes mix non-atomic reads and atomic access without an ordering barrier | Insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion. |
@@ -133,8 +132,8 @@ All validation codes below use diagnostic stage `validate` and retry class
 | `V130` | backend-allocated output buffer `…` has no static element count or output byte range | Declare the output with `.with_count(n)`, or use `.with_output_byte_range(0..0)` for a genuinely empty output. |
 
 Codes `V024`, `V026`, `V037`-`V040`, `V048`-`V050`, `V062`, `V069`,
-`V071`-`V082`, and codes above `V130` are reserved slots. Allocate through
-this registry before emitting a new diagnostic.
+`V071`-`V082`, `V113`, `V117`, and codes above `V130` are reserved slots.
+Allocate through this registry before emitting a new diagnostic.
 
 ## General errors (`E-*`)
 
