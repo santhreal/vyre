@@ -1,10 +1,10 @@
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_primitives::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
 
 mod reference_closure_tests;
 
@@ -54,20 +54,24 @@ impl ProgramDispatcher for StaticBidirInputRecordingDispatcher {
     }
 }
 
-fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    // 0 -> 1 -> 2 -> 3
-    (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
-}
-
-/// Runs one bidirectional step over [`linear_graph`] into caller-owned storage. The contracts below
-/// vary the dispatcher and the seed; the graph itself is incidental to them.
+/// Runs one bidirectional step over [`graphs::CHAIN_4`] into caller-owned storage. The contracts
+/// below vary the dispatcher and the seed; the graph itself is incidental to them.
 fn linear_step_into(
     dispatcher: &dyn ProgramDispatcher,
     seed: &[u32],
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
-    bidirectional_step_via_into(dispatcher, 4, &off, &tgt, &msk, seed, 0xFFFF_FFFF, out)
+    let g = graphs::CHAIN_4;
+    bidirectional_step_via_into(
+        dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        seed,
+        u32::MAX,
+        out,
+    )
 }
 
 /// [`linear_step_into`] returning owned storage.
@@ -75,8 +79,16 @@ fn linear_step(
     dispatcher: &dyn ProgramDispatcher,
     seed: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
-    let (off, tgt, msk) = linear_graph();
-    bidirectional_step_via(dispatcher, 4, &off, &tgt, &msk, seed, 0xFFFF_FFFF)
+    let g = graphs::CHAIN_4;
+    bidirectional_step_via(
+        dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        seed,
+        u32::MAX,
+    )
 }
 
 /// [`linear_step_into`] through caller-owned scratch, with the allow mask exposed because it
@@ -88,9 +100,17 @@ fn linear_step_with_scratch(
     scratch: &mut BidirectionalGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
+    let g = graphs::CHAIN_4;
     bidirectional_step_via_with_scratch_into(
-        dispatcher, 4, &off, &tgt, &msk, seed, allow_mask, scratch, out,
+        dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        seed,
+        allow_mask,
+        scratch,
+        out,
     )
 }
 
@@ -103,33 +123,67 @@ fn linear_closure_with_scratch(
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
-    bidirectional_closure_via_with_scratch_into(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, seed, scratch, current, next)
+    bidirectional_closure_via_with_scratch_into(
+        dispatcher,
+        CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), max_iters),
+        seed,
+        scratch,
+        current,
+        next,
+    )
 }
 
 #[test]
 fn step_includes_forward_and_backward_neighbors() {
-    let (off, tgt, msk) = linear_graph();
+    let g = graphs::CHAIN_4;
     // Seed = {1}. Forward = {2}, backward = {0}. Union ⊇ {0, 2}.
-    let out = reference_bidirectional_step(4, &off, &tgt, &msk, &[0b0010], 0xFFFF_FFFF);
+    let out = reference_bidirectional_step(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &[0b0010],
+        u32::MAX,
+    );
     assert!(out[0] & 0b0001 != 0, "0 should be in backward step from 1");
     assert!(out[0] & 0b0100 != 0, "2 should be in forward step from 1");
 }
 
 #[test]
 fn empty_seed_yields_empty_step() {
-    let (off, tgt, msk) = linear_graph();
-    let out = reference_bidirectional_step(4, &off, &tgt, &msk, &[0u32], 0xFFFF_FFFF);
+    let g = graphs::CHAIN_4;
+    let out = reference_bidirectional_step(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &[0u32],
+        u32::MAX,
+    );
     assert_eq!(out, vec![0u32]);
 }
 
 /// Closure-bar: substrate call equals direct primitive call.
 #[test]
 fn matches_primitive_directly() {
-    let (off, tgt, msk) = linear_graph();
+    let g = graphs::CHAIN_4;
     let seed = vec![0b0010];
-    let via_substrate = reference_bidirectional_step(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF);
-    let via_primitive = reference_csr_bidir(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF);
+    let via_substrate = reference_bidirectional_step(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &seed,
+        u32::MAX,
+    );
+    let via_primitive = reference_csr_bidir(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &seed,
+        u32::MAX,
+    );
     assert_eq!(via_substrate, via_primitive);
 }
 
@@ -156,27 +210,41 @@ fn allow_mask_filters_out_wrong_edge_kinds() {
 /// seed {0} must reach every node within 3 iterations.
 #[test]
 fn closure_reaches_full_chain() {
-    let (off, tgt, msk) = linear_graph();
-    let out = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &[0b0001]);
+    let out = reference_bidirectional_closure(
+        CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5),
+        &[0b0001],
+    );
     assert_eq!(out, vec![0b1111]);
 }
 
 #[test]
 fn closure_into_matches_owned_closure() {
-    let (off, tgt, msk) = linear_graph();
-    let owned = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &[0b0001]);
+    let owned = reference_bidirectional_closure(
+        CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5),
+        &[0b0001],
+    );
     let mut current = Vec::new();
     let mut next = Vec::new();
-    reference_bidirectional_closure_into(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &[0b0001], &mut current, &mut next);
+    reference_bidirectional_closure_into(
+        CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5),
+        &[0b0001],
+        &mut current,
+        &mut next,
+    );
     assert_eq!(current, owned);
 }
 
 #[test]
 fn closure_matches_primitive_directly() {
-    let (off, tgt, msk) = linear_graph();
     let seed = [0b0001];
-    let via_substrate = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &seed);
-    let via_primitive = reference_csr_bidir_closure(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 5 }, &seed);
+    let via_substrate = reference_bidirectional_closure(
+        CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5),
+        &seed,
+    );
+    let via_primitive = reference_csr_bidir_closure(
+        CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5),
+        &seed,
+    );
     assert_eq!(via_substrate, via_primitive);
 }
 
@@ -405,7 +473,22 @@ fn closure_empty_graph_validates_and_returns_empty_without_program_or_dispatch()
     let mut current = vec![0xCAFE_BABE];
     let mut next = vec![0xDEAD_BEEF];
 
-    bidirectional_closure_via_with_scratch_into(&NeverDispatches("empty bidirectional closure must not dispatch"), CsrClosureInputs { graph: CsrGraphView { node_count: 0, edge_offsets: &[0], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 4 }, &[], &mut scratch, &mut current, &mut next)
+    bidirectional_closure_via_with_scratch_into(
+        &NeverDispatches("empty bidirectional closure must not dispatch"),
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 0,
+                edge_offsets: &[0],
+                edge_targets: &[],
+                edge_kind_mask: &[],
+            },
+            4,
+        ),
+        &[],
+        &mut scratch,
+        &mut current,
+        &mut next,
+    )
     .expect("Fix: canonical empty closure should validate and short-circuit");
 
     assert!(current.is_empty());

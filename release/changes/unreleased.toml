@@ -1339,3 +1339,8 @@ text = "The exploded-supergraph (IFDS) CPU-reference corpus has one owner, `vyre
 id = "genmatvec-declared-case-with-no-arm-is-a-failure"
 category = "Added"
 text = "`vyre_test_support::case_table::ArmCoverage` reads a shared case table's declared group names at run time, records which groups a crate's arm actually asserted, and fails naming every declared group that crate has no branch for. A corpus shared through an include has a hole a per-crate copy also had: the table declares a group, one crate grows an arm, the other does not, and the crate without the arm still passes because nothing in it mentions the group. Group-count and case-count floors make a collapsed table fail rather than report a clean sweep of an empty set. Both the dense-matvec and exploded-IFDS tables are enrolled, in four arms across two crates."
+
+[[fragments]]
+id = "genmatvec-csr-closure-graph-shapes-have-one-owner"
+category = "Changed"
+text = "The fixed CSR graphs the closure contracts are written against have one owner, `vyre_primitives::graph::csr_closure_inputs::graphs`, and an unrestricted edge filter has one spelling, `vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs::allow_all`. The four-node chain and the four-node diamond were rebuilt from three array literals at each call site, four crate-local `linear_graph` helpers returned the chain as an owned triple so a caller had to keep `off`, `tgt` and `msk` alive to borrow a view from them, and more than thirty call sites restated the whole seven-field closure group only to set the allow mask to every kind. `CsrGraphShape` owns the arrays with `'static` lifetime and borrows itself as the view, so a contract now names the shape it means instead of agreeing with its siblings by coincidence."

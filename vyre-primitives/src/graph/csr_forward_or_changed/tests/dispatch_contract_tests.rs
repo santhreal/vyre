@@ -1,10 +1,11 @@
-use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::super::*;
+use crate::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
 
 #[test]
 fn static_input_key_tracks_same_shape_graph_content() {
-    let plan = plan_csr_forward_or_changed_launch(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &[0, 1, 2, 3, 3], edge_targets: &[1, 2, 3], edge_kind_mask: &[1, 1, 1] }, allow_mask: 0xFFFF_FFFF, max_iters: 4 })
-    .expect("Fix: valid CSR should produce a launch plan");
+    let plan =
+        plan_csr_forward_or_changed_launch(CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 4))
+            .expect("Fix: valid CSR should produce a launch plan");
     let first = plan
         .static_input_key(&[0, 1, 2, 3, 3], &[1, 2, 3], &[1, 1, 1])
         .expect("Fix: matching CSR should produce a static input key");
@@ -24,11 +25,28 @@ fn static_input_key_tracks_same_shape_graph_content() {
 
 #[test]
 fn static_input_key_normalizes_empty_offsets_to_zero_padded_upload() {
-    let empty_offsets_plan = plan_csr_forward_or_changed_launch(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &[], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 1, max_iters: 2 })
-        .expect("Fix: empty zero-edge CSR shorthand should plan");
-    let canonical_offsets_plan =
-        plan_csr_forward_or_changed_launch(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &[0, 0, 0, 0, 0], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 1, max_iters: 2 })
-            .expect("Fix: canonical zero-edge CSR should plan");
+    let empty_offsets_plan = plan_csr_forward_or_changed_launch(CsrClosureInputs {
+        graph: CsrGraphView {
+            node_count: 4,
+            edge_offsets: &[],
+            edge_targets: &[],
+            edge_kind_mask: &[],
+        },
+        allow_mask: 1,
+        max_iters: 2,
+    })
+    .expect("Fix: empty zero-edge CSR shorthand should plan");
+    let canonical_offsets_plan = plan_csr_forward_or_changed_launch(CsrClosureInputs {
+        graph: CsrGraphView {
+            node_count: 4,
+            edge_offsets: &[0, 0, 0, 0, 0],
+            edge_targets: &[],
+            edge_kind_mask: &[],
+        },
+        allow_mask: 1,
+        max_iters: 2,
+    })
+    .expect("Fix: canonical zero-edge CSR should plan");
     let empty_key = empty_offsets_plan
         .static_input_key(&[], &[], &[])
         .expect("Fix: empty zero-edge CSR shorthand should key");
@@ -45,8 +63,17 @@ fn static_input_key_normalizes_empty_offsets_to_zero_padded_upload() {
 
 #[test]
 fn static_input_key_rejects_edge_count_drift() {
-    let plan = plan_csr_forward_or_changed_launch(CsrClosureInputs { graph: CsrGraphView { node_count: 2, edge_offsets: &[], edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 1, max_iters: 1 })
-        .expect("Fix: zero-edge CSR should plan");
+    let plan = plan_csr_forward_or_changed_launch(CsrClosureInputs {
+        graph: CsrGraphView {
+            node_count: 2,
+            edge_offsets: &[],
+            edge_targets: &[],
+            edge_kind_mask: &[],
+        },
+        allow_mask: 1,
+        max_iters: 1,
+    })
+    .expect("Fix: zero-edge CSR should plan");
 
     let err = plan
         .static_input_key(&[], &[1], &[1])

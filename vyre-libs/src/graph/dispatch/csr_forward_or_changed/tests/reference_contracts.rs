@@ -1,11 +1,17 @@
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
+use vyre_primitives::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
 
 #[test]
 fn step_flips_change_flag_when_new_bits_added() {
-    let (off, tgt, msk) = linear_graph();
-    let (out, changed) =
-        reference_forward_step_with_change_flag(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF);
+    let g = graphs::CHAIN_4;
+    let (out, changed) = reference_forward_step_with_change_flag(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &[0b0001],
+        u32::MAX,
+    );
     // Seed {0} expands to {0, 1}. New bit added -> flag = 1.
     assert!(out[0] & 0b0010 != 0, "1 must be in expanded frontier");
     assert_eq!(changed, 1, "change flag must flip on new bit");
@@ -13,21 +19,40 @@ fn step_flips_change_flag_when_new_bits_added() {
 
 #[test]
 fn step_clears_change_flag_at_fixpoint() {
-    let (off, tgt, msk) = linear_graph();
+    let g = graphs::CHAIN_4;
     // Saturated frontier: every node already set.
-    let (_out, changed) =
-        reference_forward_step_with_change_flag(4, &off, &tgt, &msk, &[0b1111], 0xFFFF_FFFF);
+    let (_out, changed) = reference_forward_step_with_change_flag(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &[0b1111],
+        u32::MAX,
+    );
     assert_eq!(changed, 0, "no new bits -> flag stays 0");
 }
 
 /// Closure-bar: substrate output equals primitive output exactly.
 #[test]
 fn matches_primitive_directly() {
-    let (off, tgt, msk) = linear_graph();
+    let g = graphs::CHAIN_4;
     let seed = vec![0b0001];
-    let via_substrate =
-        reference_forward_step_with_change_flag(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF);
-    let via_primitive = csr_foc_cpu(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF);
+    let via_substrate = reference_forward_step_with_change_flag(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &seed,
+        u32::MAX,
+    );
+    let via_primitive = csr_foc_cpu(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &seed,
+        u32::MAX,
+    );
     assert_eq!(via_substrate, via_primitive);
 }
 
@@ -36,9 +61,10 @@ fn matches_primitive_directly() {
 /// from {0} final = {0,1,2,3}.
 #[test]
 fn closure_reaches_full_chain_via_change_flag() {
-    let (off, tgt, msk) = linear_graph();
-    let out =
-        reference_forward_closure_via_change_flag(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 10 }, &[0b0001]);
+    let out = reference_forward_closure_via_change_flag(
+        CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 10),
+        &[0b0001],
+    );
     assert_eq!(out, vec![0b1111]);
 }
 
@@ -46,9 +72,15 @@ fn closure_reaches_full_chain_via_change_flag() {
 /// on the first iteration (no work).
 #[test]
 fn empty_seed_yields_empty_closure_no_change() {
-    let (off, tgt, msk) = linear_graph();
-    let (out, changed) =
-        reference_forward_step_with_change_flag(4, &off, &tgt, &msk, &[0u32], 0xFFFF_FFFF);
+    let g = graphs::CHAIN_4;
+    let (out, changed) = reference_forward_step_with_change_flag(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &[0u32],
+        u32::MAX,
+    );
     assert_eq!(out, vec![0u32]);
     assert_eq!(changed, 0);
 }
@@ -62,8 +94,18 @@ fn closure_terminates_with_self_loop_under_max_iters() {
     let off = vec![0, 1, 1];
     let tgt = vec![0];
     let msk = vec![1];
-    let out =
-        reference_forward_closure_via_change_flag(CsrClosureInputs { graph: CsrGraphView { node_count: 2, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 50 }, &[0b01]);
+    let out = reference_forward_closure_via_change_flag(
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 2,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            50,
+        ),
+        &[0b01],
+    );
     // Self-loop never adds new bits -> terminates immediately.
     assert_eq!(out, vec![0b01]);
 }

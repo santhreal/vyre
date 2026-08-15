@@ -1436,6 +1436,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   corpus its own file defined. The rule semantics that were hand-checked per
   suite, KILL suppression, GEN injection and inter-edge fact propagation, are
   now declared as dense edge expectations both arms are held to.
+- The fixed CSR graphs the closure contracts are written against have one
+  owner, `vyre_primitives::graph::csr_closure_inputs::graphs`, and an
+  unrestricted edge filter has one spelling,
+  `vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs::allow_all`.
+  The four-node chain and the four-node diamond were rebuilt from three array
+  literals at each call site, four crate-local `linear_graph` helpers returned
+  the chain as an owned triple so a caller had to keep `off`, `tgt` and `msk`
+  alive to borrow a view from them, and more than thirty call sites restated
+  the whole seven-field closure group only to set the allow mask to every kind.
+  `CsrGraphShape` owns the arrays with `'static` lifetime and borrows itself as
+  the view, so a contract now names the shape it means instead of agreeing with
+  its siblings by coincidence.
 
 ### Removed
 
