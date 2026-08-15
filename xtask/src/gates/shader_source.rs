@@ -53,6 +53,16 @@ const PERMITTED_PREFIXES: &[&str] = &[
 /// Where a shader may be parsed from text instead of emitted structurally.
 const PARSE_SCOPE: &[&str] = &["vyre-driver-wgpu/src", "vyre-foundation/src"];
 
+/// The file that owns this rule and therefore spells every token it forbids.
+///
+/// The tokens are shader syntax, which a rule can only state as literals, and
+/// this file also spells the string builders, so the scan reported its own table
+/// eight times and could never reach zero. Masking literals is not the answer: a
+/// shader assembled from strings is assembled out of literals, which is the whole
+/// subject of the rule. The test below requires the row to still carry the tokens
+/// and the builders, so a file that stops spelling the rule stops being exempt.
+const RULE_SOURCE: &str = "xtask/src/gates/shader_source.rs";
+
 /// Shader text is emitted structurally, never assembled from string pieces.
 pub struct ShaderSource;
 
@@ -145,6 +155,9 @@ fn is_permitted(path: &Path) -> bool {
     if scan::is_test_tree(path) {
         return true;
     }
+    if text.replace('\\', "/").ends_with(RULE_SOURCE) {
+        return true;
+    }
     PERMITTED_PREFIXES
         .iter()
         .any(|prefix| text.starts_with(prefix))
@@ -166,5 +179,32 @@ mod tests {
         assert!(is_permitted(Path::new("anything/x.wgsl")));
         assert!(!is_permitted(Path::new("vyre-lower/src/lowering.rs")));
         assert!(!is_permitted(Path::new("vyre-driver/src/pipeline.rs")));
+    }
+
+    /// WHY: an exemption keyed on a path is dead the moment the rule text moves,
+    /// and a dead row reads as a decision while doing nothing. The exempt file
+    /// must still carry every token and every builder the rule forbids, so a file
+    /// that stops spelling the rule turns this red instead of quietly widening
+    /// the scan by one file.
+    #[test]
+    fn the_exempt_rule_source_still_spells_the_rule() {
+        let path = structure_gate::workspace_root().join(RULE_SOURCE);
+        let text = std::fs::read_to_string(&path).unwrap_or_else(|error| {
+            panic!("Fix: {RULE_SOURCE} is exempt from the shader scan but unreadable: {error}")
+        });
+        assert!(
+            is_permitted(Path::new(RULE_SOURCE)),
+            "Fix: the rule source must be permitted, or it reports its own token table"
+        );
+        for token in TOKENS {
+            assert!(
+                text.contains(token),
+                "Fix: {RULE_SOURCE} is exempt but no longer spells `{token}`; delete the exemption"
+            );
+        }
+        assert!(
+            scan::contains_any(&text, STRING_BUILDERS),
+            "Fix: {RULE_SOURCE} is exempt but builds no strings, so the exemption buys nothing"
+        );
     }
 }
