@@ -424,11 +424,11 @@ fn release_note_version_issues(line: &str, vyre_version: &str) -> Vec<String> {
 
 /// Documents scanned for a bare, ambiguous release tag command.
 ///
-/// Three of the five entries here were `docs/RELEASE.md` twice and
-/// `docs/RELEASE_CHECKLIST.md` once, all deleted with the mdbook, so the scan
-/// spent its blockers reporting that it could not read them and never reached a
-/// document that could carry a bad tag command. The duplicate also double-counted
-/// every finding in that one file.
+/// Three of the five entries here were one release runbook twice and a
+/// checklist beside it, all deleted with the book, so the scan spent its
+/// blockers reporting that it could not read them and never reached a document
+/// that could carry a bad tag command. The duplicate also double-counted every
+/// finding in that one file.
 fn release_doc_paths(vyre_root: &Path) -> Vec<PathBuf> {
     vec![
         vyre_root.join("README.md"),

@@ -1563,11 +1563,11 @@ fn scan_release_tooling(
 
 /// Hold the release-facing documents to the same command hygiene as the scripts.
 ///
-/// This list named `docs/RELEASE.md` three times and `docs/RELEASE_CHECKLIST.md`
-/// once, all deleted with the mdbook, and skipped each one because it is not a
-/// file. The gate therefore reported clean while scanning none of the documents
-/// its name claims. A listed document that is absent is now a finding: the list
-/// is the contract, so a deletion has to be answered here rather than absorbed.
+/// This list named one release runbook three times and a checklist beside it,
+/// all deleted with the book, and skipped each one because it is not a file.
+/// The gate therefore reported clean while scanning none of the documents its
+/// name claims. A listed document that is absent is now a finding: the list is
+/// the contract, so a deletion has to be answered here rather than absorbed.
 fn scan_release_docs(
     vyre_root: &Path,
     scanned_files: &mut usize,

@@ -155,10 +155,10 @@ fn coherent_architecture_fixture_passes() {
 
 /// A retired release claim must not return to a current architecture guide.
 ///
-/// This wrote `Vyre 0.6.9.` into `docs/RUNTIME_PIPELINE.md`, one of three pages
-/// the fixture created that `CURRENT_DOCS` does not name, so the checker never
-/// opened the file the test poisoned and the assertion below could only have
-/// passed by accident. The fixture now writes exactly what the contract reads.
+/// This wrote `Vyre 0.6.9.` into one of three pages the fixture created that
+/// `CURRENT_DOCS` does not name, so the checker never opened the file the test
+/// poisoned and the assertion below could only have passed by accident. The
+/// fixture now writes exactly what the contract reads.
 #[test]
 fn retired_architecture_version_fails_closed() {
     let temp = tempfile::tempdir().unwrap();
