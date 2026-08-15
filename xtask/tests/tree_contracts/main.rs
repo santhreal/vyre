@@ -24,4 +24,5 @@ mod crate_readmes;
 mod feature_isolation;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
+mod subcommand_dispatch;
 mod testing_guides;

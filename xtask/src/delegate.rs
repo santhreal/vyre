@@ -7,10 +7,41 @@
 //! result of the gate it wraps. On a build failure the captured text is printed
 //! and the exit code is cargo's.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::LazyLock;
 
 use serde_json::Value;
+
+/// Package whose binary owns the subcommand table.
+const DISPATCHER_PACKAGE: &str = "xtask";
+
+/// Path of the `xtask` dispatcher binary, resolved once per process.
+///
+/// `xtask` owns the subcommand table, so running a subcommand means running
+/// that binary and letting it route. A sibling build-task binary must not spawn
+/// its own path: it is not the dispatcher, so every subcommand it does not
+/// itself implement fails against its own table as unimplemented while the
+/// reported command still reads `xtask <name>`. That is what `release-evidence`
+/// did to twelve of the thirteen subcommands it drives once it moved out of
+/// `xtask`, and the misreported command name is why it read as those gates
+/// failing.
+pub fn dispatcher() -> &'static Path {
+    static DISPATCHER: LazyLock<PathBuf> = LazyLock::new(|| {
+        let current = std::env::current_exe().unwrap_or_else(|error| {
+            eprintln!("Fix: cannot resolve the running binary: {error}. Rebuild it with `cargo build -p {DISPATCHER_PACKAGE}`.");
+            std::process::exit(1);
+        });
+        dispatcher_from(&current).unwrap_or_else(|| build(DISPATCHER_PACKAGE))
+    });
+    DISPATCHER.as_path()
+}
+
+/// `current` when the running binary is already the dispatcher, `None` when a
+/// sibling build-task binary is running and the dispatcher has to be built.
+fn dispatcher_from(current: &Path) -> Option<PathBuf> {
+    (current.file_stem()? == DISPATCHER_PACKAGE).then(|| current.to_path_buf())
+}
 
 /// Build `package`'s binary of the same name, then run it with `args`.
 ///
@@ -210,5 +241,28 @@ mod tests {
             None
         );
         assert_eq!(rendered_diagnostic("not json"), None);
+    }
+
+    /// WHY: a sibling build-task binary is not the dispatcher, so it must build
+    /// and run `xtask` rather than re-enter itself. `release-evidence` re-entered
+    /// itself for thirteen subcommands and reported twelve of them as
+    /// unimplemented gates, so the decision is tested per binary name rather
+    /// than trusted to whichever binary happens to be running.
+    #[test]
+    fn only_the_dispatcher_binary_is_its_own_dispatcher() {
+        assert_eq!(
+            dispatcher_from(Path::new("/t/debug/xtask")),
+            Some(PathBuf::from("/t/debug/xtask"))
+        );
+        assert_eq!(
+            dispatcher_from(Path::new("/t/debug/xtask.exe")),
+            Some(PathBuf::from("/t/debug/xtask.exe"))
+        );
+        assert_eq!(dispatcher_from(Path::new("/t/debug/xtask-evidence")), None);
+        assert_eq!(dispatcher_from(Path::new("/t/debug/xtask-registry")), None);
+        assert_eq!(
+            dispatcher_from(Path::new("/t/debug/deps/release_evidence-9f1")),
+            None
+        );
     }
 }

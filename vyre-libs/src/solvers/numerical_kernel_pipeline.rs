@@ -12,7 +12,6 @@ use vyre_primitives::math::{
     },
     preconditioner::{newton_schulz_poly5_f32, newton_schulz_y_step},
     randomized_svd::randomized_projection_step,
-    sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents},
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -235,6 +234,7 @@ pub fn reference_gaussian_rdp_step(alpha: &[f64], sigma_squared: &[f64]) -> Vec<
 mod tests {
     use super::*;
     use vyre_foundation::ir::Node;
+    use vyre_primitives::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())

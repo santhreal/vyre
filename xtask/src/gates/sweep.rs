@@ -65,11 +65,7 @@ struct Observed {
 }
 
 fn execute(entry: &Subcommand) -> Observed {
-    let exe = std::env::current_exe().unwrap_or_else(|error| {
-        eprintln!("Fix: cannot resolve the running xtask binary: {error}");
-        process::exit(1);
-    });
-    let output = Command::new(exe)
+    let output = Command::new(crate::delegate::dispatcher())
         .arg(entry.name)
         .args(entry.ci_args)
         .output()

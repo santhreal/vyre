@@ -57,6 +57,20 @@ const COMMANDS: &[EvidenceCommand] = &[
     ]),
 ];
 
+/// The subcommand each spawned entry runs, in table order.
+///
+/// Read by the dispatch contract: every one of these is executed as a child
+/// process of the dispatcher, so a name this table still spells after the
+/// subcommand was renamed or moved would fail only when a release ran.
+#[must_use]
+pub fn spawned_subcommands() -> Vec<&'static str> {
+    COMMANDS
+        .iter()
+        .filter(|command| command.run)
+        .filter_map(|command| command.args.first().copied())
+        .collect()
+}
+
 struct EvidenceCommand {
     args: &'static [&'static str],
     required: bool,
@@ -112,18 +126,12 @@ impl EvidenceCommand {
 pub(crate) fn run(_args: &[String]) {
     let workspace_root = xtask::checkout::checkout_root();
     let mut failures = Vec::new();
-    let xtask = match std::env::current_exe() {
-        Ok(path) => path,
-        Err(error) => {
-            eprintln!("release-evidence: failed to locate current xtask binary: {error}");
-            std::process::exit(1);
-        }
-    };
     let mut reports = Vec::new();
     let mut records = Vec::new();
     for command in COMMANDS {
+        let label = format!("xtask {}", command.args.join(" "));
         let status = command.run.then(|| {
-            Command::new(&xtask)
+            Command::new(xtask::delegate::dispatcher())
                 .args(command.args)
                 .current_dir(&workspace_root)
                 .status()
@@ -131,8 +139,7 @@ pub(crate) fn run(_args: &[String]) {
         let expected = expected_artifacts(command.args);
         if command.required && expected.is_empty() {
             failures.push(format!(
-                "`xtask {}` is required but declares no expected artifacts",
-                command.args.join(" ")
+                "`{label}` is required but declares no expected artifacts"
             ));
         }
         let command_mode = if command.run {
@@ -154,8 +161,7 @@ pub(crate) fn run(_args: &[String]) {
         for artifact in &artifact_statuses {
             if release_artifact_status_has_failure(artifact) {
                 let finding = format!(
-                    "`xtask {}` expected `{}` but it was missing, empty, unreadable, or missing provenance{}",
-                    command.args.join(" "),
+                    "`{label}` expected `{}` but it was missing, empty, unreadable, or missing provenance{}",
                     artifact.path,
                     artifact_blocker_suffix(artifact)
                 );
@@ -176,25 +182,20 @@ pub(crate) fn run(_args: &[String]) {
         });
         match status {
             Some(Ok(status)) if status.success() => {}
-            Some(Ok(status)) if command.required => failures.push(format!(
-                "`xtask {}` failed with {status}",
-                command.args.join(" ")
-            )),
+            Some(Ok(status)) if command.required => {
+                failures.push(format!("`{label}` failed with {status}"));
+            }
             Some(Ok(status)) => reports.push(format!(
-                "`xtask {}` reported {status}; artifact was still written for review",
-                command.args.join(" ")
+                "`{label}` reported {status}; artifact was still written for review"
             )),
-            Some(Err(error)) if command.required => failures.push(format!(
-                "failed to run `xtask {}`: {error}",
-                command.args.join(" ")
-            )),
-            Some(Err(error)) => reports.push(format!(
-                "failed to run report-only `xtask {}`: {error}",
-                command.args.join(" ")
-            )),
+            Some(Err(error)) if command.required => {
+                failures.push(format!("failed to run `{label}`: {error}"));
+            }
+            Some(Err(error)) => {
+                reports.push(format!("failed to run report-only `{label}`: {error}"));
+            }
             None => reports.push(format!(
-                "`xtask {}` was not run by release-evidence; existing explicit artifacts were inspected",
-                command.args.join(" ")
+                "`{label}` was not run by release-evidence; existing explicit artifacts were inspected"
             )),
         }
     }

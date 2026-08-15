@@ -2215,6 +2215,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   buffer once a program carries atomics, so four nodes with 257 edges, and a
   17-by-17 kernel over two 17-element scaling vectors, both cross the threshold
   while the ping-pong state still fits one workgroup.
+- `release-evidence` runs its thirteen child subcommands through
+  `xtask::delegate::dispatcher`, the one owner of which binary runs a
+  subcommand. It resolved that child from the running executable, which was
+  correct only while it lived in `xtask`; after it moved to `xtask-evidence` it
+  re-entered itself, met that crate's six-entry table, and exited 1 with `is
+  not implemented in xtask-evidence` for twelve of the thirteen. Only
+  `backend-matrix` worked, because `xtask-evidence` happens to own it. Each
+  failure was still labelled `xtask <name>`, so one wrong process read as
+  twelve gates failing and the release evidence surface reported sixteen
+  blockers where seven exist. The same resolution in `xtask::gates::sweep` and
+  `xtask::release::release_gate` was three copies of the same eight lines of
+  failure handling and is now one call.
 
 ## [0.7.1] - 2026-08-01
 
