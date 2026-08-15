@@ -237,17 +237,19 @@ pub fn adapter_probe_report() -> AdapterProbeReport {
                 .push("TIMESTAMP_QUERY_INSIDE_ENCODERS".to_string());
         }
         let adapter_limits = adapter.limits();
-        if let Err(error) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("vyre probe"),
-            required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits {
-                max_storage_buffers_per_shader_stage:
-                    adapter_limits.max_storage_buffers_per_shader_stage,
-                ..wgpu::Limits::default()
-            },
-            memory_hints: wgpu::MemoryHints::default(),
-            trace: wgpu::Trace::Off,
-        })) {
+        if let Err(error) =
+            super::acquire::wait_for_gpu(adapter.request_device(&wgpu::DeviceDescriptor {
+                label: Some("vyre probe"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits {
+                    max_storage_buffers_per_shader_stage:
+                        adapter_limits.max_storage_buffers_per_shader_stage,
+                    ..wgpu::Limits::default()
+                },
+                memory_hints: wgpu::MemoryHints::default(),
+                trace: wgpu::Trace::Off,
+            }))
+        {
             report
                 .missing
                 .push(format!("device request failed on {}: {error}", info.name));

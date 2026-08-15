@@ -37,7 +37,6 @@ vyre-lower.workspace = true
 vyre-emit-naga.workspace = true
 naga = { workspace = true, features = ["wgsl-out", "spv-out"] }
 wgpu.workspace = true
-pollster.workspace = true
 bytemuck.workspace = true
 crossbeam-queue = { workspace = true }
 crossbeam-channel.workspace = true

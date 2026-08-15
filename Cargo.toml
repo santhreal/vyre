@@ -247,7 +247,6 @@ tempfile = "=3.27.0"
 proptest = "=1.11.0"
 rand = { version = "=0.10.2", features = ["std", "std_rng"] }
 rand_core = { version = "=0.6.4", features = ["getrandom"] }
-pollster = "=0.4.0"
 tokio = { version = "=1.53.1", features = ["rt", "fs", "time"] }
 wgpu = { version = "=25.0.2", features = ["wgsl", "naga-ir"] }
 metal = "=0.31.0"
