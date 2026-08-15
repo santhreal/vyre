@@ -1648,6 +1648,23 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   applies to every build equally; a per-invocation override makes each reader's
   build a different build, and thirty-six generated documents were teaching
   exactly that.
+- Artifact materialization has one skeleton for every backend.
+  `vyre_driver::materializer_passthrough` answers
+  `ArtifactMaterializer::device` from the acquired descriptor and, given a
+  backend field, forwards the four resident-resource methods, which two
+  backends had written out as eight identical bodies differing only in a field
+  name. The Metal and SPIR-V instances now run
+  `vyre_driver::materialize::InstanceCore::execute_modules` instead of each
+  carrying its own module loop: both had rebuilt the same config clone, grid
+  override, binding-plan build, input gather and output absorb, and both
+  discarded the device timing that loop reports, so a dispatch that measured
+  elapsed device time was reported as untimed. SPIR-V also stops tolerating a
+  dispatch that returns fewer buffers than its plan declares, which silently
+  kept the previous value for a declared output, and its third spelling of the
+  unmapped-output rejection is gone in favour of the one its own message record
+  already declared. Metal's private copy of the unbound-input rejection is
+  replaced by `vyre_driver::materialize::unbound_input`, so all four backends
+  refuse an unbound canonical value in the same words.
 
 ### Removed
 

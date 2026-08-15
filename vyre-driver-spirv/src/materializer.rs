@@ -1,10 +1,13 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Instant;
 
-use vyre_driver::materialize::{self, InstanceCore, InstanceMessages, MaterializerDevice};
+use vyre_driver::materialize::{
+    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializerDevice,
+};
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, Completion,
-    Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, Completion, DeviceIdentity,
+    DispatchConfig, ResidentOwner, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
@@ -39,6 +42,13 @@ const MESSAGES: InstanceMessages = InstanceMessages {
     },
 };
 
+/// Rejection for a dispatch that skipped a declared output slot.
+fn omitted_output(output_index: usize, name: &str) -> BackendError {
+    materialize::invalid_module(&format!(
+        "SPIR-V target module omitted output {output_index} for Program buffer `{name}`"
+    ))
+}
+
 /// First word of every well-formed SPIR-V module.
 const SPIRV_MAGIC: u32 = 0x0723_0203;
 
@@ -48,9 +58,7 @@ pub(crate) struct SpirvMaterializer {
 }
 
 impl ArtifactMaterializer for SpirvMaterializer {
-    fn device(&self) -> &dyn Device {
-        &self.descriptor
-    }
+    vyre_driver::materializer_passthrough!();
 
     fn materialize(
         &self,
@@ -103,6 +111,16 @@ struct SpirvArtifactInstance {
     modules: Vec<SpirvExecutableModule>,
 }
 
+impl ExecutableModule for SpirvExecutableModule {
+    fn program(&self) -> &Program {
+        &self.program
+    }
+
+    fn config(&self) -> &DispatchConfig {
+        &self.config
+    }
+}
+
 impl ArtifactInstance for SpirvArtifactInstance {
     vyre_driver::artifact_instance_identity!();
 
@@ -121,52 +139,50 @@ impl ArtifactInstance for SpirvArtifactInstance {
 impl SpirvArtifactInstance {
     fn execute(
         &self,
-        mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        state: BTreeMap<ArtifactValueId, Vec<u8>>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
-        for module in &self.modules {
-            let mut config = module.config.clone();
-            materialize::override_grid(&mut config, invocation_grid);
-            let plan = BindingPlan::build(&module.program)?;
-            let inputs = self.core.gather_inputs(
-                &plan,
-                &module.program,
-                &state,
-                materialize::unbound_input,
-            )?;
-            // SAFETY: `native` owns a live Vulkan device for the entire instance;
-            // words were validated as aligned SPIR-V and Program metadata came
-            // from the authenticated neutral artifact.
-            let outputs = unsafe {
-                vulkan::dispatch_program(
-                    &self.native,
+        self.core.execute_modules(
+            &self.modules,
+            state,
+            invocation_grid,
+            omitted_output,
+            |module, plan, config, state| {
+                let inputs = self.core.gather_inputs(
+                    plan,
                     &module.program,
-                    &module.words,
-                    &inputs,
-                    &config,
-                )
-            }?;
-            // A SPIR-V dispatch that returns fewer buffers than the plan declares
-            // leaves the earlier value in place rather than failing the submission.
-            for binding in &plan.bindings {
-                let Some(output_index) = binding.output_index else {
-                    continue;
-                };
-                let buffer = &module.program.buffers()[binding.buffer_index];
-                let value = self.core.values.get(buffer.name()).ok_or_else(|| {
-                    BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: output buffer `{}` must project from the canonical artifact ABI.",
-                            buffer.name()
-                        ),
-                    }
-                })?;
-                if let Some(bytes) = outputs.get(output_index) {
-                    state.insert(*value, bytes.clone());
-                }
-            }
-        }
-        self.core.completion(&state, None)
+                    state,
+                    materialize::unbound_input,
+                )?;
+                let started = Instant::now();
+                // SAFETY: `native` owns a live Vulkan device for the entire instance;
+                // words were validated as aligned SPIR-V and Program metadata came
+                // from the authenticated neutral artifact.
+                let outputs = unsafe {
+                    vulkan::dispatch_program(
+                        &self.native,
+                        &module.program,
+                        &module.words,
+                        &inputs,
+                        config,
+                    )
+                }?;
+                Ok(TimedDispatchResult {
+                    outputs,
+                    wall_ns: u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
+                        BackendError::DispatchFailed {
+                            code: None,
+                            message:
+                                "SPIR-V dispatch duration overflowed a 64-bit nanosecond count"
+                                    .to_string(),
+                        }
+                    })?,
+                    device_ns: None,
+                    enqueue_ns: None,
+                    wait_ns: None,
+                })
+            },
+        )
     }
 }
 
