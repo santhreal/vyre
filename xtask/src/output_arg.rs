@@ -194,19 +194,18 @@ pub fn create_parent_dir(path: &Path) {
     }
 }
 
-/// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
+/// Render `value` as the exact bytes an evidence artifact holds on disk.
 ///
-/// The parent directory is created here, because an artifact writer that has to
-/// remember to create it is one that will eventually forget.
-pub fn write_json(path: &Path, value: &impl serde::Serialize) {
-    create_parent_dir(path);
-    let json = match serde_json::to_string_pretty(value) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
-            std::process::exit(1);
-        }
-    };
+/// Pretty JSON, workspace paths normalised to repository-relative form, one
+/// trailing newline. A gate that regenerates an artifact in memory and a writer
+/// that puts one on disk must agree byte for byte, or every comparison reports
+/// a difference that is only the serializer, so both read this.
+///
+/// # Errors
+///
+/// Returns the serializer's message when `value` cannot be represented as JSON.
+pub fn render_evidence_json(value: &impl serde::Serialize) -> Result<String, String> {
+    let json = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
     let vyre_root = crate::checkout::checkout_root();
     let santh_root = vyre_root
         .parent()
@@ -216,7 +215,23 @@ pub fn write_json(path: &Path, value: &impl serde::Serialize) {
         .map(Path::to_path_buf)
         .unwrap_or_else(|| vyre_root.clone());
     let json = normalize_serialized_workspace_paths(&json, &vyre_root, &santh_root);
-    if let Err(error) = std::fs::write(path, format!("{json}\n")) {
+    Ok(format!("{json}\n"))
+}
+
+/// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
+///
+/// The parent directory is created here, because an artifact writer that has to
+/// remember to create it is one that will eventually forget.
+pub fn write_json(path: &Path, value: &impl serde::Serialize) {
+    create_parent_dir(path);
+    let json = match render_evidence_json(value) {
+        Ok(json) => json,
+        Err(error) => {
+            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
+            std::process::exit(1);
+        }
+    };
+    if let Err(error) = std::fs::write(path, json) {
         eprintln!("Fix: failed to write `{}`: {error}", path.display());
         std::process::exit(1);
     }
