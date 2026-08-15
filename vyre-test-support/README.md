@@ -55,7 +55,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-test-support/tests/binop_parity_tables.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test binop_parity_tables
+./cargo_full test -p vyre-test-support --test binop_parity_tables
 ```
 
 ### Features

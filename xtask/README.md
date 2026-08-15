@@ -104,7 +104,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `xtask/src/main.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p xtask -- --help
+./cargo_full run -p xtask -- --help
 ```
 
 ### Features

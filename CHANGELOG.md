@@ -270,6 +270,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   been answered by deleting them. Keying on the pair means a reviewed
   declaration exempts the gate it names and not the next one added to the same
   file.
+- `xtask` declares `default-run`, and a tree contract derives every `cargo run`
+  in the workflows and scripts at run time, derives the binary targets from
+  every member's manifest and source layout, and fails when an invocation does
+  not resolve to exactly one target. A package that ships more than one binary
+  and declares no default makes a bare `cargo run -p <package>` exit 101 before
+  running anything, which is a property of the manifest rather than of any line
+  of code: adding a second file under `xtask/src/bin` failed nineteen hosted
+  jobs at their first step and nothing in the workspace could see it. The sweep
+  already asserted that every registered subcommand is named by a workflow;
+  this is the other direction. An invocation form the scan cannot attribute is
+  an error rather than a skip, because a form nobody checked is how this
+  reached CI.
 
 ### Changed
 
@@ -1444,6 +1456,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `docs/testing/STRUCTURAL_GATES.toml`: the resident queue materializer variant
   scan and the published quantized entry-point scan. Each asserts the absence
   of a case or a row, which no execution of the covered code can witness.
+- The generated crate README contracts invoke the workspace wrapper directly
+  instead of prefixing `CARGO_BUILD_JOBS=1`. Build configuration is declared
+  once, in the cargo config and the root profiles, where it is reviewable and
+  applies to every build equally; a per-invocation override makes each reader's
+  build a different build, and thirty-six generated documents were teaching
+  exactly that.
 
 ### Removed
 
