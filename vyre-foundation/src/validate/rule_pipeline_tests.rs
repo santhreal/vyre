@@ -66,17 +66,7 @@ impl NodeVisitor for BufferNamesReached {
             | Node::AllReduce { buffer, .. }
             | Node::Broadcast { buffer, .. } => record(buffer),
             Node::IndirectDispatch { count_buffer, .. } => record(count_buffer),
-            Node::AsyncLoad {
-                source,
-                destination,
-                ..
-            }
-            | Node::AsyncStore {
-                source,
-                destination,
-                ..
-            }
-            | Node::AllGather {
+            Node::AllGather {
                 input: source,
                 output: destination,
                 ..
@@ -89,6 +79,13 @@ impl NodeVisitor for BufferNamesReached {
                 record(source);
                 record(destination);
             }
+            // An async transfer's `source` and `destination` name storage tiers,
+            // not entries in the dispatch's buffer table, so the validator does
+            // not resolve them and neither does this comparison.
+            // `extension_adversarial::async_extension_tags_remain_structural`
+            // pins that. Their `offset` and `size` operands are ordinary
+            // expressions and are reached through `ExprVisitor` below.
+            Node::AsyncLoad { .. } | Node::AsyncStore { .. } => {}
             _ => {}
         }
     }
@@ -121,10 +118,14 @@ fn unknown_buffer_name(message: &str) -> Option<String> {
 // `unknown buffer` diagnostic, which makes the two walks directly
 // comparable. A node or expression kind that one walk descends into and
 // the other skips shows up here as a set difference.
+//
+// The case count is raised because the corpus now reaches every `Node` variant:
+// at 128 cases over 8 variants no async transfer, collective, trap or region was
+// ever generated, so the walks were only ever compared on stores, loops and ifs.
 // ------------------------------------------------------------------
 proptest! {
     #![proptest_config(ProptestConfig {
-        cases: 128,
+        cases: 512,
         ..ProptestConfig::default()
     })]
 
@@ -147,12 +148,18 @@ proptest! {
 }
 
 // ------------------------------------------------------------------
-// Regression test: new single-pass validator must emit exactly the
-// same errors (+ warnings) as the old four-walk validator.
+// Regression test: the single-pass validator must emit exactly the same
+// errors (+ warnings) as the recursive walk it replaced.
+//
+// The corpus reaches every `Node` variant, so the shapes this compares now
+// include async transfers, collectives, traps, opaque extensions and regions.
+// The case count is raised to match: at 50 cases over 8 variants the async
+// alias-operand divergence and the region-scope divergence were both
+// unreachable.
 // ------------------------------------------------------------------
 proptest! {
     #![proptest_config(ProptestConfig {
-        cases: 50,
+        cases: 512,
         ..ProptestConfig::default()
     })]
 
@@ -549,5 +556,307 @@ fn store_bool_comparison_result_into_u32_buffer_validates() {
             .iter()
             .any(|e| e.code().as_str() == "V045" || e.message().contains("value has type")),
         "storing a bool comparison result into a u32 buffer must validate, got: {errors:?}"
+    );
+}
+
+// ------------------------------------------------------------------
+// `V116` had two implementations that disagreed, and production was the
+// under-reporting one.
+//
+// The flat whole-program pass in `validate::fusion_safety` recorded a transfer's
+// `offset` and `size` operands as buffer accesses; the frame-scoped copy threaded
+// through `PreorderValidator`'s stack machine recorded only `source` and
+// `destination`. An atomic in a transfer size was therefore a hazard to one
+// implementation and invisible to the other, and the one every caller of
+// `validate` reached was the blind one.
+//
+// The measured disagreement is the async operand, not, as the frame machinery
+// suggested, an atomic and a read in different frames: both implementations
+// scoped alias state to one node sequence, so a nested body started with empty
+// state in each and neither reported across a `Block`, an `If` branch or a
+// `Loop` body.
+// ------------------------------------------------------------------
+
+fn alias_hazard_program(entry: Vec<Node>) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::output("out", 0, DataType::U32)
+                .with_count(8)
+                .with_output_byte_range(0..16),
+            BufferDecl::read("input", 1, DataType::U32).with_count(8),
+            BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
+            BufferDecl::read_write("other", 3, DataType::U32).with_count(8),
+        ],
+        [1, 1, 1],
+        entry,
+    )
+}
+
+fn atomic_add(buffer: &str) -> Expr {
+    Expr::Atomic {
+        op: crate::ir::AtomicOp::Add,
+        buffer: buffer.into(),
+        index: Box::new(Expr::u32(0)),
+        expected: None,
+        value: Box::new(Expr::u32(1)),
+        ordering: crate::MemoryOrdering::SeqCst,
+    }
+}
+
+fn async_store_with_size(size: Expr) -> Node {
+    Node::AsyncStore {
+        source: "input".into(),
+        destination: "out".into(),
+        offset: Box::new(Expr::u32(0)),
+        size: Box::new(size),
+        tag: "stream0".into(),
+    }
+}
+
+fn hazard_buffers(program: &Program) -> Vec<String> {
+    validate(program)
+        .iter()
+        .filter(|error| error.code().as_str() == "V116")
+        .filter_map(|error| {
+            error
+                .message()
+                .split("fusion hazard on buffer `")
+                .nth(1)?
+                .split('`')
+                .next()
+                .map(str::to_string)
+        })
+        .collect()
+}
+
+#[test]
+fn atomic_in_an_async_transfer_size_is_a_fusion_hazard() {
+    let program = alias_hazard_program(vec![
+        Node::let_bind("snapshot", Expr::load("rw", Expr::u32(0))),
+        async_store_with_size(atomic_add("rw")),
+    ]);
+
+    assert_eq!(
+        hazard_buffers(&program),
+        vec!["rw".to_string()],
+        "an atomic on `rw` in a transfer size must be a V116 hazard against the plain read \
+         of `rw` before it: {:?}",
+        validate(&program)
+    );
+}
+
+#[test]
+fn atomic_in_an_async_transfer_offset_is_a_fusion_hazard() {
+    let program = alias_hazard_program(vec![
+        Node::let_bind("snapshot", Expr::load("rw", Expr::u32(0))),
+        Node::AsyncLoad {
+            source: "input".into(),
+            destination: "out".into(),
+            offset: Box::new(atomic_add("rw")),
+            size: Box::new(Expr::u32(1)),
+            tag: "stream0".into(),
+        },
+    ]);
+
+    assert_eq!(
+        hazard_buffers(&program),
+        vec!["rw".to_string()],
+        "the offset operand carries the same hazard as the size operand: {:?}",
+        validate(&program)
+    );
+}
+
+#[test]
+fn a_barrier_clears_an_async_transfer_operand_hazard() {
+    // Negative control for the two tests above: the rule is "without an explicit
+    // barrier", so the same program with a barrier between the read and the
+    // transfer must be accepted. A V116 that fired on every transfer would pass
+    // them both.
+    let program = alias_hazard_program(vec![
+        Node::let_bind("snapshot", Expr::load("rw", Expr::u32(0))),
+        Node::barrier(),
+        async_store_with_size(atomic_add("rw")),
+    ]);
+
+    assert!(
+        hazard_buffers(&program).is_empty(),
+        "a barrier between the read path and the atomic path clears the hazard: {:?}",
+        validate(&program)
+    );
+}
+
+#[test]
+fn an_async_transfer_operand_atomic_on_another_buffer_is_not_a_hazard() {
+    // Second negative control: the hazard is per buffer. An atomic on `other`
+    // must not be reported against a read of `rw`.
+    let program = alias_hazard_program(vec![
+        Node::let_bind("snapshot", Expr::load("rw", Expr::u32(0))),
+        async_store_with_size(atomic_add("other")),
+    ]);
+
+    assert!(
+        hazard_buffers(&program).is_empty(),
+        "an atomic on a different buffer is not a hazard against `rw`: {:?}",
+        validate(&program)
+    );
+}
+
+// ------------------------------------------------------------------
+// `Node::Region` scopes its body, and the walk that replaced the recursive
+// one must agree with it.
+//
+// The recursive walk passed no scope log for a region body, so a `let` inside a
+// region leaked into the enclosing scope and stayed live for the rest of the
+// program. `region_inline` flattens a small Region into its parent and re-wraps
+// it in a `Node::Block` when a name would collide, which is only sound while a
+// region body's bindings are scoped, so the leak was the defect.
+// ------------------------------------------------------------------
+
+fn region(generator: &str, body: Vec<Node>) -> Node {
+    Node::Region {
+        generator: generator.into(),
+        source_region: None,
+        body: std::sync::Arc::new(body),
+    }
+}
+
+fn unknown_variable_errors(program: &Program) -> Vec<String> {
+    validate(program)
+        .iter()
+        .filter(|error| error.code().as_str() == "V066")
+        .map(|error| error.message().to_string())
+        .collect()
+}
+
+#[test]
+fn a_let_inside_a_region_does_not_outlive_the_region() {
+    let program = alias_hazard_program(vec![
+        region("stage.accumulate", vec![Node::let_bind("acc", Expr::u32(1))]),
+        region(
+            "stage.write",
+            vec![Node::store("out", Expr::u32(0), Expr::var("acc"))],
+        ),
+    ]);
+
+    assert!(
+        unknown_variable_errors(&program)
+            .iter()
+            .any(|message| message.contains("acc")),
+        "a region scopes its body, so `acc` is unbound in the next region: {:?}",
+        validate(&program)
+    );
+}
+
+#[test]
+fn a_let_inside_a_block_does_not_outlive_the_block() {
+    // `Block` and `Region` carry the same binding lifetime, so the same shape
+    // must be rejected through both. A rule that held for only one of them would
+    // let `region_inline` swap a Region for a Block and change scoping.
+    let program = alias_hazard_program(vec![
+        Node::Block(vec![Node::let_bind("acc", Expr::u32(1))]),
+        Node::store("out", Expr::u32(0), Expr::var("acc")),
+    ]);
+
+    assert!(
+        unknown_variable_errors(&program)
+            .iter()
+            .any(|message| message.contains("acc")),
+        "a `Block` scopes its bindings: {:?}",
+        validate(&program)
+    );
+}
+
+#[test]
+fn a_let_inside_a_region_does_not_outlive_the_scope_holding_the_region() {
+    // The recursive walk's leak was unbounded, not one level: a binding declared
+    // in a region nested inside an `If` survived the `If` too.
+    let program = alias_hazard_program(vec![
+        Node::If {
+            cond: Expr::LitBool(true),
+            then: vec![region(
+                "stage.accumulate",
+                vec![Node::let_bind("acc", Expr::u32(1))],
+            )],
+            otherwise: Vec::new(),
+        },
+        Node::store("out", Expr::u32(0), Expr::var("acc")),
+    ]);
+
+    assert!(
+        unknown_variable_errors(&program)
+            .iter()
+            .any(|message| message.contains("acc")),
+        "neither the region nor the `If` around it lets `acc` escape: {:?}",
+        validate(&program)
+    );
+}
+
+#[test]
+fn sibling_regions_may_each_bind_the_same_name() {
+    // Negative control on the scope rule: restoring the region's scope must not
+    // turn two composed child regions that each declare `acc` into a sibling
+    // duplicate.
+    let program = alias_hazard_program(vec![
+        region("stage.one", vec![Node::let_bind("acc", Expr::u32(1))]),
+        region("stage.two", vec![Node::let_bind("acc", Expr::u32(2))]),
+    ]);
+
+    let errors = validate(&program);
+    assert!(
+        !errors.iter().any(|error| error.code().as_str() == "V032"),
+        "two child regions binding the same name are not sibling duplicates: {errors:?}"
+    );
+}
+
+// ------------------------------------------------------------------
+// An async transfer's endpoints are storage-tier tags, not buffer references.
+//
+// `AsyncLoad`/`AsyncStore` name the tier a transfer moves bytes between, which
+// is outside the dispatch's buffer table, so neither endpoint resolves against
+// it. The operands that ARE program expressions, `offset` and `size`, do
+// resolve, and validating them is what surfaced the `V116` under-report.
+// ------------------------------------------------------------------
+
+#[test]
+fn an_async_transfer_endpoint_is_not_resolved_against_the_buffer_table() {
+    let program = alias_hazard_program(vec![Node::AsyncLoad {
+        source: "ssd".into(),
+        destination: "vram".into(),
+        offset: Box::new(Expr::u32(0)),
+        size: Box::new(Expr::u32(1)),
+        tag: "stream0".into(),
+    }]);
+
+    assert!(
+        unknown_variable_errors(&program).is_empty(),
+        "transfer endpoints are tier tags, not buffers: {:?}",
+        validate(&program)
+    );
+    assert!(
+        validate(&program).is_empty(),
+        "a transfer between two tiers carries no diagnostic at all: {:?}",
+        validate(&program)
+    );
+}
+
+#[test]
+fn an_async_transfer_offset_still_resolves_its_buffer_loads() {
+    // The endpoints being opaque must not make the whole node opaque: a load
+    // from an undeclared buffer inside `offset` is a program expression and is
+    // rejected exactly as it would be in a store index.
+    let program = alias_hazard_program(vec![Node::AsyncLoad {
+        source: "ssd".into(),
+        destination: "vram".into(),
+        offset: Box::new(Expr::load("typo", Expr::u32(0))),
+        size: Box::new(Expr::u32(1)),
+        tag: "stream0".into(),
+    }]);
+
+    let errors = validate(&program);
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.message().contains("unknown buffer `typo`")),
+        "a load inside a transfer offset resolves like any other load: {errors:?}"
     );
 }

@@ -1139,3 +1139,18 @@ text = "`loop_legality_collector_closure` plants a scalar read, a buffer load, a
 id = "foundation-duplication-pin-lowered-to-measured"
 category = "Changed"
 text = "The `vyre-foundation` duplication pin records what the tree measures after the owners above: 4028 to 3718 duplicated lines, with `total_lines` measured. A pin with room under it hides the next copy."
+
+[[fragments]]
+id = "fusion-alias-hazard-rule-has-one-owner"
+category = "Fixed"
+text = "The fusion-alias hazard rule `V116` has one owner, the whole-program pass in `vyre-foundation/src/validate/fusion_safety.rs`, which both the production single-pass validator and the legacy differential arm call. Production carried a second copy inside its frame stack that recorded only two of an async transfer's four operands, so an atomic sitting in an `AsyncLoad` or `AsyncStore` `offset` or `size` expression was not recorded as an access and did not raise a hazard against an unsynchronized read of the same buffer: the program validated clean and was fused. The hazard is a relation between two nodes rather than a property of a frame, and one rule with two implementations gave one program two answers depending on which arm read it. `V113`, the malformed-alias-frame code the deleted copy raised, is retired from the registry and the code catalog."
+
+[[fragments]]
+id = "region-scopes-its-body-in-both-validator-walks"
+category = "Fixed"
+text = "Both validator walks agree that `Node::Region` scopes its body. The legacy multi-walk arm recorded no scope log for a region body, so a `let` inside a region was never undone and stayed live past the region, past an enclosing `If` branch, and on through the rest of the program, which let it shadow or collide with a later binding of the same name without a diagnostic. The pass that flattens a small region into its parent sequence re-wraps it in a `Node::Block` on a name collision, and that is sound only while a region body's bindings die at the region boundary."
+
+[[fragments]]
+id = "ir-shape-corpus-reaches-every-node-variant"
+category = "Changed"
+text = "The IR-shape proptest corpus generates all twenty `Node` variants, up from eight. Async transfers and waits, traps and resumes, the four collectives, indirect dispatch, regions and opaque extensions were never produced, so every property that walks the corpus was only ever compared on stores, lets, assigns, ifs, loops, blocks, barriers and returns. A gate enumerates the variant names the IR registry declares at run time and fails until each is either generated or recorded with a reason, so a variant added later cannot silently escape the corpus. Case counts on the two cross-walk properties are raised to match the wider shape space."

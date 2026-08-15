@@ -11,7 +11,6 @@ pub use super::depth::{
     DEFAULT_MAX_NODE_COUNT,
 };
 use super::expr_rules::validate_output_markers;
-use super::fusion_safety::{collect_expr_accesses, NodeAccesses};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use std::borrow::Cow;
 // Self-composition (duplicate self-exclusive regions) is enforced in
@@ -94,6 +93,13 @@ pub fn validate_with_options(
     validator.run(program.entry());
     report.errors.append(&mut validator.errors);
     report.warnings.append(&mut validator.warnings);
+
+    // V116 has exactly one implementation, and it is a whole-program pass, not
+    // a rule the node walk can carry: the hazard is a relation between two
+    // nodes, and threading it through the walk's frame stack is what let the
+    // walk record a transfer's `source`/`destination` while dropping the
+    // `offset`/`size` operands.
+    super::fusion_safety::validate_fusion_alias_hazards(program.entry(), &mut report.errors);
 
     // P-1.0-V2.2: linear-type discipline checker. Reports buffers
     // whose `LinearType` declaration is violated by the actual usage
@@ -273,10 +279,6 @@ struct ScopeFrame<'p> {
 enum Frame<'p> {
     /// Visit a single node (pre-order).
     Child(&'p Node),
-    /// Post-order action for `If`: extend parent alias state with cond accesses.
-    PostIf,
-    /// Post-order action for `Loop`: extend parent alias state with from/to accesses.
-    PostLoop,
     /// Enter a new scope.
     PushScope {
         divergent: bool,
@@ -285,10 +287,6 @@ enum Frame<'p> {
     },
     /// Leave the current scope and check `Return` position.
     PopScope,
-    /// Enter a fresh alias tracking frame.
-    PushAlias,
-    /// Restore the parent alias tracking frame.
-    PopAlias,
     /// Inject the loop variable binding into the current scope. The
     /// `uniform` flag mirrors the loop's bound uniformity: in a
     /// uniform-bound loop every invocation walks the same iteration
@@ -305,10 +303,6 @@ struct PreorderValidator<'p, 'o> {
     scope: FxHashMap<Ident, Binding>,
     scope_stack: SmallVec<[ScopeFrame<'p>; 16]>,
     limits: depth::LimitState,
-    alias_reads: FxHashSet<Ident>,
-    alias_atomics: FxHashSet<Ident>,
-    alias_stack: SmallVec<[(FxHashSet<Ident>, FxHashSet<Ident>); 8]>,
-    pending_alias_extensions: SmallVec<[NodeAccesses; 8]>,
     self_comp_counts: hashbrown::HashMap<String, usize>,
     errors: Vec<ValidationError>,
     warnings: Vec<super::ValidationWarning>,
@@ -329,10 +323,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
             scope: FxHashMap::default(),
             scope_stack: SmallVec::new(),
             limits: depth::LimitState::default(),
-            alias_reads: FxHashSet::default(),
-            alias_atomics: FxHashSet::default(),
-            alias_stack: SmallVec::new(),
-            pending_alias_extensions: SmallVec::new(),
             self_comp_counts: hashbrown::HashMap::default(),
             errors: Vec::new(),
             current_node: 0,
@@ -352,7 +342,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         for node in nodes.iter().rev() {
             stack.push(Frame::Child(node));
         }
-        stack.push(Frame::PushAlias);
         stack.push(Frame::PushScope {
             divergent: false,
             depth: 0,
@@ -385,7 +374,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                             let parent_divergent = self.current_divergent();
                             let branch_divergent =
                                 parent_divergent || !is_uniform(cond, &self.scope);
-                            stack.push(Frame::PostIf);
                             push_nested_sequence(
                                 &mut stack,
                                 otherwise,
@@ -424,7 +412,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                             // parent is divergent the var only matters
                             // within already-divergent context.
                             let var_uniform = bounds_uniform && !parent_divergent;
-                            stack.push(Frame::PostLoop);
                             push_nested_sequence(
                                 &mut stack,
                                 body,
@@ -441,6 +428,11 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                             let divergent = self.current_divergent();
                             push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
                         }
+                        // A region scopes its body like a block: a `let` inside
+                        // one does not outlive the region. `region_inline_scope`
+                        // pins that, because `region_inline` flattening a Region
+                        // into its parent is only sound while the parent cannot
+                        // already see the flattened bindings.
                         Node::Region { body, .. } => {
                             let depth = self.current_depth();
                             let divergent = self.current_divergent();
@@ -452,11 +444,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                         if matches!(issue.location(), ValidationLocation::Program) {
                             issue.set_location(ValidationLocation::Node(self.current_node));
                         }
-                    }
-                }
-                Frame::PostIf | Frame::PostLoop => {
-                    if let Some(accesses) = self.pending_alias_extensions.pop() {
-                        self.extend_alias(&accesses);
                     }
                 }
                 Frame::PushScope {
@@ -479,23 +466,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                     };
                     node_rules::restore_scope(&mut self.scope, frame.scope_log);
                     node_rules::check_unreachable_after_return(frame.nodes, &mut self.errors);
-                }
-                Frame::PushAlias => {
-                    let reads = std::mem::take(&mut self.alias_reads);
-                    let atomics = std::mem::take(&mut self.alias_atomics);
-                    self.alias_stack.push((reads, atomics));
-                    self.alias_reads = FxHashSet::default();
-                    self.alias_atomics = FxHashSet::default();
-                }
-                Frame::PopAlias => {
-                    let Some((reads, atomics)) = self.alias_stack.pop() else {
-                        self.errors.push(err("V113", ValidationPhase::Node, ValidationLocation::Program, "malformed validation frame stream: PopAlias without matching PushAlias".to_string(), "rebuild the program through the structured IR builder before validation.".to_string()));
-                        continue;
-                    };
-                    let _ = std::mem::take(&mut self.alias_reads);
-                    let _ = std::mem::take(&mut self.alias_atomics);
-                    self.alias_reads = reads;
-                    self.alias_atomics = atomics;
                 }
                 Frame::InsertLoopVar { var, uniform } => {
                     let Some(frame) = self.scope_stack.last_mut() else {
@@ -585,51 +555,25 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         self.warnings.append(&mut self.expr_report_scratch.warnings);
     }
 
-    /// Report fusion-alias hazards between `accesses` and the current linear state.
-    fn report_alias_hazards(&mut self, accesses: &NodeAccesses) {
-        let mut hazards = accesses
-            .atomic_buffers
-            .intersection(&self.alias_reads)
-            .cloned()
-            .collect::<SmallVec<[Ident; 8]>>();
-        hazards.extend(
-            accesses
-                .read_buffers
-                .intersection(&self.alias_atomics)
-                .cloned(),
-        );
-        hazards.sort_unstable_by(|a, b| a.as_str().cmp(b.as_str()));
-        hazards.dedup();
-
-        for buffer in hazards {
-            self.errors.push(err("V116", ValidationPhase::Composition, ValidationLocation::Program, format!(
-                "fusion hazard on buffer `{buffer}`: one node reads it non-atomically while another issues an atomic access without an explicit barrier"
-            ), format!(
-                "insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."
-            )));
-        }
-    }
-
-    /// Extend the current alias frame with `accesses`.
-    fn extend_alias(&mut self, accesses: &NodeAccesses) {
-        self.alias_reads
-            .extend(accesses.read_buffers.iter().cloned());
-        self.alias_atomics
-            .extend(accesses.atomic_buffers.iter().cloned());
-    }
-
     /// An async transfer carries the same empty-tag rule as the wait that pairs
-    /// with it, plus the two buffers it touches.
+    /// with it, and validates `offset` and `size` as expressions like any other.
     ///
-    /// It reported that rule as `V117` while `visit_async_wait` reported the
+    /// It reported the tag rule as `V117` while `visit_async_wait` reported the
     /// identical condition as `V128`, so the same defect had two stable
     /// identities depending on which end of the transfer carried it. `V128` is
-    /// the per-node rule family this belongs to (`V119`-`V130`); `V117` sat in
-    /// the malformed-frame-stream range and is gone.
+    /// the per-node rule family this belongs to; `V117` sat in the
+    /// malformed-frame-stream range and is gone.
+    ///
+    /// `source` and `destination` are storage-tier tags, not buffer-table
+    /// entries: a transfer names an endpoint outside the dispatch's buffers, so
+    /// neither is resolved. `extension_adversarial::async_extension_tags_remain_structural`
+    /// pins that.
+    ///
+    /// What this does NOT do is record alias accesses. `V116` is owned by
+    /// `super::fusion_safety`, which records all four operands; recording two of
+    /// them here as well is what produced two answers for one rule.
     fn validate_async_transfer(
         &mut self,
-        source: &Ident,
-        destination: &Ident,
         offset: &Expr,
         size: &Expr,
         tag: &Ident,
@@ -644,12 +588,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         self.validate_expr(offset, 0);
         self.validate_expr(size, 0);
 
-        let mut accesses = NodeAccesses::default();
-        accesses.read_buffers.insert(source.clone());
-        accesses.read_buffers.insert(destination.clone());
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
-
         ControlFlow::Continue(())
     }
 }
@@ -663,14 +601,12 @@ fn push_nested_sequence<'p>(
     pre_children: Option<Frame<'p>>,
 ) {
     stack.push(Frame::PopScope);
-    stack.push(Frame::PopAlias);
     for child in nodes.iter().rev() {
         stack.push(Frame::Child(child));
     }
     if let Some(pre) = pre_children {
         stack.push(pre);
     }
-    stack.push(Frame::PushAlias);
     stack.push(Frame::PushScope {
         divergent,
         depth,
@@ -683,25 +619,25 @@ macro_rules! async_transfer_visitors {
         fn visit_async_load(
             &mut self,
             _node: &Node,
-            source: &Ident,
-            destination: &Ident,
+            _source: &Ident,
+            _destination: &Ident,
             offset: &Expr,
             size: &Expr,
             tag: &Ident,
         ) -> ControlFlow<Self::Break> {
-            self.validate_async_transfer(source, destination, offset, size, tag)
+            self.validate_async_transfer(offset, size, tag)
         }
 
         fn visit_async_store(
             &mut self,
             _node: &Node,
-            source: &Ident,
-            destination: &Ident,
+            _source: &Ident,
+            _destination: &Ident,
             offset: &Expr,
             size: &Expr,
             tag: &Ident,
         ) -> ControlFlow<Self::Break> {
-            self.validate_async_transfer(source, destination, offset, size, tag)
+            self.validate_async_transfer(offset, size, tag)
         }
     };
 }
@@ -760,11 +696,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
             Some(&mut frame.scope_log),
         );
 
-        let mut accesses = NodeAccesses::default();
-        collect_expr_accesses(value, &mut accesses);
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
-
         ControlFlow::Continue(())
     }
 
@@ -785,11 +716,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         if let Some(binding) = self.scope.get_mut(name.as_str()) {
             binding.uniform = binding.uniform && new_uniform;
         }
-
-        let mut accesses = NodeAccesses::default();
-        collect_expr_accesses(value, &mut accesses);
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
 
         ControlFlow::Continue(())
     }
@@ -814,13 +740,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         self.validate_expr(index, 0);
         self.validate_expr(value, 0);
 
-        let mut accesses = NodeAccesses::default();
-        accesses.read_buffers.insert(buffer.clone());
-        collect_expr_accesses(index, &mut accesses);
-        collect_expr_accesses(value, &mut accesses);
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
-
         ControlFlow::Continue(())
     }
 
@@ -835,11 +754,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         self.validate_expr(cond, 0);
         node_rules::check_if_condition(cond, &self.buffers, &self.scope, &mut self.errors);
-
-        let mut accesses = NodeAccesses::default();
-        collect_expr_accesses(cond, &mut accesses);
-        self.report_alias_hazards(&accesses);
-        self.pending_alias_extensions.push(accesses);
 
         ControlFlow::Continue(())
     }
@@ -863,13 +777,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         let mut back_edge_scope = self.scope.clone();
         back_edge_scope.insert(var.clone(), node_rules::loop_var_binding(var_uniform));
         barrier::check_loop_back_edge(body, &back_edge_scope, &mut self.errors);
-
-        let mut accesses = NodeAccesses::default();
-        collect_expr_accesses(from, &mut accesses);
-        collect_expr_accesses(to, &mut accesses);
-        self.report_alias_hazards(&accesses);
-        self.pending_alias_extensions.push(accesses);
-
         ControlFlow::Continue(())
     }
 
@@ -887,12 +794,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
             &self.buffers,
             &mut self.errors,
         );
-
-        let mut accesses = NodeAccesses::default();
-        accesses.read_buffers.insert(count_buffer.clone());
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
-
         ControlFlow::Continue(())
     }
 
@@ -945,8 +846,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
             return ControlFlow::Continue(());
         };
         barrier::check_barrier(divergent, *ordering, &mut self.errors);
-        self.alias_reads.clear();
-        self.alias_atomics.clear();
         ControlFlow::Continue(())
     }
 
@@ -954,13 +853,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         node_rules::check_collective(node, self.options, &self.buffers, &mut self.errors);
-
-        let mut accesses = NodeAccesses::default();
-        for name in node_rules::collective_buffers(node).into_iter().flatten() {
-            accesses.read_buffers.insert(name.clone());
-        }
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
         ControlFlow::Continue(())
     }
 
