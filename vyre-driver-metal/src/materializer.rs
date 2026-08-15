@@ -5,25 +5,17 @@ mod native {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
-    use vyre_driver::materialize::{self, InstanceCore, MaterializerDevice};
+    use vyre_driver::materialize::{self, ExecutableModule, InstanceCore, MaterializerDevice};
     use vyre_driver::{
-        ArtifactInstance, BindingPlan, BindingSet, Completion, Device, DeviceIdentity,
-        DispatchConfig, ResidentOwner, Submission,
+        ArtifactInstance, BindingSet, Completion, Device, DeviceIdentity, DispatchConfig,
+        ResidentOwner, Submission,
     };
     use vyre_foundation::ir::Program;
-    use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
+    use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
 
     use crate::runtime::{MetalBackend, MetalTargetModule};
     use crate::target_compiler::METAL_TARGET_FORMAT_VERSION;
     use crate::METAL_BACKEND_ID;
-
-    /// Rejection for a declared input whose canonical value was never bound.
-    fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
-        materialize::invalid_module(&format!(
-            "canonical artifact value {} for Program buffer `{name}` is unbound",
-            value.0
-        ))
-    }
 
     /// Rejection for a dispatch that skipped a declared output slot.
     fn omitted_output(output_index: usize, name: &str) -> BackendError {
@@ -38,9 +30,7 @@ mod native {
     }
 
     impl ArtifactMaterializer for MetalMaterializer {
-        fn device(&self) -> &dyn Device {
-            &self.descriptor
-        }
+        vyre_driver::materializer_passthrough!();
 
         fn materialize(
             &self,
@@ -98,18 +88,18 @@ mod native {
         modules: Vec<MetalExecutableModule>,
     }
 
+    impl ExecutableModule for MetalExecutableModule {
+        fn program(&self) -> &Program {
+            &self.program
+        }
+
+        fn config(&self) -> &DispatchConfig {
+            &self.config
+        }
+    }
+
     impl ArtifactInstance for MetalArtifactInstance {
-        fn artifact(&self) -> Digest {
-            self.core.artifact
-        }
-
-        fn payload(&self) -> Digest {
-            self.core.payload
-        }
-
-        fn device(&self) -> &DeviceIdentity {
-            &self.core.device
-        }
+        vyre_driver::artifact_instance_identity!();
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
             self.core.accept(&bindings)?;
@@ -126,31 +116,29 @@ mod native {
     impl MetalArtifactInstance {
         fn execute(
             &self,
-            mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+            state: BTreeMap<ArtifactValueId, Vec<u8>>,
             invocation_grid: Option<[u32; 3]>,
         ) -> Result<Completion, BackendError> {
-            for executable in &self.modules {
-                let mut config = executable.config.clone();
-                materialize::override_grid(&mut config, invocation_grid);
-                let plan = BindingPlan::build(&executable.program)?;
-                let inputs =
-                    self.core
-                        .gather_inputs(&plan, &executable.program, &state, unbound_input)?;
-                let dispatched = self.backend.dispatch_target_module(
-                    &executable.module,
-                    &executable.program,
-                    &inputs,
-                    &config,
-                )?;
-                self.core.absorb_outputs(
-                    &plan,
-                    &executable.program,
-                    &dispatched.outputs,
-                    &mut state,
-                    omitted_output,
-                )?;
-            }
-            self.core.completion(&state, None)
+            self.core.execute_modules(
+                &self.modules,
+                state,
+                invocation_grid,
+                omitted_output,
+                |executable, plan, config, state| {
+                    let inputs = self.core.gather_inputs(
+                        plan,
+                        &executable.program,
+                        state,
+                        materialize::unbound_input,
+                    )?;
+                    self.backend.dispatch_target_module(
+                        &executable.module,
+                        &executable.program,
+                        &inputs,
+                        config,
+                    )
+                },
+            )
         }
     }
 
