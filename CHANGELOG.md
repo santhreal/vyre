@@ -2150,6 +2150,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   measured. What remains between the three match-emitting entry points is their
   frozen positional signatures and the shared value they each construct from
   them, which no owner can absorb without changing the public ABI.
+- `vyre_lints::read_source_bounded` is public surface with its bound stated,
+  and `vyre_lints::LINT_SOURCE_READ_CAP` is public beside it so the number a
+  caller is refused at has one home instead of a constant and a sentence that
+  can disagree. The `vyre-lints` binary is a separate compilation unit and
+  reads the workspace manifest through the same reader, so making it
+  crate-internal would have meant a second reader with a second cap in the
+  binary. The public API snapshot records both.
 - Four binding and readback decisions in `vyre-driver-wgpu` are stated once.
   `pipeline::binding::declared_byte_size` owns the
   element-count-times-element-size product with its overflow refusal,
