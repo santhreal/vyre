@@ -14,6 +14,11 @@
 //! makes about a variant stays in that suite: this file owns only which
 //! variants exist.
 //!
+//! The `DataType` element table is not here. `DataType` fixtures are owned by
+//! `vyre_test_support::data_type_variants`, which holds them to the enum
+//! declaration in `vyre-spec` at run time, and this file owns the operator
+//! enums only.
+//!
 //! `Opaque` is deliberately absent from every table. It carries an extension
 //! id, so each suite draws its own: the property suites want an arbitrary id,
 //! the freeze tests want a pinned one.
@@ -23,7 +28,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use vyre_spec::{AtomicOp, BinOp, DataType, TernaryOp, UnOp};
+use vyre_spec::{AtomicOp, BinOp, TernaryOp, UnOp};
 
 /// Every builtin `BinOp`, in wire-tag order.
 pub(crate) fn builtin_bin_ops() -> Vec<BinOp> {
@@ -126,36 +131,6 @@ pub(crate) fn builtin_atomic_ops() -> Vec<AtomicOp> {
 /// Every builtin `TernaryOp`, in wire-tag order.
 pub(crate) fn builtin_ternary_ops() -> Vec<TernaryOp> {
     vec![TernaryOp::Fma, TernaryOp::Select]
-}
-
-/// The flat `DataType` forms a buffer declaration can carry as its element.
-///
-/// `element_size` parameterises `DataType::Array`, which is the one flat form
-/// that carries a payload. The nested forms (`Vec`, `TensorShaped`,
-/// `SparseBsr`, `Quantized`), `Handle` and `Opaque` are not here: a buffer
-/// element table and a cast-target table are different sets, and a suite that
-/// needs the nested forms builds them from these leaves.
-pub(crate) fn buffer_data_types(element_size: usize) -> Vec<DataType> {
-    vec![
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::U64,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Array { element_size },
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Tensor,
-    ]
 }
 
 /// Variant names of `vyre_spec::<enum_name>` as the checked-in public-API

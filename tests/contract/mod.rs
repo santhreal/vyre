@@ -9,6 +9,8 @@ mod device_only_routing;
 mod foundation_validate_contract;
 mod node_child_descent_owner;
 mod public_api_surface;
+#[path = "../support/source_scan.rs"]
+mod source_scan;
 mod xtask_help_smoke;
 
 /// Workspace root (`vyre/` directory).

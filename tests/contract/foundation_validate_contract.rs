@@ -6,14 +6,7 @@
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::validate::validate;
-
-fn output_program(nodes: Vec<Node>) -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        nodes,
-    )
-}
+use vyre_test_support::ir_variants::single_u32_output_program;
 
 fn must_reject(program: &Program, needle: &str, contract: &str) {
     let errors = validate(program);
@@ -55,7 +48,7 @@ fn contract_multiple_output_buffers_remain_forbidden() {
 #[test]
 fn contract_static_zero_divisor_remains_v044() {
     must_reject(
-        &output_program(vec![Node::let_bind(
+        &single_u32_output_program(vec![Node::let_bind(
             "x",
             Expr::div(Expr::u32(42), Expr::u32(0)),
         )]),
@@ -67,7 +60,7 @@ fn contract_static_zero_divisor_remains_v044() {
 #[test]
 fn contract_u64_arithmetic_remains_forbidden() {
     must_reject(
-        &output_program(vec![Node::let_bind(
+        &single_u32_output_program(vec![Node::let_bind(
             "x",
             Expr::add(Expr::u64(1), Expr::u64(2)),
         )]),
@@ -79,7 +72,7 @@ fn contract_u64_arithmetic_remains_forbidden() {
 #[test]
 fn contract_unknown_buffer_load_remains_forbidden() {
     must_reject(
-        &output_program(vec![Node::let_bind(
+        &single_u32_output_program(vec![Node::let_bind(
             "x",
             Expr::load("phantom", Expr::u32(0)),
         )]),
@@ -91,7 +84,7 @@ fn contract_unknown_buffer_load_remains_forbidden() {
 #[test]
 fn contract_select_branch_type_mismatch_remains_v029() {
     must_reject(
-        &output_program(vec![Node::let_bind(
+        &single_u32_output_program(vec![Node::let_bind(
             "x",
             Expr::select(Expr::bool(true), Expr::u32(1), Expr::f32(2.0)),
         )]),
@@ -103,7 +96,7 @@ fn contract_select_branch_type_mismatch_remains_v029() {
 #[test]
 fn contract_assignment_type_mismatch_remains_v045() {
     must_reject(
-        &output_program(vec![
+        &single_u32_output_program(vec![
             Node::let_bind("x", Expr::u32(1)),
             Node::assign("x", Expr::f32(1.0)),
         ]),
@@ -115,7 +108,7 @@ fn contract_assignment_type_mismatch_remains_v045() {
 #[test]
 fn contract_cast_u64_to_f32_remains_unsupported() {
     must_reject(
-        &output_program(vec![Node::let_bind(
+        &single_u32_output_program(vec![Node::let_bind(
             "x",
             Expr::cast(DataType::F32, Expr::u64(1)),
         )]),
@@ -127,7 +120,7 @@ fn contract_cast_u64_to_f32_remains_unsupported() {
 #[test]
 fn contract_if_condition_must_not_be_f32() {
     must_reject(
-        &output_program(vec![Node::if_then_else(
+        &single_u32_output_program(vec![Node::if_then_else(
             Expr::LitF32(1.0),
             vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
             vec![],
@@ -156,7 +149,7 @@ fn contract_duplicate_buffer_names_remain_forbidden() {
 #[test]
 fn contract_mixed_numeric_addition_remains_forbidden() {
     must_reject(
-        &output_program(vec![Node::let_bind(
+        &single_u32_output_program(vec![Node::let_bind(
             "x",
             Expr::BinOp {
                 op: BinOp::Add,
@@ -172,7 +165,7 @@ fn contract_mixed_numeric_addition_remains_forbidden() {
 #[test]
 fn contract_invocation_id_axis_out_of_range_remains_forbidden() {
     must_reject(
-        &output_program(vec![Node::let_bind("x", Expr::InvocationId { axis: 9 })]),
+        &single_u32_output_program(vec![Node::let_bind("x", Expr::InvocationId { axis: 9 })]),
         "invocation/workgroup ID axis 9 out of range",
         "invocation id axis bound",
     );

@@ -55,14 +55,15 @@ pub fn declared_data_type_variants() -> BTreeSet<String> {
     top_level_variant_names(body)
 }
 
-/// One fixture per declared `DataType` variant, in declaration order of this
-/// list rather than of the enum.
+/// The flat `DataType` forms a buffer declaration can carry as its element.
 ///
-/// Parameterised variants get the smallest well-formed payload: the tables
-/// under test key off the outer discriminant, and a fixture that varied the
-/// payload would test the payload rather than the table.
+/// `element_size` parameterises `DataType::Array`, the one flat form that
+/// carries a payload. The nested forms (`Vec`, `TensorShaped`, the sparse
+/// layouts, `Quantized`, `DeviceMesh`), `Handle` and `Opaque` are not here: a
+/// buffer element table and a cast-target table are different sets, and a
+/// suite that needs the nested forms builds them from these leaves.
 #[must_use]
-pub fn data_type_variant_samples() -> Vec<DataType> {
+pub fn buffer_element_data_types(element_size: usize) -> Vec<DataType> {
     vec![
         DataType::U8,
         DataType::U16,
@@ -76,12 +77,24 @@ pub fn data_type_variant_samples() -> Vec<DataType> {
         DataType::Vec4U32,
         DataType::Bool,
         DataType::Bytes,
-        DataType::Array { element_size: 1 },
+        DataType::Array { element_size },
         DataType::F16,
         DataType::BF16,
         DataType::F32,
         DataType::F64,
         DataType::Tensor,
+    ]
+}
+
+/// One fixture per declared `DataType` variant, the flat forms first.
+///
+/// Parameterised variants get the smallest well-formed payload: the tables
+/// under test key off the outer discriminant, and a fixture that varied the
+/// payload would test the payload rather than the table.
+#[must_use]
+pub fn data_type_variant_samples() -> Vec<DataType> {
+    let mut samples = buffer_element_data_types(1);
+    samples.extend([
         DataType::Handle(vyre_spec::data_type::TypeId(0)),
         DataType::Vec {
             element: Box::new(DataType::U32),
@@ -118,7 +131,8 @@ pub fn data_type_variant_samples() -> Vec<DataType> {
         DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId::from_name(
             "vyre.test_support.fixture_data_type",
         )),
-    ]
+    ]);
+    samples
 }
 
 /// The fixtures name every variant the spec declares, exactly once.

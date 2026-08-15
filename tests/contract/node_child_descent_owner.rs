@@ -60,9 +60,11 @@
 //! fixtures derived from `EXPR_VARIANT_NAMES` at run time.
 
 use std::collections::BTreeSet;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
+use super::source_scan::{
+    is_word_byte, mask_comments_and_strings, matching_brace, rust_sources_with_text,
+};
 use super::workspace_root;
 
 /// Field names that hold child nodes on some `Node` variant.
@@ -522,15 +524,7 @@ fn rewrite(node: &Node) -> Option<Node> {
 /// Every reported block in the tree, ordered.
 fn scan(root: &Path) -> Vec<Site> {
     let mut sites = Vec::new();
-    for file in rust_sources(root) {
-        let Ok(text) = fs::read_to_string(&file) else {
-            continue;
-        };
-        let relative = file
-            .strip_prefix(root)
-            .unwrap_or(&file)
-            .to_string_lossy()
-            .replace('\\', "/");
+    for (relative, text) in rust_sources_with_text(root) {
         for line in blocks_in(&text) {
             sites.push(Site {
                 path: relative.clone(),
@@ -596,23 +590,6 @@ fn scrutinee_is_a_node(rest: &str) -> Option<usize> {
     Some(consumed + (tail.len() - head.len()))
 }
 
-/// Index of the `}` closing the `{` at `open`.
-fn matching_brace(bytes: &[u8], open: usize) -> Option<usize> {
-    let mut depth = 0usize;
-    for (index, byte) in bytes.iter().enumerate().skip(open) {
-        match byte {
-            b'{' => depth += 1,
-            b'}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Some(index);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
 
 /// True when `body` has a `_ =>` arm at arm depth, not inside a nested pattern.
 fn has_top_level_wildcard_arm(body: &str) -> bool {
@@ -685,80 +662,4 @@ fn recurses_on_a_child_body(body: &str) -> bool {
         ];
         iterated.iter().any(|form| body.contains(form.as_str()))
     })
-}
-
-const fn is_word_byte(byte: u8) -> bool {
-    byte.is_ascii_alphanumeric() || byte == b'_'
-}
-
-/// `text` with line comments, block comments and string literals blanked out.
-///
-/// Blanked rather than removed so every reported byte offset still maps to the
-/// line it came from. Without this a brace inside a doc comment desynchronises
-/// the brace matcher for the rest of the file, and the gate reports whatever
-/// happens to follow.
-fn mask_comments_and_strings(text: &str) -> String {
-    let bytes = text.as_bytes();
-    let mut out = String::with_capacity(text.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        let rest = &text[index..];
-        if rest.starts_with("//") {
-            let end = rest.find('\n').map_or(bytes.len(), |offset| index + offset);
-            out.push_str(&" ".repeat(end - index));
-            index = end;
-        } else if rest.starts_with("/*") {
-            let end = rest.find("*/").map_or(bytes.len(), |offset| index + offset + 2);
-            for byte in &bytes[index..end] {
-                out.push(if *byte == b'\n' { '\n' } else { ' ' });
-            }
-            index = end;
-        } else if bytes[index] == b'"' {
-            let mut cursor = index + 1;
-            while cursor < bytes.len() {
-                match bytes[cursor] {
-                    b'\\' => cursor += 2,
-                    b'"' => break,
-                    _ => cursor += 1,
-                }
-            }
-            let end = (cursor + 1).min(bytes.len());
-            for byte in &bytes[index..end] {
-                out.push(if *byte == b'\n' { '\n' } else { ' ' });
-            }
-            index = end;
-        } else {
-            let character = text[index..].chars().next().unwrap_or(' ');
-            out.push(character);
-            index += character.len_utf8();
-        }
-    }
-    out
-}
-
-/// Every tracked `.rs` file under the workspace, target directories excluded.
-fn rust_sources(root: &Path) -> Vec<PathBuf> {
-    let mut found = Vec::new();
-    collect(root, &mut found);
-    found.sort();
-    found
-}
-
-fn collect(directory: &Path, found: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(directory) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        if path.is_dir() {
-            if name == "target" || name == ".git" || name.starts_with('.') {
-                continue;
-            }
-            collect(&path, found);
-        } else if path.extension().is_some_and(|extension| extension == "rs") {
-            found.push(path);
-        }
-    }
 }
