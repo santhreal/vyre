@@ -35,8 +35,13 @@ tempfile.workspace = true
 [lints]
 workspace = true
 
-# The binop parity tables live behind `ir-fixtures`, so their well-formedness
-# gate compiles only when that feature selects them.
+# The binop and cast parity tables live behind `ir-fixtures`, because both name
+# IR data types, so their well-formedness gates compile only when that feature
+# selects them.
 [[test]]
 name = "binop_parity_tables"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "cast_parity_tables"
 required-features = ["ir-fixtures"]
