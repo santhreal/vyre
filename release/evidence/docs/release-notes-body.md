@@ -3635,6 +3635,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registry at run time and run through every safety rule, including reversed
   and rotated lane orders, so a new intrinsic cannot arrive with a witness
   program no gate executes.
+- Three gates that reported `could not run` now run and report a number.
+  `list-ops` and `catalog` failed while building the canonical operation
+  schema: five registered `vyre-primitives::math` operations, the
+  symmetric-eigen Jacobi family, had no backend support row, because
+  `docs/optimization/OP_MATRIX.toml` was generated before they were registered.
+  Regenerating it gives each a row, and both gates then reported the artifact
+  they own does not exist; `docs/generated/op-inventory.toml` and
+  `docs/generated/catalog.toml` are now committed. `verify-rewrite-proofs`
+  needed a solver on PATH and discharges all ten shipped rewrite obligations as
+  unsatisfiable. A gate that cannot run records no finding, and a baseline that
+  stores its zero is a baseline that reports a defect as an achievement.
 - The gate crates resolve the checkout they report on from the working
   directory at run time, through `structure_gate::workspace_root`, and no
   checkout-identifying variable is declared in the cargo config. A
