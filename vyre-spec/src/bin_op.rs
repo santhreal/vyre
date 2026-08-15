@@ -24,6 +24,27 @@ pub enum OpIntensity {
     Heavy,
 }
 
+/// What a binary operator's result type is, as a function of its operands.
+///
+/// The type an expression has and the operand discipline a validator enforces
+/// are two questions with one answer per operator, and both used to be spelled
+/// out as an operator list at the point that asked. Two lists are two chances
+/// to forget an operator, and `BinOp` is `#[non_exhaustive]`, so every list
+/// downstream ended in a catch-all that classified a new operator without
+/// anybody choosing. [`BinOp::result_class`] is the one exhaustive answer, and
+/// adding a variant fails to compile there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
+pub enum BinOpResult {
+    /// The operand type, which must be numeric and must match on both sides.
+    Numeric,
+    /// `Bool`, whatever the operands were.
+    Predicate,
+    /// An unsigned integer, whatever the operands were.
+    Integer,
+    /// Declared by the extension rather than by this contract.
+    Extension,
+}
+
 /// Binary operation kind in the frozen data contract.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
 #[non_exhaustive]
@@ -161,5 +182,64 @@ impl BinOp {
             }
             _ => OpIntensity::Medium,
         }
+    }
+
+    /// The class this operator's result type falls in.
+    ///
+    /// Exhaustive with no catch-all arm, deliberately. `BinOp` is
+    /// `#[non_exhaustive]`, so no crate outside this one can write an
+    /// exhaustive match over it, and every consumer that tried ended in a
+    /// catch-all that gave a new operator whatever answer the last arm
+    /// happened to hold. Adding a variant is a compile error here instead, in
+    /// the same patch that adds it.
+    #[must_use]
+    pub const fn result_class(self) -> BinOpResult {
+        match self {
+            Self::Add
+            | Self::Sub
+            | Self::Mul
+            | Self::Div
+            | Self::Min
+            | Self::Max
+            | Self::SaturatingAdd
+            | Self::SaturatingSub
+            | Self::SaturatingMul => BinOpResult::Numeric,
+            Self::Eq
+            | Self::Ne
+            | Self::Lt
+            | Self::Gt
+            | Self::Le
+            | Self::Ge
+            | Self::And
+            | Self::Or => BinOpResult::Predicate,
+            Self::Mod
+            | Self::WrappingAdd
+            | Self::WrappingSub
+            | Self::BitAnd
+            | Self::BitOr
+            | Self::BitXor
+            | Self::Shl
+            | Self::Shr
+            | Self::RotateLeft
+            | Self::RotateRight
+            | Self::AbsDiff
+            | Self::MulHigh
+            | Self::Shuffle
+            | Self::Ballot
+            | Self::WaveReduce
+            | Self::WaveBroadcast => BinOpResult::Integer,
+            Self::Opaque(_) => BinOpResult::Extension,
+        }
+    }
+
+    /// True when both operands must be numeric: `u32`, `i32`, or `f32`.
+    ///
+    /// Every operator whose result is its operand type, plus `AbsDiff`, whose
+    /// operands are numeric even though its result is unsigned. Derived from
+    /// [`Self::result_class`] rather than listed again, so the two answers
+    /// cannot disagree about an operator.
+    #[must_use]
+    pub const fn takes_numeric_operands(self) -> bool {
+        matches!(self.result_class(), BinOpResult::Numeric) || matches!(self, Self::AbsDiff)
     }
 }

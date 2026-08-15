@@ -1939,6 +1939,16 @@ category = "Fixed"
 text = "The optimizer compiles for the adapter it was given. `Autotune` and `DecodeScanFuse` both read device facts, and both hardcoded `AdapterCaps::conservative()` in their `ProgramPass::transform`, so every program that went through the standard pipeline was tuned for a device with no optional features whatever the real adapter reported; the caps-aware `transform_for_adapter` existed the whole time and only a caller who already knew to ask could reach it. Nothing failed, which is why it lasted: the pipeline produced a valid program and a slower one. `ProgramPass` now declares `transform_for_adapter`, whose default discards the adapter because an IR-only rewrite is the same program on every device, and `#[vyre_pass(adapter_dependent = true)]` is how a pass says its output moves with the device. `PassScheduler` carries the adapter it was built for, `PassScheduler::for_adapter` and `optimize_for_adapter` are the entries a backend uses once it has probed one, and a scheduler built without an adapter states the conservative fallback at the place that chose it instead of leaving it to whichever pass reached for a profile first."
 
 [[fragments]]
+id = "visit-split-by-what-is-visited"
+category = "Changed"
+text = "`transform::visit` is split by what is being visited. `node` owns the per-variant `Node` decisions a traversal cannot re-derive safely - which bodies a variant nests, which scalar name it binds and what it does to that name, which operands it evaluates, which buffers it names and in which direction - `expr` owns the same for the value namespace, and `walk` owns the traversals, which are written entirely against those two and restate neither. Every item is re-exported from `transform::visit`, so no caller changes. The file was 1789 lines against an 829-line cap, and every match in it is exhaustive with no catch-all arm on purpose, which is the mechanism that makes a new IR variant a compile error rather than a silent leaf classification; one file that size hides which of those decisions a reader is looking at."
+
+[[fragments]]
+id = "god-files-split-by-subject"
+category = "Changed"
+text = "Six IR and serialization files are split along the seam their contents already had. `BufferDecl` keeps its own file and the two records it carries move out with the tests that own their grammar, `linear_type` and `shape_predicate`. Program metadata separates the bounded wire-hash fallback and the canonical buffer key, which decides program equality, from the `Program` methods that call them. Type checking separates the one static type walker from what each operator accepts in each operand position. The wire encoder and decoder each grow a `buffer_table` module holding the buffer-table and memory-region halves, which mirror each other and were the two largest blocks in either file. `Ident` moves out of the expression module. No signature changes and no re-exports removed."
+
+[[fragments]]
 id = "shift-fusion-one-owner"
 category = "Fixed"
 text = "Chained shift fusion has one owner and one answer. Constant folding and strength reduction each carried the rule, and they disagreed: folding declined a pair whose counts reach the word width and left the double shift for the backend, reduction folded it to zero. Both were also wrong about a count above 31, which the target text masks with `& 31`, so `(x << 40) << 1` shifts by nine and not off the end. `algebra::shift_fusion::reduce_shift` masks each count, folds to zero once the sum reaches the width, and fuses otherwise, checked against an evaluation of the chain it replaces for every count pair up to 40."
@@ -1965,6 +1975,8 @@ text = "The transitive layer closure is a registered gate. `scripts/check_layeri
 id = "neutral-crates-sees-dotted-dependencies"
 category = "Fixed"
 text = "The substrate-neutrality rule can see the dependency form this tree uses. `scripts/check_architectural_invariants.sh` matched `^name =` against manifest text, so a dependency written `name.workspace = true` never matched, and the forbidden-edge half of the rule was unreachable for its whole life. The `neutral-crates` gate reads the parsed manifest, so both spellings are one entry, and it reports the edge the shell form could not: `vyre` depends on `vyre-runtime` in `[dependencies]`. Retired crate names are checked over every tracked manifest instead of through a ripgrep whose nonzero exit was read as no hits, and nothing is written outside the repository. The script is deleted, architectural-invariants.yml names `neutral-crates` and `layering`, and the workflow no longer sets `CARGO_BUILD_JOBS`, which is build configuration and belongs in `.cargo/config.toml`."
+
+[[fragments]]
 id = "nfa-state-major-table-single-owner"
 category = "Removed"
 text = "One NFA transition-table layout remains. `vyre-libs::scan::nfa::build_transition_table` and `subgroup_nfa::nfa_step` both use the state-major `[num_states x 256 x LANES]` shape indexed `src * 256 * LANES + byte * LANES + dst_lane`. The transposed `build_transition_table_lane_major` packer, its fallible counterpart, the `bench` feature and the `scan::nfa::bench` module that was its only non-test consumer are gone."
@@ -1978,3 +1990,13 @@ text = "Every `Node::Region` in `vyre-primitives` and `vyre-libs` is now built b
 id = "one-owner-for-the-cell-count-guard"
 category = "Changed"
 text = "Eleven builders computed their own buffer cell count and wrote their own overflow message. `vyre_primitives::math::matrix_cells` and `square_matrix_cells` now own both: the count of a `rows x cols` operand, the `n == 0` rejection for a square one, and one sentence naming the caller and the shape that did not fit. The messages change text. They previously named a domain noun the op id already carries, and eleven copies had drifted to eleven phrasings of the same fact."
+
+[[fragments]]
+id = "binop-result-class-has-one-owner"
+category = "Fixed"
+text = "`BinOp::result_class` is the one answer to what a binary operator's result type is, and `BinOp::takes_numeric_operands` is derived from it. `validate::typecheck` asked that question twice and wrote its own operator list each time, once to give an expression a static type and once to decide what its operands must be. The lists had already drifted on `AbsDiff`, which is in the operand list and not the type list; that happens to be correct and nothing said so, and nothing would have caught the reverse. Both lists ended in a catch-all, and `BinOp` is `#[non_exhaustive]`, so a new operator took whatever the last arm held. The match now lives in `vyre-spec` beside the enum with no catch-all arm, so adding an operator fails to compile there instead. `BinOpResult` is closed on purpose: a new operator is additive, a new RESULT CLASS is a new answer every consumer has to decide for."
+
+[[fragments]]
+id = "buffer-set-oracle-reads-the-owners"
+category = "Fixed"
+text = "The buffer-set equivalence property reads the declared owners instead of restating them. `referenced_buffers` answers from `ProgramFacts`, whose SoA extraction fills its `buffer_refs` column from its own exhaustive match, and nothing made that column agree with `visit::node_buffer_refs` and `visit::expr_buffer_ref`, which are the declared owners of which variant names a buffer. The oracle that checked it was a third enumeration ending in `_ => {}`, so a variant added to both real enumerations was reported as naming nothing by the oracle and the property passed while the two sides were free to disagree about it. It now composes the two owners, which makes it an oracle for the agreement rather than a second opinion about the variant list."

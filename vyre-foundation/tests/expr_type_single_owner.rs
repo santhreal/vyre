@@ -354,7 +354,7 @@ fn only_one_file_defines_expr_type() {
 
     assert_eq!(
         definitions,
-        vec!["validate/typecheck.rs".to_string()],
+        vec!["validate/typecheck/expr_type.rs".to_string()],
         "expression type inference must be defined once. Fix: delete the competing walker and \
          route its caller through vyre_foundation::validate::typecheck::expr_type, supplying its \
          environment through the TypeEnv trait."
