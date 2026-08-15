@@ -1824,6 +1824,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   is a finding ratchet: `output_lines` may fall and be lowered, may not grow,
   and a nonzero exit is a failure whatever the pin says. `--write-baseline`
   refuses to record a run in which any gate failed.
+- `vyre-test-support` states which flat `DataType` forms exist in one ungated
+  module, `data_type_elements`. The list sat inside `data_type_variants`, which
+  is gated behind `ir-fixtures`, so a suite that wanted the flat element list
+  had to enable a feature that pulls `vyre-foundation` into its dev graph; for
+  `vyre-spec`, a leaf crate that declares `DataType` in the first place, that
+  meant building the whole compiler to read a list of discriminants.
+  `vyre-spec` is now a plain dependency of `vyre-test-support` and
+  `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
+  builds its flat leaves from the same module, so the two tables cannot
+  disagree about which element types exist.
 
 ### Removed
 

@@ -59,10 +59,22 @@ log "determinism, run the contract suite twice; outputs must match"
 TMP1="$(mktemp)"
 TMP2="$(mktemp)"
 trap 'rm -f "$TMP1" "$TMP2"' EXIT
-"$CARGO_RUNNER" test -p vyre-primitives --test wire_pack_into_contracts --features matching \
-    -- --nocapture --test-threads=1 > "$TMP1" 2>&1 || true
-"$CARGO_RUNNER" test -p vyre-primitives --test wire_pack_into_contracts --features matching \
-    -- --nocapture --test-threads=1 > "$TMP2" 2>&1 || true
-diff <(grep -E '^test ' "$TMP1" | sort) <(grep -E '^test ' "$TMP2" | sort)
+# `|| true` here made a failing suite indistinguishable from a passing one: both
+# runs failed identically, the diff was empty, and the determinism check
+# reported success. Determinism is only meaningful across two runs that passed.
+run_contract_suite() {
+    local log="$1"
+    if ! "$CARGO_RUNNER" test -p vyre-primitives --test wire_pack_into_contracts --features matching \
+        -- --nocapture --test-threads=1 > "$log" 2>&1; then
+        cat "$log" >&2
+        printf 'Fix: the wire contract suite failed, so determinism cannot be judged.\n' >&2
+        exit 1
+    fi
+}
+run_contract_suite "$TMP1"
+run_contract_suite "$TMP2"
+# Unsorted on purpose: --test-threads=1 fixes the order, so sorting would hide a
+# run-to-run reordering, which is the exact nondeterminism being looked for.
+diff <(grep -E '^test ' "$TMP1") <(grep -E '^test ' "$TMP2")
 
 printf '\n\033[1;32m✓ wire CI passed (pre-commit-hook ready)\033[0m\n'

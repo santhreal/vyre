@@ -130,32 +130,11 @@ pub(crate) fn builtin_ternary_ops() -> Vec<TernaryOp> {
 
 /// The flat `DataType` forms a buffer declaration can carry as its element.
 ///
-/// `element_size` parameterises `DataType::Array`, which is the one flat form
-/// that carries a payload. The nested forms (`Vec`, `TensorShaped`,
-/// `SparseBsr`, `Quantized`), `Handle` and `Opaque` are not here: a buffer
-/// element table and a cast-target table are different sets, and a suite that
-/// needs the nested forms builds them from these leaves.
+/// `vyre_test_support::data_type_elements` owns which flat forms exist, because
+/// the IR fixture table is built from the same list; a second copy here is how
+/// one table gains an element type the other does not know about.
 pub(crate) fn buffer_data_types(element_size: usize) -> Vec<DataType> {
-    vec![
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::U64,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Array { element_size },
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Tensor,
-    ]
+    vyre_test_support::data_type_elements::flat_buffer_element_types(element_size)
 }
 
 /// Variant names of `vyre_spec::<enum_name>` as the checked-in public-API

@@ -154,6 +154,7 @@ pub mod case_table;
 #[cfg(feature = "ir-fixtures")]
 pub mod cast_parity;
 pub mod consumer_boundary;
+pub mod data_type_elements;
 #[cfg(feature = "ir-fixtures")]
 pub mod data_type_variants;
 pub mod exploded_ifds_cases;
