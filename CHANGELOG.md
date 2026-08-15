@@ -1824,6 +1824,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   is a finding ratchet: `output_lines` may fall and be lowered, may not grow,
   and a nonzero exit is a failure whatever the pin says. `--write-baseline`
   refuses to record a run in which any gate failed.
+- `vyre-primitives` classifies every Cargo feature in one place,
+  `src/organization.rs`. Marker types and `hardware` belong. The other domain
+  features are compositions parked pending a move to `vyre-libs`.
+  `tests/feature_classification.rs` fails if `Cargo.toml` grows a feature that
+  is not on exactly one of those lists, or if `hardware` is no longer the only
+  intrinsic domain.
+- User-facing crate READMEs, `docs/ARCHITECTURE.md`, `GOAL.md`, `THESIS.md`,
+  `CONTRIBUTING.md`, and the ownership/guide registries follow the workspace
+  `README.md` charter. `vyre-libs` owns every composition, including
+  compiler-internal domains. `vyre-primitives` owns only uncomposable
+  intrinsics. Persistence is selected at compile time. Unmeasured selections
+  are never called autoroute. The deleted `docs/lego-block-rule.md` two-caller
+  promotion rule is void.
 - `vyre-test-support` states which flat `DataType` forms exist in one ungated
   module, `data_type_elements`. The list sat inside `data_type_variants`, which
   is gated behind `ir-fixtures`, so a suite that wanted the flat element list

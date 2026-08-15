@@ -1,9 +1,8 @@
-//! Tier 2.5 hash primitives.
+//! Parked composition (belongs in vyre-libs): hash primitives.
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::hash::fnv1a::fnv1a32(...)`  -  explicit paths;
-//! no wildcard re-exports. See `docs/lego-block-rule.md` and
-//! `docs/lego-block-rule.md`.
+//! no wildcard re-exports. See the workspace `README.md`.
 
 /// FNV-1a 32-bit + 64-bit hash primitives.
 pub mod fnv1a;

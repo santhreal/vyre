@@ -1,7 +1,13 @@
 # vyre-driver
 
-Backend-neutral artifact materialization, typed binding, submission, completion,
-capability, and lower-level dispatch contracts for Vyre.
+Substrate-agnostic backend machinery: the backend trait every concrete
+driver implements, plus registry, routing, pipelines, bindings,
+residency, caching and eviction, autotune storage, work queues,
+dispatch policy, diagnostics.
+
+Not here: a driver name, a dialect string, or a backend-specific error
+message. A concrete detail admitted here is a detail every backend
+must then pretend to have.
 
 Production execution enters this crate after whole-program compilation:
 
@@ -88,8 +94,8 @@ admission, recovery, or persistence orchestration is required.
    rematerialization, and reference parity through the conformance engine.
 
 See `src/backend/artifact_lifecycle.rs`, `src/backend/registry/`, and
-`vyre-megakernel::target` for the contracts. See [`docs/targets.md`](../docs/targets.md)
-for the production lifecycle and extension checklist.
+`vyre-megakernel::target` for the contracts. The workspace
+[`README.md`](../README.md) places this crate.
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
@@ -126,8 +132,8 @@ Backend acquisition, capability, artifact, dispatch, and lifecycle failures reta
 
 ### Testing
 
-Use [`docs/testing/vyre-driver.md`](../docs/testing/vyre-driver.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -135,9 +141,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

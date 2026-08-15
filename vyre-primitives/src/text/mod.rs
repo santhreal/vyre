@@ -1,4 +1,4 @@
-//! Tier 2.5 text primitives.
+//! Parked composition (belongs in vyre-libs): text primitives.
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::text::char_class::char_class(...)`  -  explicit
@@ -6,7 +6,7 @@
 //! wildcard re-exports; the subsystem exposes its sub-modules, not a
 //! flat namespace.
 //!
-//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md`.
+//! See the workspace `README.md`.
 
 /// 256-bin byte histogram over source bytes.
 pub mod byte_histogram;

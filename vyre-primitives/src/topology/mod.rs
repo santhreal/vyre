@@ -1,4 +1,4 @@
-//! Tier 2.5 topological-data-analysis primitives (#15, #32).
+//! Parked composition (belongs in vyre-libs): topological-data-analysis primitives (#15, #32).
 //!
 //! Persistent homology + simplicial-complex operations. Composes
 //! with `vyre-primitives::math` and `vyre-primitives::graph`.

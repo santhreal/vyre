@@ -1,10 +1,11 @@
 # Authoring a Cat-A op in vyre-libs
 
-This document is the canonical recipe for landing a new Category-A
-composition inside `vyre-libs`. A Cat-A op produces a `Program`
-assembled from vyre primitives  -  no raw shader source, no
-backend-specific code. Every backend that implements `VyreBackend`
-runs the same Program with byte-identical output.
+This document is the recipe for landing a new composition in
+`vyre-libs`. A composition produces a `Program` assembled from
+existing IR: no raw shader source, no backend-specific code. Consumer
+dialects and compiler-internal domains use the same recipe. Every
+production backend runs the same program. The workspace `README.md`
+is the charter.
 
 Follow the 5-step recipe below. Every step has a test or a lint
 protecting it; skipping a step fails CI.
@@ -17,8 +18,8 @@ Every composition is a slice of vyre IR nodes ending in a
 [`Node::Region`](https://docs.rs/vyre-foundation) wrapper. The wrapper
 is a **debug marker**: it carries the generator name and optional
 source-region metadata so conformance certificates and tracing spans
-can name where the IR came from. Region is semantically transparent
-(see `docs/ir-semantics.md`), so the wrapper never affects execution.
+can name where the IR came from. Region is semantically transparent,
+so the wrapper never affects execution.
 
 Skeleton:
 
@@ -30,7 +31,7 @@ fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError>
         "vyre-libs::dialect::my_op",
         &[(&input, DataType::F32), (&output, DataType::F32)],
     )?;
-    // ... build `body: Vec<Node>` using the primitives in vyre-ops ...
+    // ... build `body: Vec<Node>` using vyre-primitives kernels ...
     let body = vec![/* ... */];
 
     Ok(Program::wrapped(

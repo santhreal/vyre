@@ -60,6 +60,5 @@ concrete driver crate.
 - Typed opaque IR extension registrations remain separate from semantic
   operation registration.
 
-See [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md),
-[`docs/inventory-contract.md`](../../docs/inventory-contract.md), and
-[`docs/optimization/README.md`](../../docs/optimization/README.md).
+See the workspace [`README.md`](../../README.md) and
+[`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md).

@@ -6,9 +6,9 @@ Vyre is a GPU-first execution substrate. Contributions are reviewed as changes t
 
 Read these files before changing architecture, public APIs, op definitions, or backend behavior:
 
+- `README.md` (crate-placement charter)
 - `docs/ARCHITECTURE.md`
-- `docs/THESIS.md`
-- `docs/lego-block-rule.md`
+- `THESIS.md`
 - `.github/CI_REQUIRED.md`
 
 If a change conflicts with those documents, fix the architecture or update the contract in the same pull request. Do not add a workaround that leaves the conflict unresolved.

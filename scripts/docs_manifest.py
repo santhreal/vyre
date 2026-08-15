@@ -148,11 +148,11 @@ def bootstrap() -> None:
     old = legacy_rows()
     owner_rows = [
         ("architecture", "ARCHITECTURE.md"),
-        ("benchmark", "PERF.md"),
-        ("docs-governance", "DOCUMENTATION_GOVERNANCE.md"),
+        ("benchmark", "optimization/BENCH_TARGETS.toml"),
+        ("docs-governance", "DOCS.toml"),
         ("historical", "DOCS.toml"),
         ("operation-registry", "../vyre-foundation/src/operation.rs"),
-        ("optimization", "optimization/README.md"),
+        ("optimization", "optimization/OWNERSHIP.toml"),
         ("public-facade", "../vyre/src/lib.rs"),
         ("release-tooling", "../scripts/release_docs.py"),
         ("runtime", "../vyre-runtime/src/lib.rs"),

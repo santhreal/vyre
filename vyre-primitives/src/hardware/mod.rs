@@ -11,7 +11,7 @@
 //! (single-round fused multiply-add), `inverse_sqrt_f32`.
 //!
 //! An op that composes over existing IR belongs in `vyre-libs`, not here.
-//! See `docs/lego-block-rule.md` for the Category A / Category C split.
+//! The workspace `README.md` is the charter.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::operation::{OperationRegistry, SemanticOperation};

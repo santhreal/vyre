@@ -1,4 +1,4 @@
-//! Tier 2.5 neural-network primitives.
+//! Parked composition (belongs in vyre-libs): neural-network primitives.
 
 /// Reusable attention score / normalization passes.
 pub mod attention_passes;

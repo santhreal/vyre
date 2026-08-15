@@ -6,71 +6,34 @@
 // uninitialized-write. `deny` (not `forbid`) is required so that one annotated
 // exception can compile; every other `unsafe` in the crate still hard-errors.
 #![deny(unsafe_code)]
-//! `vyre-primitives`  -  compositional primitives for vyre.
+//! `vyre-primitives`: marker types and uncomposable hardware
+//! intrinsics.
 //!
-//! Shape (mirrors Linux kernel `fs/` / `mm/` / `net/`  -  subsystem
-//! directories under one crate, feature-gated for consumers):
+//! Two things belong here.
 //!
-//! ```text
-//! vyre-primitives/
-//!   src/
-//!     lib.rs                  # subsystem table (this file)
-//!     markers.rs              # unit-struct marker types, always on
-//!     hardware/               # feature = "hardware"  (Category C intrinsics)
-//!       mod.rs
-//!       catalog.rs
-//!       region.rs
-//!       fma_f32.rs
-//!       subgroup_add.rs
-//!     text/                   # feature = "text"
-//!       mod.rs
-//!       char_class.rs
-//!       utf8_validate.rs
-//!       line_index.rs
-//!     matching/               # feature = "matching"
-//!       mod.rs
-//!       bracket_match.rs
-//!     bitset/                 # feature = "bitset"
-//!     fixpoint/               # feature = "fixpoint"
-//!     graph/                  # feature = "graph"     (CSR + BFS + SCC + motif + toposort)
-//!     hash/                   # feature = "hash"
-//!     label/                  # feature = "label"
-//!     math/                   # feature = "math"
-//!     nn/                     # feature = "nn"
-//!     parsing/                # feature = "parsing"
-//!     predicate/              # feature = "predicate"
-//!     reduce/                 # feature = "reduce"
-//! ```
+//! 1. **Marker types** (`markers`, always on): unit structs the
+//!    reference interpreter and backend emitters dispatch on.
+//! 2. **Category C hardware** (`hardware`): ops that need a dedicated
+//!    emitter arm and a dedicated reference-interpreter arm.
 //!
-//! Three kinds of primitive live here:
+//! Everything else in this crate is a composition that belongs in
+//! `vyre-libs`. Reuse count is not an admission criterion. Those
+//! domains keep their `vyre_primitives::<domain>` paths until they
+//! move. [`organization`] is the one list of what is intrinsic, what
+//! is parked, and what is crate support.
 //!
-//! 1. **Marker types** (`markers`, always on, zero deps)  -  unit
-//!    structs the reference interpreter and backend emitters dispatch
-//!    on.
+//! The path is the interface. Callers write
+//! `vyre_primitives::hardware::fma_f32` and, until the move,
+//! `vyre_primitives::math::…`.
 //!
-//! 2. **Category C hardware intrinsics** (`hardware`, feature =
-//!    "hardware")  -  ops that require a dedicated backend emitter arm
-//!    AND a dedicated reference-interpreter arm. Nothing that composes
-//!    over existing IR is admitted.
-//!
-//! 3. **Tier 2.5 substrate** (per-domain feature flags)  -  shared
-//!    `fn(...) -> Program` primitives reused by ≥ 2 Tier-3 dialects.
-//!    Each domain is one folder + one feature flag. Tier 3 crates
-//!    depend on `vyre-primitives` and enable only the domains they
-//!    need.
-//!
-//! The path IS the interface. Subsystem `mod.rs` exposes sub-modules,
-//! not a flat namespace  -  callers write
-//! `vyre_primitives::text::char_class::char_class(...)` so the LEGO
-//! chain is visible at every call site.
-//!
-//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md` for
-//! the tier rule, admission criteria, and Gate 1 enforcement.
+//! The workspace `README.md` is the charter.
 
 mod dispatch_grid;
 #[cfg(feature = "vyre-foundation")]
 pub mod ir_safe;
 mod markers;
+/// Feature classification: intrinsic, parked composition, or support.
+pub mod organization;
 pub mod wire;
 #[cfg(feature = "vyre-foundation")]
 use std::sync::Arc;
@@ -196,139 +159,108 @@ pub(crate) mod nodeset_filter;
 #[cfg(feature = "inventory-registry")]
 pub mod operation_catalog;
 
-/// Text primitives.
-#[cfg(feature = "text")]
-pub mod text;
-
-/// Pattern-matching primitives.
-#[cfg(feature = "matching")]
-pub mod matching;
-
-/// Decode primitives.
-#[cfg(feature = "decode")]
-pub mod decode;
-
-/// NFA primitives  -  subgroup-cooperative simulator (G1 GPU perf).
-#[cfg(feature = "nfa")]
-pub mod nfa;
-
-/// Hash primitives (FNV-1a 32/64, CRC-32).
-#[cfg(feature = "hash")]
-pub mod hash;
-
-/// Math primitives (dot, scan, reduce, broadcast).
-#[cfg(feature = "math")]
-pub mod math;
-
-/// Parsing primitives (optimizer and AST scan kernels).
-#[cfg(feature = "parsing")]
-pub mod parsing;
-
-/// Neural-network primitives (attention and normalization sub-kernels).
-#[cfg(feature = "nn")]
-pub mod nn;
-
-/// Graph primitives (topological sort, reachability, CSR traversal,
-/// SCC decomposition, path reconstruction  -  the Tier 2.5 substrate
-/// that a external analyzer's stdlib rules compose against).
-#[cfg(feature = "graph")]
-pub mod graph;
-
-/// Geometric / Clifford-algebra primitives (#8). Multivector products
-/// for equivariant NNs, physics simulation, robotics, 3D vision.
-#[cfg(feature = "geom")]
-pub mod geom;
-
-/// Optimization primitives (#9, #14, #46). Homotopy continuation,
-/// SOS, matroid intersection. Self: vyre's megakernel scheduler.
-#[cfg(feature = "opt")]
-pub mod opt;
-
-/// Topological-data-analysis primitives (#15, #32). Vietoris-Rips
-/// filtration + simplicial complex operations. User: TDA, persistent
-/// landscape features, call-graph topological signatures.
-#[cfg(feature = "topology")]
-pub mod topology;
-
-/// Visual pixel-map primitives. Shared packed-RGBA invocation skeletons
-/// reused by higher-level image-processing compositions.
-#[cfg(feature = "visual")]
-pub mod visual;
-
-/// Category C hardware intrinsics. Ops that need a dedicated backend emitter
-/// arm and a dedicated reference-interpreter arm: subgroup collectives,
-/// memory fences, bit instructions, fused multiply-add, inverse square root.
+/// Category C hardware intrinsics. The only domain that belongs here.
 #[cfg(feature = "hardware")]
 pub mod hardware;
 
-/// Effects-typed pipeline primitives (P-1.0-V1.x).
-/// Pure-data substrate: `EffectRow` bitmask, `Handler` over a row,
-/// `handler_apply` discharges effects, `handler_compose` builds a
-/// joint handler. Reference for the foundation effects-typed
-/// `lower` pipeline (V1.3).
+// Parked compositions. Each is a `Program` builder that belongs in
+// `vyre-libs`. Paths stay `vyre_primitives::<domain>` until the move.
+// Do not add a domain here without listing it in `organization.rs`.
+
+/// Text compositions (parked; belongs in `vyre-libs`).
+#[cfg(feature = "text")]
+pub mod text;
+
+/// Pattern-matching compositions (parked).
+#[cfg(feature = "matching")]
+pub mod matching;
+
+/// Decode compositions (parked).
+#[cfg(feature = "decode")]
+pub mod decode;
+
+/// NFA compositions (parked).
+#[cfg(feature = "nfa")]
+pub mod nfa;
+
+/// Hash compositions (parked).
+#[cfg(feature = "hash")]
+pub mod hash;
+
+/// Math compositions (parked).
+#[cfg(feature = "math")]
+pub mod math;
+
+/// Parsing compositions (parked).
+#[cfg(feature = "parsing")]
+pub mod parsing;
+
+/// Neural-network compositions (parked).
+#[cfg(feature = "nn")]
+pub mod nn;
+
+/// Graph compositions (parked): CSR, BFS, SCC, motif, toposort.
+#[cfg(feature = "graph")]
+pub mod graph;
+
+/// Geometric / Clifford-algebra compositions (parked).
+#[cfg(feature = "geom")]
+pub mod geom;
+
+/// Optimization compositions (parked).
+#[cfg(feature = "opt")]
+pub mod opt;
+
+/// Topological-data-analysis compositions (parked).
+#[cfg(feature = "topology")]
+pub mod topology;
+
+/// Visual pixel-map compositions (parked).
+#[cfg(feature = "visual")]
+pub mod visual;
+
+/// Effects-typed pipeline compositions (parked).
 #[cfg(feature = "effects")]
 pub mod effects;
 
-/// Type-discipline primitives (P-PRIM-14, …). Substructural
-/// (linear/affine/relevant/unrestricted) checks the foundation
-/// validate pipeline consumes per buffer.
+/// Type-discipline compositions (parked).
 #[cfg(feature = "types")]
 pub mod types;
 
-/// Categorical primitives (P-PRIM-16/17/18). Yoneda embedding,
-/// adjoint-pair detection, Kan extension over finite categories.
-/// Consumed by the optimizer's functorial_pass_composition substrate.
+/// Categorical compositions (parked).
 #[cfg(feature = "cat")]
 pub mod cat;
 
-/// ZX-calculus rewrite primitives (P-PRIM-5). Spider fusion,
-/// identity removal, color change. Pure-CPU on a `Vec<ZxSpider>` +
-/// edge multiset; no FP, no IR-builder dep.
+/// ZX-calculus rewrite compositions (parked).
 #[cfg(feature = "zx")]
 pub mod zx;
 
-/// d-DNNF (decomposable / deterministic NNF) compiler primitive
-/// (P-PRIM-6). Host-side CNF → d-DNNF via Shannon decomposition,
-/// linear-time model counting on the result. Used by
-/// `knowledge_compile_pass_precondition` to turn pass-precondition
-/// formulae into linear-cost evaluators.
+/// d-DNNF compiler compositions (parked).
 #[cfg(feature = "dnnf")]
 pub mod dnnf;
 
-/// Bitset primitives  -  `and`/`or`/`not`/`xor`/`popcount`/`any`/
-/// `contains` over packed u32 bitsets. The NodeSet / ValueSet
-/// representation every graph primitive consumes.
+/// Bitset compositions (parked).
 #[cfg(feature = "bitset")]
 pub mod bitset;
 
-/// Reduction primitives  -  `count`/`min`/`max`/`sum` over bitsets and
-/// fixed-width ValueSets. Backs source-query dialect aggregates.
+/// Reduction compositions (parked).
 #[cfg(feature = "reduce")]
 pub mod reduce;
 
-/// Label → NodeSet resolver  -  turn a TagFamily bitmask into a
-/// NodeSet bitset. Implements the `@family` lookup that a external analyzer's
-/// label surface surfaces.
+/// Label to NodeSet resolver (parked).
 #[cfg(feature = "label")]
 pub mod label;
 
-/// Frozen predicate primitives  -  the ~10 engine primitives (call_to,
-/// return_value_of, arg_of, size_argument_of, edge, in_function,
-/// in_file, in_package, literal_of, node_kind) that source-query dialect stdlib
-/// rules compose into every higher-level query.
+/// Predicate compositions (parked).
 #[cfg(feature = "predicate")]
 pub mod predicate;
 
-/// Deterministic fixpoint primitive (ping-pong with convergence
-/// flag). Composes `csr_forward_traverse` + bitset OR into the
-/// transitive-closure driver every stdlib taint rule needs.
+/// Fixpoint compositions (parked).
 #[cfg(feature = "fixpoint")]
 pub mod fixpoint;
 
-/// Virtual File System DMA primitives. Uses `vyre_foundation::ir`
-/// so it's gated behind the same set of features that pull
-/// vyre-foundation in as an optional dep. Any of the domain
-/// features enables vfs.
+/// Virtual-file-system DMA compositions (parked). Not its own Cargo
+/// feature: any parked domain that pulls foundation enables it.
 #[cfg(any(
     feature = "text",
     feature = "matching",
