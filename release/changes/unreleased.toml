@@ -1893,6 +1893,8 @@ text = "Three checks that could not fail are gone. Release hygiene named an xtas
 id = "artifact-gate-declaration-one-owner"
 category = "Changed"
 text = "An artifact-inspection gate is declared, not hand-written. Eleven gates across xtask, xtask-registry and xtask-evidence each spelled the same struct, the same four trait methods and the same call into `settle_inspection`, differing only in a name, a help string and one inspection expression. `xtask::artifact_gate!` now owns that shape and the eleven declarations state only what differs. Gates whose `run` does real work, such as release-conformance argument parsing, keep their own implementation."
+
+[[fragments]]
 id = "evidence-workflows-generate"
 category = "Fixed"
 text = "The workflows named \"Generate release evidence\", \"Generate measured evidence\", \"Generate release conformance evidence artifacts\" and \"Generate release benchmark evidence artifacts\" pass `--write`. A gate only touches the tree under that flag, so every one of them judged the artifacts already committed and uploaded them unchanged, which is indistinguishable from generating them until the evidence goes stale. The measured-evidence job also stopped forcing `CARGO_BUILD_JOBS=1`; parallelism is declared in `.cargo/config.toml`."
