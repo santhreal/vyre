@@ -177,10 +177,12 @@ fn compile_registered_target(
 }
 
 fn digest_hex(digest: Digest) -> String {
-    let mut output = String::with_capacity(digest.as_bytes().len() * 2);
-    for byte in digest.as_bytes() {
-        use std::fmt::Write;
-        write!(&mut output, "{byte:02x}").expect("formatting bytes into a String cannot fail");
+    const NIBBLES: &[u8; 16] = b"0123456789abcdef";
+    let bytes = digest.as_bytes();
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        output.push(char::from(NIBBLES[usize::from(byte >> 4)]));
+        output.push(char::from(NIBBLES[usize::from(byte & 0x0f)]));
     }
     output
 }
