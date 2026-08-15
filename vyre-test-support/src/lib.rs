@@ -335,11 +335,15 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
 
 /// Collect every `.rs` file under `dir` into `out`.
 ///
+/// Public because a source-derived gate outside this crate needs the same walk:
+/// a second copy is what a `tests/support` coverage gate reached for, and it
+/// duplicated this one exactly.
+///
 /// # Panics
-/// Panics when a directory entry is unreadable. The closure gate enumerates source
-/// text, so skipping an unreadable file would quietly shrink the builder set and
-/// weaken the gate.
-fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
+/// Panics when a directory entry is unreadable. A closure gate enumerates source
+/// text, so skipping an unreadable file would quietly shrink the set it proves
+/// and weaken the gate.
+pub fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };

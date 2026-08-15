@@ -17,11 +17,25 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_primitives::graph::motif::{self, count_witness_participants, MotifEdge};
 
+#[path = "../../tests/support/csr_sweep/mod.rs"]
+mod csr_sweep;
+
 #[test]
 fn motif_csr_matches_independent_witness_oracle_matrix() {
-    for case in 0..8192usize {
-        let seed = case as u64 ^ 0xA07F_CAFE_0000_0000;
-        let (node_count, offsets, targets, masks) = generated_csr(seed);
+    for (case, shape) in csr_sweep::cases(
+        "topology_only_all_kinds",
+        8192,
+        0xA07F_CAFE_0000_0000,
+        0x9E37_79B9_7F4A_7C15,
+    ) {
+        let seed = 0xA07F_CAFE_0000_0000u64 ^ case.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        let csr_sweep::CsrSweepCase {
+            node_count,
+            offsets,
+            targets,
+            masks,
+            ..
+        } = shape;
         let motif_edges = generated_motif_edges(seed.rotate_left(13), node_count);
         let adjacency = edge_mask_dictionary(&offsets, &targets, &masks);
 
@@ -133,45 +147,16 @@ fn spec_witness(node_count: u32, endpoints: &BTreeSet<u32>) -> Vec<u32> {
         .collect()
 }
 
-fn generated_csr(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
-    let mut rng = seed;
-    let node_count = 1 + next_u32(&mut rng) % 96;
-    let mut offsets = Vec::with_capacity(node_count as usize + 1);
-    let mut targets = Vec::new();
-    let mut masks = Vec::new();
-    offsets.push(0);
-    for _ in 0..node_count {
-        let degree = next_u32(&mut rng) % 6;
-        for _ in 0..degree {
-            targets.push(next_u32(&mut rng) % node_count);
-            let bit = 1u32 << (next_u32(&mut rng) % 5);
-            let noise = if next_u32(&mut rng) & 7 == 0 {
-                1u32 << (next_u32(&mut rng) % 5)
-            } else {
-                0
-            };
-            masks.push(bit | noise);
-        }
-        offsets.push(targets.len() as u32);
-    }
-    (node_count, offsets, targets, masks)
-}
-
 fn generated_motif_edges(seed: u64, node_count: u32) -> Vec<MotifEdge> {
-    let mut rng = seed;
-    let motif_len = 1 + (next_u32(&mut rng) % 5) as usize;
+    let mut rng = csr_sweep::Rng::new(seed | 1);
+    let motif_len = 1 + rng.range(5) as usize;
     let mut motif_edges = Vec::with_capacity(motif_len);
     for _ in 0..motif_len {
         motif_edges.push(MotifEdge {
-            from: next_u32(&mut rng) % node_count,
-            kind_mask: 1u32 << (next_u32(&mut rng) % 5),
-            to: next_u32(&mut rng) % node_count,
+            from: rng.range(node_count),
+            kind_mask: 1u32 << rng.range(5),
+            to: rng.range(node_count),
         });
     }
     motif_edges
-}
-
-fn next_u32(rng: &mut u64) -> u32 {
-    *rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
-    (*rng >> 16) as u32
 }

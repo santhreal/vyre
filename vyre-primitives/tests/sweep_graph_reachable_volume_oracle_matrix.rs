@@ -2,19 +2,20 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#[path = "../../tests/support/csr_sweep/mod.rs"]
+mod csr_sweep;
 mod graph_sweep_support;
-use graph_sweep_support::next_u32;
 
 use std::collections::{HashSet, VecDeque};
 
 use vyre_primitives::graph::reachable::reachable;
 
 fn generated_edges(seed: u64, node_count: u32) -> Vec<(u32, u32)> {
-    let mut rng = seed;
+    let mut rng = csr_sweep::Rng::new((seed) | 1);
     let n = node_count.max(1);
-    let edge_count = 1 + (next_u32(&mut rng) % 32) as usize;
+    let edge_count = 1 + (rng.next_u32() % 32) as usize;
     (0..edge_count)
-        .map(|_| (next_u32(&mut rng) % n, next_u32(&mut rng) % n))
+        .map(|_| (rng.next_u32() % n, rng.next_u32() % n))
         .collect()
 }
 
@@ -43,10 +44,10 @@ const CASES: usize = 16384;
 fn sweep_graph_reachable_volume_oracle_matrix() {
     for case in 0..CASES {
         let seed = case as u64 ^ 0xAEAC4AB1E;
-        let mut rng = seed;
-        let node_count = 2 + next_u32(&mut rng) % 48;
+        let mut rng = csr_sweep::Rng::new((seed) | 1);
+        let node_count = 2 + rng.next_u32() % 48;
         let edges = generated_edges(seed.rotate_left(9), node_count);
-        let source = next_u32(&mut rng) % node_count;
+        let source = rng.next_u32() % node_count;
         let sources = vec![source];
         let expected = oracle_reachable(node_count, &edges, &sources);
         let actual = reachable(node_count, &edges, &sources)
