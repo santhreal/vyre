@@ -17,75 +17,27 @@
 //! own `dispatch`. That is a different contract, pinned by
 //! `no_backend_crate_links_host_arithmetic.rs`.
 
-use std::collections::HashSet;
-use std::sync::LazyLock;
+#[macro_use]
+mod common;
 
-use vyre_driver::backend::{
-    acquire, acquire_preferred_dispatch_backend, BackendCapability, BackendPrecedence,
-    BackendRegistration,
-};
-use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{OpId, Program};
+use common::FixtureBackend;
+use vyre_driver::backend::{acquire, acquire_preferred_dispatch_backend};
+use vyre_driver::{BackendError, VyreBackend};
 
 const ORACLE_ID: &str = "fixture-reference-oracle";
 
-struct OracleBackend;
-
-impl vyre_driver::backend::private::Sealed for OracleBackend {}
-
-impl VyreBackend for OracleBackend {
-    fn id(&self) -> &'static str {
-        ORACLE_ID
-    }
-
-    fn dispatch(
-        &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        Ok(Vec::new())
-    }
-}
-
 fn acquire_oracle() -> Result<Box<dyn VyreBackend>, BackendError> {
-    Ok(Box::new(OracleBackend))
-}
-
-fn no_supported_ops() -> &'static HashSet<OpId> {
-    static OPS: LazyLock<HashSet<OpId>> = LazyLock::new(HashSet::new);
-    &OPS
-}
-
-inventory::submit! {
-    BackendRegistration {
-        id: ORACLE_ID,
-        target_id: vyre_foundation::operation::TargetId::expect_valid(ORACLE_ID),
-        payload_format: None,
-        reference_oracle: true,
-        factory: acquire_oracle,
-        supported_ops: no_supported_ops,
-        semantic_operations: no_supported_ops,
-        target_compiler: None,
-        materializer: None,
-    }
-}
-
-inventory::submit! {
-    BackendCapability {
-        id: ORACLE_ID,
-        dispatches: true,
-    }
+    Ok(Box::new(FixtureBackend(ORACLE_ID)))
 }
 
 // Rank 0 is the best rank in the table. A reference oracle at the front of the
 // precedence order must still lose, because precedence orders eligible
 // backends and an oracle is not one.
-inventory::submit! {
-    BackendPrecedence {
-        id: ORACLE_ID,
-        rank: 0,
-    }
+register_dispatchable_backend! {
+    id: ORACLE_ID,
+    oracle: true,
+    rank: 0,
+    factory: acquire_oracle,
 }
 
 #[test]

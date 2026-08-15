@@ -310,16 +310,6 @@ impl CompiledPipeline for CudaCompiledPipeline {
         replay_result
     }
 
-    fn dispatch_borrowed_batched(
-        &self,
-        batches: &[&[&[u8]]],
-        config: &DispatchConfig,
-    ) -> Result<Vec<OutputBuffers>, BackendError> {
-        let mut outputs = reserved_vec(batches.len(), "batched output")?;
-        self.dispatch_borrowed_batched_into(batches, config, &mut outputs)?;
-        Ok(outputs)
-    }
-
     fn dispatch_borrowed_batched_into(
         &self,
         batches: &[&[&[u8]]],
@@ -520,16 +510,6 @@ impl CompiledPipeline for CudaCompiledPipeline {
             self.module_key,
             outputs,
         )
-    }
-
-    fn dispatch_persistent_handles_batched(
-        &self,
-        batches: &[&[Resource]],
-        config: &DispatchConfig,
-    ) -> Result<Vec<OutputBuffers>, BackendError> {
-        let mut outputs = reserved_vec(batches.len(), "persistent batched output")?;
-        self.dispatch_persistent_handles_batched_into(batches, config, &mut outputs)?;
-        Ok(outputs)
     }
 
     fn dispatch_persistent_handles_batched_into(
