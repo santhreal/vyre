@@ -259,6 +259,10 @@ name = "proptest-coverage"
 findings = 0
 
 [[gate]]
+name = "public-api-paths"
+findings = 0
+
+[[gate]]
 name = "readback-ring"
 findings = 0
 

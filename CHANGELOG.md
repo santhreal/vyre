@@ -191,6 +191,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and dynamically bounded causal attention in one typed ProgramGraph. Prompt
   and cached-decode routes exclude future cache rows and support configurable
   head ratios, head widths, and rotary dimensions.
+- `xtask public-api-paths` measures, per crate, how many items are published at
+  more than one path, and pins the number. A crate that declares `pub mod
+  inner` and re-exports what it holds publishes every one of those items twice;
+  both paths compile, both are documented, and nothing says which one a
+  consumer should write. The first measurement over the committed snapshots is
+  4064 such items across 26 crates, with `vyre-foundation` at 789,
+  `vyre-runtime` at 735 and `vyre-driver-cuda` at 642. A crate with no row is a
+  finding, so a newly published crate is red rather than unjudged, and
+  `--write` lowers a recorded number to what it measured and never raises one.
 - `vyre-foundation` has a criterion benchmark over the whole optimizer pass
   pipeline: the eight release corpus families, wide kernels at 16 and 64
   buffers, and a 4x8 loop nest. The pipeline had per-pass timing inside the

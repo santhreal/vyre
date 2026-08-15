@@ -33,6 +33,7 @@ pub mod parity_testing;
 pub mod platform_boundary;
 pub mod platform_docs;
 pub mod proptest_coverage;
+pub mod public_api_paths;
 pub mod repo_hygiene;
 pub mod scan;
 pub mod shader_source;
@@ -88,6 +89,7 @@ pub static GATES: &[&dyn Gate] = &[
     &platform_boundary::PlatformBoundary,
     &platform_docs::PlatformConsumerDocs,
     &proptest_coverage::ProptestCoverage,
+    &public_api_paths::PublicApiPaths,
     &repo_hygiene::RepoHygiene,
     &repo_hygiene::SingleBacklog,
     &shader_source::ShaderSource,
