@@ -1633,3 +1633,8 @@ text = "`vyre-driver`'s dispatch policy bundle is covered by a test that calls e
 id = "driver-tests-skill-truth"
 category = "Fixed"
 text = "The test guides for `vyre-driver` and `vyre-driver-wgpu` describe what the crates contain. Both previously pointed at a category contract file that does not exist, listed bench and fuzz targets for directories neither crate has, and gave `cargo test --test` invocations for target names (`adversarial`, `property`, `gap`, `integration`) that were never declared. `vyre-driver`'s guide also claimed sealing through a macro name that is not in the source and invariants for a `DialectRegistry` the crate does not define. Every invariant now names a construct that exists, and the sealing entry names `backend::private::Sealed`."
+
+[[fragments]]
+id = "wgpu-loop-carrier-token-ids-from-owner"
+category = "Fixed"
+text = "`vyre-driver-wgpu`'s loop-carrier scope-latch dispatch test reads `TOK_LBRACE` and `TOK_RBRACE` from `vyre_spec::c11_token` instead of declaring its own pair with the values 1 and 2. Those two declarations were the only `TOK_`-prefixed constants outside `vyre-spec` in the tree, so `vyre-spec`'s `no_file_outside_the_owner_declares_a_token_id` failed on this file. The test pins the shape the c-parser scope walker emits, and it now pins that shape against the real numbering the walker actually sees: the canonical ids are 12 and 13. Nothing observable moves, because the program compares `scope_kind` for equality against the same constants the fixture inputs are built from, and every assertion is on `scope_open` and `scope_depth`."
