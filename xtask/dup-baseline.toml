@@ -166,7 +166,7 @@ total_lines = 3605
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 5436
+duplicate_lines = 5341
 total_lines = 102185
 
 [[crate]]

@@ -3,7 +3,9 @@
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 mod graph_sweep_support;
-use graph_sweep_support::{bitset_words, generated_csr_frontier};
+use graph_sweep_support::bitset_words;
+#[path = "../../tests/support/csr_sweep/mod.rs"]
+mod csr_sweep;
 
 use vyre_primitives::graph::csr_backward_traverse;
 
@@ -50,10 +52,12 @@ const CASES: usize = 16384;
 
 #[test]
 fn sweep_graph_csr_backward_traverse_volume_oracle_matrix() {
-    for case in 0..CASES {
-        let seed = case as u64 ^ 0xBAC1A4D1;
-        let (node_count, offsets, targets, masks, frontier, allow_mask) =
-            generated_csr_frontier(seed);
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in csr_sweep::tuples(
+        "single_source_all_kinds",
+        CASES as u64,
+        0xBAC1A4D1,
+        0x9E37_79B9_7F4A_7C15,
+    ) {
         let expected = oracle_csr_backward_step(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
