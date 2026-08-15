@@ -37,10 +37,7 @@ impl Gate for Shrink {
         let cases: Vec<(String, Program)> =
             vyre_foundation::optimizer::corpus::generate_release_corpus()
                 .into_iter()
-                .filter(|case| match selected {
-                    Some(id) => case.id == id,
-                    None => true,
-                })
+                .filter(|case| selected.is_none_or(|id| case.id == id))
                 .map(|case| (case.id, case.program))
                 .collect();
         if cases.is_empty() {
