@@ -1,13 +1,11 @@
 //! Every workspace member's generated testing guide is classified in `docs/DOCS.toml`.
 //!
-//! WHY: `scripts/docs_manifest.py` compares the manifest against the tracked
-//! Markdown under `docs/`, which means a page becomes a failure only once it is
-//! both generated and staged. Adding a crate produces a new
-//! `docs/testing/<crate>.md`; until that file is committed the manifest is
-//! silently incomplete, and the drift surfaces in CI on somebody else's commit
-//! rather than locally on the one that added the crate. `vyre-registry-link`
-//! reached the tree that way: thirty-five members had a row and thirty-six had
-//! a guide.
+//! WHY: the `docs-check` gate compares the manifest against the Markdown on
+//! disk, so a page is a failure the moment it is written. It still cannot see a
+//! guide that was never generated: adding a crate must produce a new
+//! `docs/testing/<crate>.md`, and until the generator runs there is no file to
+//! be unclassified and no row to be missing. `vyre-registry-link` reached the
+//! tree that way: thirty-five members had a row and thirty-six had a guide.
 //!
 //! The subject here is the MEMBER set, not the file set, so the manifest is
 //! judged against the same source of truth the generator uses and a new crate
@@ -85,14 +83,14 @@ fn every_workspace_member_has_a_classified_testing_guide() {
 
     assert!(
         missing.is_empty(),
-        "Fix: these workspace members have no `testing/<crate>.md` row in docs/DOCS.toml. Run `python3 scripts/testing_guides.py --write`, add the row beside the other generated testing guides, then run `python3 scripts/docs_manifest.py --write`. Adding a crate must not leave the documentation manifest incomplete:\n  {}",
+        "Fix: these workspace members have no `testing/<crate>.md` row in docs/DOCS.toml. Run `python3 scripts/testing_guides.py --write`, add the row beside the other generated testing guides, then run `cargo_full run --bin xtask -- docs-check --write`. Adding a crate must not leave the documentation manifest incomplete:\n  {}",
         missing.join("\n  ")
     );
 }
 
 /// The reverse direction: a row must name a member that still exists.
 ///
-/// `docs_manifest.py` already fails on a row whose FILE is gone, which covers a
+/// The `docs-check` gate already fails on a row whose FILE is gone, which covers a
 /// deleted guide. It cannot see a guide that outlived its crate, because the
 /// file is still there and still classified.
 #[test]

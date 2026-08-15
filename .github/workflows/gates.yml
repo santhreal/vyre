@@ -124,14 +124,6 @@ jobs:
       - name: CI matrix is intact
         run: bash scripts/check_ci_matrix.sh
 
-      # docs_manifest.py is the documentation authority validator that
-      # `xtask docs-check` runs. These are its own behavior contracts, so a
-      # change that weakens the validator fails here rather than passing
-      # docs-check vacuously. Bytecode stays off so the run leaves no
-      # __pycache__ for the repository rules to report.
-      - name: Documentation manifest validator contracts
-        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_docs_manifest.py
-
   feature-msrv:
     name: Every feature compiles alone on the MSRV
     runs-on: ubuntu-latest

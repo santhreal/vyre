@@ -1,10 +1,10 @@
 # Script assertion ledger
 
-`scripts/` holds 65 tracked files: 49 shell scripts and 16 Python scripts.
+`scripts/` holds 60 tracked files: 47 shell scripts and 13 Python scripts.
 Each one is recorded below with its assertions, what makes it exit nonzero, every
 caller found in the tree, whether the files it reads still exist, and the gate
-that owns its assertions after the port. The rows carry 261 assertions and
-89 findings.
+that owns its assertions after the port. The rows carry 230 assertions and
+81 findings.
 
 A script leaves this document by being deleted: its rule belongs to a registered
 gate, so the row is a record of a port that is finished, not of a file that still
@@ -12,22 +12,19 @@ runs. The ledger is empty when the registry owns every rule.
 
 ## Totals
 
-- Files: 65. Assertions: 261. Findings: 89.
-- Files whose subject is partly or wholly gone: 11.
-- Files nothing invokes: 27.
+- Files: 60. Assertions: 230. Findings: 81.
+- Files whose subject is partly or wholly gone: 8.
+- Files nothing invokes: 24.
 - Files that assert nothing: 1.
 
 ### Subject gone
 
 - `scripts/architecture_docs.py`
 - `scripts/bench/cross_backend_comparison.sh`
-- `scripts/check_docs_index.sh`
-- `scripts/check_docs_links.sh`
 - `scripts/check_docs_references.py`
 - `scripts/check_platform_consumer_docs.sh`
 - `scripts/cli_docs.py`
 - `scripts/crate_ownership.py`
-- `scripts/docs_manifest.py`
 - `scripts/final-launch.sh`
 - `scripts/testing_guides.py`
 
@@ -37,8 +34,6 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/bench/cross_backend_comparison.sh`
 - `scripts/bench_smoke.sh`
 - `scripts/check_bench_baselines.sh`
-- `scripts/check_docs_index.sh`
-- `scripts/check_docs_links.sh`
 - `scripts/check_evidence_paths.sh`
 - `scripts/check_expect_has_fix.sh`
 - `scripts/check_gpu_test_loudness.sh`
@@ -307,51 +302,6 @@ Exits nonzero on:
 Findings:
 
 - The manifest is parsed with awk over TOML text, so a phrase containing a quote, a multi-line string, or a field written on a continuation line is read wrongly. The repair is toml::from_str.
-
-### `scripts/check_docs_index.sh`
-
-Subject: gone: docs_manifest.py --check validates docs/DOCS.toml pages, and all 132 declared pages were deleted at b1ed746d1c.
-
-Invoked by: nothing; named in vyre-pass-engine/tests/platform_doc_consumer_boundary.rs only.
-
-Gate: xtask/src/gates/doc_contract.rs, which reports each missing declared page as a finding.
-
-Assertions:
-
-- Delegates to scripts/docs_manifest.py --check.
-
-Exits nonzero on:
-
-- whatever docs_manifest.py --check exits nonzero on
-
-Findings:
-
-- Nothing invokes it, and its subject is gone, so it exits nonzero on every tree today.
-
-### `scripts/check_docs_links.sh`
-
-Subject: gone: the active set comes from docs_manifest.py --list-active over docs/DOCS.toml, and all 132 declared pages were deleted at b1ed746d1c.
-
-Invoked by: nothing; named in vyre-pass-engine/tests/platform_doc_consumer_boundary.rs only.
-
-Gate: xtask/src/gates/doc_contract.rs, which applies the same three classes to the Markdown that survives (root, .github, crate READMEs).
-
-Assertions:
-
-- Every relative Markdown link in the active documentation set resolves to a path inside the repository.
-- No link escapes the repository root (OUTSIDE-REPO).
-- No link names a path that does not exist (MISSING).
-- No link names a gitignored path, which resolves for the author and fails for every other reader (GITIGNORED).
-- git check-ignore exiting above 1 is a tool failure, not a clean result.
-
-Exits nonzero on:
-
-- any link in one of the three classes
-- git check-ignore failure
-
-Findings:
-
-- Its scope collapsed to nothing when the pages were deleted, so the link contract has been unenforced since then. The three classes still apply to the surviving Markdown, and the gate scopes them there.
 
 ### `scripts/check_docs_references.py`
 
@@ -1067,39 +1017,6 @@ Findings:
 
 - `--changed-only` exits 0 when it finds no changed files and when it can resolve no affected package, so a run that documents nothing reports the same success as a run that documents everything. Under the contract the gate documents the workspace and reports what it built as a note.
 
-### `scripts/docs_manifest.py`
-
-Subject: partly gone: docs/DOCS.toml survives and declares 132 page rows; every one of those documents, both generated navigation files and four of the twelve owner authorities were deleted at b1ed746d1c.
-
-Invoked by: gates.yml, xtask/src/docs/docs_check.rs (registry gate docs-check), xtask/tests/tree_contracts/docs_manifest_completeness.rs, check_docs_index.sh, check_docs_links.sh, scripts/test_docs_manifest.py.
-
-Gate: xtask/src/gates/doc_contract.rs, which validates the manifest, reports each declared-but-absent page and each missing owner authority as a finding, and regenerates the navigation under ctx.write.
-
-Assertions:
-
-- docs/DOCS.toml declares version 2.
-- Every [[owner]] declares a unique id and an authority document that exists.
-- Every [[page]] declares path, title, status in current/generated/superseded/archived, audience in user/extension/contributor/release, a known owner, a kind from the eleven-value set, a non-empty section, an authority that exists, and a generation of manual or generated.
-- No two page rows declare the same path.
-- Every page under archive/ or legacy/ is archived.
-- Inactive pages set nav = false and active markdown pages set nav = true.
-- status generated and generation generated imply each other.
-- A generated page names exactly one generator, that generator exists, and the page is not its own authority.
-- A manual page names no generator.
-- The declared page set equals the Markdown actually present, in both directions.
-- No user-facing or extension-facing manual page leaks an internal marker: a local:// link, BACKLOG.md, subagent or agent-swarm or worktree protocol wording, or a phase, slice or tranche number.
-- docs/SUMMARY.md and docs/INDEX.md match the content generated from the manifest.
-
-Exits nonzero on:
-
-- any of the above; validate collects every failure and prints them all before exiting 1
-
-Findings:
-
-- It is the one script here that collects failures instead of raising on the first, which is the shape the gate contract requires. The port keeps that behaviour and the rest of the layer gains it.
-- The registry gate docs-check already runs it and is pinned at output_lines = 0, so the pin is a line count of a script that today cannot produce zero lines. The findings pin replaces it.
-- render_index runs cargo metadata --no-deps. The gate reads the workspace manifests it already walks and does not shell into cargo.
-
 ### `scripts/final-launch.sh`
 
 Subject: partly gone: the release notes it passes to `gh release create` are docs/release/v<version>.md, and docs/ carries no Markdown after b1ed746d1c.
@@ -1534,30 +1451,6 @@ Exits nonzero on:
 Findings:
 
 - A shard index outside the shard count used to select nothing and exit 0. The four assertions that close that are the valuable part and are preserved as findings.
-
-### `scripts/test_docs_manifest.py`
-
-Subject: present: it drives docs_manifest.py against temporary fixtures and reads no deleted document.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/doc_contract.rs carries the same five negative fixtures as Rust unit tests in the gate module, which is where a test of a gate belongs.
-
-Assertions:
-
-- docs_manifest.validate accepts a manifest whose authority and generation records are coherent.
-- It rejects a duplicate page path, an unclassified page present on disk, an inactive page with nav = true, an unknown owner, a missing authority source, a missing generator and an unarchived page under archive/.
-- It flags a BACKLOG.md reference and a phase identifier on an extension-facing page.
-- It accepts both on a contributor-facing page.
-- It rejects a generated page that names no generator.
-
-Exits nonzero on:
-
-- any assertion failure in the five unittest cases
-
-Findings:
-
-- This is the only test in scripts/, and it is the only negative-fixture coverage the documentation manifest has. Losing it would mean the port's collect-every-failure behaviour is asserted by nothing, so the five cases move into the gate module's tests rather than into the gate.
 
 ### `scripts/testing_guides.py`
 

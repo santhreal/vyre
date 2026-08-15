@@ -895,6 +895,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   generated/manual ownership. Crate dependency records declare purpose,
   features, target conditions, visibility, and destination seam, and optimizer
   pass reference pages are generated from the live pass registry.
+- The documentation authority check is a registered gate rather than a Python
+  program a gate shells into. `xtask docs-check` now reads `docs/DOCS.toml`
+  itself, validates every owner and page row, renders `docs/SUMMARY.md` and
+  `docs/INDEX.md` under `--write`, and resolves every outbound link in the
+  published navigation, reporting a link that escapes the repository root,
+  names no such path, or resolves to a path the repository excludes.
+  `scripts/docs_manifest.py`, `scripts/check_docs_index.sh`,
+  `scripts/check_docs_links.sh` and `scripts/test_docs_manifest.py` are
+  deleted, and the validator's behavior contracts are unit tests beside the
+  gate. The published set is read from the working tree instead of the git
+  index, so a new page is unclassified on the commit that writes it rather than
+  on somebody else's. The generated index no longer restates the workspace
+  package and target counts: `cargo metadata` owns those, and a documentation
+  index that repeated them was a second owner nothing reconciled.
 - The duplication baseline records the measured tree for three more crates:
   vyre-driver 1112 to 1082 and vyre-driver-wgpu 5710 to 5709 after their lanes
   merged, and vyre-foundation 5443 to 5339. Duplication is cross-file, so a

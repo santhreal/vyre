@@ -1,4 +1,4 @@
-<!-- Generated from docs/DOCS.toml by scripts/docs_manifest.py. -->
+<!-- Generated from docs/DOCS.toml by xtask docs-check. -->
 # Summary
 
 - [Documentation authority and lifecycle](INDEX.md)

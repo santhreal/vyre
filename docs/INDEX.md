@@ -1,4 +1,4 @@
-<!-- Generated from docs/DOCS.toml by scripts/docs_manifest.py. Do not edit. -->
+<!-- Generated from docs/DOCS.toml by xtask docs-check. Do not edit. -->
 # Documentation Authority and Lifecycle
 
 Source: [`docs/DOCS.toml`](DOCS.toml).
@@ -22,12 +22,6 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `runtime` | [`../vyre-runtime/src/lib.rs`](../vyre-runtime/src/lib.rs) |
 | `testing` | [`testing/TESTING.toml`](testing/TESTING.toml) |
 
-## Cargo-derived workspace facts
-
-- Workspace packages: 35.
-- Shipped library, binary, and example targets: 74.
-- Source: `cargo metadata --no-deps --format-version 1`.
-
 ## Lifecycle counts
 
 - current: 1.
@@ -42,7 +36,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `extension` | `architecture` | `ownership` | `ARCHITECTURE.md` | self | manual |
 | `generated` | `user` | `public-facade` | `guide` | `CLI.md` | [CLI.toml](CLI.toml) | generated: [../scripts/cli_docs.py](../scripts/cli_docs.py) |
 | `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
-| `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../scripts/docs_manifest.py](../scripts/docs_manifest.py) |
+| `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../xtask/src/docs/docs_check.rs](../xtask/src/docs/docs_check.rs) |
 | `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/structure-gate.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-aot.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |

@@ -93,7 +93,7 @@ kind = "governance"
 section = "Documentation authority"
 authority = "DOCS.toml"
 generation = "generated"
-generator = "../scripts/docs_manifest.py"
+generator = "../xtask/src/docs/docs_check.rs"
 nav = true
 
 [[page]]
