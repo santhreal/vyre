@@ -337,6 +337,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   row added to the table was dispatched by neither backend and nothing failed.
   The op set is read from the table at run time, so a row added tomorrow is
   required of every suite tomorrow.
+- Five operations now own the pieces the Jacobi eigensolver used to spell
+  inline: `givens_rotate_pair` rotates one strided element pair,
+  `jacobi_apply_rotation` applies one rotation at a pivot to a matrix and its
+  accumulator, `matrix_identity_fill` seeds a rotation accumulator,
+  `matrix_diagonal_extract` reads a diagonal out, and `eigenvector_column_sign`
+  fixes the sign of every eigenvector column. `symmetric_eigen_jacobi` composes
+  them and emits identical numerics; the three column, row and accumulator
+  rotations inside one Jacobi step were byte-identical five-node loops
+  differing only in base offset and stride, and are now one builder with two
+  address parameters.
 - `xtask-registry` asserts that every crate submitting an operation
   registration in source contributes at least one operation to the live
   registry. Dropping one of those links left the registry answering with
@@ -1834,6 +1844,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   module; `xtask/tests/common` owns the `path:line:column` violation format.
   `vyre_test_support::ir_variants::single_u32_output_program` owns the
   validator program fixture that three validation suites each built by hand.
+- Comments and doc comments in `vyre-foundation`, `vyre-primitives`,
+  `vyre-runtime` and `vyre-pass-engine` state the hardware fact instead of
+  naming a backend product. A load past a buffer end is undefined behaviour on
+  a real GPU whichever driver reached it, a nested `Return` lowers to an exit
+  branch in every machine-code emitter, and a launcher refuses a zero grid
+  extent everywhere. The old wording pinned a general rule to one vendor, so a
+  reader on another backend had to guess whether the rule applied to them.
+  Backend-specific text now lives only in the crate that owns that backend.
 - `vyre-libs` no longer reaches across dialect boundaries in private code.
   `telemetry` is a crate-root module rather than a one-file directory, because
   counters instrument every dialect and belong to none; `scratch` and
@@ -1846,6 +1864,40 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   the one declared seam: `nn::linear` reaches `MatmulBiasTiled` and `reasoning`
   reaches `reachability_closure_via_into` through it, and the prelude names
   both.
+- `vyre_primitives::math::scallop_persistent` owns `lineage_fixpoint_program`
+  and `accumulate_lineage_words`. `scallop_join` and `scallop_join_wide` each
+  carried their own copy of the persistent program envelope and the lineage
+  word join, so a change to the convergence protocol had to be made twice and
+  the two spellings had already drifted in how they reported change. Both now
+  call the owner.
+- `vyre-runtime` builds pipeline-cache test artifacts from one fixture module,
+  `src/pipeline_cache/test_artifact_fixtures.rs`, which the fingerprint suites
+  include by path. The two suites previously built the same artifact
+  independently and `artifact_for_program` looked only at the first buffer, so
+  a program whose second buffer had a different access produced a fingerprint
+  the fixture could not distinguish. It now walks every buffer with that
+  buffer's own access.
+- The `tests/SKILL.md` contracts for `vyre-spec`, `vyre-foundation`,
+  `vyre-macros`, `vyre-reference` and `vyre-primitives` now state the category
+  contract where it is read instead of pointing at a file the tree does not
+  contain, and every claim in them is checked against source. They previously
+  routed op semantics to `vyre-ops`, which is not a package here; listed bench
+  and fuzz targets for directories four of the five crates do not have; named
+  `--test adversarial`, `--test property`, `--test gap` and `--test
+  integration` where only two of those targets are declared anywhere; and
+  described `vyre-primitives` as marker types with no runtime behavior and no
+  bench, while it owns the Tier 2.5 substrate and declares the
+  `wire_throughput` bench.
+- The validation rule registry is one table in
+  `vyre-foundation/src/validate/catalog.rs`, carrying each code's phase,
+  invariant and corrective action. `docs/generated/error-codes.toml` is
+  rendered from it and `vyre-foundation/tests/validator_error_docs.rs` fails on
+  divergence, reporting one finding per divergent code. `ValidationCode` gained
+  `phase`, `invariant` and `corrective_action` accessors. The hand-maintained
+  table in `docs/error-codes.md` was a second copy that had already drifted:
+  four codes carried the placeholder text `Program validation error 0NN` with
+  the corrective action `See diagnostic output`, which the catalog replaces
+  with the invariant each emission site actually checks.
 - `xtask gates` no longer accepts a failing gate. `xtask/gate-baselines.toml`
   pinned both a `status` and an `owner` sentence per row, and the sweep treated
   `status = "red"` as the expected result whenever the row named an owner, so a
@@ -1879,6 +1931,36 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
   builds its flat leaves from the same module, so the two tables cannot
   disagree about which element types exist.
+- Three optimizer hot paths stopped allocating per sample.
+  `HotPathHints::record` allocated the key on every call including a repeat
+  sample, and its LRU eviction cloned every key in the map to find the oldest;
+  it now takes a `get_mut` fast path and clones the one key it evicts.
+  `reaching_def_propagate` keyed its propagatable-let map and its
+  shadowed-binding set by `String`, so every binding heap-allocated and
+  memcpy'd its name twice per scope walk; both are keyed by `Ident`, which is
+  an `Arc<str>` refcount bump and hashes through the same `str`, so `&str`
+  lookups are unchanged. `loop_fission` walked its body building a new `Vec`
+  node by node whether or not a fissionable loop existed; it locates the loop
+  first and copies the prefix in one `extend_from_slice`.
+- The pass engine has one scope walk. `optimizer::rewrite_walk` owns the
+  encoder's reachable-prefix truncation and the borrow-preserving rebuild, and
+  const propagation, cross-scope CSE, encoded CSE and the encoded-order rewrite
+  call it. Four copies of the same loop stood beside each other and three of
+  them discarded the walk's unchanged answer, so a pass that propagated nothing
+  still deep-copied every nested body it visited. Constant propagation also
+  stopped enumerating `Node` itself: it is a policy over the one structural
+  node rewrite, so a body-bearing variant added to the IR is descended into
+  instead of switching propagation off for everything inside it.
+- `vyre_foundation::algebra::composition::trap_program` builds the program a
+  builder returns when its inputs cannot produce a valid one. `vyre-primitives`
+  and `vyre-libs` each had their own copy, differing only in whether one output
+  buffer of count 1 is declared, and a trap program is IR composed out of IR,
+  so neither crate is its home. The declared output is an `Option` argument
+  because that is the whole difference between the two former copies.
+- `vyre-test-support` states the minimal one-output test program once, as
+  `ir_variants::single_u32_output_program`. Suites that needed a program with
+  somewhere to store a result each declared the same buffer and workgroup size
+  locally, so a change to the shape had to be found in every copy.
 - The workspace contract suite no longer compiles into `vyre-foundation`'s test
   target. `tests/contract/mod.rs` was included by
   `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the
@@ -3263,6 +3345,50 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant
   missing from the catalog a compile error. The previous markdown table, and
   the seven-variant list that checked it against a nine-variant enum, are gone.
+- Loop fusion no longer skips a fusable pair after a refusal. When two adjacent
+  loops could not be fused, the walk advanced its cursor by two instead of one,
+  so the pair formed by the second loop and its successor was never considered;
+  a comment claimed the scheduler retried the skipped pair, and nothing did.
+  The pass now bails before cloning a body that holds no fusable pair at all,
+  rather than deep-cloning the whole body and discarding it.
+- `abstraction-gate` no longer demands an operation registration for a region
+  that names no operation. Two prefixes mean the same thing: `inline::`, minted
+  by `reparent_entry_node` for a body the composer reparented onto its caller,
+  and `anonymous::`, written by a builder that needs a named phase boundary
+  inside one operation. The gate knew only the first, and fell back to
+  `source_region.is_some()` for the second, which proves nothing because
+  composition stamps `source_region` onto every entry region it reparents.
+  Seven regions were reported as unregistered building blocks that must not be
+  registered. `vyre-foundation/src/algebra/composition.rs` owns the answer as
+  `ANONYMOUS_GENERATOR_PREFIXES` and `is_anonymous_generator`, and the gate's
+  fix text now names the rename. The gate also descends through
+  `vyre_foundation::transform::visit::child_bodies` rather than its own list of
+  node arms, so a new nesting variant cannot hide a region from it.
+- `hot-path-scan` counts runtime code only. It claimed to skip `#[cfg(test)]`,
+  calling those "intentional dev-only lines, not runtime cost", but an
+  attribute annotates the item that follows it and the scan skipped the
+  attribute line alone. Every `panic!`, `format!` and `.to_string()` inside a
+  `mod tests` body was reported as hot-path cost and weighted per kLOC, and the
+  same bodies inflated the `count_code_lines` denominator, so a file's real
+  density read lower than it is. Seventeen of 125 findings were test code, one
+  `mod tests` spanning 575 lines of a backend dispatch file. The scan now
+  tracks the item a `#[cfg(test)]` annotates to its closing brace, or to its
+  semicolon when it has no body, with a brace counter that ignores braces
+  inside string and character literals and a `'` that opens a lifetime rather
+  than a literal. The `hot-path-scan` pin falls from 170 to 154 and
+  `abstraction-gate` from 32 to 23.
+- Call inlining expands a call in every operand position. The caller side and
+  the callee side each enumerated `Node` themselves and had diverged: the
+  caller copied the `AsyncLoad` and `AsyncStore` offset and size and the `Trap`
+  address verbatim, so a call written there survived a pass whose contract is
+  that no call reaches a backend. Both sides are now policies over one
+  expansion walk, `transform::inline::expand_walk`, which descends through the
+  structural node rewrite. A call inside a callee body was also expanded under
+  the caller's substitution, which renames locals but does not bind callee
+  parameters or retarget buffer-reference arguments, so `call
+  outer(BufferRef(data))` with a nested call in `outer` produced a program
+  reading a buffer only the callee declares. Nested-call arguments are expanded
+  under the callee's policy.
 - The public-API snapshot fixture no longer forces `CARGO_BUILD_JOBS=1` on the
   refresh it runs. Parallelism is declared in `.cargo/config.toml`, and an
   environment variable overrides it, so the fixture rebuilt one codegen job at
@@ -3316,6 +3442,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   neighbours to be other spiders of matching colour. `simplified_diagram` runs
   fusion and identity removal to a joint fixpoint, which terminates because
   every firing removes exactly one spider.
+- The public-API snapshot gate reports a crate it could not read instead of
+  skipping it. Two paths dropped a package out of the comparison without a
+  word: a publishable package whose `src` directory was missing, and an
+  extraction that succeeded but returned nothing. No committed snapshot is
+  empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta`
+  from a parallel build sharing one target directory, which is exactly the
+  state in which a crate most needs to be checked. Both are findings now, and
+  an extraction that exits nonzero prints what `cargo public-api` said rather
+  than a bare sentence naming the crate.
 
 ## [0.7.1] - 2026-08-01
 

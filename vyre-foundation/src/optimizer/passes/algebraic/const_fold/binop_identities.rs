@@ -83,8 +83,8 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
 /// collapse the operand to a constant `bool`, so they are only valid
 /// when reflexivity actually holds, which fails for IEEE-754 `NaN`:
 /// `NaN == NaN` is `false` and `NaN != NaN` is `true`, and both the
-/// reference oracle (`vyre-reference::binop_f32`) and the SPIR-V
-/// emitter (`OpFOrdEqual`) honor that. `x != x` is the canonical
+/// reference oracle (`vyre-reference::binop_f32`) and every target
+/// emitter honor that. `x != x` is the canonical
 /// hand-rolled NaN test, so folding it away type-blind is a real
 /// miscompile, not a corner case.
 ///
@@ -530,8 +530,8 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
             }
             // x / x is NOT folded to 1: it is unsound when x can be 0.
             // The reference oracle defines unsigned `0 / 0` as `u32::MAX`
-            // (`div_u32`), not 1, and the SPIR-V emitter's guarded
-            // `div_u32` Select agrees, so folding to 1 diverges from BOTH
+            // (`div_u32`), not 1, and the emitters' guarded division
+            // agrees, so folding to 1 diverges from BOTH
             // for u32 x=0; signed `0 / 0` errors in the oracle
             // (`div_i32`). const_fold is type- and value-blind here, so it
             // cannot prove x != 0 (or that x is unsigned). Decline.
@@ -614,7 +614,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         //      must not fold.
         //   2. IEEE-754 NaN: for a float `x` that is `NaN` at runtime,
         //      `x == x` is *false* and `x != x` is *true* (the
-        //      reference oracle and the SPIR-V `OpFOrdEqual` emitter
+        //      reference oracle and every target emitter
         //      both honor this), so folding type-blind would miscompile
         //      the canonical hand-rolled NaN check.
         // `is_reflexive_cmp_safe` admits only integer/bool literals and

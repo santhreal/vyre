@@ -1,10 +1,10 @@
 //! Unified entry point for the self-hosted optimizer pipeline.
 //!
 //! `gpu_optimize` probes the dispatcher's persistent-path support and
-//! routes through the fast persistent-resident pipeline when available
-//! (CUDA today), or uses the sequential per-pass GPU dispatch path
+//! routes through the fast persistent-resident pipeline when the
+//! dispatcher offers it, or uses the sequential per-pass dispatch path
 //! (canon → const-fold → pattern-match → DCE) for dispatchers that
-//! only implement the borrowed `dispatch` surface (wgpu today).
+//! only implement the borrowed `dispatch` surface.
 //!
 //! Callers don't need to know which backend they have  -  they call
 //! `gpu_optimize(program, dispatcher)` and get an optimized Program

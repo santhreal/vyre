@@ -491,10 +491,10 @@ pub(crate) fn restore_scope(scope: &mut Scope, mut scope_log: ScopeLog) {
 /// typechecker types Mod/bitwise/shift results as U32 regardless of operand
 /// signedness (Add/Sub/Mul/Div preserve the operand type via Frame::Bin), so a
 /// valid `store(i32_buffer, rem(i32, i32))` would otherwise be rejected. Every
-/// lower layer already reinterprets: the naga emitter coerces the store value to
-/// the element type (`coerce_value_to_type` -> `As{Sint/Uint, 4}`), PTX stores
-/// are typeless `st.global.b32`, and the reference oracle stores the value's raw
-/// bytes. NOT a widening/narrowing coercion (those change bits): only the
+/// lower layer already reinterprets: a shader emitter coerces the store value to
+/// the element type, a machine-code emitter stores a typeless 32-bit word, and
+/// the reference oracle stores the value's raw bytes. NOT a widening or
+/// narrowing coercion (those change bits): only the
 /// same-width signed/unsigned reinterpret is bit-preserving and allowed here.
 #[inline]
 #[must_use]
@@ -519,7 +519,7 @@ pub(crate) fn same_width_int_reinterpret(value: &DataType, element: &DataType) -
 ///   * `U32 <-> Bool`: a comparison/flag (0/1) stored into a u32 buffer (the
 ///     emitter coerces Bool via `x != 0` / `select(1u, 0u)`); the `U32 -> Bool`
 ///     direction is inert because a `bool` storage-buffer element is not
-///     host-shareable in WGSL, but it is kept for symmetry with the assign path.
+///     host-shareable in a shader, but it is kept for symmetry with the assign path.
 ///   * `F32 -> F32`: identity (named explicitly so the `Bytes`/vector arms above
 ///     cannot be reached for a float).
 ///   * same-width signed/unsigned integer reinterpret (`U32<->I32`, `U64<->I64`).

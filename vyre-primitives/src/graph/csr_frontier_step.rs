@@ -1194,7 +1194,7 @@ mod tests {
         assert_eq!(program.workgroup_size(), CSR_FRONTIER_STEP_WORKGROUP_SIZE);
         assert!(
             program.workgroup_size()[0] > 1,
-            "Fix: CSR frontier traversal must not launch one CUDA block per source node."
+            "Fix: CSR frontier traversal must not launch one workgroup per source node."
         );
     }
 

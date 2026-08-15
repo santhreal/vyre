@@ -29,7 +29,8 @@
 
 use vyre_foundation::fp_parity::ulp_distance;
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
-use vyre_primitives::math::symmetric_eigen_jacobi::{EIGENVECTOR_SIGN_EPSILON, OP_ID};
+use vyre_primitives::math::eigenvector_column_sign::EIGENVECTOR_SIGN_EPSILON;
+use vyre_primitives::math::symmetric_eigen_jacobi::OP_ID;
 use vyre_primitives::wire::decode_f32_le_bytes_all as unpack_f32;
 use vyre_reference::value::Value;
 

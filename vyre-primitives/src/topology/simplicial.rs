@@ -101,8 +101,8 @@ pub fn simplicial_triangle_message(
     // Skip a triangle that references an out-of-range edge, matching the CPU
     // reference `simplicial_triangle_message_cpu` (`if e_* >= n_edges { continue }`,
     // leaving that triangle's message at zero). `triangle_edges` is unvalidated
-    // input; without this gate the GPU gathers edge_features[e*d+dim] OOB (UB on
-    // CUDA) and writes a garbage message, diverging from the CPU which leaves it 0.
+    // input; without this gate the GPU gathers edge_features[e*d+dim] OOB, which is
+    // undefined behaviour on a real GPU, and writes a garbage message, diverging from the CPU which leaves it 0.
     // Bind each edge index once (avoids re-loading it three times) and only store
     // when all three are in range. Transparent to well-formed meshes.
     let edges_in_range = Expr::and(

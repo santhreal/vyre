@@ -1,41 +1,12 @@
 //! Pipeline-cache fingerprints are exact authenticated artifact identities.
 
-use std::collections::BTreeMap;
-
-use vyre_foundation::ir::{
-    BufferDecl, DataType, Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
-};
-use vyre_megakernel::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 use vyre_runtime::pipeline_cache::PipelineFingerprint;
 
-fn artifact(program: Program) -> vyre_megakernel::Artifact {
-    let mut graph = ProgramGraph::new();
-    for buffer in program.buffers() {
-        graph
-            .add_external_value(
-                buffer.name(),
-                ValueContract {
-                    dtype: buffer.element(),
-                    shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
-                    access: buffer.access(),
-                    lifetime: ValueLifetime::Invocation,
-                },
-            )
-            .unwrap();
-    }
-    graph
-        .add_node("main", program, Vec::new(), Vec::new())
-        .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    compile(&request).unwrap()
-}
+#[path = "../src/pipeline_cache/test_artifact_fixtures.rs"]
+mod artifact_fixtures;
+
+use artifact_fixtures::artifact_for_program as artifact;
 
 #[test]
 fn fingerprint_is_the_neutral_artifact_digest() {

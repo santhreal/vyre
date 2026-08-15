@@ -417,9 +417,9 @@ fn validate_rejects_non_integer_unpack_operand_on_type_not_existence() {
 // preserve the operand type via Frame::Bin. A buffer element only distinguishes
 // signedness when LOADED (sign- vs zero-extend on use); a STORE writes the raw
 // 32/64-bit word, so storing a U32-typed value into an I32 buffer (or vice
-// versa) is a bit-exact reinterpret. The naga emitter already coerces the store
-// value to the element type (coerce_value_to_type -> As{Sint/Uint}), PTX stores
-// are typeless `st.global.b32`, and the reference oracle stores the value's
+// versa) is a bit-exact reinterpret. A shader emitter already coerces the store
+// value to the element type, a machine-code emitter stores a typeless word, and
+// the reference oracle stores the value's
 // bytes, so every lower layer is byte-correct. The validator was the lone
 // over-strict layer: it rejected `store(i32_buffer, rem(i32, i32))` (a valid,
 // common signed-remainder store) with V045. These pin the coercion.

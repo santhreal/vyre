@@ -203,7 +203,8 @@ mod tests {
 
     #[test]
     fn if_u32_zero_is_not_matched() {
-        // LitU32(0) is falsy in WGSL but this pass only matches LitBool.
+        // A zero integer literal is falsy in a target language, but this pass
+        // only matches LitBool.
         // Verify the pass does NOT fire (negative twin).
         let entry = vec![Node::if_then(
             Expr::u32(0),
@@ -219,7 +220,8 @@ mod tests {
 
     #[test]
     fn if_u32_one_is_not_matched() {
-        // LitU32(1) is truthy in WGSL but this pass only matches LitBool.
+        // A one integer literal is truthy in a target language, but this pass
+        // only matches LitBool.
         let entry = vec![Node::if_then(
             Expr::u32(1),
             vec![Node::store("buf", Expr::u32(0), Expr::u32(7))],

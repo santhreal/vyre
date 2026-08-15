@@ -487,7 +487,7 @@ fn try_pass_a_local_scan(
 /// Uses an `if_then` (not `Expr::select`) for the `offset` lookup so the
 /// `block - 1` load is never evaluated when `block == 0`. `Expr::select`
 /// evaluates both arms unconditionally; with no OOB-clamp on the load
-/// path that would underflow to `0xFFFFFFFF` and ILLEGAL_ADDRESS on CUDA.
+/// path that would underflow to `0xFFFFFFFF` and fault on a real GPU.
 /// Build Pass C for a resident or manually-scheduled multi-block inclusive scan.
 ///
 /// Callers supply `partials` from [`pass_a_local_scan`] and a scanned

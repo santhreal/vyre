@@ -10,8 +10,8 @@ mod reflexive_comparison_and_self_identities {
     //
     // const_fold is type-blind: a bare `Var` may bind a float that is `NaN`
     // at runtime, where `x == x` is *false* and `x != x` is *true* under
-    // IEEE-754 (the `vyre-reference::binop_f32` oracle and the SPIR-V
-    // `OpFOrdEqual` emitter both honor this). Folding `Var cmp Var` to a
+    // IEEE-754 (the `vyre-reference::binop_f32` oracle and every target
+    // emitter honor this). Folding `Var cmp Var` to a
     // bool literal type-blind miscompiles the canonical hand-rolled NaN
     // check, so the `is_reflexive_cmp_safe` guard rejects `Var`. These six
     // tests pin the decline; before the guard was tightened they asserted
@@ -222,7 +222,7 @@ mod reflexive_comparison_and_self_identities {
     #[test]
     fn div_self_var_does_not_fold() {
         // x / x must NOT fold to 1: unsigned `0 / 0` is u32::MAX in the
-        // oracle (div_u32) and the guarded SPIR-V emitter, not 1, and
+        // oracle (div_u32) and every guarded target emitter, not 1, and
         // signed `0 / 0` errors (div_i32). const_fold cannot prove x != 0
         // or that x is unsigned, so folding to 1 is a miscompile for x=0.
         let x = Expr::var("x");

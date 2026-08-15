@@ -4,8 +4,8 @@ use crate::serial::wire::framing::{put_u32, put_u8};
 use crate::serial::wire::{MAX_MESH_AXES, MAX_TENSOR_RANK};
 
 /// Wire tag reserved for extension `DataTypes`. The tag byte is `0x80`;
-/// the u32 extension id follows immediately (little-endian). See
-/// `docs/wire-format.md` §Extensions.
+/// the u32 extension id follows immediately (little-endian). Ids below
+/// `0x8000_0000` collide with core IR and are rejected.
 pub(crate) const DATA_TYPE_TAG_OPAQUE: u8 = 0x80;
 
 /// Encode a [`DataType`] into its stable VIR0 wire-format tag byte.
