@@ -80,7 +80,13 @@ fn dispatch_programs_emit_expected_graph_primitives() {
         (
             "csr_forward_or_changed_parallel_batch_global_slot",
             csr_forward_or_changed_parallel_batch_global_slot(
-                shape(), "frontier", "changed", 1, 2, 0, 1,
+                shape(),
+                "frontier",
+                "changed",
+                1,
+                2,
+                0,
+                1,
             ),
             CSR_FORWARD,
         ),
@@ -126,7 +132,13 @@ fn child_regions_preserve_parent_context() {
         (
             "persistent_bfs_step_child_prefixed",
             persistent_bfs_step_child_prefixed(
-                PARENT, shape(), "frontier", "changed", "scratch", 1, "step",
+                PARENT,
+                shape(),
+                "frontier",
+                "changed",
+                "scratch",
+                1,
+                "step",
             ),
             PERSISTENT_STEP,
         ),

@@ -36,7 +36,6 @@ pub mod egraph_kernel_plan;
 mod egraph_readback;
 /// Adapter from frontier-typed IR plans to CUDA frontier wave envelopes.
 pub mod frontier_typed_ir_adapter;
-mod input_identity;
 mod instrumentation;
 /// Cross-process persistent CUDA JIT cache wiring (E4 + E5): configures
 /// the NVIDIA driver's built-in disk cache at backend bring-up so the

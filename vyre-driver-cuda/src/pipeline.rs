@@ -19,9 +19,7 @@ mod materialized_cache;
 mod static_params;
 
 #[cfg(test)]
-pub(crate) use materialized_cache::{
-    materialized_input_key, MAX_MATERIALIZED_OUTPUT_CACHE_BYTES_PER_PIPELINE,
-};
+pub(crate) use materialized_cache::MAX_MATERIALIZED_OUTPUT_CACHE_BYTES_PER_PIPELINE;
 pub(crate) use materialized_cache::{
     MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
 };
