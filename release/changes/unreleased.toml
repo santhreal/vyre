@@ -1678,3 +1678,8 @@ text = "`vyre-test-support` states which flat `DataType` forms exist in one unga
 id = "driver-error-catalog-generated"
 category = "Fixed"
 text = "The backend error-code catalog is generated from the enum that emits it. `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant missing from the catalog a compile error. The previous markdown table, and the seven-variant list that checked it against a nine-variant enum, are gone."
+
+[[fragments]]
+id = "loop-fusion-pair-after-refusal"
+category = "Fixed"
+text = "Loop fusion no longer skips a fusable pair after a refusal. When two adjacent loops could not be fused, the walk advanced its cursor by two instead of one, so the pair formed by the second loop and its successor was never considered; a comment claimed the scheduler retried the skipped pair, and nothing did. The pass now bails before cloning a body that holds no fusable pair at all, rather than deep-cloning the whole body and discarding it."

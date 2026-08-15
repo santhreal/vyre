@@ -337,6 +337,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   row added to the table was dispatched by neither backend and nothing failed.
   The op set is read from the table at run time, so a row added tomorrow is
   required of every suite tomorrow.
+- Five operations now own the pieces the Jacobi eigensolver used to spell
+  inline: `givens_rotate_pair` rotates one strided element pair,
+  `jacobi_apply_rotation` applies one rotation at a pivot to a matrix and its
+  accumulator, `matrix_identity_fill` seeds a rotation accumulator,
+  `matrix_diagonal_extract` reads a diagonal out, and `eigenvector_column_sign`
+  fixes the sign of every eigenvector column. `symmetric_eigen_jacobi` composes
+  them and emits identical numerics; the three column, row and accumulator
+  rotations inside one Jacobi step were byte-identical five-node loops
+  differing only in base offset and stride, and are now one builder with two
+  address parameters.
 
 ### Changed
 
@@ -1802,6 +1812,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   initializer-designator families index is one stream in
   `tests/support/c_frontend/fixtures/initializer_designator_streams.rs`, under
   one name in both.
+- Comments and doc comments in `vyre-foundation`, `vyre-primitives`,
+  `vyre-runtime` and `vyre-pass-engine` state the hardware fact instead of
+  naming a backend product. A load past a buffer end is undefined behaviour on
+  a real GPU whichever driver reached it, a nested `Return` lowers to an exit
+  branch in every machine-code emitter, and a launcher refuses a zero grid
+  extent everywhere. The old wording pinned a general rule to one vendor, so a
+  reader on another backend had to guess whether the rule applied to them.
+  Backend-specific text now lives only in the crate that owns that backend.
 - `vyre-libs` no longer reaches across dialect boundaries in private code.
   `telemetry` is a crate-root module rather than a one-file directory, because
   counters instrument every dialect and belong to none; `scratch` and
@@ -1814,6 +1832,40 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   the one declared seam: `nn::linear` reaches `MatmulBiasTiled` and `reasoning`
   reaches `reachability_closure_via_into` through it, and the prelude names
   both.
+- `vyre_primitives::math::scallop_persistent` owns `lineage_fixpoint_program`
+  and `accumulate_lineage_words`. `scallop_join` and `scallop_join_wide` each
+  carried their own copy of the persistent program envelope and the lineage
+  word join, so a change to the convergence protocol had to be made twice and
+  the two spellings had already drifted in how they reported change. Both now
+  call the owner.
+- `vyre-runtime` builds pipeline-cache test artifacts from one fixture module,
+  `src/pipeline_cache/test_artifact_fixtures.rs`, which the fingerprint suites
+  include by path. The two suites previously built the same artifact
+  independently and `artifact_for_program` looked only at the first buffer, so
+  a program whose second buffer had a different access produced a fingerprint
+  the fixture could not distinguish. It now walks every buffer with that
+  buffer's own access.
+- The `tests/SKILL.md` contracts for `vyre-spec`, `vyre-foundation`,
+  `vyre-macros`, `vyre-reference` and `vyre-primitives` now state the category
+  contract where it is read instead of pointing at a file the tree does not
+  contain, and every claim in them is checked against source. They previously
+  routed op semantics to `vyre-ops`, which is not a package here; listed bench
+  and fuzz targets for directories four of the five crates do not have; named
+  `--test adversarial`, `--test property`, `--test gap` and `--test
+  integration` where only two of those targets are declared anywhere; and
+  described `vyre-primitives` as marker types with no runtime behavior and no
+  bench, while it owns the Tier 2.5 substrate and declares the
+  `wire_throughput` bench.
+- The validation rule registry is one table in
+  `vyre-foundation/src/validate/catalog.rs`, carrying each code's phase,
+  invariant and corrective action. `docs/generated/error-codes.toml` is
+  rendered from it and `vyre-foundation/tests/validator_error_docs.rs` fails on
+  divergence, reporting one finding per divergent code. `ValidationCode` gained
+  `phase`, `invariant` and `corrective_action` accessors. The hand-maintained
+  table in `docs/error-codes.md` was a second copy that had already drifted:
+  four codes carried the placeholder text `Program validation error 0NN` with
+  the corrective action `See diagnostic output`, which the catalog replaces
+  with the invariant each emission site actually checks.
 - `xtask gates` no longer accepts a failing gate. `xtask/gate-baselines.toml`
   pinned both a `status` and an `owner` sentence per row, and the sweep treated
   `status = "red"` as the expected result whenever the row named an owner, so a
@@ -3099,6 +3151,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant
   missing from the catalog a compile error. The previous markdown table, and
   the seven-variant list that checked it against a nine-variant enum, are gone.
+- Loop fusion no longer skips a fusable pair after a refusal. When two adjacent
+  loops could not be fused, the walk advanced its cursor by two instead of one,
+  so the pair formed by the second loop and its successor was never considered;
+  a comment claimed the scheduler retried the skipped pair, and nothing did.
+  The pass now bails before cloning a body that holds no fusable pair at all,
+  rather than deep-cloning the whole body and discarding it.
 
 ## [0.7.1] - 2026-08-01
 

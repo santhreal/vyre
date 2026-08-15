@@ -95,72 +95,86 @@ impl LoopFusion {
     }
 }
 
+/// `body` with every fusable adjacent `Loop` pair merged, or `None` when no
+/// pair fuses.
 fn fuse_in_body(body: &[Node]) -> Option<Vec<Node>> {
-    let mut out: Vec<Node> = Vec::with_capacity(body.len());
-    let mut fused_any = false;
-    let mut iter = body.iter().peekable();
-    while let Some(node) = iter.next() {
-        let Node::Loop {
-            var: var_a,
-            from: from_a,
-            to: to_a,
-            body: body_a,
-        } = node
-        else {
-            out.push(node.clone());
-            continue;
-        };
-        let Some(
-            next @ Node::Loop {
-                var: var_b,
-                from: from_b,
-                to: to_b,
-                body: body_b,
-            },
-        ) = iter.peek().copied()
-        else {
-            out.push(node.clone());
-            continue;
-        };
-        if !pair_is_fusable(
-            &LoopRef {
-                var: var_a,
-                from: from_a,
-                to: to_a,
-                body: body_a,
-            },
-            &LoopRef {
-                var: var_b,
-                from: from_b,
-                to: to_b,
-                body: body_b,
-            },
-        ) {
-            // Cannot fuse: emit both loops and move past the second. It gets
-            // its chance against its own successor on the scheduler's next
-            // iteration, which is what makes this rule reach a fixpoint
-            // without a pushback buffer.
-            out.push(node.clone());
-            out.push(next.clone());
-            iter.next();
-            continue;
-        }
-        iter.next();
-        let mut fused = body_a.clone();
-        fused.extend(
-            body_b
-                .iter()
-                .map(|n| legality::rename_var_in_node(n.clone(), var_b, var_a)),
-        );
-        fused_any = true;
-        out.push(Node::Loop {
-            var: var_a.clone(),
-            from: from_a.clone(),
-            to: to_a.clone(),
-            body: fused,
-        });
+    // Proving a pair exists before allocating is what keeps the common case
+    // free. The walk below deep-clones every node it passes, and a body with
+    // nothing to fuse used to build that whole vector and throw it away on the
+    // `None` return, once per body per scheduler iteration.
+    if !body_has_fusable_pair(body) {
+        return None;
     }
-    fused_any.then_some(out)
+    let mut out: Vec<Node> = Vec::with_capacity(body.len());
+    let mut index = 0usize;
+    while index < body.len() {
+        // A pair that does not fuse advances by ONE, so the second loop is
+        // still offered to its own successor. Advancing by two skipped that
+        // offer permanently: the body it left behind is byte-identical, so the
+        // scheduler's next iteration reaches the same decision and the pair is
+        // never reconsidered.
+        match fuse_pair_at(body, index) {
+            Some(fused) => {
+                out.push(fused);
+                index += 2;
+            }
+            None => {
+                out.push(body[index].clone());
+                index += 1;
+            }
+        }
+    }
+    Some(out)
+}
+
+/// The single `Loop` that replaces `body[index]` and `body[index + 1]`, when
+/// those two are adjacent loops that fuse.
+fn fuse_pair_at(body: &[Node], index: usize) -> Option<Node> {
+    let Some(Node::Loop {
+        var: var_a,
+        from: from_a,
+        to: to_a,
+        body: body_a,
+    }) = body.get(index)
+    else {
+        return None;
+    };
+    let Some(Node::Loop {
+        var: var_b,
+        from: from_b,
+        to: to_b,
+        body: body_b,
+    }) = body.get(index + 1)
+    else {
+        return None;
+    };
+    let a = LoopRef {
+        var: var_a,
+        from: from_a,
+        to: to_a,
+        body: body_a,
+    };
+    let b = LoopRef {
+        var: var_b,
+        from: from_b,
+        to: to_b,
+        body: body_b,
+    };
+    if !pair_is_fusable(&a, &b) {
+        return None;
+    }
+    let mut fused = body_a.clone();
+    fused.extend(
+        body_b
+            .iter()
+            .map(|node| legality::rename_var_in_node(node.clone(), var_b, var_a)),
+    );
+    Some(Node::Loop {
+        var: var_a.clone(),
+        from: from_a.clone(),
+        to: to_a.clone(),
+        body: fused,
+    })
 }
 
 fn bounds_match(from_a: &Expr, to_a: &Expr, from_b: &Expr, to_b: &Expr) -> bool {
