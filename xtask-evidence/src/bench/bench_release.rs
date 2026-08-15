@@ -282,20 +282,25 @@ mod tests {
         axes
     }
 
-    /// The one message a rejected fixture was rejected with.
+    /// Every reason a rejected fixture was rejected, joined.
+    ///
+    /// One bad axis used to abort on the first message. The gate collects all
+    /// of them now, so a fixture with one injected defect can still report the
+    /// several axes that defect makes unquotable.
     fn axes_findings(benchmark_dir: &Path) -> Option<String> {
         let mut report = Report::clean();
         let _ = load_release_axes(benchmark_dir, &mut report);
-        assert!(
-            report.findings.len() <= 1,
-            "Fix: these fixtures each carry one defect; got {:?}",
-            report.findings
-        );
-        report
-            .findings
-            .into_iter()
-            .next()
-            .map(|finding| finding.message)
+        if report.findings.is_empty() {
+            return None;
+        }
+        Some(
+            report
+                .findings
+                .into_iter()
+                .map(|finding| finding.message)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
     }
 
     fn write_canonical_axes_fixture(
@@ -405,7 +410,7 @@ mod tests {
 
         assert_eq!(
             axis_value(&axes, AXIS_WARM_US_PER_FILE, AxisKind::Float),
-            Ok("17".to_string()),
+            Ok("17.0".to_string()),
             "Fix: bench-release must print the canonical bench-release-axes value, not whichever JSON directory entry exposes a top-level axis."
         );
     }
