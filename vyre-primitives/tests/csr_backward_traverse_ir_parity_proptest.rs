@@ -14,7 +14,9 @@
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
 mod graph_sweep_support;
-use graph_sweep_support::{bitset_words, frontier_step_out, generated_csr_multi_source_frontier};
+use graph_sweep_support::{bitset_words, frontier_step_out};
+#[path = "../../tests/support/csr_sweep/mod.rs"]
+mod csr_sweep;
 
 use proptest::prelude::*;
 use vyre_primitives::graph::csr_backward_traverse::{cpu_ref, csr_backward_traverse};
@@ -48,7 +50,8 @@ proptest! {
         // so the IR `dst < node_count` gate and the oracle's `dst_word < len`
         // gate never diverge on an out-of-domain destination.
         let (node_count, offsets, targets, kind_mask, frontier, allow_mask) =
-            generated_csr_multi_source_frontier(seed);
+            csr_sweep::generate(csr_sweep::group("multi_source_restricted_kinds"), seed)
+                .into_parts();
         let expected = cpu_ref(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
         let got = gpu_backward_step(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
         prop_assert_eq!(

@@ -9,10 +9,11 @@
 //! loop to unroll/vectorization and tiled-memory rewrites while keeping
 //! code size bounded.
 
-use super::substitution::{body_writes_loop_var, substitute_nodes};
+use super::substitution::body_writes_loop_var;
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::subst::substitute_nodes;
 
 /// Generic strip-mining tile. Eight lanes stays below the existing
 /// unroll budget while still exposing a regular inner loop.

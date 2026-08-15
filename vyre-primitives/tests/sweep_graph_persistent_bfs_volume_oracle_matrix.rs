@@ -3,93 +3,24 @@
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+#[path = "../../tests/support/csr_sweep/mod.rs"]
+mod csr_sweep;
 mod graph_sweep_support;
-use graph_sweep_support::{bitset_words, generated_csr_frontier};
 
 use vyre_primitives::graph::persistent_bfs;
-
-fn oracle_csr_forward_step(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    let words = bitset_words(node_count);
-    let mut out = vec![0u32; words];
-    for src in 0..node_count {
-        let word_idx = (src / 32) as usize;
-        let bit_mask = 1u32 << (src % 32);
-        if word_idx >= frontier_in.len() || (frontier_in[word_idx] & bit_mask) == 0 {
-            continue;
-        }
-        let edge_start = edge_offsets[src as usize] as usize;
-        let edge_end = edge_offsets[src as usize + 1] as usize;
-        for e in edge_start..edge_end {
-            if (edge_kind_mask[e] & allow_mask) == 0 {
-                continue;
-            }
-            let dst = edge_targets[e];
-            if dst < node_count {
-                let dst_word = (dst / 32) as usize;
-                let dst_bit = 1u32 << (dst % 32);
-                out[dst_word] |= dst_bit;
-            }
-        }
-    }
-    out
-}
-
-fn oracle_persistent(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> (Vec<u32>, u32) {
-    let words = bitset_words(node_count);
-    let mut accum = frontier_in.to_vec();
-    accum.resize(words, 0);
-    let mut changed = 0u32;
-    for _ in 0..max_iters {
-        let step = oracle_csr_forward_step(
-            node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
-            &accum,
-            allow_mask,
-        );
-        let mut step_changed = false;
-        for wi in 0..words {
-            let before = accum[wi];
-            accum[wi] |= step[wi];
-            if accum[wi] != before {
-                step_changed = true;
-            }
-        }
-        if step_changed {
-            changed = 1;
-        } else {
-            break;
-        }
-    }
-    (accum, changed)
-}
 
 const CASES: usize = 16384;
 
 #[test]
 fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
-    for case in 0..CASES {
-        let seed = case as u64 ^ 0xBF5FEFE57;
-        let (node_count, offsets, targets, masks, frontier, allow_mask) =
-            generated_csr_frontier(seed);
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in csr_sweep::tuples(
+        "single_source_all_kinds",
+        CASES as u64,
+        0xBF5FEFE57,
+        0x9E37_79B9_7F4A_7C15,
+    ) {
         let max_iters = 1 + (case % 8) as u32;
-        let expected = oracle_persistent(
+        let expected = csr_sweep::oracle_persistent_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual = persistent_bfs::cpu_ref(

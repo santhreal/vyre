@@ -3,27 +3,29 @@
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 mod graph_sweep_support;
-use graph_sweep_support::{bitset_words, next_u32};
+use graph_sweep_support::bitset_words;
+#[path = "../../tests/support/csr_sweep/mod.rs"]
+mod csr_sweep;
 
 use vyre_primitives::graph::scc_decompose;
 
 fn generated_scc_case(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, u32) {
-    let mut rng = seed;
+    let mut rng = csr_sweep::Rng::new((seed) | 1);
     const BOUNDARY_SHAPES: [u32; 27] = [
         0, 1, 2, 31, 32, 33, 63, 64, 65, 95, 96, 127, 128, 129, 255, 256, 257, 300, 511, 512, 513,
         1023, 1024, 1025, 1535, 1536, 1537,
     ];
-    let node_count = if next_u32(&mut rng) % 4 == 0 {
-        BOUNDARY_SHAPES[(next_u32(&mut rng) as usize) % BOUNDARY_SHAPES.len()]
+    let node_count = if rng.next_u32() % 4 == 0 {
+        BOUNDARY_SHAPES[(rng.next_u32() as usize) % BOUNDARY_SHAPES.len()]
     } else {
-        next_u32(&mut rng) % 2048
+        rng.next_u32() % 2048
     };
     let words = bitset_words(node_count);
     let mut forward = Vec::with_capacity(words);
     let mut backward = Vec::with_capacity(words);
     for _ in 0..words {
-        forward.push(next_u32(&mut rng));
-        backward.push(next_u32(&mut rng));
+        forward.push(rng.next_u32());
+        backward.push(rng.next_u32());
     }
 
     let tail_bits = node_count % 32;
@@ -35,14 +37,14 @@ fn generated_scc_case(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, u32) {
 
     let mut component_in = Vec::with_capacity(node_count as usize);
     for node in 0..node_count {
-        let assigned = next_u32(&mut rng) % 7 == 0;
+        let assigned = rng.next_u32() % 7 == 0;
         component_in.push(if assigned {
-            next_u32(&mut rng).wrapping_add(node) & 0x7FFF_FFFF
+            rng.next_u32().wrapping_add(node) & 0x7FFF_FFFF
         } else {
             u32::MAX
         });
     }
-    let pivot = next_u32(&mut rng);
+    let pivot = rng.next_u32();
     (node_count, forward, backward, component_in, pivot)
 }
 

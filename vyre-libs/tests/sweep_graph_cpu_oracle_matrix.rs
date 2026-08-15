@@ -34,61 +34,17 @@ const PRIMITIVE_CSR_CASES: u64 = 4096;
 /// Shapes per primitive batch family (path reconstruction, motif matching).
 const PRIMITIVE_BATCH_CASES: u64 = 2048;
 
-#[path = "../../tests/support/sweep_rng.rs"]
-mod sweep_rng;
+#[path = "../../tests/support/csr_sweep/mod.rs"]
+mod csr_sweep;
 
-use sweep_rng::Rng;
+use csr_sweep::Rng;
 
 fn bitset_words(node_count: u32) -> usize {
     node_count.div_ceil(32) as usize
 }
 
-fn generated_csr(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, u32) {
-    let mut rng = Rng::new(seed);
-    let node_count = 1 + rng.range(96);
-    let words = bitset_words(node_count);
-    let mut offsets = Vec::with_capacity(node_count as usize + 1);
-    let mut targets = Vec::new();
-    let mut masks = Vec::new();
-    offsets.push(0);
-    for _ in 0..node_count {
-        let degree = rng.range(5);
-        for _ in 0..degree {
-            targets.push(rng.range(node_count));
-            let bit = 1u32 << rng.range(5);
-            let noise = if rng.next_u32() & 7 == 0 {
-                1u32 << rng.range(5)
-            } else {
-                0
-            };
-            masks.push(bit | noise);
-        }
-        offsets.push(targets.len() as u32);
-    }
-    let mut frontier = vec![0u32; words];
-    for node in 0..node_count {
-        if rng.next_u32() & 3 == 0 {
-            frontier[(node / 32) as usize] |= 1u32 << (node % 32);
-        }
-    }
-    if rng.next_u32() & 1 == 0 {
-        let word = (node_count - 1) / 32;
-        let used = node_count % 32;
-        if used != 0 {
-            frontier[word as usize] |= !((1u32 << used) - 1);
-        }
-    }
-    let allow_mask = match rng.range(6) {
-        0 => 0,
-        1 => 1,
-        2 => 0b10,
-        3 => 0b101,
-        _ => 0xFFFF_FFFF,
-    };
-    (node_count, offsets, targets, masks, frontier, allow_mask)
-}
-
-/// One generated CSR shape: case index, then the tuple `generated_csr` yields.
+/// One generated CSR shape: case index, then the fields of a
+/// `csr_sweep::CsrSweepCase`.
 type CsrCase = (u64, u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, u32);
 
 /// Deterministic CSR shape stream for one sweep family.
@@ -96,10 +52,11 @@ type CsrCase = (u64, u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, u32);
 /// `seed` keeps a family's shapes distinct from every other family's; `stride`
 /// decorrelates successive cases within it. Both are part of the sweep's
 /// coverage: changing either moves the family onto different graphs.
-fn csr_cases(cases: u64, seed: u64, stride: u64) -> impl Iterator<Item = CsrCase> {
+fn csr_cases(group: &str, cases: u64, seed: u64, stride: u64) -> impl Iterator<Item = CsrCase> {
+    let shape = csr_sweep::group(group);
     (0..cases).map(move |case| {
         let (node_count, offsets, targets, masks, frontier, allow_mask) =
-            generated_csr(seed ^ case.wrapping_mul(stride));
+            csr_sweep::generate(shape, seed ^ case.wrapping_mul(stride)).into_parts();
         (
             case, node_count, offsets, targets, masks, frontier, allow_mask,
         )
@@ -147,32 +104,6 @@ fn oracle_forward_or_changed(
     (out, changed)
 }
 
-fn snapshot_successors(
-    node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-    masks: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    let mut out = vec![0u32; bitset_words(node_count)];
-    for src in 0..node_count {
-        if !bit_is_set(frontier, src) {
-            continue;
-        }
-        let start = offsets[src as usize] as usize;
-        let end = offsets[src as usize + 1] as usize;
-        for edge in start..end {
-            if masks[edge] & allow_mask == 0 {
-                continue;
-            }
-            let dst = targets[edge];
-            out[(dst / 32) as usize] |= 1u32 << (dst % 32);
-        }
-    }
-    out
-}
-
 fn oracle_bidirectional_step(
     node_count: u32,
     offsets: &[u32],
@@ -207,38 +138,6 @@ fn oracle_bidirectional_step(
         }
     }
     out
-}
-
-fn oracle_persistent_bfs(
-    node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-    masks: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> (Vec<u32>, u32) {
-    let words = bitset_words(node_count);
-    let mut out = frontier.to_vec();
-    out.resize(words, 0);
-    let mut changed = 0;
-    for _ in 0..max_iters {
-        let step = snapshot_successors(node_count, offsets, targets, masks, &out, allow_mask);
-        let mut step_changed = false;
-        for word in 0..words {
-            let before = out[word];
-            out[word] |= step[word];
-            if out[word] != before {
-                step_changed = true;
-            }
-        }
-        if step_changed {
-            changed = 1;
-        } else {
-            break;
-        }
-    }
-    (out, changed)
 }
 
 /// Independent model of the reverse-or-changed FIXED POINT: the set of nodes that can
@@ -414,9 +313,12 @@ fn generated_parent(seed: u64) -> (Vec<u32>, Vec<u32>, u32) {
 
 #[test]
 fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
-    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
-        csr_cases(PRIMITIVE_CSR_CASES, 0xC5A5_1D00_D00D_0001, 0x9E37_79B9)
-    {
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in csr_cases(
+        "padded_tail_masked_kinds",
+        PRIMITIVE_CSR_CASES,
+        0xC5A5_1D00_D00D_0001,
+        0x9E37_79B9,
+    ) {
         let expected_step = oracle_forward_or_changed(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
@@ -426,7 +328,7 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
         assert_eq!(actual_step, expected_step, "case={case} forward_or_changed");
 
         let max_iters = (case as u32 % 9) + 1;
-        let expected_bfs = oracle_persistent_bfs(
+        let expected_bfs = csr_sweep::oracle_persistent_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual_bfs = persistent_bfs::cpu_ref(
@@ -448,9 +350,12 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
 
 #[test]
 fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
-    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
-        csr_cases(PRIMITIVE_CSR_CASES, 0x8ACC_1234_D00D_0007, 0x9E37_79B9)
-    {
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in csr_cases(
+        "multi_source_restricted_kinds",
+        PRIMITIVE_CSR_CASES,
+        0x8ACC_1234_D00D_0007,
+        0x9E37_79B9,
+    ) {
         let max_iters = node_count.saturating_add(2);
 
         // 1. The production reverse-or-changed fixed point == the independent reverse-BFS
@@ -536,9 +441,12 @@ fn generated_path_reconstruction_oracles_cover_2048_batches() {
 
 #[test]
 fn generated_motif_oracles_cover_2048_patterns() {
-    for (case, node_count, offsets, targets, masks, _, _) in
-        csr_cases(PRIMITIVE_BATCH_CASES, 0xF00D_BA5E_4455_0000, 0xA24B_AED4)
-    {
+    for (case, node_count, offsets, targets, masks, _, _) in csr_cases(
+        "topology_only_all_kinds",
+        PRIMITIVE_BATCH_CASES,
+        0xF00D_BA5E_4455_0000,
+        0xA24B_AED4,
+    ) {
         let mut rng = Rng::new(0xBADC_0FFE_EE11_0000 ^ case);
         let motif_len = rng.range(5) as usize;
         let mut motif_edges = Vec::with_capacity(motif_len);
@@ -575,9 +483,12 @@ fn generated_motif_oracles_cover_2048_patterns() {
 #[test]
 fn sweep_csr_forward_or_changed_matches_independent_oracle_matrix() {
     let mut assertions = 0usize;
-    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
-        csr_cases(CASES_PER_FAMILY, 0xF0C5_0001, 0x9E37_79B9)
-    {
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in csr_cases(
+        "single_source_all_kinds",
+        CASES_PER_FAMILY,
+        0xF0C5_0001,
+        0x9E37_79B9,
+    ) {
         let expected = oracle_forward_or_changed(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
@@ -597,9 +508,12 @@ fn sweep_csr_forward_or_changed_matches_independent_oracle_matrix() {
 #[test]
 fn sweep_csr_bidirectional_step_matches_independent_oracle_matrix() {
     let mut assertions = 0usize;
-    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
-        csr_cases(CASES_PER_FAMILY, 0xB1D1_0002, 0xD1B5_4A32)
-    {
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in csr_cases(
+        "padded_tail_masked_kinds",
+        CASES_PER_FAMILY,
+        0xB1D1_0002,
+        0xD1B5_4A32,
+    ) {
         let expected = oracle_bidirectional_step(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
@@ -623,11 +537,14 @@ fn sweep_csr_bidirectional_step_matches_independent_oracle_matrix() {
 #[test]
 fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
     let mut assertions = 0usize;
-    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
-        csr_cases(CASES_PER_FAMILY, 0xBFC0_0003, 0xA24B_AED4)
-    {
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in csr_cases(
+        "multi_source_restricted_kinds",
+        CASES_PER_FAMILY,
+        0xBFC0_0003,
+        0xA24B_AED4,
+    ) {
         let max_iters = (case as u32 % 9) + 1;
-        let expected = oracle_persistent_bfs(
+        let expected = csr_sweep::oracle_persistent_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual = bfs_expand(
