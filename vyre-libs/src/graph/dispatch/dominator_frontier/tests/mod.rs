@@ -13,7 +13,7 @@ const DOMINATOR_CONTRACT: &str = "dominance frontier dispatch";
 
 #[test]
 fn checked_reference_surfaces_bad_seed_width() {
-    let err = try_compute_dominance_frontier(2, &[0, 0, 0], &[], &[0, 0, 0], &[], &[])
+    let err = try_dominance_frontier(2, &[0, 0, 0], &[], &[0, 0, 0], &[], &[])
         .expect_err("short dominance-frontier seed must fail through substrate wrapper");
 
     assert!(
@@ -36,7 +36,7 @@ fn frontier_of_linear_chain_is_empty() {
     let pred_offsets = vec![0, 0, 1, 2, 3];
     let pred_targets = vec![0, 1, 2];
     let seed = vec![0b0001];
-    let frontier = compute_dominance_frontier(
+    let frontier = dominance_frontier(
         4,
         &dom_offsets,
         &dom_targets,
@@ -62,7 +62,7 @@ fn frontier_of_diamond_seed_is_merge_node() {
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
     let seed = vec![0b0010]; // {1}
-    let frontier = compute_dominance_frontier(
+    let frontier = dominance_frontier(
         4,
         &dom_offsets,
         &dom_targets,
@@ -85,7 +85,7 @@ fn matches_primitive_directly() {
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
     let seed = vec![0b0011];
-    let via_substrate = compute_dominance_frontier(
+    let via_substrate = dominance_frontier(
         4,
         &dom_offsets,
         &dom_targets,
@@ -114,7 +114,7 @@ fn empty_seed_yields_empty_frontier() {
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
     let seed = vec![0u32];
-    let frontier = compute_dominance_frontier(
+    let frontier = dominance_frontier(
         4,
         &dom_offsets,
         &dom_targets,
@@ -138,7 +138,7 @@ fn seed_dominating_everything_has_empty_frontier() {
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
     let seed = vec![0b0001];
-    let frontier = compute_dominance_frontier(
+    let frontier = dominance_frontier(
         4,
         &dom_offsets,
         &dom_targets,
@@ -168,7 +168,7 @@ fn via_decodes_exact_frontier_into_reused_buffer() {
     let pred_targets = vec![0, 0, 1, 2];
     let mut out = Vec::with_capacity(4);
     let ptr = out.as_ptr();
-    compute_dominance_frontier_via_into(
+    dominance_frontier_via_into(
         &dispatcher,
         4,
         &dom_offsets,
@@ -195,7 +195,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
     let mut scratch = DominanceFrontierGpuScratch::default();
     let mut out = Vec::with_capacity(1);
 
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         &dispatcher,
         4,
         &dom_offsets,
@@ -212,7 +212,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
     let out_capacity = out.capacity();
     assert_eq!(scratch.program_builds(), 1);
 
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         &dispatcher,
         4,
         &dom_offsets,
@@ -234,7 +234,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
 
     let shorter_dom_offsets = vec![0, 3, 4, 5, 6];
     let shorter_dom_targets = vec![0, 1, 2, 1, 2, 3];
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         &dispatcher,
         4,
         &shorter_dom_offsets,
@@ -263,7 +263,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     let mut scratch = DominanceFrontierGpuScratch::default();
     let mut out = Vec::new();
 
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         &dispatcher,
         4,
         &dom_offsets,
@@ -275,7 +275,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
         &mut out,
     )
     .expect("Fix: first dominance frontier dispatch should succeed");
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         &dispatcher,
         4,
         &dom_offsets,
@@ -311,7 +311,7 @@ fn via_reuses_static_graph_inputs_and_refreshes_dynamic_seed() {
     let mut scratch = DominanceFrontierGpuScratch::default();
     let mut out = Vec::new();
 
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         &dispatcher,
         4,
         &dom_offsets,
@@ -329,7 +329,7 @@ fn via_reuses_static_graph_inputs_and_refreshes_dynamic_seed() {
         .take(4)
         .map(Vec::capacity)
         .collect::<Vec<_>>();
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         &dispatcher,
         4,
         &dom_offsets,
@@ -368,7 +368,7 @@ fn via_reuses_static_graph_inputs_and_refreshes_dynamic_seed() {
 #[test]
 fn via_zero_edge_graph_uses_primitive_padding_plan() {
     let mut out = Vec::new();
-    compute_dominance_frontier_via_into(
+    dominance_frontier_via_into(
         &DominatorInputShapeDispatcher,
         1,
         &[0, 0],
@@ -398,7 +398,7 @@ fn via_rejects_extra_outputs() {
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
-    let err = compute_dominance_frontier_via(
+    let err = dominance_frontier_via(
         &dispatcher,
         4,
         &dom_offsets,
@@ -423,7 +423,7 @@ fn via_rejects_trailing_frontier_bytes() {
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
-    let err = compute_dominance_frontier_via(
+    let err = dominance_frontier_via(
         &dispatcher,
         4,
         &dom_offsets,

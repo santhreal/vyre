@@ -20,7 +20,7 @@ use vyre_foundation::program_dispatch::{
 };
 
 /// Run many sparse frontier queries over one resident CSR graph.
-pub fn run_resident_csr_queue_batch_into(
+pub fn resident_csr_queue_batch_into(
     dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueBatchScratch,
@@ -228,7 +228,7 @@ pub fn run_resident_csr_queue_batch_into(
 }
 
 /// Run many sparse frontier queries, sharded by resident scratch budget.
-pub fn run_resident_csr_queue_batch_budgeted_into(
+pub fn resident_csr_queue_batch_budgeted_into(
     dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueBatchScratch,
@@ -255,7 +255,7 @@ pub fn run_resident_csr_queue_batch_budgeted_into(
     let mut chunk_outputs = Vec::new();
     for chunk in chunks {
         let frontier_chunk = &frontiers[chunk.start..chunk.end];
-        run_resident_csr_queue_batch_into(
+        resident_csr_queue_batch_into(
             dispatcher,
             graph,
             scratch,

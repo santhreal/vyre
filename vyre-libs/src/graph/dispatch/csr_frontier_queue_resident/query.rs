@@ -16,7 +16,7 @@ use vyre_foundation::program_dispatch::{
 };
 
 /// Run one sparse frontier query over a resident CSR graph.
-pub fn run_resident_csr_queue_query_into(
+pub fn resident_csr_queue_query_into(
     dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueScratch,

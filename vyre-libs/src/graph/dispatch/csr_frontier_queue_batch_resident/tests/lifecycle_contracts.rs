@@ -13,7 +13,7 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
     let frontiers: [&[u32]; 2] = [&first, &second];
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -38,7 +38,7 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
         scratch.read_ranges.capacity(),
     );
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,

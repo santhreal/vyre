@@ -13,7 +13,7 @@ fn batch_queries_initialize_queue_len_on_device() {
     let frontiers: [&[u32]; 2] = [&first, &second];
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,

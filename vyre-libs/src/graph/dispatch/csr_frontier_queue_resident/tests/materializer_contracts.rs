@@ -22,7 +22,7 @@ fn large_single_word_resident_query_uses_atomic_word_materializer() {
     let mut frontier = vec![0u32; words];
     frontier[0] = 1;
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -86,7 +86,7 @@ fn large_dense_resident_query_uses_word_prefix_queue_materializer() {
     let mut output = Vec::new();
     let frontier = vec![u32::MAX; words];
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -158,7 +158,7 @@ fn small_multiblock_resident_query_inlines_block_offsets() {
     let mut output = Vec::new();
     let frontier = vec![u32::MAX; words];
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -223,7 +223,7 @@ fn many_block_resident_query_scans_block_offsets_once() {
     let mut output = Vec::new();
     let frontier = vec![u32::MAX; words];
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,

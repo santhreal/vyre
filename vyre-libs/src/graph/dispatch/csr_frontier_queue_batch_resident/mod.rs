@@ -10,7 +10,7 @@ mod dispatch;
 #[cfg(test)]
 mod tests;
 
-pub use dispatch::{run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into};
+pub use dispatch::{resident_csr_queue_batch_budgeted_into, resident_csr_queue_batch_into};
 
 use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueuePrograms;
 use crate::graph::dispatch::csr_frontier_queue_scratch::{

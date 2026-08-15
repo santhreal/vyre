@@ -16,7 +16,7 @@
 //!
 //! # Composition
 //!
-//! `compute_dominance_frontier` takes CSR-encoded dominance closure,
+//! `dominance_frontier` takes CSR-encoded dominance closure,
 //! predecessor lists, and a seed bitset, and returns the frontier
 //! bitset. The CSR encoding matches the primitive's contract exactly,
 //! so the composition call is a one-liner that bumps the observability
@@ -36,11 +36,11 @@ use vyre_primitives::graph::dominator_frontier::{
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
 
 pub use dispatch::{
-    compute_dominance_frontier_via, compute_dominance_frontier_via_into,
-    compute_dominance_frontier_via_with_scratch_into,
+    dominance_frontier_via, dominance_frontier_via_into,
+    dominance_frontier_via_with_scratch_into,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::{compute_dominance_frontier, try_compute_dominance_frontier};
+pub use reference::{dominance_frontier, try_dominance_frontier};
 
 /// Caller-owned GPU dispatch scratch for dominance-frontier queries.
 #[derive(Debug, Default)]

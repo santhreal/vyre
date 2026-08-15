@@ -30,7 +30,7 @@ fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
     let frontiers: [&[u32]; 2] = [&first, &second];
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -159,7 +159,7 @@ fn uniformly_high_degree_batch_queries_use_row_strided_traverse_grid() {
     let frontiers: [&[u32]; 2] = [&first, &second];
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,

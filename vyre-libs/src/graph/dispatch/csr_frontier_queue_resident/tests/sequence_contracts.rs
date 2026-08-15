@@ -17,7 +17,7 @@ fn resident_query_initializes_queue_len_on_device() {
     let mut scratch = ResidentCsrQueueScratch::default();
     let mut output = Vec::new();
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,

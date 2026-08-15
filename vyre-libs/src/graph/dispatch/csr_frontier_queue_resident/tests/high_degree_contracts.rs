@@ -19,7 +19,7 @@ fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
     let mut scratch = ResidentCsrQueueScratch::default();
     let mut output = Vec::new();
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -112,7 +112,7 @@ fn single_superhub_resident_query_sizes_split_queue_from_high_row_count() {
     let mut scratch = ResidentCsrQueueScratch::default();
     let mut output = Vec::new();
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -153,7 +153,7 @@ fn uniformly_high_degree_resident_query_uses_row_strided_traverse_grid() {
     let mut scratch = ResidentCsrQueueScratch::default();
     let mut output = Vec::new();
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,

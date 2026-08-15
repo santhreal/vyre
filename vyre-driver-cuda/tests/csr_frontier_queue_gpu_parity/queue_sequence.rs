@@ -4,7 +4,7 @@
 //! Two lifecycles show up across the sibling contract modules. The manual one
 //! allocates seven resident handles and drives the queue-build and
 //! queue-consume programs itself, which is what pins the kernel and fence
-//! counts. The API one goes through `run_resident_csr_queue_query_into` over a
+//! counts. The API one goes through `resident_csr_queue_query_into` over a
 //! reusable graph and scratch, which is what pins that the graph stays
 //! resident. Both are sequences, not assertions: each returns the readbacks and
 //! the telemetry snapshot so the calling case keeps the counts that are its
@@ -399,7 +399,7 @@ impl ResidentQueueSession {
     ) -> CudaTelemetrySnapshot {
         let (expected_out, _) = graph.expected_traverse(frontier, queue_capacity);
         backend.reset_telemetry();
-        run_resident_csr_queue_query_into(
+        resident_csr_queue_query_into(
             dispatcher,
             &self.graph,
             &mut self.scratch,

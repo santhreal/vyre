@@ -23,7 +23,7 @@ fn resident_query_buckets_graph_sized_capacity_from_frontier_popcount() {
     }
     let mut output = Vec::new();
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -82,7 +82,7 @@ fn resident_query_reuses_larger_queue_scratch_for_smaller_effective_capacity() {
     }
     let mut output = Vec::new();
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -101,7 +101,7 @@ fn resident_query_reuses_larger_queue_scratch_for_smaller_effective_capacity() {
     let mut single_frontier = vec![0u32; words];
     single_frontier[0] = 1;
 
-    run_resident_csr_queue_query_into(
+    resident_csr_queue_query_into(
         &dispatcher,
         &graph,
         &mut scratch,

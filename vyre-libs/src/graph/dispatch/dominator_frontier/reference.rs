@@ -12,7 +12,7 @@ use vyre_primitives::graph::dominator_frontier::try_cpu_ref as try_reference_dom
 /// observability dashboards can see the dispatch is exercising the
 /// primitive.
 #[must_use]
-pub fn compute_dominance_frontier(
+pub fn dominance_frontier(
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],
@@ -20,7 +20,7 @@ pub fn compute_dominance_frontier(
     pred_targets: &[u32],
     seed: &[u32],
 ) -> Vec<u32> {
-    try_compute_dominance_frontier(
+    try_dominance_frontier(
         node_count,
         dom_offsets,
         dom_targets,
@@ -33,7 +33,7 @@ pub fn compute_dominance_frontier(
 
 /// Fallible dominance-frontier substrate reference wrapper.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_compute_dominance_frontier(
+pub fn try_dominance_frontier(
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],

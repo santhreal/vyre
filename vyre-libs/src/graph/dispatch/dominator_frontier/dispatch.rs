@@ -16,7 +16,7 @@ use vyre_primitives::graph::dominator_frontier::{
 /// Propagates dispatch failures and rejects malformed dominance or
 /// predecessor CSR inputs.
 #[allow(clippy::too_many_arguments)]
-pub fn compute_dominance_frontier_via(
+pub fn dominance_frontier_via(
     dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     dom_offsets: &[u32],
@@ -26,7 +26,7 @@ pub fn compute_dominance_frontier_via(
     seed: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
     let mut out = Vec::new();
-    compute_dominance_frontier_via_into(
+    dominance_frontier_via_into(
         dispatcher,
         node_count,
         dom_offsets,
@@ -41,7 +41,7 @@ pub fn compute_dominance_frontier_via(
 
 /// Dispatcher-backed dominance-frontier query into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
-pub fn compute_dominance_frontier_via_into(
+pub fn dominance_frontier_via_into(
     dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     dom_offsets: &[u32],
@@ -52,7 +52,7 @@ pub fn compute_dominance_frontier_via_into(
     frontier_out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let mut scratch = DominanceFrontierGpuScratch::default();
-    compute_dominance_frontier_via_with_scratch_into(
+    dominance_frontier_via_with_scratch_into(
         dispatcher,
         node_count,
         dom_offsets,
@@ -67,7 +67,7 @@ pub fn compute_dominance_frontier_via_into(
 
 /// Dispatcher-backed dominance-frontier query with caller-owned scratch.
 #[allow(clippy::too_many_arguments)]
-pub fn compute_dominance_frontier_via_with_scratch_into(
+pub fn dominance_frontier_via_with_scratch_into(
     dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     dom_offsets: &[u32],
@@ -120,7 +120,7 @@ pub fn compute_dominance_frontier_via_with_scratch_into(
         &cached.program,
         inputs,
         plan.frontier_words(),
-        "compute_dominance_frontier_via frontier_out",
+        "dominance_frontier_via frontier_out",
         Some(plan.dispatch_grid()),
         frontier_out,
     )
@@ -147,18 +147,18 @@ fn refresh_dominance_frontier_inputs(
             DispatchInput::u32_slice_or_zero_words(
                 dom_targets,
                 plan.dom_target_words(),
-                "compute_dominance_frontier_via dom_targets",
+                "dominance_frontier_via dom_targets",
             ),
             DispatchInput::U32Slice(pred_offsets),
             DispatchInput::u32_slice_or_zero_words(
                 pred_targets,
                 plan.pred_target_words(),
-                "compute_dominance_frontier_via pred_targets",
+                "dominance_frontier_via pred_targets",
             ),
             DispatchInput::U32Slice(seed),
             DispatchInput::ZeroU32Words {
                 words: plan.frontier_words(),
-                context: "compute_dominance_frontier_via frontier_out",
+                context: "dominance_frontier_via frontier_out",
             },
         ],
         &[
@@ -167,7 +167,7 @@ fn refresh_dominance_frontier_inputs(
                 5,
                 DispatchInput::ZeroU32Words {
                     words: plan.frontier_words(),
-                    context: "compute_dominance_frontier_via frontier_out",
+                    context: "dominance_frontier_via frontier_out",
                 },
             ),
         ],

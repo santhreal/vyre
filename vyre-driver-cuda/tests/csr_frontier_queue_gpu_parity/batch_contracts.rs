@@ -48,7 +48,7 @@ fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
     let output_ptrs: Vec<*const u8> = outputs.iter().map(Vec::as_ptr).collect();
 
     backend.reset_telemetry();
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -93,7 +93,7 @@ fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
     let retained_frontier_payload_capacity = scratch.frontier_payload_capacity();
 
     backend.reset_telemetry();
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -183,7 +183,7 @@ fn cuda_resident_csr_queue_batch_splits_skewed_high_degree_rows() {
     let output_ptrs: Vec<*const u8> = outputs.iter().map(Vec::as_ptr).collect();
 
     backend.reset_telemetry();
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -263,7 +263,7 @@ fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
     let mut outputs = Vec::new();
 
     backend.reset_telemetry();
-    let plan = run_resident_csr_queue_batch_budgeted_into(
+    let plan = resident_csr_queue_batch_budgeted_into(
         &dispatcher,
         &graph,
         &mut scratch,

@@ -17,7 +17,7 @@ fn budgeted_batch_memory_plan_uses_effective_queue_capacity() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    let plan = run_resident_csr_queue_batch_budgeted_into(
+    let plan = resident_csr_queue_batch_budgeted_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -66,7 +66,7 @@ fn budgeted_batch_memory_plan_accounts_for_split_high_queue_scratch() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    let plan = run_resident_csr_queue_batch_budgeted_into(
+    let plan = resident_csr_queue_batch_budgeted_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -104,7 +104,7 @@ fn budgeted_batch_packs_sparse_runs_around_dense_outlier() {
     let dense_bytes_per_query =
         words * std::mem::size_of::<u32>() * 2 + node_count as usize * 4 + 4;
 
-    let plan = run_resident_csr_queue_batch_budgeted_into(
+    let plan = resident_csr_queue_batch_budgeted_into(
         &dispatcher,
         &graph,
         &mut scratch,

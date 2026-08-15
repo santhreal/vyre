@@ -7,7 +7,7 @@ mod common;
 use common::{bytes_u32, live_backend};
 use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
-    run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
+    resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{
@@ -56,7 +56,7 @@ fn generated_resident_csr_queue_word_prefix_multiblock_matches_cpu_oracle_on_liv
             allow_mask,
         );
 
-        run_resident_csr_queue_query_into(
+        resident_csr_queue_query_into(
             &dispatcher,
             &graph,
             &mut scratch,
@@ -149,7 +149,7 @@ fn generated_resident_csr_queue_many_block_word_prefix_uses_block_offset_scan_on
             allow_mask,
         );
 
-        run_resident_csr_queue_query_into(
+        resident_csr_queue_query_into(
             &dispatcher,
             &graph,
             &mut scratch,

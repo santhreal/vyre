@@ -18,7 +18,7 @@ fn large_sparse_batch_queries_use_atomic_word_materializer() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -81,7 +81,7 @@ fn large_dense_batch_queries_use_word_prefix_queue_materializer() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -149,7 +149,7 @@ fn small_multiblock_batch_queries_inline_block_offsets() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -209,7 +209,7 @@ fn many_block_batch_queries_scan_block_offsets_once_per_query() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,

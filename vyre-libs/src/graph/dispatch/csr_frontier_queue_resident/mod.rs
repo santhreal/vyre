@@ -10,7 +10,7 @@ mod upload;
 #[cfg(test)]
 mod tests;
 
-pub use query::run_resident_csr_queue_query_into;
+pub use query::resident_csr_queue_query_into;
 pub use upload::upload_resident_csr_queue_graph;
 
 use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueuePrograms;

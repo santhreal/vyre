@@ -6,8 +6,8 @@ mod common;
 
 use common::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::dominator_frontier::{
-    compute_dominance_frontier as reference_compute_dominance_frontier,
-    compute_dominance_frontier_via,
+    dominance_frontier as reference_dominance_frontier,
+    dominance_frontier_via,
 };
 
 #[test]
@@ -20,7 +20,7 @@ fn cuda_dominance_frontier_via_chain_is_empty() {
     let pred_targets = vec![0u32, 1, 2];
     let seed = vec![0b0001u32];
     let gpu = with_cuda_optimizer_dispatcher("dominance frontier chain", |dispatcher| {
-        compute_dominance_frontier_via(
+        dominance_frontier_via(
             dispatcher,
             4,
             &dom_offsets,
@@ -31,7 +31,7 @@ fn cuda_dominance_frontier_via_chain_is_empty() {
         )
         .expect("dispatch")
     });
-    let reference = reference_compute_dominance_frontier(
+    let reference = reference_dominance_frontier(
         4,
         &dom_offsets,
         &dom_targets,
@@ -52,7 +52,7 @@ fn cuda_dominance_frontier_via_diamond_seed_is_merge_node() {
     let pred_targets = vec![0u32, 0, 1, 2];
     let seed = vec![0b0010u32]; // seed = {1}
     let gpu = with_cuda_optimizer_dispatcher("dominance frontier diamond", |dispatcher| {
-        compute_dominance_frontier_via(
+        dominance_frontier_via(
             dispatcher,
             4,
             &dom_offsets,
@@ -63,7 +63,7 @@ fn cuda_dominance_frontier_via_diamond_seed_is_merge_node() {
         )
         .expect("dispatch")
     });
-    let reference = reference_compute_dominance_frontier(
+    let reference = reference_dominance_frontier(
         4,
         &dom_offsets,
         &dom_targets,
@@ -96,7 +96,7 @@ fn cuda_dominance_frontier_via_covers_candidate_past_first_workgroup() {
 
     let gpu =
         with_cuda_optimizer_dispatcher("dominance frontier 513-node candidate", |dispatcher| {
-            compute_dominance_frontier_via(
+            dominance_frontier_via(
                 dispatcher,
                 node_count,
                 &dom_offsets,
@@ -107,7 +107,7 @@ fn cuda_dominance_frontier_via_covers_candidate_past_first_workgroup() {
             )
             .expect("dispatch")
         });
-    let reference = reference_compute_dominance_frontier(
+    let reference = reference_dominance_frontier(
         node_count,
         &dom_offsets,
         &dom_targets,

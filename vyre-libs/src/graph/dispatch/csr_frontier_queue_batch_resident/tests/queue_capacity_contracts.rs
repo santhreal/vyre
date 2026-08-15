@@ -20,7 +20,7 @@ fn batch_queries_bucket_graph_sized_capacity_from_max_frontier_popcount() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -65,7 +65,7 @@ fn batch_queries_reuse_larger_queue_scratch_for_smaller_effective_capacity() {
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let mut outputs = Vec::new();
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,
@@ -86,7 +86,7 @@ fn batch_queries_reuse_larger_queue_scratch_for_smaller_effective_capacity() {
     single[0] = 1;
     let small_frontiers: [&[u32]; 2] = [&single, &single];
 
-    run_resident_csr_queue_batch_into(
+    resident_csr_queue_batch_into(
         &dispatcher,
         &graph,
         &mut scratch,

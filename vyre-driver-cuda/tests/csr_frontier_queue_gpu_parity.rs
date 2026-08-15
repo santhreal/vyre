@@ -25,12 +25,12 @@ use vyre_foundation::program_dispatch::{
     ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
-    run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into,
+    resident_csr_queue_batch_budgeted_into, resident_csr_queue_batch_into,
     ResidentCsrQueueBatchScratch,
 };
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph;
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
-    run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
+    resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{
