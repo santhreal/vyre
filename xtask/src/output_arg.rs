@@ -200,23 +200,14 @@ pub fn create_parent_dir(path: &Path) {
 /// remember to create it is one that will eventually forget.
 pub fn write_json(path: &Path, value: &impl serde::Serialize) {
     create_parent_dir(path);
-    let json = match serde_json::to_string_pretty(value) {
+    let json = match render_evidence_json(value) {
         Ok(json) => json,
         Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
+            eprintln!("Fix: {error} for `{}`", path.display());
             std::process::exit(1);
         }
     };
-    let vyre_root = crate::checkout::checkout_root();
-    let santh_root = vyre_root
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| vyre_root.clone());
-    let json = normalize_serialized_workspace_paths(&json, &vyre_root, &santh_root);
-    if let Err(error) = std::fs::write(path, format!("{json}\n")) {
+    if let Err(error) = std::fs::write(path, json) {
         eprintln!("Fix: failed to write `{}`: {error}", path.display());
         std::process::exit(1);
     }

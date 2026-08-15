@@ -9,11 +9,15 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
-use std::process::{self, Command};
+use std::process::Command;
 
 use toml::Value;
 
+use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::manifest_walk::MAX_MANIFEST_BYTES;
+
+/// What an upward edge or an unclaimed layer costs the reader.
+const FIX: &str = "remove the upward dependency, or move the crate to the layer that matches it in docs/CRATE_OWNERSHIP.toml, then regenerate the ownership docs";
 
 /// Architectural layers, most fundamental first. A crate may depend on its own
 /// layer or on any earlier layer, never on a later one.
@@ -51,82 +55,74 @@ const LAYER_ORDER: &[&str] = &[
     "tooling",
 ];
 
-/// Run the tier-dependency gate.
-pub(crate) fn run(args: &[String]) {
-    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
-        println!(
-            "USAGE:\n  cargo xtask check-tier-deps\n\n\
-             Fails on upward layer dependencies, undeclared production edges, incomplete crate ownership, or generated crate-documentation drift."
-        );
-        return;
-    }
-    if args.len() > 2 {
-        eprintln!("Fix: check-tier-deps takes no arguments.");
-        process::exit(2);
+/// Holds every crate to the layer it declares and to the layers below it.
+pub struct CheckTierDeps;
+
+impl Gate for CheckTierDeps {
+    fn name(&self) -> &'static str {
+        "check-tier-deps"
     }
 
-    let root = crate::checkout::checkout_root();
-    let members = workspace_members(&root);
-    let mut failures = Vec::new();
+    fn help(&self) -> &'static str {
+        "Reject upward layer dependencies, undeclared production edges, incomplete crate ownership and generated crate-documentation drift"
+    }
 
-    let layers = declared_layers(&root, &mut failures);
-    let workspace_deps = workspace_dependency_packages(&root);
-    let mut packages = BTreeMap::new();
-    let mut manifests = Vec::new();
-    for member in &members {
-        let manifest = root.join(member).join("Cargo.toml");
-        let text = read_bounded(&manifest);
-        let table = parse_toml(&manifest, &text);
-        let package = package_name(&manifest, &table);
-        packages.insert(package.clone(), member.clone());
-        manifests.push((package, table));
-    }
-    let members_by_package: BTreeSet<&str> = packages.keys().map(String::as_str).collect();
-    let mut claimed: BTreeSet<&str> = BTreeSet::new();
-    for (package, table) in &manifests {
-        let Some(layer) = layers.get(package) else {
-            failures.push(format!(
-                "`{package}` is a workspace member with no entry in docs/CRATE_OWNERSHIP.toml; declare its layer there"
-            ));
-            continue;
-        };
-        claimed.insert(
-            LAYER_ORDER[layer_rank(layer).expect("declared_layers rejects unknown layers")],
-        );
-        scan_manifest(
-            package,
-            layer,
-            &layers,
-            &members_by_package,
-            &workspace_deps,
-            table,
-            &mut failures,
-        );
-    }
-    for layer in LAYER_ORDER {
-        if !claimed.contains(layer) {
-            failures.push(format!(
-                "layer `{layer}` holds a position in the layer order and no crate declares it; remove the position or record the crate"
-            ));
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let root = &ctx.root;
+        let members = workspace_members(root);
+        let mut failures = Vec::new();
+
+        let layers = declared_layers(root, &mut failures);
+        let workspace_deps = workspace_dependency_packages(root);
+        let mut packages = BTreeMap::new();
+        let mut manifests = Vec::new();
+        for member in &members {
+            let manifest = root.join(member).join("Cargo.toml");
+            let text = read_bounded(&manifest);
+            let table = parse_toml(&manifest, &text);
+            let package = package_name(&manifest, &table);
+            packages.insert(package.clone(), member.clone());
+            manifests.push((package, table));
         }
-    }
-    validate_cross_crate_promotion_contract(&root, &mut failures);
-    validate_crate_ownership_registry(&root, &mut failures);
-
-    if failures.is_empty() {
-        println!(
-            "check-tier-deps: {} workspace members; layer, ownership, and generated graph contracts agree",
-            members.len()
-        );
-    } else {
-        eprintln!("check-tier-deps: {} violation(s):", failures.len());
-        for f in &failures {
-            eprintln!("  - {f}");
+        let members_by_package: BTreeSet<&str> = packages.keys().map(String::as_str).collect();
+        let mut claimed: BTreeSet<&str> = BTreeSet::new();
+        for (package, table) in &manifests {
+            let Some(layer) = layers.get(package) else {
+                failures.push(format!(
+                    "`{package}` is a workspace member with no entry in docs/CRATE_OWNERSHIP.toml; declare its layer there"
+                ));
+                continue;
+            };
+            claimed.insert(
+                LAYER_ORDER[layer_rank(layer).expect("declared_layers rejects unknown layers")],
+            );
+            scan_manifest(
+                package,
+                layer,
+                &layers,
+                &members_by_package,
+                &workspace_deps,
+                table,
+                &mut failures,
+            );
         }
-        eprintln!(
-            "Fix: remove the upward dependency, or move the crate to the layer that matches it in docs/CRATE_OWNERSHIP.toml, then regenerate the ownership docs."
-        );
-        process::exit(1);
+        for layer in LAYER_ORDER {
+            if !claimed.contains(layer) {
+                failures.push(format!(
+                    "layer `{layer}` holds a position in the layer order and no crate declares it; remove the position or record the crate"
+                ));
+            }
+        }
+        validate_cross_crate_promotion_contract(root, &mut failures);
+        validate_crate_ownership_registry(root, &mut failures);
+
+        let mut report = Report::from_messages(failures, FIX);
+        report.note(format!(
+            "{} workspace members across {} declared layers",
+            members.len(),
+            LAYER_ORDER.len()
+        ));
+        Ok(report)
     }
 }
 

@@ -19,9 +19,13 @@ use serde::{Deserialize, Serialize};
 /// finding a reader cannot act on is a complaint.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Finding {
+    /// File the finding is about, relative to the checkout root.
     pub file: Option<PathBuf>,
+    /// Line within `file`, when the gate knows one.
     pub line: Option<u32>,
+    /// What is wrong, in one sentence.
     pub message: String,
+    /// The corrective action, in one sentence.
     pub fix: String,
 }
 
@@ -83,7 +87,9 @@ impl Finding {
 /// that must never be counted.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Report {
+    /// Everything wrong the gate found. This count is what the baseline pins.
     pub findings: Vec<Finding>,
+    /// Context the gate wants a reader to have, never counted and never pinned.
     pub notes: Vec<String>,
 }
 
@@ -94,6 +100,7 @@ impl Report {
         Self::default()
     }
 
+    /// A report of findings with no notes.
     #[must_use]
     pub fn with_findings(findings: Vec<Finding>) -> Self {
         Self {
@@ -102,10 +109,29 @@ impl Report {
         }
     }
 
+    /// One finding per message, all sharing one corrective action.
+    ///
+    /// A gate whose analysis already yields a list of prose problems states the
+    /// fix once for the class, which is how these gates printed it: one trailing
+    /// `Fix:` sentence under a list. Attaching it to each finding is what makes a
+    /// single finding actionable when the sweep prints it on its own.
+    #[must_use]
+    pub fn from_messages(messages: Vec<String>, fix: &str) -> Self {
+        Self {
+            findings: messages
+                .into_iter()
+                .map(|message| Finding::new(message, fix))
+                .collect(),
+            notes: Vec::new(),
+        }
+    }
+
+    /// Record context that must not count against the pin.
     pub fn note(&mut self, note: impl Into<String>) {
         self.notes.push(note.into());
     }
 
+    /// Record one thing the gate found wrong.
     pub fn find(&mut self, finding: Finding) {
         self.findings.push(finding);
     }
@@ -121,11 +147,14 @@ impl Report {
 /// found things. An unreadable manifest is not a clean tree.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GateError {
+    /// Why the gate could not judge the tree.
     pub message: String,
+    /// What to do so it can.
     pub fix: String,
 }
 
 impl GateError {
+    /// An error stating what stopped the gate and how to let it run.
     pub fn new(message: impl Into<String>, fix: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -142,6 +171,7 @@ impl fmt::Display for GateError {
 
 impl std::error::Error for GateError {}
 
+/// Everything a gate is allowed to know about how it was invoked.
 pub struct GateCtx {
     /// Workspace root, resolved once by the runner.
     pub root: PathBuf,
@@ -173,14 +203,24 @@ impl GateCtx {
     }
 }
 
+/// One registered check. Everything the runner knows how to run is one of these.
 pub trait Gate: Sync {
+    /// Name as typed on the command line, and the key of its baseline row.
     fn name(&self) -> &'static str;
+    /// One line describing what the gate judges, shown in help.
     fn help(&self) -> &'static str;
     /// A gate that owns a generated artifact returns true and must honour ctx.write.
     fn generates(&self) -> bool {
         false
     }
+    /// Judge the tree and report what is wrong with it.
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError>;
+    /// Package whose binary runs this gate, or `None` when `xtask` runs it in
+    /// process. The runner needs the answer to check that the package it
+    /// delegates to implements every gate assigned to it.
+    fn package(&self) -> Option<&'static str> {
+        None
+    }
 }
 
 /// A gate implemented in a crate that links vyre, run as a child process.
@@ -190,9 +230,13 @@ pub trait Gate: Sync {
 /// on demand, runs it, and reads the `Report` the child serialises on stdout.
 /// Everything else about such a gate is identical to a local one.
 pub struct Delegated {
+    /// Name as typed on the command line.
     pub name: &'static str,
+    /// One line describing what the gate judges.
     pub help: &'static str,
+    /// Package whose binary implements it.
     pub package: &'static str,
+    /// Whether the gate owns a generated artifact.
     pub generates: bool,
 }
 
@@ -211,6 +255,10 @@ impl Gate for Delegated {
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         crate::delegate::run_child_gate(self.package, self.name, ctx)
+    }
+
+    fn package(&self) -> Option<&'static str> {
+        Some(self.package)
     }
 }
 

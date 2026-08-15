@@ -14,7 +14,7 @@ use std::sync::LazyLock;
 
 use serde_json::Value;
 
-use crate::gate::{GateCtx, GateError, Report};
+use crate::gate::{Gate, GateCtx, GateError, Report};
 
 /// Package whose binary owns the subcommand table.
 const DISPATCHER_PACKAGE: &str = "xtask";
@@ -49,28 +49,6 @@ pub fn dispatcher() -> &'static Path {
 /// sibling build-task binary is running and the dispatcher has to be built.
 fn dispatcher_from(current: &Path) -> Option<PathBuf> {
     (current.file_stem()? == DISPATCHER_PACKAGE).then(|| current.to_path_buf())
-}
-
-/// Build `package`'s binary of the same name, then run it with `args`.
-///
-/// `args` is the process argument vector, so `args[0]` is the dispatcher's own
-/// path and is dropped.
-pub fn run(package: &str, args: &[String]) -> ! {
-    let executable = build(package).unwrap_or_else(|error| {
-        eprintln!("{error}");
-        std::process::exit(1);
-    });
-    let status = Command::new(&executable)
-        .args(&args[1..])
-        .status()
-        .unwrap_or_else(|error| {
-            eprintln!(
-                "Fix: cannot run {}: {error}. Rebuild it with `cargo build -p {package}`.",
-                executable.display()
-            );
-            std::process::exit(1);
-        });
-    std::process::exit(status.code().unwrap_or(1));
 }
 
 /// Build the package that implements `name`, run it, and read back the report.
@@ -115,37 +93,51 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
     })
 }
 
-/// Run a delegated binary's `main`: help, argument count, then dispatch.
+/// Run a delegated binary's `main`: help, then the one gate it was asked for.
 ///
 /// Both delegated crates are entered the same way, because `xtask` enters them
-/// the same way: it hands the whole argument vector to a binary whose only job
-/// is to resolve `args[1]` against its own table. Each `main` used to spell
-/// that out, so the two could disagree about which exit code an unimplemented
-/// subcommand gets, and CI reads that code.
-pub fn run_delegated_main(
-    package: &str,
-    purpose: &str,
-    implemented: &[(&'static str, fn(&[String]))],
-) {
+/// the same way: it hands a gate name and that gate's flags to a binary whose
+/// only job is to resolve the name against its own table. Each `main` used to
+/// spell that out, so the two could disagree about which exit code an
+/// unimplemented name gets, and CI reads that code.
+///
+/// Stdout is the protocol. The child prints one JSON `Report` and nothing else,
+/// so a converted gate returns everything it has to say and prints none of it.
+pub fn run_delegated_main(package: &str, purpose: &str, gates: &[&dyn Gate]) -> ! {
     let args: Vec<String> = std::env::args().collect();
     if args
         .iter()
         .skip(1)
-        .any(|arg| arg == "--help" || arg == "-h")
+        .any(|argument| argument == "--help" || argument == "-h")
     {
-        print_dispatch_help(package, purpose, implemented.iter().map(|(name, _)| *name));
-        return;
+        print_dispatch_help(package, purpose, gates.iter().map(|gate| gate.name()));
+        std::process::exit(0);
     }
-    if args.len() < 2 {
+    let Some(name) = args.get(1) else {
         eprintln!("Fix: missing subcommand. Run `cargo xtask --help`.");
         std::process::exit(1);
-    }
-    if !crate::subcommands::dispatch(implemented, args[1].as_str(), &args) {
-        eprintln!(
-            "Fix: `{}` is not implemented in {package}. Run `cargo xtask --help`.",
-            args[1]
-        );
+    };
+    let Some(gate) = gates.iter().find(|gate| gate.name() == name.as_str()) else {
+        eprintln!("Fix: `{name}` is not implemented in {package}. Run `cargo xtask --help`.");
         std::process::exit(1);
+    };
+    let root = crate::checkout::checkout_root();
+    let ctx = GateCtx::new(root, args[2..].to_vec());
+    match gate.run(&ctx) {
+        Ok(report) => match serde_json::to_string(&report) {
+            Ok(json) => {
+                println!("{json}");
+                std::process::exit(0);
+            }
+            Err(error) => {
+                eprintln!("Fix: cannot serialise the report of `{name}`: {error}");
+                std::process::exit(1);
+            }
+        },
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
     }
 }
 
