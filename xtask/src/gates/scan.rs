@@ -653,14 +653,22 @@ pub fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
     test_only
 }
 
-/// Whether a `#[cfg(..)]` attribute gates its item on the test harness alone.
+/// Whether an attribute puts its item in the test harness and nowhere else.
 ///
-/// `test` and `all(test, feature = "x")` cannot compile outside `cargo test`, so
-/// the item below them is test code. `any(test, feature = "cpu-parity")` is a
+/// `#[test]` is the plainest case: the item exists only under `cargo test`, and
+/// a `#[test]` function written beside shipped code in `src/` is as much test
+/// code as one inside `mod tests`.
+///
+/// For `#[cfg(..)]` the predicate decides. `test` and `all(test, feature = "x")`
+/// cannot compile outside the harness. `any(test, feature = "cpu-parity")` is a
 /// different claim: it compiles in a release build with that feature on, and the
 /// 864 items carrying it in this workspace are shipped code. `not(test)` is the
 /// opposite of a test item.
 fn is_test_only_attribute(code: &str) -> bool {
+    let trimmed = code.trim();
+    if trimmed == "#[test]" || trimmed.ends_with("::test]") {
+        return true;
+    }
     let Some(predicate) = code
         .trim()
         .strip_prefix("#[cfg(")
@@ -868,17 +876,20 @@ mod tests {
         );
     }
 
-    /// WHY: this workspace spells a test gate four ways, and only two of them
-    /// mean test-only. `any(test, feature = "cpu-parity")` sits on 864 items
-    /// that ship whenever that feature is on, so reading it as test code would
-    /// hide real production panics and real hot-path cost from every rule built
-    /// on this scan. The predicate, not the word `test`, decides.
+    /// WHY: this workspace marks test code five ways, and only three of them mean
+    /// test-only. `any(test, feature = "cpu-parity")` sits on 864 items that ship
+    /// whenever that feature is on, so reading it as test code would hide real
+    /// production panics and real hot-path cost from every rule built on this
+    /// scan. A bare `#[test]` beside shipped code is the opposite case: it never
+    /// ships, wherever it is written. The attribute, not the word `test`, decides.
     #[test]
-    fn only_a_predicate_that_requires_test_marks_test_code() {
+    fn only_an_attribute_that_requires_test_marks_test_code() {
         for attribute in [
             "#[cfg(test)]",
             "    #[cfg(all(test, feature = \"subgroup-ops\"))]",
             "#[cfg(all(feature = \"gpu\", test))]",
+            "#[test]",
+            "#[tokio::test]",
         ] {
             let lines = vec![attribute, "mod tests {", "}", "fn after() {}"];
             assert_eq!(
