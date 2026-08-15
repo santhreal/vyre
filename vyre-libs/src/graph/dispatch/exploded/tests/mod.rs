@@ -3,7 +3,9 @@ use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
 use std::sync::Mutex;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::exploded::build_cpu_reference;
+use vyre_primitives::graph::exploded::{
+    build_cpu_reference, exploded_ifds_case, EXPLODED_IFDS_CASE_COUNT,
+};
 
 mod ifds_doubles;
 
@@ -338,60 +340,27 @@ fn empty_via_path_does_not_materialize_program_or_dispatch() {
 #[test]
 fn via_matches_reference_on_generated_ifds_graphs() {
     let dispatcher = CpuOracleDispatcher::new();
-    for case in 0..512usize {
-        let num_procs = 1 + (case % 3) as u32;
-        let blocks_per_proc = 1 + ((case / 3) % 5) as u32;
-        let facts_per_proc = 1 + ((case / 15) % 5) as u32;
-        let mut intra_edges = Vec::new();
-        let mut inter_edges = Vec::new();
-        let mut flow_gen = Vec::new();
-        let mut flow_kill = Vec::new();
-
-        for p in 0..num_procs {
-            for b in 0..blocks_per_proc {
-                let next_b = (b + 1) % blocks_per_proc;
-                let mixed = case
-                    .wrapping_mul(37)
-                    .wrapping_add((p as usize).wrapping_mul(11))
-                    .wrapping_add((b as usize).wrapping_mul(7));
-                if blocks_per_proc > 1 && mixed % 2 == 0 {
-                    intra_edges.push((p, b, next_b));
-                }
-                let fact = (mixed as u32) % facts_per_proc;
-                if mixed % 3 == 0 {
-                    flow_gen.push((p, b, fact));
-                }
-                if mixed % 5 == 0 && fact != 0 {
-                    flow_kill.push((p, b, fact));
-                }
-            }
-        }
-        if num_procs > 1 {
-            for p in 0..num_procs - 1 {
-                if (case + p as usize) % 2 == 0 {
-                    inter_edges.push((p, 0, p + 1, 0));
-                }
-            }
-        }
+    for case in 0..EXPLODED_IFDS_CASE_COUNT {
+        let graph = exploded_ifds_case(case);
 
         let expected = canonical_expected(
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra_edges,
-            &inter_edges,
-            &flow_gen,
-            &flow_kill,
+            graph.num_procs,
+            graph.blocks_per_proc,
+            graph.facts_per_proc,
+            &graph.intra_edges,
+            &graph.inter_edges,
+            &graph.flow_gen,
+            &graph.flow_kill,
         );
         let actual = build_ifds_csr_via(
             &dispatcher,
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra_edges,
-            &inter_edges,
-            &flow_gen,
-            &flow_kill,
+            graph.num_procs,
+            graph.blocks_per_proc,
+            graph.facts_per_proc,
+            &graph.intra_edges,
+            &graph.inter_edges,
+            &graph.flow_gen,
+            &graph.flow_kill,
         )
         .unwrap_or_else(|error| {
             panic!("Fix: generated IFDS case {case} must dispatch through CPU oracle: {error:?}")

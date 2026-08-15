@@ -201,60 +201,27 @@ fn generated_try_build_cpu_reference_into_matches_allocating_reference() {
     let mut col_idx = Vec::new();
     let mut scratch = ExplodedIfdsCpuScratch::new();
 
-    for case in 0..1024usize {
-        let num_procs = 1 + (case % 3) as u32;
-        let blocks_per_proc = 1 + ((case / 3) % 5) as u32;
-        let facts_per_proc = 1 + ((case / 15) % 5) as u32;
-        let mut intra_edges = Vec::new();
-        let mut inter_edges = Vec::new();
-        let mut flow_gen = Vec::new();
-        let mut flow_kill = Vec::new();
-
-        for p in 0..num_procs {
-            for b in 0..blocks_per_proc {
-                let next_b = (b + 1) % blocks_per_proc;
-                let mixed = case
-                    .wrapping_mul(37)
-                    .wrapping_add((p as usize).wrapping_mul(11))
-                    .wrapping_add((b as usize).wrapping_mul(7));
-                if blocks_per_proc > 1 && mixed % 2 == 0 {
-                    intra_edges.push((p, b, next_b));
-                }
-                let fact = (mixed as u32) % facts_per_proc;
-                if mixed % 3 == 0 {
-                    flow_gen.push((p, b, fact));
-                }
-                if mixed % 5 == 0 && fact != 0 {
-                    flow_kill.push((p, b, fact));
-                }
-            }
-        }
-        if num_procs > 1 {
-            for p in 0..num_procs - 1 {
-                if (case + p as usize) % 2 == 0 {
-                    inter_edges.push((p, 0, p + 1, 0));
-                }
-            }
-        }
+    for case in 0..EXPLODED_IFDS_CASE_COUNT {
+        let graph = exploded_ifds_case(case);
 
         let expected = try_build_cpu_reference(
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra_edges,
-            &inter_edges,
-            &flow_gen,
-            &flow_kill,
+            graph.num_procs,
+            graph.blocks_per_proc,
+            graph.facts_per_proc,
+            &graph.intra_edges,
+            &graph.inter_edges,
+            &graph.flow_gen,
+            &graph.flow_kill,
         )
         .expect("Fix: generated exploded IFDS graph must build through allocating oracle.");
         try_build_cpu_reference_into(
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra_edges,
-            &inter_edges,
-            &flow_gen,
-            &flow_kill,
+            graph.num_procs,
+            graph.blocks_per_proc,
+            graph.facts_per_proc,
+            &graph.intra_edges,
+            &graph.inter_edges,
+            &graph.flow_gen,
+            &graph.flow_kill,
             &mut row_ptr,
             &mut col_idx,
             &mut scratch,
