@@ -25,6 +25,7 @@ pub mod hygiene_matrix;
 pub mod implementation_family;
 pub mod lint_hygiene;
 pub mod lockfile;
+pub mod manifest_contract;
 pub mod op_names;
 pub mod ownership;
 pub mod parity_testing;
@@ -75,6 +76,9 @@ pub static GATES: &[&dyn Gate] = &[
     &lint_hygiene::UnsafeBudget,
     &lint_hygiene::UnsafeJustification,
     &lockfile::LockfileClean,
+    &manifest_contract::InternalDepVersions,
+    &manifest_contract::PathDepsResolve,
+    &manifest_contract::WorkspaceMembership,
     &op_names::OpNames,
     &parity_testing::ParityTestingIsolated,
     &platform_boundary::PlatformBoundary,

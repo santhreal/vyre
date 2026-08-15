@@ -15,6 +15,14 @@ name = "abstraction-gate"
 findings = 0
 
 [[gate]]
+name = "audit-status"
+findings = 0
+
+[[gate]]
+name = "backend-extension"
+findings = 0
+
+[[gate]]
 name = "backend-matrix"
 findings = 0
 
@@ -24,14 +32,6 @@ findings = 0
 
 [[gate]]
 name = "bench-release"
-findings = 0
-
-[[gate]]
-name = "audit-status"
-findings = 0
-
-[[gate]]
-name = "backend-extension"
 findings = 0
 
 [[gate]]
@@ -135,6 +135,10 @@ name = "hygiene-matrix"
 findings = 0
 
 [[gate]]
+name = "internal-dep-versions"
+findings = 0
+
+[[gate]]
 name = "invariant-paths"
 findings = 0
 
@@ -211,6 +215,10 @@ name = "parity-testing-isolated"
 findings = 0
 
 [[gate]]
+name = "path-deps-resolve"
+findings = 0
+
+[[gate]]
 name = "platform-boundary"
 findings = 0
 
@@ -224,6 +232,18 @@ findings = 0
 
 [[gate]]
 name = "print-composition"
+findings = 0
+
+[[gate]]
+name = "program-wire-fields"
+findings = 0
+
+[[gate]]
+name = "proptest-coverage"
+findings = 0
+
+[[gate]]
+name = "readback-ring"
 findings = 0
 
 [[gate]]
@@ -243,26 +263,6 @@ name = "release-workload-matrix"
 findings = 0
 
 [[gate]]
-name = "shrink"
-findings = 0
-
-[[gate]]
-name = "trace-f32"
-findings = 0
-
-[[gate]]
-name = "program-wire-fields"
-findings = 0
-
-[[gate]]
-name = "proptest-coverage"
-findings = 0
-
-[[gate]]
-name = "readback-ring"
-findings = 0
-
-[[gate]]
 name = "repo-hygiene"
 findings = 2
 
@@ -271,7 +271,15 @@ name = "shader-source"
 findings = 0
 
 [[gate]]
+name = "shrink"
+findings = 0
+
+[[gate]]
 name = "single-backlog"
+findings = 0
+
+[[gate]]
+name = "trace-f32"
 findings = 0
 
 [[gate]]
@@ -305,6 +313,10 @@ findings = 0
 [[gate]]
 name = "workspace-docs"
 findings = 0
+
+[[gate]]
+name = "workspace-membership"
+findings = 2
 
 [[gate]]
 name = "workspace-tests"
