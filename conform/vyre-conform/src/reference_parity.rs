@@ -4,7 +4,7 @@
 use crate::operation_selection::PreparedEntry;
 use crate::proof_scheduler::panic_message;
 use crate::replay_capsule::build_replay_capsule;
-use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
+use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_conform::witness_plan::plan_witness_inputs_into;
 use vyre_conform::{convergence_lens, ProductionSession};
 use vyre_conform_spec::ConformanceResult;

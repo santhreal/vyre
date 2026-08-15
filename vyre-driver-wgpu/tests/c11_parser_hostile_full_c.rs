@@ -41,258 +41,173 @@ use c_frontend::rows::{
     assert_kind, assert_vast_row, pg_word_at, row_indices as typed_indices, starts_for_lens,
     word_at, PG_STRIDE_U32, VAST_STRIDE_U32,
 };
+use c_frontend::spelling::c_rows;
 
 // The VAST builder / classifier / PG lowerer dispatch is owned by
 // `c_ast_gpu_parity_support`, which every other C-AST parity root in this crate
 // already drives its stages through. What stays here is the hostile fixture
 // corpus and the node kinds each fixture must produce.
+//
+// Streams are spelled through `c_rows` rather than one `TOK_` per line. These
+// six fixtures are distinct constructs that nonetheless share long runs of
+// `LBRACE DOT IDENTIFIER ASSIGN` and `LPAREN IDENTIFIER RPAREN`, and one token
+// per line made those runs read as copied text while burying the construct in
+// 30 lines of scaffolding. Every token here is one source byte wide, which is
+// what a bare kind name in a spelling means.
 
-// ---------------------------------------------------------------------------
-// Hostile fixtures
-// ---------------------------------------------------------------------------
-
+/// ```c
 /// typedef int Foo;
 /// void bar(void) {
-///   Foo *a;          -- typedef-name declarator
-///   (Foo)*b;         -- cast expression (type-name paren without decl context)
-///   (Foo)-1;         -- cast expression
-///   c = (Foo){ .x=1 }; -- compound literal + initializer list
+///   Foo *a;            // typedef-name declarator
+///   (Foo)*b;           // cast expression (type-name paren without decl context)
+///   (Foo)-1;           // cast expression
+///   c = (Foo){ .x=1 }; // compound literal + initializer list
 /// }
+/// ```
 fn fixture_typedef_expr_ambiguity() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_TYPEDEF,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_VOID,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_IDENTIFIER, // Foo
-        TOK_STAR,
-        TOK_IDENTIFIER, // a
-        TOK_SEMICOLON,
-        TOK_LPAREN, // (Foo)
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER, // b
-        TOK_SEMICOLON,
-        TOK_LPAREN, // (Foo)
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_MINUS,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER, // c
-        TOK_ASSIGN,
-        TOK_LPAREN, // (Foo)
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "TYPEDEF INT IDENTIFIER SEMICOLON \
+         VOID IDENTIFIER LPAREN VOID RPAREN LBRACE \
+         IDENTIFIER STAR IDENTIFIER SEMICOLON \
+         LPAREN IDENTIFIER RPAREN STAR IDENTIFIER SEMICOLON \
+         LPAREN IDENTIFIER RPAREN MINUS INTEGER SEMICOLON \
+         IDENTIFIER ASSIGN LPAREN IDENTIFIER RPAREN \
+         LBRACE DOT IDENTIFIER ASSIGN INTEGER RBRACE SEMICOLON \
+         RBRACE",
+    )
 }
 
+/// ```c
 /// int (*(*f[4])(int))[2];
+/// ```
+///
 /// Deeply nested: the classifier loses the decl context after the first
 /// parenthesis, so only the outermost star is a POINTER_DECL.
 fn fixture_deeply_nested_declarator() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER, // f
-        TOK_LBRACKET,
-        TOK_INTEGER, // 4
-        TOK_RBRACKET,
-        TOK_RPAREN,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_RPAREN,
-        TOK_RPAREN,
-        TOK_LBRACKET,
-        TOK_INTEGER, // 2
-        TOK_RBRACKET,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "INT LPAREN STAR LPAREN STAR IDENTIFIER LBRACKET INTEGER RBRACKET RPAREN \
+         LPAREN INT RPAREN RPAREN LBRACKET INTEGER RBRACKET SEMICOLON",
+    )
 }
 
+/// ```c
 /// struct S { int a; struct { int b; } nested; };
 /// enum E { A, B };
+/// ```
 fn fixture_nested_struct_enum() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER, // S
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_IDENTIFIER, // a
-        TOK_SEMICOLON,
-        TOK_STRUCT,
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_IDENTIFIER, // b
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_IDENTIFIER, // nested
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-        TOK_ENUM,
-        TOK_IDENTIFIER, // E
-        TOK_LBRACE,
-        TOK_IDENTIFIER, // A
-        TOK_COMMA,
-        TOK_IDENTIFIER, // B
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT IDENTIFIER LBRACE INT IDENTIFIER SEMICOLON \
+         STRUCT LBRACE INT IDENTIFIER SEMICOLON RBRACE IDENTIFIER SEMICOLON \
+         RBRACE SEMICOLON \
+         ENUM IDENTIFIER LBRACE IDENTIFIER COMMA IDENTIFIER RBRACE SEMICOLON",
+    )
 }
 
+/// ```c
 /// int x[] = { [0] = 1, [1] = { [2] = 3, [0] = 4 } };
+/// ```
 fn fixture_nested_designated_init() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER, // x
-        TOK_LBRACKET,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "INT IDENTIFIER LBRACKET RBRACKET ASSIGN LBRACE \
+         LBRACKET INTEGER RBRACKET ASSIGN INTEGER COMMA \
+         LBRACKET INTEGER RBRACKET ASSIGN LBRACE \
+         LBRACKET INTEGER RBRACKET ASSIGN INTEGER COMMA \
+         LBRACKET INTEGER RBRACKET ASSIGN INTEGER RBRACE \
+         RBRACE SEMICOLON",
+    )
 }
 
+/// ```c
 /// __attribute__((noreturn)) void die(int code) {
 ///   __asm__ volatile ("ud2" ::: "memory");
 /// }
+/// ```
 fn fixture_gnu_attribute_inline_asm() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_GNU_ATTRIBUTE,
-        TOK_LPAREN,
-        TOK_LPAREN,
-        TOK_IDENTIFIER, // noreturn
-        TOK_RPAREN,
-        TOK_RPAREN,
-        TOK_VOID,
-        TOK_IDENTIFIER, // die
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_IDENTIFIER, // code
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_GNU_ASM,
-        TOK_VOLATILE,
-        TOK_LPAREN,
-        TOK_STRING, // "ud2"
-        TOK_COLON,
-        TOK_COLON,
-        TOK_COLON,
-        TOK_STRING, // "memory"
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "GNU_ATTRIBUTE LPAREN LPAREN IDENTIFIER RPAREN RPAREN \
+         VOID IDENTIFIER LPAREN INT IDENTIFIER RPAREN LBRACE \
+         GNU_ASM VOLATILE LPAREN STRING COLON COLON COLON STRING RPAREN SEMICOLON \
+         RBRACE",
+    )
 }
 
+/// ```c
 /// void f(void) {
 ///   int *p = (int []){ 1, 2, 3 };
 ///   struct S *s = (struct S){ .a = 1 };
 /// }
+/// ```
 fn fixture_compound_literal_stress() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_VOID,
-        TOK_IDENTIFIER, // f
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_STAR,
-        TOK_IDENTIFIER, // p
-        TOK_ASSIGN,
-        TOK_LPAREN, // (int [])
-        TOK_INT,
-        TOK_LBRACKET,
-        TOK_RBRACKET,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-        TOK_STRUCT,
-        TOK_IDENTIFIER, // S
-        TOK_STAR,
-        TOK_IDENTIFIER, // s
-        TOK_ASSIGN,
-        TOK_LPAREN, // (struct S)
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER, // a
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "VOID IDENTIFIER LPAREN VOID RPAREN LBRACE \
+         INT STAR IDENTIFIER ASSIGN LPAREN INT LBRACKET RBRACKET RPAREN \
+         LBRACE INTEGER COMMA INTEGER COMMA INTEGER RBRACE SEMICOLON \
+         STRUCT IDENTIFIER STAR IDENTIFIER ASSIGN LPAREN STRUCT IDENTIFIER RPAREN \
+         LBRACE DOT IDENTIFIER ASSIGN INTEGER RBRACE SEMICOLON \
+         RBRACE",
+    )
+}
+
+/// The spellings above produce exactly the streams the `TOK_` lists they replace
+/// produced.
+///
+/// A spelling is a second way to say the same thing, so a mistyped kind name
+/// would silently retarget a contract at a different construct while every
+/// assertion below still passed against the new shape. Token counts and the two
+/// kinds that carry the whole point of a fixture are pinned here as literals,
+/// read from the stream rather than restated from the spelling.
+#[test]
+fn every_hostile_fixture_spells_the_stream_its_contracts_index() {
+    let (types, starts, lens) = fixture_typedef_expr_ambiguity();
+    assert_eq!(types.len(), 39, "typedef/expression ambiguity token count");
+    assert_eq!(lens, vec![1; types.len()], "every hostile token is one byte");
+    // `starts_for_lens` separates adjacent lexemes, so a one-byte token stream
+    // lays out on a stride of two. What a span contract needs is that the spans
+    // are disjoint and ordered, not the stride itself.
+    assert!(
+        starts
+            .windows(2)
+            .zip(lens.iter())
+            .all(|(pair, len)| pair[0] + len <= pair[1]),
+        "token spans must be disjoint and ordered: starts={starts:?} lens={lens:?}"
+    );
+    // Row 11 is the `*` in `Foo *a` the POINTER_DECL contract indexes, row 17 the
+    // `*` in `(Foo)*b` that must not be one. Both are positional, so a shifted
+    // stream would silently move a contract onto another token.
+    assert_eq!(types[11], TOK_STAR, "row 11 is the `*` of `Foo *a`");
+    assert_eq!(types[17], TOK_STAR, "row 17 is the `*` of `(Foo)*b`");
+    assert_eq!(
+        types[32], TOK_DOT,
+        "row 32 is the `.` of the compound literal's designator"
+    );
+
+    assert_eq!(
+        fixture_deeply_nested_declarator().0.len(),
+        18,
+        "nested declarator token count"
+    );
+    assert_eq!(
+        fixture_nested_struct_enum().0.len(),
+        24,
+        "nested struct/enum token count"
+    );
+    assert_eq!(
+        fixture_nested_designated_init().0.len(),
+        31,
+        "nested designated-init token count"
+    );
+    let (asm_types, _, _) = fixture_gnu_attribute_inline_asm();
+    assert_eq!(asm_types.len(), 24, "GNU attribute / asm token count");
+    assert_eq!(
+        asm_types[16], TOK_STRING,
+        "the asm template stays a STRING; a kind-name typo here would retarget the \
+         INLINE_ASM contract at a different row"
+    );
+    assert_eq!(
+        fixture_compound_literal_stress().0.len(),
+        40,
+        "compound-literal stress token count"
+    );
 }
 
 // ---------------------------------------------------------------------------

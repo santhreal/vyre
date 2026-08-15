@@ -15,11 +15,11 @@
 use std::collections::BTreeMap;
 
 use vyre::ir::{DataType, Program};
-use vyre_conform::fp_parity::{f32_ulp_tolerance, ulp_distance};
 use vyre_conform::production::ProductionSession;
 use vyre_conform::witness_plan::{
     plan_witness_inputs_into, plan_witness_inputs_owned_into, WitnessInputPlan,
 };
+use vyre_foundation::fp_parity::{f32_ulp_tolerance, max_output_ulp};
 use vyre_reference::value::Value;
 
 type FixtureCases = Vec<Vec<Vec<u8>>>;
@@ -69,60 +69,6 @@ fn run_cpu_from_slices<'a>(
 fn backend_inputs_from_vectors<'a>(buffers: &'a [Vec<u8>], outputs: &mut Vec<&'a [u8]>) {
     outputs.clear();
     outputs.extend(buffers.iter().map(Vec::as_slice));
-}
-
-fn max_ulp_delta(reference: &[Vec<u8>], backend: &[Vec<u8>], program: &Program) -> Option<u32> {
-    if reference.len() != backend.len() {
-        return None;
-    }
-    let output_indices = program.output_buffer_indices();
-    if reference.len() != output_indices.len() {
-        return None;
-    }
-    let mut max_ulp = 0u32;
-    for (slot, &buf_idx) in output_indices.iter().enumerate() {
-        let bytes_a = reference.get(slot)?;
-        let bytes_b = backend.get(slot)?;
-        if program.buffers()[buf_idx as usize].element() != DataType::F32 {
-            continue;
-        }
-        if bytes_a.len() != bytes_b.len() || bytes_a.len() % 4 != 0 {
-            return None;
-        }
-        for (a, b) in bytes_a.chunks_exact(4).zip(bytes_b.chunks_exact(4)) {
-            let fa = f32::from_bits(u32::from_le_bytes(a.try_into().unwrap()));
-            let fb = f32::from_bits(u32::from_le_bytes(b.try_into().unwrap()));
-            if fa.to_bits() == fb.to_bits() {
-                continue;
-            }
-            if fa.is_nan() && fb.is_nan() {
-                continue;
-            }
-            // Extreme inputs (inf, NaN) often diverge between CPU reference
-            // and GPU due to fast-math / FTZ. Only same-signed infinities
-            // and same-class non-finite values are comparable for ULP.
-            if !fa.is_finite() && !fb.is_finite() {
-                if fa.is_infinite()
-                    && fb.is_infinite()
-                    && fa.is_sign_positive() == fb.is_sign_positive()
-                {
-                    continue;
-                }
-                if fa.is_nan() && fb.is_nan() {
-                    continue;
-                }
-                return Some(u32::MAX);
-            }
-            if fa.is_nan() || fb.is_nan() {
-                return Some(u32::MAX);
-            }
-            match ulp_distance(fa, fb) {
-                Some(ulp) => max_ulp = max_ulp.max(ulp),
-                None => return Some(u32::MAX),
-            }
-        }
-    }
-    Some(max_ulp)
 }
 
 fn make_adversarial_inputs_into(

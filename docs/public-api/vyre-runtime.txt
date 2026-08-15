@@ -2565,7 +2565,6 @@ pub vyre_runtime::resource_residency::ResourceSetLease::key: vyre_runtime::resou
 pub vyre_runtime::resource_residency::ResourceSetLease::status: vyre_runtime::resource_residency::ResourceAdmissionStatus
 pub vyre_runtime::resource_residency::StateLease::generation: u64
 pub vyre_runtime::resource_residency::StateLease::id: vyre_runtime::resource_residency::StateId
-pub vyre_runtime::routing::RoutingDecision::CpuSimd
 pub vyre_runtime::routing::RoutingDecision::GpuPipeline
 pub vyre_runtime::routing::RoutingDecision::PersistentMegakernel
 pub vyre_runtime::routing::RoutingExplanation::decision: vyre_runtime::routing::RoutingDecision

@@ -3937,9 +3937,11 @@ dependencies = [
 name = "vyre-test-support"
 version = "0.7.2"
 dependencies = [
+ "smallvec",
  "structure-gate",
  "tempfile",
  "vyre-foundation",
+ "vyre-spec",
 ]
 
 [[package]]

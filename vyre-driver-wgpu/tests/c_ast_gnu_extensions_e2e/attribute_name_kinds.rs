@@ -4,13 +4,7 @@ use super::*;
 fn attribute_names_classify_as_specific_kinds_gpu_cpu_parity() {
     let fix = fixture_attribute_names();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_full_pipeline_parity(&fix, "attribute_names");
 
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);

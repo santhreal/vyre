@@ -7,7 +7,6 @@
 
 #![allow(deprecated)]
 
-use vyre_libs::parsing::c::lex::tokens::{TOK_COMMENT, TOK_WHITESPACE};
 use vyre_libs::parsing::c::parse::vast::{
     C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_NONE, C_EXPR_SHAPE_STRIDE_U32,
 };
@@ -65,20 +64,8 @@ pub(crate) fn assert_pg_row(assembled: &Fixture, pg: &[u8], typed: &[u8], idx: u
     );
 }
 
-/// Assert the fixture's own lexemes re-lex to the kinds it declares, so a
-/// hand-built stream cannot assert a tokenization the lexer does not produce.
-pub(crate) fn assert_lex_matches_non_ws(assembled: &Fixture) {
-    let kinds = c_grammar_gen::lex_c11_max_munch_kinds(assembled.source.as_bytes())
-        .expect("lex fixture source");
-    let filtered: Vec<u32> = kinds
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect();
-    assert_eq!(
-        filtered, assembled.raw_kinds,
-        "hand-built fixture must match max-munch lexer (no fake tokenization)"
-    );
-}
+#[allow(unused_imports)]
+pub(crate) use crate::c_frontend::token_fixture::assert_lex_matches_non_ws;
 
 /// A structural or preprocessing row carries no expression shape.
 pub(crate) fn assert_shape_none(expr_shape: &[u8], idx: usize) {

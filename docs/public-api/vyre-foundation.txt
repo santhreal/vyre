@@ -834,7 +834,9 @@ pub fn vyre_foundation::fp_parity::compare_operation_outputs(op_id: &str, progra
 pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::effective_tolerance(op_id: &str, program: &vyre_foundation::ir::Program) -> u32
 pub fn vyre_foundation::fp_parity::f32_buffer_matches(bytes_a: &[u8], bytes_b: &[u8], tolerance: u32) -> bool
+pub fn vyre_foundation::fp_parity::f32_buffer_max_ulp(bytes_a: &[u8], bytes_b: &[u8]) -> core::option::Option<u32>
 pub fn vyre_foundation::fp_parity::f32_ulp_tolerance(program: &vyre_foundation::ir::Program) -> u32
+pub fn vyre_foundation::fp_parity::max_output_ulp(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> core::option::Option<u32>
 pub fn vyre_foundation::fp_parity::ulp_distance(left: f32, right: f32) -> core::option::Option<u32>
 pub fn vyre_foundation::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
 pub fn vyre_foundation::graph_view::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
@@ -2341,6 +2343,8 @@ pub fn vyre_foundation::serial::wire::framing::put_u32::put_u32(out: &mut alloc:
 pub fn vyre_foundation::serial::wire::framing::put_u8(out: &mut alloc::vec::Vec<u8>, value: u8)
 pub fn vyre_foundation::serial::wire::framing::put_u8::put_u8(out: &mut alloc::vec::Vec<u8>, value: u8)
 pub fn vyre_foundation::serial::wire::framing::wire_format_version_is_supported(version: u16) -> bool
+pub fn vyre_foundation::serial::wire::tags::data_type_tag(value: &vyre_spec::data_type::DataType) -> core::result::Result<u8, vyre_foundation::serial::wire::encode::error::WireEncodeErr>
+pub fn vyre_foundation::serial::wire::tags::data_type_tag::data_type_tag(value: &vyre_spec::data_type::DataType) -> core::result::Result<u8, vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::analysis::graph_view::NodeGraph
 pub fn vyre_foundation::transform::autodiff::error::AutodiffError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::transform::autodiff::grad(program: &vyre_foundation::ir::Program, outputs: &[&str], inputs: &[&str]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::transform::autodiff::error::AutodiffError>
@@ -2408,6 +2412,7 @@ pub fn vyre_foundation::transform::visit::ExprChildren<'a>::iter(self) -> impl c
 pub fn vyre_foundation::transform::visit::ExprVisitor::visit_expr(&mut self, expr: &vyre_foundation::ir::Expr)
 pub fn vyre_foundation::transform::visit::NodeVisitor::visit_node(&mut self, node: &vyre_foundation::ir::Node)
 pub fn vyre_foundation::transform::visit::any_descendant(node: &vyre_foundation::ir::Node, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool) -> bool
+pub fn vyre_foundation::transform::visit::any_expr_in(nodes: &[vyre_foundation::ir::Node], pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> bool) -> bool
 pub fn vyre_foundation::transform::visit::any_subexpr(expr: &vyre_foundation::ir::Expr, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> bool) -> bool
 pub fn vyre_foundation::transform::visit::child_bodies(node: &vyre_foundation::ir::Node) -> [&[vyre_foundation::ir::Node]; 2]
 pub fn vyre_foundation::transform::visit::child_bodies_mut(node: &mut vyre_foundation::ir::Node) -> smallvec::SmallVec<[&mut alloc::vec::Vec<vyre_foundation::ir::Node>; 2]>

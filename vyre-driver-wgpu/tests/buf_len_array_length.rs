@@ -100,6 +100,117 @@ fn u32_bytes(values: &[u32]) -> Vec<u8> {
         .collect()
 }
 
+/// The byte address invocation `w` handles for lane `k`: `w * 4 + k`.
+///
+/// Every packing program in this family lays four byte lanes across one output
+/// word, so this address, the grid gate below, and the atomic-or accumulate
+/// lane are the shape all of them share. Restating them per program is what let
+/// two of these files carry the same forty lines twice.
+fn lane_addr(k: u32) -> Expr {
+    Expr::add(Expr::mul(Expr::var("w"), Expr::u32(4)), Expr::u32(k))
+}
+
+/// An unclamped one-byte load from `input`, widened to `u32`.
+fn input_byte(addr: Expr) -> Expr {
+    Expr::cast(DataType::U32, Expr::load("input", addr))
+}
+
+/// A `buf_len`-clamped one-byte load from `input`, masked to a single byte.
+///
+/// `input` carries no static count, so `buf_len` lowers to `naga::ArrayLength`
+/// and the clamp is what keeps a lane in bounds when the bound buffer is
+/// shorter than the lane grid.
+fn clamped_input_byte(addr: Expr) -> Expr {
+    let len = Expr::buf_len("input");
+    let safe_addr = Expr::select(
+        Expr::lt(addr.clone(), len.clone()),
+        addr,
+        Expr::saturating_sub(len, Expr::u32(1)),
+    );
+    Expr::bitand(input_byte(safe_addr), Expr::u32(0xFF))
+}
+
+/// `in_byte_{k}`, either a space when `comment` holds, or `byte` otherwise.
+///
+/// Written as declare-then-assign rather than a `select` on purpose: an
+/// `Assign` to an outer-scope binding from inside both arms of an
+/// `if_then_else` is the carrier shape these contracts exist to pin.
+fn assigned_byte_nodes(k: u32, comment: Expr, byte: Expr) -> Vec<Node> {
+    vec![
+        Node::let_bind(format!("in_byte_{k}"), Expr::u32(0)),
+        Node::if_then_else(
+            comment,
+            vec![Node::assign(
+                &format!("in_byte_{k}"),
+                Expr::u32(b' ' as u32),
+            )],
+            vec![Node::assign(&format!("in_byte_{k}"), byte)],
+        ),
+    ]
+}
+
+/// `out_pos_{k}`, `out_word_idx_{k}` and `out_shift_{k}` from `off_{k}`: the
+/// destination byte index, the word holding it, and its bit shift in that word.
+fn scatter_position_nodes(k: u32) -> Vec<Node> {
+    vec![
+        Node::let_bind(
+            format!("out_pos_{k}"),
+            Expr::saturating_sub(Expr::var(format!("off_{k}")), Expr::u32(1)),
+        ),
+        Node::let_bind(
+            format!("out_word_idx_{k}"),
+            Expr::div(Expr::var(format!("out_pos_{k}")), Expr::u32(4)),
+        ),
+        Node::let_bind(
+            format!("out_shift_{k}"),
+            Expr::mul(
+                Expr::rem(Expr::var(format!("out_pos_{k}")), Expr::u32(4)),
+                Expr::u32(8),
+            ),
+        ),
+    ]
+}
+
+/// Fold `value` into `out[index]` with an atomic or, binding the prior word.
+fn atomic_or_lane(k: u32, index: Expr, value: Expr) -> Node {
+    Node::let_bind(
+        format!("prev_{k}"),
+        Expr::atomic_or("out", index, value),
+    )
+}
+
+/// `let w = InvocationId(0); if w < words { lanes }`, the grid gate every
+/// packing program here shares.
+fn invocation_gated(words: u32, lanes: Vec<Node>) -> Vec<Node> {
+    vec![
+        Node::let_bind("w", Expr::InvocationId { axis: 0 }),
+        Node::if_then(Expr::lt(Expr::var("w"), Expr::u32(words)), lanes),
+    ]
+}
+
+/// The four lanes of one output word, concatenated.
+fn four_lanes(lane: impl Fn(u32) -> Vec<Node>) -> Vec<Node> {
+    (0..4).flat_map(lane).collect()
+}
+
+/// A packing program: a runtime-length `input` of bytes, `extra` buffers, and a
+/// read-write `out` of `words` words the lanes accumulate into.
+fn packing_program(words: u32, extra: Vec<BufferDecl>, lanes: Vec<Node>) -> Program {
+    let out_binding = 1 + extra.len() as u32;
+    let mut buffers = vec![BufferDecl::storage(
+        "input",
+        0,
+        BufferAccess::ReadOnly,
+        DataType::U8,
+    )];
+    buffers.extend(extra);
+    buffers.push(
+        BufferDecl::storage("out", out_binding, BufferAccess::ReadWrite, DataType::U32)
+            .with_count(words),
+    );
+    Program::wrapped(buffers, [256, 1, 1], invocation_gated(words, lanes))
+}
+
 #[path = "buf_len_array_length/basic_len_contracts.rs"]
 mod basic_len_contracts;
 #[path = "buf_len_array_length/dynamic_pack_contracts.rs"]

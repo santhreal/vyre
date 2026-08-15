@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use vyre_conform::fp_parity::{
+use vyre_foundation::fp_parity::{
     f32_ulp_tolerance, BACKEND_ELEMENTARY_F32_ULP_BUDGET, BACKEND_TRANSCENDENTAL_ULP_BUDGET,
     REFERENCE_TRANSCENDENTAL_ULP_BUDGET,
 };

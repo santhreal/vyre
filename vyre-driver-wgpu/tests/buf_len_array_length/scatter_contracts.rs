@@ -1,166 +1,83 @@
 use super::*;
 
+/// Scatter each lane's clamped input byte to the offset `offsets[i]` names.
 fn dynamic_offset_scatter_pack_writer_program(words: u32) -> Program {
-    let w = Expr::var("w");
-    fn i_expr(k: u32) -> Expr {
-        Expr::add(Expr::mul(Expr::var("w"), Expr::u32(4)), Expr::u32(k))
-    }
-    fn source_byte(k: u32) -> Expr {
-        let addr = i_expr(k);
-        let len = Expr::buf_len("input");
-        let safe_addr = Expr::select(
-            Expr::lt(addr.clone(), len.clone()),
-            addr,
-            Expr::saturating_sub(len, Expr::u32(1)),
-        );
-        Expr::bitand(
-            Expr::cast(DataType::U32, Expr::load("input", safe_addr)),
-            Expr::u32(0xFF),
-        )
-    }
-    fn lane_nodes(k: u32) -> Vec<Node> {
-        let i = i_expr(k);
+    packing_program(
+        words,
         vec![
-            Node::let_bind(format!("off_{k}"), Expr::load("offsets", i.clone())),
-            Node::let_bind(
-                format!("out_pos_{k}"),
-                Expr::saturating_sub(Expr::var(format!("off_{k}")), Expr::u32(1)),
-            ),
-            Node::let_bind(
-                format!("out_word_idx_{k}"),
-                Expr::div(Expr::var(format!("out_pos_{k}")), Expr::u32(4)),
-            ),
-            Node::let_bind(
-                format!("out_shift_{k}"),
-                Expr::mul(
-                    Expr::rem(Expr::var(format!("out_pos_{k}")), Expr::u32(4)),
-                    Expr::u32(8),
-                ),
-            ),
-            Node::let_bind(format!("in_byte_{k}"), source_byte(k)),
-            Node::let_bind(
-                format!("prev_{k}"),
-                Expr::atomic_or(
-                    "out",
-                    Expr::var(format!("out_word_idx_{k}")),
-                    Expr::shl(
-                        Expr::var(format!("in_byte_{k}")),
-                        Expr::var(format!("out_shift_{k}")),
-                    ),
-                ),
-            ),
-        ]
-    }
-    let mut lanes = Vec::new();
-    for k in 0..4 {
-        lanes.extend(lane_nodes(k));
-    }
-    let body = vec![
-        Node::let_bind("w", Expr::InvocationId { axis: 0 }),
-        Node::if_then(Expr::lt(w.clone(), Expr::u32(words)), lanes),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U8),
             BufferDecl::storage("offsets", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(words * 4),
-            BufferDecl::storage("out", 2, BufferAccess::ReadWrite, DataType::U32).with_count(words),
         ],
-        [256, 1, 1],
-        body,
+        four_lanes(|k| {
+            let mut lane = vec![Node::let_bind(
+                format!("off_{k}"),
+                Expr::load("offsets", lane_addr(k)),
+            )];
+            lane.extend(scatter_position_nodes(k));
+            lane.push(Node::let_bind(
+                format!("in_byte_{k}"),
+                clamped_input_byte(lane_addr(k)),
+            ));
+            lane.push(atomic_or_lane(
+                k,
+                Expr::var(format!("out_word_idx_{k}")),
+                Expr::shl(
+                    Expr::var(format!("in_byte_{k}")),
+                    Expr::var(format!("out_shift_{k}")),
+                ),
+            ));
+            lane
+        }),
     )
 }
 
+/// The same scatter gated on a keep mask, substituting a space for a byte the
+/// comment mask marks as comment interior.
 fn dynamic_masked_comment_scatter_pack_writer_program(words: u32) -> Program {
-    let w = Expr::var("w");
-    fn i_expr(k: u32) -> Expr {
-        Expr::add(Expr::mul(Expr::var("w"), Expr::u32(4)), Expr::u32(k))
-    }
-    fn source_byte(i: Expr) -> Expr {
-        let len = Expr::buf_len("input");
-        let safe_addr = Expr::select(
-            Expr::lt(i.clone(), len.clone()),
-            i,
-            Expr::saturating_sub(len, Expr::u32(1)),
-        );
-        Expr::bitand(
-            Expr::cast(DataType::U32, Expr::load("input", safe_addr)),
-            Expr::u32(0xFF),
-        )
-    }
-    fn lane_nodes(k: u32, total_bytes: u32) -> Vec<Node> {
-        let i = i_expr(k);
-        vec![Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(total_bytes)),
-            vec![
-                Node::let_bind(format!("m_{k}"), Expr::load("mask", i.clone())),
-                Node::let_bind(format!("off_{k}"), Expr::load("offsets", i.clone())),
-                Node::if_then(
-                    Expr::eq(Expr::var(format!("m_{k}")), Expr::u32(1)),
-                    vec![
-                        Node::let_bind(format!("cm_{k}"), Expr::load("comment_mask", i.clone())),
-                        Node::let_bind(format!("in_byte_{k}"), Expr::u32(0)),
-                        Node::if_then_else(
-                            Expr::eq(Expr::var(format!("cm_{k}")), Expr::u32(2)),
-                            vec![Node::assign(
-                                &format!("in_byte_{k}"),
-                                Expr::u32(b' ' as u32),
-                            )],
-                            vec![Node::assign(&format!("in_byte_{k}"), source_byte(i))],
-                        ),
-                        Node::let_bind(
-                            format!("out_pos_{k}"),
-                            Expr::saturating_sub(Expr::var(format!("off_{k}")), Expr::u32(1)),
-                        ),
-                        Node::let_bind(
-                            format!("out_word_idx_{k}"),
-                            Expr::div(Expr::var(format!("out_pos_{k}")), Expr::u32(4)),
-                        ),
-                        Node::let_bind(
-                            format!("out_shift_{k}"),
-                            Expr::mul(
-                                Expr::rem(Expr::var(format!("out_pos_{k}")), Expr::u32(4)),
-                                Expr::u32(8),
-                            ),
-                        ),
-                        Node::let_bind(
-                            format!("prev_{k}"),
-                            Expr::atomic_or(
-                                "out",
-                                Expr::var(format!("out_word_idx_{k}")),
-                                Expr::shl(
-                                    Expr::var(format!("in_byte_{k}")),
-                                    Expr::var(format!("out_shift_{k}")),
-                                ),
-                            ),
-                        ),
-                    ],
-                ),
-            ],
-        )]
-    }
     let total_bytes = words * 4;
-    let mut lanes = Vec::new();
-    for k in 0..4 {
-        lanes.extend(lane_nodes(k, total_bytes));
-    }
-    let body = vec![
-        Node::let_bind("w", Expr::InvocationId { axis: 0 }),
-        Node::if_then(Expr::lt(w.clone(), Expr::u32(words)), lanes),
-    ];
-    Program::wrapped(
+    packing_program(
+        words,
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U8),
             BufferDecl::storage("mask", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(total_bytes),
             BufferDecl::storage("comment_mask", 2, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(total_bytes),
             BufferDecl::storage("offsets", 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(total_bytes),
-            BufferDecl::storage("out", 4, BufferAccess::ReadWrite, DataType::U32).with_count(words),
         ],
-        [256, 1, 1],
-        body,
+        four_lanes(|k| {
+            let addr = lane_addr(k);
+            let mut kept = vec![Node::let_bind(
+                format!("cm_{k}"),
+                Expr::load("comment_mask", addr.clone()),
+            )];
+            kept.extend(assigned_byte_nodes(
+                k,
+                Expr::eq(Expr::var(format!("cm_{k}")), Expr::u32(2)),
+                clamped_input_byte(addr.clone()),
+            ));
+            kept.extend(scatter_position_nodes(k));
+            kept.push(atomic_or_lane(
+                k,
+                Expr::var(format!("out_word_idx_{k}")),
+                Expr::shl(
+                    Expr::var(format!("in_byte_{k}")),
+                    Expr::var(format!("out_shift_{k}")),
+                ),
+            ));
+
+            vec![Node::if_then(
+                Expr::lt(addr.clone(), Expr::u32(total_bytes)),
+                vec![
+                    Node::let_bind(format!("m_{k}"), Expr::load("mask", addr.clone())),
+                    Node::let_bind(format!("off_{k}"), Expr::load("offsets", addr)),
+                    Node::if_then(
+                        Expr::eq(Expr::var(format!("m_{k}")), Expr::u32(1)),
+                        kept,
+                    ),
+                ],
+            )]
+        }),
     )
 }
 
@@ -221,3 +138,4 @@ fn dynamic_masked_comment_scatter_packs_expected_lanes_from_u8_input() {
         "mask/comment-driven byte scatter must match simple line comment compaction."
     );
 }
+

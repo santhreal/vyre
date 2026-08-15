@@ -21,7 +21,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[test]]
 name = "cache_invalidation_default"
 path = "tests/cache_invalidation_default.rs"
-required-features = ["self-substrate-adapters"]
+required-features = ["libs-compositions"]
 
 [[test]]
 name = "sweep_dispatch_shape_oracle_matrix"
@@ -37,7 +37,12 @@ path = "tests/driver_lifecycle_e2e.rs"
 
 [features]
 default = []
-self-substrate-adapters = [
+# Cache invalidation and substrate telemetry, implemented as vyre-libs
+# compositions. Without it those two entry points fail closed rather than fall
+# back to a reference path. Named `self-substrate-adapters` until the crate it
+# was named for, vyre-self-substrate, became vyre-pass-engine; the feature
+# never depended on that crate, so the name described nothing.
+libs-compositions = [
     "dep:vyre-libs",
     "vyre-libs/encoding",
     "vyre-libs/reasoning",

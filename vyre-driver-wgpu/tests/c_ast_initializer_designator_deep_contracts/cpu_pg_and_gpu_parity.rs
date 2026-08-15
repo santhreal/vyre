@@ -69,7 +69,7 @@ fn cpu_range_designator_materialises_range_expr() {
 
 #[test]
 fn cpu_union_field_designator_classifies() {
-    let (tok_types, tok_starts, tok_lens) = fixture_union_field_designator();
+    let (tok_types, tok_starts, tok_lens) = union_field_designator();
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
@@ -293,7 +293,7 @@ fn pg_lower_preserves_range_designator_array() {
 
 #[test]
 fn pg_lower_preserves_union_field_designator() {
-    let (tok_types, tok_starts, tok_lens) = fixture_union_field_designator();
+    let (tok_types, tok_starts, tok_lens) = union_field_designator();
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);

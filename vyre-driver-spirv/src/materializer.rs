@@ -44,9 +44,7 @@ const MESSAGES: InstanceMessages = InstanceMessages {
 
 /// Rejection for a dispatch that skipped a declared output slot.
 fn omitted_output(output_index: usize, name: &str) -> BackendError {
-    materialize::invalid_module(&format!(
-        "SPIR-V target module omitted output {output_index} for Program buffer `{name}`"
-    ))
+    materialize::omitted_output("SPIR-V target module", output_index, name)
 }
 
 /// First word of every well-formed SPIR-V module.
@@ -65,32 +63,31 @@ impl ArtifactMaterializer for SpirvMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        let admitted =
-            materialize::admit(artifact, payload, self.descriptor.target(SPIRV_BACKEND_ID))?;
-        let mut modules = Vec::with_capacity(admitted.len());
-        for admitted_module in admitted {
-            if admitted_module.image.bytes.len() % 4 != 0 {
-                return Err(materialize::invalid_module(
-                    "SPIR-V module byte length must be divisible by four",
-                ));
-            }
-            let words = admitted_module
-                .image
-                .bytes
-                .chunks_exact(4)
-                .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
-                .collect::<Vec<_>>();
-            if words.first().copied() != Some(SPIRV_MAGIC) {
-                return Err(materialize::invalid_module(
-                    "SPIR-V target module must begin with the SPIR-V magic word",
-                ));
-            }
-            modules.push(SpirvExecutableModule {
-                program: admitted_module.program,
-                words,
-                config: admitted_module.config,
-            });
-        }
+        let modules =
+            self.descriptor
+                .admit_modules(SPIRV_BACKEND_ID, artifact, payload, |admitted_module| {
+                    if admitted_module.image.bytes.len() % 4 != 0 {
+                        return Err(materialize::invalid_module(
+                            "SPIR-V module byte length must be divisible by four",
+                        ));
+                    }
+                    let words = admitted_module
+                        .image
+                        .bytes
+                        .chunks_exact(4)
+                        .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
+                        .collect::<Vec<_>>();
+                    if words.first().copied() != Some(SPIRV_MAGIC) {
+                        return Err(materialize::invalid_module(
+                            "SPIR-V target module must begin with the SPIR-V magic word",
+                        ));
+                    }
+                    Ok(SpirvExecutableModule {
+                        program: admitted_module.program,
+                        words,
+                        config: admitted_module.config,
+                    })
+                })?;
         Ok(Box::new(SpirvArtifactInstance {
             core: self.descriptor.instance(artifact, payload, MESSAGES),
             native: Arc::clone(&self.device),
@@ -112,27 +109,18 @@ struct SpirvArtifactInstance {
 }
 
 impl ExecutableModule for SpirvExecutableModule {
-    fn program(&self) -> &Program {
-        &self.program
-    }
-
-    fn config(&self) -> &DispatchConfig {
-        &self.config
-    }
+    vyre_driver::executable_module!();
 }
 
 impl ArtifactInstance for SpirvArtifactInstance {
     vyre_driver::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        self.core.accept(&bindings)?;
-        let invocation_grid = bindings.invocation_grid();
-        let state = materialize::host_only_bindings(
+        self.core.submit_host_only(
             &bindings,
             "SPIR-V artifact resident binding",
-            SPIRV_BACKEND_ID,
-        )?;
-        Ok(self.core.ready(self.execute(state, invocation_grid)))
+            |state, invocation_grid| self.execute(state, invocation_grid),
+        )
     }
 }
 

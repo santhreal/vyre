@@ -131,7 +131,7 @@ Run the checked-in behavior from `vyre-runtime/examples/vyre_runtime_release_sur
 
 ### Features
 
-- Manifest features: `default`, `megakernel-batch`, `remote-cache`, `self-substrate-adapters`, `subgroup-ops`, `uring-cmd-nvme`
+- Manifest features: `default`, `libs-compositions`, `megakernel-batch`, `remote-cache`, `subgroup-ops`, `uring-cmd-nvme`
 - Default feature members: None
 
 ### Errors and unsupported behavior

@@ -24,7 +24,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `self-substrate-adapters`, `test-fixtures`
+- Available manifest features: `default`, `libs-compositions`, `test-fixtures`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -48,7 +48,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `backend_validation_defaults` | `vyre-driver/tests/backend_validation_defaults.rs` | None | `./cargo_full test -p vyre-driver --test backend_validation_defaults` |
 | `test` | `backpressure_queue_quota_policy` | `vyre-driver/tests/backpressure_queue_quota_policy.rs` | None | `./cargo_full test -p vyre-driver --test backpressure_queue_quota_policy` |
 | `test` | `cache_invalidation_default` | `vyre-driver/tests/cache_invalidation_default.rs` | None | `./cargo_full test -p vyre-driver --test cache_invalidation_default` |
-| `test` | `cache_invalidation_default` | `vyre-driver/tests/cache_invalidation_default.rs` | `self-substrate-adapters` | `./cargo_full test -p vyre-driver --test cache_invalidation_default` |
+| `test` | `cache_invalidation_default` | `vyre-driver/tests/cache_invalidation_default.rs` | `libs-compositions` | `./cargo_full test -p vyre-driver --test cache_invalidation_default` |
 | `test` | `capability_adversarial` | `vyre-driver/tests/capability_adversarial.rs` | None | `./cargo_full test -p vyre-driver --test capability_adversarial` |
 | `test` | `command_execution_boundary` | `vyre-driver/tests/command_execution_boundary.rs` | None | `./cargo_full test -p vyre-driver --test command_execution_boundary` |
 | `test` | `concurrency_schedule_contracts` | `vyre-driver/tests/concurrency_schedule_contracts.rs` | None | `./cargo_full test -p vyre-driver --test concurrency_schedule_contracts` |

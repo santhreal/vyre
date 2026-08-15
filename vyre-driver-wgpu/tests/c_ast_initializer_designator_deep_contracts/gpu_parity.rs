@@ -8,7 +8,7 @@ fn gpu_parity_range_designator_array() {
 
 #[test]
 fn gpu_parity_union_field_designator() {
-    let (tok_types, tok_starts, tok_lens) = fixture_union_field_designator();
+    let (tok_types, tok_starts, tok_lens) = union_field_designator();
     assert_full_pipeline_parity(&tok_types, &tok_starts, &tok_lens, "union_field_designator");
 }
 

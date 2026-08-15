@@ -39,15 +39,17 @@
 use vyre::ir::{Expr, Program};
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
 use vyre_libs::parsing::c::parse::vast::{
-    c11_annotate_typedef_names, c11_annotate_typedef_names_precomputed_scope, c11_build_vast_nodes,
-    c11_classify_vast_node_kinds, c11_precompute_vast_scopes, c11_prehash_vast_identifiers,
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
+    c11_annotate_typedef_names, c11_annotate_typedef_names_precomputed_scope,
+    c11_build_expression_shape_nodes, c11_build_vast_nodes, c11_classify_vast_node_kinds,
+    c11_precompute_vast_scopes, c11_prehash_vast_identifiers, reference_c11_annotate_typedef_names,
+    reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds,
 };
 
+use super::expression_pipeline::run_reference_pg_lower;
 use super::rows::{
-    assert_words_eq, bytes, haystack_words, node_count_from_vast, pg_word_at, word_at,
-    VAST_STRIDE_BYTES, VAST_STRIDE_U32,
+    assert_words_eq, bytes, haystack_words, node_count_from_vast, pg_word_at, starts_for_lens,
+    word_at, VAST_STRIDE_BYTES, VAST_STRIDE_U32,
 };
 use super::token_fixture::Fixture;
 
@@ -217,6 +219,16 @@ pub(crate) mod program {
     pub(crate) fn lower_pg(node_count: u32) -> Program {
         c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(node_count), "out_pg_nodes")
     }
+
+    /// Lower raw and typed VAST rows to expression-shape rows.
+    pub(crate) fn expression_shape(node_count: u32) -> Program {
+        c11_build_expression_shape_nodes(
+            "raw_vast_nodes",
+            "typed_vast_nodes",
+            Expr::u32(node_count),
+            "expr_shape_nodes",
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -257,13 +269,14 @@ pub(crate) fn primary_output(outputs: Vec<Vec<u8>>, context: &str) -> Vec<u8> {
     outputs[0].clone()
 }
 
-/// Stage 1: raw VAST rows for a token stream.
-pub(crate) fn arm_raw_vast(
+/// Stage 1: raw VAST rows for a token stream, with the row count the builder
+/// wrote beside them.
+pub(crate) fn arm_raw_vast_with_count(
     arm: &impl ParityArm,
     tok_types: &[u32],
     tok_starts: &[u32],
     tok_lens: &[u32],
-) -> Vec<u8> {
+) -> (Vec<u8>, u32) {
     let outputs = arm.dispatch(
         "C VAST builder",
         program::build_vast(tok_types.len() as u32),
@@ -274,7 +287,41 @@ pub(crate) fn arm_raw_vast(
         2,
         "C VAST builder: expected [vast_nodes, count]"
     );
-    outputs[0].clone()
+    let count = word_at(&outputs[1], 0);
+    (outputs[0].clone(), count)
+}
+
+/// Stage 1: raw VAST rows for a token stream.
+pub(crate) fn arm_raw_vast(
+    arm: &impl ParityArm,
+    tok_types: &[u32],
+    tok_starts: &[u32],
+    tok_lens: &[u32],
+) -> Vec<u8> {
+    arm_raw_vast_with_count(arm, tok_types, tok_starts, tok_lens).0
+}
+
+/// Classified rows for a token stream, asserted equal to the CPU oracle.
+///
+/// Build then classify is the whole shape of a construct-classification test:
+/// the rows come back, the oracle comparison is the same every time, and the
+/// only thing that varies is which rows the caller then names a kind for. Six
+/// tests across two files restated build, classify, dispatch and compare, each
+/// acquiring its own backend to do it.
+pub(crate) fn arm_classified_from_tokens(
+    arm: &impl ParityArm,
+    tok_types: &[u32],
+    tok_starts: &[u32],
+    tok_lens: &[u32],
+) -> Vec<u8> {
+    let raw = reference_c11_build_vast_nodes(tok_types, tok_starts, tok_lens);
+    let typed = arm_typed_vast(arm, &raw);
+    assert_eq!(
+        typed,
+        reference_c11_classify_vast_node_kinds(&raw),
+        "classified rows must match the CPU oracle"
+    );
+    typed
 }
 
 /// Stage 2: typedef flags, resolved against precomputed brace scopes.
@@ -333,6 +380,64 @@ pub(crate) fn arm_pg_nodes(arm: &impl ParityArm, typed_vast: &[u8]) -> Vec<u8> {
         vec![typed_vast.to_vec()],
     );
     primary_output(outputs, "AST-to-PG lower")
+}
+
+/// Expression-shape rows for a fixture's raw and typed VAST rows.
+pub(crate) fn arm_expr_shape(arm: &impl ParityArm, raw_vast: &[u8], typed_vast: &[u8]) -> Vec<u8> {
+    let outputs = arm.dispatch(
+        "expression-shape lower",
+        program::expression_shape(node_count_from_vast(raw_vast)),
+        vec![raw_vast.to_vec(), typed_vast.to_vec()],
+    );
+    primary_output(outputs, "expression-shape lower")
+}
+
+/// One token stream an expression-shape family evaluates: `(tok_types, tok_lens)`
+/// for lexemes laid out one unit apart, which is what these contracts use.
+pub(crate) type ExpressionCase = (Vec<u32>, Vec<u32>);
+
+/// Assert an arm reproduces the CPU oracle's expression-shape and
+/// property-graph rows for every case of an expression family.
+///
+/// Five expression-contract files restated this loop verbatim, differing only
+/// in the table above it, so the operator groups they cover could not drift
+/// apart in what they assert. The table is the whole difference between them
+/// and it stays with the operator group it describes; the run does not.
+pub(crate) fn assert_expression_shape_family_parity(
+    arm: &impl ParityArm,
+    cases: &[ExpressionCase],
+) {
+    assert!(
+        !cases.is_empty(),
+        "Fix: an expression-shape family with no cases proves nothing; populate its table"
+    );
+    for (case_idx, (tok_types, tok_lens)) in cases.iter().enumerate() {
+        let tok_starts = starts_for_lens(tok_lens);
+        let raw_vast = reference_c11_build_vast_nodes(tok_types, &tok_starts, tok_lens);
+        let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
+
+        assert_eq!(
+            arm_expr_shape(arm, &raw_vast, &typed_vast),
+            reference_c11_build_expression_shape_nodes(&raw_vast, &typed_vast),
+            "expression-shape rows must match the CPU oracle for case {case_idx}"
+        );
+        assert_eq!(
+            arm_pg_nodes(arm, &typed_vast),
+            run_reference_pg_lower(&typed_vast),
+            "PG lowering must match the CPU oracle for case {case_idx}"
+        );
+
+        let word_aligned = bytes(
+            &typed_vast
+                .chunks_exact(4)
+                .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
+                .collect::<Vec<_>>(),
+        );
+        assert_eq!(
+            word_aligned, typed_vast,
+            "typed VAST for case {case_idx} must stay word-aligned for dispatch"
+        );
+    }
 }
 
 /// Assert an arm reproduces the CPU oracle through the classifier.

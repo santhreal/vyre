@@ -42,8 +42,29 @@
 //! from the enum body. Adding a `Node` variant turns this suite RED until
 //! somebody adds a fixture, and adding the fixture forces a decision about
 //! every owner and every consumer above.
+//!
+//! # The other way a second enumeration gets written
+//!
+//! Nothing above stops a crate from restating `Node` in a shape the three
+//! owners cannot serve. `visit::NodeVisitor` is abstract-by-default: it
+//! declares one hook per declared variant and gives almost none of them a
+//! default, so implementing it to answer a question about ONE variant costs a
+//! no-op body, with its full signature, for the other fifteen. That block of
+//! stubs is a hand enumeration of `Node` living outside this crate, where
+//! `Node` is `#[non_exhaustive]` and the compiler cannot tell its author that
+//! it went stale. Four scanners in this workspace had copied it.
+//!
+//! So the implementors are enumerated from workspace source at run time and
+//! held to a recorded list, and the trait's hooks are derived from
+//! `NODE_VARIANT_NAMES`. A new implementor anywhere turns this RED, and so
+//! does a new `Node` variant that no hook covers.
 
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+
+use vyre_foundation::ir::{
+    BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, NODE_VARIANT_NAMES,
+};
 use vyre_foundation::optimizer::cost::CostCertificate;
 use vyre_foundation::optimizer::{registered_pass_registrations, ProgramPass};
 use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
@@ -436,6 +457,112 @@ fn fixture_buffers() -> Vec<BufferDecl> {
         .collect()
 }
 
+// ---------------------------------------------------------------------------
+// The hand-enumeration owner: `visit::NodeVisitor` and who implements it.
+// ---------------------------------------------------------------------------
+
+/// Every implementation of `visit::NodeVisitor` in this workspace, with why it
+/// still writes the enum out by hand.
+///
+/// A type here restates one hook per `Node` variant. That is a second
+/// enumeration of the enum, and outside `vyre-foundation` `Node` is
+/// `#[non_exhaustive]`, so nothing tells its author when a variant is added:
+/// the new variant simply never reaches whatever the visitor was counting.
+///
+/// A scan that wants one or two variants and descent for the rest wants
+/// `transform::visit::try_for_each_node`, which takes a closure and gets its
+/// descent from `child_bodies`. Adding an implementation without adding it here
+/// is the failure this list exists to force.
+const RECORDED_NODE_VISITORS: &[(&str, &str)] = &[
+    (
+        "PreorderValidator",
+        "The validation rule pipeline dispatches a different rule set per \
+         variant, so the per-variant hook IS its work rather than boilerplate \
+         around it. It lives in this crate, where the trait's hook set is a \
+         compile error to leave incomplete.",
+    ),
+    (
+        "CountingNodeVisitor",
+        "The trait's own test. It exists to prove dispatch reaches every hook, \
+         so it must implement every hook.",
+    ),
+    (
+        "AsyncResumeRejector",
+        "vyre-emit-naga: rejects two variants and ignores the rest. Wants \
+         try_for_each_node; not yet routed.",
+    ),
+    (
+        "TrapTagCollector",
+        "vyre-emit-naga: collects one variant's tag and ignores the rest. \
+         Wants try_for_each_node; not yet routed.",
+    ),
+    (
+        "LocalSlots",
+        "vyre-reference: collects declarations from three variants and ignores \
+         the rest. Wants try_for_each_node; not yet routed.",
+    ),
+];
+
+/// `Node` variants whose visitor hook is not `visit_<snake_case_variant>`, and
+/// why.
+///
+/// Recorded rather than special-cased in the derivation, so the mapping is
+/// visible and a new exception has to be written down.
+const HOOK_NAME_EXCEPTIONS: &[(&str, &str, &str)] = &[
+    (
+        "AllReduce",
+        "visit_collective",
+        "The four collectives carry the same shape and dispatch to one hook.",
+    ),
+    ("AllGather", "visit_collective", "See AllReduce."),
+    ("ReduceScatter", "visit_collective", "See AllReduce."),
+    ("Broadcast", "visit_collective", "See AllReduce."),
+    (
+        "Opaque",
+        "visit_opaque_node",
+        "Named for what it hands over, a `&dyn NodeExtension`, not for the \
+         variant: `visit_opaque` would read as an opaque expression.",
+    ),
+];
+
+/// The hook name `visit::NodeVisitor` owes `variant`.
+fn hook_for_variant(variant: &str) -> String {
+    if let Some((_, hook, _)) = HOOK_NAME_EXCEPTIONS
+        .iter()
+        .find(|(name, _, _)| *name == variant)
+    {
+        return (*hook).to_string();
+    }
+    let mut hook = String::from("visit");
+    for (index, ch) in variant.char_indices() {
+        if ch.is_ascii_uppercase() && index > 0 {
+            hook.push('_');
+        } else if index == 0 {
+            hook.push('_');
+        }
+        hook.push(ch.to_ascii_lowercase());
+    }
+    hook
+}
+
+/// The hook names the trait declares, read from its declaration.
+fn declared_visitor_hooks() -> BTreeSet<String> {
+    let source = read_workspace_file("vyre-foundation/src/visit/traits.rs");
+    let body = vyre_test_support::braced_body(&source, "pub trait NodeVisitor {").expect(
+        "Fix: no `pub trait NodeVisitor` in vyre-foundation/src/visit/traits.rs; this scan is \
+         reading the wrong file",
+    );
+    body.match_indices("fn visit")
+        .map(|(offset, _)| {
+            let start = offset + "fn ".len();
+            let end = body[start..]
+                .find(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+                .map_or(body.len(), |len| start + len);
+            body[start..end].to_string()
+        })
+        .collect()
+}
+
 /// The registered pass whose whole job is to substitute an expression at every
 /// read site, instantiated from the registry.
 ///
@@ -516,4 +643,208 @@ fn the_optimizer_expression_rewrite_reaches_every_operand_slot() {
             sample.label()
         );
     }
+}
+
+/// The trait declares exactly one hook per declared `Node` variant.
+///
+/// This is the run-time half of the trait's contract. `dispatch_node` is
+/// exhaustive, so a new variant is a compile error THERE, but the error is
+/// solved just as easily by routing the variant into an existing hook as by
+/// giving it one, and a variant folded into somebody else's hook is invisible
+/// to every implementor. Here the fold has to be written into
+/// `HOOK_NAME_EXCEPTIONS` with a reason.
+#[test]
+fn the_node_visitor_trait_declares_one_hook_per_declared_variant() {
+    let declared: BTreeSet<String> = NODE_VARIANT_NAMES
+        .iter()
+        .map(|variant| hook_for_variant(variant))
+        .collect();
+    let hooks = declared_visitor_hooks();
+
+    assert!(
+        hooks.len() >= 10,
+        "Fix: the NodeVisitor hook scan found only {} hooks; it is reading the wrong region, \
+         not looking at a tiny trait",
+        hooks.len()
+    );
+
+    let unhooked: Vec<&String> = declared.difference(&hooks).collect();
+    assert!(
+        unhooked.is_empty(),
+        "Fix: visit::NodeVisitor declares no hook named {unhooked:?}. Either add the hook, or \
+         record in HOOK_NAME_EXCEPTIONS which existing hook the variant folds into and why; a \
+         variant folded in silently is one no implementor is asked about."
+    );
+
+    let orphan: Vec<&String> = hooks
+        .difference(&declared)
+        .filter(|hook| hook.as_str() != "visit_node")
+        .collect();
+    assert!(
+        orphan.is_empty(),
+        "Fix: visit::NodeVisitor declares {orphan:?}, which no declared Node variant reaches. \
+         Delete the hook or record the variant it serves."
+    );
+
+    let stale: Vec<&&str> = HOOK_NAME_EXCEPTIONS
+        .iter()
+        .map(|(variant, _, _)| variant)
+        .filter(|variant| !NODE_VARIANT_NAMES.contains(variant))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "Fix: HOOK_NAME_EXCEPTIONS names variants Node no longer declares: {stale:?}"
+    );
+}
+
+/// The types implementing `visit::NodeVisitor` are exactly the recorded ones.
+///
+/// The set is read from workspace source on each run rather than listed twice,
+/// so a fifth walker landing in any crate turns this RED. It is the only gate
+/// that can: outside this crate an implementation compiles cleanly forever, and
+/// the stub bodies it copies are indistinguishable from deliberate no-ops.
+#[test]
+fn every_node_visitor_implementation_in_the_workspace_is_recorded() {
+    let hooks = declared_visitor_hooks();
+    let found = scan_node_visitor_implementations(&hooks);
+
+    assert!(
+        found.len() >= 2,
+        "Fix: the implementor scan found only {} NodeVisitor implementations; the trait's own \
+         test and the validation pipeline are both in this crate, so a smaller answer means the \
+         scan is broken",
+        found.len()
+    );
+
+    let recorded: BTreeSet<&str> = RECORDED_NODE_VISITORS
+        .iter()
+        .map(|(name, _)| *name)
+        .collect();
+    let implemented: BTreeSet<&str> = found.keys().map(String::as_str).collect();
+
+    let unrecorded: Vec<String> = implemented
+        .difference(&recorded)
+        .map(|name| format!("{name} ({})", found[*name].display()))
+        .collect();
+    assert!(
+        unrecorded.is_empty(),
+        "Fix: these types implement visit::NodeVisitor and are not recorded in \
+         RECORDED_NODE_VISITORS: {unrecorded:?}. Each one restates the whole Node enum by hand, \
+         and Node is #[non_exhaustive] outside vyre-foundation, so the copy goes stale in \
+         silence. A scan that wants a variant or two and descent for the rest wants \
+         transform::visit::try_for_each_node instead; if the per-variant dispatch really is the \
+         work, record it with that reason."
+    );
+
+    let departed: Vec<&&str> = recorded.difference(&implemented).collect();
+    assert!(
+        departed.is_empty(),
+        "Fix: RECORDED_NODE_VISITORS names types that no longer implement visit::NodeVisitor: \
+         {departed:?}. Delete the rows; a stale waiver hides the next real one."
+    );
+
+    let unreasoned: Vec<&&str> = RECORDED_NODE_VISITORS
+        .iter()
+        .filter(|(_, reason)| reason.trim().len() < 20)
+        .map(|(name, _)| name)
+        .collect();
+    assert!(
+        unreasoned.is_empty(),
+        "Fix: record why {unreasoned:?} still enumerates Node by hand."
+    );
+}
+
+/// Implementor type name to the file declaring it.
+fn scan_node_visitor_implementations(hooks: &BTreeSet<String>) -> BTreeMap<String, PathBuf> {
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
+    let mut found = BTreeMap::new();
+    for path in rust_sources(&root) {
+        let Ok(source) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        for (name, body) in impl_blocks_for_trait(&source, "NodeVisitor") {
+            // `transform::visit::NodeVisitor` shares the name and declares one
+            // hook. Only the abstract-by-default trait forces the enum out by
+            // hand, and only its implementors define the per-variant hooks.
+            let per_variant = hooks
+                .iter()
+                .filter(|hook| body.contains(&format!("fn {hook}(")))
+                .count();
+            if per_variant >= 3 {
+                found.insert(name, path.strip_prefix(&root).unwrap_or(&path).to_path_buf());
+            }
+        }
+    }
+    found
+}
+
+/// Every `.rs` file under `root`, skipping build output.
+fn rust_sources(root: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if path.is_dir() {
+                if name != "target" && name != ".git" && !name.starts_with('.') {
+                    stack.push(path);
+                }
+            } else if name.ends_with(".rs") {
+                out.push(path);
+            }
+        }
+    }
+    out
+}
+
+/// `(implementing type, impl body)` for every `impl ... <trait_name> for ...`.
+fn impl_blocks_for_trait<'a>(source: &'a str, trait_name: &str) -> Vec<(String, &'a str)> {
+    let mut out = Vec::new();
+    let marker = format!("{trait_name} for ");
+    for (offset, _) in source.match_indices(&marker) {
+        // A doc example is indented inside a `///` line; the declaration is not.
+        let line_start = source[..offset].rfind('\n').map_or(0, |index| index + 1);
+        if source[line_start..offset].trim_start().starts_with("//") {
+            continue;
+        }
+        if !source[line_start..offset].trim_start().starts_with("impl") {
+            continue;
+        }
+        let after = offset + marker.len();
+        let end = source[after..]
+            .find(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+            .map_or(source.len(), |len| after + len);
+        let name = source[after..end].to_string();
+        let Some(open) = source[end..].find('{').map(|index| end + index) else {
+            continue;
+        };
+        let mut depth = 0usize;
+        let mut close = open;
+        for (index, ch) in source[open..].char_indices() {
+            match ch {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        close = open + index;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        out.push((name, &source[open..close]));
+    }
+    out
+}
+
+fn read_workspace_file(relative: &str) -> String {
+    let path = vyre_test_support::monorepo::vyre_workspace_root().join(relative);
+    std::fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("Fix: cannot read {path:?} for the walker scan: {err}"))
 }

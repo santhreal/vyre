@@ -1,6 +1,6 @@
 //! Dispatch-grid selection shared by conform certificate paths.
 
-use crate::fp_parity::f32_ulp_tolerance;
+use vyre_foundation::fp_parity::f32_ulp_tolerance;
 use vyre::ir::{BufferAccess, Program};
 use vyre_driver::DispatchConfig;
 

@@ -16,21 +16,20 @@ impl RoutingPolicy for StandardPolicy {
     }
 
     fn route_with_explanation(&self, plan: &ExecutionPlan) -> RoutingExplanation {
-        match SchedulingPolicy::standard().route(plan.fusion.node_count, plan.memory.static_bytes) {
-            PolicyRoute::CpuSimd => RoutingExplanation {
-                policy: self.name(),
-                decision: RoutingDecision::PersistentMegakernel,
-                reason: "standard policy overrides CPU SIMD suggestion to persistent megakernel for release execution",
-            },
-            PolicyRoute::GpuPipeline => RoutingExplanation {
-                policy: self.name(),
-                decision: RoutingDecision::PersistentMegakernel,
-                reason: "standard policy promotes GPU pipeline suggestion to persistent megakernel for resident execution",
-            },
-            PolicyRoute::PersistentMegakernel => RoutingExplanation {
-                policy: self.name(),
-                decision: RoutingDecision::PersistentMegakernel,
-                reason: "scheduling policy selected persistent megakernel directly",
+        // Every route the scheduling policy can suggest is served by the
+        // persistent megakernel, so the decision does not branch; only the
+        // evidence records which suggestion it started from. Asking the policy
+        // rather than answering `PersistentMegakernel` outright keeps the
+        // explanation honest about what was consulted.
+        let suggested =
+            SchedulingPolicy::standard().route(plan.fusion.node_count, plan.memory.static_bytes);
+        RoutingExplanation {
+            policy: self.name(),
+            decision: RoutingDecision::PersistentMegakernel,
+            reason: if suggested == PolicyRoute::PersistentMegakernel {
+                "scheduling policy selected persistent megakernel directly"
+            } else {
+                "standard policy promotes the non-persistent suggestion to persistent megakernel for resident execution"
             },
         }
     }
