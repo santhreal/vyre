@@ -1504,6 +1504,16 @@ id = "tooling-frontend-readme-commands-set-no-build-variable"
 category = "Changed"
 text = "The generated crate README contracts invoke the workspace wrapper directly instead of prefixing `CARGO_BUILD_JOBS=1`. Build configuration is declared once, in the cargo config and the root profiles, where it is reviewable and applies to every build equally; a per-invocation override makes each reader's build a different build, and thirty-six generated documents were teaching exactly that."
 
+[[fragments]]
+id = "tooling-frontend-testing-guides-set-no-build-variable"
+category = "Changed"
+text = "The thirty-six generated testing guides, their `docs/testing/TESTING.toml` command rows, the contributor gate list, and the performance notes all invoke `./cargo_full` with no `CARGO_BUILD_JOBS=1` prefix. The wrapper already exports that variable, so every prefixed command was a second copy of one setting, and the copies taught a rule the repository forbids: a build-affecting variable belongs in the cargo config or the wrapper, not on a command line. The generator and the two contract tests that pinned the prefixed text move together, and the contributor guide no longer claims a `rustc-wrapper` the cargo config does not declare."
+
+[[fragments]]
+id = "tooling-frontend-gated-delta-one-spec"
+category = "Changed"
+text = "`recurrent_gated_delta` and `chunked_gated_delta` take `&GatedDeltaSpec`, which is now public, and the chunked schedule is exported from the module that builds it. Each entry point had restated the same sixteen positional parameters and then rebuilt the same spec literal field by field, so eighty-two lines existed only to pass a value straight through, and any two of the eight buffer names could be swapped at a call site without a type error. The two builders that consume the spec are the entry points, so there is no wrapper left to drift. `nn_attention_clone_family_ir_invariance` pins the built IR of both schedules at both dtypes by hash, and those hashes are unchanged."
+
 
 [[fragments]]
 id = "backends-one-materializer-skeleton"

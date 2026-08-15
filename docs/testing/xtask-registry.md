@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry
+./cargo_full test -p xtask-registry
 ```
 
 Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.
@@ -14,7 +14,7 @@ The crate lives at `xtask-registry`. The `release-tooling` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry
+./cargo_full test -p xtask-registry
 ```
 
 ## Feature sets
@@ -25,8 +25,8 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `xtask-registry` | `xtask-registry/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry --bin xtask-registry` |
-| `lib` | `xtask_registry` | `xtask-registry/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry` |
+| `bin` | `xtask-registry` | `xtask-registry/src/main.rs` | None | `./cargo_full test -p xtask-registry --bin xtask-registry` |
+| `lib` | `xtask_registry` | `xtask-registry/src/lib.rs` | None | `./cargo_full test -p xtask-registry` |
 
 ## Test classes
 

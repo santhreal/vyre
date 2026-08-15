@@ -32,6 +32,15 @@ PATH_SUFFIXES = {
     ".vir",
     ".wgsl",
 }
+# Documents that record what happened, not what the tree holds. A changelog
+# entry naming a file a later commit deleted or moved is correct history, and
+# rewriting it to satisfy a reference check would falsify the record. Stated as a
+# kind once rather than as a growing list of individual exempt references.
+HISTORICAL_DOCUMENTS = (
+    "CHANGELOG.md",
+    "docs/release/",
+)
+
 ROOT_PREFIXES = (
     ".github/",
     "Cargo.toml",
@@ -107,15 +116,48 @@ def inactive_manifest_documents(root: Path) -> set[Path]:
     return inactive
 
 
+def repository_surface_documents(root: Path) -> list[Path]:
+    """Every markdown document at the repository root and under .github.
+
+    These are read as the contract of the repository: CONTRIBUTING.md says how to
+    build it, .github/CI_REQUIRED.md says which jobs must pass. Neither was in
+    scope, so a reference to a workflow or script that does not exist resolved to
+    nothing and nothing said so: CI_REQUIRED.md required reproducible-build.yml
+    and mutation-testing.yml, neither of which was ever a file. Derived from what
+    git tracks so a new root document joins on the commit that adds it, rather
+    than from a list that would have to be remembered.
+    """
+    tracked = subprocess.run(
+        ["git", "ls-files", "*.md", ".github/*.md", ".github/**/*.md"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    documents = []
+    for line in tracked.stdout.splitlines():
+        relative = Path(line)
+        if len(relative.parts) == 1 or relative.parts[0] == ".github":
+            documents.append(root / relative)
+    return documents
+
+
 def public_documents(root: Path) -> list[Path]:
     inactive = inactive_manifest_documents(root)
-    candidates = [root / "README.md", *root.glob("docs/**/*.md"), *workspace_readmes(root)]
+    candidates = [
+        root / "README.md",
+        *root.glob("docs/**/*.md"),
+        *workspace_readmes(root),
+        *repository_surface_documents(root),
+    ]
     documents: list[Path] = []
     for path in sorted(set(candidates)):
         if not path.is_file() or path.resolve() in inactive:
             continue
         relative = path.relative_to(root)
         if relative.parts[:2] in {("docs", "archive"), ("docs", "legacy")} and path.name != "README.md":
+            continue
+        if relative.as_posix().startswith(HISTORICAL_DOCUMENTS):
             continue
         if gitignored(root, relative.as_posix()):
             continue

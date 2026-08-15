@@ -99,7 +99,7 @@ fn generated_contract_contains_every_crate_guide_surface() {
         "### Boundaries",
         "The `fixture-owner` owner maintains this `foundation` crate",
         "### Minimal real example",
-        "CARGO_BUILD_JOBS=1 ./cargo_full run -p a --example demo",
+        "./cargo_full run -p a --example demo",
         "### Features",
         "Manifest features: `default`, `fast`, `safe`",
         "Default feature members: `safe`",

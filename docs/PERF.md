@@ -22,18 +22,22 @@ These settings live in the root `Cargo.toml`.
 
 ## Local build configuration
 
-The checked-in `.cargo/config.toml` sets bounded build jobs, disables proptest
+The checked-in `.cargo/config.toml` sets the build job count, disables proptest
 failure persistence, and defines workspace aliases. It does not configure a
 compiler cache. You may configure `sccache` locally, but release instructions
 must not assume it is installed.
 
-Prefer:
+The workspace root's `cargo_full` wrapper owns every build-affecting variable
+that is not in that file, including the serialized job count it applies when
+diagnosing link pressure. Run gates through it:
 
 ```bash
-CARGO_BUILD_JOBS=1 ./cargo_full test -p <crate>
+./cargo_full test -p <crate>
 ```
 
-when diagnosing flaky link pressure or reproducing CI-like load.
+A command that sets `CARGO_BUILD_JOBS`, `CARGO_TARGET_DIR`, `RUSTFLAGS`, or
+`--target-dir` itself is wrong: each such override makes one reader's build a
+different build, and the setting stops being reviewable in one place.
 
 ## Profile-guided optimization
 

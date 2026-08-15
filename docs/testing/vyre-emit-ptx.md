@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx
+./cargo_full test -p vyre-emit-ptx
 ```
 
 Consume verified lowering products and emit the primary binary backend text artifact.
@@ -14,11 +14,11 @@ The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx
+./cargo_full test -p vyre-emit-ptx
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --all-features
+./cargo_full test -p vyre-emit-ptx --all-features
 ```
 
 ## Feature sets
@@ -31,16 +31,16 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_emit_ptx_release_surface` | `vyre-emit-ptx/examples/vyre_emit_ptx_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --example vyre_emit_ptx_release_surface` |
-| `lib` | `vyre_emit_ptx` | `vyre-emit-ptx/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx` |
-| `test` | `adversarial_emit_program_matrix` | `vyre-emit-ptx/tests/adversarial_emit_program_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test adversarial_emit_program_matrix` |
-| `test` | `cross_emitter_parity` | `vyre-emit-ptx/tests/cross_emitter_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test cross_emitter_parity` |
-| `test` | `emitted_artifact_byte_stability` | `vyre-emit-ptx/tests/emitted_artifact_byte_stability.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test emitted_artifact_byte_stability` |
-| `test` | `grid_sync_loop_refusal` | `vyre-emit-ptx/tests/grid_sync_loop_refusal.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test grid_sync_loop_refusal` |
-| `test` | `nested_return_branch` | `vyre-emit-ptx/tests/nested_return_branch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test nested_return_branch` |
-| `test` | `nvrtc_compile_gate` | `vyre-emit-ptx/tests/nvrtc_compile_gate.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test nvrtc_compile_gate` |
-| `test` | `regression_emit_fixes` | `vyre-emit-ptx/tests/regression_emit_fixes.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test regression_emit_fixes` |
-| `test` | `shared_branch_walk_equality` | `vyre-emit-ptx/tests/shared_branch_walk_equality.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test shared_branch_walk_equality` |
+| `example` | `vyre_emit_ptx_release_surface` | `vyre-emit-ptx/examples/vyre_emit_ptx_release_surface.rs` | None | `./cargo_full test -p vyre-emit-ptx --example vyre_emit_ptx_release_surface` |
+| `lib` | `vyre_emit_ptx` | `vyre-emit-ptx/src/lib.rs` | None | `./cargo_full test -p vyre-emit-ptx` |
+| `test` | `adversarial_emit_program_matrix` | `vyre-emit-ptx/tests/adversarial_emit_program_matrix.rs` | None | `./cargo_full test -p vyre-emit-ptx --test adversarial_emit_program_matrix` |
+| `test` | `cross_emitter_parity` | `vyre-emit-ptx/tests/cross_emitter_parity.rs` | None | `./cargo_full test -p vyre-emit-ptx --test cross_emitter_parity` |
+| `test` | `emitted_artifact_byte_stability` | `vyre-emit-ptx/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emitted_artifact_byte_stability` |
+| `test` | `grid_sync_loop_refusal` | `vyre-emit-ptx/tests/grid_sync_loop_refusal.rs` | None | `./cargo_full test -p vyre-emit-ptx --test grid_sync_loop_refusal` |
+| `test` | `nested_return_branch` | `vyre-emit-ptx/tests/nested_return_branch.rs` | None | `./cargo_full test -p vyre-emit-ptx --test nested_return_branch` |
+| `test` | `nvrtc_compile_gate` | `vyre-emit-ptx/tests/nvrtc_compile_gate.rs` | None | `./cargo_full test -p vyre-emit-ptx --test nvrtc_compile_gate` |
+| `test` | `regression_emit_fixes` | `vyre-emit-ptx/tests/regression_emit_fixes.rs` | None | `./cargo_full test -p vyre-emit-ptx --test regression_emit_fixes` |
+| `test` | `shared_branch_walk_equality` | `vyre-emit-ptx/tests/shared_branch_walk_equality.rs` | None | `./cargo_full test -p vyre-emit-ptx --test shared_branch_walk_equality` |
 
 ## Test classes
 

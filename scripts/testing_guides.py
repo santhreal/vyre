@@ -217,7 +217,7 @@ def command_for_target(package: str, target: Target) -> str:
     flag = {"test": "--test", "bin": "--bin", "example": "--example", "bench": "--bench"}.get(
         target.kind
     )
-    base = f"CARGO_BUILD_JOBS=1 ./cargo_full test -p {package}"
+    base = f"./cargo_full test -p {package}"
     if flag is None:
         return base
     return f"{base} {flag} {target.name}"
@@ -255,11 +255,9 @@ def render_guide(
     ):
         raise ContractError(f"{context} commands must be a string array")
 
-    commands = [f"CARGO_BUILD_JOBS=1 ./cargo_full test -p {record.package}"]
+    commands = [f"./cargo_full test -p {record.package}"]
     if feature_names:
-        commands.append(
-            f"CARGO_BUILD_JOBS=1 ./cargo_full test -p {record.package} --all-features"
-        )
+        commands.append(f"./cargo_full test -p {record.package} --all-features")
     commands.extend(item.strip() for item in extra_commands)
     commands = list(dict.fromkeys(commands))
 

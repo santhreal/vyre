@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower
+./cargo_full test -p vyre-lower
 ```
 
 Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms.
@@ -14,11 +14,11 @@ The crate lives at `vyre-lower`. The `lowering` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower
+./cargo_full test -p vyre-lower
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --all-features
+./cargo_full test -p vyre-lower --all-features
 ```
 
 ## Feature sets
@@ -31,11 +31,11 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_lower` | `vyre-lower/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower` |
-| `test` | `analysis_fixture_corpuses` | `vyre-lower/tests/analysis_fixture_corpuses.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --test analysis_fixture_corpuses` |
-| `test` | `rewrite_layer_contract` | `vyre-lower/tests/rewrite_layer_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --test rewrite_layer_contract` |
-| `test` | `target_capabilities` | `vyre-lower/tests/target_capabilities.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --test target_capabilities` |
-| `test` | `verify_result_id_uniqueness` | `vyre-lower/tests/verify_result_id_uniqueness.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --test verify_result_id_uniqueness` |
+| `lib` | `vyre_lower` | `vyre-lower/src/lib.rs` | None | `./cargo_full test -p vyre-lower` |
+| `test` | `analysis_fixture_corpuses` | `vyre-lower/tests/analysis_fixture_corpuses.rs` | None | `./cargo_full test -p vyre-lower --test analysis_fixture_corpuses` |
+| `test` | `rewrite_layer_contract` | `vyre-lower/tests/rewrite_layer_contract.rs` | None | `./cargo_full test -p vyre-lower --test rewrite_layer_contract` |
+| `test` | `target_capabilities` | `vyre-lower/tests/target_capabilities.rs` | None | `./cargo_full test -p vyre-lower --test target_capabilities` |
+| `test` | `verify_result_id_uniqueness` | `vyre-lower/tests/verify_result_id_uniqueness.rs` | None | `./cargo_full test -p vyre-lower --test verify_result_id_uniqueness` |
 
 ## Test classes
 

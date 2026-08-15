@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine
+./cargo_full test -p vyre-pass-engine
 ```
 
 Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam.
@@ -14,11 +14,11 @@ The crate lives at `vyre-pass-engine`. The `pass-engine` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine
+./cargo_full test -p vyre-pass-engine
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --all-features
+./cargo_full test -p vyre-pass-engine --all-features
 ```
 
 ## Feature sets
@@ -31,19 +31,19 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_pass_engine_release_surface` | `vyre-pass-engine/examples/vyre_pass_engine_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --example vyre_pass_engine_release_surface` |
-| `lib` | `vyre_pass_engine` | `vyre-pass-engine/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine` |
-| `test` | `consumer_boundary` | `vyre-pass-engine/tests/consumer_boundary.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test consumer_boundary` |
-| `test` | `dce_dispatch_binding_contract` | `vyre-pass-engine/tests/dce_dispatch_binding_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test dce_dispatch_binding_contract` |
-| `test` | `dce_dispatch_binding_contract` | `vyre-pass-engine/tests/dce_dispatch_binding_contract.rs` | `optimizer` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test dce_dispatch_binding_contract` |
-| `test` | `dce_program_back_edge_contract` | `vyre-pass-engine/tests/dce_program_back_edge_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test dce_program_back_edge_contract` |
-| `test` | `dce_program_back_edge_contract` | `vyre-pass-engine/tests/dce_program_back_edge_contract.rs` | `optimizer` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test dce_program_back_edge_contract` |
-| `test` | `encoded_rewrite_walk_contract` | `vyre-pass-engine/tests/encoded_rewrite_walk_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test encoded_rewrite_walk_contract` |
-| `test` | `feature_boundaries` | `vyre-pass-engine/tests/feature_boundaries.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test feature_boundaries` |
-| `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
-| `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | `cpu-parity` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
-| `test` | `platform_doc_consumer_boundary` | `vyre-pass-engine/tests/platform_doc_consumer_boundary.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test platform_doc_consumer_boundary` |
-| `test` | `release_evidence_path_contract` | `vyre-pass-engine/tests/release_evidence_path_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-pass-engine --test release_evidence_path_contract` |
+| `example` | `vyre_pass_engine_release_surface` | `vyre-pass-engine/examples/vyre_pass_engine_release_surface.rs` | None | `./cargo_full test -p vyre-pass-engine --example vyre_pass_engine_release_surface` |
+| `lib` | `vyre_pass_engine` | `vyre-pass-engine/src/lib.rs` | None | `./cargo_full test -p vyre-pass-engine` |
+| `test` | `consumer_boundary` | `vyre-pass-engine/tests/consumer_boundary.rs` | None | `./cargo_full test -p vyre-pass-engine --test consumer_boundary` |
+| `test` | `dce_dispatch_binding_contract` | `vyre-pass-engine/tests/dce_dispatch_binding_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test dce_dispatch_binding_contract` |
+| `test` | `dce_dispatch_binding_contract` | `vyre-pass-engine/tests/dce_dispatch_binding_contract.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test dce_dispatch_binding_contract` |
+| `test` | `dce_program_back_edge_contract` | `vyre-pass-engine/tests/dce_program_back_edge_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test dce_program_back_edge_contract` |
+| `test` | `dce_program_back_edge_contract` | `vyre-pass-engine/tests/dce_program_back_edge_contract.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test dce_program_back_edge_contract` |
+| `test` | `encoded_rewrite_walk_contract` | `vyre-pass-engine/tests/encoded_rewrite_walk_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test encoded_rewrite_walk_contract` |
+| `test` | `feature_boundaries` | `vyre-pass-engine/tests/feature_boundaries.rs` | None | `./cargo_full test -p vyre-pass-engine --test feature_boundaries` |
+| `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | None | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
+| `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | `cpu-parity` | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
+| `test` | `platform_doc_consumer_boundary` | `vyre-pass-engine/tests/platform_doc_consumer_boundary.rs` | None | `./cargo_full test -p vyre-pass-engine --test platform_doc_consumer_boundary` |
+| `test` | `release_evidence_path_contract` | `vyre-pass-engine/tests/release_evidence_path_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test release_evidence_path_contract` |
 
 ## Test classes
 

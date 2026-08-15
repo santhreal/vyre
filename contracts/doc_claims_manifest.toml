@@ -35,13 +35,6 @@ test = "vyre-driver-wgpu/tests/pipeline_cache_contract.rs"
 description = "In-memory pipeline-cache entry-count enforcement (audit item #18)."
 
 [[claim]]
-id = "dispatch_allocation_contract"
-doc = "audits/VYRE_PERFORMANCE_ARCHITECTURE_INVENTORY_2026-04-28.md"
-phrase = "dispatch_allocation_contract.rs"
-test = "vyre-driver-wgpu/tests/dispatch_allocation_contract.rs"
-description = "Per-dispatch heap-allocation budget claim (audit item #10)."
-
-[[claim]]
 id = "primitives_lego_substrate"
 doc = "vyre-primitives/README.md"
 # Was "Tier-2.5 LEGO substrate", a phrase the README stopped using. The claim

@@ -83,8 +83,8 @@ fn generated_guide_contains_the_complete_crate_testing_contract() {
     let guide = fs::read_to_string(temp.path().join("docs/testing/a.md"))
         .expect("Fix: generated fixture guide must be readable");
     for exact in [
-        "CARGO_BUILD_JOBS=1 ./cargo_full test -p a",
-        "CARGO_BUILD_JOBS=1 ./cargo_full test -p a --all-features",
+        "./cargo_full test -p a",
+        "./cargo_full test -p a --all-features",
         "Available manifest features: `default`, `fast`",
         "| `test` | `behavior` | `a/tests/behavior.rs` |",
         "No accelerator is required.",

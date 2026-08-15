@@ -366,7 +366,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),full"
+feature = "(default),cpu-parity,graph-dispatch,test-fixtures"
 outcome = "compiles"
 
 [[pair]]
@@ -376,7 +376,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),graph-dispatch,test-fixtures"
+feature = "(default),full"
 outcome = "compiles"
 
 [[pair]]
@@ -706,12 +706,12 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "(default),bitset,cpu-parity,graph,hardware"
+feature = "(default),all-lego"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "(default),all-lego"
+feature = "(default),bitset,cpu-parity,graph,hardware"
 outcome = "compiles"
 
 [[pair]]
@@ -747,11 +747,6 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "bitset"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "bitset,fixpoint,graph,inventory-registry,math,reduce"
 outcome = "compiles"
 
 [[pair]]
