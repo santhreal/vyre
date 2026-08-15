@@ -244,6 +244,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --all-features
 | `test` | `semiring_gemm_wide_parity` | `vyre-primitives/tests/semiring_gemm_wide_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test semiring_gemm_wide_parity` |
 | `test` | `semiring_registry` | `vyre-primitives/tests/semiring_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test semiring_registry` |
 | `test` | `set_domain_selector` | `vyre-primitives/tests/set_domain_selector.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test set_domain_selector` |
+| `test` | `shared_owner_closure` | `vyre-primitives/tests/shared_owner_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test shared_owner_closure` |
 | `test` | `sheaf_diffusion_step_signed_parity` | `vyre-primitives/tests/sheaf_diffusion_step_signed_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test sheaf_diffusion_step_signed_parity` |
 | `test` | `sheaf_laplacian_eigenvalue_dispatch_parity` | `vyre-primitives/tests/sheaf_laplacian_eigenvalue_dispatch_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test sheaf_laplacian_eigenvalue_dispatch_parity` |
 | `test` | `simplicial_triangle_message_fixed_point_parity` | `vyre-primitives/tests/simplicial_triangle_message_fixed_point_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test simplicial_triangle_message_fixed_point_parity` |
