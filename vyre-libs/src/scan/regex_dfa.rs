@@ -378,7 +378,7 @@ fn build_regex_dfa_shards_with(
 /// Add an implicit `.*` prefix to a subgroup-NFA transition table: self-loop the
 /// start state (state 0, lane 0, bit 0) on every byte so it remains active at
 /// each input position. This is the standard unanchored/Aho-Corasick transform,
-/// applied to the lane-major `[num_states × 256 × LANES]` table where entry
+/// applied to the state-major `[num_states × 256 × LANES]` table where entry
 /// `trans[src*256*LANES + byte*LANES + lane]` holds the destination-state bits
 /// lane `lane` owns. For `src = 0, lane = 0` over every byte we OR in bit 0.
 /// Returns `Err(RegexDfaError::Size)` when `transition_table.len()` is not

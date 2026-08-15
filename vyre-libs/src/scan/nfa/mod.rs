@@ -9,14 +9,16 @@
 //!
 //! - `state_word` (per-lane u32): bits of the active-state set this
 //!   lane owns. Lane `k` holds states `k*32 .. k*32+32`.
-//! - `nfa_transition` (ReadOnly, u32): lane-major
+//! - `nfa_transition` (ReadOnly, u32): state-major
 //!   `[num_states × 256 × LANES_PER_SUBGROUP]`. Entry
 //!   `trans[src * 256 * LANES + byte * LANES + lane]` is the u32 of
 //!   destination bits that lane `lane` is responsible for, reached
-//!   from state `src` on byte `byte`. Lane-major layout is required
-//!   by [`vyre_primitives::nfa::subgroup_nfa::nfa_step`]; the composition must not diverge
-//!   from the primitive's contract (VYRE_MEM_LAYOUT CRITICAL-2).
-//! - `nfa_epsilon` (ReadOnly, u32): lane-major
+//!   from state `src` on byte `byte`. The source state is the outermost
+//!   index, so one subgroup load fetches every lane's word for one
+//!   `(src, byte)` pair. This layout is required by
+//!   [`vyre_primitives::nfa::subgroup_nfa::nfa_step`]; the composition
+//!   must not diverge from the primitive's contract.
+//! - `nfa_epsilon` (ReadOnly, u32): state-major
 //!   `[num_states × LANES_PER_SUBGROUP]`. All zero for literal-only
 //!   pattern sets.
 //!
@@ -106,18 +108,14 @@ pub const HAYSTACK_LEN_BUF: &str = "nfa_haystack_len";
 /// a literal-bookend kernel (BEGIN/END), or a different scan strategy.
 pub const MAX_SCAN_BYTES_BUF: &str = "nfa_max_scan_bytes";
 
-/// Build an NFA scan kernel from a precompiled plan.
-///
-/// Regex and other grammar frontends produce the same transition/epsilon table
-/// shape as literal compilation, but their state graph is not recoverable from
-/// Emit the per-peer-lane `k` block of a lane-major subgroup gather (transition or
+/// Emit the per-peer-lane `k` block of a state-major subgroup gather (transition or
 /// epsilon), with the inner per-bit walk as a RUNTIME `loop_for` bounded by a
 /// compile-time count instead of 32 unrolled `if_then` nodes.
 ///
 /// `subgroup_shuffle` still requires a compile-time peer lane, so the caller keeps
 /// `k` unrolled; only the inner bit index `bit` is made dynamic. The emitted block is
 /// O(1) in `num_states`, so the whole scan shader is O(LANES) rather than
-/// O(num_states), the size the semantic optimizer, neutral lowerer, and Naga
+/// O(num_states), the size the semantic optimizer, neutral lowerer, and backend
 /// emitter scale on. A 771-state bare-`xor` NFA previously unrolled into
 /// thousands of nodes and made verified lowering run for minutes; this keeps it flat.
 ///
@@ -127,7 +125,7 @@ pub const MAX_SCAN_BYTES_BUF: &str = "nfa_max_scan_bytes";
 /// `src_state * row_stride + byte_term? + lane`. The accumulation is OR (idempotent,
 /// order-independent), so the loop form preserves the unroll's result exactly.
 #[allow(clippy::too_many_arguments)]
-fn push_lane_major_gather(
+fn push_state_major_gather(
     out: &mut Vec<Node>,
     k: u32,
     num_states: u32,
@@ -173,6 +171,10 @@ fn push_lane_major_gather(
     ));
 }
 
+/// Build an NFA scan kernel from a precompiled plan.
+///
+/// Regex and other grammar frontends produce the same transition/epsilon table
+/// shape as literal compilation, but their state graph is not recoverable from
 /// the source strings. This builder keeps the executable scan program tied to
 /// the actual compiled plan instead of rebuilding a literal-only plan.
 ///
@@ -265,7 +267,7 @@ pub fn nfa_scan_with_plan(
     // each byte step is a straight-line block the optimiser can fold.
     let byte_term = Expr::mul(Expr::var("byte"), Expr::u32(LANES_PER_SUBGROUP as u32));
     for k in 0..LANES_PER_SUBGROUP as u32 {
-        push_lane_major_gather(
+        push_state_major_gather(
             &mut cursor_body,
             k,
             num_states,
@@ -286,7 +288,7 @@ pub fn nfa_scan_with_plan(
         let eps_iters = num_states.clamp(1, 32);
         let mut eps_body: Vec<Node> = Vec::new();
         for k in 0..LANES_PER_SUBGROUP as u32 {
-            push_lane_major_gather(
+            push_state_major_gather(
                 &mut eps_body,
                 k,
                 num_states,
@@ -400,7 +402,7 @@ pub fn nfa_scan_with_plan(
         let eps_iters = num_states.clamp(1, 32);
         let mut initial_eps_body: Vec<Node> = Vec::new();
         for k in 0..LANES_PER_SUBGROUP as u32 {
-            push_lane_major_gather(
+            push_state_major_gather(
                 &mut initial_eps_body,
                 k,
                 num_states,
@@ -469,8 +471,8 @@ mod tables;
 pub use plan::{compile, try_compile, NfaCompileError, NfaPlan};
 pub use shards::plan_shards;
 pub use tables::{
-    build_epsilon_table, build_transition_table, build_transition_table_lane_major,
-    try_build_epsilon_table, try_build_transition_table, try_build_transition_table_lane_major,
+    build_epsilon_table, build_transition_table, try_build_epsilon_table,
+    try_build_transition_table,
 };
 
 #[cfg(test)]
@@ -512,25 +514,20 @@ mod tests {
             build_transition_table(&patterns)
         );
         assert_eq!(
-            try_build_transition_table_lane_major(&patterns)
-                .expect("Fix: fallible lane-major transition table should build"),
-            build_transition_table_lane_major(&patterns)
-        );
-        assert_eq!(
             try_build_epsilon_table(&patterns).expect("Fix: fallible epsilon table should build"),
             build_epsilon_table(&patterns)
         );
     }
 
     #[test]
-    fn transition_table_has_lane_major_size() {
+    fn transition_table_is_state_major() {
         let t = build_transition_table(&["abc", "de"]);
         let plan = compile(&["abc", "de"]);
         assert_eq!(
             t.len(),
             (plan.num_states as usize) * 256 * LANES_PER_SUBGROUP,
-            "transition table must be lane-major [num_states × 256 × LANES_PER_SUBGROUP] \
-             to match subgroup_nfa::nfa_step contract (VYRE_MEM_LAYOUT CRITICAL-2)",
+            "transition table must be state-major [num_states × 256 × LANES_PER_SUBGROUP] \
+             to match subgroup_nfa::nfa_step contract",
         );
     }
 
@@ -575,7 +572,7 @@ mod tests {
     }
 
     #[test]
-    fn epsilon_table_has_lane_major_size() {
+    fn epsilon_table_is_state_major() {
         let n = compile(&["abc"]).num_states as usize;
         assert_eq!(build_epsilon_table(&["abc"]).len(), n * LANES_PER_SUBGROUP,);
     }
@@ -596,43 +593,6 @@ mod tests {
             assert!(sum < MAX_STATES_PER_SUBGROUP);
         }
         assert!(shards.len() >= 2);
-    }
-
-    #[test]
-    fn lane_major_transition_table_has_correct_size() {
-        let t = build_transition_table_lane_major(&["abc", "de"]);
-        let plan = compile(&["abc", "de"]);
-        let padded = LANES_PER_SUBGROUP * (plan.num_states as usize).div_ceil(LANES_PER_SUBGROUP);
-        assert_eq!(
-            t.len(),
-            padded * 256 * LANES_PER_SUBGROUP,
-            "lane-major table must be padded to LANES multiple per byte row"
-        );
-    }
-
-    #[test]
-    fn lane_major_transition_table_encodes_same_edges_as_flat() {
-        let patterns = &["abc", "xyz"];
-        let flat = build_transition_table(patterns);
-        let lm = build_transition_table_lane_major(patterns);
-        let plan = compile(patterns);
-        let num_states = plan.num_states as usize;
-        let padded = LANES_PER_SUBGROUP * num_states.div_ceil(LANES_PER_SUBGROUP);
-
-        // Every (src, byte, lane) entry must match between the two layouts.
-        for src in 0..num_states {
-            for byte in 0..256 {
-                for lane in 0..LANES_PER_SUBGROUP {
-                    let flat_idx =
-                        src * 256 * LANES_PER_SUBGROUP + byte * LANES_PER_SUBGROUP + lane;
-                    let lm_idx = lane * padded * 256 + byte * padded + src;
-                    assert_eq!(
-                        flat[flat_idx], lm[lm_idx],
-                        "mismatch at src={src} byte={byte} lane={lane}"
-                    );
-                }
-            }
-        }
     }
 
     #[test]
@@ -664,7 +624,7 @@ mod tests {
         assert_eq!(
             trans.count,
             plan.num_states * 256 * LANES_PER_SUBGROUP as u32,
-            "buffer count must match lane-major [num_states × 256 × LANES] layout \
+            "buffer count must match state-major [num_states × 256 × LANES] layout \
              that subgroup_nfa::nfa_step consumes",
         );
     }
@@ -708,89 +668,5 @@ mod tests {
     fn nfa_plan_input_len_is_attachable() {
         let plan = compile(&["abc"]).for_input_len(64);
         assert_eq!(plan.input_len, 64);
-    }
-}
-
-/// Benchmark-only helpers for NFA transition-table layout comparison.
-///
-/// Gated behind the `bench` feature so normal consumers do not pay
-/// compile-time cost for code that is only exercised by Criterion.
-#[cfg(feature = "bench")]
-pub mod bench {
-    pub use super::build_transition_table;
-    pub use super::build_transition_table_lane_major;
-    pub use super::compile;
-    pub use vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
-
-    use vyre_primitives::nfa::subgroup_nfa::MAX_EPSILON_ITERS;
-
-    /// Reference-oracle NFA step using the **lane-major** transition table.
-    ///
-    /// Layout: `lane * padded_num_states * 256 + byte * padded_num_states + src_state`.
-    /// Mirrors the semantics of `vyre_primitives::nfa::subgroup_nfa::cpu_step`
-    /// but indexes into the lane-major table produced by
-    /// [`build_transition_table_lane_major`].
-    pub fn reference_step_lane_major(
-        state: &[u32],
-        byte: u8,
-        transition: &[u32],
-        epsilon: &[u32],
-        num_states: usize,
-    ) -> Vec<u32> {
-        assert_eq!(state.len(), LANES_PER_SUBGROUP);
-        let padded_states = LANES_PER_SUBGROUP * num_states.div_ceil(LANES_PER_SUBGROUP);
-        assert_eq!(
-            transition.len(),
-            padded_states * 256 * LANES_PER_SUBGROUP,
-            "lane-major transition table size mismatch"
-        );
-        assert_eq!(
-            epsilon.len(),
-            num_states * LANES_PER_SUBGROUP,
-            "epsilon table size mismatch"
-        );
-
-        let mut acc = vec![0_u32; LANES_PER_SUBGROUP];
-        for (k, &peer) in state.iter().enumerate() {
-            for i in 0..32 {
-                let src_state = k * 32 + i;
-                if src_state >= num_states {
-                    break;
-                }
-                if (peer >> i) & 1 == 0 {
-                    continue;
-                }
-                for (lane, slot) in acc.iter_mut().enumerate() {
-                    let idx =
-                        lane * padded_states * 256 + (byte as usize) * padded_states + src_state;
-                    *slot |= transition[idx];
-                }
-            }
-        }
-
-        // Epsilon closure  -  real fixpoint. Same logic as flat layout;
-        // epsilon table is not transposed.
-        for _ in 0..MAX_EPSILON_ITERS as usize {
-            let prev = acc.clone();
-            for (k, &peer) in prev.iter().enumerate() {
-                for i in 0..32 {
-                    let src_state = k * 32 + i;
-                    if src_state >= num_states {
-                        break;
-                    }
-                    if (peer >> i) & 1 == 0 {
-                        continue;
-                    }
-                    for (lane, slot) in acc.iter_mut().enumerate() {
-                        let idx = src_state * LANES_PER_SUBGROUP + lane;
-                        *slot |= epsilon[idx];
-                    }
-                }
-            }
-            if acc == prev {
-                break;
-            }
-        }
-        acc
     }
 }

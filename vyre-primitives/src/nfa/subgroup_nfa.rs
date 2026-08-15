@@ -25,13 +25,14 @@
 //!
 //! - `state_bits` (per-lane u32): active-state bitset. Bit `i` in
 //!   lane `k` means state `(k * 32 + i)` is active.
-//! - `transition_buf` (ReadOnly, u32): lane-major
+//! - `transition_buf` (ReadOnly, u32): state-major
 //!   `[num_states × 256 × LANES_PER_SUBGROUP]`. Entry
 //!   `transition[src_state * 256 * LANES + byte * LANES + lane]`
 //!   is a u32 holding the destination-state bits *this lane is
 //!   responsible for* that state `src_state` reaches on byte
-//!   `byte`.
-//! - `epsilon_buf` (ReadOnly, u32): lane-major
+//!   `byte`. The source state is the outermost index, so one
+//!   subgroup load fetches every lane's word for one `(src, byte)`.
+//! - `epsilon_buf` (ReadOnly, u32): state-major
 //!   `[num_states × LANES_PER_SUBGROUP]`.
 //!
 //! Compact and cache-friendly. Higher-level NFA compositions emit this
@@ -251,8 +252,8 @@ pub fn nfa_step(
 ///
 /// `state`: active-state bitset of length `LANES_PER_SUBGROUP`.
 /// `byte`: input byte [0, 256).
-/// `transition`: lane-major `[num_states × 256 × LANES]`.
-/// `epsilon`: lane-major `[num_states × LANES]`.
+/// `transition`: state-major `[num_states × 256 × LANES]`.
+/// `epsilon`: state-major `[num_states × LANES]`.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_step(

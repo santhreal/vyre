@@ -2,10 +2,8 @@
 
 #[cfg(feature = "matching-nfa")]
 #[test]
-fn generated_nfa_plan_and_table_layout_matrix_is_stable_after_split() {
-    use vyre_libs::scan::nfa::{
-        build_transition_table, build_transition_table_lane_major, plan_shards, try_compile,
-    };
+fn nfa_plan_and_state_major_table_encode_exactly_the_declared_edges() {
+    use vyre_libs::scan::nfa::{build_transition_table, plan_shards, try_compile};
     use vyre_primitives::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
 
     let pattern_sets: &[&[&str]] = &[
@@ -30,29 +28,39 @@ fn generated_nfa_plan_and_table_layout_matrix_is_stable_after_split() {
         assert_eq!(plan.accept_start_anchored, vec![false; patterns.len()]);
         assert_eq!(plan.accept_end_anchored, vec![false; patterns.len()]);
 
-        let flat = build_transition_table(patterns);
-        let lane_major = build_transition_table_lane_major(patterns);
-        let padded_states =
-            LANES_PER_SUBGROUP * (plan.num_states as usize).div_ceil(LANES_PER_SUBGROUP);
+        let table = build_transition_table(patterns);
         assert_eq!(
-            flat.len(),
+            table.len(),
             plan.num_states as usize * 256 * LANES_PER_SUBGROUP
         );
-        assert_eq!(lane_major.len(), padded_states * 256 * LANES_PER_SUBGROUP);
 
-        for src in 0..plan.num_states as usize {
-            for byte in [0usize, 1, b'a' as usize, b'z' as usize, 0x7f, 0x80, 0xff] {
-                for lane in 0..LANES_PER_SUBGROUP {
-                    let flat_idx =
-                        src * 256 * LANES_PER_SUBGROUP + byte * LANES_PER_SUBGROUP + lane;
-                    let lane_major_idx = lane * padded_states * 256 + byte * padded_states + src;
-                    assert_eq!(
-                        flat[flat_idx], lane_major[lane_major_idx],
-                        "Fix: split NFA table packers diverged at src={src}, byte={byte}, lane={lane}."
-                    );
-                }
+        // One destination edge per pattern byte, and no edge anywhere else.
+        let mut expected_edges = 0usize;
+        let mut state_cursor = 1usize;
+        for pattern in *patterns {
+            let mut src = 0usize;
+            for byte in pattern.bytes() {
+                let dst = state_cursor;
+                let idx =
+                    src * 256 * LANES_PER_SUBGROUP + byte as usize * LANES_PER_SUBGROUP + dst / 32;
+                assert_ne!(
+                    table[idx] & (1 << (dst % 32)),
+                    0,
+                    "Fix: state-major table lost edge {src} -{byte}-> {dst}."
+                );
+                expected_edges += 1;
+                src = dst;
+                state_cursor += 1;
             }
         }
+        assert_eq!(
+            table
+                .iter()
+                .map(|word| word.count_ones() as usize)
+                .sum::<usize>(),
+            expected_edges,
+            "Fix: state-major table holds edges the pattern set does not declare."
+        );
         checked_sets += 1;
     }
 

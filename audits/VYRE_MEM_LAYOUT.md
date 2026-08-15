@@ -15,21 +15,17 @@ The vyre memory layout has systemic issues against GPU cache-line geometry (16B�
 
 ## Findings
 
-### 1. CRITICAL | `vyre-libs/src/matching/nfa.rs:362` | `bit_in_word` is undefined  -  transition table build is uncompileable
+### 1. RESOLVED | `vyre-libs/src/scan/nfa/tables.rs` | `bit_in_word` is undefined  -  transition table build is uncompileable
 
-`build_transition_table` calls `bit_in_word(word_idx, bit)`, but no such function exists in the repository. The table is supposed to be a flat `[num_states × 256]` of u32 bitsets; `bit` is already `1 << (dst % 32)`. The call should be `table[idx] |= bit;`. As written, the crate fails to compile and the NFA scan path is completely dead.
-
-**Suggested fix:** Delete the `bit_in_word` call and OR `bit` directly into `table[idx]`.
+`build_transition_table` called `bit_in_word(word_idx, bit)`, which did not exist. The current builder ORs the destination bit directly into `table[idx]` and the module compiles. `vyre-libs/src/scan/nfa/tables.rs:44` holds the fallible builder the infallible one delegates to.
 
 ---
 
-### 2. CRITICAL | `vyre-libs/src/matching/nfa.rs:278` vs `vyre-primitives/src/nfa/subgroup_nfa.rs:227` | Transition table layout mismatch between composition and primitive
+### 2. RESOLVED | `vyre-libs/src/scan/nfa/tables.rs:44` vs `vyre-primitives/src/nfa/subgroup_nfa.rs` | Transition table layout mismatch between composition and primitive
 
-`vyre-libs::matching::nfa::build_transition_table` emits a flat `[num_states × 256]` u32 table.  
-`vyre-primitives::nfa::subgroup_nfa::nfa_step` declares `transition_buf` as `[num_states × 256 × LANES_PER_SUBGROUP]` with indexing `src_state * 256 * LANES + byte * LANES + lane`.  
-These layouts are byte-incompatible. A caller that builds a table with the helper and dispatches the primitive will read garbage.
+Both sides are state-major `[num_states × 256 × LANES_PER_SUBGROUP]`, indexed `src * 256 * LANES + byte * LANES + dst_lane`. `vyre-libs/src/scan/nfa/mod.rs` asserts that shape in `transition_table_is_state_major` and asserts the dispatched buffer count against it, and `vyre-libs/tests/nfa_plan_contracts.rs` asserts the built table holds exactly the edges the pattern set declares and no others.
 
-**Suggested fix:** Unify on one canonical layout. If the primitive needs the lane-major expansion, provide a host-side `expand_for_subgroup` helper in `vyre-libs` that converts the flat table to the primitive shape, and document the ABI contract.
+A second packer, `build_transition_table_lane_major`, did emit a transposed `lane * padded_states * 256 + byte * padded_states + src` table. Nothing dispatched it: its only non-test consumer was a `#[cfg(feature = "bench")]` module that no benchmark enabled. Both it and that module are deleted, so one layout remains and the word "state-major" now names it everywhere.
 
 ---
 

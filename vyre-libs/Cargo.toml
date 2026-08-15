@@ -48,7 +48,6 @@ full = [
     "security",
     "parsing",
 ]
-bench = []
 cpu-parity = ["vyre-primitives/cpu-parity"]
 hash = ["vyre-primitives/hash"]
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
