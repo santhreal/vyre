@@ -1209,3 +1209,18 @@ text = "`vyre-primitives` gates three duplication classes it has reintroduced af
 id = "evidence-dispatch-runs-the-dispatcher"
 category = "Fixed"
 text = "`release-evidence` runs its thirteen child subcommands through `xtask::delegate::dispatcher`, the one owner of which binary runs a subcommand. It resolved that child from the running executable, which was correct only while it lived in `xtask`; after it moved to `xtask-evidence` it re-entered itself, met that crate's six-entry table, and exited 1 with `is not implemented in xtask-evidence` for twelve of the thirteen. Only `backend-matrix` worked, because `xtask-evidence` happens to own it. Each failure was still labelled `xtask <name>`, so one wrong process read as twelve gates failing and the release evidence surface reported sixteen blockers where seven exist. The same resolution in `xtask::gates::sweep` and `xtask::release::release_gate` was three copies of the same eight lines of failure handling and is now one call."
+
+[[fragments]]
+id = "bounded-ranges-prefilter-width-is-data"
+category = "Changed"
+text = "The bounded-ranges candidate gate is a width value rather than a shape per width. `PrefilterWidth` records how many mask buffers a gate binds, which region generator the assembled program carries, which dispatch shape an error names and which fallible entrypoint a fail-closed panic points at; `PrefilterGate` holds the mask names as a prefix of `[end byte, bigram, trigram bloom]` and is only constructible through a per-width constructor, so an unbound slot cannot reach a buffer declaration. One assembler emits every match-emitting shape at every width, and the ungated scan is width zero of the same table instead of a fourth builder. Each width previously restated the six-buffer input ABI, the replay call and the build quintet, so the binding of the match sink was computed in three places from three copies of the mask count: a width added or a mask resized in one copy left the sink bound over a mask, which writes match triples into a read-only table and loses recall silently rather than failing."
+
+[[fragments]]
+id = "prefilter-width-closure-gate"
+category = "Added"
+text = "`scan_prefilter_width_closure` reads the `PrefilterWidth` variants out of the width table's own source at run time and fails when a width has no recorded dispatch ABI, when a recorded row names a width the source no longer declares, when a shipped program's bindings disagree with the row's counter, mask and sink layout, when a declared mask is never read by the emitted body, and when the widths stop forming a mask prefix chain. An empty or unparsable member set panics rather than passing, because an empty set makes every closure assertion vacuous."
+
+[[fragments]]
+id = "vyre-libs-duplication-pin-lowered-to-measured"
+category = "Changed"
+text = "The `vyre-libs` duplication pin records what the tree measures after the width table lands: 10649 to 10598 duplicated lines, with `total_lines` measured. What remains between the three match-emitting entry points is their frozen positional signatures and the shared value they each construct from them, which no owner can absorb without changing the public ABI."
