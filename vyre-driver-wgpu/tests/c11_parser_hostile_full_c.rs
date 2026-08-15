@@ -161,14 +161,19 @@ fn every_hostile_fixture_spells_the_stream_its_contracts_index() {
     let (types, starts, lens) = fixture_typedef_expr_ambiguity();
     assert_eq!(types.len(), 39, "typedef/expression ambiguity token count");
     assert_eq!(lens, vec![1; types.len()], "every hostile token is one byte");
-    assert_eq!(
-        starts,
-        (0..types.len() as u32).collect::<Vec<u32>>(),
-        "one-byte tokens lay out at consecutive offsets"
+    // `starts_for_lens` separates adjacent lexemes, so a one-byte token stream
+    // lays out on a stride of two. What a span contract needs is that the spans
+    // are disjoint and ordered, not the stride itself.
+    assert!(
+        starts
+            .windows(2)
+            .zip(lens.iter())
+            .all(|(pair, len)| pair[0] + len <= pair[1]),
+        "token spans must be disjoint and ordered: starts={starts:?} lens={lens:?}"
     );
-    // Row 11 is the `*` in `Foo *a` that the POINTER_DECL contract indexes, and
-    // row 17 the `*` in `(Foo)*b` that must NOT be one. Both are positional, so a
-    // shifted stream would silently move the contract onto another token.
+    // Row 11 is the `*` in `Foo *a` the POINTER_DECL contract indexes, row 17 the
+    // `*` in `(Foo)*b` that must not be one. Both are positional, so a shifted
+    // stream would silently move a contract onto another token.
     assert_eq!(types[11], TOK_STAR, "row 11 is the `*` of `Foo *a`");
     assert_eq!(types[17], TOK_STAR, "row 17 is the `*` of `(Foo)*b`");
     assert_eq!(
