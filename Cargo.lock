@@ -3806,6 +3806,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.0",
  "smallvec",
+ "structure-gate",
  "tempfile",
  "thiserror 2.0.19",
  "tracing",
