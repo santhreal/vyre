@@ -1,46 +1,39 @@
-//! Owning child-recursive `Node` map: walks one level into `If`, `Loop`,
-//! `Block`, `Region` bodies and rebuilds the node with each child mapped
-//! through the caller's transform.
+//! Owning child-recursive `Node` map: takes each body slot of a node out,
+//! hands it to the caller's transform, and puts the result back.
 //!
-//! Audit cleanup A5 (2026-04-30): hoisted from per-pass copies. The
-//! cleanup catalog (`empty_block_collapse`, `region_promote_singleton_block`,
-//! `loop_trip_zero_eliminate`, `if_constant_branch_eliminate`,
-//! `noop_assign_eliminate`, `loop_redundant_bound_check_elide`) used to
-//! carry near-identical 4-arm `If/Loop/Block/Region` walkers  -  all those
-//! files now compose this helper plus a per-pass rewrite predicate.
+//! The cleanup catalog (`empty_block_collapse`,
+//! `region_promote_singleton_block`, `loop_trip_zero_eliminate`,
+//! `if_constant_branch_eliminate`, `noop_assign_eliminate`,
+//! `loop_redundant_bound_check_elide`) used to carry near-identical four-arm
+//! `If`/`Loop`/`Block`/`Region` walkers; all of them now compose this helper
+//! plus a per-pass rewrite predicate.
 //!
-//! ## Why an owning map (not a `&mut Node` mutator)
+//! ## Why an owning map (not a borrowed rebuild)
 //!
-//! Vyre's IR uses `Arc<Vec<Node>>` for `Region::body`. Mutating an
-//! existing tree requires `Arc::make_mut` or full clone-on-write at every
-//! step; the owning-by-value path lets each pass produce a structurally
-//! new tree (pre-existing share-state is preserved when the rewrite
-//! predicate returns the input unchanged).
+//! `transform::rewrite_walk::rewrite_node` rebuilds a node from BORROWED
+//! bodies and reports "unchanged" without allocating, which is what a pass
+//! driver wants. It cannot MOVE a body out, so a transform that consumes its
+//! input body (filtering a statement list, or recursing into each child by
+//! value) would have to clone every body at every level to use it. This map
+//! takes the slots through `transform::visit::child_bodies_mut` instead, so a
+//! body is moved, not copied.
 //!
 //! ## Recursion contract
 //!
-//! `map_children(node, &mut f)` calls `f` once per immediate child of
-//! `node` (not on `node` itself; the caller is in charge of deciding
-//! whether to apply its rewrite at the current level). The function
-//! reconstructs `node` with each child replaced by `f`'s output.
-//!
-//! For non-container nodes (`Store`, `Assign`, `Let`, `Barrier`, `Return`,
-//! `IndirectDispatch`, `AsyncLoad`, `AsyncStore`, `AsyncWait`, `Trap`,
-//! `Resume`, `Opaque`) `map_children` returns the node unchanged.
-
-use std::sync::Arc;
+//! `map_children(node, &mut f)` calls `f` once per immediate child of `node`
+//! (not on `node` itself; the caller decides whether to apply its rewrite at
+//! the current level). The node comes back with each child replaced by `f`'s
+//! output. A node with no body slot is returned untouched and `f` is never
+//! called.
 
 use crate::ir::Node;
+use crate::transform::visit::child_bodies_mut;
 
 /// Recurse one level into `node`'s child sequences and apply `f` to each
 /// immediate child node. Returns the rebuilt node.
 ///
 /// The closure may itself call `map_children` to recurse further; the
 /// helper does not do deep recursion on its own.
-///
-/// Which variants have children is [`map_body`]'s decision, not this
-/// function's: the two used to carry the same variant list and a new container
-/// variant had to be added to both.
 #[must_use]
 pub fn map_children<F>(node: Node, f: &mut F) -> Node
 where
@@ -49,76 +42,28 @@ where
     map_body(node, &mut |body| body.into_iter().map(&mut *f).collect())
 }
 
-/// Rewrite the body sequence of a container node (`If::then`,
-/// `If::otherwise`, `Loop::body`, `Block::body`, `Region::body`) through
-/// `f`, then rebuild the node. Non-container nodes are returned
-/// unchanged (no body to rewrite).
+/// Rewrite every body sequence of `node` through `f`, then hand the node back.
 ///
-/// Used by the cleanup catalog to filter or transform a node's
-/// immediate child sequence after recursion. Callers typically compose
-/// `map_body(map_children(node, &mut recurse), &mut filter_step)`.
+/// `f` is called once per body slot the variant really has, in source order:
+/// twice for `Node::If`, once for `Node::Loop`, `Node::Block`, and
+/// `Node::Region`, and never for a variant that nests nothing.
+///
+/// Which slots those are is [`child_bodies_mut`]'s decision, the one exhaustive
+/// owner in the move direction. This function used to state the list itself and
+/// end it in `other => other`, so a body-bearing variant the list had not been
+/// told about was handed back unchanged: every pass composed on it, including
+/// `rematerialize_cheap_let` and the pass engine's constant propagation, was a
+/// silent no-op inside that variant rather than an error, and no test could see
+/// the difference because the pass reported success.
 #[must_use]
-pub fn map_body<F>(node: Node, f: &mut F) -> Node
+pub fn map_body<F>(mut node: Node, f: &mut F) -> Node
 where
     F: FnMut(Vec<Node>) -> Vec<Node>,
 {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond,
-            then: f(then),
-            otherwise: f(otherwise),
-        },
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::Loop {
-            var,
-            from,
-            to,
-            body: f(body),
-        },
-        Node::Block(body) => Node::Block(f(body)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: Arc::new(f(body_vec)),
-            }
-        }
-        other => other,
+    for slot in child_bodies_mut(&mut node) {
+        *slot = f(std::mem::take(slot));
     }
-}
-
-/// True iff `pred` matches `node` itself or any descendant, in preorder.
-/// Used by passes to short-circuit when `analyze` can prove there is nothing
-/// to rewrite.
-///
-/// This forwards to [`crate::transform::visit::any_descendant`], which owns
-/// both the worklist and the child enumeration. It used to carry its own copy
-/// of each, so the two scans could disagree about which variants nest.
-///
-/// `VYRE_IR_HOTSPOTS` HIGH: every `analyze_impl` in cleanup/algebraic/loops
-/// calls this once per top-level entry node.
-#[must_use]
-pub fn any_descendant<P>(node: &Node, pred: &mut P) -> bool
-where
-    P: FnMut(&Node) -> bool,
-{
-    crate::transform::visit::any_descendant(node, pred)
+    node
 }
 
 #[cfg(test)]
@@ -126,6 +71,7 @@ mod tests {
     use super::*;
     use crate::ir::model::expr::Ident;
     use crate::ir::Expr;
+    use std::sync::Arc;
 
     fn store_at(idx: u32, value: u32) -> Node {
         Node::store("buf", Expr::u32(idx), Expr::u32(value))
@@ -202,9 +148,9 @@ mod tests {
     }
 
     #[test]
-    fn map_children_preserves_op_id_through_region_unwrap_clone_path() {
+    fn map_children_preserves_op_id_through_region_shared_body_clone_path() {
         // Two strong refs to the same Arc<Vec<Node>> body force the
-        // Arc::try_unwrap → clone branch.
+        // `Arc::make_mut` clone branch inside `child_bodies_mut`.
         let body = Arc::new(vec![store_at(0, 1)]);
         let _keepalive = Arc::clone(&body);
         let input = Node::Region {
@@ -250,174 +196,5 @@ mod tests {
         });
         assert!(!fired, "no children = no callback invocations");
         assert!(matches!(mapped, Node::Store { .. }));
-    }
-
-    #[test]
-    fn any_descendant_finds_match_at_root() {
-        let node = store_at(0, 7);
-        assert!(any_descendant(&node, &mut |n| matches!(
-            n,
-            Node::Store { .. }
-        )));
-    }
-
-    #[test]
-    fn any_descendant_recurses_into_nested_region() {
-        // store nested 3 levels deep: Block > If > Region > Store.
-        let node = Node::Block(vec![Node::if_then(
-            Expr::bool(true),
-            vec![Node::Region {
-                generator: Ident::from("nested"),
-                source_region: None,
-                body: Arc::new(vec![store_at(0, 1)]),
-            }],
-        )]);
-        assert!(any_descendant(&node, &mut |n| matches!(
-            n,
-            Node::Store { .. }
-        )));
-    }
-
-    #[test]
-    fn any_descendant_returns_false_when_no_match() {
-        let node = Node::Block(vec![Node::if_then_else(
-            Expr::bool(true),
-            vec![Node::Block(Vec::new())],
-            vec![Node::Block(Vec::new())],
-        )]);
-        assert!(!any_descendant(&node, &mut |n| matches!(
-            n,
-            Node::Store { .. }
-        )));
-    }
-
-    #[test]
-    fn any_descendant_short_circuits() {
-        // Confirmed indirectly: counter must stay <= the position of the
-        // first matching node in pre-order traversal.
-        let node = Node::Block(vec![
-            store_at(0, 1),
-            store_at(1, 2),
-            store_at(2, 3),
-            store_at(3, 4),
-        ]);
-        let mut visited = 0;
-        let found = any_descendant(&node, &mut |n| {
-            visited += 1;
-            matches!(n, Node::Store { .. })
-        });
-        assert!(found);
-        // First node visited is the Block itself (no match), then the
-        // first Store (match). So visited <= 2.
-        assert!(
-            visited <= 2,
-            "any_descendant must short-circuit; visited {visited}"
-        );
-    }
-
-    // --- O4: iterative worklist correctness & stack-safety tests ---
-
-    /// Build a 1000-deep nested `If` tree with a single `Store` leaf.
-    /// Construction is iterative so the test harness itself never recurses.
-    fn deep_if_tree(depth: usize) -> Node {
-        let mut node = store_at(0, 1);
-        for _ in 0..depth {
-            node = Node::if_then(Expr::bool(true), vec![node]);
-        }
-        node
-    }
-
-    /// Reference recursive walker used only for correctness comparison on
-    /// small trees where recursion depth is safe.
-    ///
-    /// This stays hand-written on purpose: it is the differential arm the
-    /// iterative [`any_descendant`] is checked against, and a reference that
-    /// reads its child list from the same owner as the implementation cannot
-    /// disagree with it about anything. The match is exhaustive with no
-    /// catch-all instead, so a new `Node` variant fails to compile here and the
-    /// author has to state whether the reference descends into it.
-    fn any_descendant_recursive<P>(node: &Node, pred: &mut P) -> bool
-    where
-        P: FnMut(&Node) -> bool,
-    {
-        if pred(node) {
-            return true;
-        }
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().any(|n| any_descendant_recursive(n, pred))
-                    || otherwise.iter().any(|n| any_descendant_recursive(n, pred))
-            }
-            Node::Loop { body, .. } => body.iter().any(|n| any_descendant_recursive(n, pred)),
-            Node::Block(body) => body.iter().any(|n| any_descendant_recursive(n, pred)),
-            Node::Region { body, .. } => body.iter().any(|n| any_descendant_recursive(n, pred)),
-            Node::Let { .. }
-            | Node::Assign { .. }
-            | Node::Store { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => false,
-        }
-    }
-
-    #[test]
-    fn any_descendant_iterative_no_stack_overflow_on_deep_tree() {
-        let deep = deep_if_tree(1000);
-        // The iterative worklist must survive a depth that would overflow
-        // a naive recursive implementation.
-        assert!(
-            any_descendant(&deep, &mut |n| matches!(n, Node::Store { .. })),
-            "must find the Store leaf at depth 1000 without stack overflow"
-        );
-    }
-
-    #[test]
-    fn any_descendant_iterative_matches_recursive_traversal() {
-        // Diverse small tree: Block > If(then: Loop(body: Store), else: Region(body: Store))
-        let tree = Node::Block(vec![Node::if_then_else(
-            Expr::bool(true),
-            vec![Node::Loop {
-                var: Ident::from("i"),
-                from: Expr::u32(0),
-                to: Expr::u32(2),
-                body: vec![store_at(1, 2)],
-            }],
-            vec![Node::Region {
-                generator: Ident::from("r"),
-                source_region: None,
-                body: Arc::new(vec![store_at(3, 4)]),
-            }],
-        )]);
-
-        let mut recursive_ptrs = Vec::new();
-        let recursive_found = any_descendant_recursive(&tree, &mut |n| {
-            recursive_ptrs.push(n as *const Node);
-            false
-        });
-        assert!(!recursive_found);
-
-        let mut iterative_ptrs = Vec::new();
-        let iterative_found = any_descendant(&tree, &mut |n| {
-            iterative_ptrs.push(n as *const Node);
-            false
-        });
-        assert!(!iterative_found);
-
-        assert_eq!(
-            recursive_ptrs, iterative_ptrs,
-            "iterative walker must visit the exact same nodes in the exact same pre-order as the recursive reference"
-        );
     }
 }

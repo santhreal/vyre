@@ -713,6 +713,7 @@ pub enum vyre_foundation::serial::wire::encode::error::WireEncodeErr
 pub enum vyre_foundation::transform::collectives::CollectiveTransportKind
 pub enum vyre_foundation::transform::inline::UnresolvedCalls
 pub enum vyre_foundation::transform::visit::ExprBufferRef<'a>
+pub enum vyre_foundation::transform::visit::NameBinding
 pub enum vyre_foundation::vast::VastEditCorpusError
 pub enum vyre_foundation::vast::VastError
 pub enum vyre_foundation::visit::ExprBufferAccess
@@ -2409,6 +2410,7 @@ pub fn vyre_foundation::transform::visit::NodeVisitor::visit_node(&mut self, nod
 pub fn vyre_foundation::transform::visit::any_descendant(node: &vyre_foundation::ir::Node, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool) -> bool
 pub fn vyre_foundation::transform::visit::any_subexpr(expr: &vyre_foundation::ir::Expr, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> bool) -> bool
 pub fn vyre_foundation::transform::visit::child_bodies(node: &vyre_foundation::ir::Node) -> [&[vyre_foundation::ir::Node]; 2]
+pub fn vyre_foundation::transform::visit::child_bodies_mut(node: &mut vyre_foundation::ir::Node) -> smallvec::SmallVec<[&mut alloc::vec::Vec<vyre_foundation::ir::Node>; 2]>
 pub fn vyre_foundation::transform::visit::collect_call_op_ids(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::sync::Arc<str>>
 pub fn vyre_foundation::transform::visit::expr_buffer_ref(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::transform::visit::ExprBufferRef<'_>
 pub fn vyre_foundation::transform::visit::expr_children(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::transform::visit::ExprChildren<'_>
@@ -2418,6 +2420,7 @@ pub fn vyre_foundation::transform::visit::for_each_subexpr<'a>(expr: &'a vyre_fo
 pub fn vyre_foundation::transform::visit::node_bound_name(node: &vyre_foundation::ir::Node) -> core::option::Option<&vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::visit::node_buffer_refs(node: &vyre_foundation::ir::Node) -> vyre_foundation::transform::visit::BufferRefs<'_>
 pub fn vyre_foundation::transform::visit::node_operands(node: &vyre_foundation::ir::Node) -> [core::option::Option<&vyre_foundation::ir::Expr>; 2]
+pub fn vyre_foundation::transform::visit::node_scalars(node: &vyre_foundation::ir::Node) -> vyre_foundation::transform::visit::NodeScalars<'_>
 pub fn vyre_foundation::transform::visit::node_shape(node: &vyre_foundation::ir::Node) -> vyre_foundation::transform::visit::NodeShape
 pub fn vyre_foundation::transform::visit::referenced_buffers(program: &vyre_foundation::ir::Program) -> std::collections::hash::set::HashSet<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::visit::try_for_each_expr<B>(nodes: &[vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
@@ -2565,7 +2568,6 @@ pub fn vyre_foundation::visit::expr::visit_expr_buffer_accesses(expr: &vyre_foun
 pub fn vyre_foundation::visit::expr::visit_postorder<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
 pub fn vyre_foundation::visit::expr::visit_preorder<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
 pub fn vyre_foundation::visit::expr::walk_expr_children_default<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
-pub fn vyre_foundation::visit::node_map::any_descendant<P>(node: &vyre_foundation::ir::Node, pred: &mut P) -> bool where P: core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool
 pub fn vyre_foundation::visit::node_map::map_body<F>(node: vyre_foundation::ir::Node, f: &mut F) -> vyre_foundation::ir::Node where F: core::ops::function::FnMut(alloc::vec::Vec<vyre_foundation::ir::Node>) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::visit::node_map::map_children<F>(node: vyre_foundation::ir::Node, f: &mut F) -> vyre_foundation::ir::Node where F: core::ops::function::FnMut(vyre_foundation::ir::Node) -> vyre_foundation::ir::Node
 pub fn vyre_foundation::visit::traits::Evaluatable::evaluate(&self, env: &mut Env) -> vyre_foundation::error::IrResult<Self::Value>
@@ -3130,6 +3132,7 @@ pub struct vyre_foundation::transform::compiler::visitor_walk::VisitorWalkOp
 pub struct vyre_foundation::transform::inline::InlineCtx
 pub struct vyre_foundation::transform::visit::BufferRefs<'a>
 pub struct vyre_foundation::transform::visit::ExprChildren<'a>
+pub struct vyre_foundation::transform::visit::NodeScalars<'a>
 pub struct vyre_foundation::transform::visit::NodeShape
 pub struct vyre_foundation::validate::BackendCapabilities
 pub struct vyre_foundation::validate::LimitState
@@ -5234,6 +5237,11 @@ pub vyre_foundation::transform::visit::ExprBufferRef::None
 pub vyre_foundation::transform::visit::ExprBufferRef::Read(&'a vyre_foundation::ir::Ident)
 pub vyre_foundation::transform::visit::ExprBufferRef::ReadWrite(&'a vyre_foundation::ir::Ident)
 pub vyre_foundation::transform::visit::ExprBufferRef::Unknown
+pub vyre_foundation::transform::visit::NameBinding::Declare
+pub vyre_foundation::transform::visit::NameBinding::Induction
+pub vyre_foundation::transform::visit::NameBinding::Reassign
+pub vyre_foundation::transform::visit::NodeScalars::binding: core::option::Option<(vyre_foundation::transform::visit::NameBinding, &'a vyre_foundation::ir::Ident)>
+pub vyre_foundation::transform::visit::NodeScalars::operands: [core::option::Option<&'a vyre_foundation::ir::Expr>; 2]
 pub vyre_foundation::transform::visit::NodeShape::carries_operands: bool
 pub vyre_foundation::transform::visit::NodeShape::nests_nodes: bool
 pub vyre_foundation::transform::visit::NodeShape::opaque_payload: bool

@@ -21,11 +21,11 @@
 pub(crate) mod bound_names;
 /// Expr visitor contract + recursive traversal entry points.
 pub mod expr;
-/// Owning child-recursive `Node` map + descendant-search helpers shared
-/// by the cleanup catalog (`empty_block_collapse`,
-/// `region_promote_singleton_block`, `if_constant_branch_eliminate`,
-/// `noop_assign_eliminate`, `loop_trip_zero_eliminate`,
-/// `loops::loop_redundant_bound_check_elide`).
+/// Owning child-recursive `Node` map shared by the cleanup catalog
+/// (`empty_block_collapse`, `region_promote_singleton_block`,
+/// `if_constant_branch_eliminate`, `noop_assign_eliminate`,
+/// `loop_trip_zero_eliminate`, `loops::loop_redundant_bound_check_elide`).
+/// Descendant search lives in `transform::visit::any_descendant`.
 pub mod node_map;
 /// Cross-cutting visitor contracts: `NodeVisitor`, `Lowerable`, `Evaluatable`.
 pub mod traits;

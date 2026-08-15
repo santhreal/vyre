@@ -47,7 +47,7 @@
 use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::AdapterCaps;
-use crate::transform::visit::expr_children;
+use crate::transform::visit::{expr_children, for_each_descendant};
 
 /// A frozen snapshot of the cost dimensions tracked by the optimizer's
 /// monotone-down post-condition gate.
@@ -225,14 +225,19 @@ impl CostCertificate {
 /// pattern this dimension tracks. Other branchy patterns (e.g. `if x < y`) are
 /// not divergent in the same warp-cost sense and are NOT counted here  -  they
 /// land in `control_flow_count`, which is also tracked.
+///
+/// The descent is [`for_each_descendant`], the exhaustive owner, and not
+/// `any_descendant` with a predicate that always answers `false`: that spelling
+/// counts a prefix of the tree the moment somebody makes the predicate answer
+/// `true`, and a cost fold that silently stops early lets the scheduler land a
+/// rewrite that raised the dimension it was refusing to raise.
 fn count_divergent_patterns(node: &Node, score: &mut u64) {
-    let _ = crate::visit::node_map::any_descendant(node, &mut |n| {
-        if let Node::If { cond, .. } = n {
+    for_each_descendant(node, &mut |current| {
+        if let Node::If { cond, .. } = current {
             if is_invocation_id_eq_constant(cond) {
                 *score = score.saturating_add(1);
             }
         }
-        false
     });
 }
 
@@ -444,111 +449,5 @@ mod tests {
             wide_cost.score < compact_cost.score,
             "Fix: wider profile vector/unroll/tile facts must lower the projected device cost"
         );
-    }
-
-    #[test]
-
-    fn walker_matches_canonical_on_corpus() {
-        // Kept-inline private old walker for drift-prevention. It stays
-        // hand-written on purpose: it is the differential arm the canonical
-        // walker is checked against, and a reference reading its child list
-        // from the same owner as the implementation cannot disagree with it.
-        // The match is exhaustive with no catch-all, so a new `Node` variant
-        // fails to compile here rather than being classified as a leaf by both
-        // sides at once.
-        fn count_divergent_patterns_old(node: &Node, score: &mut u64, visited: &mut Vec<Node>) {
-            let mut stack: smallvec::SmallVec<[&Node; 64]> = smallvec::SmallVec::new();
-            stack.push(node);
-            while let Some(node) = stack.pop() {
-                visited.push(node.clone());
-                match node {
-                    Node::If {
-                        cond,
-                        then,
-                        otherwise,
-                    } => {
-                        if super::is_invocation_id_eq_constant(cond) {
-                            *score = score.saturating_add(1);
-                        }
-                        stack.extend(otherwise.iter());
-                        stack.extend(then.iter());
-                    }
-                    Node::Loop { body, .. } | Node::Block(body) => {
-                        stack.extend(body.iter());
-                    }
-                    Node::Region { body, .. } => stack.extend(body.iter()),
-                    Node::Let { .. }
-                    | Node::Assign { .. }
-                    | Node::Store { .. }
-                    | Node::Return
-                    | Node::Barrier { .. }
-                    | Node::IndirectDispatch { .. }
-                    | Node::AllReduce { .. }
-                    | Node::AllGather { .. }
-                    | Node::ReduceScatter { .. }
-                    | Node::Broadcast { .. }
-                    | Node::AsyncLoad { .. }
-                    | Node::AsyncStore { .. }
-                    | Node::AsyncWait { .. }
-                    | Node::Trap { .. }
-                    | Node::Resume { .. }
-                    | Node::Opaque(_) => {}
-                }
-            }
-        }
-
-        let inner = Node::if_then(
-            Expr::BinOp {
-                op: BinOp::Eq,
-                left: Box::new(Expr::gid_x()),
-                right: Box::new(Expr::u32(1)),
-            },
-            vec![Node::store("buf", Expr::u32(1), Expr::u32(7))],
-        );
-        let outer = Node::if_then(
-            Expr::BinOp {
-                op: BinOp::Eq,
-                left: Box::new(Expr::gid_x()),
-                right: Box::new(Expr::u32(0)),
-            },
-            vec![inner, Node::Block(vec![Node::Return])],
-        );
-
-        let mut score_old = 0;
-        let mut visited_old = Vec::new();
-        count_divergent_patterns_old(&outer, &mut score_old, &mut visited_old);
-
-        let mut score_new = 0;
-        let mut visited_new = Vec::new();
-        let _ = crate::visit::node_map::any_descendant(&outer, &mut |n| {
-            visited_new.push(n.clone());
-            if let Node::If { cond, .. } = n {
-                if super::is_invocation_id_eq_constant(cond) {
-                    score_new += 1;
-                }
-            }
-            false
-        });
-
-        assert_eq!(score_old, score_new, "Divergence score mismatch");
-        assert_eq!(
-            visited_old.len(),
-            visited_new.len(),
-            "Node set length mismatch"
-        );
-
-        // Node-set (unordered) equivalence assertion
-        for node in &visited_old {
-            assert!(
-                visited_new.contains(node),
-                "Old walker visited a node that the new canonical walker missed"
-            );
-        }
-        for node in &visited_new {
-            assert!(
-                visited_old.contains(node),
-                "New canonical walker visited a node that the old walker missed"
-            );
-        }
     }
 }
