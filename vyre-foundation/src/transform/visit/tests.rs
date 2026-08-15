@@ -6,50 +6,36 @@ use std::sync::Arc;
 use crate::ir::{AtomicOp, BufferDecl, DataType, Expr, Node, Program};
 use proptest::prelude::*;
 
-/// Legacy double-walk implementation for equivalence verification.
-/// Mirrors every buffer-touching site that ProgramFacts::buffer_refs
-/// records. `arb_node` generates every declared `Node` variant, so the
-/// async and indirect-dispatch arms below are exercised rather than
-/// carried for a corpus that never reached them.
-fn referenced_buffers_legacy(program: &Program) -> HashSet<Ident> {
+/// The buffer set as the two visit owners report it, node walk then expression
+/// walk.
+///
+/// `referenced_buffers` answers from `ProgramFacts`, whose SoA extraction fills
+/// a `buffer_refs` column from its own exhaustive `match node`. That is a
+/// second complete enumeration of "which variant names a buffer", built for a
+/// different reason, and nothing makes it agree with
+/// [`node_buffer_refs`](super::node_buffer_refs) and
+/// [`expr_buffer_ref`](super::expr_buffer_ref), which are the declared owners
+/// of that question. This is the oracle for that agreement.
+///
+/// It restates no variant list of its own. The previous version did, with a
+/// `_ => {}` arm, so a variant added to both real enumerations was reported as
+/// naming nothing here and the property passed while the two sides were free to
+/// disagree about it. Reading the owners instead means a new naming variant is
+/// a compile error in `node.rs`, reaches this oracle for free, and shows up as
+/// a red property the moment the SoA column maps it differently.
+fn referenced_buffers_from_visit_owners(program: &Program) -> HashSet<Ident> {
     let mut names = HashSet::new();
-    walk_exprs(program, |expr| match expr {
-        Expr::Load { buffer, .. }
-        | Expr::BufLen { buffer }
-        | Expr::BufferRef { buffer }
-        | Expr::Atomic { buffer, .. } => {
+    walk_nodes(program, |node| {
+        let refs = node_buffer_refs(node);
+        for buffer in refs.reads.into_iter().chain(refs.writes).flatten() {
             names.insert(buffer.clone());
         }
-        _ => {}
     });
-    walk_nodes(program, |node| match node {
-        Node::Store { buffer, .. } => {
+    walk_exprs(program, |expr| match expr_buffer_ref(expr) {
+        ExprBufferRef::Read(buffer) | ExprBufferRef::ReadWrite(buffer) => {
             names.insert(buffer.clone());
         }
-        Node::IndirectDispatch { count_buffer, .. } => {
-            names.insert(count_buffer.clone());
-        }
-        Node::AsyncLoad {
-            source,
-            destination,
-            ..
-        }
-        | Node::AsyncStore {
-            source,
-            destination,
-            ..
-        } => {
-            names.insert(source.clone());
-            names.insert(destination.clone());
-        }
-        Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-            names.insert(buffer.clone());
-        }
-        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-            names.insert(input.clone());
-            names.insert(output.clone());
-        }
-        _ => {}
+        ExprBufferRef::None | ExprBufferRef::Unknown => {}
     });
     names
 }
@@ -60,11 +46,12 @@ proptest! {
         ..ProptestConfig::default()
     })]
 
+    /// The SoA buffer column and the visit owners must name the same buffers.
     #[test]
-    fn combined_walker_referenced_buffers_eq_legacy(program in arb_program()) {
+    fn soa_buffer_column_agrees_with_the_visit_owners(program in arb_program()) {
         let combined = referenced_buffers(&program);
-        let legacy = referenced_buffers_legacy(&program);
-        prop_assert_eq!(combined, legacy);
+        let owners = referenced_buffers_from_visit_owners(&program);
+        prop_assert_eq!(combined, owners);
     }
 }
 

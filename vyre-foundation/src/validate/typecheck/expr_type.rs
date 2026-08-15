@@ -2,10 +2,11 @@
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::spec_types::{BinOp, DataType};
+use crate::ir_inner::model::spec_types::DataType;
 use crate::validate::Binding;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
+use vyre_spec::bin_op::BinOpResult;
 
 /// Environment the one expression type walker reads its free names from.
 ///
@@ -160,39 +161,24 @@ pub(crate) fn expr_type<E: TypeEnv + ?Sized>(expr: &Expr, env: &mut E) -> Option
                 }
                 Expr::BinOp { op, left, right } => {
                     let operands = [left.as_ref(), right.as_ref()];
-                    match op {
-                        BinOp::Add
-                        | BinOp::Sub
-                        | BinOp::Mul
-                        | BinOp::Div
-                        | BinOp::SaturatingAdd
-                        | BinOp::SaturatingSub
-                        | BinOp::SaturatingMul
-                        | BinOp::Min
-                        | BinOp::Max => plan(expr, Combine::Arith, operands, &mut frames),
+                    match op.result_class() {
+                        BinOpResult::Numeric => plan(expr, Combine::Arith, operands, &mut frames),
                         // Logical And/Or and all comparisons evaluate to Bool.
                         // The reference interpreter produces Value::Bool here, so
                         // the static type must match or programs like `(a && b) + 1`
                         // pass validation and then fail at interpreter time.
-                        BinOp::And
-                        | BinOp::Or
-                        | BinOp::Eq
-                        | BinOp::Ne
-                        | BinOp::Lt
-                        | BinOp::Gt
-                        | BinOp::Le
-                        | BinOp::Ge => {
+                        BinOpResult::Predicate => {
                             values.push(Some(DataType::Bool));
                             plan(expr, Combine::Drop(2), operands, &mut frames);
                         }
                         // Bitwise, modulo, shift, rotate, unsigned absolute
                         // difference, multiply-high, and the wave operators are
                         // integer-typed, and an extension operator has no
-                        // declared result type. U32 is the safe default for all
-                        // of them: the operand-checker already rejects
-                        // non-integer operands, and an answer here keeps the
-                        // enclosing operator's mixed-type check armed.
-                        _ => {
+                        // declared result type. U32 is the safe default for both:
+                        // the operand-checker already rejects non-integer
+                        // operands, and an answer here keeps the enclosing
+                        // operator's mixed-type check armed.
+                        BinOpResult::Integer | BinOpResult::Extension => {
                             values.push(Some(DataType::U32));
                             plan(expr, Combine::Drop(2), operands, &mut frames);
                         }

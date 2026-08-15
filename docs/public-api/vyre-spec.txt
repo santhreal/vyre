@@ -109,6 +109,8 @@ pub const fn vyre_spec::analysis::AnalysisFactRecord::with_object(self, object: 
 pub const fn vyre_spec::analysis::AnalysisFactRecord::with_span(self, file_id: u32, start_byte: u32, end_byte: u32) -> Self
 pub const fn vyre_spec::atomic_op::AtomicOp::builtin_wire_tag(&self) -> core::option::Option<u8>
 pub const fn vyre_spec::bin_op::BinOp::builtin_wire_tag(&self) -> core::option::Option<u8>
+pub const fn vyre_spec::bin_op::BinOp::result_class(self) -> vyre_spec::bin_op::BinOpResult
+pub const fn vyre_spec::bin_op::BinOp::takes_numeric_operands(self) -> bool
 pub const fn vyre_spec::category::BackendAvailabilityPredicate::new(predicate: fn(&str) -> bool) -> Self
 pub const fn vyre_spec::collective_op::CollectiveOp::builtin_wire_tag(self) -> u8
 pub const fn vyre_spec::collective_op::CommGroup::as_u32(self) -> u32
@@ -398,6 +400,7 @@ pub enum vyre_spec::QuantizationZeroPoint
 pub enum vyre_spec::Semiring
 pub enum vyre_spec::analysis::AnalysisFactCodecError
 pub enum vyre_spec::analysis::AnalysisFactKind
+pub enum vyre_spec::bin_op::BinOpResult
 pub enum vyre_spec::bin_op::OpIntensity
 pub enum vyre_spec::data_type::QuantizationScale
 pub enum vyre_spec::data_type::QuantizationZeroPoint
@@ -1061,6 +1064,10 @@ pub vyre_spec::bin_op::BinOp::WaveBroadcast
 pub vyre_spec::bin_op::BinOp::WaveReduce
 pub vyre_spec::bin_op::BinOp::WrappingAdd
 pub vyre_spec::bin_op::BinOp::WrappingSub
+pub vyre_spec::bin_op::BinOpResult::Extension
+pub vyre_spec::bin_op::BinOpResult::Integer
+pub vyre_spec::bin_op::BinOpResult::Numeric
+pub vyre_spec::bin_op::BinOpResult::Predicate
 pub vyre_spec::bin_op::OpIntensity::Free
 pub vyre_spec::bin_op::OpIntensity::Heavy
 pub vyre_spec::bin_op::OpIntensity::Light

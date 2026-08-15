@@ -1914,3 +1914,13 @@ text = "Chained shift fusion has one owner and one answer. Constant folding and 
 id = "single-invocation-region-one-owner"
 category = "Added"
 text = "`vyre_foundation::algebra::composition::single_invocation` and `single_invocation_region` build the entry of a serial kernel: one anonymous composition region whose body runs on invocation zero of axis zero. The shape was written out by hand in every serial primitive."
+
+[[fragments]]
+id = "binop-result-class-has-one-owner"
+category = "Fixed"
+text = "`BinOp::result_class` is the one answer to what a binary operator's result type is, and `BinOp::takes_numeric_operands` is derived from it. `validate::typecheck` asked that question twice and wrote its own operator list each time, once to give an expression a static type and once to decide what its operands must be. The lists had already drifted on `AbsDiff`, which is in the operand list and not the type list; that happens to be correct and nothing said so, and nothing would have caught the reverse. Both lists ended in a catch-all, and `BinOp` is `#[non_exhaustive]`, so a new operator took whatever the last arm held. The match now lives in `vyre-spec` beside the enum with no catch-all arm, so adding an operator fails to compile there instead. `BinOpResult` is closed on purpose: a new operator is additive, a new RESULT CLASS is a new answer every consumer has to decide for."
+
+[[fragments]]
+id = "buffer-set-oracle-reads-the-owners"
+category = "Fixed"
+text = "The buffer-set equivalence property reads the declared owners instead of restating them. `referenced_buffers` answers from `ProgramFacts`, whose SoA extraction fills its `buffer_refs` column from its own exhaustive match, and nothing made that column agree with `visit::node_buffer_refs` and `visit::expr_buffer_ref`, which are the declared owners of which variant names a buffer. The oracle that checked it was a third enumeration ending in `_ => {}`, so a variant added to both real enumerations was reported as naming nothing by the oracle and the property passed while the two sides were free to disagree about it. It now composes the two owners, which makes it an oracle for the agreement rather than a second opinion about the variant list."

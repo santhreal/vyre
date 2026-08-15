@@ -34,16 +34,11 @@ pub(crate) fn validate_binop_operands(
         // Bool is NOT  -  `(a && b) + 1` must be rejected at validation time.
         // Operand types must also match: `u32 + f32` is silently ambiguous
         // today and must be rejected (VAL-003).
-        BinOp::Add
-        | BinOp::Sub
-        | BinOp::Mul
-        | BinOp::Div
-        | BinOp::SaturatingAdd
-        | BinOp::SaturatingSub
-        | BinOp::SaturatingMul
-        | BinOp::Min
-        | BinOp::Max
-        | BinOp::AbsDiff => {
+        //
+        // Which operators those are is `BinOp::takes_numeric_operands`, the
+        // one owner. Listing them here as well is how the list and the result
+        // classifier in `expr_type` drifted apart on `AbsDiff`.
+        _ if op.takes_numeric_operands() => {
             if matches!(op, BinOp::Div) && expr_is_static_zero(right) {
                 errors.push(err("V044", ValidationPhase::Type, ValidationLocation::Program, "binary operation `Div` has a statically-zero divisor"
                         .to_string(), "guard the divisor, use Select to substitute a non-zero value, or reject the input before building IR."
