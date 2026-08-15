@@ -87,15 +87,13 @@ impl Gate for CheckTierDeps {
         let members_by_package: BTreeSet<&str> = packages.keys().map(String::as_str).collect();
         let mut claimed: BTreeSet<&str> = BTreeSet::new();
         for (package, table) in &manifests {
-            let Some(layer) = layers.get(package) else {
+            let Some(&layer) = layers.get(package) else {
                 failures.push(format!(
                     "`{package}` is a workspace member with no entry in docs/CRATE_OWNERSHIP.toml; declare its layer there"
                 ));
                 continue;
             };
-            claimed.insert(
-                LAYER_ORDER[layer_rank(layer).expect("declared_layers rejects unknown layers")],
-            );
+            claimed.insert(layer.name);
             scan_manifest(
                 package,
                 layer,
@@ -175,9 +173,25 @@ fn workspace_members(root: &Path) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Position of a layer in [`LAYER_ORDER`], or `None` when the layer is unknown.
-fn layer_rank(layer: &str) -> Option<usize> {
-    LAYER_ORDER.iter().position(|known| *known == layer)
+/// One layer of [`LAYER_ORDER`], carrying the position that orders it.
+///
+/// A declared layer string is resolved once, where the registry is read, and
+/// every later comparison uses this value. Carrying the rank instead of the
+/// string is what makes an unknown layer unrepresentable downstream.
+#[derive(Clone, Copy)]
+struct Layer {
+    /// Position in [`LAYER_ORDER`]; a later position may not be depended on.
+    rank: usize,
+    /// Canonical layer name, as [`LAYER_ORDER`] spells it.
+    name: &'static str,
+}
+
+/// The layer [`LAYER_ORDER`] names, or `None` when it names no such layer.
+fn layer_of(declared: &str) -> Option<Layer> {
+    LAYER_ORDER
+        .iter()
+        .enumerate()
+        .find_map(|(rank, known)| (*known == declared).then_some(Layer { rank, name: known }))
 }
 
 /// Each crate's declared architectural layer, read from the ownership registry.
@@ -185,7 +199,7 @@ fn layer_rank(layer: &str) -> Option<usize> {
 /// A layer the registry names and [`LAYER_ORDER`] does not is a failure rather
 /// than a default, so a new layer cannot be introduced without recording where
 /// it sits.
-fn declared_layers(root: &Path, failures: &mut Vec<String>) -> BTreeMap<String, String> {
+fn declared_layers(root: &Path, failures: &mut Vec<String>) -> BTreeMap<String, Layer> {
     let path = root.join("docs/CRATE_OWNERSHIP.toml");
     let text = read_bounded(&path);
     let table = parse_toml(&path, &text);
@@ -205,13 +219,13 @@ fn declared_layers(root: &Path, failures: &mut Vec<String>) -> BTreeMap<String, 
             ));
             continue;
         };
-        if layer_rank(layer).is_none() {
+        let Some(layer) = layer_of(layer) else {
             failures.push(format!(
                 "`{package}` declares layer `{layer}`, which holds no position in the layer order; record where it sits relative to the existing layers"
             ));
             continue;
-        }
-        layers.insert(package.to_string(), layer.to_string());
+        };
+        layers.insert(package.to_string(), layer);
     }
     layers
 }
@@ -270,14 +284,13 @@ fn dep_package(key: &str, value: &Value, workspace_deps: &BTreeMap<String, Strin
 /// a consumer builds.
 fn scan_manifest(
     package: &str,
-    layer: &str,
-    layers: &BTreeMap<String, String>,
+    layer: Layer,
+    layers: &BTreeMap<String, Layer>,
     members: &BTreeSet<&str>,
     workspace_deps: &BTreeMap<String, String>,
     table: &Value,
     failures: &mut Vec<String>,
 ) {
-    let rank = layer_rank(layer).expect("declared_layers rejects unknown layers");
     for dep_kind in ["dependencies", "build-dependencies"] {
         let Some(deps) = table.get(dep_kind).and_then(Value::as_table) else {
             continue;
@@ -290,10 +303,10 @@ fn scan_manifest(
             let Some(dep_layer) = layers.get(&dep) else {
                 continue;
             };
-            let dep_rank = layer_rank(dep_layer).expect("declared_layers rejects unknown layers");
-            if dep_rank > rank {
+            if dep_layer.rank > layer.rank {
                 failures.push(format!(
-                    "{package} ({layer}) must not depend on {dep} ({dep_layer}) via `{key}` in {dep_kind}"
+                    "{package} ({}) must not depend on {dep} ({}) via `{key}` in {dep_kind}",
+                    layer.name, dep_layer.name
                 ));
             }
         }
@@ -397,10 +410,14 @@ mod tests {
 mod dependency_kind_tests {
     use super::*;
 
-    fn fixture_layers() -> BTreeMap<String, String> {
+    fn fixture_layer(name: &str) -> Layer {
+        layer_of(name).unwrap_or_else(|| panic!("`{name}` must hold a position in LAYER_ORDER"))
+    }
+
+    fn fixture_layers() -> BTreeMap<String, Layer> {
         BTreeMap::from([
-            ("vyre-primitives".to_string(), "primitives".to_string()),
-            ("vyre-driver".to_string(), "backend-neutral".to_string()),
+            ("vyre-primitives".to_string(), fixture_layer("primitives")),
+            ("vyre-driver".to_string(), fixture_layer("backend-neutral")),
         ])
     }
 
@@ -417,7 +434,7 @@ mod dependency_kind_tests {
         let mut failures = Vec::new();
         scan_manifest(
             "vyre-primitives",
-            "primitives",
+            fixture_layer("primitives"),
             &layers,
             &members,
             &workspace_deps,
@@ -466,7 +483,7 @@ mod dependency_kind_tests {
         let mut failures = Vec::new();
         scan_manifest(
             "vyre-driver",
-            "backend-neutral",
+            fixture_layer("backend-neutral"),
             &fixture_layers(),
             &fixture_members(),
             &BTreeMap::from([("vyre-primitives".to_string(), "vyre-primitives".to_string())]),
@@ -478,7 +495,8 @@ mod dependency_kind_tests {
     }
 
     /// Every layer named in the registry must hold a position, so a new layer
-    /// cannot arrive with an implicit default rank.
+    /// cannot arrive with an implicit default rank. The registry read resolves
+    /// the position, so an unranked layer arrives as a failure, never as a value.
     #[test]
     fn every_declared_layer_holds_a_position_in_the_order() {
         let root = crate::checkout::checkout_root();
@@ -488,10 +506,15 @@ mod dependency_kind_tests {
         assert!(failures.is_empty(), "{failures:?}");
         assert!(!layers.is_empty());
         for (package, layer) in &layers {
-            assert!(
-                layer_rank(layer).is_some(),
-                "`{package}` declares unranked layer `{layer}`"
+            assert_eq!(
+                LAYER_ORDER.get(layer.rank).copied(),
+                Some(layer.name),
+                "`{package}` resolved to a position outside the layer order"
             );
         }
+        assert!(
+            layer_of("a-layer-that-holds-no-position").is_none(),
+            "an unknown layer must resolve to nothing rather than a default rank"
+        );
     }
 }
