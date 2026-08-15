@@ -136,30 +136,38 @@ pub const fn is_word_byte(byte: u8) -> bool {
 /// Which spans are not code is [`opaque_span`]'s answer, the same one the
 /// registration parser reads, so a masker and a parser cannot disagree about
 /// whether a raw string or a nested block comment holds code.
+///
+/// Built one character at a time rather than by overwriting bytes, so the result
+/// is UTF-8 by construction and the walk never lands inside a character.
 #[must_use]
 pub fn mask_comments_and_strings(text: &str) -> String {
-    let mut masked = text.as_bytes().to_vec();
+    let mut masked = String::with_capacity(text.len());
     let mut at = 0usize;
     while at < text.len() {
-        if !text.is_char_boundary(at) {
-            at += 1;
-            continue;
-        }
-        let Some(span) = opaque_span(text, at) else {
-            at += 1;
-            continue;
-        };
-        let mut end = (at + span.max(1)).min(text.len());
-        while end < text.len() && !text.is_char_boundary(end) {
-            end += 1;
-        }
-        for byte in &mut masked[at..end] {
-            if *byte != b'\n' {
-                *byte = b' ';
+        let rest = &text[at..];
+        if let Some(span) = opaque_span(text, at) {
+            let mut end = (at + span.max(1)).min(text.len());
+            while end < text.len() && !text.is_char_boundary(end) {
+                end += 1;
             }
+            for ch in text[at..end].chars() {
+                if ch == '\n' {
+                    masked.push('\n');
+                } else {
+                    // One space per byte, so a reported offset still maps to its line.
+                    for _ in 0..ch.len_utf8() {
+                        masked.push(' ');
+                    }
+                }
+            }
+            at = end;
+            continue;
         }
-        at = end;
+        let Some(ch) = rest.chars().next() else {
+            break;
+        };
+        masked.push(ch);
+        at += ch.len_utf8();
     }
-    String::from_utf8(masked)
-        .expect("masking replaces whole opaque spans with ASCII, so the rest stays valid UTF-8")
+    masked
 }
