@@ -169,7 +169,7 @@ const WAIVERS: &[Waiver] = &[
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
-        path: "vyre-reference/src/execution/hashmap/node_step.rs",
+        path: "vyre-reference/src/execution/hashmap/step/node_step.rs",
         owner: "Backends",
         reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
     },
@@ -229,7 +229,7 @@ const WAIVERS: &[Waiver] = &[
         reason: "reads sibling windows inside each body, which is position information the owner walk drops",
     },
     Waiver {
-        path: "vyre-foundation/src/optimizer/passes/fusion_cse/fusion.rs",
+        path: "vyre-foundation/src/optimizer/passes/fusion_cse/fusion/mod.rs",
         owner: "CompilerCore",
         reason: "rebuild constructing each variant with its own builder; belongs on rewrite_node, conversion in flight",
     },
@@ -244,7 +244,7 @@ const WAIVERS: &[Waiver] = &[
         reason: "catch-all encodes the scope claim that other variants open their own scope, documented at the site",
     },
     Waiver {
-        path: "vyre-foundation/src/validate/rule_pipeline.rs",
+        path: "vyre-foundation/src/validate/rule_pipeline/mod.rs",
         owner: "CompilerCore",
         reason: "explicit work stack assigning per child body a divergence flag and a depth the owner walk has no slot for",
     },
