@@ -318,7 +318,7 @@ pub mod prelude {
     pub use crate::math::broadcast::broadcast;
     #[cfg(feature = "math-linalg")]
     pub use crate::math::linalg::{
-        dot, matmul, matmul_tiled, Matmul, MatmulBiasTiled, MatmulTiled,
+        dot, matmul, matmul_bias_tiled, matmul_tiled, Matmul, MatmulBiasTiled, MatmulTiled,
     };
     #[cfg(feature = "math-scan")]
     pub use crate::math::scan::scan_prefix_sum;
