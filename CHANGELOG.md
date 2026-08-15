@@ -227,6 +227,49 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   closure entry points must receive the graph as a bundle and must not declare
   three or more consecutive parameters of one type, and the wider slice-taking
   family must give each role a single name across the tree.
+- `vyre-libs` gates the row contract the C typedef-annotation family agrees on,
+  deriving its member set at run time from the `pub use` re-exports of
+  `vyre_libs::parsing::c::parse::vast::typedef_ann` so a new builder is red on
+  its first run until someone records what it writes. No builder may declare a
+  zero-length buffer for an empty node table, every builder must size its row
+  tables by the one shared stride at several row counts, and every pass must
+  carry every VAST field it does not declare that it writes, checked by running
+  each program on a table whose carried fields all differ per row.
+- Two duplication classes in `vyre-libs` are gated, each deriving its member
+  set from source at run time so a new member is red on its first run rather
+  than missing from a hand-maintained roster. Every quantized dispatch entry
+  point published as `_via` must carry a row asserting how it rejects a
+  malformed backend readback, checked against the re-export list parsed from
+  `vyre_libs::solvers::quantized_dispatch`. Every
+  `ResidentCsrQueueMaterializer` variant must have a case pinning the step
+  sequence it launches, checked against the variants parsed from
+  `vyre_libs::graph::dispatch::csr_frontier_queue_scratch`. Each gate assertion
+  names the fix rather than the failed comparison.
+- `vyre_libs` runs every C-AST parity case on the reference interpreter through
+  `vyre_driver_reference::CpuRefBackend`, dispatching the same programs the
+  driver arms dispatch. A parity failure used to be observable only on a
+  machine with a working adapter, so a case no arm named looked exactly like a
+  case that passed. Splitting the arms separates a kernel that disagrees with
+  its oracle, which fails here, from a device that disagrees with the kernel,
+  which fails only there.
+- `c_frontend::parity_matrix::assert_case_table_covers_fixture_file` reads a
+  fixture family's own source at run time, collects the fixture builders it
+  declares, and fails when the family's `CASES` table does not name one of
+  them. Adding a construct and forgetting to enumerate it used to leave it
+  proven on no backend and indistinguishable from a construct that passed,
+  which is how GNU `__restrict` normalization stayed unproven on every device.
+  A companion contract reads the fixture directory itself, so a new family is
+  red until it either has a case table or is recorded as proven another way
+  with the reason.
+- `vyre_test_support::case_table::ArmCoverage` reads a shared case table's
+  declared group names at run time, records which groups a crate's arm actually
+  asserted, and fails naming every declared group that crate has no branch for.
+  A corpus shared through an include has a hole a per-crate copy also had: the
+  table declares a group, one crate grows an arm, the other does not, and the
+  crate without the arm still passes because nothing in it mentions the group.
+  Group-count and case-count floors make a collapsed table fail rather than
+  report a clean sweep of an empty set. Both the dense-matvec and exploded-IFDS
+  tables are enrolled, in four arms across two crates.
 
 ### Changed
 
@@ -1329,6 +1372,70 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `vyre_libs::graph::dispatch::csr_forward_or_changed` and
   `vyre_libs::graph::dispatch::persistent_bfs` take the same bundle, so the
   flat shape no longer exists at any layer.
+- The C typedef-annotation builders in
+  `vyre_libs::parsing::c::parse::vast::typedef_ann` share one owner for the row
+  plumbing every one of them needs:
+  `vyre_libs::parsing::c::parse::vast::typedef_ann::row_io` declares the node
+  table, the packed and expanded haystacks and the declaration-context table,
+  sizes each by the one row stride, and emits the store loop that copies a VAST
+  row forward with named field overrides. Five passes each carried their own
+  copy of that loop and their own buffer declarations, so each was free to size
+  a table by a stride of its own or to drop a field it only carries forward.
+  Neighbour-row kind reads move to
+  `vyre_libs::parsing::c::parse::vast::build::vast_row_fields`, which now also
+  publishes the forward-neighbour read the passes were writing by hand. Eight
+  forwarding wrappers in
+  `vyre_libs::parsing::c::parse::vast::build::typedef_visibility::chain` are
+  gone and their callers name `decl_context_row_access::decl_context_base`
+  directly.
+- `vyre_libs::graph::dispatch::traversal_dispatch_pipeline` names the
+  `vyre_primitives::graph` program builders it composes instead of
+  re-publishing them. Twenty-one wrappers forwarded every argument and returned
+  the result unchanged, so each body was a restatement of the primitive's
+  parameter list, free to drift from the list it forwards to and unprovable
+  from either side. Nothing outside the module's own tests called any of them.
+  This follows the same removal already applied to the sibling
+  `structural_kernel_pipeline`.
+- The `vyre-libs` duplication pin records what the tree measures rather than
+  leaving room under it, since a pin with slack hides the next copy.
+- `c_frontend::token_fixture::classify_without_annotation` names the weaker of
+  the two classification chains, which the C-AST contracts restated as a
+  builder call plus a classifier call seventeen times. The classifier reads the
+  typedef flags an annotation pass writes, and the two chains disagree on the
+  kind of a GNU attribute's payload identifier, so a contract about declarator
+  and specifier kinds may skip annotation and one about attribute payloads may
+  not. Both are now spelled as which chain they mean.
+- The three-dispatch scope-aware typedef annotation sequence, identifier
+  prehash then brace-scope precompute then annotate, has one owner in
+  `c_frontend::parity_matrix::arm_annotated_vast`. It was written twice in the
+  driver's parity support and once more in a family root, and that third copy
+  dispatched the global-fast annotator instead: a kernel documented as having
+  no scope model, compared against the exact oracle it cannot reproduce under
+  shadowing. Removed with it, having no callers left, a wrapper whose body
+  forwarded a fixture's source bytes to the sequence.
+- The dense byte-tile Four-Russians matvec corpus has one owner,
+  `tests/support/dense_matvec_cases.rs`, with one arm per crate:
+  `vyre_primitives::bitset::four_russians` pins its byte-LUT builder,
+  word-count helper, CPU reference and dispatch Program, and
+  `vyre_libs::encoding::bitset_transform_pipeline` pins its own sizing, LUT
+  builder, parity oracle and composed Program. The corpus generator, the
+  frontier masking and the naive boolean-semiring oracle were written twice,
+  and the two copies swept different bounds: 0..=18 byte tiles by 1..=5
+  destination words on the primitive side, 0..=24 by 1..=4 on the substrate
+  side, so 384 cases in the union were exercised by neither. Both arms now run
+  the union, plus a saturated-frontier group neither had, which is the only way
+  the all-ones LUT row of every tile is reached at once.
+- The exploded-supergraph (IFDS) CPU-reference corpus has one owner,
+  `vyre_test_support::exploded_ifds_cases`, which declares the cases and owns
+  what a correct CSR for them is. `vyre_primitives::graph::exploded` pins its
+  allocating, fallible and workspace-reusing builders against it, and
+  `vyre_libs::graph::dispatch::exploded` pins its host reference, its
+  node-count helper and its dispatched path. The mixed intra/inter/GEN/KILL
+  case stream was written twice and the copies ran different counts, 1024
+  against 512, so the dispatched path was never asked about the upper half of a
+  corpus its own file defined. The rule semantics that were hand-checked per
+  suite, KILL suppression, GEN injection and inter-edge fact propagation, are
+  now declared as dense edge expectations both arms are held to.
 
 ### Removed
 
@@ -2296,6 +2403,88 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   family-scoped buffer rewrite that is the module's reason to exist.
   `NOTE_ZIFTSIEVE_GPU_DESIGN` is gone; a public constant holding a source path
   is not an API.
+- `vyre_libs::parsing::c::parse::vast::build::vast_row_fields` clamps the index
+  before loading a prior row kind. The subtraction was unclamped, and because a
+  select in this IR evaluates both arms, row 0 wrapped its index to near
+  `u32::MAX` and the untaken arm addressed a row far past the end of the table.
+  Three of the five hand-written copies of the read already clamped. The
+  global-typedef fast pass also read its forward neighbour with no out-of-range
+  fallback while every sibling and the CPU oracle substituted the sentinel;
+  both reads now come from the shared owner.
+- Every INT4 entry point in `vyre_libs::solvers::quantized_dispatch` rejects a
+  backend output buffer count other than one through
+  `shapes::expect_one_output`, which already owned that diagnostic while four
+  of the six inlined their own copy of it. The copies were each half a
+  contract: only `i4x8_batched_matmul_top1_f32_scaled_via` rejected two output
+  buffers, and only it rejected a buffer shorter than the decoded shape, while
+  the other four rejected only a longer one. `unpack_i4x8_via` checked neither.
+  `decode_output_exact` compares byte lengths for inequality, so both
+  directions always held for all six and no suite asserted more than one of
+  them. Three parity assertions also compared results through `zip`, which
+  passes on a truncated readback; they now compare the whole buffer.
+- The sparse-queue step sequence of
+  `vyre_libs::graph::dispatch::adaptive_traverse` is asserted once, over a
+  table naming which queue materializer each graph width and frontier selects.
+  Five near-identical cases previously each rebuilt the dispatcher, graph,
+  scratch and packed frontier and then spelled their own step expectation, and
+  the copies disagreed about what to check: two cases exercised the same
+  materializer with the same expectation, only the wider one asserted that no
+  word-partial buffers are allocated, three of five asserted the upload set,
+  and two of five asserted the plan cache. No case sat on the block count at
+  which frontier word prefixes stop inlining block offsets, so shifting that
+  threshold by one left the suite green.
+- The C-AST parity families evaluate one case list on both backends. Each
+  family has a CPU classification arm reading the oracles and a backend parity
+  arm dispatching the same kernels, and each arm used to enumerate its cases by
+  writing one test function per fixture it named, so the two lists were
+  independent and had drifted.
+  `c_frontend::fixtures::declarator_matrix_constructs::fixture_gnu_restrict_qualifier`
+  was named by the CPU arm and by no backend arm, leaving GNU `__restrict`
+  normalization proven on the oracle and unproven on every device;
+  `c_frontend::fixtures::semantic_gap_constructs::fixture_inner_typedef_shadows_outer`
+  reached no backend arm either, so the one construct in that family whose
+  purpose is scope-dependent typedef visibility was never dispatched; six
+  declarator-matrix cases and `fixture_anonymous_struct_union` reached a
+  backend classifier but never a backend property-graph lowerer. Both arms now
+  iterate the family's `CASES` table beside its fixtures, and
+  `c_frontend::parity_matrix` owns the four stages, every program they
+  dispatch, and the comparisons, so a construct cannot be proven on one side
+  and unproven on the other.
+- `c_frontend::parity_matrix::assert_pg_mirrors_every_vast_row` checks the
+  property graph against the typed VAST at every row a fixture produces, and
+  asserts the row count equals the token count so the span columns cannot
+  compare unrelated rows. The lowerer emits one graph row per VAST row, so that
+  is its whole contract; each family previously pinned a hand-written index
+  list for a few of its cases, which is a member set that goes stale in
+  silence, and the rows those lists left out were the ones nothing covered.
+- The asm-alias, mixed-initializer and incomplete-initializer classification
+  contracts live with the rest of their family in `vyre-libs`. Nothing in them
+  dispatches anything, so holding them in a driver crate's tests made the CPU
+  classification of three C constructs depend on that driver compiling and left
+  a package-scoped `vyre-libs` test run unable to check them. Deleted with the
+  move: a second fixture builder for `typedef int (*fn_t)(int); fn_t f;`, whose
+  four assertions were already made against the byte-identical
+  `c_frontend::fixtures::declarator_matrix_constructs::fixture_nested_typedef_complex_declarator`.
+- IR variant descent has one owner per reference mode.
+  `vyre_foundation::transform::visit::child_bodies_mut` is new and owns the
+  body slots of a node held by unique reference, alongside `child_bodies` for a
+  shared read and `vyre_foundation::transform::rewrite_walk::rewrite_node` for
+  a borrow-preserving rebuild. `vyre_foundation::visit::node_map::map_body`
+  took its slot list from a hand-written match ending in a catch-all that
+  returned the node unchanged, so a body-bearing variant the list had not been
+  told about made every pass composed on it a silent no-op inside that variant,
+  including `rematerialize_cheap_let` and the pass engine's constant
+  propagation. The scalar namespace also has one owner,
+  `vyre_foundation::transform::visit::node_scalars`, reporting the bound name,
+  what the statement does to it, and the operand expressions in one record;
+  `node_operands` and `node_bound_name` are derived from it, and
+  `vyre_foundation::visit::bound_names` no longer classifies an unrecognised
+  variant as binding nothing. `vyre_foundation::optimizer::cost` folds the
+  divergence dimension over the owning descent instead of a search that stops
+  at the first match, and `vyre_foundation::transform::autodiff::grad` reads
+  its forward types and adjoint targets from the owner and reports an
+  unsupported node by its registry variant name rather than by a `Debug`
+  rendering truncated at sixty characters.
 
 ## [0.7.1] - 2026-08-01
 
