@@ -207,50 +207,12 @@ pub(super) fn c11_annotate_typedef_names_impl(
     let mut identifier_annotation: Vec<Node> = Vec::new();
     identifier_annotation.extend([
         Node::let_bind(
-            "prev_idx",
-            Expr::select(
-                Expr::gt(t.clone(), Expr::u32(0)),
-                Expr::sub(t.clone(), Expr::u32(1)),
-                Expr::u32(0),
-            ),
-        ),
-        Node::let_bind(
-            "prev_kind_loaded",
-            Expr::load(
-                vast_nodes,
-                Expr::mul(Expr::var("prev_idx"), Expr::u32(VAST_NODE_STRIDE_U32)),
-            ),
-        ),
-        Node::let_bind(
             "prev_kind",
-            Expr::select(
-                Expr::gt(t.clone(), Expr::u32(0)),
-                Expr::var("prev_kind_loaded"),
-                Expr::u32(SENTINEL),
-            ),
-        ),
-        Node::let_bind(
-            "next_idx",
-            Expr::select(
-                Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_nodes.clone()),
-                Expr::add(t.clone(), Expr::u32(1)),
-                t.clone(),
-            ),
-        ),
-        Node::let_bind(
-            "next_kind_loaded",
-            Expr::load(
-                vast_nodes,
-                Expr::mul(Expr::var("next_idx"), Expr::u32(VAST_NODE_STRIDE_U32)),
-            ),
+            vast_prior_row_kind_expr(vast_nodes, t.clone(), 1),
         ),
         Node::let_bind(
             "next_kind",
-            Expr::select(
-                Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_nodes.clone()),
-                Expr::var("next_kind_loaded"),
-                Expr::u32(SENTINEL),
-            ),
+            vast_next_row_kind_expr(vast_nodes, t.clone(), &num_nodes, Expr::u32(SENTINEL)),
         ),
     ]);
     // The CPU oracle (`reference_c11_annotate_typedef_names_from_words`)
@@ -302,19 +264,7 @@ pub(super) fn c11_annotate_typedef_names_impl(
     identifier_annotation.extend([
         Node::let_bind(
             "possible_declarator",
-            any_token_eq(
-                Expr::var("next_kind"),
-                &[
-                    TOK_SEMICOLON,
-                    TOK_COMMA,
-                    TOK_ASSIGN,
-                    TOK_LPAREN,
-                    TOK_LBRACKET,
-                    TOK_COLON,
-                    TOK_RPAREN,
-                    TOK_RBRACKET,
-                ],
-            ),
+            is_typedef_symbol_link_follower_token(Expr::var("next_kind")),
         ),
         Node::let_bind("current_decl_flags", Expr::u32(0)),
         Node::let_bind(
@@ -322,11 +272,8 @@ pub(super) fn c11_annotate_typedef_names_impl(
             Expr::and(
                 Expr::var("possible_declarator"),
                 Expr::and(
-                    Expr::not(any_token_eq(
+                    Expr::not(is_precomputed_declaration_previous_disqualifier_token(
                         Expr::var("prev_kind"),
-                        &[
-                            TOK_STRUCT, TOK_UNION, TOK_ENUM, TOK_DOT, TOK_ARROW, TOK_GOTO,
-                        ],
                     )),
                     Expr::ne(Expr::var("next_kind"), Expr::u32(TOK_COLON)),
                 ),
@@ -454,46 +401,39 @@ pub(super) fn c11_annotate_typedef_names_impl(
         identifier_annotation,
     ));
 
-    for field in 0..VAST_NODE_STRIDE_U32 {
-        let value = match field {
-            VAST_TYPEDEF_FLAGS_FIELD => Expr::var("typedef_flags"),
-            VAST_TYPEDEF_SCOPE_FIELD => Expr::var("scope_open"),
-            VAST_TYPEDEF_SYMBOL_FIELD => Expr::var("name_hash"),
-            _ => Expr::load(vast_nodes, Expr::add(base.clone(), Expr::u32(field))),
-        };
-        loop_body.push(Node::store(
-            out_annotated_vast_nodes,
-            Expr::add(base.clone(), Expr::u32(field)),
-            value,
-        ));
-    }
+    loop_body.extend(store_row_with_overrides(
+        out_annotated_vast_nodes,
+        vast_nodes,
+        &base,
+        &[
+            (VAST_TYPEDEF_FLAGS_FIELD, "typedef_flags"),
+            (VAST_TYPEDEF_SCOPE_FIELD, "scope_open"),
+            (VAST_TYPEDEF_SYMBOL_FIELD, "name_hash"),
+        ],
+    ));
 
-    let n = node_count(&num_nodes).max(1);
+    let rows = declared_rows(&num_nodes);
     let mut buffers = vec![
-        BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-        BufferDecl::storage(haystack, 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(haystack_word_count(&haystack_len, packed_haystack)),
+        vast_nodes_input(vast_nodes, 0, rows),
+        haystack_input(haystack, 1, &haystack_len, packed_haystack),
     ];
     let out_binding = if let Some(decl_contexts) = decl_contexts {
         let visible_type = visible_type
             .expect("precomputed-context annotation requires the visible-type side table");
-        buffers.push(
-            BufferDecl::storage(decl_contexts, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_DECL_CONTEXT_STRIDE_U32)),
-        );
+        buffers.push(decl_contexts_input(decl_contexts, 2, rows));
         buffers.push(
             BufferDecl::storage(visible_type, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n),
+                .with_count(rows),
         );
         4
     } else {
         2
     };
-    buffers.push(
-        BufferDecl::output(out_annotated_vast_nodes, out_binding, DataType::U32)
-            .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-    );
+    buffers.push(vast_nodes_output(
+        out_annotated_vast_nodes,
+        out_binding,
+        rows,
+    ));
     Program::wrapped(
         buffers,
         [256, 1, 1],

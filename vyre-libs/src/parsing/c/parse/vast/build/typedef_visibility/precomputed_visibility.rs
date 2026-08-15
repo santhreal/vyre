@@ -1,3 +1,4 @@
+use super::super::super::decl_context_row_access::decl_context_base;
 use super::chain;
 use super::*;
 
@@ -48,10 +49,7 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
             &target_scope,
             chain::vast_scope_from_base(vast_nodes, &target_base),
         ),
-        Node::let_bind(
-            &target_context_base,
-            chain::decl_context_base_for_index(t.clone()),
-        ),
+        Node::let_bind(&target_context_base, decl_context_base(t.clone())),
         Node::let_bind(
             &target_link_raw,
             chain::prev_decl_link_from_base(decl_contexts, &target_context_base),
@@ -137,7 +135,7 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
         ),
         Node::let_bind(
             &scan_context_base,
-            chain::decl_context_base_for_index(Expr::var(&chain_cursor)),
+            decl_context_base(Expr::var(&chain_cursor)),
         ),
         Node::let_bind(
             &next_link_raw,

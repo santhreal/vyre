@@ -7,7 +7,7 @@ pub fn c11_precompute_vast_decl_prefix_starts(
     out_decl_contexts: &str,
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
-    let n = node_count(&num_nodes).max(1);
+    let n = declared_rows(&num_nodes);
     const PARALLEL_BACKSCAN_MAX_NODES: u32 = 16_384;
     if n > PARALLEL_BACKSCAN_MAX_NODES {
         let row_context_base = Expr::mul(
@@ -72,10 +72,8 @@ pub fn c11_precompute_vast_decl_prefix_starts(
         ];
         return Program::wrapped(
             vec![
-                BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-                BufferDecl::storage(out_decl_contexts, 1, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(n.saturating_mul(VAST_DECL_CONTEXT_STRIDE_U32)),
+                vast_nodes_input(vast_nodes, 0, n),
+                decl_contexts_scratch(out_decl_contexts, 1, n),
             ],
             [1, 1, 1],
             vec![wrap_anonymous(
@@ -165,10 +163,8 @@ pub fn c11_precompute_vast_decl_prefix_starts(
     ];
     Program::wrapped(
         vec![
-            BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-            BufferDecl::storage(out_decl_contexts, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(n.saturating_mul(VAST_DECL_CONTEXT_STRIDE_U32)),
+            vast_nodes_input(vast_nodes, 0, n),
+            decl_contexts_scratch(out_decl_contexts, 1, n),
         ],
         [256, 1, 1],
         vec![wrap_anonymous(
