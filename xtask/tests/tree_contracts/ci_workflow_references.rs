@@ -396,7 +396,7 @@ fn every_script_a_workflow_runs_is_published() {
     );
 }
 
-/// Every subcommand a workflow passes to the dispatcher is registered.
+/// Every gate a workflow passes to the runner is registered.
 ///
 /// WHY: `xtask` resolves a subcommand by name and exits with an error when the
 /// name is not in the table. A row renamed or removed leaves the step naming a
@@ -408,8 +408,8 @@ fn every_script_a_workflow_runs_is_published() {
 fn every_xtask_subcommand_a_workflow_names_is_registered() {
     let root = workspace_root();
     let registered: BTreeSet<&str> = xtask::subcommands::registry()
-        .into_iter()
-        .map(xtask::gate::Gate::name)
+        .iter()
+        .map(|gate| gate.name())
         .collect();
     let mut offenders = Vec::new();
     let mut checked = 0_usize;
