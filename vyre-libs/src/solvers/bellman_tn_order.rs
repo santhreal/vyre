@@ -54,14 +54,7 @@ pub fn bellman_tn_order_program(buffers: BellmanBuffers<'_>, extents: BellmanExt
 /// labels to it. It still names each field, because the convergence-flag width
 /// below is looked up by `changed`, and a program whose flag is labelled
 /// something else would silently fall back to a one-word upload.
-const DISPATCH_BINDINGS: BellmanBuffers<'static> = BellmanBuffers {
-    src: "src",
-    dst: "dst",
-    weight: "weight",
-    dist: "dist",
-    next_dist: "next_dist",
-    changed: "changed",
-};
+const DISPATCH_BINDINGS: BellmanBuffers<'static> = BellmanBuffers::CANONICAL;
 
 /// GPU dispatch wrapper for the Bellman-Ford-based contraction-order
 /// solver. Returns the converged minimum-distance vector.
@@ -249,14 +242,7 @@ mod tests {
     use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 
     /// Terse binding names, for the tests that only care about the program.
-    const FIXTURE: BellmanBuffers<'static> = BellmanBuffers {
-        src: "s",
-        dst: "d",
-        weight: "w",
-        dist: "di",
-        next_dist: "nd",
-        changed: "c",
-    };
+    const FIXTURE: BellmanBuffers<'static> = BellmanBuffers::TERSE;
 
     /// The dispatch wrapper's own names, for the tests that compare against it.
     const VERBOSE_FIXTURE: BellmanBuffers<'static> = DISPATCH_BINDINGS;

@@ -69,6 +69,7 @@
 
 #[cfg(feature = "vyre-foundation")]
 pub mod ir_safe;
+mod dispatch_grid;
 mod markers;
 pub mod wire;
 #[cfg(feature = "vyre-foundation")]
@@ -181,6 +182,12 @@ pub(crate) fn fixed_sdiv_by_positive_expr(numerator: Expr, denominator: Expr) ->
 
 #[cfg(any(feature = "graph", feature = "math"))]
 pub(crate) mod fixed_u32_matmul;
+
+#[cfg(all(
+    any(feature = "graph", feature = "math"),
+    any(test, feature = "cpu-parity")
+))]
+pub(crate) mod chebyshev_recurrence;
 
 #[cfg(any(feature = "label", feature = "predicate"))]
 pub(crate) mod nodeset_filter;

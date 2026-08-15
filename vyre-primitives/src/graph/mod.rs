@@ -30,24 +30,11 @@ pub(crate) fn checked_csr_offset_count(node_count: u32, op_name: &str) -> Result
     })
 }
 
-/// Blocks needed to give every one of `lanes` items its own invocation, as a
-/// one-dimensional dispatch grid.
-///
-/// Every node-lane, queue-lane and word-lane graph primitive launches the same
-/// shape: `ceil(lanes / lanes_per_group)` groups on x, one on y and z, floored at
-/// one group. The floor matters because a zero-node graph must still produce a
-/// launchable grid: the CUDA launcher rejects `grid[axis] == 0` outright, and the
-/// kernel bodies already guard every lane against `node_count`, so one group of
-/// bounds-guarded lanes is a no-op while zero groups is a launch failure.
-///
-/// This replaced four hand-rolled ceiling helpers whose zero cases disagreed:
-/// three spelled it `((value - 1) / divisor) + 1`, which underflows at zero and
-/// was only safe because each call site pre-floored its input, and one returned a
-/// grid of zero groups.
-pub(crate) const fn lane_grid(lanes: u32, lanes_per_group: u32) -> [u32; 3] {
-    let groups = lanes.div_ceil(lanes_per_group);
-    [if groups == 0 { 1 } else { groups }, 1, 1]
-}
+/// The dispatch-grid owner, re-exported so every existing `crate::graph::lane_grid`
+/// call site keeps resolving. The owner itself is ungated at the crate root: a
+/// dispatch grid is launch geometry, not a graph concept, and a domain that does
+/// not enable `graph` must still be able to reach it.
+pub(crate) use crate::dispatch_grid::lane_grid;
 
 pub(crate) fn u32_slice_fingerprint(values: &[u32]) -> u64 {
     padded_u32_slice_fingerprint(values, values.len())

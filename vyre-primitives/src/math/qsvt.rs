@@ -260,37 +260,22 @@ pub fn try_qsvt_apply_cpu_into(
     // T_0(A) v = v
     // T_1(A) v = A v
     // T_{k+1}(A) v = 2 A T_k v - T_{k-1} v
+    let degree = k_steps - 1;
     out.clear();
-    out.extend(v.iter().map(|&xi| coeffs[0] * xi));
-    if k_steps == 1 {
-        t_prev.clear();
-        t_curr.clear();
-        t_next.clear();
-        return Ok(());
-    }
-
+    out.resize(n, 0.0);
     t_prev.clear();
-    t_prev.extend_from_slice(v);
     t_curr.clear();
-    t_curr.resize(n, 0.0);
-    mat_vec_into(a_scaled, t_prev, n, t_curr);
-    for i in 0..n {
-        out[i] += coeffs[1] * t_curr[i];
+    t_next.clear();
+    if degree >= 1 {
+        t_prev.resize(n, 0.0);
+        t_curr.resize(n, 0.0);
     }
-
-    for &c_k in coeffs.iter().take(k_steps).skip(2) {
-        t_next.clear();
+    if degree >= 2 {
         t_next.resize(n, 0.0);
-        mat_vec_into(a_scaled, t_curr, n, t_next);
-        for i in 0..n {
-            t_next[i] = 2.0 * t_next[i] - t_prev[i];
-        }
-        for i in 0..n {
-            out[i] += c_k * t_next[i];
-        }
-        std::mem::swap(t_prev, t_curr);
-        std::mem::swap(t_curr, t_next);
     }
+    crate::chebyshev_recurrence::chebyshev_expansion_into(
+        a_scaled, v, coeffs, n, degree, out, t_prev, t_curr, t_next,
+    );
     Ok(())
 }
 
@@ -307,16 +292,6 @@ fn reserve_qsvt_cpu_vec<T>(out: &mut Vec<T>, len: usize, context: &str) -> Resul
     Ok(())
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn mat_vec_into(matrix: &[f64], vector: &[f64], n: usize, out: &mut [f64]) {
-    for i in 0..n {
-        let mut sum = 0.0;
-        for j in 0..n {
-            sum += matrix[i * n + j] * vector[j];
-        }
-        out[i] = sum;
-    }
-}
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
@@ -569,6 +544,22 @@ mod tests {
             curr = next;
         }
         out
+    }
+
+    /// Dense matvec written out here on purpose.
+    ///
+    /// [`independent_qsvt_apply`] is the oracle the implementation is checked
+    /// against, so it must not share the implementation's matvec: a defect in
+    /// `chebyshev_recurrence::dense_mat_vec_into` would then appear on both
+    /// sides of the comparison and the test would agree with the bug.
+    fn mat_vec_into(matrix: &[f64], vector: &[f64], n: usize, out: &mut [f64]) {
+        for i in 0..n {
+            let mut sum = 0.0;
+            for j in 0..n {
+                sum += matrix[i * n + j] * vector[j];
+            }
+            out[i] = sum;
+        }
     }
 
     #[test]

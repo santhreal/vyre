@@ -14,9 +14,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::math::scallop_persistent::{
-    ceil_div_u32, wide_lineage_body, wide_lineage_grid_sync_body,
-};
+use crate::math::scallop_persistent::{wide_lineage_body, wide_lineage_grid_sync_body};
 
 /// Stable registry id for the wide Scallop lineage join primitive.
 pub const OP_ID: &str = "vyre-primitives::math::scallop_join_wide";
@@ -24,11 +22,15 @@ pub const OP_ID: &str = "vyre-primitives::math::scallop_join_wide";
 pub const SCALLOP_JOIN_WIDE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid for the wide Scallop kernel.
+///
+/// One lane per relation cell, over the [`crate::graph::lane_grid`] owner, so
+/// the zero-relation case still yields a launchable grid.
 #[must_use]
 pub const fn scallop_join_wide_dispatch_grid(_n: u32, _w: u32) -> [u32; 3] {
-    let cells = _n.saturating_mul(_n);
-    let blocks = ceil_div_u32(cells, SCALLOP_JOIN_WIDE_WORKGROUP_SIZE[0]);
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(
+        _n.saturating_mul(_n),
+        SCALLOP_JOIN_WIDE_WORKGROUP_SIZE[0],
+    )
 }
 
 /// Emits a generic `M × K · K × N → M × N` matmul Program for `W`-wide lineage cells.
