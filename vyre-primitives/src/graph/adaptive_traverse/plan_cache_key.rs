@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 
 /// Primitive-owned resident adaptive traversal program identity.
 ///
-/// Self-substrate and future CUDA/WGSL/SPIR-V dispatch layers use this as the
+/// The self substrate and future accelerator dispatch layers use this as the
 /// stable cache-key taxonomy instead of forking per-wrapper enums.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum AdaptiveTraversalProgramKind {
@@ -42,7 +42,7 @@ pub enum AdaptiveTraversalProgramKind {
 ///
 /// The key deliberately includes program layout identity, frontier width, queue
 /// capacity, traversal masks, threshold policy, and backend feature bits so a
-/// cached Program cannot be reused across incompatible CUDA/WGSL/SPIR-V shapes.
+/// cached Program cannot be reused across incompatible backend shapes.
 /// Resident graph contents are represented by dispatch handles, not shader
 /// source, so same-shape resident graphs reuse compiled Programs.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

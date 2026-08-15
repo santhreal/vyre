@@ -1617,3 +1617,8 @@ text = "`vyre-lints` resolves the workspace root by walking ancestors for a mani
 id = "cargo-full-build-parallelism"
 category = "Fixed"
 text = "The `cargo_full` wrapper no longer exports `CARGO_BUILD_JOBS`. An environment variable overrides `.cargo/config.toml`, so the wrapper's default of `1` silently replaced the declared `[build] jobs = 16` on every invocation, and every build, test run, and gate in this workspace ran one codegen job at a time regardless of how many cores the host had. Parallelism is declared once, in the config file, where it is reviewable and applies to every build equally."
+
+[[fragments]]
+id = "platform-crates-backend-neutral-prose"
+category = "Changed"
+text = "Comments and doc comments in `vyre-foundation`, `vyre-primitives`, `vyre-runtime` and `vyre-pass-engine` state the hardware fact instead of naming a backend product. A load past a buffer end is undefined behaviour on a real GPU whichever driver reached it, a nested `Return` lowers to an exit branch in every machine-code emitter, and a launcher refuses a zero grid extent everywhere. The old wording pinned a general rule to one vendor, so a reader on another backend had to guess whether the rule applied to them. Backend-specific text now lives only in the crate that owns that backend."

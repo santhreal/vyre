@@ -68,8 +68,8 @@ pub struct ResidentReadRange {
 /// `retained_by_dispatcher` means the dispatcher owns the handles after the
 /// caller is done with the current launch sequence. Call
 /// [`ProgramDispatcher::release_resident_static_uploads`] instead of
-/// `free_resident` so CUDA can keep read-only graph/arena buffers hot while
-/// portable dispatchers free them immediately.
+/// `free_resident` so a dispatcher with a device-side cache can keep read-only
+/// graph and arena buffers hot while one without frees them immediately.
 #[derive(Debug)]
 pub struct ResidentStaticBufferSet {
     /// Resident handle ids in the same order as the payload slice passed to
@@ -112,9 +112,8 @@ impl std::error::Error for DispatchError {}
 /// Run a vyre Program with byte inputs, return byte outputs in the
 /// Program's declared output order.
 ///
-/// This is the canonical dispatch boundary. Production impls go
-/// through `vyre-driver-wgpu` or `vyre-driver-cuda`; test impls use
-/// CPU oracles (gated to test-only builds).
+/// This is the canonical dispatch boundary. Every implementation is a driver
+/// crate; the reference oracle is the only one that evaluates on the host.
 pub trait ProgramDispatcher {
     /// Dispatch `program` with the given byte inputs (one `Vec<u8>`
     /// per declared input buffer in canonical buffer order). Returns
@@ -134,10 +133,10 @@ pub trait ProgramDispatcher {
     ) -> Result<Vec<Vec<u8>>, DispatchError>;
 
     /// Whether this dispatcher supports the persistent-resident path.
-    /// Default: false. CUDA backend overrides to true. The orchestrator
-    /// uses this to decide whether to take the persistent fast-path
-    /// (encode arena once → upload once → dispatch many → readback once)
-    /// or use the non-resident per-call GPU dispatch path.
+    /// Default: false, overridden by a dispatcher that keeps device buffers
+    /// alive across launches. The orchestrator uses this to decide whether to
+    /// take the persistent fast-path (encode arena once, upload once, dispatch
+    /// many, read back once) or the non-resident per-call path.
     fn supports_persistent(&self) -> bool {
         false
     }
@@ -214,9 +213,9 @@ pub trait ProgramDispatcher {
     ///
     /// Portable default behavior allocates and uploads exactly like
     /// `alloc_resident` + `upload_resident_many`, then returns
-    /// `retained_by_dispatcher = false` so release frees the buffers. CUDA
-    /// overrides this to content-address immutable optimizer buffers and skip
-    /// H2D traffic on warmed identical programs.
+    /// `retained_by_dispatcher = false` so release frees the buffers. A
+    /// dispatcher that content-addresses immutable optimizer buffers overrides
+    /// this and skips the host-to-device traffic on warmed identical programs.
     fn acquire_resident_static_uploads(
         &self,
         _cache_domain: u64,
@@ -421,8 +420,8 @@ pub trait ProgramDispatcher {
     /// Dispatch an ordered sequence of resident-buffer Programs.
     ///
     /// Default implementation preserves correctness by fencing each step
-    /// through `dispatch_resident`. CUDA overrides this to enqueue the whole
-    /// dependent chain on one stream and synchronize once.
+    /// through `dispatch_resident`. A dispatcher with an ordered queue overrides
+    /// this to enqueue the whole dependent chain and synchronize once.
     fn dispatch_resident_sequence(
         &self,
         steps: &[ResidentDispatchStep<'_>],
@@ -436,9 +435,9 @@ pub trait ProgramDispatcher {
     /// Dispatch an ordered resident sequence and read selected resident buffers.
     ///
     /// Default implementation keeps the portable contract: execute the ordered
-    /// sequence, then read buffers through `read_resident_many`. CUDA overrides
-    /// this to enqueue the D2H readbacks behind the kernels on the same stream
-    /// and pay one host fence.
+    /// sequence, then read buffers through `read_resident_many`. A dispatcher
+    /// with an ordered queue overrides this to enqueue the readbacks behind the
+    /// kernels and pay one host fence.
     fn dispatch_resident_sequence_read_many(
         &self,
         steps: &[ResidentDispatchStep<'_>],
@@ -461,9 +460,9 @@ pub trait ProgramDispatcher {
     /// Upload resident buffers, dispatch an ordered resident sequence, then
     /// read selected resident buffers.
     ///
-    /// Default implementation fences at each portable boundary. CUDA overrides
-    /// this so H2D uploads, kernels, and D2H readbacks are ordered on one stream
-    /// with one host synchronization point.
+    /// Default implementation fences at each portable boundary. A dispatcher
+    /// with an ordered queue overrides this so uploads, kernels, and readbacks
+    /// are ordered on one queue with one host synchronization point.
     fn upload_resident_many_sequence_read_many(
         &self,
         uploads: &[(u64, &[u8])],
@@ -512,11 +511,11 @@ pub trait ProgramDispatcher {
     /// Same contract as [`Self::upload_resident_many_sequence_read_many_into`],
     /// but first clears full resident buffers to zero.
     ///
-    /// Portable dispatchers emulate clears as zero-byte payload uploads and
-    /// still pay one upload/sequence/read boundary. CUDA overrides this to
-    /// enqueue device-side memset operations on the same stream before explicit
-    /// uploads and kernels, avoiding PCIe traffic for scratch initialization
-    /// without adding host fences.
+    /// A dispatcher without device-side fill emulates clears as zero-byte
+    /// payload uploads and still pays one upload/sequence/read boundary. One
+    /// with device-side fill overrides this to enqueue the fills ahead of the
+    /// explicit uploads and kernels, which keeps scratch initialization off the
+    /// host bus without adding a fence.
     fn clear_upload_resident_many_sequence_read_many_into(
         &self,
         clears: &[(u64, usize)],
@@ -589,8 +588,8 @@ pub trait ProgramDispatcher {
     }
 
     /// Same contract as [`Self::upload_resident_many_sequence_read_ranges_into`],
-    /// but fills resident buffers first. CUDA overrides this to use device
-    /// memset and compact D2H range copies on the same stream.
+    /// but fills resident buffers first. A dispatcher with device-side fill
+    /// overrides this to use it plus compact readback range copies on one queue.
     fn fill_upload_resident_many_sequence_read_ranges_into(
         &self,
         fills: &[(u64, usize, u8)],

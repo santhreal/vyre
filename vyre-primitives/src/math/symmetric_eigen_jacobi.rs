@@ -170,7 +170,7 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
                     // t = sign(tau) / (|tau| + sqrt(1 + tau^2)). NOTE: `sign` here must match the
                     // reference's Rust `f64::signum`, which returns +1 at +0.0, this is what makes
                     // the app==aqq degenerate case (tau=+0) rotate by 45° (t=1) instead of stalling.
-                    // WGSL/`UnOp::Sign` returns 0 at 0, so we use an explicit `tau >= 0 ? 1 : -1`.
+                    // `UnOp::Sign` returns 0 at 0, so we use an explicit `tau >= 0 ? 1 : -1`.
                     Node::let_bind(
                         "jac_t",
                         Expr::div(

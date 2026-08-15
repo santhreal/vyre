@@ -229,7 +229,7 @@ pub(crate) fn validate_expr(
             validate_expr(value, buffers, scope, options, report, depth_level + 1);
             validate_subgroup_expr_support(&mut report.errors, options);
             // V047: bitwise subgroup reductions (And/Or/Xor) are undefined over
-            // floats, both the PTX emitter and the reference oracle already fail
+            // floats, both the target emitters and the reference oracle already fail
             // closed on an f32 operand (`SubgroupReduceOp::combine_f32` returns
             // None for bitwise ops). Reject it here at the type boundary so the
             // failure is uniform across every backend instead of surfacing late
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn subgroup_bitwise_reduction_rejects_f32_operand() {
         // V047: And/Or/Xor are bitwise reductions with no meaning over floats.
-        // The PTX emitter and reference oracle both fail closed on an f32
+        // Target emitters and the reference oracle both fail closed on an f32
         // operand; validation must reject it at the type boundary too, with a
         // backend that DOES support subgroup ops (so V041 is not the reason).
         let backend = SubgroupBackend {

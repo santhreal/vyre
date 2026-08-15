@@ -120,7 +120,7 @@ struct ArenaDeltaRecord {
     rewrite_action: u32,
 }
 
-/// Sparse arena deltas decoded from resident CUDA compaction.
+/// Sparse arena deltas decoded from resident device compaction.
 #[derive(Debug, Clone, Default)]
 pub struct SparseArenaDeltas {
     expr_count: u32,

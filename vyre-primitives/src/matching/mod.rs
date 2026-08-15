@@ -6,7 +6,7 @@
 //!
 //! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md`.
 
-/// Anchor-DFA plan shared by software, SPIR-V, and accelerator experiments.
+/// Anchor-DFA plan shared by software and accelerator experiments.
 pub mod anchor_dfa;
 /// Bounded-stack bracket-pair detector.
 pub mod bracket_match;

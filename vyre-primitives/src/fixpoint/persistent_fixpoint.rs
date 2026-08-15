@@ -96,9 +96,9 @@
 //! dependency invisible at the call site: weaken or move a barrier and
 //! the program breaks without anything correctness-shaped being edited.
 //! It is now an atomic exchange, so EVERY write to `changed` in both
-//! builders is an atomic. In the emitted PTX the clear is an
-//! `atom.global.exch` and the set an `atom.global.or.b32` at the same
-//! address, instead of a plain `st.global.u32` against an atomic. This
+//! builders is an atomic. In emitted machine code the clear is an
+//! atomic exchange and the set an atomic or at the same address,
+//! instead of a plain store against an atomic. This
 //! costs one lane one operation per iteration and changes no value and
 //! no pass count. It does NOT make this builder multi-workgroup safe;
 //! the race above is about barrier SCOPE, not atomicity.
@@ -322,7 +322,7 @@ pub fn persistent_fixpoint(
             //
             // This is also what makes the emitter's uniformity proof for
             // the exit condition TRUE rather than merely syntactic.
-            // `vyre-emit-ptx` classifies a `LoadGlobal` at a uniform
+            // A machine-code emitter classifies a `LoadGlobal` at a uniform
             // index as grid-uniform, and its own note on that
             // classification requires that a value steering control flow
             // is not concurrently written without synchronization. This
@@ -390,15 +390,14 @@ pub fn persistent_fixpoint(
 /// word. That reintroduces the lost-set race and turns the collective
 /// return into a stranding hazard in one edit.
 ///
-/// ## The exit is honored on the PTX path
+/// ## The exit is honored on the emitted path
 ///
-/// Measured, not assumed. Lowering this program and emitting PTX for a
-/// three-wave build produces three unpredicated `bra $L_exit`
-/// instructions, one per wave, and [`persistent_fixpoint`] produces one
+/// Measured, not assumed. Lowering this program and emitting code for a
+/// three-wave build produces three unpredicated exit branches, one per wave, and [`persistent_fixpoint`] produces one
 /// for its in-kernel loop.
 ///
 /// This was NOT always true, and the history is worth keeping because
-/// the failure was invisible. `vyre-emit-ptx` used to handle `Return`
+/// the failure was invisible. A machine-code emitter used to handle `Return`
 /// with a comment and no instruction, so a `Return` nested in an `If`
 /// emitted nothing and fell through, and every emitted wave ran no
 /// matter how early the grid converged. Answers stayed correct, because

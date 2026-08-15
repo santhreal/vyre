@@ -686,9 +686,9 @@ impl GpuEGraphSnapshot {
     ///
     /// The image contains row metadata columns, a structural row-signature
     /// column, the flat child column, and a deterministic e-class-to-row prefix
-    /// index. CUDA and other backends can upload the returned
-    /// [`GpuEGraphDeviceImage::words`] slice in one copy and pass the spans
-    /// from [`GpuEGraphDeviceImage::layout`] as kernel parameters.
+    /// index. A driver uploads the returned [`GpuEGraphDeviceImage::words`]
+    /// slice in one copy and passes the spans from
+    /// [`GpuEGraphDeviceImage::layout`] as kernel parameters.
     ///
     /// # Errors
     ///
@@ -1016,7 +1016,8 @@ fn elapsed_nonzero_ns(start: Instant) -> u64 {
 
 /// Structural row signature for packed GPU e-graph columns.
 ///
-/// Matches the CUDA row-signature refresh kernel and initial image packing.
+/// Matches the device-side row-signature refresh kernel and the initial image
+/// packing, so a refreshed row and a freshly packed row hash identically.
 #[must_use]
 pub fn gpu_egraph_row_signature(language_op_id: u32, children_len: u32, children: &[u32]) -> u32 {
     let mut hash = mix_egraph_signature(0xA24B_AED4, language_op_id);

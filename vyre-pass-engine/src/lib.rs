@@ -38,7 +38,7 @@
 //!         ↑
 //!   vyre-pass-engine       ← THIS CRATE (no driver deps)
 //!         ↑
-//!   vyre-driver / vyre-runtime / vyre-driver-{cuda,wgpu}
+//!   vyre-driver / vyre-runtime / the concrete driver crates
 //! ```
 //!
 //! `vyre-foundation` cannot depend on this crate: the encoding needs
@@ -71,7 +71,7 @@
 
 #[cfg(feature = "optimizer")]
 /// The encoder plus the passes that run the compiler against its own
-/// primitives. Exposed at the lib root so external consumers (driver-cuda
+/// primitives. Exposed at the lib root so external consumers (driver
 /// parity tests, conform runners) can reach the per-pass `*_via_encoded`
 /// entry points and optimizer contract metadata without descending into
 /// private module paths.

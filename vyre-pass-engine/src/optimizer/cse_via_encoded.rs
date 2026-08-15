@@ -81,7 +81,7 @@ pub const CANONICAL_TABLE_MULT: u32 = 2;
 /// Lookup contract for CSE canonical ids.
 ///
 /// Dense GPU CSE returns `canonical[id]` for every arena id. Resident
-/// CUDA pipelines can instead read back only non-identity pairs from a
+/// pipelines can instead read back only non-identity pairs from a
 /// device-side compaction kernel; consumers should not care which
 /// representation produced the lookup.
 pub trait CanonicalLookup {
