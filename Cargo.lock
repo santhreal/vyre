@@ -3764,7 +3764,6 @@ dependencies = [
  "serde_json",
  "smallvec",
  "structure-gate",
- "tempfile",
  "thiserror 2.0.19",
  "tracing",
  "tree-sitter",

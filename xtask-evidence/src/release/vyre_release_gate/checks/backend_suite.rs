@@ -671,7 +671,6 @@ mod backend_suite_tests {
             title: "WGPU fallback".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let status = serde_json::json!({
             "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
@@ -702,7 +701,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let status = serde_json::json!({
             "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
@@ -757,7 +755,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -862,7 +859,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -921,7 +917,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -997,7 +992,6 @@ mod backend_suite_tests {
             title: "WGPU fallback".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1077,7 +1071,6 @@ mod backend_suite_tests {
             title: "WGPU fallback".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1131,7 +1124,6 @@ mod backend_suite_tests {
             title: "WGPU fallback".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1200,7 +1192,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
-            minimum_evidence: 1,
         };
         let mut failures = Vec::new();
 
@@ -1301,7 +1292,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
-            minimum_evidence: 1,
         };
         let mut failures = Vec::new();
 
@@ -1376,7 +1366,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
-            minimum_evidence: 1,
         };
         let mut failures = Vec::new();
 
@@ -1468,7 +1457,6 @@ mod backend_suite_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
-            minimum_evidence: 1,
         };
         let mut failures = Vec::new();
 

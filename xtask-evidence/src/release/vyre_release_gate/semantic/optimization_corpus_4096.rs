@@ -381,7 +381,6 @@ mod tests {
             .into_iter()
             .map(str::to_string)
             .collect(),
-            minimum_evidence: 5,
         };
         let mut failures = Vec::new();
 

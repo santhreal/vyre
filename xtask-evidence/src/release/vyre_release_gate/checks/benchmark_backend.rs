@@ -322,7 +322,6 @@ mod benchmark_backend_tests {
             title: "cuda first".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let report = serde_json::json!({
             "blockers": ["benchmark runner reused stale CUDA evidence"],

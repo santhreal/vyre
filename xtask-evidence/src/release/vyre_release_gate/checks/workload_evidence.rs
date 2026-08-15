@@ -446,7 +446,6 @@ mod workload_evidence_tests {
             title: "proof workloads".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let matrix = serde_json::json!({
             "families": [
@@ -478,7 +477,6 @@ mod workload_evidence_tests {
             title: "proof workloads".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let matrix = serde_json::json!({
             "families": [
@@ -525,7 +523,6 @@ mod workload_evidence_tests {
             title: "proof workloads".to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         };
         let matrix = serde_json::json!({
             "required_closed_families": 12,

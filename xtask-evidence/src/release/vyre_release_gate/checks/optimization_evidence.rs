@@ -412,7 +412,6 @@ mod optimization_evidence_tests {
             title: "optimization integration".to_string(),
             status: "required".to_string(),
             evidence: vec!["optimizer-impact-cuda.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -438,7 +437,6 @@ mod optimization_evidence_tests {
             title: "CUDA first path".to_string(),
             status: "required".to_string(),
             evidence: vec!["bench-release-axes.json".to_string()],
-            minimum_evidence: 0,
         };
         let report = serde_json::json!({
             "schema_version": 1,
@@ -501,7 +499,6 @@ mod optimization_evidence_tests {
             title: "optimization integration".to_string(),
             status: "required".to_string(),
             evidence: vec!["optimizer-impact-cuda.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -566,7 +563,6 @@ mod optimization_evidence_tests {
             title: "optimization integration".to_string(),
             status: "required".to_string(),
             evidence: vec!["optimizer-impact-cuda.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 

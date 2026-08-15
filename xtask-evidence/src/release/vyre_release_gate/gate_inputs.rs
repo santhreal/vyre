@@ -30,7 +30,6 @@ pub(super) struct Requirement {
     pub(super) title: String,
     pub(super) status: String,
     pub(super) evidence: Vec<String>,
-    pub(super) minimum_evidence: usize,
 }
 
 impl Requirement {
@@ -43,7 +42,6 @@ impl Requirement {
             title: title.to_string(),
             status: "required".to_string(),
             evidence: Vec::new(),
-            minimum_evidence: 0,
         }
     }
 }

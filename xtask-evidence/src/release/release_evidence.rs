@@ -11,7 +11,7 @@ use serde::Serialize;
 
 mod artifact_status;
 mod evidence_index;
-mod expected_artifacts;
+pub(crate) mod expected_artifacts;
 
 use artifact_status::{
     artifact_blocker_suffix, generator_command, inspect_expected_artifacts,
