@@ -337,6 +337,26 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   row added to the table was dispatched by neither backend and nothing failed.
   The op set is read from the table at run time, so a row added tomorrow is
   required of every suite tomorrow.
+- `xtask-registry` asserts that every crate submitting an operation
+  registration in source contributes at least one operation to the live
+  registry. Dropping one of those links left the registry answering with
+  hundreds of ids from the crate that was still linked, every count agreeing
+  with itself, and a whole tier missing from the catalog. The expected set is
+  read from the sources when the test runs, so a third registering crate is
+  covered the day it registers. This replaces a smoke test that grepped
+  `list-ops` output for one crate's prefix from another crate's test target.
+- `xtask --help` is checked against the registered subcommand table rather than
+  against four names written into a test. A help route that prints the header
+  and a truncated table still exits zero and still contains `SUBCOMMANDS:`, so
+  the previous route check passed while commands were unreachable.
+- A CI step that passes a subcommand to `xtask`, `xtask-registry` or
+  `xtask-evidence` is resolved against the registered subcommand table. A
+  renamed or deleted row left the step naming a command that no longer exists,
+  and nothing local went red: the package existed, the binary existed, and the
+  name was one shell token in a `run:` line. `xtask gates` judges the other
+  direction, that a registered row is wired into CI, so the pair is now closed.
+  Names are extracted per step, including every command in a joined `run:`
+  block, and resolved when the test runs rather than listed in it.
 
 ### Changed
 
@@ -1802,6 +1822,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   initializer-designator families index is one stream in
   `tests/support/c_frontend/fixtures/initializer_designator_streams.rs`, under
   one name in both.
+- The tooling and workspace-contract source walks have one owner each.
+  `tests/support/source_scan.rs` owns the workspace Rust walk, the brace
+  matcher and the comment/string masker the two workspace contract scanners
+  each carried; `xtask/src/tree_walk.rs` owns the prune rule that seven xtask
+  WalkDir walks each spelled differently, so a build directory added to one is
+  now skipped by all of them; `xtask/src/manifest_walk.rs` owns the
+  read-parse-name sequence for a package manifest that the feature and metadata
+  generators each repeated; `xtask::release::conformance_evidence_semantics`
+  owns the conformance read bound and its error context, previously copied per
+  module; `xtask/tests/common` owns the `path:line:column` violation format.
+  `vyre_test_support::ir_variants::single_u32_output_program` owns the
+  validator program fixture that three validation suites each built by hand.
 - `vyre-libs` no longer reaches across dialect boundaries in private code.
   `telemetry` is a crate-root module rather than a one-file directory, because
   counters instrument every dialect and belong to none; `scratch` and
@@ -1847,6 +1879,120 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
   builds its flat leaves from the same module, so the two tables cannot
   disagree about which element types exist.
+- The workspace contract suite no longer compiles into `vyre-foundation`'s test
+  target. `tests/contract/mod.rs` was included by
+  `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the
+  whole workspace could not run until the compiler built, and a crate that has
+  nothing to do with the routing rule decided whether the rule ran at all. Each
+  contract now sits with its subject: the device-only routing rule and the node
+  child descent rule are `structure-gate` tests, which is the crate that reads
+  source text and depends on no vyre crate; the validator rejection contract is
+  a `vyre-foundation` test target; the public-API snapshot check joins the
+  other snapshot contracts in `xtask`. `structure_gate::source_scan` owns the
+  workspace source walk, the brace matcher and the comment and literal masker,
+  and the masker is built on the same `opaque_span` the registration parser
+  uses, so a masker and a parser can no longer disagree about whether a raw
+  string or a nested block comment holds code.
+- The command-line contract no longer renders a book page.
+  `scripts/cli_docs.py` kept generating `docs/CLI.md`, which is deleted, so the
+  gate compared a generated document against a file that is not there while its
+  real verdicts went unread: the manifest schema, the README each binary names,
+  the declared binary set against cargo metadata, every help route exiting zero
+  with bounded non-empty output, and the xtask help table against the
+  registered subcommands. Those verdicts stay and the CLI section of each crate
+  README is still generated. The contract test reads the subcommand count back
+  out of the generated README blocks instead of out of the deleted page, and
+  the build it runs no longer forces one codegen job.
+- The `VyreBackend` trait contract has two owners in `vyre-driver`'s test
+  surface instead of three overlapping files. `tests/backend_trait_contract.rs`
+  owns the minimal and fully overriding backend fixtures and asserts that every
+  capability default is conservative, that every override is observably
+  different from its default, that lifecycle hooks succeed by default and
+  receive every call once overridden, that the blanket `Backend` impl exposes
+  the driver identity, and that the trait surface stays object safe and `Send +
+  Sync`. `tests/backend_registry.rs` owns what the registry reports when
+  nothing is registered, including that preferred-dispatch acquisition fails
+  closed and never advertises a host fallback. The previous
+  `backend_contract.rs`, `backend_capability_negotiation.rs`, and
+  `backend_trait_compatibility.rs` each declared their own copy of the same
+  fixtures and asserted overlapping subsets of the same contract, so an
+  override that silently returned its default value was invisible in all three.
+  That case is now a single invariant rather than two mirrored capability
+  lists.
+- `vyre-driver/tests/async_dispatch_contract.rs` is the sole owner of what the
+  default async dispatch adapter guarantees: error propagation before any
+  await, a ready handle that never blocks, independent handles per dispatch,
+  object safety through both awaits, and the default `dispatch_borrowed` and
+  resident-async paths. The counting, failing, and resident backend fixtures
+  are declared once. `async_dispatch_always_nonblocking.rs` carried
+  byte-identical fixtures and three duplicate tests and is gone; every
+  assertion it made is made here, and the borrowed-dispatch case now checks the
+  forwarded payload rather than only that the call succeeded.
+- `vyre-driver`'s dispatch policy bundle is covered by a test that calls each
+  policy directly and compares the verdicts to the bundle's, so the bundle
+  cannot drift from the policies it composes. A test drives every policy at the
+  extremes of its integer domain and asserts the resulting verdict, replacing a
+  case that bound the results to `_` and only proved absence of a panic. The
+  module and field documentation names the concern each policy decides instead
+  of an internal plan label.
+- The programs the native Metal tests dispatch have one owner in
+  `vyre-driver-metal/src/tests/fixtures.rs`. The single WriteOnly `u32` output
+  word, declared with count 1 and an output byte range of 0..4, was restated at
+  nine call sites across four modules, and the
+  ReadOnly-input-plus-WriteOnly-output pair at four more, twice byte for byte
+  inside one file. The declared element count and the output byte range
+  together decide how many bytes the backend collects, so every test asserting
+  a single little-endian word was asserting against a shape it also restated:
+  one edited count would have retargeted the assertion at a different number of
+  bytes in one place and left the others agreeing with each other. Each module
+  now imports what it uses once at module scope instead of repeating the same
+  two `use` lines inside every test function.
+- The native Metal against wgpu-on-Metal comparison lives in
+  `vyre-driver-metal/src/tests/wgpu_differential.rs`. It was the second test in
+  the one-shot dispatch module, whose subject is what Metal does with a program
+  rather than whether two backends agree.
+- `vyre-driver-metal`'s `backend_metric_snapshot` builds its scalar counters
+  from a name-and-accessor table rather than fourteen hand-written pushes. A
+  counter added to `MetalMetrics` and forgotten in the snapshot was previously
+  invisible, because the push list carried no relation to the struct. The
+  resident-buffer branch moved to `push_resident_table_metrics` next to the
+  lock helper it shares a failure mode with, and the comment explaining the
+  poison sentinel states the reason instead of citing an internal rule number.
+- `vyre-driver-spirv` uses the neutral instance-rejection record instead of a
+  local copy of five entries. Three of its overrides restated the neutral
+  requirement without naming a corrective action, one restated the neutral
+  text, and one is now the neutral text. The crate carries no rejection wording
+  of its own for the shared materializer contract, so the words a caller reads
+  do not depend on which backend rejected the call.
+- The element-wise programs the SPIR-V dispatch tests and the Vulkan probe
+  example run have one owner in
+  `vyre-driver-spirv/tests/support/elementwise.rs`, shared by path include. The
+  add, output-first add, and multiply-add programs plus the `u32` byte
+  conversions were written twice, once in the test and once in the example, so
+  the example could drift from the shape the test pins. The test also grew a
+  reference-output helper and a lane comparison, which replaces two copied
+  assertion loops and three copies of the little-endian input encoding.
+- `vyre-driver-spirv` answers the seven capability queries it does not probe
+  from the `VyreBackend` defaults instead of restating `false` for each. The
+  Vulkan compute path probes four limits and claims nothing else, and the trait
+  default is already the conservative answer, so a capability added to the
+  trait no longer needs a hand-written denial here to keep the backend honest.
+- Five domains left `vyre-primitives` for `vyre-libs`, because an operation
+  belongs in `vyre-primitives` only when it cannot be composed, meaning it
+  needs its own backend emitter arm and its own reference-interpreter arm. None
+  of these did: `cat` is now `reasoning::finite_category`, `zx` is
+  `reasoning::zx_diagram`, `dnnf` is `reasoning::dnnf`, `types::linear_check`
+  and `types::shape_smt` and the whole `effects` domain collapse into
+  `analysis`. The `cat`, `zx`, `dnnf`, `types` and `effects` features are gone
+  with them, and `vyre-libs` reasoning now depends on `vyre-primitives/graph`
+  alone.
+- `reasoning::finite_category` states each construction once. Left and right
+  Kan extension were four functions differing in whether the fold summed or
+  multiplied and whether it ran per object or over a table; they are now
+  `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over
+  one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the
+  pair and its witness rather than a bool, and `yoneda_natural_iso` is
+  `natural_transformation_count`, because a count is what it returns.
 
 ### Removed
 
@@ -1932,6 +2078,24 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   artifact tokens are generated into its unreleased section from
   `release/release-train.toml` rather than checked against prose that could
   disagree with it.
+- `vyre_primitives::effects` is gone. `EffectRow`, `EffectKind`, `Handler`,
+  `handler_apply` and `handler_compose` restated the seven effect kinds and
+  three bit operations that `vyre_foundation::lower::ProgramEffects` already
+  declares, on the same bit assignments, and a kind added to one would not
+  appear in the other. The one live consumer is
+  `vyre-libs::analysis::effect_signature`, which takes `ProgramEffects`
+  directly: `check_signature` returns the unpermitted row as a verdict and
+  `residual_effects` names what stays open after a handler discharges. Handler
+  composition is row union, so it needs no function of its own.
+- `vyre_primitives::types` is gone. `LinearDiscipline` declared the same four
+  substructural disciplines and the same `forbids_drop` and `forbids_reuse`
+  predicates as `vyre_foundation::ir::LinearType`, and `check_linear_use` was a
+  second implementation of the per-buffer decision
+  `vyre_foundation::validate::linear_type` already makes and reports with a fix
+  hint. `ShapeFormula` aliased `vyre_foundation::ir::ShapePredicate` and its
+  evaluator forwarded to that type's own method. Both had no callers, and the
+  foundation owner's own tests already assert every boundary the copies
+  asserted.
 
 ### Fixed
 
@@ -3099,6 +3263,59 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant
   missing from the catalog a compile error. The previous markdown table, and
   the seven-variant list that checked it against a nine-variant enum, are gone.
+- The public-API snapshot fixture no longer forces `CARGO_BUILD_JOBS=1` on the
+  refresh it runs. Parallelism is declared in `.cargo/config.toml`, and an
+  environment variable overrides it, so the fixture rebuilt one codegen job at
+  a time regardless of the host.
+- The test guides for `vyre-driver` and `vyre-driver-wgpu` describe what the
+  crates contain. Both previously pointed at a category contract file that does
+  not exist, listed bench and fuzz targets for directories neither crate has,
+  and gave `cargo test --test` invocations for target names (`adversarial`,
+  `property`, `gap`, `integration`) that were never declared. `vyre-driver`'s
+  guide also claimed sealing through a macro name that is not in the source and
+  invariants for a `DialectRegistry` the crate does not define. Every invariant
+  now names a construct that exists, and the sealing entry names
+  `backend::private::Sealed`.
+- `vyre-driver-wgpu`'s loop-carrier scope-latch dispatch test reads
+  `TOK_LBRACE` and `TOK_RBRACE` from `vyre_spec::c11_token` instead of
+  declaring its own pair with the values 1 and 2. Those two declarations were
+  the only `TOK_`-prefixed constants outside `vyre-spec` in the tree, so
+  `vyre-spec`'s `no_file_outside_the_owner_declares_a_token_id` failed on this
+  file. The test pins the shape the c-parser scope walker emits, and it now
+  pins that shape against the real numbering the walker actually sees: the
+  canonical ids are 12 and 13. Nothing observable moves, because the program
+  compares `scope_kind` for equality against the same constants the fixture
+  inputs are built from, and every assertion is on `scope_open` and
+  `scope_depth`.
+- `vyre-driver-metal`'s poisoned-resident-table test poisons the lock. It was
+  named for the poison path and documented the sentinel, then contained a
+  comment-only block whose note explained that `MetalBackend` does not expose
+  `resident_buffers`, and asserted only that a healthy snapshot carries both
+  resident keys with a count of zero. It could not fail on the bug it existed
+  for. It now allocates a resident buffer, poisons the table from a thread that
+  panics while holding the lock, and asserts the count and byte total are both
+  `u64::MAX`, that `metal_resident_buffer_error` is 1, and that the unrelated
+  counters survive. The healthy test asserts the error key is absent, so the
+  pair separates poison from emptiness instead of proving one state twice.
+  `resident_buffers` is `pub(crate)` because poisoning the lock is the only way
+  to observe the contract.
+- The neutral rejection record in `vyre-driver/src/materialize.rs` owns the
+  corrective action for a foreign artifact binding and for a completion
+  consumed twice. Both were routed through `invalid_module`, whose suffix tells
+  the caller to recompile the target payload from the neutral artifact, which
+  is wrong advice for either: a binding aimed at another instance's digest is
+  repaired by binding against the right digest, and a completion consumed twice
+  is repaired by consuming it once. `vyre-driver-cuda` and `vyre-driver-spirv`
+  had each independently overridden the foreign-artifact string with the same
+  replacement text, which is the evidence that the action is not
+  backend-specific.
+- ZX identity removal no longer splices out a phase-zero spider whose two edges
+  are self-loops. The rule only checked that the spider had degree two, so a
+  spider wired to itself twice satisfied it, was deleted, and left the loop
+  edge naming an index past the end of the spider list. It now requires both
+  neighbours to be other spiders of matching colour. `simplified_diagram` runs
+  fusion and identity removal to a joint fixpoint, which terminates because
+  every firing removes exactly one spider.
 
 ## [0.7.1] - 2026-08-01
 
