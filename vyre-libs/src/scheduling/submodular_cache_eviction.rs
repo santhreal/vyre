@@ -53,10 +53,10 @@
 //! evict every pipeline whose picked == 0
 //! ```
 
-use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
+use crate::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::math::submodular_greedy::argmax_of_marginals_cpu;

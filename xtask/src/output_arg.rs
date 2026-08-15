@@ -2,7 +2,33 @@
 
 use std::fmt::{Display, Write as _};
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
+
+/// Whether `path` climbs out of the directory it is written relative to.
+///
+/// `earned` is how many segments it may pop before it leaves. A path built from
+/// the repository root has earned none, so its first `..` is already outside; an
+/// evidence entry written beside a manifest one level below the root has earned
+/// exactly one. A root or prefix component makes the path absolute, which names
+/// a file no clone of this repository is guaranteed to have.
+#[must_use]
+pub fn escapes_root(path: &Path, earned: i32) -> bool {
+    let mut depth = earned;
+    for component in path.components() {
+        match component {
+            Component::ParentDir => {
+                depth -= 1;
+                if depth < 0 {
+                    return true;
+                }
+            }
+            Component::Normal(_) => depth += 1,
+            Component::RootDir | Component::Prefix(_) => return true,
+            Component::CurDir => {}
+        }
+    }
+    false
+}
 
 /// Read a text file, failing rather than allocating past `max_bytes`.
 ///

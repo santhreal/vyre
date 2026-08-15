@@ -4,11 +4,11 @@ use vyre_primitives::graph::csr_forward_or_changed::{
     CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey,
 };
 
-use crate::scratch::reserve_vec as reserve_graph_vec;
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs,
     write_dispatch_input, CachedProgram, DispatchInput, ProgramCache,
 };
+use crate::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs;
 

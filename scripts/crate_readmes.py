@@ -215,8 +215,10 @@ def render_contract(
     allowed = ", ".join(f"`{item}`" for item in record.allowed_dependencies) or "None"
     available = ", ".join(f"`{item}`" for item in features) or "None"
     defaults = ", ".join(f"`{item}`" for item in default_features) or "None"
-    guide = f"docs/testing/{Path(record.path).name}.md"
-    guide_link = f"{'../' * len(Path(record.path).parts)}{guide}"
+    testing_toml = "docs/testing/TESTING.toml"
+    testing_link = f"{'../' * len(Path(record.path).parts)}{testing_toml}"
+    ownership_toml = "docs/CRATE_OWNERSHIP.toml"
+    ownership_link = f"{'../' * len(Path(record.path).parts)}{ownership_toml}"
     return "\n".join(
         [
             BEGIN_MARKER,
@@ -254,8 +256,8 @@ def render_contract(
             "",
             "### Testing",
             "",
-            f"Use [`{guide}`]({guide_link}) for exact commands, Cargo targets, hardware",
-            "requirements, evidence outputs, expected skips, and failure semantics.",
+            f"See [`{testing_toml}`]({testing_link}) for the crate's test command,",
+            "hardware contract, expected skips, and failure semantics.",
             "",
             "### Release status",
             "",
@@ -263,9 +265,8 @@ def render_contract(
             "",
             "### Ownership",
             "",
-            "`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility",
-            "and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and",
-            "`docs/OWNERSHIP.md` after changing that registry.",
+            f"[`{ownership_toml}`]({ownership_link}) is authoritative for this crate's",
+            "responsibility and allowed internal edges.",
             "",
             "### License",
             "",

@@ -1,6 +1,6 @@
-//! Marker types  -  unit structs the reference interpreter and backend
-//! emitters dispatch on. Always compiled (zero deps); unrelated to
-//! the feature-gated Tier 2.5 subsystems.
+//! Marker types: unit structs the reference interpreter and backend
+//! emitters dispatch on. Always compiled, zero deps. Unrelated to
+//! the parked composition domains.
 
 /// Stable identifier for a workgroup-shared memory region.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]

@@ -7,8 +7,8 @@ mod native {
 
     use vyre_driver::materialize::{self, ExecutableModule, InstanceCore, MaterializerDevice};
     use vyre_driver::{
-        ArtifactInstance, BindingSet, Completion, Device, DeviceIdentity, DispatchConfig,
-        ResidentOwner, Submission,
+        ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, Completion,
+        DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
     };
     use vyre_foundation::ir::Program;
     use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
