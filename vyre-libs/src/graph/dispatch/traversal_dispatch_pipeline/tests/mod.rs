@@ -1,6 +1,6 @@
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
 use vyre_foundation::ir::{Node, Program};
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 fn region_generator(node: &Node) -> &str {
@@ -161,6 +161,20 @@ fn cpu_reference_wrappers_match_traversal_contracts() {
 
     let mut current = Vec::new();
     let mut next = Vec::new();
-    reference_csr_closure_into(CsrClosureInputs { graph: CsrGraphView { node_count: 3, edge_offsets: &[0, 1, 2, 2], edge_targets: &[1, 2], edge_kind_mask: &[1, 1] }, allow_mask: 1, max_iters: 4 }, &[0b001], &mut current, &mut next);
+    reference_csr_closure_into(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 3,
+                edge_offsets: &[0, 1, 2, 2],
+                edge_targets: &[1, 2],
+                edge_kind_mask: &[1, 1],
+            },
+            allow_mask: 1,
+            max_iters: 4,
+        },
+        &[0b001],
+        &mut current,
+        &mut next,
+    );
     assert_eq!(current, vec![0b111]);
 }
