@@ -127,8 +127,9 @@ pub fn elementwise_program(
     buffers.push(
         BufferDecl::storage("out", 0, BufferAccess::ReadWrite, out_element).with_count(count),
     );
-    for (offset, input) in inputs.iter().enumerate() {
-        let binding = u32::try_from(offset + 1).expect("parity programs declare few buffers");
+    // Binding 0 is the output, so the inputs are numbered from 1 and the counter
+    // is a u32 from the start rather than a converted index.
+    for (input, binding) in inputs.iter().zip(1u32..) {
         buffers.push(
             BufferDecl::storage(
                 input.name,
@@ -184,19 +185,20 @@ pub fn dispatch_single_output(
     }
     let outputs = dispatch(program, &slices)
         .unwrap_or_else(|error| panic!("Fix: the backend must dispatch `{label}`: {error}"));
+    let [output]: [Vec<u8>; 1] = outputs.try_into().unwrap_or_else(|outputs: Vec<Vec<u8>>| {
+        panic!(
+            "`{label}` declares one ReadWrite output; the backend returned {} buffer(s). \
+             Fix: declare every ReadWrite buffer the program writes",
+            outputs.len()
+        )
+    });
     assert_eq!(
-        outputs.len(),
-        1,
-        "`{label}` declares one ReadWrite output; the backend returned {} buffer(s).",
-        outputs.len()
-    );
-    assert_eq!(
-        outputs[0].len(),
+        output.len(),
         output_bytes,
         "`{label}` output buffer must be {output_bytes} bytes; got {}.",
-        outputs[0].len()
+        output.len()
     );
-    outputs.into_iter().next().expect("length asserted above")
+    output
 }
 
 /// Build, dispatch and decode a `u32` elementwise gate in one call.
@@ -216,7 +218,13 @@ pub fn u32_binop_parity(
         ParityInput::u32_words("a", &lefts),
         ParityInput::u32_words("b", &rights),
     ];
-    let count = u32::try_from(pairs.len()).expect("parity gates use small operand tables");
+    let count = u32::try_from(pairs.len()).unwrap_or_else(|_| {
+        panic!(
+            "`{label}` declares {} operand pairs, past the u32 element count a dispatch \
+             carries. Fix: split the operand table across gates",
+            pairs.len()
+        )
+    });
     let program = elementwise_program(DataType::U32, &inputs, count, &|loads| {
         build(loads[0].clone(), loads[1].clone())
     });

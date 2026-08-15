@@ -106,12 +106,20 @@ fn terminated(mut entry: Vec<Node>, count: usize) -> Vec<Node> {
 }
 
 /// The CPU optimizer stack the GPU pipeline is measured against.
+///
+/// # Panics
+/// Panics when the registered optimizer does not converge on a fixture program.
+/// The fixtures here are generated, so a non-converging one is a pass that does
+/// not reach a fixed point rather than hostile input.
 pub fn cpu_pipeline(program: Program) -> Program {
     use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine::run as cpu_canonicalize;
     use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce;
     let program = cpu_canonicalize(program);
-    let program =
-        vyre_foundation::optimizer::optimize(program).expect("registered optimizer must converge");
+    let program = vyre_foundation::optimizer::optimize(program).unwrap_or_else(|error| {
+        panic!(
+            "the registered optimizer did not converge on a generated bench fixture: {error}. Fix: make the reported pass idempotent, or raise the fixed-point iteration bound it needs, so the oracle measures a converged program."
+        )
+    });
     cpu_dce(program)
 }
 
