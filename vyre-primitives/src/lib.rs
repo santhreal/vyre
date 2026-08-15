@@ -64,8 +64,15 @@
 //! `vyre_primitives::text::char_class::char_class(...)` so the LEGO
 //! chain is visible at every call site.
 //!
-//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md` for
-//! the tier rule, admission criteria, and Gate 1 enforcement.
+//! Admission: a builder belongs here once a second Tier 3 dialect needs it.
+//! One dialect's helper stays in that dialect. Nothing that composes over
+//! existing IR is admitted as a hardware intrinsic. The complexity rule is
+//! enforced by gate1 in `xtask-registry`, which walks each operation's
+//! registered exemplar and passes it on either of two grounds: at most 4
+//! loops and at most 200 nodes, or at least 60 percent of its nodes living
+//! inside a `Region` whose `source_region` names another registered
+//! operation. An anonymous `Region` is a local wrapper and does not count as
+//! composition.
 
 mod dispatch_grid;
 #[cfg(feature = "vyre-foundation")]

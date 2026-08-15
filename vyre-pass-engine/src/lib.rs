@@ -66,8 +66,8 @@
 //!
 //! Nine module trees that used to live here are `vyre-libs` modules now:
 //! scheduling solvers, analysis, logic, data, math, graph, hardware-boundary
-//! contracts, telemetry counters, and the parity-test program-sequence helper.
-//! `docs/ARCHITECTURE.md` records where each one went.
+//! contracts, telemetry counters, and the parity-test program-sequence
+//! helper.
 
 #[cfg(feature = "optimizer")]
 /// The encoder plus the passes that run the compiler against its own

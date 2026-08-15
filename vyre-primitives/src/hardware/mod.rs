@@ -11,7 +11,8 @@
 //! (single-round fused multiply-add), `inverse_sqrt_f32`.
 //!
 //! An op that composes over existing IR belongs in `vyre-libs`, not here.
-//! See `docs/lego-block-rule.md` for the Category A / Category C split.
+//! That is the split: a Category A op is a composition of existing IR, and a
+//! Category C op is an instruction no composition can synthesize.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::operation::{OperationRegistry, SemanticOperation};

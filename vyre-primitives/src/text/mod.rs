@@ -6,7 +6,8 @@
 //! wildcard re-exports; the subsystem exposes its sub-modules, not a
 //! flat namespace.
 //!
-//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md`.
+//! A builder lands in this directory once a second dialect needs it; a single
+//! dialect's helper stays with that dialect.
 
 /// 256-bin byte histogram over source bytes.
 pub mod byte_histogram;

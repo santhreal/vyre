@@ -4,7 +4,8 @@
 //! `vyre_primitives::matching::bracket_match::bracket_match(...)`  -
 //! explicit paths; no wildcard re-exports.
 //!
-//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md`.
+//! A builder lands in this directory once a second dialect needs it; a single
+//! dialect's helper stays with that dialect.
 
 /// Anchor-DFA plan shared by software and accelerator experiments.
 pub mod anchor_dfa;

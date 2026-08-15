@@ -1,5 +1,5 @@
-//! Region builder  -  mandatory wrap-every-body helper for every Category C
-//! hardware intrinsic. Spec: `docs/region-chain.md`.
+//! Region builder. Every Category C hardware intrinsic wraps its body in one
+//! of these, so the IR records which operation built which nodes.
 
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
@@ -7,7 +7,9 @@ use vyre_foundation::ir::Node;
 
 /// Wrap `body` in a `Node::Region` tagged with `generator`. If `source_region`
 /// is `Some`, it records the composition chain from caller to callee  -  the
-/// invariant every Cat-C intrinsic must uphold per `docs/region-chain.md`.
+/// invariant every Cat-C intrinsic must uphold: a body built by calling
+/// another operation's builder carries that operation's generator and a
+/// `source_region` naming the caller.
 #[must_use]
 pub fn wrap(generator: &str, body: Vec<Node>, source_region: Option<GeneratorRef>) -> Node {
     Node::Region {

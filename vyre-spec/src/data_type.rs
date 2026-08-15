@@ -204,8 +204,8 @@ pub enum DataType {
     /// The `ExtensionDataTypeId` is stable across process runs and
     /// resolves to a `&'static dyn ExtensionDataType` through the foundation
     /// extension registry.
-    /// Wire encoding of Opaque is `0x80 ++ u32 extension_id`  -  see
-    /// `docs/wire-format.md` §Extensions.
+    /// Wire encoding of Opaque is `0x80` followed by the u32 extension id in
+    /// little-endian order.
     ///
     /// The builtin const methods on `DataType` (`min_bytes`, `max_bytes`,
     /// `size_bytes`, `is_float_family`) return conservative sentinels for

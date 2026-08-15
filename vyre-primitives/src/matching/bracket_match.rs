@@ -6,8 +6,8 @@
 //! the bounded-stack single-lane fallback: overflow opens are deliberately
 //! ignored, so that stateful behavior is not replaced by an approximation.
 //!
-//! Migrated from `vyre-libs/src/parsing/bracket_match.rs` per
-//! `docs/lego-block-rule.md` Step 2 + `docs/lego-block-rule.md`.
+//! Migrated out of `vyre-libs/src/parsing/bracket_match.rs` once a second
+//! parser dialect needed it.
 //! Reused by every parser dialect that needs matched-brace detection
 //! (C, Rust, Go, Python f-string interpolation).
 
