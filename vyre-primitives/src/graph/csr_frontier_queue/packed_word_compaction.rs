@@ -1,7 +1,7 @@
 //! Packed-word frontier compaction: one lane per u32 frontier word, one atomic
 //! queue reservation per nonzero word.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

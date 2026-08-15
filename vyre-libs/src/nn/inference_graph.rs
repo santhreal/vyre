@@ -3,7 +3,7 @@
 //! Builds the forward pass as a sequence of [`Program`]s, one per layer type.
 //! Each Program is a Category-A composition over existing `vyre-libs` primitives.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::Program;
 
 use super::{

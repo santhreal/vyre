@@ -625,7 +625,7 @@ pub(crate) fn try_compose(a: &UnifiedEntry, b: &UnifiedEntry) -> Result<Composit
     // Reporting it here keeps the downstream assertion honest: a pair that
     // reaches the parity test and then fails validation really is a bug.
     let duplicates =
-        vyre_foundation::algebra::composition::duplicate_self_exclusive_regions(program.entry());
+        vyre_foundation::composition::duplicate_self_exclusive_regions(program.entry());
     if let Some(generator) = duplicates.first() {
         return Err(format!(
             "Fix: {} -> {} would place two copies of the self-exclusive region `{generator}` in one kernel. Give each instance distinct scratch storage, or run the two stages as separate dispatches.",

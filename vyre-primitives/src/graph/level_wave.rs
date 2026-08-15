@@ -42,7 +42,7 @@
 //! backends without native grid barriers can split the traversal into
 //! launch-separated depth waves.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,

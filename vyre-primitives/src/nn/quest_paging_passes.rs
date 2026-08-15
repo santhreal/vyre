@@ -5,7 +5,7 @@
 //! wrap the same bodies with `source_region` metadata instead of
 //! hiding multi-phase work in one monolithic op.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

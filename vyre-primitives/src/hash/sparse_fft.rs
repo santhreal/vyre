@@ -30,7 +30,7 @@
 //! supply permutation/filter policy while this file owns the reusable GPU
 //! binning and CPU parity contracts.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

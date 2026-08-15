@@ -27,7 +27,7 @@
 //! disconnected component; callers should run `reachable` first if they need
 //! strict guarantees.
 
-use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -36,7 +36,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 pub const OP_ID: &str = "vyre-primitives::graph::dominator_tree";
 // Phase boundaries inside the one operation, not operations of their own. The
 // `anonymous::` prefix is what says so: see
-// `vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES`.
+// `vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES`.
 const INIT_PHASE_GENERATOR: &str = "anonymous::dominator_tree_init_state";
 const DEPTH_PHASE_GENERATOR: &str = "anonymous::dominator_tree_recompute_depth";
 const INTERSECT_PHASE_GENERATOR: &str = "anonymous::dominator_tree_intersect_predecessors";

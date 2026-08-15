@@ -4,7 +4,7 @@
 //!
 //! Category A  -  broadcast mul. Recipe uses gain_init=5.25.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;

@@ -2,7 +2,7 @@
 //!
 //! Category A composition  -  residual stream addition.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;

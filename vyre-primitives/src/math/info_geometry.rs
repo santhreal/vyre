@@ -28,7 +28,7 @@
 //! | future `vyre-libs::ml::moe` | mixture-of-experts routing on the simplex |
 //! | future `vyre-libs::ml::calibration` | model calibration via natural distance |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

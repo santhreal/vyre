@@ -4,7 +4,7 @@
 //! score passes: walk `dk` from `0..d`, load `q[q_base + dk]` and
 //! `k[k_base + dk]`, and accumulate the product into `accum_var`.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

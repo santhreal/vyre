@@ -7,7 +7,7 @@
 
 use std::num::NonZeroU32;
 use std::sync::OnceLock;
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

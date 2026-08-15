@@ -7,7 +7,7 @@ use super::topk_selection::{
     copy_top_k_indices, init_top_k_slots, insert_top_k_candidate, BEST_IDXS, BEST_VALS,
 };
 use crate::region::wrap_anonymous;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a Program that finds the indices of the `k` largest elements in `input`.

@@ -4,7 +4,7 @@
 //! buffer is CSR-style: `offsets[i]..offsets[i+1]` is the range of
 //! `input` belonging to segment `i`.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

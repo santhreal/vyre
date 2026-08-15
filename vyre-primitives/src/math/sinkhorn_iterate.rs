@@ -4,7 +4,7 @@
 //! Composes `sinkhorn_scale` + `semiring_gemm` + a persistent fixpoint
 //! harness.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 #[cfg(test)]

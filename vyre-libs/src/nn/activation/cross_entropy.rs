@@ -3,7 +3,7 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 

@@ -69,7 +69,7 @@ impl std::fmt::Display for Semver {
 
 /// Typed attribute value carried in an [`AttrMap`].
 ///
-/// The tags match [`vyre_foundation::AttrType`] one-to-one so
+/// The tags match [`vyre_foundation::dialect_lookup::AttrType`] one-to-one so
 /// a migration can round-trip an attribute through the op's schema
 /// without losing type information.
 #[derive(Debug, Clone, PartialEq)]

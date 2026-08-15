@@ -41,7 +41,7 @@
 //! Implementation: lane 0 walks all candidates so tie-breaking and
 //! exclusion-mask semantics remain deterministic across backends.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

@@ -81,7 +81,7 @@
 //! `cpu_ref` (requires the `cpu-parity` feature) performs the same fixpoint iteration on host arrays and
 //! is the parity oracle for every GPU dispatch.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]

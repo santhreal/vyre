@@ -6,7 +6,7 @@
 //! 16.16 fixed-point row/column contraction. This module keeps that kernel in
 //! one place while callers retain their own validation language and op ids.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

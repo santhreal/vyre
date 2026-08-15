@@ -11,7 +11,7 @@
 //! is matrix multiplication with categorical intent carried in the
 //! stable op id.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};

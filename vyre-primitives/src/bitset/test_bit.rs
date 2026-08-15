@@ -1,7 +1,7 @@
 //! `bitset_test_bit`  -  scalar query: write 1 to `out_scalar` iff
 //! the bit at `bit_idx` of `buf` is set, else 0.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

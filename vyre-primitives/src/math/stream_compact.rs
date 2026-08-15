@@ -5,7 +5,7 @@
 //! `payloads[i]` into `compacted[offsets[i]]`; `live_count[0]` receives
 //! the final survivor count.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

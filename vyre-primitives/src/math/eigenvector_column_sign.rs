@@ -13,7 +13,7 @@
 //!
 //! [`EIGENVECTOR_SIGN_EPSILON`]: crate::math::eigenvector_column_sign::EIGENVECTOR_SIGN_EPSILON
 
-use vyre_foundation::algebra::composition::{
+use vyre_foundation::composition::{
     trap_program, wrap_anonymous_region, wrap_child_region,
 };
 

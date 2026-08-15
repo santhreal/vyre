@@ -47,7 +47,7 @@
 //! emit `Y_{k+1}`. The matrix product `Z_k Y_k` is the caller's job
 //! (one `semiring_gemm` dispatch per step).
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

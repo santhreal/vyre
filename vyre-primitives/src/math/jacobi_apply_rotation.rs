@@ -12,7 +12,7 @@
 //! loop-carried pivot variables while the standalone Program passes constants.
 //! The rotation is the operation; choosing the pivot is not part of it.
 
-use vyre_foundation::algebra::composition::{
+use vyre_foundation::composition::{
     trap_program, wrap_anonymous_region, wrap_child_region,
 };
 

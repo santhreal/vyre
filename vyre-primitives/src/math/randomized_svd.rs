@@ -31,7 +31,7 @@
 //! | future `vyre-libs::security::anomaly` | covariance-based anomaly detection |
 //! | `vyre-foundation::transform` dispatch compression | randomized SVD compresses huge low-rank dispatch dependency matrices for polyhedral fusion analysis at workspace scale |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

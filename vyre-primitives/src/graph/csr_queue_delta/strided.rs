@@ -1,6 +1,6 @@
 //! Row-strided queue-to-queue sparse CSR expansion.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{csr_queue_step_program, CsrQueueLanes};

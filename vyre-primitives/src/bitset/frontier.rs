@@ -1,7 +1,7 @@
 //! Packed-frontier bitset utilities and fused frontier absorption.
 
 use core::fmt;
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use crate::bitset::bitset_words;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};

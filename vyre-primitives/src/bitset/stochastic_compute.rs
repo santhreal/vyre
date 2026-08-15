@@ -9,7 +9,7 @@
 //! bitstream representations elementwise.
 
 use super::binary_word::{binary_word_program, BitwiseBinaryOp};
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.

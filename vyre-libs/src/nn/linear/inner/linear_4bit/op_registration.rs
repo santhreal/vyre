@@ -1,6 +1,6 @@
 //! Operation-catalog registrations for the INT4 linear builders.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::DataType;
 
 use super::affine_grouped::linear_4bit_affine_grouped;

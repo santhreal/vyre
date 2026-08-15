@@ -1,18 +1,10 @@
 #[non_exhaustive] #[repr(C)] pub struct vyre_foundation::match_result::ByteRange
-#[non_exhaustive] pub enum vyre_foundation::AttrType
-#[non_exhaustive] pub enum vyre_foundation::DataflowKind
-#[non_exhaustive] pub enum vyre_foundation::EdgeKind
-#[non_exhaustive] pub enum vyre_foundation::GraphValidateError
 #[non_exhaustive] pub enum vyre_foundation::IrError
 #[non_exhaustive] pub enum vyre_foundation::MemoryOrdering
-#[non_exhaustive] pub enum vyre_foundation::analysis::graph_view::DataflowKind
-#[non_exhaustive] pub enum vyre_foundation::analysis::graph_view::EdgeKind
-#[non_exhaustive] pub enum vyre_foundation::analysis::graph_view::GraphValidateError
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::DiagnosticStage
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::RetryClass
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::Severity
 #[non_exhaustive] pub enum vyre_foundation::dialect_lookup::AttrType
-#[non_exhaustive] pub enum vyre_foundation::dispatch::dialect_lookup::AttrType
 #[non_exhaustive] pub enum vyre_foundation::error::IrError
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::InnovationTrack
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionError
@@ -66,15 +58,7 @@
 #[non_exhaustive] pub enum vyre_foundation::validate::ValidationPhase
 #[non_exhaustive] pub enum vyre_foundation::validate::validation_error::ValidationLocation
 #[non_exhaustive] pub enum vyre_foundation::validate::validation_error::ValidationPhase
-#[non_exhaustive] pub struct vyre_foundation::AlgebraicLawRegistration
-#[non_exhaustive] pub struct vyre_foundation::DataEdge
-#[non_exhaustive] pub struct vyre_foundation::GraphNode
-#[non_exhaustive] pub struct vyre_foundation::NodeGraph
-#[non_exhaustive] pub struct vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration
 #[non_exhaustive] pub struct vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
-#[non_exhaustive] pub struct vyre_foundation::analysis::graph_view::DataEdge
-#[non_exhaustive] pub struct vyre_foundation::analysis::graph_view::GraphNode
-#[non_exhaustive] pub struct vyre_foundation::analysis::graph_view::NodeGraph
 #[non_exhaustive] pub struct vyre_foundation::graph_view::DataEdge
 #[non_exhaustive] pub struct vyre_foundation::graph_view::GraphNode
 #[non_exhaustive] pub struct vyre_foundation::graph_view::NodeGraph
@@ -120,8 +104,8 @@ impl core::default::Default for vyre_foundation::memory_model::MemoryOrdering
 impl core::default::Default for vyre_foundation::optimizer::PassScheduler
 impl core::default::Default for vyre_foundation::optimizer::ctx::AdapterCaps
 impl core::default::Default for vyre_foundation::optimizer::hot_path_hints::HotPathHints
-impl core::error::Error for vyre_foundation::analysis::graph_view::GraphValidateError
 impl core::error::Error for vyre_foundation::execution_plan::fusion::FusionError
+impl core::error::Error for vyre_foundation::graph_view::GraphValidateError
 impl core::error::Error for vyre_foundation::ir::EvalError
 impl core::error::Error for vyre_foundation::lower::LoweringError
 impl core::error::Error for vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
@@ -142,7 +126,6 @@ impl core::error::Error for vyre_foundation::vast::VastEditCorpusError
 impl core::fmt::Debug for vyre_foundation::ir::Ident
 impl core::fmt::Debug for vyre_foundation::optimizer::ctx::AnalysisCache
 impl core::fmt::Debug for vyre_foundation::optimizer::hot_path_hints::HotPathHints
-impl core::fmt::Display for vyre_foundation::analysis::graph_view::GraphValidateError
 impl core::fmt::Display for vyre_foundation::diagnostics::Diagnostic
 impl core::fmt::Display for vyre_foundation::diagnostics::DiagnosticCode
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionAliasingError
@@ -150,6 +133,7 @@ impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionOverDispatchError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::fmt::Display for vyre_foundation::graph_view::GraphValidateError
 impl core::fmt::Display for vyre_foundation::ir::EvalError
 impl core::fmt::Display for vyre_foundation::ir::Ident
 impl core::fmt::Display for vyre_foundation::lower::LoweringError
@@ -177,31 +161,31 @@ impl core::ops::bit::BitOrAssign for vyre_foundation::lower::effects::ProgramEff
 impl core::ops::deref::Deref for vyre_foundation::ir::Ident
 impl core::ops::drop::Drop for vyre_foundation::ir::ExprArena
 impl core::ops::drop::Drop for vyre_foundation::perf::SpanGuard
-impl inventory::Collect for vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration
-impl inventory::Collect for vyre_foundation::dispatch::extension::ExtensionAtomicOpRegistration
-impl inventory::Collect for vyre_foundation::dispatch::extension::ExtensionBinOpRegistration
-impl inventory::Collect for vyre_foundation::dispatch::extension::ExtensionDataTypeRegistration
-impl inventory::Collect for vyre_foundation::dispatch::extension::ExtensionUnOpRegistration
-impl inventory::Collect for vyre_foundation::dispatch::extension::OpaqueExprResolver
-impl inventory::Collect for vyre_foundation::dispatch::extension::OpaqueNodeResolver
+impl inventory::Collect for vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
+impl inventory::Collect for vyre_foundation::extension::ExtensionAtomicOpRegistration
+impl inventory::Collect for vyre_foundation::extension::ExtensionBinOpRegistration
+impl inventory::Collect for vyre_foundation::extension::ExtensionDataTypeRegistration
+impl inventory::Collect for vyre_foundation::extension::ExtensionUnOpRegistration
+impl inventory::Collect for vyre_foundation::extension::OpaqueExprResolver
+impl inventory::Collect for vyre_foundation::extension::OpaqueNodeResolver
 impl inventory::Collect for vyre_foundation::operation::OperationRegistration
 impl inventory::Collect for vyre_foundation::optimizer::ProgramPassRegistration
 impl inventory::Collect for vyre_foundation::transform::compiler::shader_provider::CompilerPrimitiveShader
 impl serde_core::ser::Serialize for vyre_foundation::operation::TargetId
-impl vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration
-impl vyre_foundation::analysis::graph_view::DataEdge
-impl vyre_foundation::analysis::graph_view::GraphNode
-impl vyre_foundation::analysis::graph_view::NodeGraph
+impl vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
 impl vyre_foundation::diagnostics::Diagnostic
 impl vyre_foundation::diagnostics::DiagnosticCode
 impl vyre_foundation::diagnostics::OpLocation
 impl vyre_foundation::diagnostics::Severity
-impl vyre_foundation::dispatch::dialect_lookup::Signature
+impl vyre_foundation::dialect_lookup::Signature
 impl vyre_foundation::error::IrError
 impl vyre_foundation::execution_plan::ExecutionPlan
 impl vyre_foundation::execution_plan::ReadbackStrategy
 impl vyre_foundation::execution_plan::SchedulingPolicy
 impl vyre_foundation::execution_plan::memory_budget::DeviceMemoryBudget
+impl vyre_foundation::graph_view::DataEdge
+impl vyre_foundation::graph_view::GraphNode
+impl vyre_foundation::graph_view::NodeGraph
 impl vyre_foundation::ir::BufferDecl
 impl vyre_foundation::ir::EvalError
 impl vyre_foundation::ir::Expr
@@ -387,14 +371,14 @@ impl<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> core::default::Default for vyre_foundation::optimizer::eqsat::EGraph<L>
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> vyre_foundation::optimizer::eqsat::EGraph<L>
 impl<L> vyre_foundation::optimizer::eqsat::Rule<L> for vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules where L: vyre_foundation::optimizer::eqsat::ENodeLang + vyre_foundation::optimizer::eqsat_toml::OpIdNode
-pub const fn vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration::new(op_id: &'static str, law: vyre_spec::algebraic_law::AlgebraicLaw) -> Self
+pub const fn vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration::new(op_id: &'static str, law: vyre_spec::algebraic_law::AlgebraicLaw) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_retry(self, retry: vyre_foundation::diagnostics::RetryClass) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_stage(self, stage: vyre_foundation::diagnostics::DiagnosticStage) -> Self
 pub const fn vyre_foundation::diagnostics::DiagnosticCode::new(code: &'static str) -> Self
 pub const fn vyre_foundation::diagnostics::OpLocation::with_graph_node(self, node: u32) -> Self
 pub const fn vyre_foundation::diagnostics::OpLocation::with_graph_value(self, value: u32) -> Self
 pub const fn vyre_foundation::diagnostics::Severity::label(self) -> &'static str
-pub const fn vyre_foundation::dispatch::dialect_lookup::Signature::bytes_extractor(inputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam], outputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam], attrs: &'static [vyre_foundation::dispatch::dialect_lookup::AttrSchema]) -> Self
+pub const fn vyre_foundation::dialect_lookup::Signature::bytes_extractor(inputs: &'static [vyre_foundation::dialect_lookup::TypedParam], outputs: &'static [vyre_foundation::dialect_lookup::TypedParam], attrs: &'static [vyre_foundation::dialect_lookup::AttrSchema]) -> Self
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::allow_fused_threads(&self, fused_threads: u64, max_arm_threads: u64) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::default_worker_count(&self) -> u32
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::default_worker_groups_from_limits(&self, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
@@ -437,7 +421,7 @@ pub const fn vyre_foundation::operation::OperationRegistration::primitive(id: &'
 pub const fn vyre_foundation::operation::OperationRegistration::tolerance(&self) -> u32
 pub const fn vyre_foundation::operation::OperationRegistration::with_category(self, category: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dispatch::dialect_lookup::Signature) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dialect_lookup::Signature) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_tolerance(self, tolerance: vyre_foundation::operation::TolerancePolicy) -> Self
 pub const fn vyre_foundation::operation::OperationTier::matrix_value(self) -> &'static str
 pub const fn vyre_foundation::operation::SemanticOperation::category(self) -> core::option::Option<&'static str>
@@ -485,8 +469,6 @@ pub const fn vyre_foundation::validate::validation_error::ValidationError::locat
 pub const fn vyre_foundation::validate::validation_error::ValidationError::phase(&self) -> vyre_foundation::validate::validation_error::ValidationPhase
 pub const fn vyre_foundation::validate::validation_error::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
 pub const fn vyre_foundation::validate::validation_error::ValidationPhase::as_str(self) -> &'static str
-pub const vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
-pub const vyre_foundation::algebra::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::fp_parity::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
@@ -722,20 +704,6 @@ pub enum vyre_foundation::visit::VisitOrder
 pub enum vyre_foundation::visit::expr::ExprBufferAccess
 pub fn alloc::string::String::from(err: vyre_foundation::serial::wire::encode::error::WireEncodeErr) -> alloc::string::String
 pub fn alloc::vec::Vec<u8>::from(writer: vyre_foundation::opaque_payload::endian::LeBytesWriter) -> Self
-pub fn vyre_foundation::algebra::algebraic_law_registry::has_law<F>(op_id: &str, predicate: F) -> bool where F: core::ops::function::Fn(&vyre_spec::algebraic_law::AlgebraicLaw) -> bool
-pub fn vyre_foundation::algebra::algebraic_law_registry::is_associative(op_id: &str) -> bool
-pub fn vyre_foundation::algebra::algebraic_law_registry::is_commutative(op_id: &str) -> bool
-pub fn vyre_foundation::algebra::algebraic_law_registry::laws_for_op(op_id: &str) -> &'static [&'static vyre_spec::algebraic_law::AlgebraicLaw]
-pub fn vyre_foundation::algebra::composition::duplicate_self_exclusive_regions(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<alloc::string::String>
-pub fn vyre_foundation::algebra::composition::is_anonymous_generator(generator: &str) -> bool
-pub fn vyre_foundation::algebra::composition::mark_self_exclusive_region(generator: &str) -> alloc::string::String
-pub fn vyre_foundation::algebra::composition::reparent_program_children(program: &vyre_foundation::ir::Program, parent_op_id: &str) -> alloc::vec::Vec<vyre_foundation::ir::Node>
-pub fn vyre_foundation::algebra::composition::self_exclusive_region_key(generator: &str) -> core::option::Option<&str>
-pub fn vyre_foundation::algebra::composition::tag_program(parent_op_id: &str, program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::algebra::composition::trap_program(op_id: &str, output: core::option::Option<(&str, vyre_spec::data_type::DataType)>, message: impl core::convert::Into<alloc::string::String>) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::algebra::composition::wrap_anonymous_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
-pub fn vyre_foundation::algebra::composition::wrap_child_region(generator: &str, parent: vyre_foundation::ir::model::expr::GeneratorRef, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
-pub fn vyre_foundation::algebra::composition::wrap_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>, source_region: core::option::Option<vyre_foundation::ir::model::expr::GeneratorRef>) -> vyre_foundation::ir::Node
 pub fn vyre_foundation::algebraic_law_registry::has_law<F>(op_id: &str, predicate: F) -> bool where F: core::ops::function::Fn(&vyre_spec::algebraic_law::AlgebraicLaw) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_associative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_commutative(op_id: &str) -> bool
@@ -747,20 +715,13 @@ pub fn vyre_foundation::allocation::try_reserve_hash_set_to_capacity<T, S>(set: 
 pub fn vyre_foundation::allocation::try_reserve_smallvec_to_capacity<A>(vec: &mut smallvec::SmallVec<A>, target_capacity: usize) -> core::result::Result<(), smallvec::CollectionAllocErr> where A: smallvec::Array
 pub fn vyre_foundation::allocation::try_reserve_string_to_capacity(string: &mut alloc::string::String, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_foundation::allocation::try_reserve_vec_to_capacity<T>(vec: &mut alloc::vec::Vec<T>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
-pub fn vyre_foundation::analysis::graph_view::DataEdge::new(from: u32, to: u32, kind: vyre_foundation::analysis::graph_view::EdgeKind) -> Self
-pub fn vyre_foundation::analysis::graph_view::GraphNode::new(id: u32, kind: vyre_foundation::analysis::graph_view::DataflowKind) -> Self
-pub fn vyre_foundation::analysis::graph_view::GraphValidateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::analysis::graph_view::NodeGraph::from_program(program: &vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::analysis::graph_view::NodeGraph::from_program_owned(program: vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::analysis::graph_view::NodeGraph::new(nodes: alloc::vec::Vec<vyre_foundation::analysis::graph_view::GraphNode>, edges: alloc::vec::Vec<vyre_foundation::analysis::graph_view::DataEdge>) -> Self
-pub fn vyre_foundation::analysis::graph_view::NodeGraph::try_into_program(self) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
-pub fn vyre_foundation::analysis::graph_view::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
-pub fn vyre_foundation::analysis::graph_view::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::analysis::graph_view::NodeGraph
 pub fn vyre_foundation::composition::duplicate_self_exclusive_regions(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_foundation::composition::is_anonymous_generator(generator: &str) -> bool
 pub fn vyre_foundation::composition::mark_self_exclusive_region(generator: &str) -> alloc::string::String
 pub fn vyre_foundation::composition::reparent_program_children(program: &vyre_foundation::ir::Program, parent_op_id: &str) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::composition::self_exclusive_region_key(generator: &str) -> core::option::Option<&str>
+pub fn vyre_foundation::composition::single_invocation(body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> alloc::vec::Vec<vyre_foundation::ir::Node>
+pub fn vyre_foundation::composition::single_invocation_region(op_id: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::composition::tag_program(parent_op_id: &str, program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::composition::trap_program(op_id: &str, output: core::option::Option<(&str, vyre_spec::data_type::DataType)>, message: impl core::convert::Into<alloc::string::String>) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::composition::wrap_anonymous_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
@@ -787,20 +748,6 @@ pub fn vyre_foundation::diagnostics::OpLocation::op(op_id: impl core::convert::I
 pub fn vyre_foundation::diagnostics::OpLocation::with_attr(self, name: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_operand(self, index: u32) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_path(self, path: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::dispatch::extension::RuleConditionExt::evaluate_opaque(&self, ctx: &dyn core::any::Any) -> bool
-pub fn vyre_foundation::dispatch::extension::RuleConditionExt::extension_id(&self) -> vyre_spec::extension::ExtensionRuleConditionId
-pub fn vyre_foundation::dispatch::extension::RuleConditionExt::required_buffers(&self) -> alloc::vec::Vec<vyre_foundation::ir::BufferDecl>
-pub fn vyre_foundation::dispatch::extension::RuleConditionExt::stable_fingerprint(&self) -> [u8; 32]
-pub fn vyre_foundation::dispatch::extension::decode_opaque_expr(kind: &str, payload: &[u8]) -> core::result::Result<vyre_foundation::ir::Expr, alloc::string::String>
-pub fn vyre_foundation::dispatch::extension::decode_opaque_node(kind: &str, payload: &[u8]) -> core::result::Result<vyre_foundation::ir::Node, alloc::string::String>
-pub fn vyre_foundation::dispatch::extension::resolve_atomic_op(id: vyre_spec::extension::ExtensionAtomicOpId) -> core::option::Option<&'static dyn vyre_spec::extension::ExtensionAtomicOp>
-pub fn vyre_foundation::dispatch::extension::resolve_bin_op(id: vyre_spec::extension::ExtensionBinOpId) -> core::option::Option<&'static dyn vyre_spec::extension::ExtensionBinOp>
-pub fn vyre_foundation::dispatch::extension::resolve_data_type(id: vyre_spec::extension::ExtensionDataTypeId) -> core::option::Option<&'static dyn vyre_spec::extension::ExtensionDataType>
-pub fn vyre_foundation::dispatch::extension::resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>
-pub fn vyre_foundation::dispatch::extension::try_resolve_atomic_op(id: vyre_spec::extension::ExtensionAtomicOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionAtomicOp>, alloc::string::String>
-pub fn vyre_foundation::dispatch::extension::try_resolve_bin_op(id: vyre_spec::extension::ExtensionBinOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionBinOp>, alloc::string::String>
-pub fn vyre_foundation::dispatch::extension::try_resolve_data_type(id: vyre_spec::extension::ExtensionDataTypeId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionDataType>, alloc::string::String>
-pub fn vyre_foundation::dispatch::extension::try_resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>, alloc::string::String>
 pub fn vyre_foundation::error::IrError::lowering(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::execution_plan::ExecutionPlan::track_active(&self, track: vyre_foundation::execution_plan::InnovationTrack) -> bool
 pub fn vyre_foundation::execution_plan::ReadbackStrategy::visible_bytes(&self) -> u64
@@ -835,6 +782,7 @@ pub fn vyre_foundation::extension::try_resolve_atomic_op(id: vyre_spec::extensio
 pub fn vyre_foundation::extension::try_resolve_bin_op(id: vyre_spec::extension::ExtensionBinOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionBinOp>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_data_type(id: vyre_spec::extension::ExtensionDataTypeId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionDataType>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>, alloc::string::String>
+pub fn vyre_foundation::fp_parity::canonical_f32(value: f32) -> f32
 pub fn vyre_foundation::fp_parity::compare_operation_outputs(op_id: &str, program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::effective_tolerance(op_id: &str, program: &vyre_foundation::ir::Program) -> u32
@@ -842,10 +790,15 @@ pub fn vyre_foundation::fp_parity::f32_buffer_matches(bytes_a: &[u8], bytes_b: &
 pub fn vyre_foundation::fp_parity::f32_ulp_tolerance(program: &vyre_foundation::ir::Program) -> u32
 pub fn vyre_foundation::fp_parity::max_output_ulp(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> core::option::Option<u32>
 pub fn vyre_foundation::fp_parity::ulp_distance(left: f32, right: f32) -> core::option::Option<u32>
-pub fn vyre_foundation::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
-pub fn vyre_foundation::graph_view::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
-pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::analysis::graph_view::NodeGraph
-pub fn vyre_foundation::has_law<F>(op_id: &str, predicate: F) -> bool where F: core::ops::function::Fn(&vyre_spec::algebraic_law::AlgebraicLaw) -> bool
+pub fn vyre_foundation::graph_view::DataEdge::new(from: u32, to: u32, kind: vyre_foundation::graph_view::EdgeKind) -> Self
+pub fn vyre_foundation::graph_view::GraphNode::new(id: u32, kind: vyre_foundation::graph_view::DataflowKind) -> Self
+pub fn vyre_foundation::graph_view::GraphValidateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::graph_view::NodeGraph::from_program(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::graph_view::NodeGraph::from_program_owned(program: vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::graph_view::NodeGraph::new(nodes: alloc::vec::Vec<vyre_foundation::graph_view::GraphNode>, edges: alloc::vec::Vec<vyre_foundation::graph_view::DataEdge>) -> Self
+pub fn vyre_foundation::graph_view::NodeGraph::try_into_program(self) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::graph_view::GraphValidateError>
+pub fn vyre_foundation::graph_view::from_graph(graph: vyre_foundation::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::graph_view::GraphValidateError>
+pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::graph_view::NodeGraph
 pub fn vyre_foundation::hashing::update_length_delimited_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8])
 pub fn vyre_foundation::ir::ArenaProgram<'a>::buffer(&self, name: &str) -> core::option::Option<&vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::ir::ArenaProgram<'a>::buffers(&self) -> &[vyre_foundation::ir::BufferDecl]
@@ -1215,9 +1168,6 @@ pub fn vyre_foundation::ir::model::program::Scope<K, V>::len(&self) -> usize
 pub fn vyre_foundation::ir::model::program::Scope<K, V>::new() -> Self
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
-pub fn vyre_foundation::is_associative(op_id: &str) -> bool
-pub fn vyre_foundation::is_commutative(op_id: &str) -> bool
-pub fn vyre_foundation::laws_for_op(op_id: &str) -> &'static [&'static vyre_spec::algebraic_law::AlgebraicLaw]
 pub fn vyre_foundation::lower::LoweringError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::lower::LoweringError::invalid(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::lower::LoweringError::message(&self) -> &str
@@ -2395,7 +2345,6 @@ pub fn vyre_foundation::serial::wire::framing::put_u8::put_u8(out: &mut alloc::v
 pub fn vyre_foundation::serial::wire::framing::wire_format_version_is_supported(version: u16) -> bool
 pub fn vyre_foundation::serial::wire::tags::data_type_tag(value: &vyre_spec::data_type::DataType) -> core::result::Result<u8, vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::tags::data_type_tag::data_type_tag(value: &vyre_spec::data_type::DataType) -> core::result::Result<u8, vyre_foundation::serial::wire::encode::error::WireEncodeErr>
-pub fn vyre_foundation::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::analysis::graph_view::NodeGraph
 pub fn vyre_foundation::transform::autodiff::error::AutodiffError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::transform::autodiff::grad(program: &vyre_foundation::ir::Program, outputs: &[&str], inputs: &[&str]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::transform::autodiff::error::AutodiffError>
 pub fn vyre_foundation::transform::autodiff::grad::grad(program: &vyre_foundation::ir::Program, outputs: &[&str], inputs: &[&str]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::transform::autodiff::error::AutodiffError>
@@ -2666,20 +2615,12 @@ pub fn vyre_foundation::visit::walk_expr_children_default<V: vyre_foundation::vi
 pub fn vyre_foundation::visit::walk_node_children_default<V: vyre_foundation::visit::traits::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::traits::NodeVisitor>::Break>
 pub macro vyre_foundation::rewrite_rules!
 pub mod vyre_foundation
-pub mod vyre_foundation::algebra
-pub mod vyre_foundation::algebra::algebraic_law_registry
-pub mod vyre_foundation::algebra::composition
 pub mod vyre_foundation::algebraic_law_registry
 pub mod vyre_foundation::allocation
-pub mod vyre_foundation::analysis
-pub mod vyre_foundation::analysis::graph_view
 pub mod vyre_foundation::composition
 pub mod vyre_foundation::cpu_op
 pub mod vyre_foundation::diagnostics
 pub mod vyre_foundation::dialect_lookup
-pub mod vyre_foundation::dispatch
-pub mod vyre_foundation::dispatch::dialect_lookup
-pub mod vyre_foundation::dispatch::extension
 pub mod vyre_foundation::error
 pub mod vyre_foundation::execution_plan
 pub mod vyre_foundation::execution_plan::fusion
@@ -2915,9 +2856,6 @@ pub mod vyre_foundation::visit
 pub mod vyre_foundation::visit::expr
 pub mod vyre_foundation::visit::node_map
 pub mod vyre_foundation::visit::traits
-pub struct vyre_foundation::AttrSchema
-pub struct vyre_foundation::Signature
-pub struct vyre_foundation::TypedParam
 pub struct vyre_foundation::diagnostics::Diagnostic
 pub struct vyre_foundation::diagnostics::DiagnosticCause
 pub struct vyre_foundation::diagnostics::DiagnosticCode(pub alloc::borrow::Cow<'static, str>)
@@ -2925,15 +2863,6 @@ pub struct vyre_foundation::diagnostics::OpLocation
 pub struct vyre_foundation::dialect_lookup::AttrSchema
 pub struct vyre_foundation::dialect_lookup::Signature
 pub struct vyre_foundation::dialect_lookup::TypedParam
-pub struct vyre_foundation::dispatch::dialect_lookup::AttrSchema
-pub struct vyre_foundation::dispatch::dialect_lookup::Signature
-pub struct vyre_foundation::dispatch::dialect_lookup::TypedParam
-pub struct vyre_foundation::dispatch::extension::ExtensionAtomicOpRegistration
-pub struct vyre_foundation::dispatch::extension::ExtensionBinOpRegistration
-pub struct vyre_foundation::dispatch::extension::ExtensionDataTypeRegistration
-pub struct vyre_foundation::dispatch::extension::ExtensionUnOpRegistration
-pub struct vyre_foundation::dispatch::extension::OpaqueExprResolver
-pub struct vyre_foundation::dispatch::extension::OpaqueNodeResolver
 pub struct vyre_foundation::execution_plan::AccuracyPlan
 pub struct vyre_foundation::execution_plan::AutotunePlan
 pub struct vyre_foundation::execution_plan::BufferPlan
@@ -3221,7 +3150,6 @@ pub struct vyre_foundation::vast::VastHeader
 pub struct vyre_foundation::vast::VastNode
 pub trait vyre_foundation::cpu_op::CategoryAOp
 pub trait vyre_foundation::cpu_op::CpuOp
-pub trait vyre_foundation::dispatch::extension::RuleConditionExt: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::extension::RuleConditionExt: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::ExprNode: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::NodeExtension: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
@@ -3248,8 +3176,6 @@ pub trait vyre_foundation::visit::traits::Evaluatable<Env: ?core::marker::Sized>
 pub trait vyre_foundation::visit::traits::Lowerable<Ctx: ?core::marker::Sized>
 pub trait vyre_foundation::visit::traits::NodeVisitor
 pub type vyre_foundation::IrResult<T, E> = core::result::Result<T, E>
-pub type vyre_foundation::dispatch::extension::ExprExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::ExprNode>, alloc::string::String>
-pub type vyre_foundation::dispatch::extension::NodeExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::NodeExtension>, alloc::string::String>
 pub type vyre_foundation::error::IrResult<T, E> = core::result::Result<T, E>
 pub type vyre_foundation::extension::ExprExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::ExprNode>, alloc::string::String>
 pub type vyre_foundation::extension::NodeExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::NodeExtension>, alloc::string::String>
@@ -3274,8 +3200,6 @@ pub type vyre_foundation::visit::NodeVisitor::Break
 pub type vyre_foundation::visit::expr::ExprVisitor::Break
 pub type vyre_foundation::visit::traits::Evaluatable::Value
 pub type vyre_foundation::visit::traits::NodeVisitor::Break
-pub use vyre_foundation::AlgebraicLaw
-pub use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLaw
 pub use vyre_foundation::algebraic_law_registry::AlgebraicLaw
 pub use vyre_foundation::cpu_op::CpuFn
 pub use vyre_foundation::ir::AtomicOp
@@ -3300,38 +3224,6 @@ pub use vyre_foundation::ir::model::spec_types::SubgroupReduceOp
 pub use vyre_foundation::ir::model::spec_types::UnOp
 pub use vyre_foundation::optimizer::vyre_pass
 pub use vyre_foundation::pass_substrate::dataflow_fixpoint::Semiring
-pub vyre_foundation::AlgebraicLawRegistration::law: vyre_spec::algebraic_law::AlgebraicLaw
-pub vyre_foundation::AlgebraicLawRegistration::op_id: &'static str
-pub vyre_foundation::AttrSchema::default: core::option::Option<&'static str>
-pub vyre_foundation::AttrSchema::name: &'static str
-pub vyre_foundation::AttrSchema::ty: vyre_foundation::dispatch::dialect_lookup::AttrType
-pub vyre_foundation::AttrType::Bool
-pub vyre_foundation::AttrType::Bytes
-pub vyre_foundation::AttrType::Enum(&'static [&'static str])
-pub vyre_foundation::AttrType::F32
-pub vyre_foundation::AttrType::I32
-pub vyre_foundation::AttrType::String
-pub vyre_foundation::AttrType::U32
-pub vyre_foundation::AttrType::Unknown
-pub vyre_foundation::DataEdge::from: u32
-pub vyre_foundation::DataEdge::kind: vyre_foundation::analysis::graph_view::EdgeKind
-pub vyre_foundation::DataEdge::to: u32
-pub vyre_foundation::DataflowKind::Barrier
-pub vyre_foundation::DataflowKind::Phi(alloc::vec::Vec<u32>)
-pub vyre_foundation::DataflowKind::Statement(vyre_foundation::ir::Node)
-pub vyre_foundation::EdgeKind::Control
-pub vyre_foundation::EdgeKind::Def
-pub vyre_foundation::EdgeKind::Def::name: vyre_foundation::ir::Ident
-pub vyre_foundation::EdgeKind::Ordering
-pub vyre_foundation::GraphNode::id: u32
-pub vyre_foundation::GraphNode::kind: vyre_foundation::analysis::graph_view::DataflowKind
-pub vyre_foundation::GraphValidateError::Cycle
-pub vyre_foundation::GraphValidateError::Cycle::path: alloc::vec::Vec<u32>
-pub vyre_foundation::GraphValidateError::DanglingEdge
-pub vyre_foundation::GraphValidateError::DanglingEdge::from: u32
-pub vyre_foundation::GraphValidateError::DanglingEdge::to: u32
-pub vyre_foundation::GraphValidateError::OrphanPhi
-pub vyre_foundation::GraphValidateError::OrphanPhi::node_id: u32
 pub vyre_foundation::IrError::InlineArgCountMismatch
 pub vyre_foundation::IrError::InlineArgCountMismatch::expected: usize
 pub vyre_foundation::IrError::InlineArgCountMismatch::got: usize
@@ -3368,43 +3260,8 @@ pub vyre_foundation::MemoryOrdering::GridSync
 pub vyre_foundation::MemoryOrdering::Relaxed
 pub vyre_foundation::MemoryOrdering::Release
 pub vyre_foundation::MemoryOrdering::SeqCst
-pub vyre_foundation::NodeGraph::buffers: alloc::vec::Vec<vyre_foundation::ir::BufferDecl>
-pub vyre_foundation::NodeGraph::edges: alloc::vec::Vec<vyre_foundation::analysis::graph_view::DataEdge>
-pub vyre_foundation::NodeGraph::nodes: alloc::vec::Vec<vyre_foundation::analysis::graph_view::GraphNode>
-pub vyre_foundation::NodeGraph::workgroup_size: [u32; 3]
-pub vyre_foundation::Signature::attrs: &'static [vyre_foundation::dispatch::dialect_lookup::AttrSchema]
-pub vyre_foundation::Signature::bytes_extraction: bool
-pub vyre_foundation::Signature::inputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam]
-pub vyre_foundation::Signature::outputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam]
-pub vyre_foundation::TypedParam::name: &'static str
-pub vyre_foundation::TypedParam::ty: &'static str
-pub vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration::law: vyre_spec::algebraic_law::AlgebraicLaw
-pub vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration::op_id: &'static str
 pub vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration::law: vyre_spec::algebraic_law::AlgebraicLaw
 pub vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration::op_id: &'static str
-pub vyre_foundation::analysis::graph_view::DataEdge::from: u32
-pub vyre_foundation::analysis::graph_view::DataEdge::kind: vyre_foundation::analysis::graph_view::EdgeKind
-pub vyre_foundation::analysis::graph_view::DataEdge::to: u32
-pub vyre_foundation::analysis::graph_view::DataflowKind::Barrier
-pub vyre_foundation::analysis::graph_view::DataflowKind::Phi(alloc::vec::Vec<u32>)
-pub vyre_foundation::analysis::graph_view::DataflowKind::Statement(vyre_foundation::ir::Node)
-pub vyre_foundation::analysis::graph_view::EdgeKind::Control
-pub vyre_foundation::analysis::graph_view::EdgeKind::Def
-pub vyre_foundation::analysis::graph_view::EdgeKind::Def::name: vyre_foundation::ir::Ident
-pub vyre_foundation::analysis::graph_view::EdgeKind::Ordering
-pub vyre_foundation::analysis::graph_view::GraphNode::id: u32
-pub vyre_foundation::analysis::graph_view::GraphNode::kind: vyre_foundation::analysis::graph_view::DataflowKind
-pub vyre_foundation::analysis::graph_view::GraphValidateError::Cycle
-pub vyre_foundation::analysis::graph_view::GraphValidateError::Cycle::path: alloc::vec::Vec<u32>
-pub vyre_foundation::analysis::graph_view::GraphValidateError::DanglingEdge
-pub vyre_foundation::analysis::graph_view::GraphValidateError::DanglingEdge::from: u32
-pub vyre_foundation::analysis::graph_view::GraphValidateError::DanglingEdge::to: u32
-pub vyre_foundation::analysis::graph_view::GraphValidateError::OrphanPhi
-pub vyre_foundation::analysis::graph_view::GraphValidateError::OrphanPhi::node_id: u32
-pub vyre_foundation::analysis::graph_view::NodeGraph::buffers: alloc::vec::Vec<vyre_foundation::ir::BufferDecl>
-pub vyre_foundation::analysis::graph_view::NodeGraph::edges: alloc::vec::Vec<vyre_foundation::analysis::graph_view::DataEdge>
-pub vyre_foundation::analysis::graph_view::NodeGraph::nodes: alloc::vec::Vec<vyre_foundation::analysis::graph_view::GraphNode>
-pub vyre_foundation::analysis::graph_view::NodeGraph::workgroup_size: [u32; 3]
 pub vyre_foundation::diagnostics::Diagnostic::cause: core::option::Option<vyre_foundation::diagnostics::DiagnosticCause>
 pub vyre_foundation::diagnostics::Diagnostic::code: vyre_foundation::diagnostics::DiagnosticCode
 pub vyre_foundation::diagnostics::Diagnostic::doc_url: core::option::Option<alloc::borrow::Cow<'static, str>>
@@ -3441,7 +3298,7 @@ pub vyre_foundation::diagnostics::Severity::Note
 pub vyre_foundation::diagnostics::Severity::Warning
 pub vyre_foundation::dialect_lookup::AttrSchema::default: core::option::Option<&'static str>
 pub vyre_foundation::dialect_lookup::AttrSchema::name: &'static str
-pub vyre_foundation::dialect_lookup::AttrSchema::ty: vyre_foundation::dispatch::dialect_lookup::AttrType
+pub vyre_foundation::dialect_lookup::AttrSchema::ty: vyre_foundation::dialect_lookup::AttrType
 pub vyre_foundation::dialect_lookup::AttrType::Bool
 pub vyre_foundation::dialect_lookup::AttrType::Bytes
 pub vyre_foundation::dialect_lookup::AttrType::Enum(&'static [&'static str])
@@ -3450,41 +3307,12 @@ pub vyre_foundation::dialect_lookup::AttrType::I32
 pub vyre_foundation::dialect_lookup::AttrType::String
 pub vyre_foundation::dialect_lookup::AttrType::U32
 pub vyre_foundation::dialect_lookup::AttrType::Unknown
-pub vyre_foundation::dialect_lookup::Signature::attrs: &'static [vyre_foundation::dispatch::dialect_lookup::AttrSchema]
+pub vyre_foundation::dialect_lookup::Signature::attrs: &'static [vyre_foundation::dialect_lookup::AttrSchema]
 pub vyre_foundation::dialect_lookup::Signature::bytes_extraction: bool
-pub vyre_foundation::dialect_lookup::Signature::inputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam]
-pub vyre_foundation::dialect_lookup::Signature::outputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam]
+pub vyre_foundation::dialect_lookup::Signature::inputs: &'static [vyre_foundation::dialect_lookup::TypedParam]
+pub vyre_foundation::dialect_lookup::Signature::outputs: &'static [vyre_foundation::dialect_lookup::TypedParam]
 pub vyre_foundation::dialect_lookup::TypedParam::name: &'static str
 pub vyre_foundation::dialect_lookup::TypedParam::ty: &'static str
-pub vyre_foundation::dispatch::dialect_lookup::AttrSchema::default: core::option::Option<&'static str>
-pub vyre_foundation::dispatch::dialect_lookup::AttrSchema::name: &'static str
-pub vyre_foundation::dispatch::dialect_lookup::AttrSchema::ty: vyre_foundation::dispatch::dialect_lookup::AttrType
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::Bool
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::Bytes
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::Enum(&'static [&'static str])
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::F32
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::I32
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::String
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::U32
-pub vyre_foundation::dispatch::dialect_lookup::AttrType::Unknown
-pub vyre_foundation::dispatch::dialect_lookup::Signature::attrs: &'static [vyre_foundation::dispatch::dialect_lookup::AttrSchema]
-pub vyre_foundation::dispatch::dialect_lookup::Signature::bytes_extraction: bool
-pub vyre_foundation::dispatch::dialect_lookup::Signature::inputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam]
-pub vyre_foundation::dispatch::dialect_lookup::Signature::outputs: &'static [vyre_foundation::dispatch::dialect_lookup::TypedParam]
-pub vyre_foundation::dispatch::dialect_lookup::TypedParam::name: &'static str
-pub vyre_foundation::dispatch::dialect_lookup::TypedParam::ty: &'static str
-pub vyre_foundation::dispatch::extension::ExtensionAtomicOpRegistration::id: vyre_spec::extension::ExtensionAtomicOpId
-pub vyre_foundation::dispatch::extension::ExtensionAtomicOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionAtomicOp
-pub vyre_foundation::dispatch::extension::ExtensionBinOpRegistration::id: vyre_spec::extension::ExtensionBinOpId
-pub vyre_foundation::dispatch::extension::ExtensionBinOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionBinOp
-pub vyre_foundation::dispatch::extension::ExtensionDataTypeRegistration::id: vyre_spec::extension::ExtensionDataTypeId
-pub vyre_foundation::dispatch::extension::ExtensionDataTypeRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionDataType
-pub vyre_foundation::dispatch::extension::ExtensionUnOpRegistration::id: vyre_spec::extension::ExtensionUnOpId
-pub vyre_foundation::dispatch::extension::ExtensionUnOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionUnOp
-pub vyre_foundation::dispatch::extension::OpaqueExprResolver::deserialize: vyre_foundation::dispatch::extension::ExprExtensionDeserializer
-pub vyre_foundation::dispatch::extension::OpaqueExprResolver::kind: &'static str
-pub vyre_foundation::dispatch::extension::OpaqueNodeResolver::deserialize: vyre_foundation::dispatch::extension::NodeExtensionDeserializer
-pub vyre_foundation::dispatch::extension::OpaqueNodeResolver::kind: &'static str
 pub vyre_foundation::error::IrError::InlineArgCountMismatch
 pub vyre_foundation::error::IrError::InlineArgCountMismatch::expected: usize
 pub vyre_foundation::error::IrError::InlineArgCountMismatch::got: usize
@@ -3657,14 +3485,14 @@ pub vyre_foundation::extension::ExtensionDataTypeRegistration::id: vyre_spec::ex
 pub vyre_foundation::extension::ExtensionDataTypeRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionDataType
 pub vyre_foundation::extension::ExtensionUnOpRegistration::id: vyre_spec::extension::ExtensionUnOpId
 pub vyre_foundation::extension::ExtensionUnOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionUnOp
-pub vyre_foundation::extension::OpaqueExprResolver::deserialize: vyre_foundation::dispatch::extension::ExprExtensionDeserializer
+pub vyre_foundation::extension::OpaqueExprResolver::deserialize: vyre_foundation::extension::ExprExtensionDeserializer
 pub vyre_foundation::extension::OpaqueExprResolver::kind: &'static str
-pub vyre_foundation::extension::OpaqueNodeResolver::deserialize: vyre_foundation::dispatch::extension::NodeExtensionDeserializer
+pub vyre_foundation::extension::OpaqueNodeResolver::deserialize: vyre_foundation::extension::NodeExtensionDeserializer
 pub vyre_foundation::extension::OpaqueNodeResolver::kind: &'static str
 pub vyre_foundation::fp_parity::BufferParity::Mismatch(alloc::string::String)
 pub vyre_foundation::fp_parity::BufferParity::Ok
 pub vyre_foundation::graph_view::DataEdge::from: u32
-pub vyre_foundation::graph_view::DataEdge::kind: vyre_foundation::analysis::graph_view::EdgeKind
+pub vyre_foundation::graph_view::DataEdge::kind: vyre_foundation::graph_view::EdgeKind
 pub vyre_foundation::graph_view::DataEdge::to: u32
 pub vyre_foundation::graph_view::DataflowKind::Barrier
 pub vyre_foundation::graph_view::DataflowKind::Phi(alloc::vec::Vec<u32>)
@@ -3674,7 +3502,7 @@ pub vyre_foundation::graph_view::EdgeKind::Def
 pub vyre_foundation::graph_view::EdgeKind::Def::name: vyre_foundation::ir::Ident
 pub vyre_foundation::graph_view::EdgeKind::Ordering
 pub vyre_foundation::graph_view::GraphNode::id: u32
-pub vyre_foundation::graph_view::GraphNode::kind: vyre_foundation::analysis::graph_view::DataflowKind
+pub vyre_foundation::graph_view::GraphNode::kind: vyre_foundation::graph_view::DataflowKind
 pub vyre_foundation::graph_view::GraphValidateError::Cycle
 pub vyre_foundation::graph_view::GraphValidateError::Cycle::path: alloc::vec::Vec<u32>
 pub vyre_foundation::graph_view::GraphValidateError::DanglingEdge
@@ -3683,8 +3511,8 @@ pub vyre_foundation::graph_view::GraphValidateError::DanglingEdge::to: u32
 pub vyre_foundation::graph_view::GraphValidateError::OrphanPhi
 pub vyre_foundation::graph_view::GraphValidateError::OrphanPhi::node_id: u32
 pub vyre_foundation::graph_view::NodeGraph::buffers: alloc::vec::Vec<vyre_foundation::ir::BufferDecl>
-pub vyre_foundation::graph_view::NodeGraph::edges: alloc::vec::Vec<vyre_foundation::analysis::graph_view::DataEdge>
-pub vyre_foundation::graph_view::NodeGraph::nodes: alloc::vec::Vec<vyre_foundation::analysis::graph_view::GraphNode>
+pub vyre_foundation::graph_view::NodeGraph::edges: alloc::vec::Vec<vyre_foundation::graph_view::DataEdge>
+pub vyre_foundation::graph_view::NodeGraph::nodes: alloc::vec::Vec<vyre_foundation::graph_view::GraphNode>
 pub vyre_foundation::graph_view::NodeGraph::workgroup_size: [u32; 3]
 pub vyre_foundation::ir::BufferDecl::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_foundation::ir::BufferDecl::binding: u32
@@ -4478,7 +4306,7 @@ pub vyre_foundation::operation::OperationRegistration::expected_output: core::op
 pub vyre_foundation::operation::OperationRegistration::id: &'static str
 pub vyre_foundation::operation::OperationRegistration::laws: &'static [&'static str]
 pub vyre_foundation::operation::OperationRegistration::semantic_version: u32
-pub vyre_foundation::operation::OperationRegistration::signature: core::option::Option<vyre_foundation::dispatch::dialect_lookup::Signature>
+pub vyre_foundation::operation::OperationRegistration::signature: core::option::Option<vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::OperationRegistration::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::OperationRegistration::tier: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::OperationRegistration::tolerance: vyre_foundation::operation::TolerancePolicy
@@ -4503,7 +4331,7 @@ pub vyre_foundation::operation::SemanticOperation::expected_output: core::option
 pub vyre_foundation::operation::SemanticOperation::id: &'static str
 pub vyre_foundation::operation::SemanticOperation::laws: &'static [&'static str]
 pub vyre_foundation::operation::SemanticOperation::semantic_version: u32
-pub vyre_foundation::operation::SemanticOperation::signature: core::option::Option<&'static vyre_foundation::dispatch::dialect_lookup::Signature>
+pub vyre_foundation::operation::SemanticOperation::signature: core::option::Option<&'static vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::SemanticOperation::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::SemanticOperation::tier: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::SemanticOperation::tolerance: vyre_foundation::operation::TolerancePolicy

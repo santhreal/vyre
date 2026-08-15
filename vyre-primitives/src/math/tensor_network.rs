@@ -15,7 +15,7 @@
 //! | future `vyre-libs::sci::quantum_chem` | quantum chemistry contraction |
 //! | `vyre-driver` megakernel scheduling | each Region in vyre's IR is a tensor; wires are buffer dependencies; optimal fusion = optimal contraction order |
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};

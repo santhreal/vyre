@@ -14,13 +14,13 @@
 //! `transform::visit` is still the one path a caller names.
 
 /// Per-variant `Node` decisions: nesting, scalar binding, operands, buffers.
-pub mod node;
+mod node;
 
 /// Per-variant `Expr` decisions: operands, buffer reference, sub-expression walks.
-pub mod expr;
+mod expr;
 
 /// Explicit-worklist traversals over nodes and expressions.
-pub mod walk;
+mod walk;
 
 #[cfg(test)]
 pub(crate) mod fixtures;

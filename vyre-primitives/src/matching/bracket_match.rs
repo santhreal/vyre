@@ -9,7 +9,7 @@
 //! Every parser dialect that needs matched-brace detection reaches this one
 //! kernel: C, Rust, Go, and Python f-string interpolation.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the Tier 2.5 primitive.

@@ -1,7 +1,7 @@
 //! Deterministic packed-frontier scatter: source-ordered queue materialization
 //! from per-word partials plus either a local block prefix or precomputed offsets.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

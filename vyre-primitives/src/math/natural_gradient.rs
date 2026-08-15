@@ -33,7 +33,7 @@
 //! Self-consumer is weak; revisit when optimizer-aware dispatch
 //! scheduling appears.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.

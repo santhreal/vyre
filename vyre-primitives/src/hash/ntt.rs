@@ -49,7 +49,7 @@
 //! Goldilocks-field NTT is a separate op because it requires a native
 //! 64-bit arithmetic schema rather than this module's u32 buffer ABI.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

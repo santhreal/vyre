@@ -11,7 +11,7 @@
 //! id. The CPU reference below shows the composition; the Program
 //! ships one pass.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

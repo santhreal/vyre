@@ -26,7 +26,7 @@
 //! | `vyre-libs::security::what_if` consumers | "would finding fire under fix X?" counterfactual analysis |
 //! | `vyre-foundation::transform` change-impact analysis | `do(rule_X)` on the rule dependency graph predicts which downstream Programs invalidate. Replaces ad-hoc cache-invalidation tracking with formal causal analysis. |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

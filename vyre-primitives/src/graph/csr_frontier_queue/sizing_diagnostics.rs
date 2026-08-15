@@ -2,7 +2,7 @@
 //! diagnostic emitted when a size cannot be represented.
 
 use std::fmt;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 
 use vyre_foundation::ir::{DataType, Program};
 

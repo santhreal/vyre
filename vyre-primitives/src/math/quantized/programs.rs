@@ -1,6 +1,6 @@
 //! IR program builders for packed INT4 quantized primitives.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use super::program_helpers::{
     i4_dot_accumulation_body, i4_matvec_scaled_body, signed_i4_nibble_expr,

@@ -2,7 +2,7 @@
 //!
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::nn::attention_passes::{

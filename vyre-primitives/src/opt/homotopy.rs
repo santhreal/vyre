@@ -31,7 +31,7 @@
 //! | future `vyre-libs::opt::milp_relax` | MILP continuous relaxation |
 //! | `vyre-runtime/src/megakernel/planner.rs` (#22 self-consumer) | **vyre's megakernel scheduler ILP** is solved by relaxing to a continuous family parameterized by `t ∈ [0, 1]` and following the homotopy path on GPU |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

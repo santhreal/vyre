@@ -60,7 +60,7 @@ pub const fn fnv1a32_update_byte(hash: u32, byte: u8) -> u32 {
     (hash ^ byte as u32).wrapping_mul(FNV1A32_PRIME)
 }
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id  -  the Tier 3 wrapper registers under this id.

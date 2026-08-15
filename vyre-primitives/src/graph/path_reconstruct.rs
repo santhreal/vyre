@@ -13,7 +13,7 @@
 //! and writes the path length into `path_len[0]`. Bounded by
 //! `max_depth` so a corrupt parent array cannot hang the GPU.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

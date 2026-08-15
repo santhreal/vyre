@@ -11,7 +11,7 @@ fn program_builds_without_panic() {
 
 #[test]
 fn program_exposes_chk_phases_as_child_regions() {
-    use vyre_foundation::algebra::composition::is_anonymous_generator;
+    use vyre_foundation::composition::is_anonymous_generator;
     use vyre_foundation::ir::Node;
 
     fn collect(nodes: &[Node], generators: &mut Vec<String>) {

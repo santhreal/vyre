@@ -8,7 +8,7 @@
 use crate::builder::{build_elementwise_unary, BuildOptions};
 use crate::region::wrap_anonymous;
 use crate::tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const JOIN_OP_ID: &str = "vyre-libs::math::algebra::join";

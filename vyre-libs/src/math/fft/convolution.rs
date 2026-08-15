@@ -6,7 +6,7 @@
 //! complex buffers `[re0, im0, re1, im1, ...]` with length `2 * n`.
 
 use std::sync::Arc;
-use vyre_foundation::algebra::composition::wrap_child_region;
+use vyre_foundation::composition::wrap_child_region;
 
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};

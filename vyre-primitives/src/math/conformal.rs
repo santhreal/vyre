@@ -28,7 +28,7 @@
 //! | future `vyre-libs::observability::regression` | bounded-error performance regression detection |
 //! | `vyre-driver` dispatch cost model | probabilistic circuits output intervals, not point estimates; conformal intervals on past dispatch latency feed megakernel scheduling as soft constraints |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

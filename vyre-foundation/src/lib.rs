@@ -107,25 +107,26 @@ pub mod program_caps;
 /// and the reference interpreter.
 pub(crate) mod scalar_ops;
 
-/// Operation schema and opaque IR extension surfaces.
-pub mod dispatch;
+/// Endian-agnostic memory ordering shared by atomics and fences.
+pub use memory_model::MemoryOrdering;
 
-/// Algebraic-laws surface (algebraic_law_registry, composition).
-pub mod algebra;
+/// Inventory-registered algebraic-law registry (`algebraic_law_registry::laws_for_op`).
+pub mod algebraic_law_registry;
 
-/// Static-analysis surface (graph_view).
-pub mod analysis;
+/// Region composition: region wrappers, program tagging, self-exclusive expansion.
+pub mod composition;
+
+/// Read-only adjacency view over a `Program` for analyses.
+pub mod graph_view;
+
+/// Callable operation signature types and identifier interning.
+pub mod dialect_lookup;
+
+/// Inventory-registered extension hooks (`OpaqueExprResolver`, `OpaqueNodeResolver`).
+pub mod extension;
 
 /// Substrate-neutral allocation reservation arithmetic shared by hot paths.
 pub mod allocation;
-
-pub use algebra::algebraic_law_registry;
-pub use algebra::algebraic_law_registry::{
-    has_law, is_associative, is_commutative, laws_for_op, AlgebraicLaw, AlgebraicLawRegistration,
-};
-pub use analysis::graph_view;
-pub use dispatch::dialect_lookup;
-pub use memory_model::MemoryOrdering;
 
 /// Endian-fixed encode/decode helpers for `Expr::Opaque` / `Node::Opaque` payloads.
 pub mod opaque_payload;
@@ -133,18 +134,10 @@ pub mod opaque_payload;
 /// Packed AST (VAST) wire layout plus host-side tree walks.
 pub mod vast;
 
-pub use analysis::graph_view::{
-    from_graph, to_graph, DataEdge, DataflowKind, EdgeKind, GraphNode, GraphValidateError,
-    NodeGraph,
-};
-pub use dispatch::dialect_lookup::{AttrSchema, AttrType, Signature, TypedParam};
-
 // The generated AST is owner-local; public consumers use `pub mod ir`.
 mod ir_inner {
     pub mod model;
 }
-pub use algebra::composition;
-pub use dispatch::extension;
 
 /// Deterministic field framing for content-addressed hashes.
 pub mod hashing;

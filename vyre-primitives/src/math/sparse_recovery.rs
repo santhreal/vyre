@@ -26,7 +26,7 @@
 //! | future `vyre-libs::ml::dictionary` | dictionary learning |
 //! | `vyre-foundation::transform` sparse-buffer compaction | when a Region's output is mostly zero, IHT picks the threshold that keeps the top-k non-zeros. The same primitive ships to user signal-recovery dialects. |
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Op id.

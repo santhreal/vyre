@@ -1,7 +1,7 @@
 //! Four-Russians dense traversal: source-byte tile shapes, the column
 //! transpose and LUT build feeding them, and the graph-level program.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::FOUR_RUSSIANS_DENSE_OP_ID;

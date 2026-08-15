@@ -3,7 +3,7 @@
 //! (e.g. component discovery, alias unification).
 
 use super::padded_u32_slice_fingerprint as csr_bidirectional_padded_slice_fingerprint;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::{DataType, Program};
 

@@ -15,7 +15,7 @@
 //!
 //! The queue length can exceed queue capacity to expose overflow pressure; the
 //! traversal consumes only the first `queue_capacity` entries.
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{

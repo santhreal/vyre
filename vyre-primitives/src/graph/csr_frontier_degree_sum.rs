@@ -21,7 +21,7 @@
 //! bottom of this file documents the contract; the parity harness runs
 //! both implementations on the same input.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, Expr, Node, Program};
 

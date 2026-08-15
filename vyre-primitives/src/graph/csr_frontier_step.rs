@@ -12,7 +12,7 @@
 //! direction is its argument because the row scan and the edge-kind filter are
 //! one walk, not two.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

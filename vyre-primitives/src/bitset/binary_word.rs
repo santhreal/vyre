@@ -4,7 +4,7 @@
 //! and buffer contracts, but the IR shape is intentionally centralized here so
 //! new bitset binary ops do not fork the same load/op/store kernel body.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

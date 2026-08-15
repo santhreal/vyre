@@ -19,7 +19,7 @@
 //! | future `vyre-libs::ml::training_dynamics` | training-dynamics-aware optimizers |
 //! | `vyre-foundation::transform` spectral scheduling | clip outlier eigenvalues in vyre's dispatch graph |
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Op id.

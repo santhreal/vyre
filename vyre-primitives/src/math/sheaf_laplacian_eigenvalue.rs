@@ -18,7 +18,7 @@
 //! fixed point on the GPU/IR path (`r`, `v`) and `f64` on the CPU reference path.
 
 use std::sync::Arc;
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

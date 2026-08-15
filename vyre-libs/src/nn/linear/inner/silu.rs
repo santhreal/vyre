@@ -16,7 +16,7 @@
 //! because the activation is element-wise and depends only on the
 //! per-output-row accumulator value.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::fused_activation::linear_fused_activation;

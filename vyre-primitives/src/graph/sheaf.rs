@@ -26,7 +26,7 @@
 //! | `vyre-libs::security::call_graph_sheaf` consumers | typed call-graph anomalies |
 //! | `vyre-foundation::transform` dispatch-sheaf analysis | vyre's dispatch graph is heterophilic; sheaf diffusion predicts where fusion fails |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

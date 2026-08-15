@@ -43,7 +43,7 @@
 //! semiring_gemm) so that region-chain audits show the M-Z projection
 //! intent at the call site.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.

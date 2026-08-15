@@ -9,7 +9,7 @@
 //! lookup table, emit the target-instance row. Composes with
 //! `level_wave_program` for whole-schema migration.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

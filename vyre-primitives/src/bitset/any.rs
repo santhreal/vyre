@@ -4,7 +4,7 @@
 //! ORs them, writes a boolean (0 or 1) to `out[0]`. Used by source-query dialect
 //! `exists` / `any(...)` aggregate lowerings.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

@@ -10,7 +10,7 @@
 //! correctly computed (the caller is responsible for that  -  usually
 //! via `vyre-libs::dataflow::ssa::compute_dominators`).
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

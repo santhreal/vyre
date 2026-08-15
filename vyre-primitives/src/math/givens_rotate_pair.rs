@@ -8,7 +8,7 @@
 //! stride between successive elements of a line, so they are one builder with
 //! two address parameters rather than three copies of a five-node loop.
 
-use vyre_foundation::algebra::composition::{
+use vyre_foundation::composition::{
     trap_program, wrap_anonymous_region, wrap_child_region,
 };
 

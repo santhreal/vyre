@@ -6,7 +6,7 @@
 //!
 //! Category A composition.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::unary::typed_sigmoid_gate_program;

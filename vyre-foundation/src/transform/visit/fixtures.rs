@@ -10,7 +10,7 @@
 //! better covered for having them, since `Expr::Call` is a node the walk
 //! descends into.
 
-use crate::algebra::composition::mark_self_exclusive_region;
+use crate::composition::mark_self_exclusive_region;
 use crate::ir::{
     AtomicOp, BinOp, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, Node,
     NodeExtension, Program, UnOp,

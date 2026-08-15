@@ -34,7 +34,7 @@
 //! | future `vyre-libs::sci::pde` | high-dim PDE state representation |
 //! | `vyre-foundation::transform` region compression | the Region tree is a tensor network; TT contraction order is the optimal fusion order for chain-shaped Region compositions |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

@@ -1,6 +1,6 @@
 //! VAST first-child / next-sibling tree traversal primitives.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::vast::{NODE_STRIDE_U32, SENTINEL};

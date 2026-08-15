@@ -4,7 +4,7 @@
 //! the primitive authority for the fused checksum body; higher-tier crates may
 //! rename buffers or stamp parent op ids, but should not rebuild this loop.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

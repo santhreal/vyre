@@ -1,6 +1,6 @@
 //! Workgroup-local OR reduction over a u32 scratch buffer.
 
-use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

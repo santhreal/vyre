@@ -12,7 +12,7 @@
 //! the conform harness cpu↔gpu bytecompare oracle.
 
 use std::collections::HashSet;
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;

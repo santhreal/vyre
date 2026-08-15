@@ -1,4 +1,4 @@
-use vyre_foundation::algebra::composition::wrap_child_region;
+use vyre_foundation::composition::wrap_child_region;
 
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{Expr, Node};

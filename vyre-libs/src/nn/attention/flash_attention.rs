@@ -47,7 +47,7 @@
 //! over `d` lanes lands on top of this substrate; the algorithmic
 //! correctness gate is the per-row reference.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::planner::plan_flash_attention_scalar;

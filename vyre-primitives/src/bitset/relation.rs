@@ -4,7 +4,7 @@
 //! per-word predicate into `out_scalar[0]` with atomic AND, and differ
 //! only in the predicate they apply per word.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;

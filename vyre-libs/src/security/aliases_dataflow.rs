@@ -28,7 +28,7 @@
 //! `fixpoint_iterations` config  -  the same path single-direction
 //! flows_to uses.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::Program;
 use vyre_foundation::ir::{BufferAccess, DataType};

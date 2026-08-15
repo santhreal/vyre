@@ -4,7 +4,7 @@
 //! text. Concrete drivers own target spelling; primitives own the backend-
 //! neutral algorithm.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

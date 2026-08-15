@@ -6,7 +6,7 @@
 //! pointer chasing for popcount math over coalesced words.
 
 use core::fmt;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 
 use crate::region::{wrap_anonymous, wrap_child};
 use vyre_foundation::ir::model::expr::GeneratorRef;

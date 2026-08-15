@@ -14,7 +14,7 @@
 //! | `vyre-libs::ml::probabilistic_logic` | neuro-symbolic systems |
 //! | `vyre-libs::security::policy_engine` | rule-conflict resolution as probabilistic logic |
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

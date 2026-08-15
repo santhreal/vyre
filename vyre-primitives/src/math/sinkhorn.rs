@@ -47,7 +47,7 @@
 //! near zero saturate to 1 to avoid divide-by-zero (callers tighten
 //! ε to control floor activation).
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Op id for the scaling-update primitive.

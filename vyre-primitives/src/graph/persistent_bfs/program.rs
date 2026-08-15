@@ -1,4 +1,4 @@
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use super::layout::{PersistentBfsBuffers, BATCH_OP_ID, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE};
 use crate::bitset::bitset_words;

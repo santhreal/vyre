@@ -6,7 +6,7 @@
 //!
 //! Algorithm: TT-SVD (Oseledets 2011).
 
-use vyre_foundation::algebra::composition::{
+use vyre_foundation::composition::{
     trap_program, wrap_anonymous_region, wrap_child_region,
 };
 

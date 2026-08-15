@@ -29,7 +29,7 @@
 //! round. The public builder accepts any `N` in `1..=1024` and pads
 //! the workgroup to the next power of two internally.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

@@ -12,7 +12,7 @@ use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS,
 };
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 /// Canonical op id.

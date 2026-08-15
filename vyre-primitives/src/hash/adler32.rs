@@ -6,7 +6,7 @@
 //! `input[i]` packs one byte per u32 slot in the low 8 bits; high bits are
 //! ignored by construction.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

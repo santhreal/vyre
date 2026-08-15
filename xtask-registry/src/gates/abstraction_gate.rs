@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 
 use vyre::ir::{Node, Program};
-use vyre_foundation::algebra::composition::is_anonymous_generator;
+use vyre_foundation::composition::is_anonymous_generator;
 use vyre_foundation::transform::visit::child_bodies;
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
@@ -251,7 +251,7 @@ mod tests {
     /// without arriving here.
     #[test]
     fn an_anonymous_child_is_not_an_unregistered_child() {
-        for prefix in vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES {
+        for prefix in vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES {
             let generator = format!("{prefix}vyre-libs::security::flows_to");
             let node = child(&generator, "vyre-libs::security::flows_to");
             let failures = findings(&node, &["vyre-libs::security::flows_to"]);
@@ -302,7 +302,7 @@ mod tests {
     /// wrapping its own body.
     #[test]
     fn an_anonymous_child_does_not_count_as_registered_composition() {
-        for prefix in vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES {
+        for prefix in vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES {
             let generator = format!("{prefix}vyre-libs::security::flows_to");
             let node = child(&generator, "vyre-libs::security::flows_to");
             let ids: BTreeSet<String> = ["vyre-libs::security::flows_to".to_string()].into();

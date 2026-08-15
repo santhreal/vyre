@@ -3,7 +3,7 @@
 //! Resident graph pipelines use this to clear scratch/output bitsets on device
 //! instead of uploading zero-filled host buffers every iteration.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

@@ -43,7 +43,7 @@
 //! The bitmask approach uses pure arithmetic  -  no branches, every lane
 //! does the same work, GPU throughput stays at peak.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

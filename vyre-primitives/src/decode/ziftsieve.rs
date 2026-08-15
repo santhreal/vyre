@@ -7,7 +7,7 @@
 //! accelerator backend, or a future persistent decode megakernel as long as they satisfy the same
 //! sequence-index contract.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

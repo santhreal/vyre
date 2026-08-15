@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use vyre::ir::{Node, Program};
-use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration;
+use vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration;
 use vyre_foundation::operation::classify_operation_id as classify_op_id;
 use xtask::gate::{Gate, GateCtx, GateError, Report};
 

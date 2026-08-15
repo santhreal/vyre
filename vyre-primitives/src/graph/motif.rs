@@ -4,7 +4,7 @@
 //! ProgramGraph CSR. If every requested motif edge exists, every
 //! endpoint participating in the motif is marked in the final witness.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use super::padded_u32_slice_fingerprint as motif_padded_slice_fingerprint;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};

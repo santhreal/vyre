@@ -15,7 +15,7 @@
 //! [`UTF8_INVALID`] at the offending byte. Valid bytes retain the
 //! shape code parser dialects need for downstream tokenization.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the registered Tier 3 wrapper.

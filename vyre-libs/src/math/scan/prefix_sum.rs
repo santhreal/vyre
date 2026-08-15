@@ -4,7 +4,7 @@
 //! workgroup scan for one-block inputs and the multi-block scan for larger
 //! buffers.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
 use vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;

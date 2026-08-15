@@ -10,7 +10,7 @@
 //! Used in the Parameter Golf submission pipeline after quantization
 //! and before Brotli-11 compression.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;

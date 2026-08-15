@@ -4,7 +4,7 @@
 //! Callers import the narrow module they need so region-chain audits can see
 //! which primitive owns the shared work.
 
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, Program};
 
 use crate::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;

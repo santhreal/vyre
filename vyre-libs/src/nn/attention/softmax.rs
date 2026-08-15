@@ -27,7 +27,7 @@ use crate::builder::{
 use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::region::wrap;
 use crate::tensor_ref::{TensorRef, TensorRefError};
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 

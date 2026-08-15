@@ -6,7 +6,7 @@
 //! replace branchy byte logic with coalesced table loads.
 
 use std::sync::LazyLock;
-use vyre_foundation::algebra::composition::wrap_anonymous_region;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

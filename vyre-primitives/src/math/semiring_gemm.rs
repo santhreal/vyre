@@ -42,7 +42,7 @@
 //! dense enum-specialized semiring GEMM over the seven well-known
 //! semirings.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 pub use vyre_spec::Semiring;
 

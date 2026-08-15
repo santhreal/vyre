@@ -1,7 +1,7 @@
 //! Deterministic packed-frontier prefix scan: per-word popcounts, per-block
 //! totals, and the in-place conversion of block totals into queue offsets.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;

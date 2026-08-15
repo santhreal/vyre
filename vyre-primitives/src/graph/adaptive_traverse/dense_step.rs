@@ -1,7 +1,7 @@
 //! Dense-bitmatrix traversal step: one destination node per lane, ORing its
 //! reverse-adjacency bitrow against the frontier.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

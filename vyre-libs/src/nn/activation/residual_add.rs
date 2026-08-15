@@ -1,6 +1,6 @@
 //! Element-wise residual-stream addition.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 use super::unary::typed_binary_activation_program;

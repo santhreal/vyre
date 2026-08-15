@@ -9,7 +9,7 @@
 //! an approximate root x of `f(x) ≡ 0 (mod p^k)` and the formal
 //! derivative `f'(x)`, return a refined root accurate `mod p^{2k}`.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

@@ -5,7 +5,7 @@
 //! sources, updates a resident accumulator bitset, and appends first-time
 //! discoveries directly into the next active queue.
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{

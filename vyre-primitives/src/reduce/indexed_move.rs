@@ -4,7 +4,7 @@
 //! element count, and move one u32 between `src` and `dst`. The mode
 //! only decides which side is indexed indirectly.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

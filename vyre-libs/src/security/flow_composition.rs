@@ -15,7 +15,7 @@
 //!   any_hit = bitset_any(hits)                (sink projection, optional)
 //! ```
 
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;

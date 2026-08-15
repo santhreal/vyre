@@ -45,7 +45,7 @@
 //! would force the prefix-sum to wait on the unpack inside the same
 //! warp's lifetime  -  strictly worse occupancy.
 
-use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
