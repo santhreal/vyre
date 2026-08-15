@@ -20,6 +20,8 @@ mod device_buffer;
 mod dispatch_config;
 mod dispatch_result;
 mod error;
+/// Generated catalog of the error and diagnostic codes this crate emits.
+pub mod error_catalog;
 mod forward;
 mod pending_dispatch;
 mod regex_accelerator;
