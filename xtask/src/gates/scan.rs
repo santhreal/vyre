@@ -494,6 +494,58 @@ pub fn is_comment(line: &str) -> bool {
     trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*')
 }
 
+/// The text with every string and char literal blanked, comments left intact.
+///
+/// A detector's own pattern table is source that contains every shape it looks
+/// for, so a rule that reads raw lines reports itself. Blanking literals removes
+/// that class without an exemption naming the detector. Comments stay because
+/// several rules read prose, and the span walk belongs to
+/// `structure_gate::opaque_span`, which is the one owner of what is not code.
+///
+/// Byte length and line structure are preserved, so a line number taken from the
+/// masked text names the same line in the file.
+#[must_use]
+pub fn mask_literals(text: &str) -> String {
+    let mut masked = String::with_capacity(text.len());
+    let mut at = 0;
+    while at < text.len() {
+        if !text.is_char_boundary(at) {
+            at += 1;
+            continue;
+        }
+        match structure_gate::opaque_span(text, at) {
+            Some(span) if span > 0 => {
+                let mut end = (at + span).min(text.len());
+                while end < text.len() && !text.is_char_boundary(end) {
+                    end += 1;
+                }
+                let piece = &text[at..end];
+                if piece.starts_with("//") || piece.starts_with("/*") {
+                    masked.push_str(piece);
+                } else {
+                    for character in piece.chars() {
+                        if character == '\n' {
+                            masked.push('\n');
+                        } else {
+                            // One space per byte, so a masked offset still names its own line.
+                            for _ in 0..character.len_utf8() {
+                                masked.push(' ');
+                            }
+                        }
+                    }
+                }
+                at = end;
+            }
+            _ => {
+                let character = text[at..].chars().next().unwrap_or(' ');
+                masked.push(character);
+                at += character.len_utf8();
+            }
+        }
+    }
+    masked
+}
+
 /// Whether a repository-relative path sits at or under a root.
 #[must_use]
 pub fn under(path: &Path, root: &str) -> bool {
