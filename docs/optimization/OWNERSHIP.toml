@@ -308,9 +308,6 @@ write = [
   "scripts/**",
   "release/evidence/**",
 ]
-avoid = [
-  "BACKLOG.md",
-]
 required_commands = [
   "cargo_full test -p vyre-foundation wire",
   "cargo_full test -p vyre-driver -p vyre-runtime",
