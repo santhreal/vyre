@@ -3,10 +3,9 @@
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-mod graph_sweep_support;
-use graph_sweep_support::bitset_words;
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
+mod graph_sweep_support;
 
 use vyre_primitives::graph::persistent_bfs;
 
