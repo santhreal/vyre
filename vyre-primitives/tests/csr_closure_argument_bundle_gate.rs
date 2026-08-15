@@ -24,6 +24,7 @@
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
+use vyre_test_support::collect_rust_files;
 use vyre_test_support::monorepo::vyre_crate_directory;
 
 /// A parameter as declared: name with any `mut` binding mode stripped, and the
@@ -90,6 +91,7 @@ fn graph_source_files() -> Vec<PathBuf> {
     );
     let mut files = Vec::new();
     collect_rust_files(&root, &mut files);
+    files.retain(|path| !holds_test_code(path));
     files.sort();
     assert!(
         !files.is_empty(),
@@ -99,28 +101,14 @@ fn graph_source_files() -> Vec<PathBuf> {
     files
 }
 
-fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let entries = std::fs::read_dir(dir)
-        .unwrap_or_else(|err| panic!("Fix: CSR closure gate cannot read {}: {err}", dir.display()));
-    for entry in entries {
-        let entry = entry.unwrap_or_else(|err| {
-            panic!(
-                "Fix: CSR closure gate cannot read an entry under {}: {err}",
-                dir.display()
-            )
-        });
-        let path = entry.path();
-        if path.is_dir() {
-            if path.file_name().is_some_and(|name| name == "tests") {
-                continue;
-            }
-            collect_rust_files(&path, out);
-        } else if path.extension().is_some_and(|ext| ext == "rs")
-            && path.file_stem().is_some_and(|stem| stem != "tests")
-        {
-            out.push(path);
-        }
-    }
+/// Whether a walked path holds test code rather than a production signature.
+///
+/// A `tests` directory and a `tests.rs` file are the two shapes this tree uses
+/// for a module's tests, and neither declares a contract a call site must match.
+fn holds_test_code(path: &Path) -> bool {
+    path.components()
+        .any(|component| component.as_os_str() == "tests")
+        || path.file_stem().is_some_and(|stem| stem == "tests")
 }
 
 /// Blank out line comments, block comments and string literals so a `fn` inside

@@ -34,12 +34,12 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{
     BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, NodeExtension, Program,
     NODE_VARIANT_NAMES,
 };
 use vyre_foundation::visit::node_shape;
-use vyre_foundation::ir::MemoryOrdering;
 
 /// One `Node` fixture together with what was planted in it.
 #[derive(Debug, Clone)]

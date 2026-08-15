@@ -408,15 +408,29 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
 /// duplicated this one exactly.
 ///
 /// # Panics
-/// Panics when a directory entry is unreadable. A closure gate enumerates source
-/// text, so skipping an unreadable file would quietly shrink the set it proves
-/// and weaken the gate.
+/// Panics when `dir` exists but cannot be read, or when an entry under it cannot
+/// be read. A source-derived gate enumerates this set to decide what it proves,
+/// so a skipped file would shrink that set in silence and weaken the gate instead
+/// of failing it. A directory that does not exist is not a shrink: a crate with no
+/// `tests/` directory contributes no test sources, and that walk yields nothing.
 pub fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return,
+        Err(error) => panic!(
+            "cannot enumerate `{}`: {error}. Fix: restore read permission on the directory so the gate proves every source file under it.",
+            dir.display()
+        ),
     };
     for entry in entries {
-        let path = entry.expect("source entry must be readable").path();
+        let path = entry
+            .unwrap_or_else(|error| {
+                panic!(
+                    "cannot read an entry under `{}`: {error}. Fix: restore read permission on that entry so the gate proves every source file under it.",
+                    dir.display()
+                )
+            })
+            .path();
         if path.is_dir() {
             collect_rust_files(&path, out);
         } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
