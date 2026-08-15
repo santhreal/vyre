@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Public-API stability gate.
 #
-# Uses rustdoc through `cargo_full public-api` to snapshot the externally reachable
+# Uses rustdoc through `./cargo_full public-api` to snapshot the externally reachable
 # API of every publishable workspace crate, including modules and reexports,
 # then diffs it against docs/public-api/<package>.txt.
 #

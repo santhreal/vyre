@@ -509,7 +509,7 @@ def render_ownership(records: list[CrateRecord]) -> str:
             "1. Change the manifest and `docs/CRATE_OWNERSHIP.toml` together.",
             "2. Run `python3 scripts/crate_ownership.py --write`.",
             "3. Add a public import migration test when a public edge changes.",
-            "4. Run `cargo_full run --bin xtask -- check-tier-deps` and `lego-audit`.",
+            "4. Run `./cargo_full run --bin xtask -- check-tier-deps` and `lego-audit`.",
             "",
         ]
     )

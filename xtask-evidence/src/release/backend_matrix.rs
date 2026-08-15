@@ -400,7 +400,7 @@ fn audit_recorded_matrix(workspace_root: &Path, scan: &SourceScan, inspection: &
             inspection.blocked(
                 ARTIFACT,
                 format!("the backend matrix could not be read: {error}"),
-                "Run `cargo_full run --bin xtask -- backend-matrix --write` on a release host \
+                "Run `./cargo_full run --bin xtask -- backend-matrix --write` on a release host \
                  and commit the artifact.",
             );
             return;
@@ -479,7 +479,7 @@ fn compare_recorded_field(
         inspection.blocked(
             ARTIFACT,
             format!("`{field}` in the artifact is not what the current tree produces"),
-            "Run `cargo_full run --bin xtask -- backend-matrix --write` and commit the artifact. \
+            "Run `./cargo_full run --bin xtask -- backend-matrix --write` and commit the artifact. \
              This field is read from source, so it is stale rather than host-specific.",
         );
     }

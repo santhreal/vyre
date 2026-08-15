@@ -360,7 +360,7 @@ fn compare_artifact(root: &Path, gate: &str, artifact: &Generated) -> Vec<Findin
                     artifact.path.display()
                 ),
                 format!(
-                    "Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact."
+                    "Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact."
                 ),
             )];
         }
@@ -377,7 +377,7 @@ fn compare_artifact(root: &Path, gate: &str, artifact: &Generated) -> Vec<Findin
 /// Judge the fingerprint the committed artifact carries, if it carries one.
 fn provenance_findings(gate: &str, path: &Path, fingerprint: Option<&str>) -> Vec<Finding> {
     let fix =
-        format!("Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact.");
+        format!("Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact.");
     let Some(fingerprint) = fingerprint else {
         return vec![Finding::in_file(
             path.to_path_buf(),
@@ -415,7 +415,7 @@ pub fn divergences(gate: &str, path: &Path, committed: &str, generated: &str) ->
         return Vec::new();
     }
     let fix = format!(
-        "Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact, or correct the tree fact the line reports."
+        "Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact, or correct the tree fact the line reports."
     );
     let committed_lines: Vec<&str> = committed.lines().collect();
     let generated_lines: Vec<&str> = generated.lines().collect();

@@ -88,7 +88,7 @@ fn judge(evidence_dir: &Path) -> Report {
             Err(message) => report.find(Finding::in_file(
                 evidence_dir.join("bench-release-axes.json"),
                 message,
-                "Rerun `cargo_full run --bin xtask -- release-benchmarks --backend cuda` on a \
+                "Rerun `./cargo_full run --bin xtask -- release-benchmarks --backend cuda` on a \
                  release host so the axis is recorded with the run that measured it.",
             )),
         }
@@ -111,11 +111,8 @@ enum AxisKind {
 
 /// One axis's recorded value, or why it cannot be quoted.
 fn axis_value(axes: &Value, axis: &str, kind: AxisKind) -> Result<String, String> {
-    let raw = json_axis_text(axes, axis).ok_or_else(|| {
-        format!(
-            "canonical bench-release axes are missing `{axis}`"
-        )
-    })?;
+    let raw = json_axis_text(axes, axis)
+        .ok_or_else(|| format!("canonical bench-release axes are missing `{axis}`"))?;
     let parsed = match kind {
         AxisKind::Float => raw.parse::<f64>().is_ok(),
         AxisKind::U32 => raw.parse::<u32>().is_ok(),
@@ -190,7 +187,7 @@ fn read_json_report(path: &Path, label: &str, report: &mut Report) -> Option<Val
             report.find(Finding::in_file(
                 path.to_path_buf(),
                 format!("cannot read {label}: {error}"),
-                "Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` on a \
+                "Run `./cargo_full run --bin xtask -- release-benchmarks --backend cuda` on a \
                  release host and commit the artifact.",
             ));
             return None;
@@ -545,8 +542,8 @@ mod tests {
         )
         .expect("Fix: write drifted temporary release axes.");
 
-        let error = axes_findings(&benchmark_dir)
-            .expect("Fix: drifted release axes must not load.");
+        let error =
+            axes_findings(&benchmark_dir).expect("Fix: drifted release axes must not load.");
 
         assert!(
             error.contains("gbs_scan_throughput=999 does not match source artifacts 4"),

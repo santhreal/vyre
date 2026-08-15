@@ -36,8 +36,8 @@ each spelling against its backend.
 1. Implement `kernel.rs` with the backend behavior described above.
 2. Verify `lowering/wgsl.rs` matches the WGSL operator spellings used
    by `kernel.rs`.
-3. Run `cargo_full build`.
-4. Run `cargo_full run -p vyre certify {id}`.
+3. Run `./cargo_full build`.
+4. Run `./cargo_full run -p vyre certify {id}`.
 "#
     )
 }

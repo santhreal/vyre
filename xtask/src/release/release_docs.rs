@@ -114,7 +114,7 @@ impl Gate for ReleaseDocs {
                 report.find(Finding::in_file(
                     path,
                     "the generated release content disagrees with the fragments and the train",
-                    "regenerate it with `cargo_full run --bin xtask -- release-docs --write`; \
+                    "regenerate it with `./cargo_full run --bin xtask -- release-docs --write`; \
                      never hand-edit a generated release document",
                 ));
             }

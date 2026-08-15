@@ -68,7 +68,7 @@ const REQUIRED: [&str; 9] = [
 ];
 /// How to regenerate what this gate owns.
 const REGENERATE: &str =
-    "regenerate the README sections with `cargo_full run --bin xtask -- cli-docs --write`";
+    "regenerate the README sections with `./cargo_full run --bin xtask -- cli-docs --write`";
 
 /// One `[[binary]]` row of the manifest.
 struct Binary {

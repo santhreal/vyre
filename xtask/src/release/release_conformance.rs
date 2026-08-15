@@ -175,7 +175,7 @@ fn audit(workspace_root: &Path, config: &Config) -> Inspection {
                 inspection.blocked(
                     artifact,
                     format!("{backend_id} conformance evidence could not be read: {error}"),
-                    "Run `cargo_full run --bin xtask -- release-conformance --backend \
+                    "Run `./cargo_full run --bin xtask -- release-conformance --backend \
                      <backend> --write` on a host with that device and commit the artifact.",
                 );
                 continue;
@@ -238,7 +238,7 @@ fn audit_release_log(workspace_root: &Path, inspection: &mut Inspection) {
             inspection.blocked(
                 RELEASE_LOG,
                 format!("the release conformance log could not be read: {error}"),
-                "Run `cargo_full run --bin xtask -- release-conformance --backend all --write` \
+                "Run `./cargo_full run --bin xtask -- release-conformance --backend all --write` \
                  and commit the log.",
             );
             return;

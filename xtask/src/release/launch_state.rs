@@ -161,7 +161,7 @@ fn prepublish_gate_status(
         inspection.blocked(
             ARTIFACT,
             format!("prepublish gate `{gate}` has written no `{artifact}`"),
-            format!("Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact."),
+            format!("Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact."),
         );
         return "missing";
     };
@@ -169,7 +169,7 @@ fn prepublish_gate_status(
         inspection.blocked(
             ARTIFACT,
             format!("prepublish gate artifact `{artifact}` is not valid JSON"),
-            format!("Run `cargo_full run --bin xtask -- {gate} --write` to rewrite it."),
+            format!("Run `./cargo_full run --bin xtask -- {gate} --write` to rewrite it."),
         );
         return "unreadable";
     };
@@ -183,7 +183,7 @@ fn prepublish_gate_status(
     inspection.blocked(
         ARTIFACT,
         format!("prepublish gate `{gate}` recorded {blockers} blocker(s) in `{artifact}`"),
-        format!("Run `cargo_full run --bin xtask -- {gate}` and clear what it reports."),
+        format!("Run `./cargo_full run --bin xtask -- {gate}` and clear what it reports."),
     );
     "blocked"
 }

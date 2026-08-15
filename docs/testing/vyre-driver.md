@@ -73,6 +73,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `reference_oracle_loses_to_a_device` | `vyre-driver/tests/reference_oracle_loses_to_a_device.rs` | None | `./cargo_full test -p vyre-driver --test reference_oracle_loses_to_a_device` |
 | `test` | `registry_closure` | `vyre-driver/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-driver --test registry_closure` |
 | `test` | `release_publication_boundary` | `vyre-driver/tests/release_publication_boundary.rs` | None | `./cargo_full test -p vyre-driver --test release_publication_boundary` |
+| `test` | `resident_binding_projection` | `vyre-driver/tests/resident_binding_projection.rs` | None | `./cargo_full test -p vyre-driver --test resident_binding_projection` |
 | `test` | `routing_registry_surface` | `vyre-driver/tests/routing_registry_surface.rs` | None | `./cargo_full test -p vyre-driver --test routing_registry_surface` |
 | `test` | `runtime_watchdog_proofs` | `vyre-driver/tests/runtime_watchdog_proofs.rs` | None | `./cargo_full test -p vyre-driver --test runtime_watchdog_proofs` |
 | `test` | `scan_graph_update_classifier_registry` | `vyre-driver/tests/scan_graph_update_classifier_registry.rs` | None | `./cargo_full test -p vyre-driver --test scan_graph_update_classifier_registry` |

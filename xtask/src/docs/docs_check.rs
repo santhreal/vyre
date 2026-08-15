@@ -91,7 +91,7 @@ const ACTIVE_STATUSES: [&str; 2] = ["current", "generated"];
 /// of how work here is produced.
 const EXTERNAL_AUDIENCES: [&str; 2] = ["extension", "user"];
 /// How to regenerate what this gate owns.
-const REGENERATE: &str = "regenerate the navigation with `cargo_full run --bin xtask -- docs-check --write`";
+const REGENERATE: &str = "regenerate the navigation with `./cargo_full run --bin xtask -- docs-check --write`";
 
 /// One `[[page]]` row of the manifest.
 struct Page {

@@ -150,7 +150,7 @@ The `CompetitorRun` trait in `src/api/competitor.rs` enables side-by-side A/B co
 1. Create `src/cases/<workload>.rs` implementing `BenchCase`
 2. Add `inventory::submit! { &MyWorkload as &'static dyn BenchCase }` at the bottom
 3. Register in `src/cases/mod.rs`
-4. Run `cargo_full test -p vyre-bench` to verify integration
+4. Run `./cargo_full test -p vyre-bench` to verify integration
 5. Add the competitor entry to `competitors.toml` if applicable
 
 ## Release evidence
@@ -241,7 +241,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 ### Boundaries
 
 The `benchmarks` owner maintains this `tooling` crate at `vyre-bench`.
-Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

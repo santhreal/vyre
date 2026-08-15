@@ -618,9 +618,8 @@ fn read_scan_conformance_matrix(
             findings.push(ScanConformanceFinding {
                 semantics: semantics.clone(),
                 engine: None,
-                issue:
-                    "missing evidence_path. Fix: point at the source that judges this row."
-                        .to_string(),
+                issue: "missing evidence_path. Fix: point at the source that judges this row."
+                    .to_string(),
             });
         } else {
             match read_text_bounded(&vyre_root.join(evidence_path)) {
@@ -656,11 +655,7 @@ fn read_scan_conformance_matrix(
                 ),
             });
         } else if code != matrix.no_refusal_code && !live_codes.contains(code) {
-            let known = live_codes
-                .iter()
-                .copied()
-                .collect::<Vec<_>>()
-                .join(", ");
+            let known = live_codes.iter().copied().collect::<Vec<_>>().join(", ");
             findings.push(ScanConformanceFinding {
                 semantics: semantics.clone(),
                 engine: None,
@@ -824,7 +819,7 @@ fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
         eprintln!("  - {line}");
     }
     eprintln!(
-        "Fix: run `cargo_full run --bin xtask -- conformance-matrix --output {}`, commit, then re-run --check.",
+        "Fix: run `./cargo_full run --bin xtask -- conformance-matrix --output {}`, commit, then re-run --check.",
         output.display()
     );
     std::process::exit(1);

@@ -2739,6 +2739,28 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   release. The two lists of files that own a rule are named once and a test
   requires every row to resolve, after two rows had outlived the tree they
   named.
+- The operation-schema contract tests read the validator's report. A delegated
+  gate binary returns findings as JSON and exits zero, because the dispatcher
+  treats a non-zero exit as a gate that could not run, so eleven mutation tests
+  asserting a non-zero exit could never fail and passed against a committed
+  schema that already disagreed with the live registry. The schema is
+  regenerated from the 359 live registrations.
+- The one-public-path gate reads the crate source to tell an item at two paths
+  from a name several sibling modules each declare. A snapshot line is
+  identical for both, so a terminal id table per grammar, a per-op identifier
+  and a lint entry point named for the scan it runs all read as one item
+  published four ways, and a quarter of the measured count could not be closed
+  by deleting anything. A name the crate declares twice is two items; only a
+  name declared at most once can be one item at two paths. The count of shared
+  names is reported and left unpinned, because a module is what disambiguates
+  two grammars naming the same bracket.
+- The routing-contract closure test reads a split op as one module. An op whose
+  program moved into its own file registered in the tests module beside it,
+  which the test looked for only under a directory named for the file, so a
+  routed convergence op read as unregistered while its registration sat two
+  lines away. A registration in a neighbouring file counts when it names the
+  op, so a dialect directory shared by several ops still cannot lend one op's
+  registration to another.
 - A test that compiles a scratch crate builds it in the cargo build directory.
   vyre_test_support::monorepo::cargo_target_directory reports where cargo is
   writing this run's artifacts, resolved from the running test binary, so no
@@ -2760,6 +2782,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   them was a format inside a return Err. Each file's note now ends with its
   error-path count, and every hot-path budget in
   docs/optimization/HOT_PATHS.toml is lowered to the measurement that remains.
+- The composition audit reports an exemption row that matches nothing. The
+  phase-marker list and the declared Tier-3 leaf list are named once each and
+  every row is checked against the live registry, so a row naming a renamed or
+  deleted op is a finding instead of reading as coverage. Two rows were already
+  in that state and are gone.
 - Every command this workspace tells a reader to run names the wrapper. The
   dispatcher usage text, its rebuild and help messages, the scaffold and audit
   binaries, the structure gate header, the error catalog regeneration note, the
@@ -3614,6 +3641,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   count buffer as a read because the host writes it and the shader only reads
   it; the scan now agrees, and no emitted shader changes because the Naga
   emitter rejects `IndirectDispatch` before producing WGSL.
+- A region that names the operation behind it counts as composed. Making every
+  library operation tag its own entry region added one node that the
+  composition measurement read as own work, so the measured fraction of every
+  operation that took that fix went down and two ops reported a composition
+  regression they had not suffered. The trend baseline is unchanged; the
+  measurement is.
 - The substrate-neutrality rule can see the dependency form this tree uses.
   `scripts/check_architectural_invariants.sh` matched `^name =` against
   manifest text, so a dependency written `name.workspace = true` never matched,
@@ -3652,6 +3685,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   delegate to that owner rather than restating the variant list, and the
   descendant scan uses an explicit worklist so a deep tree cannot overflow the
   native stack.
+- No crate publishes an item at more than one path. The atomic and bit-count
+  compositions in vyre-libs published each op both flat and through a generated
+  module, vyre-primitives carried a prelude and a facade module for another
+  crate's wire envelope, vyre-lower kept two import-boundary modules that only
+  re-exported the fact modules beside them, the wgpu pipeline re-exported the
+  bind-group statistics and the persistent dispatch item, the driver root
+  re-exported one validator out of the validation module that owns it, and the
+  reference crate re-exported its op counter at the root. Every second path is
+  deleted and every caller names the owner.
 - The f32 parity canonicalizer has one owner.
   `vyre_foundation::fp_parity::canonical_f32` states the rule once: a NaN
   becomes the canonical quiet NaN and a subnormal becomes a zero of the same
@@ -3662,6 +3704,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   different contract: it also collapses negative zero and flushes subnormals to
   positive zero, which loses sign. The two test-side restatements also stay,
   each now saying why: a judge that calls the code it judges proves nothing.
+- Every instruction that names the build wrapper names it as ./cargo_full. A
+  bare cargo_full is not on the search path, so a fix line quoting it told the
+  reader to run a command that does not resolve. The generators that embed
+  those lines emit the same spelling, so the artifact and its generator agree.
 - The operand namespace table of a lowered kernel op has one owner again,
   `vyre_lower::operand_class`. Structural verification and data-dependency
   queries answered from two tables that disagreed on a structured loop operand

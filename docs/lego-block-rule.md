@@ -68,14 +68,14 @@ Before writing a new sub-op:
 1. **Search by name.** `git grep -n 'fn <verb>' -- vyre-libs/src
    vyre-primitives/src`. If the work has a name, someone has probably
    written it.
-2. **Search by op id.** `cargo_full run --bin xtask -- print-composition
+2. **Search by op id.** `./cargo_full run --bin xtask -- print-composition
    --op-id <id>` walks a registered op's region tree. If a region's
    generator reads like the work you are about to do, that is the
    primitive.
 3. **Search by region chain.** Print the composition of a sibling op in
    the same domain. The chain names the primitives that sibling already
    composes, and usually one of them applies.
-4. **Ask Gate 1.** `cargo_full run --bin xtask -- gate1` reports each
+4. **Ask Gate 1.** `./cargo_full run --bin xtask -- gate1` reports each
    op's composed fraction. A sibling with a high composed fraction is the
    playbook to follow.
 
@@ -100,7 +100,7 @@ caller is a hard failure.
 
 ## Gate 1 and lego-audit
 
-`cargo_full run --bin xtask -- gate1` walks every registered op's region
+`./cargo_full run --bin xtask -- gate1` walks every registered op's region
 tree and passes an op when either half holds:
 
 1. Under raw budget: four loops or fewer and 200 nodes or fewer.
@@ -113,9 +113,9 @@ region built by composing another registered op carries a
 `source_region`. On failure the diagnostic lists the inline sub-blocks
 that should have been primitive calls.
 
-`cargo_full run --bin xtask -- lego-audit` is the stricter pass: IR
+`./cargo_full run --bin xtask -- lego-audit` is the stricter pass: IR
 fingerprint no-reinvention, depth of composition, primitive coverage, and
-cross-dialect reach-through. `cargo_full run --bin xtask -- dup-scan`
+cross-dialect reach-through. `./cargo_full run --bin xtask -- dup-scan`
 reports duplicated line counts per crate against their pins.
 
 ## Cross-crate promotion patch contract
