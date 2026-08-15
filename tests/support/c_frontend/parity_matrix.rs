@@ -269,13 +269,14 @@ pub(crate) fn primary_output(outputs: Vec<Vec<u8>>, context: &str) -> Vec<u8> {
     outputs[0].clone()
 }
 
-/// Stage 1: raw VAST rows for a token stream.
-pub(crate) fn arm_raw_vast(
+/// Stage 1: raw VAST rows for a token stream, with the row count the builder
+/// wrote beside them.
+pub(crate) fn arm_raw_vast_with_count(
     arm: &impl ParityArm,
     tok_types: &[u32],
     tok_starts: &[u32],
     tok_lens: &[u32],
-) -> Vec<u8> {
+) -> (Vec<u8>, u32) {
     let outputs = arm.dispatch(
         "C VAST builder",
         program::build_vast(tok_types.len() as u32),
@@ -286,7 +287,41 @@ pub(crate) fn arm_raw_vast(
         2,
         "C VAST builder: expected [vast_nodes, count]"
     );
-    outputs[0].clone()
+    let count = word_at(&outputs[1], 0);
+    (outputs[0].clone(), count)
+}
+
+/// Stage 1: raw VAST rows for a token stream.
+pub(crate) fn arm_raw_vast(
+    arm: &impl ParityArm,
+    tok_types: &[u32],
+    tok_starts: &[u32],
+    tok_lens: &[u32],
+) -> Vec<u8> {
+    arm_raw_vast_with_count(arm, tok_types, tok_starts, tok_lens).0
+}
+
+/// Classified rows for a token stream, asserted equal to the CPU oracle.
+///
+/// Build then classify is the whole shape of a construct-classification test:
+/// the rows come back, the oracle comparison is the same every time, and the
+/// only thing that varies is which rows the caller then names a kind for. Six
+/// tests across two files restated build, classify, dispatch and compare, each
+/// acquiring its own backend to do it.
+pub(crate) fn arm_classified_from_tokens(
+    arm: &impl ParityArm,
+    tok_types: &[u32],
+    tok_starts: &[u32],
+    tok_lens: &[u32],
+) -> Vec<u8> {
+    let raw = reference_c11_build_vast_nodes(tok_types, tok_starts, tok_lens);
+    let typed = arm_typed_vast(arm, &raw);
+    assert_eq!(
+        typed,
+        reference_c11_classify_vast_node_kinds(&raw),
+        "classified rows must match the CPU oracle"
+    );
+    typed
 }
 
 /// Stage 2: typedef flags, resolved against precomputed brace scopes.
