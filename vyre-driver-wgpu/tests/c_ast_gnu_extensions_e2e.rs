@@ -13,7 +13,6 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
@@ -34,7 +33,8 @@ mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, c_fixture, row_indices, word_at, Fixture, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_lex_matches_non_ws, c_fixture, row_indices, word_at,
+    Fixture, VAST_STRIDE_U32,
 };
 
 // ---------------------------------------------------------------------------

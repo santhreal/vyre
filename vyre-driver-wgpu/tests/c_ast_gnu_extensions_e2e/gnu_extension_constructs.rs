@@ -4,17 +4,7 @@ use super::*;
 fn attribute_before_declarator_gpu_cpu_parity() {
     let fix = fixture_attribute_before_declarator();
 
-    // Lexer sanity-check: the raw source must produce the expected raw kinds.
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(
-        lexed_non_ws, fix.raw_kinds,
-        "lexer raw kinds must match hand-built fixture"
-    );
-
+    assert_lex_matches_non_ws(&fix);
     assert_full_pipeline_parity(&fix, "attribute_before_declarator");
 
     // Semantic spot-checks on the CPU reference (GPU already proven equal).
@@ -36,13 +26,7 @@ fn attribute_before_declarator_gpu_cpu_parity() {
 fn attribute_after_declarator_gpu_cpu_parity() {
     let fix = fixture_attribute_after_declarator();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_full_pipeline_parity(&fix, "attribute_after_declarator");
 
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
@@ -61,13 +45,7 @@ fn attribute_after_declarator_gpu_cpu_parity() {
 fn statement_expression_gpu_cpu_parity() {
     let fix = fixture_statement_expression();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_full_pipeline_parity(&fix, "statement_expression");
 
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
@@ -87,13 +65,7 @@ fn statement_expression_gpu_cpu_parity() {
 fn typeof_promotes_to_gnu_typeof_keyword_gpu_cpu_parity() {
     let fix = fixture_typeof();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_eq!(
         fix.tok_types[0], TOK_GNU_TYPEOF,
         "typeof must promote to the GNU typeof token"
@@ -115,13 +87,7 @@ fn typeof_promotes_to_gnu_typeof_keyword_gpu_cpu_parity() {
 fn inline_asm_gpu_cpu_parity() {
     let fix = fixture_inline_asm();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_full_pipeline_parity(&fix, "inline_asm");
 
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
@@ -146,13 +112,7 @@ fn inline_asm_gpu_cpu_parity() {
 fn extended_asm_operands_classify_gpu_cpu_parity() {
     let fix = fixture_extended_asm_operands();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_full_pipeline_parity(&fix, "extended_asm_operands");
 
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
@@ -168,13 +128,7 @@ fn extended_asm_operands_classify_gpu_cpu_parity() {
 fn asm_goto_label_classifies_gpu_cpu_parity() {
     let fix = fixture_asm_goto();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_full_pipeline_parity(&fix, "asm_goto");
 
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
@@ -193,13 +147,7 @@ fn asm_goto_label_classifies_gpu_cpu_parity() {
 fn labels_as_values_classifies_label_address_gpu_cpu_parity() {
     let fix = fixture_labels_as_values();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
-
+    assert_lex_matches_non_ws(&fix);
     assert_eq!(fix.tok_types[4], TOK_AND, "&& must lex as TOK_AND");
     assert_eq!(
         fix.tok_types[5], TOK_IDENTIFIER,
@@ -222,12 +170,7 @@ fn labels_as_values_classifies_label_address_gpu_cpu_parity() {
 fn extension_statement_expression_gpu_cpu_parity() {
     let fix = fixture_extension_statement_expression();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
+    assert_lex_matches_non_ws(&fix);
     assert_eq!(
         fix.tok_types[0], TOK_GNU_EXTENSION,
         "__extension__ must promote before parsing"
@@ -259,12 +202,7 @@ fn extension_statement_expression_gpu_cpu_parity() {
 fn extension_declaration_prefix_gpu_cpu_parity() {
     let fix = fixture_extension_declaration();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
+    assert_lex_matches_non_ws(&fix);
     assert_eq!(fix.tok_types[0], TOK_GNU_EXTENSION);
 
     assert_full_pipeline_parity(&fix, "extension_declaration");
@@ -288,12 +226,7 @@ fn extension_declaration_prefix_gpu_cpu_parity() {
 fn builtins_and_generic_classify_as_distinct_exprs_gpu_cpu_parity() {
     let fix = fixture_builtin_and_generic_expressions();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
+    assert_lex_matches_non_ws(&fix);
     assert_eq!(fix.tok_types[3], TOK_BUILTIN_CONSTANT_P);
     assert_eq!(fix.tok_types[15], TOK_BUILTIN_CHOOSE_EXPR);
     assert_eq!(fix.tok_types[27], TOK_BUILTIN_TYPES_COMPATIBLE_P);
@@ -337,12 +270,7 @@ fn builtins_and_generic_classify_as_distinct_exprs_gpu_cpu_parity() {
 fn range_designator_ellipsis_classifies_gpu_cpu_parity() {
     let fix = fixture_range_designator();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
+    assert_lex_matches_non_ws(&fix);
     assert_eq!(
         fix.tok_types[8], TOK_ELLIPSIS,
         "`...` must lex as one ellipsis token, not three dots"
@@ -364,12 +292,7 @@ fn range_designator_ellipsis_classifies_gpu_cpu_parity() {
 fn packed_struct_attribute_gpu_cpu_parity() {
     let fix = fixture_packed_struct_attribute();
 
-    let lexed = lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
-    let lexed_non_ws = lexed
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect::<Vec<_>>();
-    assert_eq!(lexed_non_ws, fix.raw_kinds);
+    assert_lex_matches_non_ws(&fix);
     assert_eq!(fix.tok_types[1], TOK_GNU_ATTRIBUTE);
 
     assert_full_pipeline_parity(&fix, "packed_struct_attribute");
