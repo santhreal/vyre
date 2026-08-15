@@ -1,9 +1,8 @@
 //! Device-loss recovery.
 //!
-//! See `contracts/release.md`. After a simulated device-lost event
-//! the backend must (a) report `device_lost() == true`, (b) recover
-//! via `try_recover() -> Ok(())`, (c) accept the next dispatch
-//! successfully.
+//! After a simulated device-lost event the backend must (a) report
+//! `device_lost() == true`, (b) recover via `try_recover() -> Ok(())`, and
+//! (c) accept the next dispatch successfully.
 
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
