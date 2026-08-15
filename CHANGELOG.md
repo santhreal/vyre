@@ -4,6 +4,9 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ## [Unreleased]
 
+Vyre 0.7.2 releases from candidate tag `vyre-v0.7.2-rc.1` and final tag `vyre-v0.7.2`.
+Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-wgpu@0.7.2`.
+
 ### Added
 
 - Grouped affine INT4 linear now provides a typed batched program builder that
@@ -1799,6 +1802,38 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   initializer-designator families index is one stream in
   `tests/support/c_frontend/fixtures/initializer_designator_streams.rs`, under
   one name in both.
+- `vyre-libs` no longer reaches across dialect boundaries in private code.
+  `telemetry` is a crate-root module rather than a one-file directory, because
+  counters instrument every dialect and belong to none; `scratch` and
+  `dispatch_program_cache` sit at the crate root beside `dispatch_buffers`,
+  because host dispatch plumbing is not a dialect either. The
+  `analysis::dataflow_fixpoint` re-export of
+  `vyre_foundation::pass_substrate::dataflow_fixpoint` is deleted, so the
+  closure family has one path instead of two, and every caller names the owner.
+  Composition that genuinely crosses dialects goes through `prelude`, which is
+  the one declared seam: `nn::linear` reaches `MatmulBiasTiled` and `reasoning`
+  reaches `reachability_closure_via_into` through it, and the prelude names
+  both.
+- `xtask gates` no longer accepts a failing gate. `xtask/gate-baselines.toml`
+  pinned both a `status` and an `owner` sentence per row, and the sweep treated
+  `status = "red"` as the expected result whenever the row named an owner, so a
+  gate could fail indefinitely while the sweep reported that every gate held
+  its baseline; three did, for a fortnight. Both fields are gone from the
+  schema and a row that still carries either fails to load rather than being
+  ignored, because a default derive would accept and discard it. What remains
+  is a finding ratchet: `output_lines` may fall and be lowered, may not grow,
+  and a nonzero exit is a failure whatever the pin says. `--write-baseline`
+  refuses to record a run in which any gate failed.
+- `vyre-test-support` states which flat `DataType` forms exist in one ungated
+  module, `data_type_elements`. The list sat inside `data_type_variants`, which
+  is gated behind `ir-fixtures`, so a suite that wanted the flat element list
+  had to enable a feature that pulls `vyre-foundation` into its dev graph; for
+  `vyre-spec`, a leaf crate that declares `DataType` in the first place, that
+  meant building the whole compiler to read a list of discriminants.
+  `vyre-spec` is now a plain dependency of `vyre-test-support` and
+  `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
+  builds its flat leaves from the same module, so the two tables cannot
+  disagree about which element types exist.
 
 ### Removed
 
@@ -1871,6 +1906,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   had two paths and a reader could not tell which was the owner. Every caller
   inside and outside the crate imports `vyre_foundation::fp_parity` directly;
   no alias remains.
+- The mdbook is deleted: 134 files, every `.md` under `docs/` plus `book.toml`.
+  It described a tree that had moved out from under it, and a document that
+  contradicts source is worse than no document, because a reader who checks it
+  is misled and a reader who does not is unserved. What remains under `docs/`
+  is machine-readable contract data that gates read directly: the `.toml`
+  policies including `OWNERSHIP.toml`, `HOT_PATHS.toml`, `OP_MATRIX.toml`,
+  `TESTING.toml` and `STRUCTURAL_GATES.toml`, the per-crate public-API `.txt`
+  snapshots, `OP_SCHEMA.json` and `architecture.svg`. `README.md` and per-crate
+  `README` files remain the documentation surface. `scripts/release_docs.py`
+  accordingly generates `CHANGELOG.md` alone, and the release train's required
+  artifact tokens are generated into its unreleased section from
+  `release/release-train.toml` rather than checked against prose that could
+  disagree with it.
 
 ### Fixed
 
@@ -3027,6 +3075,13 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `unexpected content, expected nothing`, and source reading goes through the
   one bounded reader `vyre_lints::read_source_bounded` so a single cap covers
   every file the lint walks.
+- The `cargo_full` wrapper no longer exports `CARGO_BUILD_JOBS`. An environment
+  variable overrides `.cargo/config.toml`, so the wrapper's default of `1`
+  silently replaced the declared `[build] jobs = 16` on every invocation, and
+  every build, test run, and gate in this workspace ran one codegen job at a
+  time regardless of how many cores the host had. Parallelism is declared once,
+  in the config file, where it is reviewable and applies to every build
+  equally.
 
 ## [0.7.1] - 2026-08-01
 

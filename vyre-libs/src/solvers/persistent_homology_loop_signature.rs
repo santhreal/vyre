@@ -47,7 +47,7 @@
 //! compute it via persistent homology.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::device::scratch::reserve_vec_capacity_or_panic;
+use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
 };
@@ -87,7 +87,7 @@ pub fn reference_region_loop_skeleton_into(
     n: u32,
     out: &mut Vec<u32>,
 ) {
-    use crate::telemetry::observability::{bump, persistent_homology_loop_signature_calls};
+    use crate::telemetry::{bump, persistent_homology_loop_signature_calls};
     bump(&persistent_homology_loop_signature_calls);
     let n_us = n as usize;
     assert_eq!(dist_matrix.len(), n_us * n_us);
@@ -136,7 +136,7 @@ pub fn region_loop_skeleton_fixed_via_into(
     n: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, persistent_homology_loop_signature_calls};
+    use crate::telemetry::{bump, persistent_homology_loop_signature_calls};
     bump(&persistent_homology_loop_signature_calls);
 
     let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via")?;

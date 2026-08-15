@@ -11,7 +11,7 @@ pub fn reference_reconstruct_path(
     max_depth: u32,
     scratch: &mut Vec<u32>,
 ) -> u32 {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
+    use crate::telemetry::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     path_reconstruct_cpu(parent, target, max_depth, scratch)
 }

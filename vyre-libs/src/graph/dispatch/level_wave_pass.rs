@@ -51,7 +51,7 @@ pub fn build_callee_before_caller_program(
     max_depth: u32,
     function_count: u32,
 ) -> Program {
-    use crate::telemetry::observability::{bump, level_wave_pass_calls};
+    use crate::telemetry::{bump, level_wave_pass_calls};
     bump(&level_wave_pass_calls);
     level_wave_program(step_body, depth_buf, max_depth, function_count)
 }
@@ -79,7 +79,7 @@ pub fn build_callee_before_caller_program_with_buffers(
     max_depth: u32,
     function_count: u32,
 ) -> Program {
-    use crate::telemetry::observability::{bump, level_wave_pass_calls};
+    use crate::telemetry::{bump, level_wave_pass_calls};
     bump(&level_wave_pass_calls);
     level_wave_program_with_buffers(
         step_body,

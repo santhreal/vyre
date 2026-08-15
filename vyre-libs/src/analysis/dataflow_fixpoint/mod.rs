@@ -49,10 +49,6 @@ pub use scc_decomposition::{
     forward_backward_bitsets_for_pivot, forward_backward_bitsets_for_pivot_into,
     reference_scc_components_via_substrate_into, scc_components_via_substrate,
 };
-pub use vyre_foundation::pass_substrate::dataflow_fixpoint::{
-    lineage_closure, lineage_closure_into, reachability_closure, reachability_closure_into,
-    shortest_path_closure, shortest_path_closure_into,
-};
 
 /// Caller-owned dispatch scratch for repeated semiring-GEMM GPU calls.
 #[derive(Debug, Default)]

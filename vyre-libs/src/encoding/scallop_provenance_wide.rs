@@ -22,7 +22,7 @@ pub fn scallop_provenance_wide_program(
     w: u32,
     max_iterations: u32,
 ) -> Program {
-    use crate::telemetry::observability::{bump, scallop_provenance_wide_calls};
+    use crate::telemetry::{bump, scallop_provenance_wide_calls};
     bump(&scallop_provenance_wide_calls);
     scallop_join_wide(state, next, join_rules, changed, n, w, max_iterations)
 }

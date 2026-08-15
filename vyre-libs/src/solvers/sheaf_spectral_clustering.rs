@@ -87,7 +87,7 @@ pub struct FixedSheafSpectrum {
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn dominant_spectrum(restriction_diag: &[f64], iterations: u32) -> (f64, Vec<f64>) {
-    use crate::telemetry::observability::{bump, sheaf_spectral_clustering_calls};
+    use crate::telemetry::{bump, sheaf_spectral_clustering_calls};
     bump(&sheaf_spectral_clustering_calls);
     let mut scratch = SheafSpectrumScratch::default();
     let lambda = dominant_spectrum_with_scratch(restriction_diag, iterations, &mut scratch);
@@ -212,7 +212,7 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     scratch: &mut SheafSpectrumGpuScratch,
     eigenvector_out: &mut Vec<u32>,
 ) -> Result<u32, DispatchError> {
-    use crate::telemetry::observability::{bump, sheaf_spectral_clustering_calls};
+    use crate::telemetry::{bump, sheaf_spectral_clustering_calls};
     bump(&sheaf_spectral_clustering_calls);
 
     let cells = checked_product_count(n_nodes, d, "n_nodes", "d", "dominant_spectrum_fixed_via")?;

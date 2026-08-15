@@ -133,6 +133,14 @@ pub(crate) fn builtin_ternary_ops() -> Vec<TernaryOp> {
     vec![TernaryOp::Fma, TernaryOp::Select]
 }
 
+/// The flat `DataType` forms a buffer declaration can carry as its element.
+///
+/// `vyre_test_support::data_type_elements` owns which flat forms exist, because
+/// the IR fixture table is built from the same list; a second copy here is how
+/// one table gains an element type the other does not know about.
+pub(crate) fn buffer_data_types(element_size: usize) -> Vec<DataType> {
+    vyre_test_support::data_type_elements::flat_buffer_element_types(element_size)
+}
 /// Variant names of `vyre_spec::<enum_name>` as the checked-in public-API
 /// snapshot records them, `Opaque` excluded.
 ///

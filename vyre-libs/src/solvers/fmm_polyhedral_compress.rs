@@ -42,7 +42,7 @@
 //! each multipole order has an explicit schema and test oracle.
 
 #[cfg(test)]
-use crate::device::scratch::reserve_vec_capacity_or_panic;
+use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
     write_u32_slice_le_bytes, write_zero_bytes,
@@ -106,7 +106,7 @@ pub fn reference_aggregate_to_cells_into(
     cell_assignment: &[u32],
     out: &mut Vec<f64>,
 ) {
-    use crate::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
+    use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
     assert_eq!(scores.len(), cell_assignment.len());
     p2m_zeroth_moment_cpu_into(scores, cell_assignment, out);
@@ -137,7 +137,7 @@ pub fn reference_translate_to_targets_into(
     cell_distances: &[f64],
     local: &mut Vec<f64>,
 ) {
-    use crate::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
+    use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
     let num_cells = cell_moments.len();
     assert_eq!(
@@ -179,7 +179,7 @@ pub fn reference_evaluate_at_regions_into(
     n: u32,
     out: &mut Vec<f64>,
 ) {
-    use crate::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
+    use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
     assert_eq!(cell_assignment.len(), n as usize);
     out.clear();
@@ -276,7 +276,7 @@ pub fn aggregate_to_cells_via_with_scratch_into(
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
+    use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
     let n_regions = validate_region_shape(
@@ -340,7 +340,7 @@ pub fn translate_to_targets_via_with_scratch_into(
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
+    use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
     let n_cells = validate_square_distance_shape(
@@ -406,7 +406,7 @@ pub fn evaluate_at_regions_via_with_scratch_into(
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
+    use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
     validate_region_n(cell_assignment.len(), n, "evaluate_at_regions_via")?;

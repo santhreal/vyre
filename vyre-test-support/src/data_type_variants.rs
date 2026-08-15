@@ -27,7 +27,7 @@
 
 use std::collections::BTreeSet;
 
-use vyre_foundation::ir::DataType;
+use vyre_spec::DataType;
 
 use crate::monorepo::vyre_workspace_root;
 
@@ -57,43 +57,14 @@ pub fn declared_data_type_variants() -> BTreeSet<String> {
 
 /// The flat `DataType` forms a buffer declaration can carry as its element.
 ///
-/// `element_size` parameterises `DataType::Array`, the one flat form that
-/// carries a payload. The nested forms (`Vec`, `TensorShaped`, the sparse
-/// layouts, `Quantized`, `DeviceMesh`), `Handle` and `Opaque` are not here: a
-/// buffer element table and a cast-target table are different sets, and a
-/// suite that needs the nested forms builds them from these leaves.
-#[must_use]
-pub fn buffer_element_data_types(element_size: usize) -> Vec<DataType> {
-    vec![
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::U64,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Array { element_size },
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Tensor,
-    ]
-}
-
-/// One fixture per declared `DataType` variant, the flat forms first.
-///
-/// Parameterised variants get the smallest well-formed payload: the tables
-/// under test key off the outer discriminant, and a fixture that varied the
-/// payload would test the payload rather than the table.
+/// The flat leaves come from [`crate::data_type_elements`], so the two tables
+/// cannot disagree about which flat forms exist. Parameterised variants get the
+/// smallest well-formed payload: the tables under test key off the outer
+/// discriminant, and a fixture that varied the payload would test the payload
+/// rather than the table.
 #[must_use]
 pub fn data_type_variant_samples() -> Vec<DataType> {
-    let mut samples = buffer_element_data_types(1);
+    let mut samples = crate::data_type_elements::flat_buffer_element_types(1);
     samples.extend([
         DataType::Handle(vyre_spec::data_type::TypeId(0)),
         DataType::Vec {

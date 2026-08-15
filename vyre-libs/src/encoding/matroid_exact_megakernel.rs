@@ -29,7 +29,7 @@
 //! exists. Each augmentation strictly grows the independent set.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::device::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
+use crate::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
 #[cfg(test)]
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{
@@ -320,7 +320,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
     scratch: &mut ExactMatroidDispatchScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, matroid_exact_megakernel_calls};
+    use crate::telemetry::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     let n_u32 = validate_full_for_dispatch(exchange_adj, sources, sinks, seed_x, n)?;
@@ -422,7 +422,7 @@ pub fn reference_select_optimal_subset_into<'a>(
 ) -> Result<&'a [u32], ExactMatroidError> {
     validate_full(exchange_adj, sources, sinks, seed_x, n)?;
 
-    use crate::telemetry::observability::{bump, matroid_exact_megakernel_calls};
+    use crate::telemetry::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     scratch.prepare(seed_x, n, max_augmentations);
@@ -494,7 +494,7 @@ pub fn reference_select_optimal_subset_all_eligible_into<'a>(
 ) -> Result<&'a [u32], ExactMatroidError> {
     let _expected_adj = validate_common(exchange_adj, seed_x, n)?;
 
-    use crate::telemetry::observability::{bump, matroid_exact_megakernel_calls};
+    use crate::telemetry::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     scratch.prepare(seed_x, n, max_augmentations);

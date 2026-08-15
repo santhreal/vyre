@@ -65,7 +65,7 @@ pub fn apply_pass_functor_into(
     target_n_cols: u32,
     out: &mut Vec<u32>,
 ) {
-    use crate::telemetry::observability::{bump, functorial_pass_composition_calls};
+    use crate::telemetry::{bump, functorial_pass_composition_calls};
     bump(&functorial_pass_composition_calls);
     assert_eq!(view_in.len(), column_mapping.len());
     out.clear();
@@ -110,7 +110,7 @@ pub fn apply_pass_functor_via_into(
     target_n_cols: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, functorial_pass_composition_calls};
+    use crate::telemetry::{bump, functorial_pass_composition_calls};
     bump(&functorial_pass_composition_calls);
 
     if target_n_cols == 0 {

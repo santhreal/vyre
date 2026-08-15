@@ -7,8 +7,8 @@
 //! This replaces ad-hoc cache invalidation with formal causal analysis.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::analysis::dataflow_fixpoint::reachability_closure_into;
-use crate::analysis::dataflow_fixpoint::reachability_closure_via_into;
+use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
+use crate::prelude::reachability_closure_via_into;
 #[cfg(test)]
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{
@@ -67,7 +67,7 @@ impl DoCalculusImpactScratch {
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn predict_impact(adj: &[u32], intervention_mask: &[u32], n: u32) -> Vec<u32> {
-    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         return Vec::new();
@@ -169,7 +169,7 @@ pub fn predict_impact_via_into(
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         scratch.impact_mask.clear();
@@ -365,7 +365,7 @@ fn dispatch_do_calculus_surgery_into<F>(
 where
     F: FnOnce(&str, &str, &str, u32) -> Program,
 {
-    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
     let cells = checked_square_cells(n, op_name)?;
@@ -483,7 +483,7 @@ fn rule3_subgraph_via_into_with_inputs(
     reduced: &mut Vec<u32>,
     kept: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
     let cells = checked_square_cells(n, "rule3_subgraph_via")?;
@@ -587,7 +587,7 @@ fn rule3_subgraph_via_into_with_inputs(
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn impact_subgraph(adj: &[u32], intervention_mask: &[u32], n: u32) -> (Vec<u32>, Vec<u32>) {
-    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         return (Vec::new(), Vec::new());
@@ -634,7 +634,7 @@ pub fn reference_impact_subgraph_with_scratch(
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn predict_impact_observation_form(adj: &[u32], observation_mask: &[u32], n: u32) -> Vec<u32> {
-    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         return Vec::new();
@@ -712,7 +712,7 @@ pub fn predict_impact_observation_form_via_into(
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         scratch.impact_mask.clear();

@@ -19,7 +19,7 @@ use vyre_primitives::types::{
 /// Returns [`LinearTypeError`] when the count violates the
 /// discipline (Linear/Relevant dropped, or Linear/Affine reused).
 pub fn verify_use_count(discipline: LinearDiscipline, uses: u32) -> Result<(), LinearTypeError> {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_check_linear(discipline, uses)
 }

@@ -115,6 +115,17 @@ pub mod descriptor;
 /// Host-side byte marshalling for `ProgramDispatcher` calls.
 pub mod dispatch_buffers;
 
+/// Host-side capacity reservation for dispatch staging buffers. Crate-root
+/// plumbing, not a dialect: every dialect that stages a dispatch reserves
+/// through this one owner.
+#[cfg(feature = "device")]
+pub(crate) mod scratch;
+
+/// Host-side compiled-`Program` cache keyed by dispatch shape. Crate-root
+/// plumbing for the same reason as `scratch`.
+#[cfg(feature = "device")]
+pub(crate) mod dispatch_program_cache;
+
 pub use descriptor::{BufferDescriptor, ProgramDescriptor};
 
 /// Derived view over canonical library operation registrations.
@@ -124,7 +135,7 @@ pub mod operation_catalog;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
 
-/// Device-boundary contracts and dispatch scratch.
+/// Device-boundary contracts: probe, memory ownership, resident graph layout.
 #[cfg(feature = "device")]
 pub mod device;
 
@@ -285,6 +296,10 @@ pub mod test_support;
 /// Re-export the small set of vyre types every composition function
 /// returns. Consumers can `use vyre_libs::prelude::*` and get the API
 /// plus the types it returns.
+///
+/// This is also the one seam a dialect crosses through. A dialect that
+/// composes another dialect's work names it here, so the coupling is one
+/// reviewable list rather than a reach into another module tree.
 pub mod prelude {
     pub use vyre_foundation::ir::model::expr::GeneratorRef;
     pub use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -303,6 +318,8 @@ pub mod prelude {
 
     // Built-in Cat-A builders (gated on the relevant feature flags so
     // minimum-footprint consumers don't pay for the ones they skip).
+    #[cfg(feature = "analysis")]
+    pub use crate::analysis::dataflow_fixpoint::reachability_closure_via_into;
     #[cfg(feature = "decode")]
     pub use crate::decode::{base64_decode, hex_decode, inflate, ziftsieve_gpu};
     #[cfg(feature = "crypto-blake3")]
@@ -318,7 +335,9 @@ pub mod prelude {
     #[cfg(feature = "math-broadcast")]
     pub use crate::math::broadcast::broadcast;
     #[cfg(feature = "math-linalg")]
-    pub use crate::math::linalg::{dot, matmul, matmul_tiled, Matmul, MatmulTiled};
+    pub use crate::math::linalg::{
+        dot, matmul, matmul_tiled, Matmul, MatmulBiasTiled, MatmulTiled,
+    };
     #[cfg(feature = "math-scan")]
     pub use crate::math::scan::scan_prefix_sum;
     #[cfg(feature = "math-succinct")]
