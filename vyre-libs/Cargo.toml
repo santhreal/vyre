@@ -56,7 +56,7 @@ matching = ["matching-substring", "matching-dfa"]
 crypto = ["crypto-blake3"]
 decode = ["vyre-primitives/cpu-parity", "vyre-primitives/decode", "vyre-primitives/matching"]
 text = []
-logical = ["math-broadcast", "vyre-primitives/bitset"]
+logical = ["vyre-primitives/bitset"]
 rule = ["dep:regex"]
 
 # Compiler self-use composition domains, migrated out of the GPU pass engine

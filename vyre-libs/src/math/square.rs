@@ -2,7 +2,7 @@
 //!
 //! Category-A composition.
 
-use crate::math::elementwise::{f32_elementwise_mul, F32MulRhs};
+use crate::builder::elementwise::{f32_elementwise_mul, F32MulRhs};
 use vyre_foundation::ir::Program;
 
 /// Build a Program that computes `output[i] = input[i] * input[i]`.

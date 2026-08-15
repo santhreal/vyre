@@ -47,7 +47,6 @@ impl Gate for OptimizationDocs {
 /// Repository-relative document this gate owns.
 const PASSES_PATH: &str = "docs/generated/optimizer-passes.toml";
 
-
 fn metadata_by_name() -> Result<BTreeMap<&'static str, PassMetadata>, String> {
     let registrations = registered_pass_registrations().map_err(|error| error.to_string())?;
     Ok(registrations
@@ -75,14 +74,10 @@ fn build() -> Result<String, String> {
             OptimizationCatalogEntryKind::ExecutablePass => "executable pass",
             OptimizationCatalogEntryKind::SupplementalRule => "supplemental rule",
         };
-        let requires = registered.map_or_else(
-            || array([]),
-            |row| array(row.requires.iter().copied()),
-        );
-        let invalidates = registered.map_or_else(
-            || array([]),
-            |row| array(row.invalidates.iter().copied()),
-        );
+        let requires =
+            registered.map_or_else(|| array([]), |row| array(row.requires.iter().copied()));
+        let invalidates =
+            registered.map_or_else(|| array([]), |row| array(row.invalidates.iter().copied()));
         let termination = match entry.kind {
             OptimizationCatalogEntryKind::ExecutablePass => {
                 "bounded by the scheduler restart and iteration budgets"

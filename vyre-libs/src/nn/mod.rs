@@ -38,8 +38,6 @@ pub mod moe;
 pub(crate) mod rms;
 
 #[cfg(feature = "nn-norm")]
-pub(crate) mod tiled_reduce;
-
 #[cfg(any(
     feature = "nn-inference",
     all(

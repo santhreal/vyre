@@ -10,7 +10,8 @@
 pub mod all;
 /// `reduce_any` - emit `1` when any lane in a u32 ValueSet is non-zero.
 pub mod any;
-mod atomic_scalar;
+/// The grid-stride atomic-scalar shape, shared with the bitset relations.
+pub(crate) mod atomic_scalar;
 pub mod count;
 pub mod count_non_zero;
 pub mod gather;

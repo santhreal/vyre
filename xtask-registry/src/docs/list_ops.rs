@@ -85,4 +85,3 @@ fn render(operations: &[OperationRecord]) -> String {
     }
     text
 }
-

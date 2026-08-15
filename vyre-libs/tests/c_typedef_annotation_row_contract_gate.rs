@@ -47,7 +47,7 @@ use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 
 /// Module whose public re-exports define the family. Read at run time.
-const MEMBER_SOURCE: &str = "src/parsing/c/parse/vast/typedef_ann.rs";
+const MEMBER_SOURCE: &str = "src/parsing/c/parse/vast/typedef_ann/mod.rs";
 
 const NODES: &str = "vast_nodes";
 const HAYSTACK: &str = "haystack";

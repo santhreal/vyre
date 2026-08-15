@@ -13,6 +13,17 @@
 //!
 //! What these do not catch: a deliberate IR change. That is the point at which
 //! a human decides the new IR is correct and re-pins the affected constant.
+//!
+//! Eleven constants were re-recorded for two such changes. The two `shunting`
+//! entries and the three `semantic_graph` entries moved when every child region
+//! that had named itself by suffixing its parent operation id took the
+//! `anonymous::` prefix instead: a phase boundary inside one operation has no
+//! operation to name it with, and an audit reading such a name as an id was
+//! demanding a registration for a building block that must not exist. The six
+//! `annotate` entries moved when the C declaration prefix walk gained one owner:
+//! the four annotate builders had been reading a second copy of the
+//! previous-token disqualifier predicate, and the surviving owner disagrees with
+//! that copy on the token set, which is the defect the collapse fixed.
 
 #![cfg(feature = "parsing")]
 #![forbid(unsafe_code)]
@@ -875,15 +886,15 @@ const EXPECTED: &[(&str, &str)] = &[
     ),
     (
         "c/lower/semantic_graph",
-        "98064a8dfe2ea2f5e388c5844a7504bb88c323fe50ceb045a7e7f6e309a5bb89",
+        "3d2075d9fb74f3bba23678b396dc918ac12323e2ca5b8831ce3f591557e2f0db",
     ),
     (
         "c/lower/semantic_graph_with_pg",
-        "d0d6de67afd0bdc58e643d5d3b25a0192b73e8ffad7a6010317669d3d66b207c",
+        "8eae8649e117f3799008727911c1c04d2514096b29bcaf25acb6c12a449a5d6e",
     ),
     (
         "c/lower/semantic_graph_no_control_resolution",
-        "dd858320f80fdcc74ee930a57f291f0d955c23a5dfb74994e7fdab9c044ac935",
+        "3f907acd54dce2d4847362c191c1b6dc4d2bf5bf602411eaa9c4433dd61f1b29",
     ),
     (
         "c/typedef/prehash",
@@ -895,35 +906,35 @@ const EXPECTED: &[(&str, &str)] = &[
     ),
     (
         "c/typedef/annotate",
-        "6db939a6803bfdd3ff2737dce55148b286e7cc423c7fe25bb58878a3d5278c4c",
+        "f610d68749dce3b95b8cdc76a4c0246c7b66d0887deb0b10a7230f8cab2df92c",
     ),
     (
         "c/typedef/annotate_packed",
-        "18b7c9c68dfc0b0e13cb699ee07500328a10bf81ed7e758f6bb6309d5f0c16ce",
+        "47c7be2fd6a9273c26fda2c660e0531b6fab13cba9b2868e7096a87f7d8236d7",
     ),
     (
         "c/typedef/annotate_precomputed_scope",
-        "ae4669ac4bc674140aa83e739a653ae95ded1ba22abdc80a4e819deafd4e8a72",
+        "e52648bdb18b0fa21768af84c7d046c4902cd2829c0f1f88c5cd0a2fbaf6218f",
     ),
     (
         "c/typedef/annotate_precomputed_scope_packed",
-        "0f186e4b08f3ecf2da61a1d95238fb442abd697d0391f3e055d5c9e569094b44",
+        "29446a1e3b11ca1cc990712264f6db970289b0bab746af8f350a59dcc10d59a7",
     ),
     (
         "c/typedef/annotate_precomputed_context",
-        "6a48290196ff7477869227267fd83cbfc01d424a36943dadeef75bce0c447ad9",
+        "8641d6d09565f6df5773fd9bc19dea65806902f47e9f1d5949a30d2f6888072c",
     ),
     (
         "c/typedef/annotate_precomputed_context_packed",
-        "73ae49cf5bd1733d719d4dab39aeb856c1ea851a8db824a6a3f7302ba475e704",
+        "6be90d92c35af7ae96bc7fd3567f92ee6c3d5ec77a1b58eb7f6629dc54f89d00",
     ),
     (
         "core/ast/shunting",
-        "964eddf2fd3f882eb0e873daadabb325ed4ad98fd1c945698c43d916e7a7411a",
+        "7d48e9cf92a5244fe5252e20108c8a2b8461577e152c934e3f5ee69f3c8a8c43",
     ),
     (
         "core/ast/shunting_with_capacity",
-        "2df3aee68b2c9f8f5efb0f259d0a293a2ebc9636982e9cce9f0876da0a3f5054",
+        "15008181950586f054720b52b712a14b34aa83ab10fb56f2bc871d49b5eca7df",
     ),
 ];
 

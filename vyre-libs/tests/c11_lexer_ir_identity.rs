@@ -14,6 +14,15 @@
 //! not an operation id and every audit that reads a generator as one was being
 //! told otherwise.
 //!
+//! The eight `c11_lex_single_pass` and `c11_lex_regular_single_pass` values were
+//! recorded later, when the digraph resolution phase stopped borrowing another
+//! crate's operation id for its name. That child region had been labelled
+//! `vyre-primitives::text::utf8_validate` and then, when the constant went
+//! crate-private, `vyre-primitives::text::line_index`: two different primitives
+//! for one body that resolves digraphs and splices lines and calls neither. It is
+//! a phase boundary inside `c11_lex_digraphs`, so it carries the `anonymous::`
+//! prefix and names what it does.
+//!
 //! Mutation gate: perturbing any shared classifier stage (a token constant, a
 //! scan bound, a byte accessor, a variable name) changes the fingerprint of
 //! every entry point that composes that stage, so this test goes red.
@@ -310,42 +319,42 @@ const GOLDEN: &[(&str, u32, &str)] = &[
     (
         "c11_lex_single_pass",
         1,
-        "4675e39ec0ff48abb8bf1a668c0151b43beb3e07052a0d5368522a656eb56af0",
+        "f8b7874a95705cecadff51596261ca29fc754209d8869f4b847badaf7bb31907",
     ),
     (
         "c11_lex_single_pass",
         7,
-        "3e540faddeee3922364c002f8359fdd884cfa21e4a2605fefe9ca5346a5e47e6",
+        "a67882dd020dd3465673203b783fb99ec86585239b43bee75a77b702130a0e8b",
     ),
     (
         "c11_lex_single_pass",
         17,
-        "de74137a4dccbf5ddf92f34844792cb2d7f616e848c6297bcbf24998d20041b2",
+        "4e9a11d6e8033c9850bcd059e5e9448596c599dde8f42d457496f0930bf4d91f",
     ),
     (
         "c11_lex_single_pass",
         64,
-        "7167e4d7c6676cd19cdade90694f33722f3078d1d05d05bf5a11ad0bb197a661",
+        "1232ecdd287d44858af79d9bca0cd8136eba44b174e005cd8a7e556c67139191",
     ),
     (
         "c11_lex_regular_single_pass",
         1,
-        "2b868b142e70ac106d32b1bfd6cc7395814cd8e87ebd964d858c39f412b597f5",
+        "1f120e5ccecda4ddae10848c60f9f4bdbfee9a5925e7205ac1c3411bd0450061",
     ),
     (
         "c11_lex_regular_single_pass",
         7,
-        "71f19ad098c3fe6a765209a86d358c03d869b47bbf6669be9391f8fcacea7b4c",
+        "1ee5f66acecffa4df8c8e90151aeec575e3d1dd3ec9af105ce1732b6f4a83d04",
     ),
     (
         "c11_lex_regular_single_pass",
         17,
-        "9a3fee4b5349f1e9687b60abd2a50e987ac2e4e4a344f683715516dee0f35489",
+        "0d3bdce9004c6835fe57fed3cdd6ab716bfafe8ffd0588f03325398694d3a634",
     ),
     (
         "c11_lex_regular_single_pass",
         64,
-        "de660c5cae18ae89c94bef2030bb3310ab94adcf920ddef6d8f00ac43fec9ee8",
+        "d8d52fa59b2c15ea08b9ce67bc810ff225bbc7cd463eceed026294f211ec9cf2",
     ),
 ];
 

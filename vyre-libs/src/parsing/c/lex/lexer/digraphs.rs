@@ -7,6 +7,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use super::classify::*;
 
+const OP_ID: &str = "vyre-libs::parsing::c11_lex_digraphs";
+
 /// Resolves C11 digraphs and line-splicing markers natively in the token stream.
 /// Translates sequence pairs like `<` and `:` into `[` natively via parallel SIMT passes
 /// without branching diverging divergence loops.
@@ -213,10 +215,10 @@ pub fn c11_lex_digraphs(
         ],
         [256, 1, 1],
         vec![wrap_anonymous_region(
-            "vyre-libs::parsing::c11_lex_digraphs",
+            OP_ID,
             vec![child_phase(
-                "vyre-libs::parsing::c11_lex_digraphs",
-                vyre_primitives::text::LINE_INDEX_OP_ID,
+                OP_ID,
+                "anonymous::c_lex_resolve_digraph_at_token",
                 vec![Node::if_then(
                     Expr::lt(t.clone(), logical_token_count.clone()),
                     transform_logic,
@@ -224,7 +226,7 @@ pub fn c11_lex_digraphs(
             )],
         )],
     )
-    .with_entry_op_id("vyre-libs::parsing::c11_lex_digraphs")
+    .with_entry_op_id(OP_ID)
     .with_non_composable_with_self(true)
 }
 

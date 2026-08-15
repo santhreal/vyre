@@ -4,6 +4,7 @@
 //! [`rms_norm_reference`] entry remains available as the correctness oracle.
 
 use crate::{
+    builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram},
     builder::{strided_accumulate_child, strided_writeback_child},
     nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX},
 };
@@ -44,10 +45,8 @@ fn invalid_rms_program(op_id: &'static str, output: &str) -> Program {
 fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Program {
     let tile = RMS_TILE.min(n).max(1);
     let chunks = n.div_ceil(tile);
-    let local = Expr::var("local");
-    let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        strided_accumulate_child(
+    let sum_of_squares = ReducePhase {
+        accumulate: strided_accumulate_child(
             OP_ID,
             tile,
             chunks,
@@ -60,49 +59,42 @@ fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Progra
                 Expr::add(acc, square_expr(value))
             },
         ),
-        Node::barrier(),
-    ];
-    body.push(workgroup_tree::sum_f32_child(
-        OP_ID,
-        tile,
-        "rms_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(Node::if_then(
-        Expr::and(
-            Expr::is_first_workgroup(),
-            Expr::eq(local.clone(), Expr::u32(0)),
-        ),
-        vec![Node::Store {
+        reductions: vec![workgroup_tree::sum_f32_child(
+            OP_ID,
+            tile,
+            "rms_scratch",
+            WorkgroupReductionScope::FirstWorkgroup,
+        )],
+        publish: vec![Node::Store {
             buffer: "rms_scale".into(),
             index: Expr::u32(0),
             value: inverse_rms_expr(Expr::load("rms_scratch", Expr::u32(0)), n, eps),
         }],
-    ));
-    body.push(Node::barrier());
-    body.push(strided_writeback_child(
-        OP_ID,
-        tile,
-        chunks,
-        n,
-        output,
-        vec![Node::let_bind(
-            "scale",
-            Expr::load("rms_scale", Expr::u32(0)),
-        )],
-        |idx| Expr::mul(Expr::load(input, idx), Expr::var("scale")),
-    ));
+    };
 
-    Program::wrapped(
-        vec![
+    tiled_reduce_program(TiledReduceProgram {
+        generator: OP_ID,
+        buffers: vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("rms_scratch", tile, DataType::F32),
             BufferDecl::workgroup("rms_scale", 1, DataType::F32),
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
-        [tile, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+        workgroup: [tile, 1, 1],
+        phases: vec![sum_of_squares],
+        writeback: Some(strided_writeback_child(
+            OP_ID,
+            tile,
+            chunks,
+            n,
+            output,
+            vec![Node::let_bind(
+                "scale",
+                Expr::load("rms_scale", Expr::u32(0)),
+            )],
+            |idx| Expr::mul(Expr::load(input, idx), Expr::var("scale")),
+        )),
+    })
 }
 
 fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Program {

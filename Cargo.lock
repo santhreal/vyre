@@ -4655,7 +4655,6 @@ dependencies = [
  "vyre-driver",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lints",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",

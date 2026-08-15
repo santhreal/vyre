@@ -39,7 +39,14 @@ pub fn lattice_join(a: &str, b: &str, out: &str, size: u32) -> Program {
 /// Returns [`TensorRefError`] when buffer names alias, dtypes are wrong, or the
 /// element count cannot be represented by the IR.
 pub fn try_lattice_join(a: &str, b: &str, out: &str, size: u32) -> Result<Program, TensorRefError> {
-    super::elementwise::try_u32_elementwise_binary(JOIN_OP_ID, a, b, out, size, Expr::bitor)
+    crate::builder::elementwise::try_u32_elementwise_binary(
+        JOIN_OP_ID,
+        a,
+        b,
+        out,
+        size,
+        Expr::bitor,
+    )
 }
 
 /// Lattice Meet (Infimum) for u32.
@@ -65,7 +72,14 @@ pub fn lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Program {
 /// Returns [`TensorRefError`] when buffer names alias, dtypes are wrong, or the
 /// element count cannot be represented by the IR.
 pub fn try_lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Result<Program, TensorRefError> {
-    super::elementwise::try_u32_elementwise_binary(MEET_OP_ID, a, b, out, size, Expr::bitand)
+    crate::builder::elementwise::try_u32_elementwise_binary(
+        MEET_OP_ID,
+        a,
+        b,
+        out,
+        size,
+        Expr::bitand,
+    )
 }
 
 /// Min-Plus Semiring Multiplication.
@@ -98,13 +112,18 @@ pub fn try_semiring_min_plus_mul(
     out: &str,
     size: u32,
 ) -> Result<Program, TensorRefError> {
-    super::elementwise::try_u32_elementwise_binary(MINPLUS_MUL_OP_ID, a, b, out, size, |lx, rx| {
-        Expr::BinOp {
+    crate::builder::elementwise::try_u32_elementwise_binary(
+        MINPLUS_MUL_OP_ID,
+        a,
+        b,
+        out,
+        size,
+        |lx, rx| Expr::BinOp {
             op: BinOp::SaturatingAdd,
             left: Box::new(lx),
             right: Box::new(rx),
-        }
-    })
+        },
+    )
 }
 
 /// Boolean-semiring dense matrix multiplication.

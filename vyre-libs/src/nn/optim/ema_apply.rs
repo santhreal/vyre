@@ -2,9 +2,9 @@
 //!
 //! Category A  -  element-wise weighted average. Recipe decay=0.9965.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
+use crate::builder::build_indexed_map;
 use vyre_primitives::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::optim::ema_apply";
@@ -16,36 +16,19 @@ const OP_ID: &str = "vyre-libs::optim::ema_apply";
 /// `decay`  -  scalar, baked as constant.
 #[must_use]
 pub fn ema_apply(ema: &str, theta: &str, n: u32, decay: f32) -> Program {
-    let i = Expr::var("i");
-    let ema_val = Expr::load(ema, i.clone());
-    let theta_val = Expr::load(theta, i.clone());
-
-    // ema = decay * ema + (1 - decay) * theta
-    let updated = Expr::add(
-        Expr::mul(Expr::f32(decay), ema_val),
-        Expr::mul(Expr::f32(1.0 - decay), theta_val),
-    );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: ema.into(),
-                index: i,
-                value: flush_tiny(updated),
-            }],
-        ),
+    let buffers = vec![
+        BufferDecl::storage(ema, 0, BufferAccess::ReadWrite, DataType::F32).with_count(n),
+        BufferDecl::storage(theta, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
     ];
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(ema, 0, BufferAccess::ReadWrite, DataType::F32).with_count(n),
-            BufferDecl::storage(theta, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    build_indexed_map(OP_ID, buffers, ema, n, [64, 1, 1], |i| {
+        // ema = decay * ema + (1 - decay) * theta
+        let updated = Expr::add(
+            Expr::mul(Expr::f32(decay), Expr::load(ema, i.clone())),
+            Expr::mul(Expr::f32(1.0 - decay), Expr::load(theta, i.clone())),
+        );
+        (i, flush_tiny(updated))
+    })
 }
 
 inventory::submit! {

@@ -55,11 +55,11 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
     ),
     (
         "vyre-primitives::bitset::equal",
-        "vyre-primitives::bitset::relation",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
     ),
     (
         "vyre-primitives::bitset::subset_of",
-        "vyre-primitives::bitset::relation",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
     ),
     (
         "vyre-primitives::bitset::set_bit",
@@ -266,39 +266,43 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
     ),
     (
         "vyre-libs::logical::nand",
-        "vyre-libs::math::elementwise::u32_elementwise_binary",
+        "vyre-libs::builder::elementwise::u32_elementwise_binary",
     ),
     (
         "vyre-libs::logical::nor",
-        "vyre-libs::math::elementwise::u32_elementwise_binary",
+        "vyre-libs::builder::elementwise::u32_elementwise_binary",
     ),
     (
         "vyre-libs::math::algebra::join",
-        "vyre-libs::math::elementwise::u32_elementwise_binary",
+        "vyre-libs::builder::elementwise::u32_elementwise_binary",
     ),
     (
         "vyre-libs::math::algebra::meet",
-        "vyre-libs::math::elementwise::u32_elementwise_binary",
+        "vyre-libs::builder::elementwise::u32_elementwise_binary",
     ),
     (
         "vyre-libs::math::algebra::minplus_mul",
-        "vyre-libs::math::elementwise::u32_elementwise_binary",
+        "vyre-libs::builder::elementwise::u32_elementwise_binary",
     ),
     (
         "vyre-libs::math::avg_floor",
-        "vyre-libs::math::elementwise::u32_elementwise_binary",
+        "vyre-libs::builder::elementwise::u32_elementwise_binary",
     ),
     (
         "vyre-libs::math::lzcnt_u32",
-        "vyre-libs::math::elementwise::u32_elementwise_unary",
+        "vyre-libs::builder::elementwise::u32_elementwise_unary",
     ),
     (
         "vyre-libs::math::tzcnt_u32",
-        "vyre-libs::math::elementwise::u32_elementwise_unary",
+        "vyre-libs::builder::elementwise::u32_elementwise_unary",
     ),
     (
         "vyre-libs::math::wrapping_neg",
-        "vyre-libs::math::elementwise::u32_elementwise_unary",
+        "vyre-libs::builder::elementwise::u32_elementwise_unary",
+    ),
+    (
+        "vyre-libs::quant::int8_pack",
+        "vyre-libs::builder::elementwise::u32_elementwise_unary",
     ),
     (
         "vyre-libs::nn::gelu",
@@ -321,12 +325,28 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::nn::activation::typed_sigmoid_gate_program",
     ),
     (
+        "vyre-libs::nn::skip_gate",
+        "vyre-libs::builder::indexed_map",
+    ),
+    (
+        "vyre-libs::optim::ema_apply",
+        "vyre-libs::builder::indexed_map",
+    ),
+    (
+        "vyre-libs::math::reduce_mean",
+        "vyre-libs::builder::tiled_reduce",
+    ),
+    (
+        "vyre-libs::nn::layer_norm",
+        "vyre-libs::builder::tiled_reduce",
+    ),
+    (
         "vyre-libs::nn::rms_norm",
-        "vyre-libs::builder::strided_writeback_child",
+        "vyre-libs::builder::tiled_reduce",
     ),
     (
         "vyre-libs::nn::softmax",
-        "vyre-libs::builder::strided_writeback_child",
+        "vyre-libs::builder::tiled_reduce",
     ),
     (
         "vyre-libs::parsing::c_sema_scope.scope",
@@ -374,7 +394,77 @@ pub const DISTINCT_FAMILY_PAIRS: &[(&str, &str)] = &[
         "vyre-libs::nn::activation::typed_binary_activation_program",
         "vyre-libs::nn::activation::typed_sigmoid_gate_program",
     ),
+    (
+        "vyre-libs::builder::elementwise::u32_elementwise_binary",
+        "vyre-libs::builder::elementwise::u32_elementwise_unary",
+    ),
 ];
+
+/// Operation pairs whose IR shapes agree past the bucket key and whose
+/// algorithms were read side by side and judged distinct, as
+/// `(one, other, reason)`.
+///
+/// A shape verdict cannot tell a shared algorithm from a shared IR idiom: a
+/// guarded lane index, a row-major loop nest, and straight-line unrolled
+/// arithmetic have one fingerprint whatever work they do. So the shape verdict
+/// is "unreviewed", not "duplicate", and the reviewer records the outcome. The
+/// two outcomes are a shared builder, which is a family row above, and a
+/// reviewed pair, which is a row here carrying the reason the shape cannot
+/// express.
+pub const REVIEWED_DISTINCT_OPERATIONS: &[(&str, &str, &str)] = &[
+    (
+        "vyre-primitives::graph::path_reconstruct",
+        "vyre-primitives::text::encoding_classify",
+        "a bounded serial loop that stores one element per step; one follows parent pointers to \
+         materialize a path, the other reads 256 histogram bins to pick an encoding class",
+    ),
+    (
+        "vyre-primitives::graph::functor_apply",
+        "vyre-primitives::reduce::histogram",
+        "one lane reading through an index table and storing one element; the functor carries a \
+         schema column mapping and the histogram counts occurrences of the bin its lane owns",
+    ),
+    (
+        "vyre-primitives::math::matrix_identity_fill",
+        "vyre-primitives::parsing::planar_rewrite_schedule",
+        "row-major two-dimensional index arithmetic under a per-cell predicate; the fill compares \
+         row against column and stores a constant, the rewrite matches a k by k window against a \
+         pattern and stores its replacement",
+    ),
+    (
+        "vyre-primitives::math::tensor_train_decompose",
+        "vyre-primitives::parsing::planar_rewrite_schedule",
+        "the loop nest that walks one mode index range is all the two share; the decomposition \
+         composes an eigensolve and partial dot products per mode, and the shape carries neither \
+         the truncation nor the window match",
+    ),
+    (
+        "vyre-primitives::decode::ziftsieve_literal_copy",
+        "vyre-primitives::math::bigint_add_carry",
+        "one lane per element over a contiguous range with a running offset; the copy moves bytes \
+         to a prefix-summed destination and the addition propagates a carry between limbs, and a \
+         carry chain cannot be a copy",
+    ),
+    (
+        "vyre-libs::math::fft::fft4_complex",
+        "vyre-primitives::hash::blake3_g",
+        "straight-line unrolled arithmetic over a fixed small operand set has one fingerprint \
+         whatever the arithmetic is; one is four complex butterflies over f32 twiddles, the other \
+         is the BLAKE3 four-word mixing of add, xor and rotate over u32",
+    ),
+];
+
+/// Reason two registered operations were reviewed and kept apart, read in both
+/// directions.
+#[must_use]
+pub fn reviewed_distinct_operations(left_id: &str, right_id: &str) -> Option<&'static str> {
+    REVIEWED_DISTINCT_OPERATIONS
+        .iter()
+        .find(|(one, other, _)| {
+            (*one == left_id && *other == right_id) || (*one == right_id && *other == left_id)
+        })
+        .map(|(_, _, reason)| *reason)
+}
 
 /// Family id a source path belongs to, used to group similar implementations.
 #[must_use]
@@ -485,5 +575,66 @@ mod tests {
             "vyre-primitives::hardware::popcount_u32",
             "vyre-primitives::hardware::workgroup_barrier"
         ));
+    }
+
+    /// WHY: a reviewed pair whose sides are one operation would suppress that
+    /// operation against itself, which the pair walk never asks about, so the
+    /// row would read as a judgment nothing consults.
+    #[test]
+    fn a_reviewed_pair_names_two_operations() {
+        for (one, other, _) in REVIEWED_DISTINCT_OPERATIONS {
+            assert_ne!(
+                one, other,
+                "Fix: the reviewed-distinct row for `{one}` names one operation twice"
+            );
+        }
+    }
+
+    /// WHY: the lookup returns the first match, so a second row for one pair is
+    /// a reason no reader of the audit will ever be shown.
+    #[test]
+    fn no_reviewed_pair_is_recorded_twice_in_either_order() {
+        for (index, (one, other, _)) in REVIEWED_DISTINCT_OPERATIONS.iter().enumerate() {
+            for (later_one, later_other, _) in REVIEWED_DISTINCT_OPERATIONS.iter().skip(index + 1) {
+                let same = (one == later_one && other == later_other)
+                    || (one == later_other && other == later_one);
+                assert!(
+                    !same,
+                    "Fix: `{one}` and `{other}` are recorded twice; keep one row and merge the reasons"
+                );
+            }
+        }
+    }
+
+    /// WHY: the reason is the whole content of the row. An empty one suppresses
+    /// the finding and records nothing about why the shapes agree.
+    #[test]
+    fn every_reviewed_pair_carries_a_reason() {
+        for (one, other, reason) in REVIEWED_DISTINCT_OPERATIONS {
+            assert!(
+                reason.len() > 40,
+                "Fix: `{one}` and `{other}` carry the reason `{reason}`, which is too short to \
+                 name what the shared shape cannot express"
+            );
+        }
+    }
+
+    #[test]
+    fn a_reviewed_pair_reads_in_both_directions() {
+        let forward = reviewed_distinct_operations(
+            "vyre-libs::math::fft::fft4_complex",
+            "vyre-primitives::hash::blake3_g",
+        );
+        let backward = reviewed_distinct_operations(
+            "vyre-primitives::hash::blake3_g",
+            "vyre-libs::math::fft::fft4_complex",
+        );
+        assert_eq!(forward, backward);
+        assert!(forward.is_some());
+        assert!(reviewed_distinct_operations(
+            "vyre-primitives::hash::blake3_g",
+            "vyre-primitives::reduce::all"
+        )
+        .is_none());
     }
 }

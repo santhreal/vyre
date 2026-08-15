@@ -5,9 +5,9 @@
 //! Category A composition  -  sigmoid + mul + add. Used in the recipe
 //! for U-Net skip connections between encoder and decoder layers.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program, UnOp};
 
+use crate::builder::build_indexed_map;
 use vyre_primitives::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::nn::skip_gate";
@@ -20,56 +20,42 @@ const OP_ID: &str = "vyre-libs::nn::skip_gate";
 /// `output[n]` (F32)  -  gated combination.
 #[must_use]
 pub fn skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> Program {
-    let i = Expr::var("i");
-    let g_raw = Expr::load(gate, i.clone());
-    let b = Expr::load(branch, i.clone());
-    let s = Expr::load(skip, i.clone());
-
-    // sigmoid(g) = 1 / (1 + exp(-g))
-    let sigmoid_g = Expr::div(
-        Expr::f32(1.0),
-        Expr::add(
-            Expr::f32(1.0),
-            Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(Expr::UnOp {
-                    op: UnOp::Negate,
-                    operand: Box::new(g_raw),
-                }),
-            },
-        ),
-    );
-
-    // out = sig * branch + (1 - sig) * skip
-    let result = Expr::add(
-        Expr::mul(sigmoid_g.clone(), b),
-        Expr::mul(Expr::sub(Expr::f32(1.0), sigmoid_g), s),
-    );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: flush_tiny(result),
-            }],
-        ),
+    let buffers = vec![
+        BufferDecl::storage(gate, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::storage(branch, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::storage(skip, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::output(output, 3, DataType::F32)
+            .with_count(n.max(1))
+            .with_output_byte_range(0..(n as usize).saturating_mul(4)),
     ];
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(gate, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(branch, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(skip, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 3, DataType::F32)
-                .with_count(n.max(1))
-                .with_output_byte_range(0..(n as usize).saturating_mul(4)),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    build_indexed_map(OP_ID, buffers, output, n, [64, 1, 1], |i| {
+        let g_raw = Expr::load(gate, i.clone());
+        let b = Expr::load(branch, i.clone());
+        let s = Expr::load(skip, i.clone());
+
+        // sigmoid(g) = 1 / (1 + exp(-g))
+        let sigmoid_g = Expr::div(
+            Expr::f32(1.0),
+            Expr::add(
+                Expr::f32(1.0),
+                Expr::UnOp {
+                    op: UnOp::Exp,
+                    operand: Box::new(Expr::UnOp {
+                        op: UnOp::Negate,
+                        operand: Box::new(g_raw),
+                    }),
+                },
+            ),
+        );
+
+        // out = sig * branch + (1 - sig) * skip
+        let result = Expr::add(
+            Expr::mul(sigmoid_g.clone(), b),
+            Expr::mul(Expr::sub(Expr::f32(1.0), sigmoid_g), s),
+        );
+        (i, flush_tiny(result))
+    })
 }
 
 inventory::submit! {

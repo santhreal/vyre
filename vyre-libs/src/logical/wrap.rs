@@ -13,5 +13,5 @@ pub(crate) fn build_logical_binary<F>(
 where
     F: Fn(Expr, Expr) -> Expr,
 {
-    crate::math::elementwise::u32_elementwise_binary(op_id, a, b, out, size, op)
+    crate::builder::elementwise::u32_elementwise_binary(op_id, a, b, out, size, op)
 }

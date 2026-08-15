@@ -20,11 +20,11 @@
 //!
 //! Both paths produce the same IR.
 
+use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate_child,
     strided_writeback_child, BuildOptions,
 };
-use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
@@ -207,7 +207,7 @@ fn softmax_tiled_program(
         ],
         workgroup,
         phases: vec![max_pass, sum_pass],
-        writeback: strided_writeback_child(
+        writeback: Some(strided_writeback_child(
             OP_ID,
             tile,
             chunks,
@@ -229,7 +229,7 @@ fn softmax_tiled_program(
                 }),
                 right: Box::new(Expr::var("sum_val")),
             },
-        ),
+        )),
     })
 }
 

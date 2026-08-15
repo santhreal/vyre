@@ -18,10 +18,10 @@ use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
+use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child, BuildOptions,
 };
-use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::nn::layer_norm";
@@ -251,7 +251,7 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
         ],
         workgroup,
         phases: vec![moments],
-        writeback,
+        writeback: Some(writeback),
     })
 }
 

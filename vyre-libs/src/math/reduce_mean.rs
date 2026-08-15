@@ -3,6 +3,8 @@
 //! Category-A composition with a workgroup-tiled sum reduction.
 
 use crate::builder::strided_accumulate_child;
+use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
+#[cfg(test)]
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
@@ -41,12 +43,8 @@ fn reduce_mean_invalid_program(input: &str, output: &str) -> Program {
 fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
     let tile = REDUCE_MEAN_TILE;
     let chunks = n.div_ceil(tile);
-    let local = Expr::var("local");
-    // Per-lane strided sum into `mean_scratch[local]` via the shared accumulator
-    // child (same skeleton as dot/rms_norm/softmax); the workgroup tree reduces it below.
-    let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        strided_accumulate_child(
+    let mean = ReducePhase {
+        accumulate: strided_accumulate_child(
             OP_ID,
             tile,
             chunks,
@@ -56,17 +54,13 @@ fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
             "mean_scratch",
             |idx, acc| Expr::add(acc, Expr::load(input, idx)),
         ),
-        Node::barrier(),
-    ];
-    body.push(workgroup_tree::sum_f32_child(
-        OP_ID,
-        tile,
-        "mean_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(Node::if_then(
-        Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
-        vec![Node::Store {
+        reductions: vec![workgroup_tree::sum_f32_child(
+            OP_ID,
+            tile,
+            "mean_scratch",
+            WorkgroupReductionScope::FirstWorkgroup,
+        )],
+        publish: vec![Node::Store {
             buffer: output.into(),
             index: Expr::u32(0),
             value: Expr::div(
@@ -74,17 +68,19 @@ fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
                 Expr::f32(n as f32),
             ),
         }],
-    ));
+    };
 
-    Program::wrapped(
-        vec![
+    tiled_reduce_program(TiledReduceProgram {
+        generator: OP_ID,
+        buffers: vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("mean_scratch", tile, DataType::F32),
             BufferDecl::output(output, 1, DataType::F32).with_count(1),
         ],
-        [tile, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+        workgroup: [tile, 1, 1],
+        phases: vec![mean],
+        writeback: None,
+    })
 }
 
 #[cfg(test)]

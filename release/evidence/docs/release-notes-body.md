@@ -2704,6 +2704,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every crate to find the rows describing one, and the generated per-crate page
   is what answers the question. The section now links `docs/testing/<crate>.md`
   and names the TOML as its authority.
+- The lego-quick gate answers from source text and no longer links the
+  operation registry: it moved to xtask, which is where both crates already say
+  a source-text gate belongs, so a pre-commit run stops building the registry
+  crate. Its rule against sibling-dialect imports in vyre-libs is replaced by
+  one against an import the manifest does not declare, because composing
+  another dialect is what the composition policy asks for and undeclared
+  coupling is what it forbids; dialect membership is now derived from the cfg
+  attributes in vyre-libs/src/lib.rs instead of a hand-kept list of five names,
+  and the fix text names the shared builder and descriptor modules. Two checks
+  are gone: a large-file advisory that was a third owner of a measurement the
+  file-size cap and the composition audit already own, and a ban on IR
+  construction under vyre-libs, which forbade the one thing a Category A
+  composition is defined to do and whose 203-row path exemption list had rotted
+  to 59 dead rows because no path list survives a file split.
 - The command-hygiene scan reads authored documents only. CHANGELOG.md and the
   release notes beside it are generated from release/changes, and a released
   entry records what a version did rather than telling a reader what to run, so
@@ -2720,6 +2734,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   module it belongs to and is declared without an attribute. The fusion tests
   had two declaring owners, the parent module and the file they prove; only the
   file that proves them declares them now.
+- The digraph resolution phase of the C11 lexer no longer borrows another crate
+  operation id for its name. That child region was labelled with the utf8
+  validation id and then, when the constant went crate-private, with the line
+  index id: two different primitives for one body that resolves digraphs and
+  splices lines and calls neither. It is a phase boundary inside one operation,
+  so it carries the anonymous prefix and names what it does. Nineteen pinned IR
+  fingerprints across the lexer and parser walk families are re-recorded with
+  the change that moved each of them: this rename, the earlier rename of every
+  child region that had derived its name from its parent operation, and the
+  collapse of the C declaration prefix walk onto one owner whose disqualifier
+  token set differs from the copy the annotate builders had been reading.
 - The contract that a failing xtask command says why it failed judges the exit
   itself. It used to match one shape of the original defect, an `if` whose
   condition named a blocker and whose branch exited, and the gate architecture
@@ -2728,6 +2753,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   nothing. It now derives every nonzero `process::exit` in the xtask crates at
   run time and requires an enclosing block to write the cause on either stream,
   so a silent exit added anywhere in the tooling fails it.
+- A per-backend conformance artifact recorded under an older shape is now
+  reported as stale, naming both the version it carries and the version the
+  reader holds, instead of as unparseable JSON. Three committed artifacts
+  carried a row-count field under its former name and read as corrupt files.
+  The shape version is raised, and a test pins the recorded field set to it so
+  a rename turns the suite red until the version records that the shape
+  changed.
+- The composition audit reports an unreviewed shape pair rather than a
+  duplicate. A shape verdict cannot tell a shared algorithm from a shared IR
+  idiom: a guarded lane index, a row-major loop nest and straight-line unrolled
+  arithmetic have one fingerprint whatever work they do. The reviewer records
+  one of two outcomes, a shared builder or a reviewed pair with the reason the
+  shape cannot express, and every row of both lists is checked against the live
+  registry.
 - A gate that detects a stub may spell it. A code-call pattern found only
   inside a string literal is a rule definition, the same reason a doc comment
   was already exempt, so a pattern table row reading text equals todo-open no
@@ -2741,6 +2780,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   asserting a non-zero exit could never fail and passed against a committed
   schema that already disagreed with the live registry. The schema is
   regenerated from the 359 live registrations.
+- The elementwise map builders live in the builder module rather than under
+  math. A shared skeleton hosted inside one gated dialect is unreachable from
+  the others: logical depended on math-broadcast only to reach the builder, and
+  nn quantization could not reach it at all and carried its own copy of the
+  unary map. The logical feature no longer pulls in math, and int8 packing, the
+  skip gate and the EMA update route through the shared builders.
 - The one-public-path gate reads the crate source to tell an item at two paths
   from a name several sibling modules each declare. A snapshot line is
   identical for both, so a terminal id table per grammar, a per-op identifier
@@ -2750,6 +2795,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   name declared at most once can be one item at two paths. The count of shared
   names is reported and left unpinned, because a module is what disambiguates
   two grammars naming the same bracket.
+- The exemption list shipped with vyre-lints drops 59 rows that named a file no
+  longer in the tree, and a test now fails on any row that names nothing. An
+  exemption keyed on a path silently exempts nothing after a rename or a split,
+  so the count it holds back grows by every construction site in the files that
+  moved. The header states what the file is: the default configuration of the
+  shipped lint, read by no workspace gate.
 - The routing-contract closure test reads a split op as one module. An op whose
   program moved into its own file registered in the tests module beside it,
   which the test looked for only under a directory named for the file, so a
@@ -3700,6 +3751,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   different contract: it also collapses negative zero and flushes subnormals to
   positive zero, which loses sign. The two test-side restatements also stay,
   each now saying why: a judge that calls the code it judges proves nothing.
+- Tiled reductions share one program skeleton. reduce_mean, rms_norm,
+  layer_norm and softmax each hand-built the same reduce-then-publish shape
+  (bind the lane, accumulate with a stride, reduce through workgroup scratch,
+  publish from lane zero of workgroup zero, stream the normalized output back),
+  so a change to the barrier placement or the publish guard had four places to
+  be made. The skeleton lives in the unconditional builder module, above the
+  separately gated math and nn dialects that reach for it, and the emitted IR
+  is unchanged. A publish that is the last thing a program does no longer emits
+  the barrier that fenced it, because nothing reads the published scalars.
 - Every instruction that names the build wrapper names it as ./cargo_full. A
   bare cargo_full is not on the search path, so a fix line quoting it told the
   reader to run a command that does not resolve. The generators that embed
@@ -4157,6 +4217,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now proves it. It named a path only the core table listed, so it asserted a
   core cap and never exercised the precedence; cap_from takes both tables, and
   the test injects one path into both and asserts the tighter number wins.
+- Bitset equality and subset now reduce through the grid-stride reduction
+  primitive instead of a second copy of it. The copy was missing the
+  first-workgroup guard the owner documents, so the relation ops wrote their
+  result from every workgroup. The owner takes an input list and a value
+  expression, which is what the relation ops needed and what the copy existed
+  to provide.
 - The release hygiene scan reads every xtask source file. It named thirteen
   command modules by hand, so a release command added beside them was never
   scanned and a renamed module kept its row while resolving to nothing, which

@@ -23,7 +23,9 @@ pub fn selected_cases(
         return Err(GateError::new(
             match selected {
                 Some(id) => format!("no release corpus case is named `{id}`"),
-                None => format!("the release corpus generated no case, so there is nothing to {verb}"),
+                None => {
+                    format!("the release corpus generated no case, so there is nothing to {verb}")
+                }
             },
             format!("run the gate without --program to {verb} every generated case"),
         ));

@@ -203,7 +203,7 @@ pub mod visual;
     feature = "math-scan",
     feature = "math-broadcast"
 ))]
-pub(crate) use math::elementwise::{f32_elementwise_mul, F32MulRhs};
+pub(crate) use builder::elementwise::{f32_elementwise_mul, F32MulRhs};
 #[cfg(feature = "nn-linear-4bit")]
 pub(crate) use math::linalg::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,

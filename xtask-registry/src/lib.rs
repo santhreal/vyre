@@ -35,7 +35,6 @@ pub static GATES: &[&dyn Gate] = &[
     &gates::heuristic_audit::HeuristicAudit,
     &gates::lego_audit::LegoAudit,
     &gates::lego_audit::PrimitiveAdmissionGate,
-    &gates::lego_quick::LegoQuick,
     &gates::verify_rewrite_proofs::VerifyRewriteProofs,
     &gates::whats_similar::WhatsSimilar,
     &print_composition::PrintComposition,

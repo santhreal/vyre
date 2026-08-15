@@ -1,7 +1,11 @@
 //! Shared elementwise Program builders.
 //!
-//! Category-A math and NN wrappers keep domain-specific names and op ids, but
-//! the repeated per-lane load/compute/store skeleton lives here.
+//! Category-A math, logical, quantization and NN wrappers keep domain-specific
+//! names and op ids, but the repeated per-lane load/compute/store skeleton lives
+//! here. It sits beside the indexed-map child it composes and above every
+//! dialect that reaches for it: hosting it inside `math` made the boolean
+//! dialect declare a dependency on the math broadcast surface to reach one
+//! helper, and left the quantization ops with no way to reach it at all.
 
 use crate::builder::{build_indexed_map, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};

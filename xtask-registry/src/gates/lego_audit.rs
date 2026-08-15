@@ -70,8 +70,8 @@ use xtask::gates::dedup_report::{
     DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
 };
 use xtask::gates::implementation_family::{
-    known_distinct_implementation_families, same_implementation_family,
-    IMPLEMENTATION_FAMILY_ROWS,
+    known_distinct_implementation_families, reviewed_distinct_operations,
+    same_implementation_family, IMPLEMENTATION_FAMILY_ROWS, REVIEWED_DISTINCT_OPERATIONS,
 };
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
@@ -734,8 +734,9 @@ const DEAD_EXEMPTION_FIX: &str =
 /// Every exemption row must match a registered op.
 ///
 /// An exemption is a rule that a named op is judged elsewhere: a phase of a
-/// larger composition, a declared pure-IR leaf, or an op whose shape comes from
-/// a shared builder. A row naming an op that was renamed or deleted stops
+/// larger composition, a declared pure-IR leaf, an op whose shape comes from a
+/// shared builder, or a pair whose shapes were read side by side and judged
+/// distinct. A row naming an op that was renamed or deleted stops
 /// exempting anything, and nothing says so: the list keeps its length, the audit
 /// keeps passing, and a reader takes the row as evidence the op is covered. Two
 /// rows were already in that state.
@@ -762,6 +763,16 @@ fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
                 format!("no registered op answers to `{id}`, claimed by the implementation family `{family}`"),
                 DEAD_EXEMPTION_FIX,
             ));
+        }
+    }
+    for (one, other, _) in REVIEWED_DISTINCT_OPERATIONS {
+        for id in [one, other] {
+            if !ops.iter().any(|op| &op.id == id) {
+                report.find(Finding::new(
+                    format!("no registered op answers to `{id}`, half of the reviewed-distinct pair with `{}`", if id == one { other } else { one }),
+                    DEAD_EXEMPTION_FIX,
+                ));
+            }
         }
     }
 }
@@ -1503,7 +1514,7 @@ fn leaf_stem(leaf: &str) -> &str {
 }
 
 // ============================================================
-// Check 10: operand-shape duplicate  -  catches false negatives of check 1.
+// Check 10: unreviewed shape pair  -  catches false negatives of check 1.
 // ============================================================
 //
 // Check 1 fires when bigram-cosine ≥ 0.88. False negatives slip when
@@ -1529,13 +1540,13 @@ fn check_10_operand_shape_duplicate(report: &mut Report, ops: &[OpInfo]) -> usiz
     report.note(format!("[10/10] Operand-shape advisory (same fingerprint prefix, then cosine ≥ {OPERAND_DUP_MIN_COSINE:.2} past that prefix)"));
     let pairs = operand_shape_duplicate_pairs(ops);
     for (cos, a, b) in &pairs {
-        report.find(violation(format!("  ⚠ shape-duplicate: `{}` and `{}` share their entry shape and {:.0}% cosine over the rest of the body. Fix: extract the shared body to one builder, or record the pair in `implementation_family_id` naming the builder each one already shares.",
+        report.find(violation(format!("  ⚠ unreviewed shape pair: `{}` and `{}` share their entry shape and {:.0}% cosine over the rest of the body. Fix: extract the shared body to one builder and record both in `IMPLEMENTATION_FAMILY_ROWS`, or read the two algorithms side by side and record the pair in `REVIEWED_DISTINCT_OPERATIONS` with the reason the shape cannot express.",
             a.id,
             b.id,
             cos * 100.0)));
     }
     if pairs.is_empty() {
-        report.note("  ✓ no operand-shape duplicates".to_string());
+        report.note("  ✓ every shape pair is reviewed".to_string());
     }
     0
 }
@@ -1570,6 +1581,7 @@ fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)>
                 }
                 if same_implementation_family(&a.id, &b.id)
                     || known_distinct_implementation_families(&a.id, &b.id)
+                    || reviewed_distinct_operations(&a.id, &b.id).is_some()
                 {
                     continue;
                 }

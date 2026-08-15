@@ -10,6 +10,5 @@ pub mod cross_target;
 pub mod gate1;
 pub mod heuristic_audit;
 pub mod lego_audit;
-pub mod lego_quick;
 pub mod verify_rewrite_proofs;
 pub mod whats_similar;

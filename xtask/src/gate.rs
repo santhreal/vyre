@@ -291,9 +291,9 @@ mod tests {
     use super::*;
 
     /// WHY: notes exist so a gate can report what it walked without inflating
-    /// the pinned number. `lego-quick` pinned 13292 output lines, of which the
-    /// overwhelming majority were the ops it enumerated. If a note ever counted,
-    /// the pin would ratchet on context instead of on defects.
+    /// the pinned number. A composition audit enumerates thousands of registered
+    /// operations as context; if a note ever counted, the pin would ratchet on
+    /// the size of the tree instead of on its defects.
     #[test]
     fn notes_are_not_counted() {
         let mut report = Report::clean();

@@ -56,8 +56,6 @@ pub(crate) mod welford;
 /// Wrapping negation operation
 pub mod wrapping_neg;
 
-pub(crate) mod elementwise;
-
 fn invalid_f32_reduction_program(
     op_id: &'static str,
     input: &str,

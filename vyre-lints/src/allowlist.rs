@@ -170,6 +170,31 @@ mod tests {
         assert_eq!(a.measured_roots(), ["vyre-libs/src"]);
     }
 
+    /// WHY: an exemption is keyed on a path, so a rename or a file split leaves
+    /// a row that exempts nothing while still reading as coverage of the file it
+    /// names. 59 of 203 shipped rows named a path that no longer existed, and
+    /// every construction site in the files that moved silently entered the
+    /// measured set.
+    #[test]
+    fn every_shipped_exemption_names_a_file_that_exists() {
+        let root = vyre_test_support::monorepo::vyre_workspace_root();
+        let shipped = root.join("vyre-lints/allowlist.toml");
+        let text = crate::read_source_bounded(&shipped).expect("shipped allowlist reads");
+        let parsed: AllowlistFile = toml::from_str(&text).expect("shipped allowlist parses");
+
+        let missing: Vec<&String> = parsed
+            .exempt_files
+            .iter()
+            .filter(|relative| !root.join(relative).exists())
+            .collect();
+
+        assert!(
+            missing.is_empty(),
+            "Fix: these exemption rows name no file: {missing:?}. Point each row at the path the \
+             file moved to, or delete it: a row that names nothing exempts nothing."
+        );
+    }
+
     #[test]
     fn missing_allowlist_file_errors() {
         let r = load(Path::new("/nonexistent/path/allowlist.toml"));

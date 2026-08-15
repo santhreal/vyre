@@ -332,18 +332,12 @@ mod tests {
             )
         };
         let wrappers: [(&str, Node); 4] = [
-            (
-                "Block",
-                Node::Block(vec![buried()]),
-            ),
+            ("Block", Node::Block(vec![buried()])),
             (
                 "Loop",
                 Node::loop_for("i", Expr::u32(0), Expr::u32(1), vec![buried()]),
             ),
-            (
-                "If/then",
-                Node::if_then(Expr::bool(true), vec![buried()]),
-            ),
+            ("If/then", Node::if_then(Expr::bool(true), vec![buried()])),
             (
                 "If/otherwise",
                 Node::if_then_else(Expr::bool(true), Vec::new(), vec![buried()]),

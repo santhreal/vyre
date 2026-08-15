@@ -5,7 +5,7 @@ const OP_ID: &str = "vyre-libs::math::wrapping_neg";
 /// Computes wrapping negation.
 #[must_use]
 pub fn wrapping_neg(a: &str, out: &str, size: u32) -> Program {
-    super::elementwise::u32_elementwise_unary(OP_ID, a, out, size, |value| {
+    crate::builder::elementwise::u32_elementwise_unary(OP_ID, a, out, size, |value| {
         Expr::sub(Expr::u32(0), value)
     })
 }

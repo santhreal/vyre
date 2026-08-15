@@ -6,6 +6,8 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::builder::elementwise::u32_elementwise_unary;
+
 const PACK_OP_ID: &str = "vyre-libs::quant::int8_pack";
 const UNPACK_OP_ID: &str = "vyre-libs::quant::int8_unpack";
 
@@ -51,29 +53,9 @@ pub fn int8_unpack(packed: &str, scales: &str, output: &str, n: u32, cols: u32) 
 /// Pack to int8: mask to 8 bits.
 #[must_use]
 pub fn int8_pack(input: &str, output: &str, n: u32) -> Program {
-    let i = Expr::var("i");
-    let value = Expr::bitand(Expr::load(input, i.clone()), Expr::u32(0xFF));
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(output, 1, DataType::U32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(PACK_OP_ID, body)],
-    )
+    u32_elementwise_unary(PACK_OP_ID, input, output, n, |value| {
+        Expr::bitand(value, Expr::u32(0xFF))
+    })
 }
 
 inventory::submit! {

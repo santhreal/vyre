@@ -98,11 +98,11 @@ pub(crate) fn atomic_reduce_u32(
     op_id: &'static str,
 ) -> Program {
     atomic_grid_stride_u32(
-        input,
+        &[input],
         out,
         count,
         kind.identity(),
-        |input, index| kind.value(input, index),
+        |index| kind.value(input, index),
         |out, value| kind.atomic(out, value),
         op_id,
     )
@@ -116,11 +116,11 @@ pub(crate) fn atomic_nonzero_bool_reduce_u32(
     op_id: &'static str,
 ) -> Program {
     atomic_grid_stride_u32(
-        input,
+        &[input],
         out,
         count,
         kind.identity(),
-        |input, index| {
+        |index| {
             Expr::select(
                 Expr::ne(Expr::load(input, index), Expr::u32(0)),
                 Expr::u32(1),
@@ -307,8 +307,15 @@ macro_rules! define_u32_reduce_op {
 
 pub(crate) use define_u32_reduce_op;
 
-fn atomic_grid_stride_u32<V, A>(
-    input: &str,
+/// Build a grid-stride loop that folds one value per element into `out[0]`
+/// through a single atomic.
+///
+/// `inputs` are the read-only u32 buffers the value expression reads, bound in
+/// order from zero, with `out` bound after them. `value` receives the element
+/// index and closes over whichever inputs it reads, so a relation over two
+/// buffers and a reduction over one share this one shape.
+pub(crate) fn atomic_grid_stride_u32<V, A>(
+    inputs: &[&str],
     out: &str,
     count: u32,
     identity: u32,
@@ -317,7 +324,7 @@ fn atomic_grid_stride_u32<V, A>(
     op_id: &'static str,
 ) -> Program
 where
-    V: Fn(&str, Expr) -> Expr,
+    V: Fn(Expr) -> Expr,
     A: Fn(&str, Expr) -> Expr,
 {
     let lane = Expr::InvocationId { axis: 0 };
@@ -365,7 +372,7 @@ where
                         Expr::lt(Expr::var("i"), Expr::u32(count)),
                         vec![Node::let_bind(
                             "_acc_prev",
-                            atomic(out, value(input, Expr::var("i"))),
+                            atomic(out, value(Expr::var("i"))),
                         )],
                     ),
                 ],
@@ -373,11 +380,31 @@ where
         ),
     ];
 
+    let mut buffers: Vec<BufferDecl> = inputs
+        .iter()
+        .enumerate()
+        .map(|(binding, name)| {
+            BufferDecl::storage(
+                name,
+                u32::try_from(binding).unwrap_or(u32::MAX),
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(count)
+        })
+        .collect();
+    buffers.push(
+        BufferDecl::storage(
+            out,
+            u32::try_from(inputs.len()).unwrap_or(u32::MAX),
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(1),
+    );
+
     Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
-            BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
+        buffers,
         [WORKGROUP_SIZE, 1, 1],
         vec![wrap_anonymous_region(op_id, body)],
     )

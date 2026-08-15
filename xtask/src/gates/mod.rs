@@ -24,6 +24,7 @@ pub mod hot_path_scan;
 pub mod hygiene_matrix;
 pub mod implementation_family;
 pub mod layering;
+pub mod lego_quick;
 pub mod lint_hygiene;
 pub mod lockfile;
 pub mod manifest_contract;
@@ -76,6 +77,7 @@ pub static GATES: &[&dyn Gate] = &[
     &hygiene_matrix::HygieneMatrix,
     &layering::Layering,
     &layering::NeutralCrates,
+    &lego_quick::LegoQuick,
     &lint_hygiene::ExpectHasFix,
     &lint_hygiene::MissingDocsOverride,
     &lint_hygiene::UnsafeBudget,

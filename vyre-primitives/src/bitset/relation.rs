@@ -1,15 +1,16 @@
 //! Shared packed-bitset scalar relation reductions.
 //!
-//! Relation ops all scan `lhs` and `rhs` word-wise, reduce each
-//! per-word predicate into `out_scalar[0]` with atomic AND, and differ
-//! only in the predicate they apply per word.
+//! Relation ops all scan `lhs` and `rhs` word-wise, reduce each per-word
+//! predicate into `out_scalar[0]` with atomic AND, and differ only in the
+//! predicate they apply per word. That is the grid-stride atomic-scalar shape
+//! `reduce::atomic_scalar` owns, over two read-only inputs instead of one, so
+//! the relation supplies the predicate and the shape stays in one place. It used
+//! to be a second copy, which is how it came to be missing the first-workgroup
+//! gate that keeps the reduction correct under any dispatch grid.
 
-use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{Expr, Program};
 
-use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-const WORKGROUP_SIZE: u32 = 256;
+use crate::reduce::atomic_scalar::atomic_grid_stride_u32;
 
 /// Supported bitset-wide scalar relations.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,57 +42,19 @@ pub(crate) fn bitset_relation_program(
     words: u32,
     relation: BitsetRelation,
 ) -> Program {
-    let lane = Expr::InvocationId { axis: 0 };
-    let chunk_count = Expr::div(
-        Expr::add(Expr::u32(words), Expr::u32(WORKGROUP_SIZE - 1)),
-        Expr::u32(WORKGROUP_SIZE),
-    );
-    let predicate = relation.predicate(
-        Expr::load(lhs, Expr::var("w")),
-        Expr::load(rhs, Expr::var("w")),
-    );
-    let body = vec![
-        Node::if_then(
-            Expr::eq(lane.clone(), Expr::u32(0)),
-            vec![Node::store(out_scalar, Expr::u32(0), Expr::u32(1))],
-        ),
-        Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
+    atomic_grid_stride_u32(
+        &[lhs, rhs],
+        out_scalar,
+        words,
+        1,
+        |index| {
+            Expr::select(
+                relation.predicate(Expr::load(lhs, index.clone()), Expr::load(rhs, index)),
+                Expr::u32(1),
+                Expr::u32(0),
+            )
         },
-        Node::loop_for(
-            "chunk",
-            Expr::u32(0),
-            chunk_count,
-            vec![
-                Node::let_bind(
-                    "w",
-                    Expr::add(
-                        Expr::mul(Expr::var("chunk"), Expr::u32(WORKGROUP_SIZE)),
-                        lane.clone(),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::lt(Expr::var("w"), Expr::u32(words)),
-                    vec![Node::let_bind(
-                        "_relation_prev",
-                        Expr::atomic_and(
-                            out_scalar,
-                            Expr::u32(0),
-                            Expr::select(predicate, Expr::u32(1), Expr::u32(0)),
-                        ),
-                    )],
-                ),
-            ],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(out_scalar, 2, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [WORKGROUP_SIZE, 1, 1],
-        vec![wrap_anonymous_region(op_id, body)],
+        |out, value| Expr::atomic_and(out, Expr::u32(0), value),
+        op_id,
     )
 }

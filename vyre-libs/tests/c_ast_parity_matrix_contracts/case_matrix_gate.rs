@@ -96,6 +96,10 @@ fn every_fixture_builder_is_a_parity_case() {
 /// A fixture family belongs here only when its constructs are proven by a
 /// contract that is not a four-stage CPU/backend comparison, which is why the
 /// reason is recorded next to the name rather than in a commit message.
+///
+/// A file that is not a family at all, such as a token stream two families
+/// index by row, belongs here for the same reason: the directory is the set, so
+/// every file in it carries a decision.
 const FAMILIES_WITHOUT_A_CASE_TABLE: &[(&str, &str)] = &[
     (
         "asm_extended_operands.rs",
@@ -155,6 +159,11 @@ const FAMILIES_WITHOUT_A_CASE_TABLE: &[(&str, &str)] = &[
     (
         "gnu_builtin_control_flow.rs",
         "GNU builtin control flow asserts property-graph edges",
+    ),
+    (
+        "initializer_designator_streams.rs",
+        "a token stream shared by the two initializer-designator families, indexed by row from \
+         both, so the parity is asserted in each family and not from here",
     ),
     (
         "linux_macro_builtin_qualifier.rs",

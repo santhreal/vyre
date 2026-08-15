@@ -17,6 +17,9 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
+pub(crate) mod elementwise;
+pub(crate) mod tiled_reduce;
+
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -314,7 +317,6 @@ where
 ///
 /// This keeps paired reductions such as `(sum, sum_sq)` in one memory pass
 /// instead of forcing two separate scans over the input.
-#[allow(dead_code)]
 pub(crate) fn strided_accumulate2_child<F1, F2>(
     parent_op_id: &'static str,
     tile: u32,
@@ -415,7 +417,6 @@ fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec
 
 /// Tensor-ref elementwise binary builder, used by `math::avg_floor`,
 /// `math::algebra`, and other binary-arithmetic primitives.
-#[allow(dead_code)]
 pub(crate) fn build_elementwise_binary<F>(
     op_id: &'static str,
     a: crate::tensor_ref::TensorRef,
@@ -524,7 +525,6 @@ where
     ))
 }
 
-#[allow(dead_code)]
 pub(crate) fn build_elementwise_unary<F>(
     op_id: &'static str,
     a: crate::tensor_ref::TensorRef,

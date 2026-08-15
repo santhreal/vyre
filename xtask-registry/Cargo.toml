@@ -33,7 +33,6 @@ vyre-registry-link = { workspace = true, features = [
     "spirv",
     "wgpu",
 ] }
-vyre-lints.workspace = true
 vyre-reference.workspace = true
 vyre-spec.workspace = true
 # `lego-audit` is the release catalog gate. It must link every shipped Tier-3
