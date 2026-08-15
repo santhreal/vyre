@@ -497,8 +497,8 @@ pub const SUBCOMMANDS: &[Subcommand] = &[
     },
     Subcommand {
         name: "vyre-release-gate",
-        usage: "[--prepublish] [--manifest PATH]",
-        help: "Enforce final or prepublication evidence closure",
+        usage: "[--launch-complete] [--manifest PATH]",
+        help: "Enforce prepublication or launch-complete evidence closure",
         kind: Kind::Gate,
         ci_args: &[],
         home: Home::Evidence,

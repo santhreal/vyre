@@ -20,7 +20,7 @@ fn run_generator(root: &Path, mode: &str) -> Output {
 }
 
 fn write_fixture(root: &Path, actions: usize, duplicate_package: bool) {
-    for directory in ["scripts", "release/changes", "docs/release"] {
+    for directory in ["scripts", "release/changes"] {
         fs::create_dir_all(root.join(directory))
             .expect("Fix: release document fixture directories must be creatable");
     }
@@ -81,19 +81,9 @@ packages = ["a"]
         "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- stale text\n\n## [1.2.2]\n\n- prior release\n",
     )
     .expect("Fix: fixture changelog must be writable");
-    fs::write(
-        root.join("docs/release/v1.2.3.md"),
-        "# stale preamble\n\n## What is in this release\n\nThe exact release regression is fixed.\n",
-    )
-    .expect("Fix: fixture release notes must be writable");
-    fs::write(
-        root.join("docs/RELEASE.md"),
-        "# Release\n\nVyre 1.2.3.\nrelease/release-train.toml\nRELEASE_CHECKLIST.md\nrelease/changes/unreleased.toml\n--prepublish\n\n## Rollback\n",
-    )
-    .expect("Fix: fixture release runbook must be writable");
 }
 
-/// Locks the repository release surfaces to the train, fragment, and generated-view authorities.
+/// Locks the repository release surfaces to the train and fragment authorities.
 #[test]
 fn workspace_release_documents_are_current() {
     let output = run_generator(&workspace_root(), "--check");
@@ -104,11 +94,12 @@ fn workspace_release_documents_are_current() {
     );
     assert_eq!(
         String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8"),
-        "release-docs: release train, fragments, notes, and checklist agree\n"
+        "release-docs: release train, fragments, changelog, and release notes agree\n"
     );
 }
 
-/// Proves one write derives changelog text, package ownership, repository ownership, and tag order from data.
+/// Proves one write derives the changelog's release identities and its change
+/// list from the train and the fragments, with no hand-maintained copy between.
 #[test]
 fn write_derives_every_release_metadata_surface() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
@@ -124,31 +115,31 @@ fn write_derives_every_release_metadata_surface() {
         .expect("Fix: generated changelog must be readable");
     assert!(changelog.contains("- The exact release regression is fixed."));
     assert!(!changelog.contains("stale text"));
-
-    let notes = fs::read_to_string(temp.path().join("docs/release/v1.2.3.md"))
-        .expect("Fix: generated release notes must be readable");
-    assert!(notes.contains("| `vyre` | `owner/vyre` | `1.2.3` | `a@1.2.3` |"));
-    assert!(notes.contains("| Final | Vyre | `vyre-v1.2.3` |"));
-    assert!(notes.contains("## Validated changes"));
-    assert!(notes.contains("- The exact release regression is fixed."));
-
-    let checklist = fs::read_to_string(temp.path().join("docs/RELEASE_CHECKLIST.md"))
-        .expect("Fix: generated release checklist must be readable");
-    assert!(checklist.contains("`action-0`: External action 0."));
-    assert!(checklist.contains("Push Vyre candidate tag `vyre-v1.2.3-rc.1`"));
+    assert!(changelog.contains(
+        "Vyre 1.2.3 releases from candidate tag `vyre-v1.2.3-rc.1` and final tag `vyre-v1.2.3`."
+    ));
+    assert!(changelog.contains("Backend crates carried at that version: `a@1.2.3`."));
+    assert!(changelog.contains("## [1.2.2]"));
 }
 
-/// Prevents a hand edit to a generated checklist from silently changing operator release instructions.
+/// Prevents a hand edit to the generated changelog section from silently
+/// changing what a release claims to contain.
 #[test]
 fn check_rejects_generated_release_document_drift() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
     assert!(run_generator(temp.path(), "--write").status.success());
+    let changelog_path = temp.path().join("CHANGELOG.md");
+    let generated = fs::read_to_string(&changelog_path)
+        .expect("Fix: generated fixture changelog must be readable");
     fs::write(
-        temp.path().join("docs/RELEASE_CHECKLIST.md"),
-        "# locally edited release procedure\n",
+        &changelog_path,
+        generated.replace(
+            "- The exact release regression is fixed.",
+            "- A hand-written claim no fragment backs.",
+        ),
     )
-    .expect("Fix: stale fixture checklist must be writable");
+    .expect("Fix: drifted fixture changelog must be writable");
 
     let output = run_generator(temp.path(), "--check");
     assert!(!output.status.success());
@@ -209,8 +200,12 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     let launch_path = temp.path().join("scripts/final-launch.sh");
     let launch =
         fs::read_to_string(&launch_path).expect("Fix: fixture launch script must be readable");
-    let candidate = "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\" -m \"$VYRE_RELEASE_TAG_VYRE_RC\"";
-    let prepublish = "\"$CARGO_RUNNER\" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --prepublish";
+    // Both tokens carry their trailing newline: the launch-complete invocation
+    // one screen below has the prepublication command as a strict prefix, so a
+    // newline-free token would rewrite that line too and the swap would prove
+    // nothing about ordering.
+    let candidate = "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\" -m \"$VYRE_RELEASE_TAG_VYRE_RC\"\n";
+    let prepublish = "\"$CARGO_RUNNER\" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
     let reordered = launch
         .replace(candidate, "__VYRE_RELEASE_ORDER_SWAP__")
         .replace(prepublish, candidate)

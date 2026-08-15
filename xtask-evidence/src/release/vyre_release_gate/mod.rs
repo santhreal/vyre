@@ -184,7 +184,7 @@ pub(crate) fn run(args: &[String]) {
 
     if failures.is_empty() {
         let scope = match options.mode {
-            GateMode::Final => "final launch",
+            GateMode::LaunchComplete => "launch complete",
             GateMode::Prepublish => "prepublication",
         };
         println!(

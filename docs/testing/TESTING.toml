@@ -103,7 +103,7 @@ expected_skips = "Ignored physical benchmarks are absent from the default test c
 evidence_outputs = ["release/evidence/benchmarks/", "Raw per-sample benchmark records", "Generated suite summaries and source-tree fingerprints"]
 
 [package.xtask]
-commands = ["./cargo_full test -p xtask", "./cargo_full run --bin xtask -- vyre-release-gate --prepublish"]
+commands = ["./cargo_full test -p xtask", "./cargo_full run --bin xtask -- vyre-release-gate"]
 hardware = "Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend and must fail on an unavailable requested device."
 evidence_outputs = ["release/evidence/", "Generated documentation and matrices named by each command", "Command status and exact semantic blocker diagnostics"]
 

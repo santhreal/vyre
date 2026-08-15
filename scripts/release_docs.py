@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TRAIN_PATH = ROOT / "release/release-train.toml"
 FRAGMENTS_PATH = ROOT / "release/changes/unreleased.toml"
 CHANGELOG_PATH = ROOT / "CHANGELOG.md"
+NOTES_PATH = ROOT / "release/evidence/docs/release-notes-body.md"
 LAUNCH_PATH = ROOT / "scripts/final-launch.sh"
 CATEGORIES = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security")
 
@@ -151,12 +152,27 @@ def replace_unreleased(changelog: str, section: str) -> str:
     return changelog[:start] + section.rstrip() + "\n" + changelog[end:]
 
 
+def render_release_notes_body(train: dict, grouped: dict[str, list[str]]) -> str:
+    """The body `gh release create --notes-file` attaches to the final tag.
+
+    `scripts/final-launch.sh` pointed at `docs/release/v<version>.md`, a page the
+    deleted mdbook carried and nothing regenerates, so the last outward step of a
+    release would have failed on a missing file after the crates were already
+    published. The notes are the same section the changelog carries, under a
+    heading naming the tag instead of `Unreleased`, so there is one authored
+    source for what a release says it contains.
+    """
+    section = render_changelog_section(train, grouped)
+    return section.replace("## [Unreleased]", f"# {train['tags']['vyre']}", 1)
+
+
 def collect_outputs(train: dict, grouped: dict[str, list[str]]) -> dict[Path, str]:
     changelog = CHANGELOG_PATH.read_text(encoding="utf-8")
     return {
         CHANGELOG_PATH: replace_unreleased(
             changelog, render_changelog_section(train, grouped)
-        )
+        ),
+        NOTES_PATH: render_release_notes_body(train, grouped),
     }
 
 
@@ -165,14 +181,14 @@ def validate_launch_order() -> list[str]:
     steps = (
         'git tag -a "$VYRE_RELEASE_TAG_VYRE_RC"',
         'git push origin "$VYRE_RELEASE_TAG_VYRE_RC"',
-        "-- vyre-release-gate --prepublish",
+        "-- vyre-release-gate\n",
         'VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh',
         'git tag -a "$VYRE_RELEASE_TAG_VYRE"',
         'git push origin "$VYRE_RELEASE_TAG_VYRE"',
         'gh release create "$VYRE_RELEASE_TAG_VYRE"',
         "> release/evidence/final/public-launch-completion.json",
         "-- launch-state --output",
-        "-- vyre-release-gate\n",
+        "-- vyre-release-gate --launch-complete\n",
     )
     positions = [launch.find(step) for step in steps]
     errors: list[str] = []
@@ -219,8 +235,9 @@ def main() -> int:
         outputs = collect_outputs(train, grouped)
         if args.write:
             for path, content in outputs.items():
+                path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(content, encoding="utf-8")
-            print("release-docs: wrote the changelog")
+            print("release-docs: wrote the changelog and the release notes body")
             return 0
         errors = validate_prose(train)
         errors.extend(validate_launch_order())
@@ -230,7 +247,7 @@ def main() -> int:
                 errors.append(f"{path.relative_to(ROOT)}: generated release content is stale; run `python3 scripts/release_docs.py --write`")
         if errors:
             raise ValueError("\n".join(errors))
-        print("release-docs: release train, fragments, and changelog agree")
+        print("release-docs: release train, fragments, changelog, and release notes agree")
         return 0
     except (KeyError, OSError, ValueError) as error:
         print(f"release-docs: {error}", file=sys.stderr)

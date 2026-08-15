@@ -10,7 +10,7 @@ pub(super) struct GateOptions {
 
 pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> {
     let mut manifest_path = None;
-    let mut mode = GateMode::Final;
+    let mut mode = GateMode::default();
     let mut index = 2;
     while index < args.len() {
         match args[index].as_str() {
@@ -21,17 +21,19 @@ pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> 
                 manifest_path = Some(PathBuf::from(path));
                 index += 2;
             }
-            "--prepublish" => {
-                mode = GateMode::Prepublish;
+            "--launch-complete" => {
+                mode = GateMode::LaunchComplete;
                 index += 1;
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo xtask vyre-release-gate [--prepublish] [--manifest PATH]\n\n\
-                     Checks the Vyre release evidence manifest. Final mode requires \
-                     completed publication, repository verification, and pushes. \
-                     --prepublish accepts only those explicit approval-gated actions \
-                     as pending and rejects every internal blocker."
+                    "USAGE:\n  cargo xtask vyre-release-gate [--launch-complete] [--manifest PATH]\n\n\
+                     Checks the Vyre release evidence manifest. The default \
+                     prepublication mode accepts the three approval-gated \
+                     external actions as pending and rejects every internal \
+                     blocker. --launch-complete additionally requires completed \
+                     publication, repository verification, and pushes, so it is \
+                     only meaningful after the release has shipped."
                 );
                 std::process::exit(0);
             }
@@ -90,34 +92,52 @@ pub(super) fn escapes_repository(evidence: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// Prepublication mode must remain an explicit opt-in while preserving a
-    /// caller-supplied evidence manifest.
+    /// The launch-complete judgement must remain an explicit opt-in while
+    /// preserving a caller-supplied evidence manifest.
     #[test]
-    fn parses_prepublish_mode_with_manifest() {
+    fn parses_launch_complete_mode_with_manifest() {
         let args = vec![
             "xtask".to_string(),
             "vyre-release-gate".to_string(),
-            "--prepublish".to_string(),
+            "--launch-complete".to_string(),
             "--manifest".to_string(),
             "release/custom.toml".to_string(),
         ];
 
-        let options = options_from_args(&args).expect("valid prepublish arguments");
+        let options = options_from_args(&args).expect("valid launch-complete arguments");
 
-        assert_eq!(options.mode, GateMode::Prepublish);
+        assert_eq!(options.mode, GateMode::LaunchComplete);
         assert_eq!(options.manifest_path, PathBuf::from("release/custom.toml"));
     }
 
-    /// Omitting the prepublication flag must retain the final-launch gate so
-    /// an ordinary invocation cannot silently weaken release closure.
+    /// A bare invocation must judge prepublication readiness. The gate used to
+    /// default to the launch-complete judgement, which demands a publication
+    /// that has not happened, so every sweep of a pre-release tree failed on
+    /// six findings no source change could clear.
     #[test]
-    fn defaults_to_final_launch_mode() {
+    fn defaults_to_prepublication_mode() {
         let args = vec!["xtask".to_string(), "vyre-release-gate".to_string()];
 
-        let options = options_from_args(&args).expect("valid final-gate arguments");
+        let options = options_from_args(&args).expect("valid default arguments");
 
-        assert_eq!(options.mode, GateMode::Final);
+        assert_eq!(options.mode, GateMode::Prepublish);
         assert_eq!(options.manifest_path, default_manifest_path());
+    }
+
+    /// The removed spelling must be rejected rather than silently ignored: a
+    /// caller still passing it would otherwise get the mode it asked for by
+    /// accident today and a different one the day the default moves.
+    #[test]
+    fn rejects_the_removed_prepublish_flag() {
+        let args = vec![
+            "xtask".to_string(),
+            "vyre-release-gate".to_string(),
+            "--prepublish".to_string(),
+        ];
+
+        let error = options_from_args(&args).expect_err("removed flag must not parse");
+
+        assert!(error.contains("--prepublish"), "{error}");
     }
 
     /// Evidence must name a file the repository actually carries. Entries that
