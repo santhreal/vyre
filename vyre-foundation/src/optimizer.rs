@@ -444,8 +444,24 @@ pub trait ProgramPass: private::Sealed + Send + Sync {
     /// Pre-transform analysis hook.
     fn analyze(&self, program: &Program) -> PassAnalysis;
 
-    /// Transform a program.
+    /// Transform a program for no particular device.
+    ///
+    /// Most passes are IR-only rewrites: the same program comes out on every
+    /// device, so they never see an adapter. A pass whose result depends on
+    /// device facts implements [`ProgramPass::transform_for_adapter`] instead
+    /// and must not reach for a profile of its own here.
     fn transform(&self, program: Program) -> PassResult;
+
+    /// Transform a program for the adapter the scheduler was built for.
+    ///
+    /// The default ignores `caps`, which is the correct answer for a rewrite
+    /// that is valid on every device. Overriding this is what makes a pass
+    /// device-dependent; picking a profile inside [`ProgramPass::transform`]
+    /// only hides which device the program was compiled for.
+    fn transform_for_adapter(&self, program: Program, caps: &AdapterCaps) -> PassResult {
+        let _ = caps;
+        self.transform(program)
+    }
 
     /// Whether this pass implements candidate-granular planar batching.
     ///
@@ -464,21 +480,26 @@ pub trait ProgramPass: private::Sealed + Send + Sync {
     }
 
     /// Apply one selected disjoint rewrite wave.
-    fn apply_rewrite_batch(&self, program: Program, _batch: &RewriteBatch) -> PassResult {
-        self.transform(program)
+    fn apply_rewrite_batch(
+        &self,
+        program: Program,
+        _batch: &RewriteBatch,
+        caps: &AdapterCaps,
+    ) -> PassResult {
+        self.transform_for_adapter(program, caps)
     }
 
     /// Batch-aware transform entry point used by the scheduler.
-    fn batch_apply(&self, program: Program) -> PassResult {
+    fn batch_apply(&self, program: Program, caps: &AdapterCaps) -> PassResult {
         if !self.supports_planar_batching() {
-            return self.transform(program);
+            return self.transform_for_adapter(program, caps);
         }
         let candidates = self.rewrite_candidates(&program);
         if candidates.is_empty() {
             return PassResult::unchanged(program);
         }
         if !candidates.should_batch() {
-            return self.transform(program);
+            return self.transform_for_adapter(program, caps);
         }
         let plan = candidates.plan();
         if !plan.has_batches() {
@@ -488,7 +509,7 @@ pub trait ProgramPass: private::Sealed + Send + Sync {
         let mut changed = false;
         let mut program = program;
         for batch in plan.batches() {
-            let result = self.apply_rewrite_batch(program, batch);
+            let result = self.apply_rewrite_batch(program, batch, caps);
             changed |= result.changed;
             program = result.program;
         }
@@ -505,8 +526,8 @@ pub trait ProgramPass: private::Sealed + Send + Sync {
     ///
     /// Returns [`RefusalReason`] when the pass proves that applying its rewrite
     /// would violate cost, effect, or wire-contract constraints.
-    fn try_transform(&self, program: Program) -> Result<PassResult, RefusalReason> {
-        Ok(self.transform(program))
+    fn try_transform(&self, program: Program, caps: &AdapterCaps) -> Result<PassResult, RefusalReason> {
+        Ok(self.transform_for_adapter(program, caps))
     }
 
     /// Refusal-aware batch transform. Passes with typed refusal contracts
@@ -517,8 +538,12 @@ pub trait ProgramPass: private::Sealed + Send + Sync {
     ///
     /// Returns [`RefusalReason`] when a batched rewrite would violate cost,
     /// effect, or wire-contract constraints.
-    fn try_batch_apply(&self, program: Program) -> Result<PassResult, RefusalReason> {
-        self.try_transform(program)
+    fn try_batch_apply(
+        &self,
+        program: Program,
+        caps: &AdapterCaps,
+    ) -> Result<PassResult, RefusalReason> {
+        self.try_transform(program, caps)
     }
 
     /// Effects this pass is explicitly allowed to introduce.
@@ -585,18 +610,25 @@ impl ProgramPassKind {
         self.0.analyze(program)
     }
 
-    /// Transform a program.
+    /// Transform a program for no particular device.
     #[must_use]
     #[inline]
     pub fn transform(&self, program: Program) -> PassResult {
         self.0.transform(program)
     }
 
+    /// Transform a program for a known adapter.
+    #[must_use]
+    #[inline]
+    pub fn transform_for_adapter(&self, program: Program, caps: &AdapterCaps) -> PassResult {
+        self.0.transform_for_adapter(program, caps)
+    }
+
     /// Batch-aware transform.
     #[must_use]
     #[inline]
-    pub fn batch_apply(&self, program: Program) -> PassResult {
-        self.0.batch_apply(program)
+    pub fn batch_apply(&self, program: Program, caps: &AdapterCaps) -> PassResult {
+        self.0.batch_apply(program, caps)
     }
 
     /// Refusal-aware transform.
@@ -604,8 +636,12 @@ impl ProgramPassKind {
     /// # Errors
     /// Returns the [`RefusalReason`] reported by the underlying pass.
     #[inline]
-    pub fn try_transform(&self, program: Program) -> Result<PassResult, RefusalReason> {
-        self.0.try_transform(program)
+    pub fn try_transform(
+        &self,
+        program: Program,
+        caps: &AdapterCaps,
+    ) -> Result<PassResult, RefusalReason> {
+        self.0.try_transform(program, caps)
     }
 
     /// Refusal-aware batch transform.
@@ -613,8 +649,12 @@ impl ProgramPassKind {
     /// # Errors
     /// Returns the [`RefusalReason`] reported by the underlying pass.
     #[inline]
-    pub fn try_batch_apply(&self, program: Program) -> Result<PassResult, RefusalReason> {
-        self.0.try_batch_apply(program)
+    pub fn try_batch_apply(
+        &self,
+        program: Program,
+        caps: &AdapterCaps,
+    ) -> Result<PassResult, RefusalReason> {
+        self.0.try_batch_apply(program, caps)
     }
 
     /// Analyses preserved by this pass after running. See [`ProgramPass::preserves`].
@@ -797,7 +837,12 @@ pub fn registered_pass_registrations(
     }
 }
 
-/// Run the globally registered optimizer passes to a fixed point.
+/// Run the globally registered optimizer passes to a fixed point, for no
+/// known device.
+///
+/// A caller that has probed an adapter uses [`optimize_for_adapter`]. This
+/// entry compiles against [`AdapterCaps::conservative`], which is the answer
+/// for a device whose optional features are unknown, not a device anyone runs.
 ///
 /// # Errors
 ///
@@ -817,6 +862,29 @@ pub fn optimize(program: Program) -> Result<Program, OptimizerError> {
         Ok(scheduler) => scheduler.run(program),
         Err(error) => Err(error.clone()),
     }
+}
+
+/// Run the globally registered optimizer passes to a fixed point for `adapter`.
+///
+/// Every adapter-dependent pass sees `adapter`. The scheduler is built per
+/// call because the adapter is part of what the pipeline compiles for; the
+/// pass list itself is the process-wide scheduled order.
+///
+/// # Errors
+///
+/// Returns [`OptimizerError`] when requirements cannot be satisfied or when
+/// the pass pipeline oscillates past the configured iteration cap.
+pub fn optimize_for_adapter(
+    program: Program,
+    adapter: AdapterCaps,
+) -> Result<Program, OptimizerError> {
+    let passes = registered_passes_for_profile(OptimizerProfile::Release)?;
+    PassScheduler::for_adapter(passes, adapter)
+        .with_cost_monotone_enforcement(true)
+        .with_effect_handler_enforcement(true)
+        .with_linear_type_enforcement(true)
+        .with_shape_predicate_enforcement(true)
+        .run(program)
 }
 
 /// Run selected optimizer passes for `program` using hot-path telemetry.

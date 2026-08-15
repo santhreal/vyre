@@ -7,7 +7,7 @@
 
 use vyre_driver::backend::{
     acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
-    registered_backends, registered_backends_by_precedence, VyreBackend,
+    registered_backends, registered_backends_by_precedence,
 };
 
 #[test]
