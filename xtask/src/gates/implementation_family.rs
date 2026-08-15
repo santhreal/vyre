@@ -1,135 +1,388 @@
 //! Canonical implementation-family taxonomy for registered-op dedup audits.
+//!
+//! A family names the shared builder that emits an operation's IR shape. Two
+//! operations in one family are one implementation reached under two names, so a
+//! dedup audit that measures shape alone would report them as copies forever.
+//!
+//! The taxonomy is a table rather than a match so the audit can enumerate it and
+//! prove every row still names a registered operation. A row whose operation was
+//! renamed or deleted classifies nothing, and nothing says so: the audit keeps
+//! passing and a reader takes the row as evidence the operation is covered.
 
-/// Return the shared builder family that owns an operation's emitted IR shape.
-#[must_use]
+/// One row per registered operation whose IR shape is emitted by a shared
+/// builder, as `(operation id, family)`. The family is the path of the builder
+/// that owns the emitted body.
+pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
+    (
+        "vyre-primitives::bitset::and",
+        "vyre-primitives::bitset::binary_word",
+    ),
+    (
+        "vyre-primitives::bitset::and_not",
+        "vyre-primitives::bitset::binary_word",
+    ),
+    (
+        "vyre-primitives::bitset::or",
+        "vyre-primitives::bitset::binary_word",
+    ),
+    (
+        "vyre-primitives::bitset::stochastic_and_mul",
+        "vyre-primitives::bitset::binary_word",
+    ),
+    (
+        "vyre-primitives::bitset::xor",
+        "vyre-primitives::bitset::binary_word",
+    ),
+    (
+        "vyre-primitives::bitset::and_into",
+        "vyre-primitives::bitset::target_operand_word",
+    ),
+    (
+        "vyre-primitives::bitset::and_not_into",
+        "vyre-primitives::bitset::target_operand_word",
+    ),
+    (
+        "vyre-primitives::bitset::copy",
+        "vyre-primitives::bitset::target_operand_word",
+    ),
+    (
+        "vyre-primitives::bitset::or_into",
+        "vyre-primitives::bitset::target_operand_word",
+    ),
+    (
+        "vyre-primitives::bitset::xor_into",
+        "vyre-primitives::bitset::target_operand_word",
+    ),
+    (
+        "vyre-primitives::bitset::equal",
+        "vyre-primitives::bitset::relation",
+    ),
+    (
+        "vyre-primitives::bitset::subset_of",
+        "vyre-primitives::bitset::relation",
+    ),
+    (
+        "vyre-primitives::bitset::set_bit",
+        "vyre-primitives::bitset::bit_update",
+    ),
+    (
+        "vyre-primitives::bitset::clear_bit",
+        "vyre-primitives::bitset::bit_update",
+    ),
+    (
+        "vyre-primitives::predicate::literal_of",
+        "vyre-primitives::nodeset_filter",
+    ),
+    (
+        "vyre-primitives::predicate::node_kind_eq",
+        "vyre-primitives::nodeset_filter",
+    ),
+    (
+        "vyre-primitives::label::resolve_family",
+        "vyre-primitives::nodeset_filter",
+    ),
+    (
+        "vyre-primitives::graph::vast_walk_preorder",
+        "vyre-primitives::graph::vast_tree_walk_order",
+    ),
+    (
+        "vyre-primitives::graph::vast_walk_postorder",
+        "vyre-primitives::graph::vast_tree_walk_order",
+    ),
+    // Every row below reaches `forward_body` or `backward_body` in
+    // `csr_frontier_step`, including the excluding variant, whose only
+    // difference is the excluded-source operand that body already takes.
+    (
+        "vyre-primitives::graph::csr_forward_traverse",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::graph::csr_forward_traverse_excluding",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::graph::csr_backward_traverse",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::graph::csr_frontier_degree_sum",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::graph::tensor_flow_forward",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::predicate::call_to",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::predicate::edge",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::predicate::return_value_of",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::predicate::arg_of",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::predicate::size_argument_of",
+        "vyre-primitives::graph::csr_frontier_step",
+    ),
+    (
+        "vyre-primitives::graph::csr_forward_or_changed",
+        "vyre-primitives::graph::outgoing_frontier_or_changed",
+    ),
+    (
+        "vyre-primitives::graph::csr_backward_or_changed",
+        "vyre-primitives::graph::incoming_frontier_or_changed",
+    ),
+    (
+        "vyre-primitives::graph::functor_apply",
+        "vyre-primitives::graph::target_centric_functor_apply",
+    ),
+    (
+        "vyre-primitives::hardware::workgroup_barrier",
+        "vyre-primitives::hardware::barrier_identity_u32_program",
+    ),
+    (
+        "vyre-primitives::hardware::storage_barrier",
+        "vyre-primitives::hardware::barrier_identity_u32_program",
+    ),
+    (
+        "vyre-primitives::hardware::bit_reverse_u32",
+        "vyre-primitives::hardware::unary_u32_program",
+    ),
+    (
+        "vyre-primitives::hardware::popcount_u32",
+        "vyre-primitives::hardware::unary_u32_program",
+    ),
+    (
+        "vyre-primitives::graph::monoidal_compose",
+        "vyre-primitives::fixed_u32_matmul::u32_matmul_program",
+    ),
+    (
+        "vyre-primitives::math::tensor_network_pair_contract",
+        "vyre-primitives::fixed_u32_matmul::u32_matmul_program",
+    ),
+    (
+        "vyre-primitives::math::semiring_gemm",
+        "vyre-primitives::fixed_u32_matmul::u32_matmul_program",
+    ),
+    (
+        "vyre-primitives::math::sinkhorn_scale",
+        "vyre-primitives::math::u32_binary_map",
+    ),
+    (
+        "vyre-primitives::math::gaussian_rdp_step",
+        "vyre-primitives::math::u32_binary_map",
+    ),
+    (
+        "vyre-primitives::math::iht_threshold",
+        "vyre-primitives::math::u32_vector_scalar_map",
+    ),
+    (
+        "vyre-primitives::math::mp_edge_clip",
+        "vyre-primitives::math::u32_vector_scalar_map",
+    ),
+    (
+        "vyre-primitives::reduce::sum",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
+    ),
+    (
+        "vyre-primitives::reduce::min",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
+    ),
+    (
+        "vyre-primitives::reduce::max",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
+    ),
+    (
+        "vyre-primitives::reduce::count",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
+    ),
+    (
+        "vyre-primitives::reduce::count_non_zero",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
+    ),
+    (
+        "vyre-primitives::reduce::any",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
+    ),
+    (
+        "vyre-primitives::reduce::all",
+        "vyre-primitives::reduce::atomic_grid_stride_u32",
+    ),
+    (
+        "vyre-primitives::reduce::gather",
+        "vyre-primitives::reduce::indexed_move",
+    ),
+    (
+        "vyre-primitives::reduce::scatter",
+        "vyre-primitives::reduce::indexed_move",
+    ),
+    (
+        "vyre-primitives::reduce::workgroup_sum_f32",
+        "vyre-primitives::reduce::workgroup_tree",
+    ),
+    (
+        "vyre-primitives::reduce::workgroup_sum_u32",
+        "vyre-primitives::reduce::workgroup_tree",
+    ),
+    (
+        "vyre-primitives::reduce::workgroup_max_f32",
+        "vyre-primitives::reduce::workgroup_tree",
+    ),
+    (
+        "vyre-libs::math::atomic::atomic_add_u32",
+        "vyre-libs::math::atomic::build_atomic_serial",
+    ),
+    (
+        "vyre-libs::math::atomic::atomic_and_u32",
+        "vyre-libs::math::atomic::build_atomic_serial",
+    ),
+    (
+        "vyre-libs::math::atomic::atomic_exchange_u32",
+        "vyre-libs::math::atomic::build_atomic_serial",
+    ),
+    (
+        "vyre-libs::math::atomic::atomic_max_u32",
+        "vyre-libs::math::atomic::build_atomic_serial",
+    ),
+    (
+        "vyre-libs::math::atomic::atomic_min_u32",
+        "vyre-libs::math::atomic::build_atomic_serial",
+    ),
+    (
+        "vyre-libs::math::atomic::atomic_or_u32",
+        "vyre-libs::math::atomic::build_atomic_serial",
+    ),
+    (
+        "vyre-libs::math::atomic::atomic_xor_u32",
+        "vyre-libs::math::atomic::build_atomic_serial",
+    ),
+    (
+        "vyre-libs::logical::nand",
+        "vyre-libs::math::elementwise::u32_elementwise_binary",
+    ),
+    (
+        "vyre-libs::logical::nor",
+        "vyre-libs::math::elementwise::u32_elementwise_binary",
+    ),
+    (
+        "vyre-libs::math::algebra::join",
+        "vyre-libs::math::elementwise::u32_elementwise_binary",
+    ),
+    (
+        "vyre-libs::math::algebra::meet",
+        "vyre-libs::math::elementwise::u32_elementwise_binary",
+    ),
+    (
+        "vyre-libs::math::algebra::minplus_mul",
+        "vyre-libs::math::elementwise::u32_elementwise_binary",
+    ),
+    (
+        "vyre-libs::math::avg_floor",
+        "vyre-libs::math::elementwise::u32_elementwise_binary",
+    ),
+    (
+        "vyre-libs::math::lzcnt_u32",
+        "vyre-libs::math::elementwise::u32_elementwise_unary",
+    ),
+    (
+        "vyre-libs::math::tzcnt_u32",
+        "vyre-libs::math::elementwise::u32_elementwise_unary",
+    ),
+    (
+        "vyre-libs::math::wrapping_neg",
+        "vyre-libs::math::elementwise::u32_elementwise_unary",
+    ),
+    (
+        "vyre-libs::nn::gelu",
+        "vyre-libs::nn::activation::f32_unary_activation_program",
+    ),
+    (
+        "vyre-libs::nn::leaky_relu_sq",
+        "vyre-libs::nn::activation::f32_unary_activation_program",
+    ),
+    (
+        "vyre-libs::nn::residual_add",
+        "vyre-libs::nn::activation::typed_binary_activation_program",
+    ),
+    (
+        "vyre-libs::nn::sigmoid_gate",
+        "vyre-libs::nn::activation::typed_sigmoid_gate_program",
+    ),
+    (
+        "vyre-libs::nn::swiglu",
+        "vyre-libs::nn::activation::typed_sigmoid_gate_program",
+    ),
+    (
+        "vyre-libs::nn::rms_norm",
+        "vyre-libs::builder::strided_writeback_child",
+    ),
+    (
+        "vyre-libs::nn::softmax",
+        "vyre-libs::builder::strided_writeback_child",
+    ),
+    (
+        "vyre-libs::parsing::c_sema_scope.scope",
+        "vyre-libs::parsing::c_sema_scope_phase",
+    ),
+    (
+        "vyre-libs::parsing::c_sema_scope.scope.brace",
+        "vyre-libs::parsing::c_sema_scope_phase",
+    ),
+    (
+        "vyre-libs::parsing::c_sema_scope.scope.function_parameters",
+        "vyre-libs::parsing::c_sema_scope_phase",
+    ),
+    (
+        "vyre-libs::parsing::c_sema_scope.decl",
+        "vyre-libs::parsing::c_sema_scope_phase",
+    ),
+    (
+        "vyre-libs::parsing::c_sema_scope.identifier_intern",
+        "vyre-libs::parsing::c_sema_scope_phase",
+    ),
+];
+
+/// Family pairs that emit the same shape from deliberately separate builders.
+///
+/// Each row is one unordered pair, read in both directions. A pair belongs here
+/// only when the two builders were compared and kept apart for a reason the
+/// shape cannot express: a barrier that must not be reordered into a unary map,
+/// a direction that must stay a direction, a gather that must not become a
+/// scatter, an activation whose operand typing differs.
+pub const DISTINCT_FAMILY_PAIRS: &[(&str, &str)] = &[
+    (
+        "vyre-primitives::hardware::barrier_identity_u32_program",
+        "vyre-primitives::hardware::unary_u32_program",
+    ),
+    (
+        "vyre-primitives::graph::outgoing_frontier_or_changed",
+        "vyre-primitives::graph::incoming_frontier_or_changed",
+    ),
+    (
+        "vyre-primitives::reduce::indexed_move",
+        "vyre-primitives::graph::target_centric_functor_apply",
+    ),
+    (
+        "vyre-libs::nn::activation::typed_binary_activation_program",
+        "vyre-libs::nn::activation::typed_sigmoid_gate_program",
+    ),
+];
+
 /// Family id a source path belongs to, used to group similar implementations.
+#[must_use]
 pub fn implementation_family_id(op_id: &str) -> Option<&'static str> {
-    match op_id {
-        "vyre-primitives::bitset::and"
-        | "vyre-primitives::bitset::and_not"
-        | "vyre-primitives::bitset::or"
-        | "vyre-primitives::bitset::stochastic_and_mul"
-        | "vyre-primitives::bitset::xor" => Some("vyre-primitives::bitset::binary_word"),
-        "vyre-primitives::bitset::and_into"
-        | "vyre-primitives::bitset::and_not_into"
-        | "vyre-primitives::bitset::copy"
-        | "vyre-primitives::bitset::or_into"
-        | "vyre-primitives::bitset::xor_into" => {
-            Some("vyre-primitives::bitset::target_operand_word")
-        }
-        "vyre-primitives::bitset::equal" | "vyre-primitives::bitset::subset_of" => {
-            Some("vyre-primitives::bitset::relation")
-        }
-        "vyre-primitives::bitset::set_bit" | "vyre-primitives::bitset::clear_bit" => {
-            Some("vyre-primitives::bitset::bit_update")
-        }
-        "vyre-primitives::predicate::literal_of"
-        | "vyre-primitives::predicate::node_kind_eq"
-        | "vyre-primitives::label::resolve_family" => Some("vyre-primitives::nodeset_filter"),
-        "vyre-primitives::graph::vast_walk_preorder"
-        | "vyre-primitives::graph::vast_walk_postorder" => {
-            Some("vyre-primitives::graph::vast_tree_walk_order")
-        }
-        "vyre-primitives::graph::csr_forward_traverse"
-        | "vyre-primitives::graph::csr_backward_traverse"
-        | "vyre-primitives::graph::csr_frontier_degree_sum"
-        | "vyre-primitives::graph::tensor_flow_forward"
-        | "vyre-primitives::predicate::call_to"
-        | "vyre-primitives::predicate::edge"
-        | "vyre-primitives::predicate::return_value_of"
-        | "vyre-primitives::predicate::arg_of"
-        | "vyre-primitives::predicate::size_argument_of" => {
-            Some("vyre-primitives::graph::csr_frontier_step")
-        }
-        "vyre-primitives::graph::csr_forward_or_changed" => {
-            Some("vyre-primitives::graph::outgoing_frontier_or_changed")
-        }
-        "vyre-primitives::graph::csr_backward_or_changed" => {
-            Some("vyre-primitives::graph::incoming_frontier_or_changed")
-        }
-        "vyre-primitives::graph::functor_apply" => {
-            Some("vyre-primitives::graph::target_centric_functor_apply")
-        }
-        "vyre-primitives::hardware::workgroup_barrier"
-        | "vyre-primitives::hardware::storage_barrier" => {
-            Some("vyre-primitives::hardware::barrier_identity_u32_program")
-        }
-        "vyre-primitives::hardware::bit_reverse_u32"
-        | "vyre-primitives::hardware::popcount_u32" => {
-            Some("vyre-primitives::hardware::unary_u32_program")
-        }
-        "vyre-primitives::graph::monoidal_compose"
-        | "vyre-primitives::math::tensor_network_pair_contract"
-        | "vyre-primitives::math::semiring_gemm" => {
-            Some("vyre-primitives::fixed_u32_matmul::u32_matmul_program")
-        }
-        "vyre-primitives::math::sinkhorn_scale" | "vyre-primitives::math::gaussian_rdp_step" => {
-            Some("vyre-primitives::math::u32_binary_map")
-        }
-        "vyre-primitives::math::iht_threshold" | "vyre-primitives::math::mp_edge_clip" => {
-            Some("vyre-primitives::math::u32_vector_scalar_map")
-        }
-        "vyre-primitives::reduce::sum"
-        | "vyre-primitives::reduce::min"
-        | "vyre-primitives::reduce::max"
-        | "vyre-primitives::reduce::count"
-        | "vyre-primitives::reduce::count_non_zero"
-        | "vyre-primitives::reduce::any"
-        | "vyre-primitives::reduce::all" => Some("vyre-primitives::reduce::atomic_grid_stride_u32"),
-        "vyre-primitives::reduce::gather" | "vyre-primitives::reduce::scatter" => {
-            Some("vyre-primitives::reduce::indexed_move")
-        }
-        "vyre-primitives::reduce::workgroup_sum_f32"
-        | "vyre-primitives::reduce::workgroup_sum_u32"
-        | "vyre-primitives::reduce::workgroup_max_f32" => {
-            Some("vyre-primitives::reduce::workgroup_tree")
-        }
-        "vyre-libs::math::atomic::atomic_add_u32"
-        | "vyre-libs::math::atomic::atomic_and_u32"
-        | "vyre-libs::math::atomic::atomic_exchange_u32"
-        | "vyre-libs::math::atomic::atomic_max_u32"
-        | "vyre-libs::math::atomic::atomic_min_u32"
-        | "vyre-libs::math::atomic::atomic_or_u32"
-        | "vyre-libs::math::atomic::atomic_xor_u32" => {
-            Some("vyre-libs::math::atomic::build_atomic_serial")
-        }
-        "vyre-libs::logical::nand"
-        | "vyre-libs::logical::nor"
-        | "vyre-libs::math::algebra::join"
-        | "vyre-libs::math::algebra::meet"
-        | "vyre-libs::math::algebra::minplus_mul"
-        | "vyre-libs::math::avg_floor" => {
-            Some("vyre-libs::math::elementwise::u32_elementwise_binary")
-        }
-        "vyre-libs::math::lzcnt_u32"
-        | "vyre-libs::math::tzcnt_u32"
-        | "vyre-libs::math::wrapping_neg" => {
-            Some("vyre-libs::math::elementwise::u32_elementwise_unary")
-        }
-        "vyre-libs::nn::gelu" | "vyre-libs::nn::leaky_relu_sq" => {
-            Some("vyre-libs::nn::activation::f32_unary_activation_program")
-        }
-        "vyre-libs::nn::residual_add" => {
-            Some("vyre-libs::nn::activation::typed_binary_activation_program")
-        }
-        "vyre-libs::nn::sigmoid_gate" | "vyre-libs::nn::swiglu" => {
-            Some("vyre-libs::nn::activation::typed_sigmoid_gate_program")
-        }
-        "vyre-libs::nn::rms_norm" | "vyre-libs::nn::softmax" => {
-            Some("vyre-libs::builder::strided_writeback_child")
-        }
-        "vyre-libs::parsing::c11_gnu_inline_asm_pass" => {
-            Some("vyre-libs::parsing::c::atomic_collect_u32")
-        }
-        "vyre-libs::parsing::c_sema_scope.scope"
-        | "vyre-libs::parsing::c_sema_scope.scope.brace"
-        | "vyre-libs::parsing::c_sema_scope.scope.function_parameters"
-        | "vyre-libs::parsing::c_sema_scope.decl"
-        | "vyre-libs::parsing::c_sema_scope.identifier_intern" => {
-            Some("vyre-libs::parsing::c_sema_scope_phase")
-        }
-        _ => None,
-    }
+    IMPLEMENTATION_FAMILY_ROWS
+        .iter()
+        .find(|(id, _)| *id == op_id)
+        .map(|(_, family)| *family)
 }
 
 /// Return whether two registered operations already use one shared implementation family.
@@ -150,32 +403,87 @@ pub fn known_distinct_implementation_families(left_id: &str, right_id: &str) -> 
     let Some(right_family) = implementation_family_id(right_id) else {
         return false;
     };
-    matches!(
-        (left_family, right_family),
-        (
-            "vyre-primitives::hardware::barrier_identity_u32_program",
-            "vyre-primitives::hardware::unary_u32_program"
-        ) | (
-            "vyre-primitives::hardware::unary_u32_program",
-            "vyre-primitives::hardware::barrier_identity_u32_program"
-        ) | (
-            "vyre-primitives::graph::outgoing_frontier_or_changed",
-            "vyre-primitives::graph::incoming_frontier_or_changed"
-        ) | (
-            "vyre-primitives::graph::incoming_frontier_or_changed",
-            "vyre-primitives::graph::outgoing_frontier_or_changed"
-        ) | (
-            "vyre-primitives::reduce::indexed_move",
-            "vyre-primitives::graph::target_centric_functor_apply"
-        ) | (
-            "vyre-primitives::graph::target_centric_functor_apply",
-            "vyre-primitives::reduce::indexed_move"
-        ) | (
-            "vyre-libs::nn::activation::typed_binary_activation_program",
-            "vyre-libs::nn::activation::typed_sigmoid_gate_program"
-        ) | (
-            "vyre-libs::nn::activation::typed_sigmoid_gate_program",
-            "vyre-libs::nn::activation::typed_binary_activation_program"
-        )
-    )
+    DISTINCT_FAMILY_PAIRS.iter().any(|(one, other)| {
+        (*one == left_family && *other == right_family)
+            || (*one == right_family && *other == left_family)
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: a distinct-pair row names two families. If either family stops being
+    /// claimed by any operation, the row keeps its length and stops separating
+    /// anything, and the dedup audit silently loses the exemption it records.
+    #[test]
+    fn every_distinct_pair_names_a_family_some_operation_claims() {
+        for (one, other) in DISTINCT_FAMILY_PAIRS {
+            for family in [one, other] {
+                assert!(
+                    IMPLEMENTATION_FAMILY_ROWS
+                        .iter()
+                        .any(|(_, claimed)| claimed == family),
+                    "Fix: no operation row claims the family `{family}`; delete the distinct-family pair that names it or restore the row that claimed it"
+                );
+            }
+        }
+    }
+
+    /// WHY: one operation with two families would make its family answer depend
+    /// on table order, so two operations could be in one family and not in it.
+    #[test]
+    fn no_operation_claims_two_families() {
+        for (index, (id, family)) in IMPLEMENTATION_FAMILY_ROWS.iter().enumerate() {
+            for (other_id, other_family) in IMPLEMENTATION_FAMILY_ROWS.iter().skip(index + 1) {
+                assert!(
+                    other_id != id || other_family == family,
+                    "Fix: `{id}` claims both `{family}` and `{other_family}`; one operation has one shared builder"
+                );
+            }
+        }
+    }
+
+    /// WHY: a family of one operation groups nothing, and reads as evidence that
+    /// a shared builder is shared.
+    #[test]
+    fn a_family_that_groups_one_operation_is_paired_or_absent() {
+        for (id, family) in IMPLEMENTATION_FAMILY_ROWS {
+            let claimants = IMPLEMENTATION_FAMILY_ROWS
+                .iter()
+                .filter(|(_, claimed)| claimed == family)
+                .count();
+            let paired = DISTINCT_FAMILY_PAIRS
+                .iter()
+                .any(|(one, other)| one == family || other == family);
+            assert!(
+                claimants > 1 || paired,
+                "Fix: `{family}` is claimed only by `{id}` and is in no distinct-family pair; either it groups nothing and the row goes, or the second claimant is missing"
+            );
+        }
+    }
+
+    #[test]
+    fn a_shared_builder_groups_its_operations() {
+        assert!(same_implementation_family(
+            "vyre-primitives::predicate::edge",
+            "vyre-primitives::graph::csr_forward_traverse_excluding"
+        ));
+        assert!(!same_implementation_family(
+            "vyre-primitives::predicate::edge",
+            "vyre-primitives::reduce::all"
+        ));
+    }
+
+    #[test]
+    fn a_distinct_pair_reads_in_both_directions() {
+        assert!(known_distinct_implementation_families(
+            "vyre-primitives::hardware::workgroup_barrier",
+            "vyre-primitives::hardware::popcount_u32"
+        ));
+        assert!(known_distinct_implementation_families(
+            "vyre-primitives::hardware::popcount_u32",
+            "vyre-primitives::hardware::workgroup_barrier"
+        ));
+    }
 }

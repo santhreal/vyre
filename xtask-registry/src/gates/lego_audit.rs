@@ -71,6 +71,7 @@ use xtask::gates::dedup_report::{
 };
 use xtask::gates::implementation_family::{
     known_distinct_implementation_families, same_implementation_family,
+    IMPLEMENTATION_FAMILY_ROWS,
 };
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
@@ -732,10 +733,12 @@ const DEAD_EXEMPTION_FIX: &str =
 
 /// Every exemption row must match a registered op.
 ///
-/// An exemption is a rule that a named op is judged elsewhere. A row naming an op
-/// that was renamed or deleted stops exempting anything, and nothing says so: the
-/// list keeps its length, the audit keeps passing, and a reader takes the row as
-/// evidence the op is covered. Two rows were already in that state.
+/// An exemption is a rule that a named op is judged elsewhere: a phase of a
+/// larger composition, a declared pure-IR leaf, or an op whose shape comes from
+/// a shared builder. A row naming an op that was renamed or deleted stops
+/// exempting anything, and nothing says so: the list keeps its length, the audit
+/// keeps passing, and a reader takes the row as evidence the op is covered. Two
+/// rows were already in that state.
 fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
     for marker in PHASE_MARKERS {
         if !ops.iter().any(|op| op.id.contains(marker)) {
@@ -749,6 +752,14 @@ fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
         if !ops.iter().any(|op| op.id == leaf) {
             report.find(Finding::new(
                 format!("no registered op answers to the declared Tier-3 leaf `{leaf}`"),
+                DEAD_EXEMPTION_FIX,
+            ));
+        }
+    }
+    for (id, family) in IMPLEMENTATION_FAMILY_ROWS {
+        if !ops.iter().any(|op| &op.id == id) {
+            report.find(Finding::new(
+                format!("no registered op answers to `{id}`, claimed by the implementation family `{family}`"),
                 DEAD_EXEMPTION_FIX,
             ));
         }
@@ -1500,23 +1511,38 @@ fn leaf_stem(leaf: &str) -> &str {
 // prefix (the first ~16 bytes of the IR-shape fingerprint, which
 // captures the entry node-kind sequence). These are the "same
 // problem, slightly reordered" duplicates that bigram cosine misses.
+//
+// WHY the score reads only past the prefix: the bucket key already
+// fixes those bytes identical for every pair in the bucket, so scoring
+// them again measures the key and reports similarity the check itself
+// created. Two ops whose entries agree and whose remainders diverge
+// scored above the threshold on the strength of the agreement that put
+// them in one bucket. The remainder is the only evidence the key did
+// not already spend, so the remainder is what the score reads, and a
+// body that ends inside the key window carries no such evidence and is
+// not compared at all.
 
 const PREFIX_LEN: usize = 16;
 const OPERAND_DUP_MIN_COSINE: f64 = 0.55;
 
 fn check_10_operand_shape_duplicate(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note(format!("[10/10] Operand-shape advisory (same fingerprint prefix + cosine ≥ {OPERAND_DUP_MIN_COSINE:.2})"));
+    report.note(format!("[10/10] Operand-shape advisory (same fingerprint prefix, then cosine ≥ {OPERAND_DUP_MIN_COSINE:.2} past that prefix)"));
     let pairs = operand_shape_duplicate_pairs(ops);
     for (cos, a, b) in &pairs {
-        report.find(violation(format!("  ⚠ shape-duplicate: `{}` and `{}` share fingerprint prefix and {:.0}% cosine. Fix: confirm the two ops are doing distinct work, or extract the shared body to vyre-primitives.",
+        report.find(violation(format!("  ⚠ shape-duplicate: `{}` and `{}` share their entry shape and {:.0}% cosine over the rest of the body. Fix: extract the shared body to one builder, or record the pair in `implementation_family_id` naming the builder each one already shares.",
             a.id,
             b.id,
             cos * 100.0)));
     }
     if pairs.is_empty() {
-        report.note(format!("  ✓ no operand-shape duplicates"));
+        report.note("  ✓ no operand-shape duplicates".to_string());
     }
     0
+}
+
+/// The part of a fingerprint the bucket key did not already fix.
+fn fingerprint_past_prefix(fingerprint: &[u8]) -> &[u8] {
+    fingerprint.get(PREFIX_LEN..).unwrap_or(&[])
 }
 
 fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)> {
@@ -1550,7 +1576,10 @@ fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)>
                 if same_subdialect(&a.id, &b.id) {
                     continue;
                 }
-                let cos = structural_similarity(&a.fingerprint, &b.fingerprint);
+                let cos = structural_similarity(
+                    fingerprint_past_prefix(&a.fingerprint),
+                    fingerprint_past_prefix(&b.fingerprint),
+                );
                 if cos < OPERAND_DUP_MIN_COSINE {
                     continue;
                 }
@@ -1652,6 +1681,64 @@ mod dedup_contract_tests {
             composed_nodes: 0,
             children: children.iter().map(|child| (*child).to_string()).collect(),
         }
+    }
+
+    fn op_with_fingerprint(id: &str, fingerprint: Vec<u8>) -> OpInfo {
+        let mut info = op(id, Tier::T3, &[]);
+        info.fingerprint = fingerprint;
+        info
+    }
+
+    /// WHY: the bucket key fixes the first `PREFIX_LEN` bytes identical for
+    /// every pair in a bucket. Scoring those bytes again measures the key, so a
+    /// pair whose bodies diverge everywhere the key did not reach used to score
+    /// above the threshold on the strength of the agreement that bucketed it.
+    /// This test fails the moment the score reads the whole fingerprint again:
+    /// with a 16-byte shared entry and remainders that share no bigram, whole
+    /// fingerprint cosine is over 0.55 and remainder cosine is 0.
+    #[test]
+    fn a_pair_that_agrees_only_where_the_bucket_key_reaches_is_not_a_duplicate() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xB1, 0xB3, 0xB1, 0xB3, 0xB1, 0xB3, 0xB1, 0xB3]);
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::alpha::left", left),
+            op_with_fingerprint("vyre-primitives::beta::right", right),
+        ];
+        assert!(operand_shape_duplicate_pairs(&ops).is_empty());
+    }
+
+    /// WHY: a body that ends inside the key window leaves no evidence the key
+    /// did not already spend, so it cannot be judged either way. Two four-node
+    /// operations used to pair at 88% because the key had made them identical.
+    #[test]
+    fn a_body_that_ends_inside_the_bucket_key_is_not_compared() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::alpha::left", entry.clone()),
+            op_with_fingerprint("vyre-primitives::beta::right", entry),
+        ];
+        assert!(operand_shape_duplicate_pairs(&ops).is_empty());
+    }
+
+    /// WHY: the correction must keep the duplicates it was built to find. Two
+    /// bodies that agree past the key still pair.
+    #[test]
+    fn a_pair_that_agrees_past_the_bucket_key_is_still_a_duplicate() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA3]);
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::alpha::left", left),
+            op_with_fingerprint("vyre-primitives::beta::right", right),
+        ];
+        let pairs = operand_shape_duplicate_pairs(&ops);
+        assert_eq!(pairs.len(), 1, "the pair past the key must still be found");
+        assert!(pairs[0].0 >= OPERAND_DUP_MIN_COSINE);
     }
 
     /// IR duplicate analysis judges exactly the registrations that carry a
