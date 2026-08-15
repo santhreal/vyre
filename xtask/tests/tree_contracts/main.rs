@@ -25,7 +25,7 @@ mod cli_surface;
 mod crate_ownership_registry;
 mod crate_readmes;
 mod docs_manifest_completeness;
-mod evidence_blocker_reporting;
+mod exit_states_a_cause;
 mod feature_isolation;
 mod nested_byte_row_types;
 mod public_api_snapshot_inventory;

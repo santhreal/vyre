@@ -2416,6 +2416,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every crate to find the rows describing one, and the generated per-crate page
   is what answers the question. The section now links `docs/testing/<crate>.md`
   and names the TOML as its authority.
+- The contract that a failing xtask command says why it failed judges the exit
+  itself. It used to match one shape of the original defect, an `if` whose
+  condition named a blocker and whose branch exited, and the gate architecture
+  removed every member of that set, because a gate now returns findings and
+  only the dispatcher exits: the rule matched nothing and passed by judging
+  nothing. It now derives every nonzero `process::exit` in the xtask crates at
+  run time and requires an enclosing block to write the cause on either stream,
+  so a silent exit added anywhere in the tooling fails it.
 - `abstraction-gate` no longer demands an operation registration for a region
   that names no operation. Two prefixes mean the same thing: `inline::`, minted
   by `reparent_entry_node` for a body the composer reparented onto its caller,
