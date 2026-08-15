@@ -28,6 +28,8 @@ use vyre_test_support::case_table::ArmCoverage;
 use vyre_primitives::bitset::four_russians::{
     frontier_words_for_byte_tiles, BYTE_TILE_STATES, BYTE_TILE_WIDTH,
 };
+use vyre_primitives::wire::pack_u32_slice;
+use vyre_reference::value::Value;
 
 /// Minimum declared group count, the floor [`arm_coverage`] enforces.
 ///
@@ -278,6 +280,63 @@ impl LutCache {
             self.key = Some(key);
         }
         (&self.columns, &self.lut)
+    }
+}
+
+/// A dense-matvec byte-LUT builder: columns, tile count, destination words.
+pub(crate) type LutBuilder = fn(&[u32], u32, u32) -> Vec<u32>;
+
+/// A dense-matvec dispatch Program builder: frontier, LUT and output buffer
+/// names, then the tile count and destination words the shape is pinned to.
+pub(crate) type MatvecProgramBuilder =
+    fn(&str, &str, &str, u32, u32) -> vyre_foundation::ir::Program;
+
+/// Assert `program` overwrites a dirty output buffer with the boolean-semiring
+/// result rather than accumulating into it, for every case.
+///
+/// The dirty buffer is all-ones, so an accumulating implementation returns
+/// all-ones and a correct one returns the oracle. Both arms drove the reference
+/// interpreter with the same three buffers in the same order, differing only in
+/// which builders they passed, so `arm` names the crate under test in the
+/// failure message and the builders are arguments.
+pub(crate) fn assert_program_overwrites_dirty_output(
+    arm: &str,
+    cases: &[DenseMatvecCase],
+    lut_of: LutBuilder,
+    program_of: MatvecProgramBuilder,
+) {
+    for case in cases {
+        let columns = case.columns();
+        let lut = lut_of(&columns, case.tile_count, case.dst_words);
+        let frontier = case.frontier();
+        let expected = case.naive(&columns, &frontier);
+        let program = program_of(
+            "frontier",
+            "tile_lut",
+            "out",
+            case.tile_count,
+            case.dst_words,
+        );
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(pack_u32_slice(&frontier)),
+                Value::from(pack_u32_slice(&lut)),
+                Value::from(pack_u32_slice(&vec![u32::MAX; case.dst_words as usize])),
+            ],
+        )
+        .unwrap_or_else(|err| {
+            panic!(
+                "Fix: the {arm} dense matvec Program must execute in the reference oracle: {err}"
+            )
+        });
+
+        assert_eq!(
+            outputs[0].to_bytes(),
+            pack_u32_slice(&expected),
+            "Fix: the {arm} dense matvec Program must overwrite dirty output with the exact boolean-semiring result for {}.",
+            case.label()
+        );
     }
 }
 

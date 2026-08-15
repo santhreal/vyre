@@ -14,13 +14,14 @@ use vyre_libs::encoding::bitset_transform_pipeline::{
     dense_boolean_matvec_lut, dense_matvec_frontier_words, dense_matvec_lut_words,
     four_russians_dense_matvec_program, reference_dense_boolean_matvec,
 };
-use vyre_libs::test_support::u32_bytes;
-use vyre_reference::value::Value;
 
 #[path = "../../tests/support/dense_matvec_cases.rs"]
 mod dense_matvec_cases;
 
-use dense_matvec_cases::{arm_coverage, declared_groups, DenseMatvecCase, LutCache};
+use dense_matvec_cases::{
+    arm_coverage, assert_program_overwrites_dirty_output, declared_groups, DenseMatvecCase,
+    LutCache,
+};
 
 /// Every declared group has a substrate arm, and every case in it holds.
 ///
@@ -35,7 +36,12 @@ fn substrate_dense_matvec_arms_cover_every_declared_case_group() {
                 assert_transform_matches_naive(&group.cases);
             }
             "dirty_output_overwrite" => {
-                assert_program_overwrites_dirty_output(&group.cases);
+                assert_program_overwrites_dirty_output(
+                    "self-substrate",
+                    &group.cases,
+                    dense_boolean_matvec_lut,
+                    four_russians_dense_matvec_program,
+                );
             }
             _ => continue,
         }
@@ -67,40 +73,6 @@ fn assert_transform_matches_naive(cases: &[DenseMatvecCase]) {
             reference_dense_boolean_matvec(&frontier, lut, case.tile_count, case.dst_words),
             case.naive(columns, &frontier),
             "Fix: self-substrate dense matvec transform drifted for {}.",
-            case.label()
-        );
-    }
-}
-
-/// The composed transform Program overwrites a dirty output buffer instead of
-/// accumulating into it.
-fn assert_program_overwrites_dirty_output(cases: &[DenseMatvecCase]) {
-    for case in cases {
-        let columns = case.columns();
-        let lut = dense_boolean_matvec_lut(&columns, case.tile_count, case.dst_words);
-        let frontier = case.frontier();
-        let expected = case.naive(&columns, &frontier);
-        let program = four_russians_dense_matvec_program(
-            "frontier",
-            "tile_lut",
-            "out",
-            case.tile_count,
-            case.dst_words,
-        );
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(u32_bytes(&frontier)),
-                Value::from(u32_bytes(&lut)),
-                Value::from(u32_bytes(&vec![u32::MAX; case.dst_words as usize])),
-            ],
-        )
-        .expect("Fix: self-substrate dense matvec Program must execute in reference oracle.");
-
-        assert_eq!(
-            outputs[0].to_bytes(),
-            u32_bytes(&expected),
-            "Fix: dense matvec transform must overwrite dirty output with the exact boolean-semiring result for {}.",
             case.label()
         );
     }

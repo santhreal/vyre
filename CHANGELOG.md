@@ -1448,6 +1448,17 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `CsrGraphShape` owns the arrays with `'static` lifetime and borrows itself as
   the view, so a contract now names the shape it means instead of agreeing with
   its siblings by coincidence.
+- The dirty-output contract for a dense byte-tile matvec Program is asserted
+  once, by `tests/support/dense_matvec_cases.rs`, which drives the reference
+  interpreter with the all-ones output buffer and takes the LUT builder and
+  Program builder as arguments. The two arms ran byte-identical interpreter
+  setups and differed only in which builders they named, which is why they were
+  the largest cross-crate duplicate pair in the repository. The primitive arm
+  passes
+  `vyre_primitives::bitset::four_russians::four_russians_dense_matvec_byte_lut`
+  and the substrate arm passes
+  `vyre_libs::encoding::bitset_transform_pipeline::four_russians_dense_matvec_program`,
+  and the failure message names which arm failed.
 
 ### Removed
 
