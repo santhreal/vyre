@@ -1204,3 +1204,38 @@ text = "`vyre_libs::solvers::numerical_kernel_pipeline` re-exports the Sinkhorn 
 id = "shared-owner-closure-gates"
 category = "Added"
 text = "`vyre-primitives` gates three duplication classes it has reintroduced after previous cleanups, each deriving its member set from source at run time so a new member is red on its first run rather than absent from a hand-maintained roster. No dispatch-grid function may compute its own ceiling division, and every domain declaring one must be able to reach the owner, which is checked against the feature closure parsed from the manifest. No binding record may have its full name set spelled twice anywhere in the workspace, and a new record must publish canonical names. Every op routing a convergence loop through `routed_persistent_fixpoint` must register with the one routing contract, and none may observe the routing obligations privately. Each gate asserts its own member count first, because a structural signature that stops matching the tree otherwise turns into a test that passes by finding nothing."
+
+[[fragments]]
+id = "cast-parity-one-case-list-per-family"
+category = "Fixed"
+text = "The C-AST parity families evaluate one case list on both backends. Each family has a CPU classification arm reading the oracles and a backend parity arm dispatching the same kernels, and each arm used to enumerate its cases by writing one test function per fixture it named, so the two lists were independent and had drifted. `c_frontend::fixtures::declarator_matrix_constructs::fixture_gnu_restrict_qualifier` was named by the CPU arm and by no backend arm, leaving GNU `__restrict` normalization proven on the oracle and unproven on every device; `c_frontend::fixtures::semantic_gap_constructs::fixture_inner_typedef_shadows_outer` reached no backend arm either, so the one construct in that family whose purpose is scope-dependent typedef visibility was never dispatched; six declarator-matrix cases and `fixture_anonymous_struct_union` reached a backend classifier but never a backend property-graph lowerer. Both arms now iterate the family's `CASES` table beside its fixtures, and `c_frontend::parity_matrix` owns the four stages, every program they dispatch, and the comparisons, so a construct cannot be proven on one side and unproven on the other."
+
+[[fragments]]
+id = "cast-parity-matrix-runs-without-a-device"
+category = "Added"
+text = "`vyre_libs` runs every C-AST parity case on the reference interpreter through `vyre_driver_reference::CpuRefBackend`, dispatching the same programs the driver arms dispatch. A parity failure used to be observable only on a machine with a working adapter, so a case no arm named looked exactly like a case that passed. Splitting the arms separates a kernel that disagrees with its oracle, which fails here, from a device that disagrees with the kernel, which fails only there."
+
+[[fragments]]
+id = "cast-parity-pg-rows-are-not-a-list"
+category = "Fixed"
+text = "`c_frontend::parity_matrix::assert_pg_mirrors_every_vast_row` checks the property graph against the typed VAST at every row a fixture produces, and asserts the row count equals the token count so the span columns cannot compare unrelated rows. The lowerer emits one graph row per VAST row, so that is its whole contract; each family previously pinned a hand-written index list for a few of its cases, which is a member set that goes stale in silence, and the rows those lists left out were the ones nothing covered."
+
+[[fragments]]
+id = "cast-parity-cpu-contracts-leave-the-driver-crate"
+category = "Fixed"
+text = "The asm-alias, mixed-initializer and incomplete-initializer classification contracts live with the rest of their family in `vyre-libs`. Nothing in them dispatches anything, so holding them in a driver crate's tests made the CPU classification of three C constructs depend on that driver compiling and left a package-scoped `vyre-libs` test run unable to check them. Deleted with the move: a second fixture builder for `typedef int (*fn_t)(int); fn_t f;`, whose four assertions were already made against the byte-identical `c_frontend::fixtures::declarator_matrix_constructs::fixture_nested_typedef_complex_declarator`."
+
+[[fragments]]
+id = "cast-parity-annotated-and-raw-classification-named-apart"
+category = "Changed"
+text = "`c_frontend::token_fixture::classify_without_annotation` names the weaker of the two classification chains, which the C-AST contracts restated as a builder call plus a classifier call seventeen times. The classifier reads the typedef flags an annotation pass writes, and the two chains disagree on the kind of a GNU attribute's payload identifier, so a contract about declarator and specifier kinds may skip annotation and one about attribute payloads may not. Both are now spelled as which chain they mean."
+
+[[fragments]]
+id = "cast-parity-scoped-annotator-has-one-sequence"
+category = "Changed"
+text = "The three-dispatch scope-aware typedef annotation sequence, identifier prehash then brace-scope precompute then annotate, has one owner in `c_frontend::parity_matrix::arm_annotated_vast`. It was written twice in the driver's parity support and once more in a family root, and that third copy dispatched the global-fast annotator instead: a kernel documented as having no scope model, compared against the exact oracle it cannot reproduce under shadowing. Removed with it, having no callers left, a wrapper whose body forwarded a fixture's source bytes to the sequence."
+
+[[fragments]]
+id = "cast-parity-a-fixture-nobody-runs-is-a-failure"
+category = "Added"
+text = "`c_frontend::parity_matrix::assert_case_table_covers_fixture_file` reads a fixture family's own source at run time, collects the fixture builders it declares, and fails when the family's `CASES` table does not name one of them. Adding a construct and forgetting to enumerate it used to leave it proven on no backend and indistinguishable from a construct that passed, which is how GNU `__restrict` normalization stayed unproven on every device. A companion contract reads the fixture directory itself, so a new family is red until it either has a case table or is recorded as proven another way with the reason."
