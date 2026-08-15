@@ -1,8 +1,13 @@
-//! Every documented claim has a proving test, and says so in the document.
+//! Where a contract is written, and where it is not.
 //!
-//! Claim drift is how documentation lies. Each row in the claim manifest pins a
+//! Two rules live here, both about the boundary between source and document.
+//! Claim drift is how documentation lies: each row in the claim manifest pins a
 //! phrase in a document to a test path, so a document edit rides alongside the
-//! test edit and removing a claim removes both.
+//! test edit and removing a claim removes both. And a comment that says the rule
+//! lives in a document is not a statement of the rule: it costs a reader a second
+//! file and it outlives the file it names, which is what happened when the book
+//! those comments pointed into was deleted and every pointer became a pointer to
+//! nothing with no gate red to show for it.
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
@@ -95,5 +100,124 @@ impl Gate for DocClaims {
 
         report.note(format!("{} claim(s) checked", claims.len()));
         Ok(report)
+    }
+}
+
+/// The published documentation directory, and the extension its pages carry.
+const DOCUMENT_DIRECTORY: &str = "docs/";
+const DOCUMENT_SUFFIX: &str = ".md";
+
+/// A source comment states its contract instead of naming a document.
+pub struct ContractInSource;
+
+impl Gate for ContractInSource {
+    fn name(&self) -> &'static str {
+        "contract-in-source"
+    }
+
+    fn help(&self) -> &'static str {
+        "comments that defer a contract to a published document instead of stating it"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let tree = Tree::open(&ctx.root)?;
+        let sources = tree.all_rust();
+        let mut report = Report::clean();
+        let mut scanned = 0_usize;
+        for path in &sources {
+            let text = tree.read(path)?;
+            scanned += 1;
+            for (index, line) in text.lines().enumerate() {
+                if !is_prose(line) {
+                    continue;
+                }
+                for document in documents_named_in(line) {
+                    report.find(Finding::at(
+                        path.clone(),
+                        u32::try_from(index + 1).unwrap_or(u32::MAX),
+                        format!("this comment defers its contract to {document}"),
+                        "state the rule in the source that has to follow it, then delete the \
+                         pointer; a document can be deleted and the comment cannot tell",
+                    ));
+                }
+            }
+        }
+        report.note(format!("{scanned} source file(s) scanned"));
+        Ok(report)
+    }
+}
+
+/// Whether a line is prose rather than code.
+///
+/// Comments only, deliberately: a path in code is an artifact the program reads
+/// or writes, and a generator naming its own output owns that output rather than
+/// deferring to it.
+fn is_prose(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    trimmed.starts_with("//") || trimmed.starts_with('*')
+}
+
+/// Every published document path one line names.
+///
+/// A match must start the path: a directory of the same name nested under
+/// another one, such as the release evidence tree, is a different tree and
+/// carries no contract.
+fn documents_named_in(line: &str) -> Vec<&str> {
+    let path_character = |character: char| {
+        character.is_ascii_alphanumeric() || matches!(character, '.' | '/' | '-' | '_')
+    };
+    let bytes = line.as_bytes();
+    let mut found = Vec::new();
+    let mut cursor = 0;
+    while let Some(offset) = line[cursor..].find(DOCUMENT_DIRECTORY) {
+        let start = cursor + offset;
+        cursor = start + DOCUMENT_DIRECTORY.len();
+        if start > 0 && path_character(char::from(bytes[start - 1])) {
+            continue;
+        }
+        let end = line[start..]
+            .find(|character| !path_character(character))
+            .map_or(line.len(), |length| start + length);
+        let candidate = &line[start..end];
+        if candidate.ends_with(DOCUMENT_SUFFIX) {
+            found.push(candidate);
+        }
+    }
+    found
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: the rule is about the published documentation tree, not about the
+    /// word. A path nested under another directory names a different tree, and a
+    /// path glued to a longer token is not a path at all. Reading either as a
+    /// deferral would make the gate fire on the release evidence tree, and a gate
+    /// with false positives gets switched off.
+    #[test]
+    fn only_a_published_document_path_is_a_deferral() {
+        assert_eq!(
+            documents_named_in("// the rule lives in docs/lego-block-rule.md"),
+            vec!["docs/lego-block-rule.md"]
+        );
+        assert!(documents_named_in("// release/evidence/docs/notes.md").is_empty());
+        assert!(documents_named_in("// see docs/generated/OP_SCHEMA.json").is_empty());
+        assert_eq!(
+            documents_named_in("//! docs/A.md and docs/B.md").len(),
+            2,
+            "two pointers on one line are two findings"
+        );
+    }
+
+    /// WHY: a path in code is an artifact the program reads or writes, and the
+    /// generators in this tree name their own output. Scanning code would report
+    /// every one of them and the rule would be reverted rather than followed.
+    #[test]
+    fn a_path_in_code_is_not_a_deferral() {
+        assert!(is_prose("    // docs/x.md"));
+        assert!(is_prose("/// docs/x.md"));
+        assert!(is_prose(" * docs/x.md"));
+        assert!(!is_prose("    let path = \"docs/x.md\";"));
     }
 }

@@ -9,7 +9,7 @@
 #![warn(unreachable_pub)]
 // vyre-runtime owns the io_uring zero-copy ingest path and the persistent
 // megakernel ring; both reach into FFI / mmap territory. Every unsafe site
-// carries a `Safety:` comment that `check_unsafe_justifications.sh` validates.
+// carries a `SAFETY:` comment the `lint-unsafe-justification` gate validates.
 #![allow(unsafe_code)]
 
 /// Errors surfaced by the runtime layer. Every variant carries a

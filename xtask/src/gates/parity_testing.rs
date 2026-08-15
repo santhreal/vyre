@@ -1,8 +1,5 @@
 //! The gate that keeps the WGSL parity oracle out of production builds.
 //!
-//! This was `scripts/check_parity_testing_not_leaked.sh`, wired into CI only
-//! through the `check-cat-a` composite.
-//!
 //! `parity-testing` enables a probe path that emits raw shader text, bypassing
 //! the IR, validation and the conformance gate. It exists for the f32
 //! transcendental parity oracle. A manifest that enables it outside a

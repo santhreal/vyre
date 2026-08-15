@@ -13,7 +13,7 @@
 //!   - megakernel dispatch
 //!
 //! GPU-required: each test acquires a real adapter; no silent skip.
-//! `scripts/check_gpu_test_loudness.sh` enforces the loudness rule.
+//! The `gpu-loudness` gate enforces the loudness rule.
 
 use vyre::ir::{BufferDecl, DataType, Program};
 use vyre_driver::{BackendError, VyreBackend};

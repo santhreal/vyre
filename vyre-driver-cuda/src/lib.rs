@@ -19,7 +19,7 @@
 // every call site is the boundary between safe vyre code and the CUDA driver
 // API. Allow `unsafe` here so the rest of the workspace can keep
 // `unsafe_code = "deny"` while this backend wraps cudarc properly with
-// per-call Safety: comments enforced by `check_unsafe_justifications.sh`.
+// per-call SAFETY comments the `lint-unsafe-justification` gate enforces.
 #![allow(unsafe_code)]
 
 mod aot_launcher;

@@ -55,6 +55,19 @@ const SILENT_SKIPS: &[(&str, &str)] = &[
     ("adapter missing", "skipp"),
 ];
 
+/// The files that own a silent-skip rule and therefore spell what it forbids.
+///
+/// The pattern the rule looks for is a string literal, and so is the rule's own
+/// table, so a gate that scans its own source reports itself and can never reach
+/// zero. Masking string literals is not the answer: a real silent skip prints its
+/// excuse from a literal, which is exactly what the rule is for. The test below
+/// requires each row to exist and to carry the language, so a row that stops
+/// spelling the rule stops being an exemption.
+const SILENT_SKIP_RULE_SOURCES: &[&str] = &[
+    "xtask/src/gates/gpu_loudness.rs",
+    "xtask/src/gates/repo_hygiene.rs",
+];
+
 /// Instruction files, redirects and backlog files hold their agreed shape.
 pub struct RepoHygiene;
 
@@ -107,7 +120,8 @@ impl Gate for RepoHygiene {
                 continue;
             }
             let text = tree.read(redirect)?;
-            if !text.contains("compatibility redirect") || !text.contains("AGENTS.md") {
+            let lowered = text.to_ascii_lowercase();
+            if !lowered.contains("compatibility redirect") || !text.contains("AGENTS.md") {
                 report.find(Finding::in_file(
                     *redirect,
                     "instruction file is not a redirect to AGENTS.md",
@@ -192,6 +206,12 @@ impl Gate for RepoHygiene {
         }
 
         for file in tree.all_rust() {
+            if SILENT_SKIP_RULE_SOURCES
+                .iter()
+                .any(|source| file == Path::new(source))
+            {
+                continue;
+            }
             let text = tree.read(&file)?;
             for (number, line) in scan::numbered(&text) {
                 if SILENT_SKIPS
@@ -343,5 +363,27 @@ mod tests {
         assert!(FORBIDDEN_SUFFIXES.iter().any(|suffix| "release/x.tar.gz".ends_with(suffix)));
         assert!(FORBIDDEN_EXTENSIONS.contains(&"zip"));
         assert!(!FORBIDDEN_EXTENSIONS.contains(&"rs"));
+    }
+
+    /// WHY: an exemption keyed on a path is dead the moment the rule text moves,
+    /// and a dead row reads as a decision while doing nothing. Each exempt file
+    /// must exist and must still carry the language the rule forbids, so a row
+    /// that stops spelling the rule turns this red instead of quietly widening
+    /// the scan by one file.
+    #[test]
+    fn every_silent_skip_exemption_still_spells_the_rule() {
+        let root = structure_gate::workspace_root();
+        for source in SILENT_SKIP_RULE_SOURCES {
+            let path = root.join(source);
+            let text = std::fs::read_to_string(&path)
+                .unwrap_or_else(|error| panic!("Fix: {source} is exempt but unreadable: {error}"));
+            assert!(
+                SILENT_SKIPS
+                    .iter()
+                    .any(|(reason, action)| text.contains(reason) && text.contains(action)),
+                "Fix: {source} is exempt from the silent-skip scan but no longer spells the \
+                 rule; delete the row"
+            );
+        }
     }
 }

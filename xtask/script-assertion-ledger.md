@@ -1,10 +1,10 @@
 # Script assertion ledger
 
-`scripts/` holds 56 tracked files: 45 shell scripts and 11 Python scripts.
+`scripts/` holds 37 tracked files: 27 shell scripts and 10 Python scripts.
 Each one is recorded below with its assertions, what makes it exit nonzero, every
 caller found in the tree, whether the files it reads still exist, and the gate
-that owns its assertions after the port. The rows carry 214 assertions and
-73 findings.
+that owns its assertions after the port. The rows carry 155 assertions and
+38 findings.
 
 A script leaves this document by being deleted: its rule belongs to a registered
 gate, so the row is a record of a port that is finished, not of a file that still
@@ -12,20 +12,14 @@ runs. The ledger is empty when the registry owns every rule.
 
 ## Totals
 
-- Files: 56. Assertions: 214. Findings: 73.
-- Files whose subject is partly or wholly gone: 7.
-- Files nothing invokes: 22.
-- Files that assert nothing: 1.
+- Files: 37. Assertions: 155. Findings: 38.
+- Files whose subject is partly or wholly gone: 2.
+- Files nothing invokes: 12.
 
 ### Subject gone
 
-- `scripts/architecture_docs.py`
 - `scripts/bench/cross_backend_comparison.sh`
-- `scripts/check_docs_references.py`
-- `scripts/check_platform_consumer_docs.sh`
-- `scripts/crate_ownership.py`
 - `scripts/final-launch.sh`
-- `scripts/testing_guides.py`
 
 ### Nothing invokes it
 
@@ -33,18 +27,8 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/bench/cross_backend_comparison.sh`
 - `scripts/bench_smoke.sh`
 - `scripts/check_bench_baselines.sh`
-- `scripts/check_evidence_paths.sh`
-- `scripts/check_expect_has_fix.sh`
-- `scripts/check_gpu_test_loudness.sh`
-- `scripts/check_invariant_paths_exist.sh`
 - `scripts/check_metal_macbook.sh`
-- `scripts/check_no_string_wgsl.sh`
-- `scripts/check_op_names.sh`
-- `scripts/check_parity_testing_not_leaked.sh`
-- `scripts/check_platform_consumer_docs.sh`
-- `scripts/check_primitive_contract.sh`
 - `scripts/check_signed_conformance_certificate.sh`
-- `scripts/check_unsafe_justifications.sh`
 - `scripts/crate_ownership.py`
 - `scripts/crate_readmes.py`
 - `scripts/final-launch.sh`
@@ -52,16 +36,13 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/testing_guides.py`
 - `scripts/wire_ci_local.sh`
 
-### Asserts nothing
-
-- `scripts/bench_smoke.sh`
-
 ## Rows
+
 ### `scripts/apply-branch-protection.sh`
 
 Subject: present.
 
-Invoked by: nothing; named in .github/CI_REQUIRED.md and .github/CODEOWNERS.
+Invoked by: nothing; named in .github/CI_REQUIRED.md, .github/CODEOWNERS and six release evidence artifacts that record it as the source of the branch protection state.
 
 Gate: xtask/src/gates/ci_contract.rs for every assertion; the gh mutation is not a gate and stays a manual operator action.
 
@@ -92,7 +73,7 @@ Findings:
 
 ### `scripts/architecture_docs.py`
 
-Subject: partly gone: the five documents it reads were deleted at b1ed746d1c; docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/optimization/OWNERSHIP.toml, docs/CRATE_OWNERSHIP.toml, release/release-train.toml and the backend evidence all survive.
+Subject: present: the one document it validates, docs/ARCHITECTURE.md, is tracked, as are docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/optimization/OWNERSHIP.toml, docs/CRATE_OWNERSHIP.toml, release/release-train.toml and the backend evidence. CURRENT_DOCS carried five documents and an RFC when this row was written; four of the six were deleted and the list was trimmed to the survivor, so the assertions below that name a second document no longer apply.
 
 Invoked by: architectural-invariants.yml, xtask/tests/tree_contracts/architecture_docs.rs; version-coupled by xtask-registry/src/docs/operation_schema.rs and cited by docs/optimization/OWNERSHIP.toml and xtask/src/release/conformance_workflows.rs.
 
@@ -162,7 +143,7 @@ Exits nonzero on:
 
 Subject: present.
 
-Invoked by: nothing; named in CHANGELOG.md and the changelog fragments only.
+Invoked by: nothing; named in benches/RESULTS.md and the changelog only.
 
 Gate: xtask/src/gates/bench_contract.rs.
 
@@ -271,37 +252,9 @@ Exits nonzero on:
 
 - whatever check_deep_bench_coverage.py exits nonzero on
 
-### `scripts/check_doc_claim_to_test.sh`
-
-Subject: present (contracts/doc_claims_manifest.toml is tracked).
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/doc_contract.rs.
-
-Assertions:
-
-- contracts/doc_claims_manifest.toml exists and parses to at least one [[claim]].
-- Every claim row declares id, doc, phrase and test.
-- Every claim's doc file exists and contains the literal phrase.
-- Every claim's test path exists.
-
-Exits nonzero on:
-
-- missing manifest
-- zero claims parsed
-- incomplete row
-- missing doc
-- phrase absent
-- missing test path
-
-Findings:
-
-- The manifest is parsed with awk over TOML text, so a phrase containing a quote, a multi-line string, or a field written on a continuation line is read wrongly. The repair is toml::from_str.
-
 ### `scripts/check_docs_references.py`
 
-Subject: partly gone: docs/**/*.md are gone; root Markdown, .github Markdown and crate READMEs survive and the assertion applies to them unchanged.
+Subject: present: docs carries 41 tracked Markdown documents again, plus root Markdown, .github Markdown and the crate READMEs.
 
 Invoked by: xtask/tests/docs_references.rs.
 
@@ -314,76 +267,6 @@ Assertions:
 Exits nonzero on:
 
 - any unresolvable reference
-
-### `scripts/check_every_source_file_is_reachable.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/source_reachability.rs.
-
-Assertions:
-
-- Delegates to scripts/lib/check_every_source_file_is_reachable.py. Invokes no cargo, because the defect it detects is a file cargo never compiles.
-
-Exits nonzero on:
-
-- whatever check_every_source_file_is_reachable.py exits nonzero on
-
-### `scripts/check_evidence_paths.sh`
-
-Subject: present.
-
-Invoked by: nothing; named in CHANGELOG.md, the changelog fragments and vyre-pass-engine/tests/release_evidence_path_contract.rs.
-
-Gate: xtask/src/gates/evidence_paths.rs.
-
-Assertions:
-
-- release/evidence exists and jq is available.
-- The file-extension vocabulary is derived from the tree at run time and is non-empty.
-- Every path-shaped string leaf, at any depth, in every JSON under release/evidence resolves on disk, resolved absolute, then against the workspace root, then against the artifact's own directory.
-- No cited path that exists is gitignored, because evidence citing a local-only file is unverifiable by any other reader.
-- git check-ignore exiting above 1 is a tool failure, per repository.
-
-Exits nonzero on:
-
-- missing evidence dir
-- jq missing
-- empty extension vocabulary
-- any citation naming a nonexistent path
-- any cited path that is gitignored
-- check-ignore failure
-
-Findings:
-
-- Nothing invokes it. When it was written the tree carried 185 stale citations across 16 artifacts, and the only prior semantic check on an artifact was internal self-consistency, which a stale artifact passes trivially. That contract is now unenforced in CI.
-- The derived extension vocabulary and the depth-independent leaf walk are the two shapes that make it work, and both are preserved: serde_json gives the same walk without jq.
-
-### `scripts/check_expect_has_fix.sh`
-
-Subject: present.
-
-Invoked by: nothing; the path appears as a string in vyre-driver/src/registry/enforce.rs.
-
-Gate: xtask/src/gates/lint_hygiene.rs.
-
-Assertions:
-
-- Every .expect("...") site in non-test Rust source has `Fix:` on the same line or within the next three lines.
-- The count of sites without Fix: does not exceed the baseline.
-
-Exits nonzero on:
-
-- count above baseline
-
-Findings:
-
-- The baseline is `VYRE_EXPECT_BASELINE:-0`, so any caller can raise the ceiling from the environment and the ratchet passes. A pinned number belongs in xtask/gate-baselines.toml, which no caller can override.
-- `set -uo pipefail` without `-e`, so a failure inside the loop body does not stop the script.
-- `grep -rn ... 2>/dev/null` reads a failed search as zero sites, which is a clean tree.
-- It scans the working tree from `.` rather than tracked files, so untracked scratch moves the count.
 
 ### `scripts/check_external_ir_extension_ci.sh`
 
@@ -423,49 +306,6 @@ Exits nonzero on:
 
 - whatever check_feature_msrv.py exits nonzero on
 
-### `scripts/check_gpu_test_loudness.sh`
-
-Subject: present.
-
-Invoked by: nothing; the path appears as a string in vyre-driver-wgpu/tests/dispatch_adversarial.rs.
-
-Gate: xtask/src/gates/gpu_loudness.rs.
-
-Assertions:
-
-- No Rust file contains a silent GPU skip: an is_err early return, a `skipped`/`no GPU`/`GPU unavailable` print, or a cfg/cfg_attr gate that ignores a test when no GPU feature is on, unless a loud abort (acquire_or_panic, a named panic!, or an assert carrying Fix:) sits within ten lines above or twenty below.
-
-Exits nonzero on:
-
-- any unpaired silent-skip site
-
-Findings:
-
-- Three of the ten patterns are unreachable. Inside single quotes `'#\\[cfg\\(not...'` passes a literal double backslash to grep -E, so the pattern requires a backslash character before `[cfg` in the Rust source, which never occurs. The cfg and cfg_attr classes named in the header comment are therefore not checked at all. The gate carries them as live patterns in Rust with single escaping.
-- It scans the filesystem with `find` rather than tracked files.
-- `grep -nE ... 2>/dev/null` inside an `if` reads a failed search as no hits.
-- Nothing invokes it, so the AGENTS.md silent-fallback rule it cites has no enforcement in CI.
-
-### `scripts/check_invariant_paths_exist.sh`
-
-Subject: present.
-
-Invoked by: nothing; named in CHANGELOG.md only.
-
-Gate: xtask/src/gates/doc_contract.rs.
-
-Assertions:
-
-- Every `conform/**.rs` path cited by vyre-spec/src/invariants.rs exists on disk, excluding the doc-comment example `conform/tests/<file>.rs`.
-
-Exits nonzero on:
-
-- any cited path missing
-
-Findings:
-
-- Nothing invokes it.
-
 ### `scripts/check_metal_macbook.sh`
 
 Subject: present.
@@ -501,165 +341,6 @@ Findings:
 - Roughly 60 assertions are `grep -q` over JSON, so a counter renamed inside a nested object still matches, and a field present with a null value passes. The gate parses the JSON and asserts the fields.
 - The artifact count of 7 is a literal in a grep pattern, so adding an eighth artifact fails with a message about a missing string rather than about the count.
 
-### `scripts/check_no_hot_path_inventory.sh`
-
-Subject: present (docs/inventory-contract.md, cited in the header, is gone).
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- No `inventory::iter::<` call appears in eleven production trees, outside an allowlist of six init-only files and outside test modules.
-
-Exits nonzero on:
-
-- any hit outside the allowlist
-
-Findings:
-
-- This gate is the reason scripts/lib/source_scan.sh exists. It asked ripgrep for -P, this build has no PCRE2, every invocation errored into /dev/null, and the gate passed on every possible tree. The assertion is live again through the shared scanner and stays live in Rust.
-
-### `scripts/check_no_hot_path_vec_vec.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- Occurrences of Vec<Vec<u8>> in vyre-driver-wgpu production sources equal 14, excluding tests.
-- Under --strict, every occurrence is inside a comment.
-
-Exits nonzero on:
-
-- count above the ceiling
-- count below the ceiling
-- a strict-mode hit in live code
-
-Findings:
-
-- The previous ceiling of 35 sat above an actual 24, so eleven new nested-Vec sites could land unseen. The equality ratchet replaced it and is preserved.
-
-### `scripts/check_no_string_wgsl.sh`
-
-Subject: present (the allowlist still names docs/ paths that are gone, which widens nothing because those files cannot appear).
-
-Invoked by: nothing; named in CHANGELOG.md, vyre-libs/AUTHORING.md and vyre-primitives/README.md.
-
-Gate: xtask/src/gates/shader_source.rs.
-
-Assertions:
-
-- No Rust file outside the allowlist contains a WGSL syntax token (@compute, @workgroup_size, @group(, @binding(, var<storage, var<uniform, var<workgroup, -> @location) while also containing push_str, format_args, format!, write!, writeln! or a raw string.
-- No file under vyre-driver-wgpu/src has push_str calls together with WGSL tokens.
-- The number of files containing naga::front::wgsl::parse_str under vyre-driver-wgpu/src and vyre-foundation/src is 0.
-
-Exits nonzero on:
-
-- violations above 0
-- parse_str file count above 0
-
-Findings:
-
-- Both `progress` branches compare a count against 0 with `-lt`, so neither can ever fire. A branch that cannot execute is not a report, and the two messages it would print have never been printed.
-- `grep -rl ... 2>/dev/null || true` on the outer file listing reads a failed search as no files, which reads as a clean tree.
-- It scans the filesystem rather than tracked files, and it excludes only target and .git.
-
-### `scripts/check_op_names.sh`
-
-Subject: present (docs/op-naming.md, the cited rule source, is gone).
-
-Invoked by: nothing; the path appears as a string in xtask/src/gates/check_cat_a.rs.
-
-Gate: xtask/src/gates/naming.rs.
-
-Assertions:
-
-- vyre-libs/src exists.
-- No public free function in a vyre-libs op source file is named with a compute_/do_/run_/make_/create_/new_ prefix.
-- No public free function is named with an _op/_impl/_internal suffix.
-- No public free function name contains an uppercase letter, which would need #[allow(non_snake_case)] to compile.
-
-Exits nonzero on:
-
-- missing vyre-libs/src
-- any banned prefix, suffix or non-snake-case name
-
-Findings:
-
-- `for f in $op_files` splits an unquoted command substitution on whitespace, so a path containing a space is scanned as two nonexistent paths and the redirect fails the script.
-- The skip list names five filenames by hand, so a new module-root or helper filename is scanned as an op file.
-
-### `scripts/check_parity_testing_not_leaked.sh`
-
-Subject: present.
-
-Invoked by: nothing; the path appears as a string in vyre-libs/AUTHORING.md and xtask/src/gates/check_cat_a.rs.
-
-Gate: xtask/src/gates/manifest_contract.rs.
-
-Assertions:
-
-- No Cargo.toml enables the vyre-driver-wgpu parity-testing feature outside a dev-dependencies section, except its declaration in vyre-driver-wgpu's own [features] block.
-
-Exits nonzero on:
-
-- any non-dev activation
-
-Findings:
-
-- It walks the filesystem with find rather than tracked manifests, so a Cargo.toml inside an untracked scratch checkout is judged.
-- The section tracker is line-based, so `features = ["parity-testing"]` written inside an inline table on the crate line is not attributed to a section.
-
-### `scripts/check_platform_consumer_docs.sh`
-
-Subject: partly gone: all 17 entries of PLATFORM_MARKDOWN_FILES were deleted at b1ed746d1c, and each is guarded by [[ -f ]], so that whole loop now scans nothing. Crate sources, crate READMEs and OP_MATRIX.toml survive.
-
-Invoked by: nothing; named in CHANGELOG.md, vyre-lints/src/consumer_coupling.rs and vyre-pass-engine/tests/platform_doc_consumer_boundary.rs.
-
-Gate: xtask/src/gates/doc_contract.rs.
-
-Assertions:
-
-- No Rust comment or doc comment in thirteen platform crates names a downstream consumer product (weir, surgec, gossan, keyhog).
-- No crate-local README.md, ARCHITECTURE.md or CONFIG.md in those crates names one.
-- No listed platform Markdown file or docs/optimization/OP_MATRIX.toml names one, except the release-coordination documents listed in vyre-lints/rules/release_coordination_docs.txt.
-
-Exits nonzero on:
-
-- any consumer name in a scanned comment or document
-
-Findings:
-
-- The 17-entry markdown list is now inert. Every entry is skipped silently by its own file guard, so the gate reports a consumer-neutral tree having read none of the documents its name is about. The Rust gate reports each missing listed document as a finding rather than skipping it.
-- The exemption file vyre-lints/rules/release_coordination_docs.txt is shared with vyre-lints, which is the right shape and is preserved.
-
-### `scripts/check_primitive_contract.sh`
-
-Subject: present.
-
-Invoked by: nothing; the path appears as a string in xtask/src/gates/hygiene_matrix.rs.
-
-Gate: none needed: the registry already owns primitive-admission-gate, and this file is a shell adapter in front of it.
-
-Assertions:
-
-- Rejects any path argument, because source-file shape is not a primitive contract.
-- Delegates to `xtask primitive-admission-gate`.
-
-Exits nonzero on:
-
-- any argument passed
-- whatever primitive-admission-gate exits nonzero on
-
-Findings:
-
-- It is a compatibility entry point in front of a registered subcommand, which is exactly the shim shape the port removes. Its own assertion, that path arguments are refused, disappears with it because the registry gate takes no paths.
-
 ### `scripts/check_public_api_snapshot.sh`
 
 Subject: present (docs/public-api/*.txt survive; they are .txt, not the deleted mdbook).
@@ -692,34 +373,6 @@ Findings:
 
 - `set -uo pipefail` without `-e`.
 - The refresh path writes into docs/public-api from whatever the tree holds at that instant. Under the contract the write half is ctx.write on the gate that owns the artifact, which keeps the diff print and the per-crate scoping.
-
-### `scripts/check_repo_hygiene.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/repo_hygiene.rs.
-
-Assertions:
-
-- Fifteen required repository files exist, and .github/ISSUE_TEMPLATE holds at least three .md files.
-- CLAUDE.md and GEMINI.md each say `compatibility redirect`, name AGENTS.md, and are at most 8 lines.
-- No .pytest_cache, .cursor or __pycache__ directory is present outside target and .git.
-- No no-GPU escape hatch appears in .github or vyre-driver-wgpu/Cargo.toml.
-- No file with a build or backup extension is present outside target, corpus and fixture trees.
-- No node_modules, .venv, .next or dist directory is present.
-- .github/workflows-paused/gpu-parity.yml does not exist, so GPU parity is not paused.
-- No Rust file contains silent GPU skip language.
-
-Exits nonzero on:
-
-- any of the eight groups failing
-
-Findings:
-
-- `set -uo pipefail` without `-e`, so an unexpected error inside a check body continues.
-- It prints a check mark per passing item, which is 20 lines of output on a clean tree. Under the contract a clean gate says nothing and the per-item confirmations become notes.
 
 ### `scripts/check_signed_conformance_certificate.sh`
 
@@ -759,86 +412,11 @@ Exits nonzero on:
 - spirv-val missing
 - test failure
 
-### `scripts/check_unification_baselines.sh`
-
-Subject: present (docs/MIGRATION.md, cited as the target list, is gone).
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/unification.rs.
-
-Assertions:
-
-- Every declared scan path of every ratchet row exists, so a row cannot pass by measuring nothing.
-- vyre-foundation/src declares exactly one `fn child_bodies`, so nothing re-implements exhaustive child enumeration.
-- No BufferAccess::infer/auto/derive_from helper exists in the lowering, wgpu or megakernel trees.
-- No `fn cpu_reference` exists in vyre-foundation/src or vyre-reference/src.
-- Exactly one fusion-planning entry point exists across three trees.
-- No PipelineCacheStore implementation lives in vyre-driver-wgpu/src.
-
-Exits nonzero on:
-
-- a declared path missing
-- any row count above its floor
-
-Findings:
-
-- `set -uo pipefail` without `-e`.
-- Three of five rows previously scanned paths that had moved and scored 0, which is at or below every floor, so they passed by measuring nothing. The missing-path assertion that fixed it is the single most important shape in this whole layer and the Rust scanner enforces it for every gate: a scan path that does not exist is an error, not an empty result.
-- The P-DELETE-1 row was pinned at 18 against an actual 22 and was measuring the wrong property. Its replacement counts one owner instead.
-
-### `scripts/check_unsafe_budget.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/lint_hygiene.rs.
-
-Assertions:
-
-- scripts/unsafe_budget.txt exists.
-- The set of tracked .rs files carrying allow(unsafe_code) equals the reviewed list exactly, in both directions.
-
-Exits nonzero on:
-
-- missing budget file
-- a file carrying the override that is not listed
-- a listed file that no longer carries it
-
-Findings:
-
-- The two-directional set comparison is the right shape and is preserved. Three of the previous nine whitelist entries named a crate that no longer existed, which is why the rule is a set equality over the override marker rather than a path whitelist.
-
-### `scripts/check_unsafe_justifications.sh`
-
-Subject: present.
-
-Invoked by: nothing; named in two crate lib.rs headers, a README and xtask/src/gates/hygiene_matrix.rs.
-
-Gate: xtask/src/gates/lint_hygiene.rs.
-
-Assertions:
-
-- Every `unsafe {` block in production Rust source has a `// SAFETY: <text>` comment in the contiguous comment block up to eight lines above.
-- No SAFETY comment is a cop-out (TODO, FIXME, unclear, investigate, unknown, tbd, ???).
-
-Exits nonzero on:
-
-- a block with no SAFETY comment
-- a cop-out SAFETY comment
-
-Findings:
-
-- Nothing invokes it, so Law H has no CI enforcement.
-- `grep -rn ... 2>/dev/null` reads a failed search as no unsafe blocks.
-- It scans the filesystem from the repository root rather than tracked files, and it runs one `sed -n` per candidate line, so the cost is one process per line of backward scan.
-
 ### `scripts/crate_ownership.py`
 
-Subject: partly gone: docs/CRATE_OWNERSHIP.toml survives, and both generated documents docs/CRATE_GRAPH.md and docs/OWNERSHIP.md were deleted at b1ed746d1c.
+Subject: present: docs/CRATE_OWNERSHIP.toml and both generated documents, docs/CRATE_GRAPH.md and docs/OWNERSHIP.md, are tracked.
 
-Invoked by: nothing directly; consumed by lib/check_layering.py, xtask/src/gates/check_tier_deps.rs and xtask/tests/tree_contracts/crate_ownership_registry.rs.
+Invoked by: nothing directly; consumed by xtask/src/gates/check_tier_deps.rs and xtask/src/gates/layering.rs, and named as the generator of docs/CRATE_GRAPH.md and docs/OWNERSHIP.md.
 
 Gate: xtask/src/gates/ownership_registry.rs.
 
@@ -869,9 +447,9 @@ Findings:
 
 ### `scripts/crate_readmes.py`
 
-Subject: present: it writes into crate READMEs, which survive. It links docs/testing/<crate>.md, which is gone, so every generated block points at a file no reader can open.
+Subject: present: it writes into crate READMEs, and the docs/testing/<crate>.md guides its generated block links are tracked again, 35 of them.
 
-Invoked by: nothing directly; xtask/tests/tree_contracts/crate_readmes.rs shells into it, and all 31 crate READMEs name it as their generator.
+Invoked by: nothing directly; xtask/tests/tree_contracts/crate_readmes.rs shells into it, and all 35 crate READMEs name it as their generator.
 
 Gate: xtask/src/gates/doc_contract.rs, which regenerates the crate-contract block under ctx.write.
 
@@ -930,7 +508,7 @@ Findings:
 
 Subject: partly gone: the release notes it passes to `gh release create` are docs/release/v<version>.md, and docs/ carries no Markdown after b1ed746d1c.
 
-Invoked by: nothing; it is the manual launch entry point.
+Invoked by: nothing; it is the manual launch entry point, and it is named by xtask/src/release/launch_state.rs, release/release-train.toml, release/vyre-release-evidence.toml, docs/optimization/OWNERSHIP.toml and conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs.
 
 Gate: xtask/src/gates/release_contract.rs owns every precondition; the publish, tag, push and gh release actions stay operator actions.
 
@@ -1031,32 +609,6 @@ Exits nonzero on:
 - missing cache contract file or test name
 - unregistered --case reference
 
-### `scripts/lib/check_every_source_file_is_reachable.py`
-
-Subject: present.
-
-Invoked by: check_every_source_file_is_reachable.sh from gates.yml.
-
-Gate: xtask/src/gates/source_reachability.rs.
-
-Assertions:
-
-- Every declared cargo target path (lib, build, bin, test, bench, example) names a tracked file.
-- Every autodiscovered target root resolves.
-- Every `mod name;` resolves to a tracked name.rs or name/mod.rs, honouring #[path] and inline module nesting.
-- Every tracked .rs file is reachable from some cargo target root, or exempt.
-- Every template-manifest exemption covers at least one tracked .rs file.
-- Every trybuild pattern matches at least one tracked file.
-
-Exits nonzero on:
-
-- target path naming nothing
-- unresolvable mod declaration
-- orphaned .rs file
-- exemption matching nothing
-- trybuild pattern matching nothing
-- no tracked .rs or Cargo.toml
-
 ### `scripts/lib/check_feature_msrv.py`
 
 Subject: present.
@@ -1134,33 +686,6 @@ Assertions:
 Exits nonzero on:
 
 - any of the four keys missing or non-scalar
-
-### `scripts/lib/source_scan.sh`
-
-Subject: present.
-
-Invoked by: 10 shell gates.
-
-Gate: replaced by the Rust scanner in xtask/src/gates/scan.rs, which is fallible by type rather than by exit status.
-
-Assertions:
-
-- Every scan path passed to a rule exists on disk (returns 2 otherwise).
-- `git ls-files` succeeds; a listing failure is fatal rather than an empty result.
-- A grep exit status other than 0, 1 or 123 is a failed search, not a clean tree.
-- A tracked file absent from the working tree is reported, not silently dropped.
-- `vyre_file_has` exits 2 when its file is missing or the search fails, because `set -e` does not fire inside an `if` condition.
-
-Exits nonzero on:
-
-- scan path missing
-- git ls-files failure
-- grep status not in {0,1,123}
-- vyre_file_has on a missing file
-
-Findings:
-
-- The reason this file exists is a live finding class: nine gates read a failed ripgrep as a clean tree, and check_no_hot_path_inventory.sh passed on every possible tree because this ripgrep build has no PCRE2.
 
 ### `scripts/lib/sweep_targets.py`
 
@@ -1347,7 +872,7 @@ Findings:
 
 ### `scripts/testing_guides.py`
 
-Subject: partly gone: docs/CRATE_OWNERSHIP.toml, docs/testing/TESTING.toml and every crate manifest survive; all of docs/testing/*.md was deleted at b1ed746d1c.
+Subject: present: docs/CRATE_OWNERSHIP.toml, docs/testing/TESTING.toml, every crate manifest and all 35 docs/testing/*.md guides are tracked.
 
 Invoked by: nothing directly; xtask/tests/tree_contracts/testing_guides.rs and docs_manifest_completeness.rs shell into it, and docs/DOCS.toml names it as the generator of every testing guide.
 

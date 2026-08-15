@@ -33,7 +33,7 @@ pub enum EnforceVerdict {
         /// Stable identifier for the gate that produced the veto.
         policy: &'static str,
         /// Human-readable reason; the prose MUST start with `Fix:` so the
-        /// `check_expect_has_fix.sh` gate accepts it.
+        /// `lint-expect-fix` gate accepts it.
         detail: String,
     },
 }

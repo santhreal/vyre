@@ -55,6 +55,7 @@ pub static GATES: &[&dyn Gate] = &[
     &audit_status::AuditStatus,
     &check_tier_deps::CheckTierDeps,
     &dep_drift::DepDrift,
+    &doc_contract::ContractInSource,
     &doc_contract::DocClaims,
     &dup_scan::DupScan,
     &evidence_paths::EvidencePaths,

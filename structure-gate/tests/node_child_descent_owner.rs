@@ -3,8 +3,8 @@
 //!
 //! # What this is not
 //!
-//! It is not a count of `match node {` blocks. That was tried, as row
-//! `P-DELETE-1` of `scripts/check_unification_baselines.sh`, and it measured the
+//! It is not a count of `match node {` blocks. That was tried, as a row named
+//! `P-DELETE-1` in the retired shell unification ratchet, and it measured the
 //! wrong thing in both directions: 22 distinct traversals over one enum is not
 //! duplication, `match node {}` is the only idiom Rust offers for dispatching on
 //! a variant, and deleting an EXHAUSTIVE block lowered the count while making the

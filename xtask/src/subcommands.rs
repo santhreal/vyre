@@ -168,6 +168,7 @@ pub static SUBSETS: &[Subset] = &[
             "single-backlog",
             "platform-consumer-docs",
             "doc-claims",
+            "contract-in-source",
             "evidence-paths",
             "invariant-paths",
         ],

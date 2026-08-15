@@ -21,8 +21,8 @@
 //! The truth data is TOML, not Rust. Nothing compiles a repository-root
 //! `tests/` tree in this workspace, so the `property.rs` and `e2e_cli.rs`
 //! placeholders the scaffolder used to write were tracked files that no cargo
-//! target could compile, which is exactly what
-//! `scripts/check_every_source_file_is_reachable.sh` now rejects.
+//! target could compile, which is exactly what the `source-reachability` gate
+//! now rejects.
 
 use std::path::{Path, PathBuf};
 

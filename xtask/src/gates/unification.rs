@@ -149,3 +149,102 @@ impl Gate for Unification {
         Ok(report)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::process::Command;
+
+    use tempfile::TempDir;
+
+    use super::*;
+
+    /// A git checkout carrying every root the rows scan, each holding one file.
+    ///
+    /// The roots have to exist, because a row over a missing path is itself a
+    /// finding, which is the whole point of the second fixture below.
+    fn checkout(temporary: &TempDir) -> PathBuf {
+        let root = temporary.path().to_path_buf();
+        for row in ROWS {
+            for scanned in row.roots {
+                let directory = root.join(scanned);
+                fs::create_dir_all(&directory).expect("a scanned root");
+                fs::write(directory.join("owner.rs"), "fn owner() {}\n").expect("a source file");
+            }
+        }
+        let status = Command::new("git")
+            .args(["init", "-q", "."])
+            .current_dir(&root)
+            .status()
+            .expect("git is available");
+        assert!(status.success(), "the fixture checkout is a git repository");
+        root
+    }
+
+    /// Every finding message, joined.
+    fn messages(report: &Report) -> String {
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.message.clone())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// WHY: this gate is a ratchet, and a ratchet is only worth its run time if
+    /// the direction it forbids is observed to be red. Two sites of a surface
+    /// whose ceiling is one is exactly the regression each row names, and the
+    /// report has to carry the count and the ceiling or the reader cannot tell a
+    /// legitimate owner from a duplicate.
+    #[test]
+    fn a_second_owner_of_a_unified_surface_is_reported() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = checkout(&temporary);
+        fs::write(
+            root.join("vyre-foundation/src/first.rs"),
+            "pub fn child_bodies() {}\n",
+        )
+        .expect("the owner");
+        fs::write(
+            root.join("vyre-foundation/src/second.rs"),
+            "pub fn child_bodies() {}\n",
+        )
+        .expect("the duplicate");
+
+        let report = Unification
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate runs");
+        let reported = messages(&report);
+        assert!(
+            reported.contains("child-bodies-owner has 2 site(s) against a ceiling of 1"),
+            "the duplicate is reported with its count and ceiling: {reported}"
+        );
+    }
+
+    /// WHY: three of the five rows in the shell version of this ratchet scanned
+    /// paths the code had moved out of and scored zero, which is at or below every
+    /// ceiling, so they passed by measuring nothing. A row over a missing path is
+    /// therefore a finding in its own right, and it must name the path rather than
+    /// report a clean count.
+    #[test]
+    fn a_row_that_scans_a_missing_path_is_reported() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = checkout(&temporary);
+        fs::remove_dir_all(root.join("vyre-driver-wgpu/src")).expect("a root the code left");
+
+        let report = Unification
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate runs");
+        let reported = messages(&report);
+        assert!(
+            reported.contains("scans a path that does not exist"),
+            "the unmeasurable row is reported: {reported}"
+        );
+        assert!(
+            !report.notes.iter().any(|note| note.contains("pipeline-cache-in-backend")),
+            "and it is not also counted as clean: {:?}",
+            report.notes
+        );
+    }
+}

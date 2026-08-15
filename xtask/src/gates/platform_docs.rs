@@ -3,12 +3,14 @@
 //! Dependency rules catch a `use` edge. Semantic coupling arrives through prose:
 //! a comment that names the downstream product tells a reader the platform knows
 //! who is calling it. The scanned set is enumerated from the tree rather than
-//! listed, because the listed version named seventeen documents, sixteen of which
-//! the documentation deletion removed, and skipped each missing one silently. A
-//! guard that scans one file while naming seventeen reports a boundary it never
-//! measured. The comment match is anchored after leading whitespace, which the
-//! shell version required to be present, so a crate-level `//!` block at column
-//! zero was outside its scope entirely.
+//! listed. The listed version named seventeen documents, fifteen of which the
+//! documentation collapse removed, and it skipped each missing one silently: a
+//! guard that scans two files while naming seventeen reports a boundary it never
+//! measured. The enumeration covers both survivors and every document added
+//! since, so the roll call of what was lost is gone with the rows. The comment
+//! match is anchored after leading whitespace, which the shell version required
+//! to be present, so a crate-level `//!` block at column zero was outside its
+//! scope entirely.
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
@@ -28,31 +30,6 @@ const PLATFORM_CRATES: &[&str] = &[
     "vyre-driver-spirv",
     "vyre-runtime",
     "vyre-pass-engine",
-];
-
-/// Documents the earlier guard named, kept so the coverage it lost is visible.
-///
-/// A row naming a document that no longer exists is a finding rather than a
-/// deletion: it records what the guard stopped covering, and retiring a row is
-/// the operator's call.
-const DECLARED_DOCUMENTS: &[&str] = &[
-    "README.md",
-    "docs/ARCHITECTURE.md",
-    "docs/HOT_PATH_PROOFS.md",
-    "docs/MATH_PRIMITIVES_PLACEMENT.md",
-    "docs/PREDICATE_EXPR_DUALITY.md",
-    "docs/ERROR_SURFACE.md",
-    "docs/RELEASE.md",
-    "docs/RELEASE_CHECKLIST.md",
-    "docs/TESTING_PROGRAM.md",
-    "docs/RECURSION_THESIS.md",
-    "docs/RUNTIME_PIPELINE.md",
-    "docs/library-tiers.md",
-    "docs/megakernel-wiring.md",
-    "docs/ops-catalog.md",
-    "docs/parsing-and-frontends.md",
-    "docs/region-chain.md",
-    "docs/consumer-integration.md",
 ];
 
 /// Data files that carry prose and are scanned like a document.
@@ -83,17 +60,6 @@ impl Gate for PlatformConsumerDocs {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let exempt = release_coordination_entries(&tree)?;
-
-        for declared in DECLARED_DOCUMENTS {
-            if !tree.exists(declared) {
-                report.find(Finding::in_file(
-                    *declared,
-                    "the consumer-neutrality guard names a document that does not exist",
-                    "delete the row; the scanned set is enumerated from the tree, so a row \
-                     naming a missing document only records coverage that was lost",
-                ));
-            }
-        }
 
         for crate_name in PLATFORM_CRATES {
             let source_root = format!("{crate_name}/src");

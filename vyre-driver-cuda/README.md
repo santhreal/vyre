@@ -36,7 +36,7 @@ let outputs = backend.dispatch(&program, &inputs, &config)?;
   bindings (`cudarc::driver::sys::cu*`) are inherently unsafe FFI. The
   rest of the workspace keeps `unsafe_code = "deny"`; this crate
   documents its policy in `src/lib.rs` and gates every unsafe block
-  through `scripts/check_unsafe_justifications.sh`.
+  through the `lint-unsafe-justification` gate.
 - **PTX-only emit path.** The CUDA backend never emits SPIR-V or WGSL.
   Cross-substrate parity is verified by the conformance runner against
   the wgpu and reference backends.

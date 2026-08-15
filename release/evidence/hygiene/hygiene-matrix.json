@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:0b11b7db89e1ba783f74ea8641e8532faa6df0bb:dirty=true:worktree=29468ae2431fb89bb9e4162b237cbf34f21f3b132998656dc4a5238315b4ec02",
+  "source_fingerprint": "git:faa8731f525cc2b9626f2601372c1eb1eb308327:dirty=true:worktree=8c12e19ae94a270ecdba06f9a0f5ce0a01d7e27b7653ed4d3c68734e925a1064",
   "schema_version": 5,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4579,
+  "scanned_files": 4562,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -49,7 +49,7 @@
     },
     {
       "pattern": "expect_call",
-      "count": 47
+      "count": 46
     },
     {
       "pattern": "panic_macro",
@@ -57,7 +57,7 @@
     },
     {
       "pattern": "placeholder_text",
-      "count": 14
+      "count": 13
     },
     {
       "pattern": "source_inspection_test",
@@ -263,7 +263,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 32
+      "count": 31
     },
     {
       "owner_lane": "testing_evidence",
@@ -271,7 +271,7 @@
       "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false,
-      "count": 4
+      "count": 3
     },
     {
       "owner_lane": "testing_evidence",
@@ -569,7 +569,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 19
+      "count": 18
     },
     {
       "owner_lane": "testing_evidence",
@@ -623,7 +623,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 4
+      "count": 3
     },
     {
       "owner_lane": "testing_evidence",
@@ -2898,26 +2898,6 @@
       "release_blocker": false
     },
     {
-      "path": "xtask/src/gates/lint_hygiene.rs",
-      "line": 51,
-      "pattern": "expect_call",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/lint_hygiene.rs",
-      "line": 224,
-      "pattern": "placeholder_text",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "xtask/src/bin/audit_rule_contracts.rs",
       "line": 44,
       "pattern": "unwrap_call",
@@ -4261,18 +4241,6 @@
       "line": 357,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
-    },
-    {
-      "path": "xtask/src/gates/lint_hygiene.rs",
-      "line": 51,
-      "pattern": "expect_call",
-      "text": "// A gate that scans for the string `.expect(\"` writes that"
-    },
-    {
-      "path": "xtask/src/gates/lint_hygiene.rs",
-      "line": 224,
-      "pattern": "placeholder_text",
-      "text": "format!(\"unsafe block with a placeholder SAFETY comment: {justification}\"),"
     },
     {
       "path": "xtask/src/bin/audit_rule_contracts.rs",

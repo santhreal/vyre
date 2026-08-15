@@ -2,8 +2,8 @@
 //!
 //! Nine shell gates each carried their own ripgrep invocation. Most ended in
 //! `2>/dev/null || true`, which turns a failed search into an empty result, and
-//! an empty result is what those gates read as a clean tree. One of them,
-//! `check_no_hot_path_inventory.sh`, passed on every possible tree for two
+//! an empty result is what those gates read as a clean tree. The inventory scan
+//! now owned by `hot-path-inventory` passed on every possible tree for two
 //! years: it asked for `-P`, that ripgrep build has no PCRE2, every invocation
 //! errored, and the error went to `/dev/null`.
 //!

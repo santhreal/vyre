@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The repository hygiene gate read the instruction redirects case-sensitively and reported both CLAUDE.md and GEMINI.md as policy files, because each opens its sentence with a capital letter. It also reported its own rule table and the loudness gate's, since the language a silent-skip rule forbids is a string literal and so is the table that spells it. The two rule sources are exempt by path, and a test requires each to exist and to still carry the language, so a stale exemption is red rather than a silent widening."

@@ -2497,9 +2497,8 @@ fn is_release_rule_text(trimmed: &str) -> bool {
 /// belonged to, so the list exempted files that do not exist. The test below
 /// reads this array and requires every row to resolve, because an exemption that
 /// names nothing reads as a decision while doing nothing.
-const HYGIENE_RULE_SOURCES: [&str; 8] = [
-    "scripts/check_unsafe_justifications.sh",
-    "scripts/check_primitive_contract.sh",
+const HYGIENE_RULE_SOURCES: [&str; 7] = [
+    "xtask/src/gates/lint_hygiene.rs",
     "xtask/src/release/feature_matrix.rs",
     "xtask/src/gates/hygiene_matrix.rs",
     "xtask-evidence/src/release/backend_matrix.rs",

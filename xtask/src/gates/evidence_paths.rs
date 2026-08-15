@@ -381,6 +381,10 @@ fn toplevel(directory: &Path) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
+    use tempfile::TempDir;
+
     use super::*;
 
     fn vocabulary() -> BTreeSet<String> {
@@ -458,6 +462,222 @@ mod tests {
                 "findings[0].path".to_string(),
                 "root".to_string()
             ]
+        );
+    }
+
+    /// A git checkout holding one evidence artifact, one Rust file and one
+    /// manifest.
+    ///
+    /// Neither of those two is decoration. The citation vocabulary is the set of
+    /// extensions the tree itself uses, so in a tree carrying no `.rs` and no
+    /// `.toml` file a citation of either reads as prose and the gate reports
+    /// nothing, for the right reason and with nothing proved.
+    fn checkout(temporary: &TempDir, artifact: &str) -> PathBuf {
+        let root = temporary.path().to_path_buf();
+        fs::create_dir_all(root.join(EVIDENCE_DIR)).expect("an evidence directory");
+        fs::write(root.join("keep.rs"), "fn keep() {}\n").expect("a Rust file");
+        fs::write(root.join("Cargo.toml"), "[workspace]\n").expect("a manifest");
+        fs::write(root.join(EVIDENCE_DIR).join("artifact.json"), artifact)
+            .expect("an evidence artifact");
+        git(&root, &["init", "-q", "."]);
+        root
+    }
+
+    /// Run one git step in `root`, failing the test when git does.
+    fn git(root: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .status()
+            .expect("git is available");
+        assert!(status.success(), "the fixture git step failed: {args:?}");
+    }
+
+    /// Every finding, as the file it names followed by its message.
+    fn messages(report: &Report) -> String {
+        report
+            .findings
+            .iter()
+            .map(|finding| {
+                let file = finding
+                    .file
+                    .as_ref()
+                    .map(|path| path.display().to_string())
+                    .unwrap_or_default();
+                format!("{file} {}", finding.message)
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// WHY: the passing direction is what a stale artifact produces trivially, so
+    /// the gate is only worth its run time if the failing direction is pinned. A
+    /// refactor that stopped discovering citations, mis-parsed the JSON or
+    /// resolved every path to some fallback would leave the green run green. The
+    /// report has to name the artifact, the route and the path, because a
+    /// citation nobody can locate is not actionable.
+    #[test]
+    fn a_citation_that_does_not_resolve_is_reported() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = checkout(
+            &temporary,
+            r#"{"findings":[{"path":"definitely/not/on/disk/anywhere.rs"}]}"#,
+        );
+
+        let report = EvidencePaths
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate runs");
+        let reported = messages(&report);
+        assert!(
+            reported.contains("artifact.json"),
+            "the artifact is named: {reported}"
+        );
+        assert!(
+            reported.contains("findings[0].path"),
+            "and the route inside it: {reported}"
+        );
+        assert!(
+            reported.contains("definitely/not/on/disk/anywhere.rs"),
+            "and the path that resolves to nothing: {reported}"
+        );
+    }
+
+    /// WHY: existence and reachability are different questions with different
+    /// oracles, `stat` and `git check-ignore`, and this branch never fires on the
+    /// real tree, where no cited path is ignored. Without a fixture it would be
+    /// code nobody has watched work and everybody trusts. The tracked file pins
+    /// the other half: a committed path matching an ignore pattern is already in
+    /// public history and must stay clean, which is why the question is asked of
+    /// git's index rather than of the pattern.
+    #[test]
+    fn a_cited_path_that_is_gitignored_is_reported() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = checkout(&temporary, "{}");
+        fs::write(root.join(".gitignore"), "generated.rs\ntracked.rs\n")
+            .expect("an ignore rule");
+        fs::write(root.join("generated.rs"), "fn generated() {}\n").expect("an ignored file");
+        fs::write(root.join("tracked.rs"), "fn tracked() {}\n").expect("a tracked file");
+        git(&root, &["add", "-f", ".gitignore", "tracked.rs", "keep.rs"]);
+        git(
+            &root,
+            &[
+                "-c",
+                "user.email=gate@vyre.test",
+                "-c",
+                "user.name=gate",
+                "commit",
+                "-qm",
+                "fixture",
+            ],
+        );
+        fs::write(
+            root.join(EVIDENCE_DIR).join("artifact.json"),
+            format!(
+                r#"{{"files":[{{"path":"{}"}},{{"path":"{}"}}]}}"#,
+                root.join("tracked.rs").display(),
+                root.join("generated.rs").display()
+            ),
+        )
+        .expect("an evidence artifact");
+
+        let report = EvidencePaths
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate runs");
+        let reported = messages(&report);
+        assert!(
+            reported.contains("gitignored"),
+            "the reason is reachability, not absence: {reported}"
+        );
+        assert!(
+            reported.contains("generated.rs"),
+            "and the ignored path is named: {reported}"
+        );
+        assert!(
+            !reported.contains("tracked.rs"),
+            "a committed path stays clean however it is ignored: {reported}"
+        );
+    }
+
+    /// WHY: discovery has been narrowed twice and both narrowings hid live
+    /// defects. Reading one top-level array of objects with a `path` field hid 81
+    /// of 634 citations, and reading the key `path` and nothing else hid 2775
+    /// more under `manifest`, `artifact`, `workflow` and bare array members; nine
+    /// of those were dead. So one absent path sits at each placement a narrower
+    /// filter missed, each must be reported at its full route, and the count is
+    /// asserted so a filter that reads the first and stops is red.
+    #[test]
+    fn a_citation_is_read_at_every_placement() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = checkout(
+            &temporary,
+            concat!(
+                r#"{"path":"absent/on/the/root/object.rs","#,
+                r#""subject":{"path":"absent/under/an/object.rs"},"#,
+                r#""groups":[{"rows":[{"path":"absent/in/a/nested/array.rs"}]}],"#,
+                r#""crate":{"manifest":"absent/crate/Cargo.toml"},"#,
+                r#""sources":["absent/array/member.rs"]}"#
+            ),
+        );
+
+        let report = EvidencePaths
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate runs");
+        let reported = messages(&report);
+        for (route, path) in [
+            ("path", "absent/on/the/root/object.rs"),
+            ("subject.path", "absent/under/an/object.rs"),
+            ("groups[0].rows[0].path", "absent/in/a/nested/array.rs"),
+            ("crate.manifest", "absent/crate/Cargo.toml"),
+            ("sources[0]", "absent/array/member.rs"),
+        ] {
+            assert!(
+                reported.contains(&format!("{route} cites a path that is not on disk: {path}")),
+                "the citation at `{route}` is located: {reported}"
+            );
+        }
+        assert_eq!(report.count(), 5, "every placement counts: {reported}");
+        assert!(
+            report.notes.iter().any(|note| note.contains("5 citation(s)")),
+            "and the note states what was read: {:?}",
+            report.notes
+        );
+    }
+
+    /// WHY: the discovery rule is a shape rule, so it needs a floor on the other
+    /// side. A gate with false positives gets muted, and muting this one restores
+    /// the state it was built to end. Version strings, schema ids, operation ids,
+    /// fingerprints, recorded commands and ratios all live beside real citations
+    /// and none of them names a file. The separator is the extension vocabulary
+    /// the tree itself uses, so a loosening that starts matching any dotted token
+    /// turns this red.
+    #[test]
+    fn a_string_that_names_no_file_is_not_a_citation() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = checkout(
+            &temporary,
+            concat!(
+                r#"{"version":"1.2.0","#,
+                r#""schema_id":"vyre-conform-input-envelope-v1","#,
+                r#""op":"vyre-primitives::hardware::subgroup_shuffle","#,
+                r#""fingerprint":"source-tree-v1:f42685f0","#,
+                r#""command":"git grep -nE \"trait CpuOp\" -- absent/crate/src","#,
+                r#""ratio":"0.0/1.0"}"#
+            ),
+        );
+
+        let report = EvidencePaths
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate runs");
+        assert_eq!(
+            report.count(),
+            0,
+            "no string here names a file: {}",
+            messages(&report)
+        );
+        assert!(
+            report.notes.iter().any(|note| note.contains("0 citation(s)")),
+            "and none was read as one: {:?}",
+            report.notes
         );
     }
 }

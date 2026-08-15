@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:0b11b7db89e1ba783f74ea8641e8532faa6df0bb:dirty=true:worktree=29468ae2431fb89bb9e4162b237cbf34f21f3b132998656dc4a5238315b4ec02",
+  "source_fingerprint": "git:faa8731f525cc2b9626f2601372c1eb1eb308327:dirty=true:worktree=8c12e19ae94a270ecdba06f9a0f5ce0a01d7e27b7653ed4d3c68734e925a1064",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -932,12 +932,6 @@
       "line": 357,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
-    },
-    {
-      "path": "xtask/src/gates/lint_hygiene.rs",
-      "line": 51,
-      "pattern": "expect_call",
-      "text": "// A gate that scans for the string `.expect(\"` writes that"
     },
     {
       "path": "xtask/src/bin/audit_rule_contracts.rs",

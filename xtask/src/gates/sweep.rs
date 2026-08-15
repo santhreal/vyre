@@ -661,18 +661,18 @@ mod tests {
     #[test]
     fn a_script_reference_comes_from_a_command_not_from_prose() {
         assert_eq!(
-            referenced_script("        run: bash scripts/check_unsafe_budget.sh"),
-            Some("check_unsafe_budget.sh")
+            referenced_script("        run: bash scripts/check_ci_matrix.sh"),
+            Some("check_ci_matrix.sh")
         );
         assert_eq!(
-            referenced_script("        run: bash scripts/lib/source_scan.sh --strict"),
-            Some("lib/source_scan.sh")
+            referenced_script("        run: bash scripts/lib/cargo_runner.sh --strict"),
+            Some("lib/cargo_runner.sh")
         );
         assert_eq!(
             referenced_script("        run: bash \"scripts/check_public_api.sh\";"),
             Some("check_public_api.sh")
         );
-        assert_eq!(referenced_script("      # all on scripts/source_scan.sh."), None);
+        assert_eq!(referenced_script("      # all on scripts/cargo_runner.sh."), None);
         assert_eq!(
             referenced_script("        run: bash scripts/gate.sh # see scripts/other.sh."),
             Some("gate.sh")

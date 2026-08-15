@@ -3,7 +3,7 @@
 //!
 //! # What used to stand here
 //!
-//! `scripts/check_unification_baselines.sh` carried a row named `P-DELETE-1`
+//! The retired shell unification ratchet carried a row named `P-DELETE-1`
 //! that counted `match node {` occurrences under `validate/` and `transform/`
 //! and required the count to stay at or below 18. That number is a proxy and it
 //! is wrong in both directions. A count that falls proves nothing: 4 of the 22

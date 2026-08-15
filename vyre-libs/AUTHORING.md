@@ -55,7 +55,7 @@ fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError>
 - Product overflows (m·k, s·d, etc.) must be guarded with
   `checked_mul` or routed through `TensorRef::element_count()`.
 - No raw WGSL, WGSL-like strings, or any backend-specific code
-  (`scripts/check_no_string_wgsl.sh`).
+  (the `shader-source` gate).
 
 ## 2. Ship a typed builder
 
@@ -211,7 +211,7 @@ module that builds it. Callers name that module.
   lifetime regressions).
 - `cargo doc --workspace --all-features --no-deps` (all intra-doc
   links resolve).
-- `scripts/check_parity_testing_not_leaked.sh`.
+- The `parity-testing-isolated` gate.
 - (WIP P3.7) op fingerprint unchanged vs. last release unless a
   CHANGELOG entry documents the break.
 

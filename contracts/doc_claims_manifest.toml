@@ -1,8 +1,8 @@
 # Doc-claim-to-test manifest.
 #
 # Every README / docs performance or capability claim that should be
-# regression-gated lands here as one row. The gate
-# (`scripts/check_doc_claim_to_test.sh`) verifies:
+# regression-gated lands here as one row. The `doc-claims` gate
+# verifies:
 #   - each claim's `doc` file exists and contains the `phrase`.
 #   - each claim's `test` file exists.
 #
@@ -11,7 +11,7 @@
 # proving test/bench. Removing a claim requires removing both.
 #
 # This is the "for every claim the docs make, there is a test that
-# fails when the claim becomes false" contract from CLAUDE.md, encoded.
+# fails when the claim becomes false" contract from AGENTS.md, encoded.
 
 [[claim]]
 id = "dispatch_hot_path_budgets"

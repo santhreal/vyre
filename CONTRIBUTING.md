@@ -114,7 +114,7 @@ C parser, VAST, program graph, or object sections:
 Repository discipline, CI, review metadata, or community files:
 
 ```bash
-bash scripts/check_repo_hygiene.sh
+./cargo_full run -p xtask --bin xtask -- repo-hygiene
 ```
 
 Oracle-matrix sweep, or a `[[test]]` entry's `required-features`:

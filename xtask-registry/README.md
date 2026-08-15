@@ -51,7 +51,7 @@ Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 
 ./cargo_full run -p xtask-registry --bin xtask-registry -- --help
 ```
 
-Commands: `abstraction-gate`, `catalog`, `compile`, `conformance-matrix`, `cross-target`, `gate1`, `heuristic-audit`, `lego-audit`, `lego-quick`, `list-ops`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `primitive-admission-gate`, `print-composition`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `whats-similar`.
+Commands: `abstraction-gate`, `catalog`, `compile`, `conformance-matrix`, `cross-target`, `gate1`, `heuristic-audit`, `lego-audit`, `list-ops`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `primitive-admission-gate`, `print-composition`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `whats-similar`.
 
 Hardware: No accelerator is required; a missing device is reported, not assumed.
 

@@ -9,7 +9,7 @@
 //! into a vector of its own. Batched rows now live in one buffer behind
 //! `vyre_driver::BatchOutputs`.
 //!
-//! `scripts/check_no_hot_path_vec_vec.sh` ratchets a count of the two-level
+//! The `hot-path-nested-rows` gate ratchets a count of the two-level
 //! `Vec<Vec<u8>>` in ONE crate. That level is the legitimate per-slot output of
 //! a single dispatch and cannot be driven to zero, and the count covered no
 //! other crate, so a three-deep copy in another backend was unobserved.

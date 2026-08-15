@@ -55,7 +55,7 @@ and `inventory-registry`.
 - **Marker types at the public surface.** Implementations live in
   `vyre-reference` and the concrete driver crates.
 - **No GPU code in this crate.** Lowering lives in the driver that
-  owns the target. `check_no_string_wgsl.sh` is non-negotiable.
+  owns the target. The `shader-source` gate is non-negotiable.
 - **No promotion by caller count.** A composition does not move here
   because a second dialect called it.
 

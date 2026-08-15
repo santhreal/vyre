@@ -9,6 +9,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Added
 
+- The `contract-in-source` gate reports a comment that defers its contract to a
+  published document instead of stating it. A pointer costs a reader a second
+  file and outlives the file it names: when the book those comments pointed
+  into was deleted, every pointer became a pointer to nothing and no gate went
+  red. The rule lived in a test in an unrelated crate and shelled out to git;
+  it now reads the tracked source set through the scanner, reports the file and
+  line, and is exercised on 4511 files.
 - The `frozen-contracts` gate reads the snapshot directory and reports a
   snapshot no frozen contract claims. The frozen set is a table in the gate and
   the snapshots are files on disk, so deleting a row left its snapshot behind,
@@ -2637,6 +2644,30 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `build_transition_table_lane_major` packer, its fallible counterpart, the
   `bench` feature and the `scan::nfa::bench` module that was its only non-test
   consumer are gone.
+- `scripts/check_platform_consumer_docs.sh`,
+  `scripts/check_parity_testing_not_leaked.sh` and
+  `scripts/check_primitive_contract.sh` are gone, along with
+  `vyre-pass-engine/tests/platform_doc_consumer_boundary.rs`, which existed to
+  give the first one a cargo entry point. The `platform-consumer-docs` and
+  `parity-testing-isolated` gates own the first two rules; the third was a
+  shell adapter in front of the registered `primitive-admission-gate` and its
+  only assertion was that it refused path arguments.
+- `scripts/check_doc_claim_to_test.sh`, `scripts/check_op_names.sh`,
+  `scripts/check_invariant_paths_exist.sh` and `scripts/check_repo_hygiene.sh`
+  are gone. The `doc-claims`, `op-names`, `invariant-paths` and `repo-hygiene`
+  gates own those rules. The claim manifest is parsed with a TOML parser rather
+  than awk, so a phrase carrying a quote or spanning lines is read correctly,
+  and the op-name scan no longer splits a path on whitespace or skips files by
+  a hand-typed filename list.
+- `scripts/check_evidence_paths.sh` is gone, and with it
+  `vyre-pass-engine/tests/release_evidence_path_contract.rs`, which existed to
+  give the script a cargo-visible entry point. The `evidence-paths` gate owns
+  the rule. Its four fail-direction fixtures moved into the gate: a citation
+  that resolves to nothing is reported at its route, a cited path that exists
+  but is gitignored is reported for reachability rather than absence while a
+  committed path stays clean, every placement a narrower filter once missed is
+  read, and a version, schema id, operation id, fingerprint, command or ratio
+  is not read as a citation.
 - `scripts/check_max_file_size.sh` is gone. It was a second implementation of
   the per-file line cap with its own table of exemptions, invoked by no
   workflow and no gate, so the two owners of one rule could disagree without
@@ -2652,6 +2683,36 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   also carried now lives in the gate sweep, where the registry, the baseline,
   the subsets and the workflows already have to agree. The script's section
   left `xtask/script-assertion-ledger.md` by deletion.
+- `scripts/check_no_hot_path_inventory.sh`,
+  `scripts/check_no_hot_path_vec_vec.sh` and the shared
+  `scripts/lib/source_scan.sh` they read the tree through are gone. The
+  `hot-path-inventory` and `hot-path-nested-rows` gates own those two rules and
+  read the tree through `xtask/src/gates/scan.rs`, where a failed scan is an
+  error by type and a scan path that does not exist is a finding rather than a
+  clean count.
+- Three shell copies of the lint hygiene rules are gone:
+  `scripts/check_expect_has_fix.sh`, `scripts/check_unsafe_budget.sh` and
+  `scripts/check_unsafe_justifications.sh`. The `lint-expect-fix`,
+  `lint-unsafe-budget` and `lint-unsafe-justification` gates own those rules,
+  read tracked files rather than the working tree, and cannot mistake a failed
+  search for a clean one. The expect ratchet in particular took its ceiling
+  from `VYRE_EXPECT_BASELINE`, so any caller could raise it from the
+  environment; the pin now lives in `xtask/gate-baselines.toml`, which no
+  caller can override.
+- `scripts/check_no_string_wgsl.sh` and `scripts/check_gpu_test_loudness.sh`
+  are gone. The `shader-source` and `gpu-loudness` gates own those rules. Both
+  scripts had branches that could not fire: the shader guard compared a count
+  against zero with `-lt`, and three of the loudness patterns required a
+  literal backslash before `[cfg` in Rust source, so the cfg classes its own
+  header claimed to cover were never checked.
+- `scripts/check_unification_baselines.sh`,
+  `scripts/check_every_source_file_is_reachable.sh` and
+  `scripts/lib/check_every_source_file_is_reachable.py` are gone. The
+  `unification` and `source-reachability` gates own those rules. The
+  unification gate gained the two fixtures the shell version never had: a
+  second owner of a unified surface is reported with its count and its ceiling,
+  and a row whose scanned path is missing is reported instead of scoring zero,
+  which is how three of the five shell rows passed by measuring nothing.
 - The buffer-name form of each classic Aho-Corasick program left the published
   surface of vyre-libs. The `build_*`/`try_build_*` entry that binds the pinned
   ABI names is the one published path per program. The legacy buffered
@@ -2775,6 +2836,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   The shape version is raised, and a test pins the recorded field set to it so
   a rename turns the suite red until the version records that the shape
   changed.
+- The repository hygiene gate read the instruction redirects case-sensitively
+  and reported both CLAUDE.md and GEMINI.md as policy files, because each opens
+  its sentence with a capital letter. It also reported its own rule table and
+  the loudness gate's, since the language a silent-skip rule forbids is a
+  string literal and so is the table that spells it. The two rule sources are
+  exempt by path, and a test requires each to exist and to still carry the
+  language, so a stale exemption is red rather than a silent widening.
 - The composition audit reports an unreviewed shape pair rather than a
   duplicate. A shape verdict cannot tell a shared algorithm from a shared IR
   idiom: a guarded lane index, a row-major loop nest and straight-line unrolled
@@ -4224,6 +4292,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   reached the program: the operation read zeros, wrote zeros, and its recorded
   expected outputs were unreachable. The buffer is read-write, which is what
   the body does.
+- The consumer-neutrality gate no longer carries a roll call of seventeen
+  documents, fifteen of which the documentation collapse deleted, each reported
+  as a finding on every tree. The scanned set is enumerated from the tree,
+  which already covered the two survivors and covers every document added
+  since, so the gate reaches zero by describing what is there rather than by
+  mourning what is not.
 - The per-file line ratchet holds ceilings for files that exist. Forty-eight
   rows named files that had already been split away, one row excluded the whole
   resident runtime tree while its restructure was pending, and twenty-three
