@@ -11,13 +11,16 @@
 //! walk in the workspace from one exhaustive match.
 //!
 //! Two visitor shapes live here and answer different questions:
-//! - [`NodeVisitor`] and [`ExprVisitor`] are the exhaustive contracts, one
+//! - [`NodeVisitor`](crate::visit::NodeVisitor) and
+//!   [`ExprVisitor`](crate::visit::ExprVisitor) are the exhaustive contracts, one
 //!   method per variant, abstract-by-default so rustc forces a decision at
 //!   every implementation site. Traversal order is explicit: `*_preorder`
 //!   visits the current node before its children, `*_postorder` after, and a
 //!   visitor short-circuits by returning `ControlFlow::Break`.
-//! - [`NodeSink`] and [`ExprSink`] receive every node and expression a
-//!   [`walk_nodes_and_exprs`] pass reaches, with no per-variant knowledge.
+//! - [`NodeSink`](crate::visit::NodeSink) and [`ExprSink`](crate::visit::ExprSink)
+//!   receive every node and expression a
+//!   [`walk_nodes_and_exprs`](crate::visit::walk_nodes_and_exprs) pass reaches,
+//!   with no per-variant knowledge.
 //!
 //! Every walk is an explicit worklist rather than recursion, so an
 //! adversarially deep program costs heap instead of native stack.
