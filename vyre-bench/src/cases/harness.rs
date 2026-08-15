@@ -35,6 +35,12 @@ pub(crate) struct WorkloadDescription {
     pub(crate) determinism: DeterminismClass,
     pub(crate) owner_crate: &'static str,
     pub(crate) suites: &'static [SuiteKind],
+    /// Named suites this case is active in *instead of* the built-in list.
+    ///
+    /// `SuiteKind::Custom` holds an `Arc<str>`, so a custom suite cannot appear
+    /// in a `const` suite list. A case naming any custom suite here is active in
+    /// exactly those and in no built-in suite.
+    pub(crate) custom_suites: &'static [&'static str],
     pub(crate) needs_gpu: bool,
     pub(crate) needs_network: bool,
     pub(crate) min_vram_bytes: Option<u64>,
@@ -79,6 +85,7 @@ impl WorkloadDescription {
             determinism: DeterminismClass::Deterministic,
             owner_crate: "vyre-bench",
             suites: HONEST_SUITES,
+            custom_suites: &[],
             needs_gpu: true,
             needs_network: false,
             min_vram_bytes: Some(min_vram_bytes),
@@ -104,6 +111,7 @@ impl WorkloadDescription {
         determinism: DeterminismClass::Deterministic,
         owner_crate: "vyre-bench",
         suites: &[],
+        custom_suites: &[],
         needs_gpu: true,
         needs_network: false,
         min_vram_bytes: None,
@@ -179,6 +187,18 @@ impl<P: 'static> BenchCase for HarnessCase<P> {
 
     fn suites(&self) -> &'static [SuiteKind] {
         self.workload.suites
+    }
+
+    fn active_in_suite(&self, suite: &SuiteKind) -> bool {
+        let custom = self.workload.custom_suites;
+        if !custom.is_empty() {
+            return match suite {
+                SuiteKind::Custom(name) => custom.iter().any(|entry| *entry == &**name),
+                _ => false,
+            };
+        }
+        let suites = self.workload.suites;
+        suites.is_empty() || suites.contains(suite)
     }
 
     fn requirements(&self) -> BenchRequirements {

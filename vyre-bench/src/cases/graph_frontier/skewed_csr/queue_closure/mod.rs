@@ -6,9 +6,7 @@
 //! own: the fixture, the wave bound it holds the closure to, and its metric
 //! points.
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, WorkloadClass};
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::queue_closure::{
     dispatch_queue_closure, queue_closure_bytes_touched, queue_closure_prepared, queue_closure_run,
@@ -50,13 +48,9 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "resident",
         "release",
     ],
-    layer: BenchLayer::Foundation,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(128 * 1024 * 1024),
     min_input_bytes: Some(CSR_NODE_COUNT as u64 * 16),
     feature_set: &[
@@ -66,7 +60,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "graph.skewed-degree",
         "resident-repeated-sequence",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<GraphCsrSkewedQueueClosurePrepared> = CaseOps {
