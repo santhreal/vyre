@@ -14,7 +14,11 @@
 # vyre-libs dispatch partners, and neither side owns the shape yet. The CSR
 # frontier buffer layout is no longer part of that: `graph::program_graph` owns
 # `word_buffer`, `frontier_buffer` and `push_frontier_changed_buffers`, and every
-# graph primitive declares its own buffers through them.
+# graph primitive declares its own buffers through them. Nor is the kernel-body
+# skeleton below those buffers: `graph::frontier_bits` owns packed-bitset word
+# and mask addressing, `graph::lane_grid` owns the one-dimensional dispatch grid,
+# and `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes` owns the
+# double-buffered workgroup scan sweep.
 #
 # Eleven of vyre-primitives' lines are deliberate and cannot be collapsed.
 # `vyre_primitives::types::linear_check::LinearDiscipline` and
@@ -43,7 +47,7 @@ total_lines = 106
 [[crate]]
 name = "structure-gate"
 duplicate_lines = 0
-total_lines = 1947
+total_lines = 1955
 
 [[crate]]
 name = "tests"
@@ -62,8 +66,8 @@ total_lines = 1511
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 2161
-total_lines = 37643
+duplicate_lines = 1439
+total_lines = 37662
 
 [[crate]]
 name = "vyre-debug"
@@ -72,13 +76,13 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 1030
-total_lines = 36010
+duplicate_lines = 901
+total_lines = 36317
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 2658
-total_lines = 67275
+duplicate_lines = 2577
+total_lines = 67210
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -97,7 +101,7 @@ total_lines = 1900
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 3015
+duplicate_lines = 2820
 total_lines = 55943
 
 [[crate]]
@@ -107,8 +111,8 @@ total_lines = 766
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_lines = 221
-total_lines = 8993
+duplicate_lines = 155
+total_lines = 8947
 
 [[crate]]
 name = "vyre-emit-ptx"
@@ -122,8 +126,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 4037
-total_lines = 94408
+duplicate_lines = 3055
+total_lines = 94662
 
 [[crate]]
 name = "vyre-frontend-rust"
@@ -137,8 +141,8 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 10566
-total_lines = 187199
+duplicate_lines = 9623
+total_lines = 186301
 
 [[crate]]
 name = "vyre-lints"
@@ -162,13 +166,13 @@ total_lines = 3605
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 6612
-total_lines = 101988
+duplicate_lines = 5436
+total_lines = 102185
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 743
-total_lines = 15256
+duplicate_lines = 490
+total_lines = 15530
 
 [[crate]]
 name = "vyre-runtime"
@@ -177,7 +181,7 @@ total_lines = 29041
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 223
+duplicate_lines = 221
 total_lines = 9082
 
 [[crate]]
@@ -193,14 +197,14 @@ total_lines = 9706
 [[crate]]
 name = "xtask"
 duplicate_lines = 102
-total_lines = 17046
+total_lines = 17349
 
 [[crate]]
 name = "xtask-evidence"
-duplicate_lines = 475
-total_lines = 25648
+duplicate_lines = 91
+total_lines = 25387
 
 [[crate]]
 name = "xtask-registry"
-duplicate_lines = 58
-total_lines = 8078
+duplicate_lines = 49
+total_lines = 8070

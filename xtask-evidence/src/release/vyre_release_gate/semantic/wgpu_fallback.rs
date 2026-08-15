@@ -12,10 +12,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .get("wgpu_fallback_present")
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blockers = array_len(&matrix, "blockers");
     if !present {
         failures.push(
             "requirement `wgpu-fallback` backend matrix does not prove acquireable WGPU fallback"

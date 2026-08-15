@@ -1,12 +1,11 @@
 use super::*;
-use crate::c_frontend::rows::assert_pg_preserves_fixture_row;
-use crate::c_frontend::token_fixture::{annotate_and_classify, classify};
+use crate::c_frontend::parity_matrix::{assert_pg_mirrors_every_vast_row, cpu_stages};
+use crate::c_frontend::token_fixture::{annotate_and_classify, classify_without_annotation};
 
 #[test]
 fn cpu_nested_struct_union_enum_kinds() {
     let fix = fixture_nested_struct_union_enum();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_STRUCT_DECL),
@@ -38,8 +37,7 @@ fn cpu_nested_struct_union_enum_kinds() {
 #[test]
 fn cpu_anonymous_struct_union_members() {
     let fix = fixture_anonymous_struct_union();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_UNION_DECL),
@@ -107,8 +105,7 @@ fn cpu_typedef_multiple_complex_declarators() {
 #[test]
 fn cpu_deeply_nested_pointer_with_qualifiers() {
     let fix = fixture_deeply_nested_pointer();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     // All three stars must be POINTER_DECL
     assert_eq!(
@@ -149,8 +146,7 @@ fn cpu_deeply_nested_pointer_with_qualifiers() {
 #[test]
 fn cpu_storage_class_combinations_stay_raw() {
     let fix = fixture_storage_class_combinations();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     // static inline int f(void);
     assert_eq!(kind_at(&typed, 0), 0, "static must remain raw syntax");
@@ -201,8 +197,7 @@ fn cpu_storage_class_combinations_stay_raw() {
 #[test]
 fn cpu_bitfield_nested_struct_kinds() {
     let fix = fixture_bitfield_nested_struct();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_BIT_FIELD_DECL),
@@ -228,8 +223,7 @@ fn cpu_bitfield_nested_struct_kinds() {
 #[test]
 fn cpu_gnu_attribute_on_field_and_typedef() {
     let fix = fixture_gnu_attribute_field_and_typedef();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     // First __attribute__ on struct field
     assert_eq!(
@@ -266,8 +260,7 @@ fn cpu_gnu_attribute_on_field_and_typedef() {
 #[test]
 fn cpu_function_pointer_to_pointer_kinds() {
     let fix = fixture_function_pointer_to_pointer();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_POINTER_DECL),
@@ -293,8 +286,7 @@ fn cpu_function_pointer_to_pointer_kinds() {
 #[test]
 fn cpu_array_of_function_pointers_qualified_kinds() {
     let fix = fixture_array_of_function_pointers_qualified();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_POINTER_DECL),
@@ -322,52 +314,20 @@ fn cpu_array_of_function_pointers_qualified_kinds() {
 }
 
 // ---------------------------------------------------------------------------
-// PG lowering preservation contracts
+// PG lowering preservation contract
 // ---------------------------------------------------------------------------
 
+/// Every advanced-declaration case's property graph mirrors its typed VAST at
+/// every row.
+///
+/// This replaces four hand-written index lists covering four of the nine cases.
+/// `assert_pg_mirrors_every_vast_row` checks all rows the fixture produces, and
+/// iterating `CASES` reaches every case, so there is no index list and no case
+/// list to leave a construct out of.
 #[test]
-fn pg_lower_preserves_nested_struct_union_enum_rows() {
-    let fix = fixture_nested_struct_union_enum();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
-    let pg = reference_ast_to_pg_nodes(&typed);
-
-    for idx in [0usize, 3, 5, 8, 14, 19, 21, 25, 30] {
-        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
-    }
-}
-
-#[test]
-fn pg_lower_preserves_typedef_multiple_declarator_rows() {
-    let fix = fixture_typedef_multiple_declarators();
-    let typed = classify(&fix);
-    let pg = reference_ast_to_pg_nodes(&typed);
-
-    for idx in [0usize, 1, 8, 10, 11] {
-        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
-    }
-}
-
-#[test]
-fn pg_lower_preserves_deeply_nested_pointer_rows() {
-    let fix = fixture_deeply_nested_pointer();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
-    let pg = reference_ast_to_pg_nodes(&typed);
-
-    for idx in [2usize, 4, 6, 8] {
-        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
-    }
-}
-
-#[test]
-fn pg_lower_preserves_storage_class_rows() {
-    let fix = fixture_storage_class_combinations();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
-    let pg = reference_ast_to_pg_nodes(&typed);
-
-    for idx in [3usize, 4, 11, 16] {
-        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
+fn pg_lower_mirrors_every_row_of_every_case() {
+    for case in declaration_advanced_constructs::CASES {
+        let fix = (case.build)();
+        assert_pg_mirrors_every_vast_row(&fix, &cpu_stages(&fix), case.name);
     }
 }

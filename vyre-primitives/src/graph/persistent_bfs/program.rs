@@ -4,6 +4,7 @@ use super::layout::{PersistentBfsBuffers, BATCH_OP_ID, OP_ID, PERSISTENT_BFS_WOR
 use crate::bitset::bitset_words;
 use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active;
+use crate::graph::frontier_bits::bind_bit_address;
 use crate::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::model::expr::Ident;
@@ -916,18 +917,18 @@ fn persistent_bfs_batch_parallel_step_body(
             in_bounds.as_str(),
             Expr::lt(src.clone(), Expr::u32(shape.node_count)),
         ),
-        Node::let_bind(
-            word_idx.as_str(),
-            Expr::select(
-                Expr::var(in_bounds.as_str()),
-                Expr::shr(src.clone(), Expr::u32(5)),
-                Expr::u32(0),
-            ),
-        ),
-        Node::let_bind(
-            bit_mask.as_str(),
-            Expr::shl(Expr::u32(1), Expr::bitand(src.clone(), Expr::u32(31))),
-        ),
+    ];
+    // Snapshot path: the load lands before the barrier and the guard after it, so
+    // the address, the load and the test are separate statements rather than one
+    // `frontier_bits::when_bit_set` probe. The word index is `select`ed to zero out
+    // of bounds so the pre-barrier load stays in range for the tail lanes.
+    body.extend(bind_bit_address(
+        &src,
+        word_idx.as_str(),
+        bit_mask.as_str(),
+        |word| Expr::select(Expr::var(in_bounds.as_str()), word, Expr::u32(0)),
+    ));
+    body.extend([
         Node::let_bind(
             src_word.as_str(),
             Expr::load(
@@ -948,7 +949,7 @@ fn persistent_bfs_batch_parallel_step_body(
             Expr::ne(Expr::var(src_active.as_str()), Expr::u32(0)),
             edge_scan(),
         ),
-    ];
+    ]);
     if !uses_grid_sync {
         body.push(Node::barrier());
     }

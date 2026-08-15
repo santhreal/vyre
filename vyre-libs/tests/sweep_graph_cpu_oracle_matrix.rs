@@ -18,6 +18,7 @@ use vyre_libs::graph::dispatch::exploded::{
 };
 use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
 use vyre_primitives::graph::csr_backward_or_changed;
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_primitives::graph::csr_forward_or_changed;
 use vyre_primitives::graph::exploded::build_cpu_reference;
 use vyre_primitives::graph::motif::{self, MotifEdge};
@@ -429,7 +430,17 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual_bfs = persistent_bfs::cpu_ref(
-            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask,
+                max_iters,
+            },
+            &frontier,
         );
         assert_eq!(actual_bfs, expected_bfs, "case={case} persistent_bfs");
     }
@@ -447,7 +458,17 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         //    live accumulator and is order-dependent for multi-hop chains, but the CONVERGED
         //    set is unique regardless of pass order.
         let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
-            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask,
+                max_iters,
+            },
+            &frontier,
         );
         let expected = oracle_backward_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
@@ -610,7 +631,17 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual = bfs_expand(
-            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask,
+                max_iters,
+            },
+            &frontier,
         );
         assert_eq!(
             actual, expected,

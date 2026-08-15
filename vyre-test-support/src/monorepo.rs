@@ -76,6 +76,21 @@ pub fn vyre_workspace_root() -> PathBuf {
     structure_gate::workspace_root()
 }
 
+/// Directory of the workspace member that declares `package`, in this checkout.
+///
+/// A gate needing its own crate directory calls this with `CARGO_PKG_NAME`
+/// rather than joining a compiled-in manifest path: the package name is stable
+/// across checkouts, the directory is not, and a member's directory is not
+/// always its package name.
+///
+/// # Panics
+///
+/// Panics when no workspace member declares `package`.
+#[must_use]
+pub fn vyre_crate_directory(package: &str) -> PathBuf {
+    structure_gate::member_directory(&vyre_workspace_root(), package)
+}
+
 /// Root of the monorepo hosting vyre and its sibling products, if there is one.
 ///
 /// Returns `None` for a standalone vyre checkout. See the module docs for the

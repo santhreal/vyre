@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use vyre_foundation::optimizer::corpus::RELEASE_OPTIMIZATION_FAMILIES;
+
 use super::super::checks::*;
 use super::super::gate_inputs::Requirement;
 
@@ -12,10 +14,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     ) else {
         return;
     };
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blockers = array_len(&matrix, "blockers");
     if blockers != 0 {
         failures.push(format!(
             "requirement `{}` optimization matrix still reports {blockers} blocker(s)",
@@ -53,7 +52,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                     .and_then(serde_json::Value::as_array)
                     .cloned()
                     .unwrap_or_default();
-                for required_family in REQUIRED_BENCHMARKED_OPTIMIZATION_FAMILIES {
+                for required_family in RELEASE_OPTIMIZATION_FAMILIES {
                     let covered = manifest
                         .get("covered_pass_families")
                         .and_then(serde_json::Value::as_array)
@@ -165,28 +164,16 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                             ));
                         }
                     }
-                    for field in [
-                        "min_wall_p50",
-                        "min_wall_p95",
-                        "min_wall_p99",
-                        "min_baseline_wall_p50",
-                        "min_baseline_wall_p95",
-                        "min_baseline_wall_p99",
-                    ] {
-                        if case
-                            .get(field)
-                            .and_then(serde_json::Value::as_u64)
-                            .unwrap_or(0)
-                            == 0
-                        {
-                            failures.push(format!(
-                                "requirement `optimization-benchmark-proof` pass-family manifest case `{}` has non-positive `{field}`",
-                                case.get("case_id")
-                                    .and_then(serde_json::Value::as_str)
-                                    .unwrap_or("<unknown>")
-                            ));
-                        }
-                    }
+                    check_aggregate_wall_percentiles_positive(
+                        case,
+                        &format!(
+                            "requirement `optimization-benchmark-proof` pass-family manifest case `{}`",
+                            case.get("case_id")
+                                .and_then(serde_json::Value::as_str)
+                                .unwrap_or("<unknown>")
+                        ),
+                        failures,
+                    );
                     let has_speed_win = case
                         .get("min_wall_speedup_x1000")
                         .and_then(serde_json::Value::as_u64)

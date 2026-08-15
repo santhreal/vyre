@@ -114,12 +114,9 @@ pub const fn persistent_bfs_batch_dispatch_grid(node_count: u32, query_count: u3
     }
 }
 
+/// Grid X for a resident persistent-BFS launch: one lane per node.
 const fn persistent_bfs_grid_x(node_count: u32) -> u32 {
-    if node_count == 0 {
-        1
-    } else {
-        ((node_count - 1) / PERSISTENT_BFS_WORKGROUP_SIZE[0]) + 1
-    }
+    crate::graph::lane_grid(node_count, PERSISTENT_BFS_WORKGROUP_SIZE[0])[0]
 }
 
 /// Validated persistent-BFS graph layout metadata.

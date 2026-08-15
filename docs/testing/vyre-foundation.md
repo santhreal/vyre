@@ -81,6 +81,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --all-features
 | `test` | `loop_fusion_binding_collision` | `vyre-foundation/tests/loop_fusion_binding_collision.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test loop_fusion_binding_collision` |
 | `test` | `loop_fusion_scalar_dependency` | `vyre-foundation/tests/loop_fusion_scalar_dependency.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test loop_fusion_scalar_dependency` |
 | `test` | `loop_induction_var_guards` | `vyre-foundation/tests/loop_induction_var_guards.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test loop_induction_var_guards` |
+| `test` | `loop_legality_collector_closure` | `vyre-foundation/tests/loop_legality_collector_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test loop_legality_collector_closure` |
 | `test` | `loop_licm_scope_extension` | `vyre-foundation/tests/loop_licm_scope_extension.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test loop_licm_scope_extension` |
 | `test` | `loop_software_pipeline_loopvar_in_value` | `vyre-foundation/tests/loop_software_pipeline_loopvar_in_value.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test loop_software_pipeline_loopvar_in_value` |
 | `test` | `loop_strip_mine_fresh_ident_scope` | `vyre-foundation/tests/loop_strip_mine_fresh_ident_scope.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test loop_strip_mine_fresh_ident_scope` |

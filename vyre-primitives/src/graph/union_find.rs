@@ -15,17 +15,12 @@ pub const OP_ID: &str = "vyre-primitives::graph::union_find";
 pub const UNION_FIND_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid that covers every union edge lane.
+///
+/// One lane per union edge, over the [`crate::graph::lane_grid`] owner, so the
+/// zero-edge case still yields a launchable grid.
 #[must_use]
 pub const fn union_find_dispatch_grid(edge_count: u32) -> [u32; 3] {
-    let lanes_per_block = UNION_FIND_WORKGROUP_SIZE[0];
-    let full_blocks = edge_count / lanes_per_block;
-    let tail_block = if edge_count % lanes_per_block == 0 {
-        0
-    } else {
-        1
-    };
-    let blocks = full_blocks + tail_block;
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(edge_count, UNION_FIND_WORKGROUP_SIZE[0])
 }
 
 /// Build the path-halving body used by [`union_roots_body`].

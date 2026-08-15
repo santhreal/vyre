@@ -67,6 +67,7 @@
 //! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md` for
 //! the tier rule, admission criteria, and Gate 1 enforcement.
 
+mod dispatch_grid;
 #[cfg(feature = "vyre-foundation")]
 pub mod ir_safe;
 mod markers;
@@ -181,6 +182,12 @@ pub(crate) fn fixed_sdiv_by_positive_expr(numerator: Expr, denominator: Expr) ->
 
 #[cfg(any(feature = "graph", feature = "math"))]
 pub(crate) mod fixed_u32_matmul;
+
+#[cfg(all(
+    any(feature = "graph", feature = "math"),
+    any(test, feature = "cpu-parity")
+))]
+pub(crate) mod chebyshev_recurrence;
 
 #[cfg(any(feature = "label", feature = "predicate"))]
 pub(crate) mod nodeset_filter;

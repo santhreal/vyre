@@ -116,6 +116,21 @@ pub(crate) const COLD_PIPELINE_BUILD_METRICS: &[&str] = &[
 /// Metric names that may carry the scan throughput axis.
 pub(crate) const SCAN_THROUGHPUT_METRICS: &[&str] = &["wall_gb_s_x1000", "device_gb_s_x1000"];
 
+/// Aggregate wall-clock percentile fields an inspection record reports, every
+/// one of which a release proof must carry as a positive number.
+///
+/// Three gates spelled this list out and each one could have drifted from the
+/// record it grades. A percentile added to the record is demanded by all of
+/// them from here, or by none of them.
+pub(crate) const AGGREGATE_WALL_PERCENTILE_FIELDS: &[&str] = &[
+    "min_wall_p50",
+    "min_wall_p95",
+    "min_wall_p99",
+    "min_baseline_wall_p50",
+    "min_baseline_wall_p95",
+    "min_baseline_wall_p99",
+];
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum BenchmarkArtifactPathIssue {
     AbsolutePath,

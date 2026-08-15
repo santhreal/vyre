@@ -80,6 +80,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver --all-features
 | `test` | `sweep_dispatch_shape_oracle_matrix` | `vyre-driver/tests/sweep_dispatch_shape_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver --test sweep_dispatch_shape_oracle_matrix` |
 | `test` | `sweep_numeric_oracle_matrix` | `vyre-driver/tests/sweep_numeric_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver --test sweep_numeric_oracle_matrix` |
 | `test` | `trace_context_telemetry_contracts` | `vyre-driver/tests/trace_context_telemetry_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver --test trace_context_telemetry_contracts` |
+| `test` | `vyre_backend_forwarding_closure` | `vyre-driver/tests/vyre_backend_forwarding_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver --test vyre_backend_forwarding_closure` |
 
 ## Test classes
 

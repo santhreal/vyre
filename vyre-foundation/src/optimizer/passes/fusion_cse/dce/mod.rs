@@ -43,6 +43,8 @@ pub(crate) use eliminate_dead_lets::eliminate_dead_lets;
 pub(crate) use eliminate_unreachable::eliminate_unreachable;
 /// Result bundle returned by liveness pruning.
 pub(crate) use live_result::LiveResult;
+/// The identifier set liveness propagates; the only place its type is named.
+pub(crate) use live_result::LiveSet;
 /// Return the node prefix reachable before an unconditional return.
 pub(crate) use reachable_prefix::reachable_prefix;
 

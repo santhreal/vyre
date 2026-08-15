@@ -49,12 +49,7 @@ impl MegakernelExecutionPlanner for CudaCachedExecutionPlanner<'_> {
                 readback_bytes: request.sample.readback_bytes,
             },
             request.graph,
-            request.bytes_per_node,
-            request.bytes_per_edge,
-            request.frontier_bytes,
-            request.scratch_bytes,
-            request.output_bytes,
-            request.budget_bytes,
+            request.bytes,
             request.launch_overhead_ns,
             request.fusion_pressure,
         )

@@ -14,21 +14,12 @@ pub fn c11_precompute_vast_scopes(
         ),
         Node::let_bind("scope_kind", Expr::load(vast_nodes, Expr::var("scope_row"))),
     ]);
-    for field in 0..VAST_NODE_STRIDE_U32 {
-        let value = if field == VAST_TYPEDEF_SCOPE_FIELD {
-            Expr::var("scope_current")
-        } else {
-            Expr::load(
-                vast_nodes,
-                Expr::add(Expr::var("scope_row"), Expr::u32(field)),
-            )
-        };
-        scan_body.push(Node::store(
-            out_scoped_vast_nodes,
-            Expr::add(Expr::var("scope_row"), Expr::u32(field)),
-            value,
-        ));
-    }
+    scan_body.extend(store_row_with_overrides(
+        out_scoped_vast_nodes,
+        vast_nodes,
+        &Expr::var("scope_row"),
+        &[(VAST_TYPEDEF_SCOPE_FIELD, "scope_current")],
+    ));
     scan_body.extend([
         Node::if_then(
             Expr::eq(Expr::var("scope_kind"), Expr::u32(TOK_LBRACE)),
@@ -84,30 +75,23 @@ pub fn c11_precompute_vast_scopes(
         ],
     )];
 
-    let n = node_count(&num_nodes).max(1);
-    let scope_stack_decl = if c11_precompute_vast_scopes_uses_global_stack(n) {
+    let rows = declared_rows(&num_nodes);
+    let scope_stack_decl = if c11_precompute_vast_scopes_uses_global_stack(rows) {
         BufferDecl::storage(
             "__vast_scope_stack",
             2,
             BufferAccess::ReadWrite,
             DataType::U32,
         )
-        .with_count(n)
+        .with_count(rows)
         .with_output_byte_range(0..0)
     } else {
-        BufferDecl::workgroup("__vast_scope_stack", n, DataType::U32)
+        BufferDecl::workgroup("__vast_scope_stack", rows, DataType::U32)
     };
     Program::wrapped(
         vec![
-            BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-            BufferDecl::storage(
-                out_scoped_vast_nodes,
-                1,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
+            vast_nodes_input(vast_nodes, 0, rows),
+            vast_nodes_scratch(out_scoped_vast_nodes, 1, rows),
             scope_stack_decl,
         ],
         [1, 1, 1],

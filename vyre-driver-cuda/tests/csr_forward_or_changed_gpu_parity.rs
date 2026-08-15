@@ -2,6 +2,7 @@
 
 #![cfg(test)]
 
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
@@ -31,10 +32,33 @@ fn assert_forward_closure_matches(
     allow: u32,
     max_iters: u32,
 ) -> Vec<u32> {
-    let cpu = reference_forward_closure_via_change_flag(n, off, tgt, msk, seed, allow, max_iters);
+    let cpu = reference_forward_closure_via_change_flag(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: n,
+                edge_offsets: off,
+                edge_targets: tgt,
+                edge_kind_mask: msk,
+            },
+            allow_mask: allow,
+            max_iters,
+        },
+        seed,
+    );
     with_cuda_optimizer_dispatcher(label, |dispatcher| {
         let gpu = forward_closure_via_change_flag_gpu(
-            dispatcher, n, off, tgt, msk, seed, allow, max_iters,
+            dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: off,
+                    edge_targets: tgt,
+                    edge_kind_mask: msk,
+                },
+                allow_mask: allow,
+                max_iters,
+            },
+            seed,
         )
         .expect("dispatch");
         assert_eq!(gpu, cpu, "{label}: closure divergence");

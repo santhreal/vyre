@@ -57,8 +57,7 @@ pub const LEVEL_WAVE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid that covers every level-wave lane.
 #[must_use]
 pub const fn level_wave_dispatch_grid(lane_count: u32) -> [u32; 3] {
-    let blocks = lane_count.div_ceil(LEVEL_WAVE_WORKGROUP_SIZE[0]);
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(lane_count, LEVEL_WAVE_WORKGROUP_SIZE[0])
 }
 
 fn depth_wave_body(

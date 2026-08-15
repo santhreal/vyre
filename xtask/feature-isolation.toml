@@ -366,7 +366,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),crypto,full,logical,matching,math,nn,nn-moe,parsing,security,visual"
+feature = "(default),full"
 outcome = "compiles"
 
 [[pair]]
@@ -711,7 +711,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "(default),bitset,fixpoint,graph,hardware,hash,inventory-registry,label,matching,math,nn,parsing,predicate,reduce,text"
+feature = "(default),all-lego"
 outcome = "compiles"
 
 [[pair]]

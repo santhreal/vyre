@@ -11,9 +11,11 @@ use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
+use crate::transform::rewrite_walk;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::ops::ControlFlow;
 use std::sync::Arc;
 
 /// Visitor called for each [`Node`] during [`walk_nodes_and_exprs`].
@@ -163,75 +165,38 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
     }
 }
 
-/// `node` with each body slot replaced by `map`'s result for that slot.
+/// Every child node body of `node`, in source order, as slots a caller can
+/// take a body out of or write a new one into.
 ///
-/// This is the borrowed, change-reporting counterpart of
-/// [`node_map::map_body`](crate::visit::node_map::map_body), and the ONE owner
-/// of "which body slots does this variant have" in the rebuild direction.
-/// `child_bodies` answers the same question for a read-only scan, but a scan
-/// cannot say what to do with a slot it changed, so a rebuild that re-derives
-/// the slot list can descend into a body and then drop it.
+/// The unique-reference owner of "which body slots does this variant have".
+/// [`child_bodies`] answers the same question for a read-only scan and
+/// [`rewrite_walk::rewrite_node`] answers it for a rebuild that must preserve
+/// an unchanged borrow. Neither can hand back a slot to MOVE a body out of, so
+/// an owning map has to re-derive the slot list, and
+/// [`node_map::map_body`](crate::visit::node_map::map_body) did exactly that
+/// with a list ending in `other => other`. A body-bearing variant that list had
+/// not been told about came back unchanged, so a pass composed on it was a
+/// silent no-op for that variant instead of an error.
 ///
-/// A variant with no body is returned borrowed without calling `map`, and a
-/// variant with one body has `map` called once: a one-slot variant must not see
-/// the empty second slice `child_bodies` pads its answer with, because a rule
-/// that rewrites a whole body would then be handed a body that does not exist.
+/// Only the slots the variant really has are returned, so a one-slot variant is
+/// never handed the empty padding [`child_bodies`] adds to its answer. A
+/// `Node::Region` body is shared through an `Arc` and is cloned here only when
+/// another owner still holds it.
 ///
-/// The node is rebuilt only when a slot came back owned, and the rebuild clones
-/// the variant's own operands rather than its bodies, so an unchanged subtree
-/// costs nothing.
+/// Exhaustive with no catch-all arm, deliberately, for the same reason
+/// [`child_bodies`] is.
 #[must_use]
-pub(crate) fn map_bodies_cow<'a>(
-    node: &'a Node,
-    map: &mut impl FnMut(&'a [Node]) -> Cow<'a, [Node]>,
-) -> Cow<'a, Node> {
+pub fn child_bodies_mut(node: &mut Node) -> SmallVec<[&mut Vec<Node>; 2]> {
+    let mut slots: SmallVec<[&mut Vec<Node>; 2]> = SmallVec::new();
     match node {
         Node::If {
-            cond,
-            then,
-            otherwise,
+            then, otherwise, ..
         } => {
-            let then_body = map(then);
-            let otherwise_body = map(otherwise);
-            if matches!(then_body, Cow::Borrowed(_)) && matches!(otherwise_body, Cow::Borrowed(_)) {
-                return Cow::Borrowed(node);
-            }
-            Cow::Owned(Node::If {
-                cond: cond.clone(),
-                then: then_body.into_owned(),
-                otherwise: otherwise_body.into_owned(),
-            })
+            slots.push(then);
+            slots.push(otherwise);
         }
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => match map(body) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(body) => Cow::Owned(Node::Loop {
-                var: var.clone(),
-                from: from.clone(),
-                to: to.clone(),
-                body,
-            }),
-        },
-        Node::Block(body) => match map(body) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(body) => Cow::Owned(Node::Block(body)),
-        },
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => match map(body) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(body) => Cow::Owned(Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(body),
-            }),
-        },
+        Node::Loop { body, .. } | Node::Block(body) => slots.push(body),
+        Node::Region { body, .. } => slots.push(Arc::make_mut(body)),
         Node::Let { .. }
         | Node::Assign { .. }
         | Node::Store { .. }
@@ -247,32 +212,146 @@ pub(crate) fn map_bodies_cow<'a>(
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
-        | Node::Opaque(_) => Cow::Borrowed(node),
+        | Node::Opaque(_) => {}
+    }
+    slots
+}
+
+/// `node` with each body slot replaced by `map`'s result for that slot.
+///
+/// The change-reporting rebuild, for a caller holding a borrow that must not
+/// pay for a clone when nothing changed.
+///
+/// Which slots the variant has, and how the node is put back together from new
+/// ones, is [`rewrite_walk::rewrite_node`]'s decision: it offers exactly the
+/// real slots, in source order, and clones the variant's own operands rather
+/// than its bodies, so an unchanged subtree costs nothing. Its hook cannot
+/// carry the caller's borrow, so the slice handed to `map` comes from
+/// [`child_bodies`] instead and the two are matched by position. A one-slot
+/// variant therefore never sees the empty second slice `child_bodies` pads its
+/// answer with: a rule that rewrites a whole body would otherwise be handed a
+/// body that does not exist.
+#[must_use]
+pub(crate) fn map_bodies_cow<'a>(
+    node: &'a Node,
+    map: &mut impl FnMut(&'a [Node]) -> Cow<'a, [Node]>,
+) -> Cow<'a, Node> {
+    struct MapBodies<'a, 'm, M> {
+        slots: [&'a [Node]; 2],
+        next: usize,
+        map: &'m mut M,
+    }
+
+    impl<'a, M> rewrite_walk::NodeRewrite for MapBodies<'a, '_, M>
+    where
+        M: FnMut(&'a [Node]) -> Cow<'a, [Node]>,
+    {
+        fn operand(&mut self, _expr: &Expr) -> Option<Expr> {
+            None
+        }
+
+        fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+            let slot = self.slots[self.next];
+            debug_assert!(
+                std::ptr::eq(slot.as_ptr(), body.as_ptr()) && slot.len() == body.len(),
+                "rewrite_node offered body slot {} that child_bodies does not report there",
+                self.next
+            );
+            self.next += 1;
+            match (self.map)(slot) {
+                Cow::Borrowed(_) => None,
+                Cow::Owned(rewritten) => Some(rewritten),
+            }
+        }
+    }
+
+    let mut mapper = MapBodies {
+        slots: child_bodies(node),
+        next: 0,
+        map,
+    };
+    rewrite_walk::rewrite_node(node, &mut mapper).map_or(Cow::Borrowed(node), Cow::Owned)
+}
+
+/// What a statement does to the scalar name it carries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NameBinding {
+    /// Introduces the name into the enclosing scope, bound to the value in the
+    /// first operand slot. `Node::Let`.
+    Declare,
+    /// Rebinds a name the enclosing scope already declares, to the value in the
+    /// first operand slot. `Node::Assign`.
+    Reassign,
+    /// Introduces a loop induction variable: a counter the loop itself drives,
+    /// with no value operand. `Node::Loop`.
+    Induction,
+}
+
+/// Everything `node` carries in the scalar namespace: the name it binds, what
+/// it does to that name, and the operand expressions it evaluates.
+///
+/// One record rather than two answers because both come from the same
+/// per-variant decision. A scope pass that asks only "which name" and a rewrite
+/// that asks only "which operands" used to read two separate enumerations of
+/// the same enum, and two enumerations are two chances to forget a variant.
+#[derive(Debug, Clone, Copy)]
+pub struct NodeScalars<'a> {
+    /// The name the statement binds, and what it does to it.
+    ///
+    /// `Node::AsyncLoad` and the collectives name buffers, which is a different
+    /// namespace answered by [`node_buffer_refs`].
+    pub binding: Option<(NameBinding, &'a Ident)>,
+    /// Operand expressions in source order, padded with `None`, so a caller can
+    /// flatten unconditionally. The widest variants carry exactly two: `Store`
+    /// (index, value), `Loop` (from, to), and the async copies (offset, size).
+    pub operands: [Option<&'a Expr>; 2],
+}
+
+impl<'a> NodeScalars<'a> {
+    const NONE: Self = Self {
+        binding: None,
+        operands: [None, None],
+    };
+
+    const fn operands_only(operands: [Option<&'a Expr>; 2]) -> Self {
+        Self {
+            binding: None,
+            operands,
+        }
     }
 }
 
-/// Every operand expression `node` carries directly, in source order.
+/// The scalar name and operand positions of `node`.
 ///
-/// This is the ONE owner of the question "which node variants carry
-/// expressions", the operand counterpart of [`child_bodies`]. Adding a `Node`
-/// variant fails to compile here, so a variant that gains an expression
-/// position cannot be skipped by a scan or a rewrite in silence.
-///
-/// Leaves return two `None`s, so a caller can flatten unconditionally. The
-/// widest variants carry exactly two operands: `Store` (index, value), `Loop`
-/// (from, to), and the async copies (offset, size).
+/// This is the ONE owner of both questions, and the match has no catch-all arm.
+/// Adding a `Node` variant fails to compile here, so a variant that gains an
+/// operand position cannot be skipped by a scan or a rewrite in silence, and a
+/// variant that gains a binding position cannot let a pass hoist, fuse, or
+/// inline across a live rebinding while every existing test still passes. The
+/// hand-written versions this replaces each ended in a `_` arm reporting
+/// "carries nothing".
 #[inline]
 #[must_use]
-pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
+pub fn node_scalars(node: &Node) -> NodeScalars<'_> {
     match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => [Some(value), None],
-        Node::Store { index, value, .. } => [Some(index), Some(value)],
-        Node::If { cond, .. } => [Some(cond), None],
-        Node::Loop { from, to, .. } => [Some(from), Some(to)],
+        Node::Let { name, value } => NodeScalars {
+            binding: Some((NameBinding::Declare, name)),
+            operands: [Some(value), None],
+        },
+        Node::Assign { name, value } => NodeScalars {
+            binding: Some((NameBinding::Reassign, name)),
+            operands: [Some(value), None],
+        },
+        Node::Loop { var, from, to, .. } => NodeScalars {
+            binding: Some((NameBinding::Induction, var)),
+            operands: [Some(from), Some(to)],
+        },
+        Node::Store { index, value, .. } => NodeScalars::operands_only([Some(index), Some(value)]),
+        Node::If { cond, .. } => NodeScalars::operands_only([Some(cond), None]),
         Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            [Some(offset), Some(size)]
+            NodeScalars::operands_only([Some(offset), Some(size)])
         }
-        Node::Trap { address, .. } => [Some(address), None],
+        Node::Trap { address, .. } => NodeScalars::operands_only([Some(address), None]),
         Node::Block(_)
         | Node::Region { .. }
         | Node::Return
@@ -284,8 +363,32 @@ pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
         | Node::Broadcast { .. }
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
-        | Node::Opaque(_) => [None, None],
+        | Node::Opaque(_) => NodeScalars::NONE,
     }
+}
+
+/// Every operand expression `node` carries directly, in source order.
+///
+/// The operand half of [`node_scalars`], for the many callers that do not care
+/// which name the statement binds. Leaves return two `None`s.
+#[inline]
+#[must_use]
+pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
+    node_scalars(node).operands
+}
+
+/// The scalar name a statement binds, or `None` when it binds nothing.
+///
+/// The name half of [`node_scalars`], for a caller that needs the name but not
+/// what the statement does to it. A caller that must tell a fresh declaration
+/// from a rebinding reads [`NodeScalars::binding`] instead: `visit::bound_names`
+/// collects only the declaring forms, because a `Node::Assign` writes a name the
+/// enclosing scope already declares and counting it as a second declaration
+/// makes a scope-extension pass refuse a legal rewrite.
+#[inline]
+#[must_use]
+pub fn node_bound_name(node: &Node) -> Option<&Ident> {
+    node_scalars(node).binding.map(|(_, name)| name)
 }
 
 /// Every sub-expression of every node in `nodes` and in every nested body.
@@ -304,9 +407,45 @@ pub fn for_each_expr<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Expr)) {
     });
 }
 
+/// Every sub-expression of every node in `nodes`, in source pre-order,
+/// stopping at the first `Break`.
+///
+/// The short-circuiting form of [`for_each_expr`], for a guard that reports the
+/// FIRST expression matching a predicate instead of every one. Node descent is
+/// [`try_for_each_node`], operand positions are [`node_operands`], and
+/// sub-expressions are [`expr_children`], so a guard cannot answer "no such
+/// expression anywhere" for a position it never named. A guard that hand-rolls
+/// the three enumerations instead reports "clean" for the positions it forgot,
+/// which is the failure mode of a fail-closed check: it fails open.
+///
+/// Both walks are explicit worklists, so an adversarially deep program costs
+/// heap rather than native stack.
+pub fn try_for_each_expr<B>(
+    nodes: &[Node],
+    mut f: impl FnMut(&Expr) -> ControlFlow<B>,
+) -> ControlFlow<B> {
+    let mut stopped: Option<B> = None;
+    try_for_each_node(nodes, |node| {
+        for operand in node_operands(node).into_iter().flatten() {
+            let hit = any_subexpr(operand, &mut |expr| match f(expr) {
+                ControlFlow::Continue(()) => false,
+                ControlFlow::Break(value) => {
+                    stopped = Some(value);
+                    true
+                }
+            });
+            if hit {
+                return ControlFlow::Break(());
+            }
+        }
+        ControlFlow::Continue(())
+    });
+    stopped.map_or(ControlFlow::Continue(()), ControlFlow::Break)
+}
+
 /// The buffers a node names directly, split by direction.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct BufferRefs<'a> {
+pub struct BufferRefs<'a> {
     /// Buffers read by name, in source order.
     pub reads: [Option<&'a Ident>; 2],
     /// Buffers written by name, in source order.
@@ -360,7 +499,7 @@ impl<'a> BufferRefs<'a> {
 /// dependency walk that answered this question with a per-variant match ending
 /// in `_ => {}` reported that an `AllReduce` touches nothing.
 #[must_use]
-pub(crate) fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
+pub fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
     match node {
         Node::Store { buffer, .. } => BufferRefs::write(buffer),
         Node::AsyncLoad {
@@ -403,7 +542,7 @@ pub(crate) fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
 
 /// What an expression does to the buffer it names.
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum ExprBufferRef<'a> {
+pub enum ExprBufferRef<'a> {
     /// Names no buffer.
     None,
     /// Reads the named buffer, or reads its metadata.
@@ -423,7 +562,7 @@ pub(crate) enum ExprBufferRef<'a> {
 /// direction that loses: a dependency walk that believes an atomic only reads
 /// sees no conflict with a store to the same buffer.
 #[must_use]
-pub(crate) fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
+pub fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
     match expr {
         Expr::Atomic { buffer, .. } => ExprBufferRef::ReadWrite(buffer),
         Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
@@ -736,6 +875,37 @@ pub fn walk_nodes(program: &Program, f: impl FnMut(&Node)) {
 /// The walk is iterative, so nesting depth costs heap rather than native stack.
 #[inline]
 pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
+    let _: ControlFlow<()> = try_for_each_node(nodes, |node| {
+        f(node);
+        ControlFlow::Continue(())
+    });
+}
+
+/// Every node in `nodes` and in every nested body, depth first, in source
+/// order, stopping at the first `Break`.
+///
+/// The short-circuiting form of [`for_each_node`], and the descent every
+/// fallible scan outside this crate should use. Before it existed, a scan that
+/// wanted to stop early had to implement `NodeVisitor`, which is
+/// abstract-by-default: answering a question about two variants meant writing a
+/// no-op body, with its full signature, for the other fifteen. Four scanners in
+/// this workspace restated that same block of stubs, and the one that refused to
+/// hand-rolled its own recursive descent ending in `_ => {}` instead, which
+/// classified every nesting variant it had not been told about as containing
+/// nothing.
+///
+/// Descent is [`child_bodies`], the single exhaustive owner, so a new nesting
+/// variant is a compile error there rather than a silently empty answer here.
+/// A caller that also needs the expressions a node carries takes them from
+/// [`node_operands`], and the buffers it names from [`node_buffer_refs`]; both
+/// are exhaustive for the same reason.
+///
+/// The walk is iterative, so nesting depth costs heap rather than native stack.
+#[inline]
+pub fn try_for_each_node<'a, B>(
+    nodes: &'a [Node],
+    mut f: impl FnMut(&'a Node) -> ControlFlow<B>,
+) -> ControlFlow<B> {
     let mut stack: SmallVec<[&'a Node; 128]> = SmallVec::new();
     stack.reserve(nodes.len());
     for node in nodes.iter().rev() {
@@ -743,7 +913,7 @@ pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
     }
 
     while let Some(node) = stack.pop() {
-        f(node);
+        f(node)?;
         // Groups in reverse, each reversed: `then` pops before `otherwise`,
         // and both in source order. Same visit order as the hand-written match
         // this replaces.
@@ -753,6 +923,7 @@ pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
             }
         }
     }
+    ControlFlow::Continue(())
 }
 
 fn push_node_children_and_exprs<'a>(
@@ -833,6 +1004,11 @@ pub fn walk_exprs(program: &Program, mut f: impl FnMut(&Expr)) {
 /// nodes in place, for example to specialize control flow or inject
 /// instrumentation. The explicit-stack invariant is preserved.
 ///
+/// Descent is [`child_bodies_mut`], the single exhaustive owner of the body
+/// slots in the unique-reference direction, so this function does not restate
+/// which variants nest and cannot disagree with [`walk_nodes`] about which
+/// subtrees a rewrite reaches.
+///
 /// # Examples
 ///
 /// ```
@@ -854,48 +1030,8 @@ pub fn walk_nodes_mut(program: &mut Program, mut f: impl FnMut(&mut Node)) {
 
     while let Some(node) = stack.pop() {
         f(&mut *node);
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                for n in otherwise.iter_mut().rev() {
-                    stack.push(n);
-                }
-                for n in then.iter_mut().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Loop { body, .. } => {
-                for n in body.iter_mut().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Block(inner) => {
-                for n in inner.iter_mut().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Region { body, .. } => {
-                for n in std::sync::Arc::make_mut(body).iter_mut().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Let { .. }
-            | Node::Assign { .. }
-            | Node::Store { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => {}
+        for body in child_bodies_mut(node).into_iter().rev() {
+            stack.extend(IntoIterator::into_iter(body).rev());
         }
     }
 }
@@ -1041,9 +1177,31 @@ pub fn collect_call_op_ids(program: &Program) -> Vec<Arc<str>> {
 /// descends into.
 #[cfg(test)]
 pub(crate) mod fixtures {
-    use crate::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
+    use crate::algebra::composition::mark_self_exclusive_region;
+    use crate::ir::{
+        AtomicOp, BinOp, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, Node,
+        NodeExtension, Program, UnOp,
+    };
+    use crate::ir_inner::model::expr::GeneratorRef;
     use crate::MemoryOrdering;
     use proptest::prelude::*;
+    use std::sync::Arc;
+
+    vyre_test_support::test_node_extension! {
+        WellFormedNodeExtension,
+        kind: "test.node.wellformed",
+        identity: "test.node.wellformed",
+        fingerprint: 0x11,
+    }
+
+    // An extension whose `debug_identity` is empty, so `V031` is reachable from
+    // the corpus rather than only from a hand-written case.
+    vyre_test_support::test_node_extension! {
+        AnonymousNodeExtension,
+        kind: "test.node.anonymous",
+        identity: "",
+        fingerprint: 0x22,
+    }
 
     pub(crate) fn arb_ident() -> BoxedStrategy<String> {
         prop::sample::select(&["x", "y", "idx", "i", "acc"][..])
@@ -1130,36 +1288,166 @@ pub(crate) mod fixtures {
         .boxed()
     }
 
+    pub(crate) fn arb_async_tag() -> BoxedStrategy<String> {
+        // The empty tag is the `V128` case; it belongs in the corpus because
+        // both walks must report it at the same end of the transfer.
+        prop::sample::select(&["stream0", "stream1", ""][..])
+            .prop_map(str::to_string)
+            .boxed()
+    }
+
+    pub(crate) fn arb_generator() -> BoxedStrategy<String> {
+        prop_oneof![
+            prop::sample::select(&["region.a", "region.b"][..]).prop_map(str::to_string),
+            prop::sample::select(&["excl.a", "excl.b"][..]).prop_map(mark_self_exclusive_region),
+        ]
+        .boxed()
+    }
+
+    pub(crate) fn arb_collective_op() -> BoxedStrategy<CollectiveOp> {
+        prop::sample::select(&[CollectiveOp::Sum, CollectiveOp::Max][..]).boxed()
+    }
+
+    pub(crate) fn arb_comm_group() -> BoxedStrategy<CommGroup> {
+        prop::sample::select(&[CommGroup::WORLD, CommGroup(1)][..]).boxed()
+    }
+
     pub(crate) fn arb_node() -> BoxedStrategy<Node> {
         arb_node_with_depth(3)
     }
 
+    /// The IR-shape corpus every walk-equivalence property runs on.
+    ///
+    /// Covers every variant `Node` declares. `corpus_generates_every_node_variant`
+    /// is the gate: it samples this strategy, names what came out with
+    /// `crate::ir::node_variant_name`, and compares that against
+    /// `crate::ir::NODE_VARIANT_NAMES`, which the AST registry macro emits from
+    /// the enum body. A variant added to `Node` and not added here turns that
+    /// gate RED, so the corpus cannot silently stop covering the enum.
     pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
-        let leaf = prop_oneof![
-            (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Let {
-                name: name.into(),
-                value,
-            }),
-            (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Assign {
-                name: name.into(),
-                value,
-            }),
-            (arb_buffer_name(), arb_expr(), arb_expr()).prop_map(|(buffer, index, value)| {
-                Node::Store {
+        let leaf = prop::strategy::Union::new(vec![
+            (arb_ident(), arb_expr())
+                .prop_map(|(name, value)| Node::Let {
+                    name: name.into(),
+                    value,
+                })
+                .boxed(),
+            (arb_ident(), arb_expr())
+                .prop_map(|(name, value)| Node::Assign {
+                    name: name.into(),
+                    value,
+                })
+                .boxed(),
+            (arb_buffer_name(), arb_expr(), arb_expr())
+                .prop_map(|(buffer, index, value)| Node::Store {
                     buffer: buffer.into(),
                     index,
                     value,
-                }
-            }),
-            Just(Node::Return),
-            Just(Node::barrier()),
-        ];
+                })
+                .boxed(),
+            (arb_buffer_name(), 0u64..=8)
+                .prop_map(|(count_buffer, count_offset)| Node::IndirectDispatch {
+                    count_buffer: count_buffer.into(),
+                    count_offset,
+                })
+                .boxed(),
+            (
+                arb_buffer_name(),
+                arb_buffer_name(),
+                arb_expr(),
+                arb_expr(),
+                arb_async_tag(),
+            )
+                .prop_map(|(source, destination, offset, size, tag)| Node::AsyncLoad {
+                    source: source.into(),
+                    destination: destination.into(),
+                    offset: Box::new(offset),
+                    size: Box::new(size),
+                    tag: tag.into(),
+                })
+                .boxed(),
+            (
+                arb_buffer_name(),
+                arb_buffer_name(),
+                arb_expr(),
+                arb_expr(),
+                arb_async_tag(),
+            )
+                .prop_map(
+                    |(source, destination, offset, size, tag)| Node::AsyncStore {
+                        source: source.into(),
+                        destination: destination.into(),
+                        offset: Box::new(offset),
+                        size: Box::new(size),
+                        tag: tag.into(),
+                    },
+                )
+                .boxed(),
+            arb_async_tag()
+                .prop_map(|tag| Node::AsyncWait { tag: tag.into() })
+                .boxed(),
+            (arb_expr(), arb_async_tag())
+                .prop_map(|(address, tag)| Node::Trap {
+                    address: Box::new(address),
+                    tag: tag.into(),
+                })
+                .boxed(),
+            arb_async_tag()
+                .prop_map(|tag| Node::Resume { tag: tag.into() })
+                .boxed(),
+            (arb_buffer_name(), arb_collective_op(), arb_comm_group())
+                .prop_map(|(buffer, op, group)| Node::AllReduce {
+                    buffer: buffer.into(),
+                    op,
+                    group,
+                })
+                .boxed(),
+            (arb_buffer_name(), arb_buffer_name(), arb_comm_group())
+                .prop_map(|(input, output, group)| Node::AllGather {
+                    input: input.into(),
+                    output: output.into(),
+                    group,
+                })
+                .boxed(),
+            (
+                arb_buffer_name(),
+                arb_buffer_name(),
+                arb_collective_op(),
+                arb_comm_group(),
+            )
+                .prop_map(|(input, output, op, group)| Node::ReduceScatter {
+                    input: input.into(),
+                    output: output.into(),
+                    op,
+                    group,
+                })
+                .boxed(),
+            (arb_buffer_name(), 0u32..=2, arb_comm_group())
+                .prop_map(|(buffer, root, group)| Node::Broadcast {
+                    buffer: buffer.into(),
+                    root,
+                    group,
+                })
+                .boxed(),
+            Just(Node::Return).boxed(),
+            Just(Node::barrier()).boxed(),
+            prop::bool::ANY
+                .prop_map(|well_formed| {
+                    let extension: Arc<dyn NodeExtension> = if well_formed {
+                        Arc::new(WellFormedNodeExtension)
+                    } else {
+                        Arc::new(AnonymousNodeExtension)
+                    };
+                    Node::Opaque(extension)
+                })
+                .boxed(),
+        ]);
 
         if depth == 0 {
             return leaf.boxed();
         }
 
-        leaf.prop_recursive(2, 32, 2, move |inner| {
+        leaf.prop_recursive(2, 48, 2, move |inner| {
             prop_oneof![
                 (
                     arb_expr(),
@@ -1183,7 +1471,17 @@ pub(crate) mod fixtures {
                         to,
                         body,
                     }),
-                prop::collection::vec(inner, 0..=3).prop_map(Node::Block),
+                prop::collection::vec(inner.clone(), 0..=3).prop_map(Node::Block),
+                (
+                    arb_generator(),
+                    proptest::option::of(arb_generator()),
+                    prop::collection::vec(inner, 0..=3),
+                )
+                    .prop_map(|(generator, source_region, body)| Node::Region {
+                        generator: Ident::from(generator),
+                        source_region: source_region.map(|name| GeneratorRef { name }),
+                        body: Arc::new(body),
+                    }),
             ]
         })
         .boxed()
@@ -1208,6 +1506,14 @@ pub(crate) mod fixtures {
             })
             .boxed()
     }
+
+    /// `Node` variants the corpus deliberately does not generate, each with the
+    /// reason.
+    ///
+    /// Empty: every declared variant is generated. An entry here is a recorded
+    /// decision, not a shortcut, and `corpus_generates_every_node_variant`
+    /// accepts only variants named here as absent.
+    pub(crate) const CORPUS_EXCLUDED_NODE_VARIANTS: &[(&str, &str)] = &[];
 }
 
 #[cfg(test)]
@@ -1219,8 +1525,9 @@ mod tests {
 
     /// Legacy double-walk implementation for equivalence verification.
     /// Mirrors every buffer-touching site that ProgramFacts::buffer_refs
-    /// records so the equivalence proptest stays sound even when arb_node
-    /// is extended with Async / IndirectDispatch variants.
+    /// records. `arb_node` generates every declared `Node` variant, so the
+    /// async and indirect-dispatch arms below are exercised rather than
+    /// carried for a corpus that never reached them.
     fn referenced_buffers_legacy(program: &Program) -> HashSet<Ident> {
         let mut names = HashSet::new();
         walk_exprs(program, |expr| match expr {
@@ -1251,6 +1558,13 @@ mod tests {
             } => {
                 names.insert(source.clone());
                 names.insert(destination.clone());
+            }
+            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
+                names.insert(buffer.clone());
+            }
+            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
+                names.insert(input.clone());
+                names.insert(output.clone());
             }
             _ => {}
         });
@@ -1324,5 +1638,143 @@ mod tests {
         assert!(buffers.contains(&Ident::from("rw")));
         assert!(buffers.contains(&Ident::from("counts")));
         assert_eq!(buffers.len(), 2);
+    }
+
+    /// The corpus must reach every `Node` variant the AST registry declares.
+    ///
+    /// The variant set is read from `NODE_VARIANT_NAMES` at run time, so this
+    /// closes the class rather than one instance of it: adding a variant to the
+    /// `Node` declaration turns this RED until the variant is generated by
+    /// `fixtures::arb_node_with_depth` or listed in
+    /// `fixtures::CORPUS_EXCLUDED_NODE_VARIANTS` with a reason. Every corpus
+    /// consumer  -  the traversal properties here and the validator differential
+    /// property in `crate::validate`  -  inherits that coverage.
+    ///
+    /// A hardcoded expectation would not: `arb_node` covered 8 of 20 variants
+    /// while its doc comment claimed the corpus was the union of what its callers
+    /// need, and nothing was red.
+    #[test]
+    fn corpus_generates_every_node_variant() {
+        use crate::ir::{node_variant_name, NODE_VARIANT_NAMES};
+        use fixtures::CORPUS_EXCLUDED_NODE_VARIANTS;
+        use proptest::strategy::{Strategy, ValueTree};
+        use proptest::test_runner::TestRunner;
+        use std::collections::BTreeSet;
+
+        let strategy = fixtures::arb_node_with_depth(3);
+        let mut runner = TestRunner::deterministic();
+        let mut generated = BTreeSet::new();
+        for _ in 0..4096 {
+            let node = strategy
+                .new_tree(&mut runner)
+                .expect("Fix: the IR-shape corpus must produce a value for every sample")
+                .current();
+            for_each_node(std::slice::from_ref(&node), |inner| {
+                generated.insert(node_variant_name(inner));
+            });
+        }
+
+        let declared: BTreeSet<&str> = NODE_VARIANT_NAMES.iter().copied().collect();
+        let excluded: BTreeSet<&str> = CORPUS_EXCLUDED_NODE_VARIANTS
+            .iter()
+            .map(|(variant, _)| *variant)
+            .collect();
+
+        let unknown_exclusions: Vec<&str> = excluded.difference(&declared).copied().collect();
+        assert!(
+            unknown_exclusions.is_empty(),
+            "Fix: CORPUS_EXCLUDED_NODE_VARIANTS names variants Node does not declare: \
+             {unknown_exclusions:?}"
+        );
+
+        let generated_but_excluded: Vec<&str> =
+            generated.intersection(&excluded).copied().collect();
+        assert!(
+            generated_but_excluded.is_empty(),
+            "Fix: these variants are generated and also listed as excluded, so the recorded \
+             reason is stale: {generated_but_excluded:?}"
+        );
+
+        let missing: Vec<&str> = declared
+            .difference(&generated)
+            .copied()
+            .filter(|variant| !excluded.contains(variant))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "Fix: generate these Node variants in fixtures::arb_node_with_depth, or record why \
+             each is excluded in fixtures::CORPUS_EXCLUDED_NODE_VARIANTS: {missing:?}"
+        );
+    }
+
+    /// `any_descendant` stops at the first match instead of walking the rest.
+    ///
+    /// The short circuit is the whole reason a scan uses it rather than
+    /// [`for_each_descendant`], and it is also why a visitor must NOT be
+    /// written as `any_descendant` with a predicate that always answers
+    /// `false`: the moment such a predicate answers `true` the visit becomes a
+    /// visit of a prefix, with no diagnostic.
+    #[test]
+    fn any_descendant_stops_at_the_first_match() {
+        let store = |index: u32| Node::store("buf", Expr::u32(index), Expr::u32(index));
+        let node = Node::Block(vec![store(0), store(1), store(2), store(3)]);
+        let mut visited = 0;
+        let found = any_descendant(&node, &mut |candidate| {
+            visited += 1;
+            matches!(candidate, Node::Store { .. })
+        });
+        assert!(found);
+        assert_eq!(
+            visited, 2,
+            "Fix: any_descendant visited the Block and the first Store, then must stop"
+        );
+    }
+
+    /// A predicate that never matches is offered every node and answers false.
+    #[test]
+    fn any_descendant_reaches_every_nested_body_and_reports_no_match() {
+        let node = Node::Block(vec![Node::if_then(
+            Expr::bool(true),
+            vec![Node::Region {
+                generator: Ident::from("vyre.visit.nested"),
+                source_region: None,
+                body: Arc::new(vec![Node::loop_for(
+                    "i",
+                    Expr::u32(0),
+                    Expr::u32(1),
+                    vec![Node::Return],
+                )]),
+            }],
+        )]);
+        let mut visited = 0;
+        let found = any_descendant(&node, &mut |_| {
+            visited += 1;
+            false
+        });
+        assert!(!found);
+        assert_eq!(
+            visited, 5,
+            "Fix: the walk must reach Block, If, Region, Loop and Return"
+        );
+    }
+
+    /// The walk is an explicit worklist, so nesting depth costs heap.
+    ///
+    /// The recursive descent this replaced overflowed the native stack on a
+    /// tree this deep, and the programs that reach that depth are exactly the
+    /// adversarial ones.
+    #[test]
+    fn any_descendant_survives_a_deeply_nested_tree() {
+        let mut node = Node::store("buf", Expr::u32(0), Expr::u32(1));
+        for _ in 0..1_000 {
+            node = Node::if_then(Expr::bool(true), vec![node]);
+        }
+        assert!(
+            any_descendant(&node, &mut |candidate| matches!(
+                candidate,
+                Node::Store { .. }
+            )),
+            "Fix: the store at the bottom of a 1000-deep tree must still be found"
+        );
     }
 }

@@ -33,8 +33,10 @@
 //!   Dynamic indexes that happen to coincide at runtime are conservatively
 //!   left alone.
 //! - Any node between the two whose evaluation could observe or mutate
-//!   `b` blocks the rewrite. The reachability check piggybacks on the
-//!   same predicate `dead_store_elim` uses (`node_observes_buffer`).
+//!   `b` blocks the rewrite. `memory::alias` owns that proof, under
+//!   `Interference::ReadsAndWrites`: unlike `dead_store_elim`, a write to
+//!   `b` in the gap is as disqualifying as a read, because a structurally
+//!   distinct index may still name the forwarded lane at run time.
 //! - The forwarded `v` is `Expr::clone()`d into the Let. If `v` itself
 //!   is observably side-effecting (e.g. contains an Atomic), forwarding
 //!   would duplicate the side effect. The shared re-execution safety predicate
@@ -46,11 +48,12 @@
 //!   the forwarded expression would observe the new value, not the stored one.
 //!   `find_forwarding_store` rejects that case (`node_reassigns_any_var`).
 
+use super::alias::{node_interferes, Interference};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::any_descendant;
+use crate::transform::visit::{any_descendant, for_each_subexpr};
 use rustc_hash::FxHashSet;
 
 /// `ProgramPass` registration for the store-to-load forwarding rewrite
@@ -128,8 +131,10 @@ fn forward_in_body(body: &[Node]) -> Option<Vec<Node>> {
 
 /// Walk back through `prev_siblings` looking for a `Node::Store(b, i, v)`
 /// whose buffer equals `buffer` and whose index is structurally equal to
-/// `index`. Return the stored value `v`. Bail out the moment any
-/// intervening node could observe or mutate `buffer`.
+/// `index`. Return the stored value `v`. Bail out the moment
+/// [`node_interferes`] reports a node in the gap that could read or write
+/// `buffer` -- which includes a same-buffer `Store` to a structurally
+/// different index, since the two may name one lane at run time.
 fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -> Option<Expr> {
     for (passed, prev) in prev_siblings.iter().rev().enumerate() {
         if let Node::Store {
@@ -159,14 +164,8 @@ fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -
                 }
                 return Some(value.clone());
             }
-            // A different-index Store to the same buffer is not a
-            // forwarder but also doesn't observe our value; keep
-            // walking unless there's something else blocking.
-            if store_buffer == buffer {
-                return None;
-            }
         }
-        if node_blocks_forwarding(prev, buffer) {
+        if node_interferes(prev, buffer, Interference::ReadsAndWrites) {
             return None;
         }
     }
@@ -174,41 +173,22 @@ fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -
 }
 
 /// Collect every `Expr::Var` name in `value`. By the time forwarding is
-/// considered, `value` has passed [`expr_is_observably_free_for_reexecution`], so it contains
-/// no `Load`/`Atomic`/`Call`/subgroup ops -- its only runtime-mutable inputs
-/// are these scalar variables (literals and invocation/workgroup/local ids are
-/// invariant within an invocation's straight-line execution).
+/// considered, `value` has passed [`expr_is_observably_free_for_reexecution`],
+/// so it contains no `Load`/`Atomic`/`Call`/subgroup ops -- its only
+/// runtime-mutable inputs are these scalar variables (literals and
+/// invocation/workgroup/local ids are invariant within an invocation's
+/// straight-line execution).
+///
+/// Operand positions come from [`for_each_subexpr`]. The hand-written match
+/// this replaces ended in `_ => {}`, so a variable reachable only through an
+/// operand position it did not enumerate read as absent, and the pass forwarded
+/// a value whose input the gap had already reassigned.
 fn collect_value_vars(value: &Expr, out: &mut FxHashSet<Ident>) {
-    match value {
-        Expr::Var(name) => {
+    for_each_subexpr(value, &mut |expr| {
+        if let Expr::Var(name) = expr {
             out.insert(name.clone());
         }
-        Expr::BinOp { left, right, .. } => {
-            collect_value_vars(left, out);
-            collect_value_vars(right, out);
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            collect_value_vars(operand, out);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_value_vars(a, out);
-            collect_value_vars(b, out);
-            collect_value_vars(c, out);
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_value_vars(cond, out);
-            collect_value_vars(true_val, out);
-            collect_value_vars(false_val, out);
-        }
-        // Leaves with no variable, plus the kinds `expr_is_observably_free_for_reexecution`
-        // already rejected (Load/Atomic/Call/BufLen/subgroup/Opaque) which
-        // never reach a forwarded value.
-        _ => {}
-    }
+    });
 }
 
 /// True if `node` -- or any node nested in its bodies -- reassigns a variable
@@ -226,78 +206,6 @@ fn node_reassigns_any_var(node: &Node, vars: &FxHashSet<Ident>) -> bool {
         node,
         &mut |n| matches!(n, Node::Assign { name, .. } if vars.contains(name)),
     )
-}
-
-/// True if `node` could read or otherwise observe `buffer`'s contents
-/// in a way that makes forwarding unsafe.
-fn node_blocks_forwarding(node: &Node, buffer: &Ident) -> bool {
-    match node {
-        Node::Store {
-            buffer: other,
-            index,
-            value,
-        } => {
-            other == buffer
-                || expr_touches_buffer(index, buffer)
-                || expr_touches_buffer(value, buffer)
-        }
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_touches_buffer(value, buffer),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_touches_buffer(cond, buffer)
-                || then.iter().any(|n| node_blocks_forwarding(n, buffer))
-                || otherwise.iter().any(|n| node_blocks_forwarding(n, buffer))
-        }
-        Node::Loop { from, to, body, .. } => {
-            expr_touches_buffer(from, buffer)
-                || expr_touches_buffer(to, buffer)
-                || body.iter().any(|n| node_blocks_forwarding(n, buffer))
-        }
-        Node::Block(body) => body.iter().any(|n| node_blocks_forwarding(n, buffer)),
-        Node::Region { body, .. } => body.iter().any(|n| node_blocks_forwarding(n, buffer)),
-        Node::AllReduce {
-            buffer: collective, ..
-        }
-        | Node::Broadcast {
-            buffer: collective, ..
-        } => collective == buffer,
-        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-            input == buffer || output == buffer
-        }
-        Node::Barrier { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Return
-        | Node::Opaque(_) => true,
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            ..
-        }
-        | Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            ..
-        } => {
-            source == buffer
-                || destination == buffer
-                || expr_touches_buffer(offset, buffer)
-                || expr_touches_buffer(size, buffer)
-        }
-        Node::IndirectDispatch { count_buffer, .. } => count_buffer == buffer,
-        Node::Trap { address, .. } => expr_touches_buffer(address, buffer),
-    }
-}
-
-fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
-    super::expr_touches_buffer(expr, buffer, false)
 }
 
 /// True when `body` holds a forwardable `Store` / `Let(Load)` pair.

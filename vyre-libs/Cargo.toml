@@ -143,9 +143,6 @@ vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 vyre-driver = { path = "../vyre-driver" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
-tempfile.workspace = true
-sha2.workspace = true
-criterion.workspace = true
 naga.workspace = true
 # PATH-ONLY (package = vyre-grammar-gen): see vyre-driver-wgpu. cargo strips path-only
 # dev-deps from the published manifest, so this creates no publish-ordering constraint
@@ -153,7 +150,7 @@ naga.workspace = true
 c-grammar-gen = { package = "vyre-grammar-gen", path = "../vyre-grammar-gen" }
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 
 [package.metadata.docs.rs]
@@ -317,6 +314,11 @@ required-features = ["cpu-parity", "solvers", "test-fixtures"]
 name = "quantized_via_reference_parity"
 path = "tests/quantized_via_reference_parity.rs"
 required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "quantized_dispatch_variant_coverage_gate"
+path = "tests/quantized_dispatch_variant_coverage_gate.rs"
+required-features = ["solvers"]
 
 [[test]]
 name = "sheaf_heterophilic_via_reference_parity"
@@ -958,6 +960,11 @@ path = "tests/c_ast_declarator_matrix_contracts.rs"
 required-features = ["c-parser"]
 
 [[test]]
+name = "c_ast_parity_matrix_contracts"
+path = "tests/c_ast_parity_matrix_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
 name = "c11_build_vast_nodes"
 path = "tests/c11_build_vast_nodes.rs"
 required-features = ["c-parser"]
@@ -965,6 +972,11 @@ required-features = ["c-parser"]
 [[test]]
 name = "c11_ast_corpus_complete_constructs"
 path = "tests/c11_ast_corpus_complete_constructs.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_typedef_annotation_row_contract_gate"
+path = "tests/c_typedef_annotation_row_contract_gate.rs"
 required-features = ["c-parser"]
 
 [[test]]

@@ -16,6 +16,7 @@
 use std::fs;
 use std::path::Path;
 
+use serde::Serialize;
 use serde_json::{json, Value};
 use tempfile::TempDir;
 
@@ -101,6 +102,79 @@ pub(crate) fn cpu_sota_case(
         },
         "performance": {"contract_passed": true, "speedup_x": 200.0}
     })
+}
+
+/// One benchmark case: the identity triple every reader keys on, plus whatever
+/// measured fields the reader under test grades.
+pub(crate) fn benchmark_case(
+    id: &str,
+    backend_id: &str,
+    status: &str,
+    measured: impl IntoIterator<Item = (&'static str, Value)>,
+) -> Value {
+    let mut case = json!({
+        "id": id,
+        "backend_id": backend_id,
+        "status": status
+    });
+    let fields = case
+        .as_object_mut()
+        .expect("Fix: benchmark_case builds a JSON object.");
+    for (key, value) in measured {
+        fields.insert(key.to_string(), value);
+    }
+    case
+}
+
+/// The correctness reason every hidden-failure fixture reports.
+pub(crate) const HIDDEN_INVALID_REASON: &str = "CUDA/WGPU output mismatch at row 17";
+
+/// A case the runner recorded as `pass` whose correctness evidence says the
+/// output was wrong, plus whatever measured fields the reader under test needs
+/// before it will look at correctness at all.
+///
+/// Four readers reject this shape and each carried its own copy of it, keyed on
+/// a reason string spelled out four times. A reader that started reporting the
+/// reason differently would have been corrected in one copy, and the other
+/// three would have gone on asserting the old text against a fixture that no
+/// longer produced it.
+pub(crate) fn hidden_invalid_case(
+    id: &str,
+    backend_id: &str,
+    measured: impl IntoIterator<Item = (&'static str, Value)>,
+) -> Value {
+    let correctness = json!({"Invalid": {"reason": HIDDEN_INVALID_REASON}});
+    benchmark_case(
+        id,
+        backend_id,
+        "pass",
+        std::iter::once(("correctness", correctness)).chain(measured),
+    )
+}
+
+/// [`hidden_invalid_case`] carrying the contract, timings and winning
+/// performance claim a reader demands before it will read correctness at all.
+///
+/// The claim is a generous 200x in every copy on purpose: a reader that accepts
+/// the case has taken the claim over the correctness evidence beside it.
+pub(crate) fn hidden_invalid_measured_case(
+    id: &str,
+    backend_id: &str,
+    contract: Value,
+    metrics: Value,
+) -> Value {
+    hidden_invalid_case(
+        id,
+        backend_id,
+        [
+            ("contract", contract),
+            ("metrics", metrics),
+            (
+                "performance",
+                json!({"contract_passed": true, "speedup_x": 200.0}),
+            ),
+        ],
+    )
 }
 
 /// Wall and baseline wall timings as `[p50, p95, p99]`, each declaring the thirty
@@ -307,10 +381,17 @@ impl EvidenceWorkspace {
     ///
     /// The suite is cross-checked against the axes for artifacts either side
     /// omits, so a fixture about anything else has to make the two agree.
-    pub(crate) fn cuda_release_suite(artifacts: &[&str]) -> Value {
+    pub(crate) fn cuda_release_suite<S: Serialize>(artifacts: &[S]) -> Value {
         json!({
             "backend": "cuda",
             "artifacts": artifacts
+        })
+    }
+
+    /// The release axes that cite exactly `artifacts` and no scalar of their own.
+    pub(crate) fn cuda_release_axes<S: Serialize>(artifacts: &[S]) -> Value {
+        json!({
+            "source_artifacts": artifacts
         })
     }
 
@@ -358,6 +439,24 @@ impl EvidenceWorkspace {
             })
             .collect()
     }
+}
+
+/// The release-axis issues a single written CUDA source artifact draws.
+///
+/// A fixture about one artifact still has to satisfy the axes-against-suite
+/// cross-check, so every such test wrote the same workspace, the same
+/// one-element axes and the same one-element suite around the case list it
+/// actually cared about.
+pub(crate) fn cuda_release_axis_issues(file_name: &str, cases: Value) -> Vec<String> {
+    let workspace = EvidenceWorkspace::new();
+    let artifact = workspace.write_cuda_release_artifact(file_name, cases);
+    let axes = EvidenceWorkspace::cuda_release_axes(&[&artifact]);
+    let cuda_suite = EvidenceWorkspace::cuda_release_suite(&[&artifact]);
+    crate::bench::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues(
+        workspace.path(),
+        &axes,
+        &cuda_suite,
+    )
 }
 
 #[cfg(test)]

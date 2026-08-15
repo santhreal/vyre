@@ -32,6 +32,7 @@ use vyre_primitives::graph::csr_queue_delta::{
 use vyre_primitives::graph::csr_queue_split::csr_queue_split_low_forward_traverse;
 use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_test_support::ir_regions::{canonicalize, edge_guard, region};
 
 const NODE_COUNT: u32 = 64;
 const EDGE_COUNT: u32 = 7;
@@ -258,44 +259,6 @@ fn entry_point_ir_fingerprints_are_byte_identical() {
          if a shape change is intended, record why in the commit body and replace \
          PRE_MERGE_FINGERPRINTS with:\n{table}"
     );
-}
-
-/// Erase one entry point's private variable prefix so two clones of the same
-/// loop compare equal. Every builder in this family uses exactly one prefix.
-fn canonicalize(program: &Program, prefix: &str) -> String {
-    format!("{:?}", program.entry()).replace(&format!("{prefix}_"), "Q_")
-}
-
-/// Slice a canonicalized dump between two `Let`-introduced markers, cutting
-/// each bound back to the start of its binding so a region always begins and
-/// ends on a whole binding. The slice deliberately starts inside the region
-/// body: the enclosing `Node::Region` carries the entry point's own op id,
-/// which is part of the public contract and differs by construction.
-fn region(dump: &str, from: &str, to: &str) -> String {
-    let bind_start = |marker: &str| {
-        let at = dump
-            .find(marker)
-            .unwrap_or_else(|| panic!("Fix: canonicalized dump must contain `{marker}`:\n{dump}"));
-        dump[..at].rfind("Let {").unwrap_or_else(|| {
-            panic!("Fix: `{marker}` must be introduced by a Let binding:\n{dump}")
-        })
-    };
-    let start = bind_start(from);
-    let end = bind_start(to);
-    assert!(
-        start < end,
-        "Fix: region markers are out of order in:\n{dump}"
-    );
-    dump[start..end].to_string()
-}
-
-/// The edge-kind allow test, destination load, destination bound check, and
-/// destination word/bit split. Shared by every queue entry point; the emit that
-/// follows it is what legitimately differs.
-fn edge_guard(program: &Program, prefix: &str, emit_var: &str) -> String {
-    let dump = canonicalize(program, prefix);
-    let emit = format!("Ident(\"{emit_var}\")").replace(&format!("{prefix}_"), "Q_");
-    region(&dump, "Ident(\"Q_kind\")", &emit)
 }
 
 #[test]

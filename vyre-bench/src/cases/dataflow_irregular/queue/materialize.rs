@@ -5,11 +5,10 @@
 //! [`crate::cases::queue_traverse_plan`]. What is this case's own: the exploded
 //! supergraph fixture, the CPU oracle, and its metric points.
 
+use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
@@ -60,11 +59,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: QUEUE_MATERIALIZE_SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(NODE_COUNT as u64 * 12),
     feature_set: &[
@@ -74,7 +70,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "frontier-queue",
         "resident-sequence",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<DataflowIfdsSkewedQueuePrepared> = CaseOps {
@@ -159,10 +155,7 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
 
     let baseline_start = Instant::now();
     let oracle = ifds_skewed_cpu_oracle(&fixture);
-    let baseline_wall_ns = baseline_start
-        .elapsed()
-        .as_nanos()
-        .min(u128::from(u64::MAX)) as u64;
+    let baseline_wall_ns = elapsed_ns(baseline_start);
     let mut stats = fixture.stats;
     stats.allowed_edges_from_active = oracle.allowed_edges_from_active;
     stats.filtered_edges_from_active = oracle.filtered_edges_from_active;

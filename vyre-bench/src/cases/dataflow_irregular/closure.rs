@@ -1,9 +1,7 @@
 use std::time::Instant;
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
-use crate::api::metric::BenchMetrics;
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
+use crate::api::metric::{elapsed_ns, BenchMetrics};
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, ResidentInputSet, TransferAccounting,
 };
@@ -74,11 +72,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(NODE_COUNT as u64 * 20),
     feature_set: &[
@@ -87,7 +82,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "skewed-csr",
         "resident-frontier",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<DataflowIfdsSkewedClosurePrepared> = CaseOps {
@@ -362,7 +357,7 @@ fn dispatch_resident_closure_sequence(
         &mut [&mut frontier_output, &mut changed_output],
     )
     .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let wall_ns = elapsed_ns(started);
 
     Ok(ClosureSequenceRun {
         outputs: vec![frontier_output, changed_output],

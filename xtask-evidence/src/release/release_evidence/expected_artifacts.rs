@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::Path;
 
 use serde::Serialize;
@@ -188,16 +187,7 @@ pub(crate) fn write_expected_artifact_registry(
     workspace_root: &Path,
     registry: &ReleaseExpectedArtifactRegistry,
 ) {
-    let output = workspace_root.join(EXPECTED_ARTIFACT_REGISTRY);
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!(
-                "release-evidence: failed to create `{}`: {error}",
-                parent.display()
-            );
-            std::process::exit(1);
-        }
-    }
+    let output = super::release_evidence_output(workspace_root, EXPECTED_ARTIFACT_REGISTRY);
     xtask::output_arg::write_json(&output, registry);
 }
 

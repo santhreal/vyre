@@ -1,5 +1,5 @@
 use vyre_foundation::ir::{AtomicOp, Expr, MemoryOrdering, Node, Program};
-use vyre_foundation::visit::node_map::any_descendant;
+use vyre_foundation::transform::visit::any_descendant;
 
 use vyre_primitives::fixpoint::persistent_fixpoint::{
     cpu_ref, persistent_fixpoint, persistent_fixpoint_grid, OP_ID_GRID,

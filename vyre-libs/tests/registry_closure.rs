@@ -37,7 +37,7 @@ const BUILDER_FLOOR: usize = 320;
 #[test]
 fn every_program_builder_is_tested_registered_or_explicitly_waived() {
     vyre_test_support::assert_registry_closure(
-        env!("CARGO_MANIFEST_DIR"),
+        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")),
         COVERAGE_WAIVER,
         BUILDER_FLOOR,
     );

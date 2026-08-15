@@ -124,7 +124,7 @@ vyre-driver-reference = { path = "../vyre-driver-reference" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
 criterion.workspace = true
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 [package.metadata.docs.rs]
 all-features = true
@@ -132,6 +132,13 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
 workspace = true
+
+# Reads source text only, so it needs no domain feature: gating it on one would
+# narrow the walk to the modules that feature happens to enable, and a class is
+# not closed over a subset of the tree.
+[[test]]
+name = "shared_owner_closure"
+path = "tests/shared_owner_closure.rs"
 
 # Master plan: integration smoke needs hash builders + inventory walk.
 [[test]]

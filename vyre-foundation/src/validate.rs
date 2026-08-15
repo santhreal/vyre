@@ -54,11 +54,17 @@ mod call_rules;
 mod cast;
 mod expr_rules;
 mod fusion_safety;
+/// The recursive walk the single-pass validator replaced, kept as the second
+/// arm of the differential property test.
+#[cfg(test)]
+mod legacy_walk;
 /// Linear-type discipline checker (P-1.0-V2.2). Verifies each
 /// `BufferDecl::linear_type()` against the actual usage count in the
 /// IR. Violators are reported as `ValidationError`s.
 pub mod linear_type;
-mod nodes;
+/// Every per-node validation rule, one owner each, shared by the production
+/// single-pass walk and the differential test's second walk.
+mod node_rules;
 mod self_composition;
 mod shadowing;
 /// Shape-refinement predicate checker (P-1.0-V3.2). Evaluates each

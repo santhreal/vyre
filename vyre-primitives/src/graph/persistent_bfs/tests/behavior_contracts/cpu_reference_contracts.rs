@@ -1,16 +1,10 @@
 use super::*;
+use crate::graph::csr_closure_inputs::graphs::{CHAIN_4, DIAMOND_4};
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 #[test]
 fn persistent_bfs_reaches_closure() {
-    let (frontier, changed) = cpu_ref(
-        4,
-        &[0, 2, 3, 4, 4],
-        &[1, 2, 3, 3],
-        &[1, 1, 1, 1],
-        &[0b0001],
-        0xFFFF_FFFF,
-        4,
-    );
+    let (frontier, changed) = cpu_ref(CsrClosureInputs::allow_all(DIAMOND_4, 4), &[0b0001]);
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(changed, 1);
 }
@@ -19,29 +13,15 @@ fn persistent_bfs_reaches_closure() {
 fn cpu_ref_into_reuses_frontier_storage() {
     let mut frontier = Vec::with_capacity(8);
     let changed = cpu_ref_into(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(CHAIN_4, 8),
         &[0b0001],
-        0xFFFF_FFFF,
-        8,
         &mut frontier,
     );
     let capacity = frontier.capacity();
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(changed, 1);
 
-    let changed = cpu_ref_into(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
-        &[0],
-        0xFFFF_FFFF,
-        8,
-        &mut frontier,
-    );
+    let changed = cpu_ref_into(CsrClosureInputs::allow_all(CHAIN_4, 8), &[0], &mut frontier);
     assert_eq!(frontier.capacity(), capacity);
     assert_eq!(frontier, vec![0]);
     assert_eq!(changed, 0);
@@ -57,13 +37,8 @@ fn try_cpu_ref_into_with_scratch_reuses_step_storage_and_clears_stale_state() {
     let step_capacity = scratch.step.capacity();
 
     let changed = try_cpu_ref_into_with_scratch(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(CHAIN_4, 8),
         &[0b0001],
-        0xFFFF_FFFF,
-        8,
         &mut frontier,
         &mut scratch,
     )
@@ -75,13 +50,8 @@ fn try_cpu_ref_into_with_scratch_reuses_step_storage_and_clears_stale_state() {
     assert_eq!(scratch.step.len(), 1);
 
     let changed = try_cpu_ref_into_with_scratch(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(CHAIN_4, 8),
         &[0],
-        0xFFFF_FFFF,
-        8,
         &mut frontier,
         &mut scratch,
     )
@@ -103,13 +73,16 @@ fn try_cpu_ref_into_rejects_bad_input_without_clobbering_frontier() {
     let capacity = frontier.capacity();
 
     let err = try_cpu_ref_into(
-        4,
-        &[0, 1, 2],
-        &[1, 2, 3],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &[0, 1, 2],
+                edge_targets: &[1, 2, 3],
+                edge_kind_mask: &[1, 1, 1],
+            },
+            8,
+        ),
         &[0b0001],
-        0xFFFF_FFFF,
-        8,
         &mut frontier,
     )
     .expect_err("Fix: fallible persistent BFS oracle must reject malformed CSR inputs");
@@ -127,13 +100,16 @@ fn try_cpu_ref_into_with_scratch_rejects_bad_input_without_clobbering_storage() 
     };
 
     let err = try_cpu_ref_into_with_scratch(
-        4,
-        &[0, 1, 2],
-        &[1, 2, 3],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &[0, 1, 2],
+                edge_targets: &[1, 2, 3],
+                edge_kind_mask: &[1, 1, 1],
+            },
+            8,
+        ),
         &[0b0001],
-        0xFFFF_FFFF,
-        8,
         &mut frontier,
         &mut scratch,
     )
@@ -173,22 +149,28 @@ fn fallible_cpu_ref_matches_compatibility_oracle_on_generated_chains() {
         }
 
         let expected = cpu_ref(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                node_count.saturating_add(1),
+            ),
             &seed,
-            0xFFFF_FFFF,
-            node_count.saturating_add(1),
         );
         let actual = try_cpu_ref(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                node_count.saturating_add(1),
+            ),
             &seed,
-            0xFFFF_FFFF,
-            node_count.saturating_add(1),
         )
         .expect("Fix: generated valid persistent BFS chain should run fallibly");
         assert_eq!(actual, expected, "node_count={node_count}");
@@ -233,17 +215,31 @@ fn generated_try_cpu_ref_into_with_scratch_matches_allocating_reference() {
         let allow_mask = if case % 3 == 0 { 1 } else { 0xFFFF_FFFF };
         let max_iters = (case % 11) as u32;
         let expected = try_cpu_ref(
-            node_count, &offsets, &targets, &masks, &seed, allow_mask, max_iters,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask,
+                max_iters,
+            },
+            &seed,
         )
         .expect("Fix: generated persistent BFS graph must be valid for allocating oracle.");
         let changed = try_cpu_ref_into_with_scratch(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask,
+                max_iters,
+            },
             &seed,
-            allow_mask,
-            max_iters,
             &mut frontier,
             &mut scratch,
         )
@@ -267,16 +263,9 @@ const CHAIN4_MASKS: &[u32] = &[1, 1, 1];
 fn converged_reports_false_and_partial_frontier_when_max_iters_below_diameter() {
     // Two steps grow {0}->{0,1}->{0,1,2}; the closure is still growing, so the
     // loop exhausts max_iters without proving a fixpoint.
-    let (frontier, outcome) = try_cpu_ref_converged(
-        4,
-        CHAIN4_OFFSETS,
-        CHAIN4_TARGETS,
-        CHAIN4_MASKS,
-        &[0b0001],
-        0xFFFF_FFFF,
-        2,
-    )
-    .expect("Fix: valid chain must run under the convergence-reporting oracle.");
+    let (frontier, outcome) =
+        try_cpu_ref_converged(CsrClosureInputs::allow_all(CHAIN_4, 2), &[0b0001])
+            .expect("Fix: valid chain must run under the convergence-reporting oracle.");
     assert_eq!(frontier, vec![0b0111]);
     assert_eq!(
         outcome,
@@ -293,16 +282,9 @@ fn converged_reports_false_and_partial_frontier_when_max_iters_below_diameter() 
 fn converged_reports_true_at_true_stop_iter_when_max_iters_above_diameter() {
     // Three growth steps reach 0b1111; the 4th step adds nothing and proves the
     // fixpoint, so the loop stops at iteration 4 well within the budget of 8.
-    let (frontier, outcome) = try_cpu_ref_converged(
-        4,
-        CHAIN4_OFFSETS,
-        CHAIN4_TARGETS,
-        CHAIN4_MASKS,
-        &[0b0001],
-        0xFFFF_FFFF,
-        8,
-    )
-    .expect("Fix: valid chain must run under the convergence-reporting oracle.");
+    let (frontier, outcome) =
+        try_cpu_ref_converged(CsrClosureInputs::allow_all(CHAIN_4, 8), &[0b0001])
+            .expect("Fix: valid chain must run under the convergence-reporting oracle.");
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(
         outcome,
@@ -320,16 +302,9 @@ fn converged_is_false_when_full_set_is_reached_only_on_the_last_allowed_step() {
     // Exactly 3 iterations reach 0b1111, but the loop never runs the 4th
     // confirming step, so it cannot prove the fixpoint: converged stays false
     // even though the frontier is already complete.
-    let (frontier, outcome) = try_cpu_ref_converged(
-        4,
-        CHAIN4_OFFSETS,
-        CHAIN4_TARGETS,
-        CHAIN4_MASKS,
-        &[0b0001],
-        0xFFFF_FFFF,
-        3,
-    )
-    .expect("Fix: valid chain must run under the convergence-reporting oracle.");
+    let (frontier, outcome) =
+        try_cpu_ref_converged(CsrClosureInputs::allow_all(CHAIN_4, 3), &[0b0001])
+            .expect("Fix: valid chain must run under the convergence-reporting oracle.");
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(
         outcome,
@@ -346,16 +321,9 @@ fn converged_is_false_when_full_set_is_reached_only_on_the_last_allowed_step() {
 fn converged_reports_true_with_no_change_when_seed_is_already_a_fixpoint() {
     // A seed that already contains the whole closure never grows: the first
     // step adds nothing, so the run converges immediately with changed=0.
-    let (frontier, outcome) = try_cpu_ref_converged(
-        4,
-        CHAIN4_OFFSETS,
-        CHAIN4_TARGETS,
-        CHAIN4_MASKS,
-        &[0b1111],
-        0xFFFF_FFFF,
-        8,
-    )
-    .expect("Fix: valid chain must run under the convergence-reporting oracle.");
+    let (frontier, outcome) =
+        try_cpu_ref_converged(CsrClosureInputs::allow_all(CHAIN_4, 8), &[0b1111])
+            .expect("Fix: valid chain must run under the convergence-reporting oracle.");
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(
         outcome,
@@ -393,23 +361,31 @@ fn converged_changed_flag_matches_sticky_oracle_on_generated_chains() {
         }
         for max_iters in [0_u32, 1, 2, node_count, node_count.saturating_add(2)] {
             let (sticky_frontier, sticky_changed) = try_cpu_ref(
-                node_count,
-                &offsets,
-                &targets,
-                &masks,
+                CsrClosureInputs {
+                    graph: CsrGraphView {
+                        node_count,
+                        edge_offsets: &offsets,
+                        edge_targets: &targets,
+                        edge_kind_mask: &masks,
+                    },
+                    allow_mask: 0xFFFF_FFFF,
+                    max_iters,
+                },
                 &seed,
-                0xFFFF_FFFF,
-                max_iters,
             )
             .expect("Fix: generated valid chain must run under the sticky oracle.");
             let (converged_frontier, outcome) = try_cpu_ref_converged(
-                node_count,
-                &offsets,
-                &targets,
-                &masks,
+                CsrClosureInputs {
+                    graph: CsrGraphView {
+                        node_count,
+                        edge_offsets: &offsets,
+                        edge_targets: &targets,
+                        edge_kind_mask: &masks,
+                    },
+                    allow_mask: 0xFFFF_FFFF,
+                    max_iters,
+                },
                 &seed,
-                0xFFFF_FFFF,
-                max_iters,
             )
             .expect("Fix: generated valid chain must run under the convergence oracle.");
             assert_eq!(

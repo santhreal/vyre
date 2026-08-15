@@ -30,6 +30,7 @@
 //!   iteration for any numbering.
 
 use super::*;
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::wire::pack_u32_slice;
 use vyre_driver::backend::VyreBackend;
 use vyre_driver::grid_sync::{
@@ -249,13 +250,17 @@ fn assert_device_matches_oracle(
     max_iters: u32,
 ) -> (u32, bool) {
     let (frontier, outcome) = try_cpu_ref_converged(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+            },
+            allow_mask,
+            max_iters,
+        },
         frontier_in,
-        allow_mask,
-        max_iters,
     )
     .expect("Fix: CPU oracle must accept a valid graph.");
     let (device_frontier, device_changed, device_converged) = run_converged(
@@ -450,13 +455,17 @@ fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
         let converged = read_named_output(&program, &outputs, "converged")[0];
 
         let (_, oracle) = try_cpu_ref_converged(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask: 0xFFFF_FFFF,
+                max_iters,
+            },
             &seed,
-            0xFFFF_FFFF,
-            max_iters,
         )
         .expect("Fix: CPU oracle must accept a valid graph.");
         assert_eq!(
@@ -543,13 +552,17 @@ fn assert_batch_device_matches_oracle(
     let mut oracle_outcomes = Vec::with_capacity(seeds.len());
     for (query, seed) in seeds.iter().enumerate() {
         let (frontier, outcome) = try_cpu_ref_converged(
-            node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
+                },
+                allow_mask,
+                max_iters,
+            },
             seed,
-            allow_mask,
-            max_iters,
         )
         .expect("Fix: CPU oracle must accept a valid graph.");
         let start = query * words;
@@ -692,13 +705,17 @@ fn assert_device_density_matches_oracle(
     max_iters: u32,
 ) -> Vec<u32> {
     let (frontier, _outcome, active) = try_cpu_ref_density(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+            },
+            allow_mask,
+            max_iters,
+        },
         frontier_in,
-        allow_mask,
-        max_iters,
     )
     .expect("Fix: CPU density oracle must accept a valid graph.");
     assert_eq!(
@@ -865,13 +882,17 @@ fn assert_batch_device_density_matches_oracle(
     let mut oracle = Vec::with_capacity(seeds.len() * max_iters as usize);
     for (query, seed) in seeds.iter().enumerate() {
         let (_frontier, _outcome, active) = try_cpu_ref_density(
-            node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
+                },
+                allow_mask,
+                max_iters,
+            },
             seed,
-            allow_mask,
-            max_iters,
         )
         .expect("Fix: CPU density oracle must accept a valid graph.");
         let start = query * max_iters as usize;

@@ -22,10 +22,7 @@ jobs:
         run: python3 scripts/architecture_docs.py . --check
 
       - name: Verify architecture behavior contracts
-        run: >-
-          ./cargo_full test -p xtask
-          --test architecture_docs
-          --test canonical_first_workgroup_guard
+        run: ./cargo_full test -p xtask --test tree_contracts
 
       - name: Verify semantic operation coverage
         run: ./cargo_full run -p xtask -- op-matrix --check

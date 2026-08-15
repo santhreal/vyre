@@ -6,7 +6,9 @@
 //! decode-to-scan pipelines.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::decode::ziftsieve::ziftsieve_literal_copy_with_op_id;
+use vyre_primitives::decode::ziftsieve::{
+    ziftsieve_literal_copy_with_op_id, ZiftsieveBuffers, ZiftsieveExtents,
+};
 
 // CPU parity oracle: re-exported only for parity tests / the `cpu-parity`
 // feature, never as a production decode surface (matches the vyre-primitives
@@ -23,39 +25,31 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 const OP_ID: &str = "vyre-libs::decode::ziftsieve";
 const FAMILY_PREFIX: &str = "decode_ziftsieve";
 
-/// Canonical pointer to the primitive-owned GPU-port design.
-pub const NOTE_ZIFTSIEVE_GPU_DESIGN: &str = "docs: primitive GPU-port design is in \
-     libs/performance/matching/vyre/vyre-primitives/src/decode/ziftsieve.rs";
-
 /// Build a Program that copies LZ4 literals in parallel given a pre-built
 /// sequence index.
 ///
-/// The reusable IR and CPU oracle live in `vyre-primitives`; this wrapper only
-/// applies libs-level buffer scoping and preserves the public composition id.
+/// The reusable IR and CPU oracle live in `vyre-primitives`; this composition
+/// adds exactly two things, and they are what its tests assert: the generic
+/// `input` and `output` names are rewritten to family-scoped ones so a fused
+/// kernel cannot collide them with another decoder's buffers, and the program
+/// carries the libs op id rather than the primitive's.
 #[must_use]
-pub fn ziftsieve_gpu(
-    input: &str,
-    output: &str,
-    seq_literal_start: &str,
-    seq_literal_len: &str,
-    seq_literal_offset: &str,
-    input_len: u32,
-    seq_count: u32,
-    max_output: u32,
-) -> Program {
-    let input = scoped_decode_input_buffer(FAMILY_PREFIX, input);
-    let output =
-        scoped_decode_output_buffer(FAMILY_PREFIX, "output", output, &["output", "decoded"]);
+pub fn ziftsieve_gpu(buffers: ZiftsieveBuffers<'_>, extents: ZiftsieveExtents) -> Program {
+    let input = scoped_decode_input_buffer(FAMILY_PREFIX, buffers.input);
+    let output = scoped_decode_output_buffer(
+        FAMILY_PREFIX,
+        "output",
+        buffers.output,
+        &["output", "decoded"],
+    );
     ziftsieve_literal_copy_with_op_id(
         OP_ID,
-        &input,
-        &output,
-        seq_literal_start,
-        seq_literal_len,
-        seq_literal_offset,
-        input_len,
-        seq_count,
-        max_output,
+        ZiftsieveBuffers {
+            input: &input,
+            output: &output,
+            ..buffers
+        },
+        extents,
     )
 }
 
@@ -70,14 +64,12 @@ mod tests {
         let max_output = seq_lens.iter().copied().sum::<u32>();
         let input_words = input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>();
         let program = ziftsieve_gpu(
-            "input",
-            "output",
-            "seq_start",
-            "seq_len",
-            "seq_off",
-            input.len() as u32,
-            seq_count,
-            max_output,
+            ZiftsieveBuffers::CANONICAL,
+            ZiftsieveExtents {
+                input_len: input.len() as u32,
+                seq_count,
+                max_output,
+            },
         );
         let inputs = vec![
             Value::from(pack_words(&input_words)),
@@ -92,24 +84,65 @@ mod tests {
         words.into_iter().take(max_output as usize).collect()
     }
 
+    /// The composition must produce a program that runs end to end. The decode
+    /// semantics themselves are the primitive's contract and are proven there,
+    /// including the hostile out-of-contract cases; restating them here proved
+    /// the primitive twice and the composition not at all.
     #[test]
-    fn single_literal() {
-        assert_eq!(run(&[0x10, b'A'], &[1], &[1], &[0]), vec![b'A' as u32]);
-    }
-
-    #[test]
-    fn two_sequences() {
+    fn the_composition_decodes_through_the_primitive() {
         assert_eq!(
             run(&[0x10, b'A', 0x20, b'B', b'C'], &[1, 3], &[1, 2], &[0, 1]),
             vec![b'A' as u32, b'B' as u32, b'C' as u32]
         );
     }
 
+    /// WHY: the generic names are what a fused kernel collides on, so the
+    /// rewrite is this module's whole reason to exist and nothing asserted it.
+    /// An explicit caller name must survive, or composition by name breaks.
     #[test]
-    fn zero_literal_sequence_is_nop() {
-        assert_eq!(
-            run(&[0x00, 0x10, b'A'], &[0], &[0], &[0]),
-            Vec::<u32>::new()
+    fn generic_binding_names_are_family_scoped_and_explicit_ones_are_kept() {
+        let scoped = ziftsieve_gpu(ZiftsieveBuffers::CANONICAL, ZiftsieveExtents::default());
+        let names: Vec<&str> = scoped
+            .buffers()
+            .iter()
+            .map(|buffer| buffer.name())
+            .collect();
+        assert!(
+            names.contains(&"__vyre_decode_ziftsieve_input")
+                && names.contains(&"__vyre_decode_ziftsieve_output"),
+            "Fix: generic `input`/`output` must be rewritten to family-scoped names, got {names:?}"
+        );
+        let explicit = ziftsieve_gpu(
+            ZiftsieveBuffers {
+                input: "block_words",
+                output: "literals",
+                ..ZiftsieveBuffers::CANONICAL
+            },
+            ZiftsieveExtents::default(),
+        );
+        let names: Vec<&str> = explicit
+            .buffers()
+            .iter()
+            .map(|buffer| buffer.name())
+            .collect();
+        assert!(
+            names.contains(&"block_words") && names.contains(&"literals"),
+            "Fix: an explicit caller name must be preserved, got {names:?}"
+        );
+    }
+
+    /// WHY: the libs op id is the other thing this module adds. It reaches the
+    /// program identity, so a composition that lost it would be indistinguishable
+    /// from the bare primitive in the registry and in every duplicate report.
+    #[test]
+    fn the_program_carries_the_libs_op_id() {
+        let program = ziftsieve_gpu(ZiftsieveBuffers::CANONICAL, ZiftsieveExtents::default());
+        assert!(
+            !program.structural_eq(&vyre_primitives::decode::ziftsieve::ziftsieve_literal_copy(
+                ZiftsieveBuffers::CANONICAL,
+                ZiftsieveExtents::default(),
+            )),
+            "Fix: `{OP_ID}` must reach the program identity instead of the primitive id"
         );
     }
 

@@ -8,8 +8,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 #[cfg(test)]
 use crate::fixpoint::persistent_fixpoint::{
-    fixpoint_route, persistent_fixpoint, persistent_fixpoint_grid,
-    PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+    fixpoint_route, persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
 use crate::fixpoint::persistent_fixpoint::{routed_persistent_fixpoint, FixpointState};
 use crate::math::semiring_gemm::{semiring_gemm, Semiring};

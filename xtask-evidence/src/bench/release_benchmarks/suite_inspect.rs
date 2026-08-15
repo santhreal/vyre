@@ -10,7 +10,7 @@ use super::evidence_schema::{
 };
 use super::inspect_core::{
     first_metric_p50, read_benchmark_report, read_text_bounded, record_observed_metric_percentile,
-    record_required_metric_percentile, WallClockMinima,
+    record_required_metric_percentile, report_cases, WallClockMinima,
 };
 use super::metrics::write_json;
 use super::release_thresholds::{
@@ -580,14 +580,7 @@ pub(super) fn inspect_backend_suite_artifact(
             case_count: 0,
             failed_count: None,
             nonmatching_case_backend_count: 0,
-            min_wall_samples: None,
-            min_wall_p50: None,
-            min_wall_p95: None,
-            min_wall_p99: None,
-            min_baseline_wall_samples: None,
-            min_baseline_wall_p50: None,
-            min_baseline_wall_p95: None,
-            min_baseline_wall_p99: None,
+            minima: WallClockMinima::default(),
             cpu_sota_100x_required: artifact.cpu_sota_100x_required,
             cpu_sota_100x_contract_cases: 0,
             cpu_sota_100x_passing_cases: 0,
@@ -761,14 +754,7 @@ pub(super) fn inspect_backend_suite_artifact(
             summary_failed_count
         ));
     }
-    let cases = report
-        .get("cases")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    if cases.is_empty() {
-        blockers.push("cases array is empty or missing".to_string());
-    }
+    let cases = report_cases(&report, &mut blockers);
     if let Some(mismatch) =
         crate::bench::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
             &report,
@@ -914,14 +900,7 @@ pub(super) fn inspect_backend_suite_artifact(
         case_count: cases.len(),
         failed_count,
         nonmatching_case_backend_count,
-        min_wall_samples: minima.wall_samples,
-        min_wall_p50: minima.wall_p50,
-        min_wall_p95: minima.wall_p95,
-        min_wall_p99: minima.wall_p99,
-        min_baseline_wall_samples: minima.baseline_wall_samples,
-        min_baseline_wall_p50: minima.baseline_wall_p50,
-        min_baseline_wall_p95: minima.baseline_wall_p95,
-        min_baseline_wall_p99: minima.baseline_wall_p99,
+        minima,
         cpu_sota_100x_required: artifact.cpu_sota_100x_required,
         cpu_sota_100x_contract_cases,
         cpu_sota_100x_passing_cases,
@@ -937,7 +916,8 @@ pub(super) fn nonblank_str(value: &Value) -> Option<&str> {
 mod tests {
     use super::*;
     use crate::report_fixture::{
-        case_summary, cpu_sota_contract, cuda_cached_metrics, host_environment,
+        benchmark_case, case_summary, cpu_sota_contract, cuda_cached_metrics,
+        hidden_invalid_measured_case, host_environment, launched_percentile_metrics,
     };
 
     use tempfile::TempDir;
@@ -1278,19 +1258,21 @@ mod tests {
                 "source_tree_fingerprint": "\t",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "environment": host_environment(" ", " ", "\t", "\n"),
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "cuda",
-                        "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "kernel_launches": {"samples": 1, "p50": 1}
-                        },
-                        "performance": {"contract_passed": true, "speedup_x": 120.0}
-                    }
-                ]
+                "cases": [benchmark_case(
+                    "release.condition_eval.1m",
+                    "cuda",
+                    "pass",
+                    [
+                        (
+                            "metrics",
+                            launched_percentile_metrics([10, 11, 12], [1000, 1001, 1002], 1),
+                        ),
+                        (
+                            "performance",
+                            json!({"contract_passed": true, "speedup_x": 120.0}),
+                        ),
+                    ],
+                )]
             }))
             .expect("Fix: serialize blank provenance benchmark artifact JSON."),
         )
@@ -1778,25 +1760,12 @@ mod tests {
                 "schema_version": 2,
                 "selected_backend": "wgpu",
                 "summary": case_summary(1, 0),
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "correctness": {
-                            "Invalid": {
-                                "reason": "CUDA/WGPU output mismatch at row 17"
-                            }
-                        },
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002},
-                            "kernel_launches": {"samples": 1, "p50": 1}
-                        },
-                        "contract": cpu_sota_contract("release condition eval", &["wgpu"]),
-                        "performance": {"contract_passed": true, "speedup_x": 200.0}
-                    }
-                ]
+                "cases": [hidden_invalid_measured_case(
+                    "release.condition_eval.1m",
+                    "wgpu",
+                    cpu_sota_contract("release condition eval", &["wgpu"]),
+                    launched_percentile_metrics([10, 11, 12], [2000, 2001, 2002], 1),
+                )]
             }))
             .expect("Fix: serialize hidden-invalid WGPU benchmark artifact JSON."),
         )

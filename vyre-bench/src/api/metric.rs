@@ -28,6 +28,29 @@ pub struct MetricPoint {
     pub value: u64,
 }
 
+/// Nanoseconds elapsed since `started`, saturating at `u64::MAX`.
+///
+/// Every timed span in the benchmark reports nanoseconds as a `u64`, and
+/// `Duration::as_nanos` is a `u128`. Three spellings of the narrowing coexisted:
+/// a bare `as u64` cast, a `min(u64::MAX)` clamp, and a `try_from().unwrap_or`.
+/// The bare cast wraps: a span longer than about 18.4 seconds was reported as a
+/// short one, so the slowest samples read as the fastest. This is the single
+/// spelling, and it saturates.
+#[must_use]
+pub fn elapsed_ns(started: std::time::Instant) -> u64 {
+    narrow_nanos(started.elapsed().as_nanos())
+}
+
+/// The one narrowing of a nanosecond count to the `u64` every metric reports.
+///
+/// Split out from `elapsed_ns` so the saturation boundary is reachable without
+/// an `Instant` far enough in the past to overflow, which no monotonic clock
+/// can supply.
+#[must_use]
+fn narrow_nanos(nanos: u128) -> u64 {
+    u64::try_from(nanos).unwrap_or(u64::MAX)
+}
+
 #[must_use]
 pub fn digest64_buffers(buffers: &[Vec<u8>]) -> u64 {
     let mut hasher = blake3::Hasher::new();
@@ -173,5 +196,32 @@ mod tests {
             joined, split,
             "Fix: benchmark output digests must include buffer boundaries."
         );
+    }
+
+    /// A span longer than `u64::MAX` nanoseconds reports as the maximum rather
+    /// than wrapping to a small number. No monotonic clock can produce an
+    /// `Instant` 585 years in the past, so the boundary is driven through
+    /// `narrow_nanos`, the function `elapsed_ns` delegates the cast to. The
+    /// bare `as u64` cast this replaced wrapped `u64::MAX + 1` to 0.
+    #[test]
+    fn nanosecond_narrowing_saturates_rather_than_wrapping() {
+        assert_eq!(narrow_nanos(u128::from(u64::MAX) + 1), u64::MAX);
+        assert_eq!(narrow_nanos(u128::from(u64::MAX) * 4), u64::MAX);
+        assert_eq!(narrow_nanos(u128::from(u64::MAX)), u64::MAX);
+        assert_eq!(narrow_nanos(1_000_000), 1_000_000);
+        assert_eq!(narrow_nanos(0), 0);
+    }
+
+    /// A real span narrows to a plausible nonzero count without saturating.
+    #[test]
+    fn real_span_reports_between_zero_and_saturation() {
+        let started = std::time::Instant::now();
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        let observed = elapsed_ns(started);
+        assert!(
+            observed >= 1_000_000,
+            "2ms sleep must exceed 1ms: {observed}"
+        );
+        assert!(observed < u64::MAX, "a real span must not saturate");
     }
 }

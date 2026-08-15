@@ -3,10 +3,8 @@ use super::lex_columns::{
     u32s_to_bytes, LexColumns, LexColumnsContract, LexSample, LEX_SUITES,
 };
 use super::rust_source_words;
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
-use crate::api::metric::MetricPoint;
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
+use crate::api::metric::{elapsed_ns, MetricPoint};
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use vyre_foundation::ir::Program;
 use vyre_frontend_rust::lex::lexer::cpu_lexer::lex as lex_cpu;
@@ -33,15 +31,11 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-frontend-rust",
     suites: LEX_SUITES,
-    needs_gpu: true,
-    needs_network: false,
-    min_vram_bytes: None,
     min_input_bytes: Some((RUST_LEXER_REPEATS * 512) as u64),
     feature_set: &["rust-frontend", "gpu-lexer", "ir-lexer"],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<LexColumns> = CaseOps {
@@ -81,7 +75,7 @@ fn build_case(_ctx: &mut BenchContext) -> Result<LexColumns, BenchError> {
 
     let baseline_start = std::time::Instant::now();
     let (baseline_outputs, token_count) = rust_lexer_baseline_outputs(&source_bytes)?;
-    let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+    let baseline_wall_ns = elapsed_ns(baseline_start);
 
     Ok(LexColumns {
         program,

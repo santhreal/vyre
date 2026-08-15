@@ -8,13 +8,14 @@
 //! fast despite being serial. The GPU must amortize branch divergence via
 //! massive parallelism over independent program instances.
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::cases::harness::{
+    verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
-use crate::api::metric::BenchMetrics;
-use crate::api::suite::SuiteKind;
-use crate::cases::reference_sample::timed_reference;
+use crate::cases::reference_sample::{
+    measure_against_reference, referenced_bytes_touched, referenced_program, HostReferencePayload,
+    HostReferenced,
+};
 use rand::{RngExt, SeedableRng};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -32,122 +33,86 @@ const OP_MUL: u32 = 2;
 const OP_DUP: u32 = 3;
 const OP_SWAP: u32 = 4;
 
-const HONEST_SUITES: &[SuiteKind] = &[
-    SuiteKind::Honest,
-    SuiteKind::Deep,
-    SuiteKind::Release,
-    SuiteKind::Smoke,
-];
+struct BytecodeDispatchPrepared {
+    dispatch: HostReferencePayload,
+    instrs: Vec<u32>,
+}
 
-pub struct BytecodeDispatch;
-
-impl BenchCase for BytecodeDispatch {
-    fn id(&self) -> BenchId {
-        BenchId("interpreter.bytecode.dispatch.10m".to_string())
+impl HostReferenced for BytecodeDispatchPrepared {
+    fn dispatch(&self) -> &HostReferencePayload {
+        &self.dispatch
     }
 
-    fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Bytecode Interpreter 10M".to_string(),
-            description: "Stack-based bytecode VM: 4096 instances × 2500 instructions each"
-                .to_string(),
-            tags: vec![
-                "honest".to_string(),
-                "branch-heavy".to_string(),
-                "serial".to_string(),
-            ],
-            layer: BenchLayer::Honest,
-            workload: WorkloadClass::Honest,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-bench".to_string(),
-        }
-    }
-
-    fn suites(&self) -> &'static [SuiteKind] {
-        HONEST_SUITES
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some((TOTAL_INSTRS as u64) * 4 + (INSTANCE_COUNT as u64) * 4),
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
-    }
-
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        Some(PerformanceContract::cpu_sota_3x(
-            "Bytecode interpreter",
-            "hand-tuned C threaded interpreter",
-            "switch-dispatch loop with computed goto",
+    fn reference(&self) -> Result<Vec<u8>, BenchError> {
+        Ok(cpu_interpret(
+            &self.instrs,
+            INSTANCE_COUNT as usize,
+            INSTRS_PER_INSTANCE as usize,
         ))
     }
+}
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let prog = bytecode_program(INSTANCE_COUNT, INSTRS_PER_INSTANCE);
-        Ok(Box::new(prog))
+static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
+    "interpreter.bytecode.dispatch.10m",
+    "Bytecode Interpreter 10M",
+    "Stack-based bytecode VM: 4096 instances × 2500 instructions each",
+    &["honest", "branch-heavy", "serial"],
+    TOTAL_INSTRS as u64 * 4 + INSTANCE_COUNT as u64 * 4,
+    Some(ContractDescription {
+        primitive: "Bytecode interpreter",
+        baseline_crate: "hand-tuned C threaded interpreter",
+        baseline_name: "switch-dispatch loop with computed goto",
+        min_speedup_x: 3.0,
+    }),
+);
+
+static OPS: CaseOps<BytecodeDispatchPrepared> = CaseOps {
+    build: prepare_bytecode_dispatch,
+    measure: measure_against_reference::<BytecodeDispatchPrepared>,
+    verify: verify_exact,
+    program: referenced_program::<BytecodeDispatchPrepared>,
+    fingerprint: None,
+    bytes_touched: referenced_bytes_touched::<BytecodeDispatchPrepared>,
+};
+
+static CASE: HarnessCase<BytecodeDispatchPrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
+
+/// One instruction trace, one opcode plus immediate per word.
+///
+/// The stream is seeded, so the dispatched bytes are the same on every sample;
+/// generating it once during preparation keeps that host work out of the sampled
+/// loop entirely.
+fn instruction_trace() -> Vec<u32> {
+    let mut rng = rand::rngs::StdRng::seed_from_u64(0xCAFE_BABE);
+    let mut instrs = vec![0u32; TOTAL_INSTRS as usize];
+    for instr in &mut instrs {
+        let op = rng.random_range(0..5u32);
+        let imm = if op == OP_PUSH {
+            rng.random_range(1..256u32)
+        } else {
+            0
+        };
+        *instr = op | (imm << 8);
     }
+    instrs
+}
 
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prog = crate::api::case::prepared_program(prepared)?;
-        let mut rng = rand::rngs::StdRng::seed_from_u64(0xCAFE_BABE);
+fn prepare_bytecode_dispatch(
+    _ctx: &mut BenchContext,
+) -> Result<BytecodeDispatchPrepared, BenchError> {
+    let instrs = instruction_trace();
+    let inputs = vec![vyre_primitives::wire::pack_u32_slice(&instrs)];
 
-        // Generate random instruction trace
-        let mut instrs = vec![0u32; TOTAL_INSTRS as usize];
-        for instr in &mut instrs {
-            let op = rng.random_range(0..5u32);
-            let imm = if op == OP_PUSH {
-                rng.random_range(1..256u32)
-            } else {
-                0
-            };
-            *instr = op | (imm << 8);
-        }
-
-        let instrs_bytes = vyre_primitives::wire::pack_u32_slice(&instrs);
-        let inputs = vec![instrs_bytes];
-
-        // GPU dispatch
-        let timed = ctx
-            .dispatch_timed(prog, &inputs, &ctx.dispatch_config)
-            .map_err(|e| BenchError::BackendFailed(e.to_string()))?;
-        let outputs = timed.outputs;
-
-        let (cpu_results, elapsed_ref) = timed_reference(|| {
-            cpu_interpret(
-                &instrs,
-                INSTANCE_COUNT as usize,
-                INSTRS_PER_INSTANCE as usize,
-            )
-        });
-
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
-                input_bytes: Some(inputs.iter().map(Vec::len).sum::<usize>() as u64),
-                output_bytes: Some(outputs.iter().map(Vec::len).sum::<usize>() as u64),
-                ..Default::default()
-            },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(elapsed_ref),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(vec![cpu_results]),
-        })
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+    Ok(BytecodeDispatchPrepared {
+        dispatch: HostReferencePayload::host_buffers(
+            bytecode_program(INSTANCE_COUNT, INSTRS_PER_INSTANCE),
+            inputs,
+        ),
+        instrs,
+    })
 }
 
 fn bytecode_program(instance_count: u32, instrs_per_instance: u32) -> Program {
@@ -286,7 +251,7 @@ fn cpu_interpret(instrs: &[u32], instances: usize, instrs_per: usize) -> Vec<u8>
 }
 
 inventory::submit! {
-    &BytecodeDispatch as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }
 
 #[cfg(test)]

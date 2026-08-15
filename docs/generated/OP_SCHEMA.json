@@ -16298,76 +16298,81 @@
       "composition_chain": [
         {
           "depth": 0,
-          "operation": "vyre.program.root",
+          "operation": "vyre-libs::security::aliases_dataflow",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "inline::vyre-libs::security::aliases_dataflow",
           "registered": false
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-primitives::bitset::or_into",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-primitives::bitset::or_into",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-primitives::bitset::zero",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-primitives::bitset::zero",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-libs::security::flows_to",
           "registered": true
         },
         {
           "depth": 2,
-          "operation": "vyre-primitives::graph::csr_forward_traverse",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-libs::security::flows_to",
+          "operation": "vyre-primitives::bitset::or_into",
           "registered": true
         },
         {
           "depth": 2,
+          "operation": "vyre-primitives::bitset::zero",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::bitset::zero",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::security::flows_to",
+          "registered": true
+        },
+        {
+          "depth": 3,
           "operation": "vyre-primitives::graph::csr_forward_traverse",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
+          "operation": "vyre-libs::security::flows_to",
+          "registered": true
+        },
+        {
+          "depth": 3,
+          "operation": "vyre-primitives::graph::csr_forward_traverse",
+          "registered": true
+        },
+        {
+          "depth": 2,
           "operation": "vyre-primitives::bitset::or_into",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-primitives::bitset::or_into",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-primitives::bitset::and",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-primitives::bitset::and",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-primitives::bitset::or_into",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-primitives::bitset::or_into",
           "registered": true
         }
@@ -18449,6 +18454,11 @@
       "composition_chain": [
         {
           "depth": 0,
+          "operation": "vyre-libs::security::taint_kill",
+          "registered": true
+        },
+        {
+          "depth": 1,
           "operation": "vyre-primitives::bitset::and_not",
           "registered": true
         }

@@ -171,7 +171,10 @@ pub fn try_aliases_dataflow(
             buffer
         })
         .collect();
-    Ok(fused.with_rewritten_buffers(buffers))
+    Ok(crate::region::tag_program(
+        OP_ID,
+        fused.with_rewritten_buffers(buffers),
+    ))
 }
 
 /// CPU oracle. Mirrors the GPU semantic over a host-side dataflow

@@ -2,6 +2,7 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 mod graph_sweep_support;
 use graph_sweep_support::{bitset_words, generated_csr_frontier};
 
@@ -92,7 +93,17 @@ fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual = persistent_bfs::cpu_ref(
-            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask,
+                max_iters,
+            },
+            &frontier,
         );
         assert_eq!(actual, expected, "Fix: persistent_bfs volume case {case}");
     }

@@ -4,30 +4,13 @@ use super::super::checks::*;
 use super::super::gate_inputs::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
-    let Some(matrix) = first_json_evidence(
-        requirement,
-        base_dir,
-        "release-workload-matrix.json",
-        failures,
-    ) else {
+    let Some(matrix) = release_workload_matrix(requirement, base_dir, failures) else {
         return;
     };
-    let required = matrix
-        .get("required_closed_families")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let matched = matrix
-        .get("matched_required_families")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let release_cases = matrix
-        .get("release_suite_case_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let required = u64_field(&matrix, "required_closed_families", 0);
+    let matched = u64_field(&matrix, "matched_required_families", 0);
+    let release_cases = u64_field(&matrix, "release_suite_case_count", 0);
+    let blockers = array_len(&matrix, "blockers");
     if required < 12 {
         failures.push(format!(
             "requirement `proof-workloads-12` matrix requires only {required} workload families; needs at least 12"

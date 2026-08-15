@@ -103,7 +103,7 @@ pub(crate) fn run(args: &[String]) {
         },
     };
     crate::output_arg::write_json(&output, &state);
-    crate::output_arg::report_evidence_artifact("launch-state", &output, state.blockers.len());
+    crate::output_arg::report_evidence_artifact("launch-state", &output, &state.blockers);
 }
 
 fn completion_marker_complete(path: &Path) -> bool {

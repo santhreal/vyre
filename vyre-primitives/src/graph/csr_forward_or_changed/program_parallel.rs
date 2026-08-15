@@ -6,6 +6,7 @@ use vyre_foundation::MemoryOrdering;
 
 use super::layout::{CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID};
 use crate::graph::edge_scan::csr_edge_expand_nodes;
+use crate::graph::frontier_bits::{bind_bit_address, bit_is_set, BitAccess};
 use crate::graph::program_graph::{push_frontier_changed_buffers, ProgramGraphShape};
 
 /// Parallel in-place expansion program for production fixed-point drivers.
@@ -191,23 +192,23 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
         } else {
             ungated_src_active
         };
-        return vec![
-            Node::let_bind(
-                in_bounds.as_str(),
-                Expr::lt(src.clone(), Expr::u32(shape.node_count)),
-            ),
-            Node::let_bind(
-                word_idx.as_str(),
-                Expr::select(
-                    Expr::var(in_bounds.as_str()),
-                    Expr::shr(src.clone(), Expr::u32(5)),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::let_bind(
-                bit_mask.as_str(),
-                Expr::shl(Expr::u32(1), Expr::bitand(src.clone(), Expr::u32(31))),
-            ),
+        let mut preamble = vec![Node::let_bind(
+            in_bounds.as_str(),
+            Expr::lt(src.clone(), Expr::u32(shape.node_count)),
+        )];
+        // The snapshot path reads its own source bit rather than calling
+        // `frontier_bits::when_bit_set`: the read must land BEFORE the barrier and
+        // the guard AFTER it, so the address, the load and the test are three
+        // separate statements here instead of one probe. The word index is
+        // `select`ed to zero out of bounds so the pre-barrier load stays in range
+        // for the tail lanes of the last group.
+        preamble.extend(bind_bit_address(
+            &src,
+            word_idx.as_str(),
+            bit_mask.as_str(),
+            |word| Expr::select(Expr::var(in_bounds.as_str()), word, Expr::u32(0)),
+        ));
+        preamble.extend([
             Node::let_bind(
                 src_word.as_str(),
                 Expr::load(frontier_out, Expr::var(word_idx.as_str())),
@@ -218,27 +219,24 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
                 Expr::ne(Expr::var(src_active.as_str()), Expr::u32(0)),
                 edge_scan(),
             ),
-        ];
+        ]);
+        return preamble;
     }
 
-    let body = vec![
-        Node::let_bind(word_idx.as_str(), Expr::shr(src.clone(), Expr::u32(5))),
-        Node::let_bind(
-            bit_mask.as_str(),
-            Expr::shl(Expr::u32(1), Expr::bitand(src.clone(), Expr::u32(31))),
-        ),
-        Node::let_bind(
-            src_word.as_str(),
-            Expr::load(frontier_out, Expr::var(word_idx.as_str())),
-        ),
-        Node::if_then(
-            Expr::ne(
-                Expr::bitand(Expr::var(src_word.as_str()), Expr::var(bit_mask.as_str())),
-                Expr::u32(0),
-            ),
-            edge_scan(),
-        ),
-    ];
+    let mut body =
+        bind_bit_address(&src, word_idx.as_str(), bit_mask.as_str(), |word| word).to_vec();
+    body.push(Node::let_bind(
+        src_word.as_str(),
+        Expr::load(frontier_out, Expr::var(word_idx.as_str())),
+    ));
+    body.push(Node::if_then(
+        bit_is_set(BitAccess {
+            word: word_idx.as_str(),
+            mask: bit_mask.as_str(),
+            value: src_word.as_str(),
+        }),
+        edge_scan(),
+    ));
 
     vec![Node::if_then(
         Expr::lt(Expr::gid_x(), Expr::u32(shape.node_count)),

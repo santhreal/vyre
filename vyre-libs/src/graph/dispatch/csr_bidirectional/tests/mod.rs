@@ -4,6 +4,7 @@ use crate::test_support::NeverDispatches;
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 mod reference_closure_tests;
 
@@ -105,13 +106,17 @@ fn linear_closure_with_scratch(
     let (off, tgt, msk) = linear_graph();
     bidirectional_closure_via_with_scratch_into(
         dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters,
+        },
         seed,
-        0xFFFF_FFFF,
-        max_iters,
         scratch,
         current,
         next,
@@ -168,24 +173,49 @@ fn allow_mask_filters_out_wrong_edge_kinds() {
 #[test]
 fn closure_reaches_full_chain() {
     let (off, tgt, msk) = linear_graph();
-    let out = reference_bidirectional_closure(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 5);
+    let out = reference_bidirectional_closure(
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            5,
+        ),
+        &[0b0001],
+    );
     assert_eq!(out, vec![0b1111]);
 }
 
 #[test]
 fn closure_into_matches_owned_closure() {
     let (off, tgt, msk) = linear_graph();
-    let owned = reference_bidirectional_closure(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 5);
+    let owned = reference_bidirectional_closure(
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            5,
+        ),
+        &[0b0001],
+    );
     let mut current = Vec::new();
     let mut next = Vec::new();
     reference_bidirectional_closure_into(
-        4,
-        &off,
-        &tgt,
-        &msk,
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            5,
+        ),
         &[0b0001],
-        0xFFFF_FFFF,
-        5,
         &mut current,
         &mut next,
     );
@@ -196,8 +226,30 @@ fn closure_into_matches_owned_closure() {
 fn closure_matches_primitive_directly() {
     let (off, tgt, msk) = linear_graph();
     let seed = [0b0001];
-    let via_substrate = reference_bidirectional_closure(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, 5);
-    let via_primitive = reference_csr_bidir_closure(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, 5);
+    let via_substrate = reference_bidirectional_closure(
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            5,
+        ),
+        &seed,
+    );
+    let via_primitive = reference_csr_bidir_closure(
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            5,
+        ),
+        &seed,
+    );
     assert_eq!(via_substrate, via_primitive);
 }
 
@@ -428,13 +480,16 @@ fn closure_empty_graph_validates_and_returns_empty_without_program_or_dispatch()
 
     bidirectional_closure_via_with_scratch_into(
         &NeverDispatches("empty bidirectional closure must not dispatch"),
-        0,
-        &[0],
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 0,
+                edge_offsets: &[0],
+                edge_targets: &[],
+                edge_kind_mask: &[],
+            },
+            4,
+        ),
         &[],
-        &[],
-        &[],
-        0xFFFF_FFFF,
-        4,
         &mut scratch,
         &mut current,
         &mut next,

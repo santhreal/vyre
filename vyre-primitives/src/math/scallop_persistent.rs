@@ -2,12 +2,6 @@ use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
 use vyre_foundation::ir::{Expr, Node};
 use vyre_foundation::MemoryOrdering;
 
-pub(crate) const fn ceil_div_u32(value: u32, divisor: u32) -> u32 {
-    let full = value / divisor;
-    let tail = if value % divisor == 0 { 0 } else { 1 };
-    full + tail
-}
-
 fn workgroup_lineage_loop(
     iteration_var: &'static str,
     chunk_var: &'static str,
@@ -62,7 +56,7 @@ pub(crate) fn single_word_lineage_body(
     lanes: u32,
 ) -> Vec<Node> {
     let lane = Expr::InvocationId { axis: 0 };
-    let cell_chunks = ceil_div_u32(cells, lanes).max(1);
+    let cell_chunks = cells.div_ceil(lanes).max(1);
     let cell = Expr::add(
         Expr::mul(Expr::var("__sj_chunk"), Expr::u32(lanes)),
         lane.clone(),
@@ -235,7 +229,7 @@ pub(crate) fn wide_lineage_body(
     lanes: u32,
 ) -> Vec<Node> {
     let lane = Expr::InvocationId { axis: 0 };
-    let cell_chunks = ceil_div_u32(cells, lanes).max(1);
+    let cell_chunks = cells.div_ceil(lanes).max(1);
     let cell = Expr::add(
         Expr::mul(Expr::var("__sjw_chunk"), Expr::u32(lanes)),
         lane.clone(),

@@ -55,8 +55,9 @@ pub(crate) use case_summary::{
     benchmark_report_summary_matches_case_evidence,
 };
 pub(crate) use cpu_sota_100x::{
-    benchmark_case_has_cpu_sota_contract, benchmark_case_proves_cpu_sota_100x,
-    cpu_sota_100x_case_counts, inspect_cpu_sota_100x_case_count_consistency,
+    benchmark_case_claims_contract_win, benchmark_case_has_cpu_sota_contract,
+    benchmark_case_proves_cpu_sota_100x, cpu_sota_100x_case_counts,
+    inspect_cpu_sota_100x_case_count_consistency,
 };
 pub(crate) use evidence_blockers::benchmark_evidence_blocker_issues;
 pub(crate) use fused_execution_dag::benchmark_fused_execution_dag_issues;

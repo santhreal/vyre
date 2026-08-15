@@ -177,13 +177,8 @@ mod tests {
     fn cuda_release_axes_require_scalar_axes_from_source_artifacts() {
         let workspace = EvidenceWorkspace::new();
         let artifacts = workspace.cuda_release_axis_artifacts("release.scalar-required", 3);
-        let axes = serde_json::json!({
-            "source_artifacts": artifacts
-        });
-        let cuda_suite = serde_json::json!({
-            "backend": "cuda",
-            "artifacts": artifacts
-        });
+        let axes = EvidenceWorkspace::cuda_release_axes(&artifacts);
+        let cuda_suite = EvidenceWorkspace::cuda_release_suite(&artifacts);
 
         let issues = cuda_release_axes_source_artifact_issues(workspace.path(), &axes, &cuda_suite);
 
@@ -215,10 +210,7 @@ mod tests {
             "max_vram_mib": 24576,
             "source_artifacts": artifacts
         });
-        let cuda_suite = serde_json::json!({
-            "backend": "cuda",
-            "artifacts": artifacts
-        });
+        let cuda_suite = EvidenceWorkspace::cuda_release_suite(&artifacts);
 
         let issues = cuda_release_axes_source_artifact_issues(workspace.path(), &axes, &cuda_suite);
 

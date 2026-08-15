@@ -248,7 +248,7 @@ fn csr_out_degree_profile(
 mod tests {
     use super::*;
     use vyre_driver::megakernel_execution::{
-        plan_megakernel_memory_budget, MegakernelExecutionTopology,
+        plan_megakernel_memory_budget, MegakernelByteLayout, MegakernelExecutionTopology,
     };
     use vyre_libs::device::device_resident_token_fact_graph::{
         plan_device_resident_token_fact_graph, TokenFactEdge, TokenFactEdgeKind, TokenFactNode,
@@ -286,12 +286,14 @@ mod tests {
         let memory = plan_megakernel_memory_budget(
             MegakernelExecutionTopology::SparseFrontier,
             cuda.graph_shape,
-            cuda.node_record_bytes,
-            cuda.edge_record_bytes,
-            64,
-            cuda.payload_bytes,
-            16,
-            512,
+            MegakernelByteLayout {
+                bytes_per_node: cuda.node_record_bytes,
+                bytes_per_edge: cuda.edge_record_bytes,
+                frontier_bytes: 64,
+                scratch_bytes: cuda.payload_bytes,
+                output_bytes: 16,
+                budget_bytes: 512,
+            },
         )
         .expect("Fix: adapted token/fact graph should feed CUDA memory planning");
         assert_eq!(memory.graph_bytes, 128);

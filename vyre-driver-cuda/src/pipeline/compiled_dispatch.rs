@@ -18,12 +18,12 @@ use crate::backend::resident_dispatch::{next_dispatch_binding, CudaResidentDispa
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec, resize_vec_slots};
 use crate::backend::CachedCudaGraph;
 use crate::numeric::CUDA_NUMERIC;
-use crate::pipeline::materialized_cache::{materialized_input_key, MaterializedInputKey};
 use crate::pipeline::{
     cuda_graph_lane_count_for_batch, cuda_graph_replay_enabled, CudaCompiledPipeline,
     MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
     MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE,
 };
+use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
 
 fn compiled_graph_batch_inputs<'a>(
     batches: &'a [&[&[u8]]],
@@ -102,14 +102,14 @@ fn compiled_graph_lane_mut<'a>(
 #[derive(Clone, Copy, Debug)]
 struct MaterializedBatchMiss {
     batch_index: usize,
-    input_key: MaterializedInputKey,
+    input_key: ExactInputKey,
 }
 
 #[derive(Clone, Copy, Debug)]
 struct LaunchedMaterializedBatch {
     lane: usize,
     batch_index: usize,
-    input_key: MaterializedInputKey,
+    input_key: ExactInputKey,
     replay_stats: CudaGraphReplayStats,
 }
 
@@ -182,7 +182,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         }
         let started = std::time::Instant::now();
         let mut outputs = reserved_vec(self.prepared.output_binding_indices.len(), "timed output")?;
-        let input_key = materialized_input_key(inputs)?;
+        let input_key = exact_input_key(inputs)?;
         if self.materialized_output_cache_hit_with_key_into(inputs, &input_key, &mut outputs)? {
             let wall_ns = CUDA_NUMERIC
                 .elapsed_nanos_u64(started, "cuda graph materialized timed hit wall latency")?;
@@ -277,7 +277,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
                 .await_result_into(outputs)?;
             return Ok(());
         }
-        let input_key = materialized_input_key(inputs)?;
+        let input_key = exact_input_key(inputs)?;
         if self.materialized_output_cache_hit_with_key_into(inputs, &input_key, outputs)? {
             return Ok(());
         }
@@ -1022,16 +1022,15 @@ impl CudaCompiledPipeline {
         outputs: &mut Vec<OutputBuffers>,
     ) -> Result<SmallVec<[MaterializedBatchMiss; MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE]>, BackendError>
     {
-        let mut input_keys = SmallVec::<
-            [(usize, MaterializedInputKey); MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE],
-        >::new();
+        let mut input_keys =
+            SmallVec::<[(usize, ExactInputKey); MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE]>::new();
         reserve_smallvec(
             &mut input_keys,
             batches.len(),
             "cuda graph materialized batch input key",
         )?;
         for (batch_index, inputs) in batches.iter().enumerate() {
-            input_keys.push((batch_index, materialized_input_key(inputs)?));
+            input_keys.push((batch_index, exact_input_key(inputs)?));
         }
         let mut miss_entries =
             SmallVec::<[MaterializedBatchMiss; MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE]>::new();
@@ -1082,7 +1081,7 @@ impl CudaCompiledPipeline {
     fn materialized_output_cache_hit_with_key_into(
         &self,
         inputs: &[&[u8]],
-        input_key: &MaterializedInputKey,
+        input_key: &ExactInputKey,
         outputs: &mut OutputBuffers,
     ) -> Result<bool, BackendError> {
         let snapshot = {
@@ -1102,7 +1101,7 @@ impl CudaCompiledPipeline {
     fn remember_materialized_output_cache_with_key(
         &self,
         inputs: &[&[u8]],
-        input_key: MaterializedInputKey,
+        input_key: ExactInputKey,
         outputs: &OutputBuffers,
     ) -> Result<(), BackendError> {
         let Some(entry) = MaterializedPipelineOutputCacheEntry::new_with_key_if_cacheable(
@@ -1230,7 +1229,7 @@ impl CudaCompiledPipeline {
     fn take_cached_graph_with_key(
         &self,
         inputs: &[&[u8]],
-        input_key: &MaterializedInputKey,
+        input_key: &ExactInputKey,
     ) -> Result<Option<CachedCudaGraph>, BackendError> {
         Ok(self
             .take_cached_graph_with_replay_state(inputs, input_key)?
@@ -1240,7 +1239,7 @@ impl CudaCompiledPipeline {
     fn take_cached_graph_with_replay_state(
         &self,
         inputs: &[&[u8]],
-        input_key: &MaterializedInputKey,
+        input_key: &ExactInputKey,
     ) -> Result<Option<CachedGraphReplaySelection>, BackendError> {
         let mut graphs = self.graph_cache.lock().map_err(|_| {
             BackendError::DispatchFailed {

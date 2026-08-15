@@ -14,15 +14,13 @@
 
 use super::byte_pack::u32_bytes;
 use super::conditional::{
-    conditional_measure, conditional_program, pattern_streams, verify_sparse_outputs,
-    ConditionalLabels, ConditionalPrepared, HONEST_SUITES,
+    conditional_measure, conditional_program, file_metadata_predicates, fired_append,
+    pattern_index_binds, pattern_streams, rule_conditions, rule_fires, stream_predicates,
+    verify_sparse_outputs, ConditionalLabels, ConditionalPrepared, PatternStreams,
 };
 use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
-use super::mix32;
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, DeterminismClass,
-    WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
+use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use rayon::prelude::*;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -58,34 +56,25 @@ pub(crate) const LABELS: ConditionalLabels = ConditionalLabels {
     wire_context: "conditional-eval output",
 };
 
-static WORKLOAD: WorkloadDescription = WorkloadDescription {
-    id: "conditions.yara_like.eval.1m",
-    name: "YARA-like Conditional Eval 1M",
-    summary: "Evaluate 1M branchy rule conditions over pattern flags, counts, offsets, filesize, and entropy metadata",
-    tags: &[
+static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
+    "conditions.yara_like.eval.1m",
+    "YARA-like Conditional Eval 1M",
+    "Evaluate 1M branchy rule conditions over pattern flags, counts, offsets, filesize, and entropy metadata",
+    &[
         "honest",
         "conditions",
         "rule-engine",
         "cpu-favorable",
         "dataflow-adjacent",
     ],
-    layer: BenchLayer::Honest,
-    workload: WorkloadClass::Honest,
-    determinism: DeterminismClass::Deterministic,
-    owner_crate: "vyre-bench",
-    suites: HONEST_SUITES,
-    needs_gpu: true,
-    needs_network: false,
-    min_vram_bytes: Some(PATTERN_COUNT as u64 * 12 + RULE_COUNT as u64 * 40 + 4),
-    min_input_bytes: None,
-    feature_set: &[],
-    contract: Some(ContractDescription {
+    PATTERN_COUNT as u64 * 12 + RULE_COUNT as u64 * 40 + 4,
+    Some(ContractDescription {
         primitive: "YARA-like boolean rule-condition evaluation",
         baseline_crate: "rayon",
         baseline_name: "Rayon-parallel scalar short-circuit rule loop",
         min_speedup_x: 100.0,
     }),
-};
+);
 
 static OPS: CaseOps<ConditionalPrepared> = CaseOps {
     build: prepare_conditional_eval,
@@ -144,73 +133,29 @@ fn condition_program() -> Program {
             Node::let_bind("tid", Expr::gid_x()),
             Node::if_then(
                 Expr::lt(Expr::var("tid"), Expr::u32(RULE_COUNT)),
-                vec![
-                    Node::let_bind("pa", Expr::load("rule_a", Expr::var("tid"))),
-                    Node::let_bind("pb", Expr::load("rule_b", Expr::var("tid"))),
-                    Node::let_bind("pc", Expr::load("rule_c", Expr::var("tid"))),
-                    Node::let_bind("pd", Expr::load("rule_d", Expr::var("tid"))),
-                    Node::let_bind(
-                        "both_literals",
-                        Expr::and(
-                            Expr::ne(Expr::load("matched", Expr::var("pa")), Expr::u32(0)),
-                            Expr::ne(Expr::load("matched", Expr::var("pb")), Expr::u32(0)),
-                        ),
+                [
+                    pattern_index_binds(
+                        Expr::load("rule_a", Expr::var("tid")),
+                        Expr::load("rule_b", Expr::var("tid")),
+                        Expr::load("rule_c", Expr::var("tid")),
+                        Expr::load("rule_d", Expr::var("tid")),
                     ),
-                    Node::let_bind(
-                        "count_ok",
-                        Expr::ge(
-                            Expr::load("counts", Expr::var("pc")),
-                            Expr::load("min_count", Expr::var("tid")),
-                        ),
+                    stream_predicates(
+                        Expr::load("min_count", Expr::var("tid")),
+                        Expr::load("max_offset", Expr::var("tid")),
                     ),
-                    Node::let_bind(
-                        "offset_ok",
-                        Expr::le(
-                            Expr::load("offsets", Expr::var("pd")),
-                            Expr::load("max_offset", Expr::var("tid")),
-                        ),
+                    // One file per run: its size and entropy are graph constants,
+                    // not lane-indexed loads.
+                    file_metadata_predicates(
+                        Expr::u32(FILESIZE_BYTES),
+                        Expr::load("min_size", Expr::var("tid")),
+                        Expr::load("max_size", Expr::var("tid")),
+                        Expr::u32(ENTROPY_MILLIBITS),
+                        Expr::load("entropy_limit", Expr::var("tid")),
                     ),
-                    Node::let_bind(
-                        "size_ok",
-                        Expr::and(
-                            Expr::ge(
-                                Expr::u32(FILESIZE_BYTES),
-                                Expr::load("min_size", Expr::var("tid")),
-                            ),
-                            Expr::le(
-                                Expr::u32(FILESIZE_BYTES),
-                                Expr::load("max_size", Expr::var("tid")),
-                            ),
-                        ),
-                    ),
-                    Node::let_bind(
-                        "entropy_ok",
-                        Expr::le(
-                            Expr::u32(ENTROPY_MILLIBITS),
-                            Expr::load("entropy_limit", Expr::var("tid")),
-                        ),
-                    ),
-                    Node::let_bind(
-                        "fired",
-                        Expr::and(
-                            Expr::and(Expr::var("both_literals"), Expr::var("count_ok")),
-                            Expr::and(
-                                Expr::var("offset_ok"),
-                                Expr::and(Expr::var("size_ok"), Expr::var("entropy_ok")),
-                            ),
-                        ),
-                    ),
-                    Node::if_then(
-                        Expr::var("fired"),
-                        vec![
-                            Node::let_bind(
-                                "slot",
-                                Expr::atomic_add("fired_count", Expr::u32(0), Expr::u32(1)),
-                            ),
-                            Node::store("fired_rules", Expr::var("slot"), Expr::var("tid")),
-                        ],
-                    ),
-                ],
+                    fired_append("fired_rules"),
+                ]
+                .concat(),
             ),
         ],
     )
@@ -232,17 +177,18 @@ fn prepare_conditional_eval(ctx: &mut BenchContext) -> Result<ConditionalPrepare
     let mut max_size = Vec::with_capacity(RULE_COUNT as usize);
     let mut entropy_limit = Vec::with_capacity(RULE_COUNT as usize);
 
+    // One rule per lane, its nine parameters spread across nine buffers.
     for rule in 0..RULE_COUNT {
-        let seed = mix32(rule);
-        rule_a.push(seed & (PATTERN_COUNT - 1));
-        rule_b.push(mix32(seed ^ 0x9E37_79B9) & (PATTERN_COUNT - 1));
-        rule_c.push(mix32(seed ^ 0x85EB_CA6B) & (PATTERN_COUNT - 1));
-        rule_d.push(mix32(seed ^ 0xC2B2_AE35) & (PATTERN_COUNT - 1));
-        min_count.push((seed >> 5) % 7 + 1);
-        max_offset.push(FILESIZE_BYTES - ((seed >> 11) % (FILESIZE_BYTES / 2)));
-        min_size.push(FILESIZE_BYTES - ((seed >> 17) & 4095));
-        max_size.push(FILESIZE_BYTES + ((seed >> 3) & 8191));
-        entropy_limit.push(600 + ((seed >> 9) % 320));
+        let conditions = rule_conditions(rule, PATTERN_COUNT, FILESIZE_BYTES);
+        rule_a.push(conditions.pattern_a);
+        rule_b.push(conditions.pattern_b);
+        rule_c.push(conditions.pattern_c);
+        rule_d.push(conditions.pattern_d);
+        min_count.push(conditions.min_count);
+        max_offset.push(conditions.max_offset);
+        min_size.push(conditions.min_size);
+        max_size.push(conditions.max_size);
+        entropy_limit.push(conditions.entropy_limit);
     }
 
     let inputs = vec![
@@ -269,21 +215,12 @@ fn prepare_conditional_eval(ctx: &mut BenchContext) -> Result<ConditionalPrepare
     )?;
 
     let baseline_start = std::time::Instant::now();
-    let baseline_output = cpu_conditional_eval_raw(
-        &matched,
-        &counts,
-        &offsets,
-        &rule_a,
-        &rule_b,
-        &rule_c,
-        &rule_d,
-        &min_count,
-        &max_offset,
-        &min_size,
-        &max_size,
-        &entropy_limit,
-    );
-    let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+    let baseline_output = cpu_conditional_eval_raw(&PatternStreams {
+        matched: &matched,
+        counts: &counts,
+        offsets: &offsets,
+    });
+    let baseline_wall_ns = elapsed_ns(baseline_start);
 
     Ok(ConditionalPrepared {
         program,
@@ -302,45 +239,19 @@ fn prepare_conditional_eval(ctx: &mut BenchContext) -> Result<ConditionalPrepare
     })
 }
 
-#[allow(clippy::too_many_arguments)]
-fn cpu_conditional_eval_raw(
-    matched: &[u32],
-    counts: &[u32],
-    offsets: &[u32],
-    rule_a: &[u32],
-    rule_b: &[u32],
-    rule_c: &[u32],
-    rule_d: &[u32],
-    min_count: &[u32],
-    max_offset: &[u32],
-    min_size: &[u32],
-    max_size: &[u32],
-    entropy_limit: &[u32],
-) -> Vec<Vec<u8>> {
-    let mut fired_rules: Vec<u32> = (0..RULE_COUNT as usize)
+/// The host oracle: the fired rule set, sorted, with its count in the first
+/// buffer and the identifiers padded out to the sparse buffer's declared length.
+fn cpu_conditional_eval_raw(streams: &PatternStreams<'_>) -> Vec<Vec<u8>> {
+    let mut fired_rules: Vec<u32> = (0..RULE_COUNT)
         .into_par_iter()
-        .map(|rule| {
-            if matched[rule_a[rule] as usize] == 0 {
-                return None;
-            }
-            if matched[rule_b[rule] as usize] == 0 {
-                return None;
-            }
-            if counts[rule_c[rule] as usize] < min_count[rule] {
-                return None;
-            }
-            if offsets[rule_d[rule] as usize] > max_offset[rule] {
-                return None;
-            }
-            if FILESIZE_BYTES < min_size[rule] || FILESIZE_BYTES > max_size[rule] {
-                return None;
-            }
-            if ENTROPY_MILLIBITS > entropy_limit[rule] {
-                return None;
-            }
-            Some(rule as u32)
+        .filter(|rule| {
+            rule_fires(
+                streams,
+                &rule_conditions(*rule, PATTERN_COUNT, FILESIZE_BYTES),
+                FILESIZE_BYTES,
+                ENTROPY_MILLIBITS,
+            )
         })
-        .flatten()
         .collect();
     fired_rules.sort_unstable();
     let count = fired_rules.len() as u32;
@@ -402,7 +313,10 @@ mod tests {
     #[test]
     fn harness_case_keeps_its_registered_identity_and_contract() {
         assert_eq!(CONDITIONAL_EVAL.id().0, "conditions.yara_like.eval.1m");
-        assert_eq!(CONDITIONAL_EVAL.suites(), HONEST_SUITES);
+        assert_eq!(
+            CONDITIONAL_EVAL.suites(),
+            crate::cases::harness::HONEST_SUITES
+        );
 
         let contract = CONDITIONAL_EVAL
             .performance_contract()

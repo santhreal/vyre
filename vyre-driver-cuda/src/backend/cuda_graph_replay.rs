@@ -11,7 +11,7 @@ use super::cuda_graph::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
 use super::ordering::{classify_dense_permutation, DensePermutationDefect};
 use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};
-use crate::input_identity::{exact_input_key, ExactInputKey};
+use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
 
 impl CachedCudaGraph {
     pub(crate) fn input_shape_matches(&self, inputs: &[&[u8]]) -> bool {

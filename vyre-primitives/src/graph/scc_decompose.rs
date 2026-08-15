@@ -17,6 +17,8 @@ use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::bitset::bitset_words;
+use crate::graph::frontier_bits::{bind_bit_address, bind_word, bit_is_set, BitAccess};
+use crate::graph::lane_grid;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::scc_decompose";
@@ -26,23 +28,7 @@ pub const SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid for one SCC decomposition pass over `node_count` lanes.
 #[must_use]
 pub const fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
-    [
-        ceil_div_u32(at_least_one(node_count), SCC_DECOMPOSE_WORKGROUP_SIZE[0]),
-        1,
-        1,
-    ]
-}
-
-const fn at_least_one(value: u32) -> u32 {
-    if value == 0 {
-        1
-    } else {
-        value
-    }
-}
-
-const fn ceil_div_u32(value: u32, divisor: u32) -> u32 {
-    ((value - 1) / divisor) + 1
+    lane_grid(node_count, SCC_DECOMPOSE_WORKGROUP_SIZE[0])
 }
 
 /// Build a Program that marks every node in the intersection of
@@ -70,33 +56,42 @@ pub fn scc_decompose(
     let t = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
 
-    let body = vec![
-        Node::let_bind("word_idx", Expr::shr(t.clone(), Expr::u32(5))),
-        Node::let_bind(
-            "bit",
-            Expr::shl(Expr::u32(1), Expr::bitand(t.clone(), Expr::u32(31))),
+    // One bit address serves both bitsets: forward and backward reach share the
+    // node domain, so the pivot's SCC is exactly the nodes whose bit is set in
+    // both. Addressing them separately is what lets the two sides disagree.
+    let mut body = bind_bit_address(&t, "word_idx", "bit", |word| word).to_vec();
+    body.extend([
+        bind_word(
+            forward_bitset,
+            BitAccess {
+                word: "word_idx",
+                mask: "bit",
+                value: "fwd_word",
+            },
         ),
-        Node::let_bind(
-            "fwd_word",
-            Expr::load(forward_bitset, Expr::var("word_idx")),
-        ),
-        Node::let_bind(
-            "bwd_word",
-            Expr::load(backward_bitset, Expr::var("word_idx")),
+        bind_word(
+            backward_bitset,
+            BitAccess {
+                word: "word_idx",
+                mask: "bit",
+                value: "bwd_word",
+            },
         ),
         Node::let_bind(
             "fwd_set",
-            Expr::ne(
-                Expr::bitand(Expr::var("fwd_word"), Expr::var("bit")),
-                Expr::u32(0),
-            ),
+            bit_is_set(BitAccess {
+                word: "word_idx",
+                mask: "bit",
+                value: "fwd_word",
+            }),
         ),
         Node::let_bind(
             "bwd_set",
-            Expr::ne(
-                Expr::bitand(Expr::var("bwd_word"), Expr::var("bit")),
-                Expr::u32(0),
-            ),
+            bit_is_set(BitAccess {
+                word: "word_idx",
+                mask: "bit",
+                value: "bwd_word",
+            }),
         ),
         // PHASE7_GRAPH HIGH: previously this stored unconditionally,
         // overwriting any prior pivot's assignment for nodes that
@@ -115,7 +110,7 @@ pub fn scc_decompose(
                 ),
             ],
         ),
-    ];
+    ]);
 
     Program::wrapped(
         vec![

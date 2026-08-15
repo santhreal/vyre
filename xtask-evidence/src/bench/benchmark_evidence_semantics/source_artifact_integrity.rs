@@ -111,12 +111,11 @@ pub(crate) fn inspect_source_artifact_case_integrity(
 #[cfg(test)]
 mod tests {
     use super::super::release_axes_cuda::cuda_release_axes_source_artifact_issues;
-    use crate::report_fixture::EvidenceWorkspace;
+    use crate::report_fixture::{cuda_release_axis_issues, EvidenceWorkspace};
 
     #[test]
     fn cuda_release_axes_reject_case_backend_drift_inside_cuda_source_artifact() {
-        let workspace = EvidenceWorkspace::new();
-        let artifact = workspace.write_cuda_release_artifact(
+        let issues = cuda_release_axis_issues(
             "workload-backend-drift.json",
             serde_json::json!([
                 {
@@ -126,12 +125,6 @@ mod tests {
                 }
             ]),
         );
-        let axes = serde_json::json!({
-            "source_artifacts": [artifact]
-        });
-        let cuda_suite = EvidenceWorkspace::cuda_release_suite(&[&artifact]);
-
-        let issues = cuda_release_axes_source_artifact_issues(workspace.path(), &axes, &cuda_suite);
 
         assert!(
             issues.iter().any(|issue| issue.contains(

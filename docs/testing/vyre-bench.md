@@ -44,6 +44,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- release-benchmarks --backend 
 | `test` | `benchmark_methodology_contracts` | `vyre-bench/tests/benchmark_methodology_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test benchmark_methodology_contracts` |
 | `test` | `benchmark_target_contracts` | `vyre-bench/tests/benchmark_target_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test benchmark_target_contracts` |
 | `test` | `cache_hit_rate_reporting` | `vyre-bench/tests/cache_hit_rate_reporting.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test cache_hit_rate_reporting` |
+| `test` | `case_declaration_contracts` | `vyre-bench/tests/case_declaration_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test case_declaration_contracts` |
 | `test` | `cli_audit_surface` | `vyre-bench/tests/cli_audit_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test cli_audit_surface` |
 | `test` | `clone_family_contracts` | `vyre-bench/tests/clone_family_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test clone_family_contracts` |
 | `test` | `corpus_paging_planner` | `vyre-bench/tests/corpus_paging_planner.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test corpus_paging_planner` |

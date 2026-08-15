@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use crate::api::case::{BenchContext, Correctness, PerformanceContract, PerformanceEvaluation};
-use crate::api::metric::{digest64_buffers, MetricStats};
+use crate::api::metric::{digest64_buffers, elapsed_ns, MetricStats};
 use crate::api::suite::SuiteKind;
 use crate::report::json::{benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport};
 
@@ -52,7 +52,7 @@ pub(super) fn run_case(
         let run_result = case
             .run(ctx, prepared)
             .map_err(|error| format!("Warmup error on sample {warmup_index}: {error}"))?;
-        let elapsed_ns = u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        let elapsed_ns = elapsed_ns(started);
         if warmup_index == 0 {
             case.verify(ctx, &run_result)
                 .map_err(|error| format!("Warmup verify error: {error}"))?;

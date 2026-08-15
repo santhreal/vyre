@@ -1,13 +1,12 @@
-use super::{collect_expr_refs, expr_has_effect, reachable_prefix, LiveResult};
-use crate::ir::{Ident, Node};
-use im::HashSet;
+use super::{collect_expr_refs, expr_has_effect, reachable_prefix, LiveResult, LiveSet};
+use crate::ir::Node;
 
 #[inline]
 #[expect(
     clippy::too_many_lines,
     reason = "reverse liveness/DCE pass keeps Node reconstruction and live-set transfer together"
 )]
-pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: HashSet<Ident>) -> LiveResult {
+pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> LiveResult {
     let reachable_len = reachable_prefix(&nodes).len();
     let mut live = live_after;
     let mut kept = Vec::with_capacity(reachable_len);

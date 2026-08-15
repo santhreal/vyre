@@ -66,33 +66,19 @@ pub(super) fn c11_prehash_vast_identifiers_impl(
     )];
     loop_body.extend(row.nodes(Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER))));
 
-    for field in 0..VAST_NODE_STRIDE_U32 {
-        let value = if field == VAST_TYPEDEF_SYMBOL_FIELD {
-            Expr::var("name_hash")
-        } else {
-            Expr::load(vast_nodes, Expr::add(base.clone(), Expr::u32(field)))
-        };
-        loop_body.push(Node::store(
-            out_hashed_vast_nodes,
-            Expr::add(base.clone(), Expr::u32(field)),
-            value,
-        ));
-    }
+    loop_body.extend(store_row_with_overrides(
+        out_hashed_vast_nodes,
+        vast_nodes,
+        &base,
+        &[(VAST_TYPEDEF_SYMBOL_FIELD, "name_hash")],
+    ));
 
-    let n = node_count(&num_nodes).max(1);
+    let rows = declared_rows(&num_nodes);
     Program::wrapped(
         vec![
-            BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-            BufferDecl::storage(haystack, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_word_count(&haystack_len, packed_haystack)),
-            BufferDecl::storage(
-                out_hashed_vast_nodes,
-                2,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
+            vast_nodes_input(vast_nodes, 0, rows),
+            haystack_input(haystack, 1, &haystack_len, packed_haystack),
+            vast_nodes_scratch(out_hashed_vast_nodes, 2, rows),
         ],
         [256, 1, 1],
         vec![wrap_anonymous(

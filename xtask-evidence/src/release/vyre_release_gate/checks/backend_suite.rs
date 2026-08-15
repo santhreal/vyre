@@ -15,19 +15,11 @@ pub(crate) fn check_backend_suite_report(
     suffix: &str,
     failures: &mut Vec<String>,
 ) {
-    let Some(report) = first_json_evidence(requirement, base_dir, suffix, failures) else {
+    let Some(report) =
+        schema_2_json_evidence(requirement, base_dir, suffix, "backend suite", failures)
+    else {
         return;
     };
-    let schema_version = report
-        .get("schema_version")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if schema_version < 2 {
-        failures.push(format!(
-            "requirement `{}` backend suite `{suffix}` schema_version={schema_version}; expected schema>=2",
-            requirement.id
-        ));
-    }
     let expected_suite_backend = expected_backend_for_suite_evidence(suffix);
     if let Some(expected_backend) = expected_suite_backend {
         if let Some(issue) = backend_suite_backend_issue(&report, expected_backend) {
@@ -46,10 +38,7 @@ pub(crate) fn check_backend_suite_report(
             }
         }
     }
-    let family_count = report
-        .get("family_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
+    let family_count = u64_field(&report, "family_count", 0);
     let artifact_count = report
         .get("artifacts")
         .and_then(serde_json::Value::as_array)
@@ -309,26 +298,14 @@ pub(crate) fn check_backend_suite_report(
                     requirement.id
                 ));
             }
-            for field in [
-                "min_wall_p50",
-                "min_wall_p95",
-                "min_wall_p99",
-                "min_baseline_wall_p50",
-                "min_baseline_wall_p95",
-                "min_baseline_wall_p99",
-            ] {
-                if status
-                    .get(field)
-                    .and_then(serde_json::Value::as_u64)
-                    .unwrap_or(0)
-                    == 0
-                {
-                    failures.push(format!(
-                        "requirement `{}` backend suite `{suffix}` artifact `{path}` has non-positive `{field}`",
-                        requirement.id
-                    ));
-                }
-            }
+            check_aggregate_wall_percentiles_positive(
+                status,
+                &format!(
+                    "requirement `{}` backend suite `{suffix}` artifact `{path}`",
+                    requirement.id
+                ),
+                failures,
+            );
             match status.get("blockers").and_then(serde_json::Value::as_array) {
                 Some(blockers) => {
                     for blocker in blockers {

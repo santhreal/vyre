@@ -52,15 +52,15 @@ Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs`:
+Run the checked-in behavior from `vyre-test-support/tests/binop_parity_tables.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory
+CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test binop_parity_tables
 ```
 
 ### Features
 
-- Manifest features: `ir-fixtures`
+- Manifest features: `default`, `ir-fixtures`
 - Default feature members: None
 
 ### Errors and unsupported behavior

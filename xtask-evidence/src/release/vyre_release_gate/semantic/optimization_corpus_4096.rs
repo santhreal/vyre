@@ -1,22 +1,13 @@
 use std::path::Path;
 
+use vyre_foundation::optimizer::corpus::RELEASE_OPTIMIZATION_FAMILIES;
+
 use crate::bench::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values;
 
 use super::super::checks::*;
 use super::super::gate_inputs::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
-    const REQUIRED_FAMILIES: [&str; 8] = [
-        "scalar-algebra",
-        "strength-reduction",
-        "fusion-cse",
-        "dead-code",
-        "memory-dataflow",
-        "loop-transform",
-        "control-flow",
-        "canonicalization",
-    ];
-
     let Some(corpus) =
         first_json_evidence(requirement, base_dir, "optimization-corpus.json", failures)
     else {
@@ -84,13 +75,13 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .unwrap_or_default();
         let declared_required = u64_field(&family_manifest, "required_family_count", 0);
         let missing_required = array_len(&family_manifest, "missing_required_families");
-        if families.len() != REQUIRED_FAMILIES.len()
-            || declared_required != REQUIRED_FAMILIES.len() as u64
+        if families.len() != RELEASE_OPTIMIZATION_FAMILIES.len()
+            || declared_required != RELEASE_OPTIMIZATION_FAMILIES.len() as u64
         {
             failures.push(format!(
                 "requirement `optimization-corpus-4096` family manifest has {} row(s) and declares {declared_required}; needs exactly {} source-owned semantic families",
                 families.len(),
-                REQUIRED_FAMILIES.len()
+                RELEASE_OPTIMIZATION_FAMILIES.len()
             ));
         }
         if missing_required != 0 {
@@ -105,7 +96,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             "family manifest has duplicate family rows",
             failures,
         );
-        for required_family in REQUIRED_FAMILIES {
+        for required_family in RELEASE_OPTIMIZATION_FAMILIES {
             let cases = families
                 .iter()
                 .find(|family| {
@@ -237,20 +228,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             ));
         }
     }
-}
-
-fn u64_field(value: &serde_json::Value, field: &str, default: u64) -> u64 {
-    value
-        .get(field)
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(default)
-}
-
-fn array_len(value: &serde_json::Value, field: &str) -> usize {
-    value
-        .get(field)
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len)
 }
 
 fn check_duplicate_rows(

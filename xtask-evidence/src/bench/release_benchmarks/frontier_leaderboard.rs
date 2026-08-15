@@ -10,7 +10,9 @@ use xtask::docs::research_key::is_research_key;
 use xtask::docs::research_source_ledger::embedded_research_source_keys;
 use xtask::hash::sha256_hex;
 
-use super::inspect_core::read_text_bounded;
+use crate::bench::benchmark_evidence_semantics::SCAN_THROUGHPUT_METRICS;
+
+use super::inspect_core::{first_metric_p50, read_text_bounded};
 use super::metrics::write_json;
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 use super::suite_inspect::backend_suite_output_path;
@@ -724,8 +726,9 @@ fn build_row(
     selected_backend: Option<String>,
     case: &Value,
 ) -> FrontierLeaderboardRow {
-    let cpu_digest = metric_p50(case, "cpu_digest").map(|digest| digest.to_string());
-    let gpu_digest = metric_p50(case, "gpu_digest").map(|digest| digest.to_string());
+    let metrics = case.get("metrics").and_then(Value::as_object);
+    let cpu_digest = first_metric_p50(metrics, &["cpu_digest"]).map(|digest| digest.to_string());
+    let gpu_digest = first_metric_p50(metrics, &["gpu_digest"]).map(|digest| digest.to_string());
     let output_digest = gpu_digest.clone().or_else(|| cpu_digest.clone());
     let corpus_digest = case
         .get("held_out_corpus_id")
@@ -733,12 +736,14 @@ fn build_row(
         .or_else(|| case.get("workload_fingerprint").and_then(nonblank_str))
         .map(str::to_string);
     let baseline_version = baseline_contract_digest(baseline, case);
-    let throughput_gb_s_x1000_p50 =
-        first_metric_p50(case, &["wall_gb_s_x1000", "device_gb_s_x1000"]);
-    let latency_wall_ns_p50 = first_metric_p50(case, &["wall_ns", "active_time_ns"]);
-    let memory_total_mib_p50 = metric_p50(case, "memory_total_mib");
-    let transfer_bytes_p50 = metric_p50(case, "transfer_bytes").or_else(|| {
-        Some(metric_p50(case, "host_to_device_bytes")? + metric_p50(case, "device_to_host_bytes")?)
+    let throughput_gb_s_x1000_p50 = first_metric_p50(metrics, SCAN_THROUGHPUT_METRICS);
+    let latency_wall_ns_p50 = first_metric_p50(metrics, &["wall_ns", "active_time_ns"]);
+    let memory_total_mib_p50 = first_metric_p50(metrics, &["memory_total_mib"]);
+    let transfer_bytes_p50 = first_metric_p50(metrics, &["transfer_bytes"]).or_else(|| {
+        Some(
+            first_metric_p50(metrics, &["host_to_device_bytes"])?
+                + first_metric_p50(metrics, &["device_to_host_bytes"])?,
+        )
     });
     let unsupported_cases = string_array(case.get("unsupported_cases"));
     let rejected_plan_reasons = case
@@ -1031,17 +1036,6 @@ fn selected_plan_reason(case: &Value, baseline_id: &str, selected_backend: Optio
         "baseline `{baseline_id}` uses selected_backend `{}` with case status `{status}` and performance_contract_passed={performance_passed}",
         selected_backend.unwrap_or("<missing-backend>")
     )
-}
-
-fn metric_p50(case: &Value, metric: &str) -> Option<u64> {
-    case.get("metrics")
-        .and_then(|metrics| metrics.get(metric))
-        .and_then(|metric| metric.get("p50"))
-        .and_then(Value::as_u64)
-}
-
-fn first_metric_p50(case: &Value, metrics: &[&str]) -> Option<u64> {
-    metrics.iter().find_map(|metric| metric_p50(case, metric))
 }
 
 fn require_present(blockers: &mut Vec<String>, value: Option<&str>, field: &str) {

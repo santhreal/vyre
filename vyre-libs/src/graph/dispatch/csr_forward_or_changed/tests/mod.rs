@@ -4,6 +4,7 @@ use crate::test_support::NeverDispatches;
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 mod reference_contracts;
 
@@ -83,13 +84,17 @@ fn linear_closure(
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu(
         dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters,
+        },
         &[0b0001],
-        0xFFFF_FFFF,
-        max_iters,
     )
 }
 
@@ -102,13 +107,17 @@ fn linear_closure_into(
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu_into(
         dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters,
+        },
         &[0b0001],
-        0xFFFF_FFFF,
-        max_iters,
         frontier,
     )
 }
@@ -125,7 +134,20 @@ fn linear_closure_with_scratch(
 ) -> Result<(), DispatchError> {
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu_with_scratch_into(
-        dispatcher, 4, &off, &tgt, &msk, seed, allow_mask, max_iters, scratch, frontier,
+        dispatcher,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask,
+            max_iters,
+        },
+        seed,
+        scratch,
+        frontier,
     )
 }
 
@@ -269,13 +291,16 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
     ] {
         forward_closure_via_change_flag_gpu_with_scratch_into(
             &dispatcher,
-            4,
-            &edge_offsets,
-            edge_targets,
-            &edge_kind_mask,
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
+                    node_count: 4,
+                    edge_offsets: &edge_offsets,
+                    edge_targets,
+                    edge_kind_mask: &edge_kind_mask,
+                },
+                1,
+            ),
             &[0b0001],
-            0xFFFF_FFFF,
-            1,
             &mut scratch,
             &mut frontier,
         )
@@ -376,13 +401,16 @@ fn gpu_rejects_mismatched_edge_arrays() {
     };
     let err = forward_closure_via_change_flag_gpu(
         &dispatcher,
-        2,
-        &[0, 1, 1],
-        &[1],
-        &[],
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 2,
+                edge_offsets: &[0, 1, 1],
+                edge_targets: &[1],
+                edge_kind_mask: &[],
+            },
+            1,
+        ),
         &[0b01],
-        0xFFFF_FFFF,
-        1,
     )
     .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));
@@ -409,13 +437,16 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
 
             let result = forward_closure_via_change_flag_gpu_into(
                 &dispatcher,
-                node_count,
-                &edge_offsets,
-                &[],
-                &[],
+                CsrClosureInputs::allow_all(
+                    CsrGraphView {
+                        node_count,
+                        edge_offsets: &edge_offsets,
+                        edge_targets: &[],
+                        edge_kind_mask: &[],
+                    },
+                    1,
+                ),
                 &seed,
-                0xFFFF_FFFF,
-                1,
                 &mut frontier,
             );
 

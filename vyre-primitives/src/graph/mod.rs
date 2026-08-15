@@ -30,6 +30,12 @@ pub(crate) fn checked_csr_offset_count(node_count: u32, op_name: &str) -> Result
     })
 }
 
+/// The dispatch-grid owner, re-exported so every existing `crate::graph::lane_grid`
+/// call site keeps resolving. The owner itself is ungated at the crate root: a
+/// dispatch grid is launch geometry, not a graph concept, and a domain that does
+/// not enable `graph` must still be able to reach it.
+pub(crate) use crate::dispatch_grid::lane_grid;
+
 pub(crate) fn u32_slice_fingerprint(values: &[u32]) -> u64 {
     padded_u32_slice_fingerprint(values, values.len())
 }
@@ -56,6 +62,9 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
 /// The published call shapes of a CSR closure, stated once for every op that
 /// iterates a one-step traversal to a fixpoint.
 pub(crate) mod csr_closure_entry_points;
+/// The ONE named-field input bundle every CSR closure entry point takes, so a
+/// run of same-typed CSR slices cannot transpose silently at a call site.
+pub mod csr_closure_inputs;
 /// One BFS step that accumulates into frontier_out and reports changes.
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.
@@ -65,6 +74,10 @@ pub mod csr_forward_traverse;
 /// `graph/` level because it is the common parent of both consumer subsystems;
 /// burying it inside one of them would force the other to reach across a sibling.
 pub(crate) mod edge_scan;
+/// The ONE packed-bitset addressing skeleton: word index, bit mask, the
+/// bit-is-set probe, and the atomic set with 0-to-1 flip detection. Peer of
+/// `edge_scan` for the same reason: every consumer is a sibling.
+pub(crate) mod frontier_bits;
 /// One persistent-BFS workgroup step with coalesced change detection.
 pub mod persistent_bfs_step;
 

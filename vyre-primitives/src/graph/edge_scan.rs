@@ -25,6 +25,7 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
+use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use crate::graph::program_graph::{
     ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
 };
@@ -63,57 +64,25 @@ pub(in crate::graph) fn csr_edge_expand_nodes(
     let dst = name("dst");
     let dst_word_idx = name("dst_word_idx");
     let dst_bit = name("dst_bit");
-    let old = name("old");
 
     // Callers that track a changed flag (the in-place accumulating paths) pass a
     // non-empty `on_new_bit`; the two-buffer forward step (frontier_in -> frontier_out)
-    // discovers no new-bit work and passes an empty body. When empty, skip the
-    // `old`-load + 0->1 flip guard entirely and emit a bare `atomic_or` so the
-    // forward step keeps its minimal set-only IR (no unused binding, no empty guard).
+    // discovers no new-bit work and passes an empty body. `set_bit` then emits a bare
+    // `atomic_or` with no flip guard, so the forward step keeps its minimal set-only IR
+    // and binds the discarded pre-OR word under the `_`-prefixed name.
     let flip_body = on_new_bit();
-    let set_dst_bit = if flip_body.is_empty() {
-        vec![Node::let_bind(
-            name("_prev").as_str(),
-            Expr::atomic_or(
-                frontier_out,
-                Expr::var(dst_word_idx.as_str()),
-                Expr::var(dst_bit.as_str()),
-            ),
-        )]
-    } else {
-        vec![
-            Node::let_bind(
-                old.as_str(),
-                Expr::atomic_or(
-                    frontier_out,
-                    Expr::var(dst_word_idx.as_str()),
-                    Expr::var(dst_bit.as_str()),
-                ),
-            ),
-            Node::if_then(
-                Expr::eq(
-                    Expr::bitand(Expr::var(old.as_str()), Expr::var(dst_bit.as_str())),
-                    Expr::u32(0),
-                ),
-                flip_body,
-            ),
-        ]
-    };
-
-    let mut on_bounded = vec![
-        Node::let_bind(
-            dst_word_idx.as_str(),
-            frontier_index(Expr::shr(Expr::var(dst.as_str()), Expr::u32(5))),
-        ),
-        Node::let_bind(
-            dst_bit.as_str(),
-            Expr::shl(
-                Expr::u32(1),
-                Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
-            ),
-        ),
-    ];
-    on_bounded.extend(set_dst_bit);
+    let pre_or_word = name(if flip_body.is_empty() { "_prev" } else { "old" });
+    let on_bounded = set_bit(
+        frontier_out,
+        &Expr::var(dst.as_str()),
+        BitAccess {
+            word: dst_word_idx.as_str(),
+            mask: dst_bit.as_str(),
+            value: pre_or_word.as_str(),
+        },
+        frontier_index,
+        flip_body,
+    );
 
     vec![
         Node::let_bind(
@@ -186,33 +155,22 @@ pub(in crate::graph) fn csr_edge_scan_nodes(
     let bit_mask = name("bit_mask");
     let src_word = name("src_word");
 
-    vec![
-        Node::let_bind(
-            word_idx.as_str(),
-            frontier_index(Expr::shr(src.clone(), Expr::u32(5))),
-        ),
-        Node::let_bind(
-            bit_mask.as_str(),
-            Expr::shl(Expr::u32(1), Expr::bitand(src.clone(), Expr::u32(31))),
-        ),
-        Node::let_bind(
-            src_word.as_str(),
-            Expr::load(frontier_out, Expr::var(word_idx.as_str())),
-        ),
-        Node::if_then(
-            Expr::ne(
-                Expr::bitand(Expr::var(src_word.as_str()), Expr::var(bit_mask.as_str())),
-                Expr::u32(0),
-            ),
-            csr_edge_expand_nodes(
-                shape,
-                frontier_out,
-                src,
-                frontier_index,
-                on_new_bit,
-                edge_kind_mask,
-                prefix,
-            ),
-        ),
-    ]
+    let expand = csr_edge_expand_nodes(
+        shape,
+        frontier_out,
+        src.clone(),
+        &frontier_index,
+        on_new_bit,
+        edge_kind_mask,
+        prefix,
+    );
+    when_bit_set(
+        frontier_out,
+        &src,
+        Some(word_idx.as_str()),
+        src_word.as_str(),
+        bit_mask.as_str(),
+        frontier_index,
+        expand,
+    )
 }

@@ -21,6 +21,57 @@ pub const MAX_BLOCK_SIZE: usize = 4 * 1024 * 1024;
 /// Defensive upper bound for sequence count in one block.
 pub const MAX_SEQUENCES_PER_BLOCK: usize = 100_000;
 
+/// Buffer names one indexed literal-copy dispatch binds.
+///
+/// Every field is a `&str`, so a positional list of five names is a positional
+/// list wearing field names: transposing `seq_literal_len` with
+/// `seq_literal_offset` compiles, reads as deliberate from either side, and
+/// copies each literal run to the length it should have had rather than to its
+/// output offset. There is no constructor, so a struct literal names every
+/// binding at the construction site.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ZiftsieveBuffers<'a> {
+    /// Compressed block words, one byte per `u32`.
+    pub input: &'a str,
+    /// Decoded literal words, `max_output` elements.
+    pub output: &'a str,
+    /// Per-sequence offset of the literal run inside `input`.
+    pub seq_literal_start: &'a str,
+    /// Per-sequence literal run length.
+    pub seq_literal_len: &'a str,
+    /// Per-sequence prefix-summed offset inside `output`.
+    pub seq_literal_offset: &'a str,
+}
+
+impl ZiftsieveBuffers<'static> {
+    /// The canonical binding names for a literal-copy program.
+    ///
+    /// A caller with no naming of its own gets one here instead of inventing
+    /// five strings, and every program built from it declares the same bindings
+    /// in the same order, which is what lets two such programs be compared.
+    pub const CANONICAL: Self = Self {
+        input: "input",
+        output: "output",
+        seq_literal_start: "seq_start",
+        seq_literal_len: "seq_len",
+        seq_literal_offset: "seq_off",
+    };
+}
+
+/// Extents that size the buffers a literal-copy program declares.
+///
+/// `input_len` of zero leaves the input count unbounded, which is how a caller
+/// that does not know the block size declares it.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct ZiftsieveExtents {
+    /// Element count of `input`, or zero to leave it undeclared.
+    pub input_len: u32,
+    /// Number of indexed sequences, one lane each.
+    pub seq_count: u32,
+    /// Element count of `output`, the cap every store is gated on.
+    pub max_output: u32,
+}
+
 /// Result of a reference LZ4 literal extraction.
 ///
 /// `literals` holds the decoded bytes, CAPPED at the caller's `max_output`: the
@@ -171,14 +222,14 @@ fn decode_length(data: &[u8], pos: &mut usize, initial: usize) -> Result<usize, 
 
 /// Build the primitive body for indexed literal copy.
 #[must_use]
-pub fn ziftsieve_literal_copy_body(
-    input: &str,
-    output: &str,
-    seq_literal_start: &str,
-    seq_literal_len: &str,
-    seq_literal_offset: &str,
-    seq_count: u32,
-) -> Vec<Node> {
+pub fn ziftsieve_literal_copy_body(buffers: ZiftsieveBuffers<'_>, seq_count: u32) -> Vec<Node> {
+    let ZiftsieveBuffers {
+        input,
+        output,
+        seq_literal_start,
+        seq_literal_len,
+        seq_literal_offset,
+    } = buffers;
     vec![
         Node::let_bind("seq_idx", Expr::InvocationId { axis: 0 }),
         Node::if_then(
@@ -246,27 +297,8 @@ pub fn ziftsieve_literal_copy_body(
 
 /// Build a Program that copies indexed LZ4 literals in parallel.
 #[must_use]
-pub fn ziftsieve_literal_copy(
-    input: &str,
-    output: &str,
-    seq_literal_start: &str,
-    seq_literal_len: &str,
-    seq_literal_offset: &str,
-    input_len: u32,
-    seq_count: u32,
-    max_output: u32,
-) -> Program {
-    ziftsieve_literal_copy_with_op_id(
-        OP_ID,
-        input,
-        output,
-        seq_literal_start,
-        seq_literal_len,
-        seq_literal_offset,
-        input_len,
-        seq_count,
-        max_output,
-    )
+pub fn ziftsieve_literal_copy(buffers: ZiftsieveBuffers<'_>, extents: ZiftsieveExtents) -> Program {
+    ziftsieve_literal_copy_with_op_id(OP_ID, buffers, extents)
 }
 
 /// Build a Program with a caller-provided op id.
@@ -276,23 +308,22 @@ pub fn ziftsieve_literal_copy(
 #[must_use]
 pub fn ziftsieve_literal_copy_with_op_id(
     op_id: &str,
-    input: &str,
-    output: &str,
-    seq_literal_start: &str,
-    seq_literal_len: &str,
-    seq_literal_offset: &str,
-    input_len: u32,
-    seq_count: u32,
-    max_output: u32,
+    buffers: ZiftsieveBuffers<'_>,
+    extents: ZiftsieveExtents,
 ) -> Program {
-    let body = ziftsieve_literal_copy_body(
+    let ZiftsieveBuffers {
         input,
         output,
         seq_literal_start,
         seq_literal_len,
         seq_literal_offset,
+    } = buffers;
+    let ZiftsieveExtents {
+        input_len,
         seq_count,
-    );
+        max_output,
+    } = extents;
+    let body = ziftsieve_literal_copy_body(buffers, seq_count);
 
     let input_decl = BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32);
     let input_decl = if input_len == 0 {
@@ -350,7 +381,16 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
-        || ziftsieve_literal_copy("input", "output", "seq_start", "seq_len", "seq_off", 5, 2, 3),
+        || {
+            ziftsieve_literal_copy(
+                ZiftsieveBuffers::CANONICAL,
+                ZiftsieveExtents {
+                    input_len: 5,
+                    seq_count: 2,
+                    max_output: 3,
+                },
+            )
+        },
         Some(fixture_inputs),
         Some(fixture_outputs),
     )
@@ -367,14 +407,12 @@ mod tests {
         let max_output = seq_lens.iter().copied().sum::<u32>();
         let input_words = input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>();
         let program = ziftsieve_literal_copy(
-            "input",
-            "output",
-            "seq_start",
-            "seq_len",
-            "seq_off",
-            input.len() as u32,
-            seq_count,
-            max_output,
+            ZiftsieveBuffers::CANONICAL,
+            ZiftsieveExtents {
+                input_len: input.len() as u32,
+                seq_count,
+                max_output,
+            },
         );
         let inputs = vec![
             Value::from(crate::wire::pack_u32_slice(&input_words)),
@@ -475,14 +513,12 @@ mod tests {
         sentinel: u32,
     ) -> Vec<u32> {
         let program = ziftsieve_literal_copy(
-            "input",
-            "output",
-            "seq_start",
-            "seq_len",
-            "seq_off",
-            input_words.len() as u32,
-            seq_starts.len() as u32,
-            max_output,
+            ZiftsieveBuffers::CANONICAL,
+            ZiftsieveExtents {
+                input_len: input_words.len() as u32,
+                seq_count: seq_starts.len() as u32,
+                max_output,
+            },
         );
         let inputs = vec![
             Value::from(crate::wire::pack_u32_slice(input_words)),
@@ -563,14 +599,12 @@ mod tests {
         // the 3-slot output. The pre-fix ungated store would OOB-write slots 3,4 past
         // the buffer → nonzero, which is what a real GPU would corrupt.
         let program = ziftsieve_literal_copy(
-            "input",
-            "output",
-            "seq_start",
-            "seq_len",
-            "seq_off",
-            4,
-            1,
-            3,
+            ZiftsieveBuffers::CANONICAL,
+            ZiftsieveExtents {
+                input_len: 4,
+                seq_count: 1,
+                max_output: 3,
+            },
         );
         let (_outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,

@@ -1,10 +1,10 @@
 use super::super::*;
-use super::linear_graph;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
 use std::cell::RefCell;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_primitives::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
 
 struct PersistentBfsDispatcher {
     outputs: Vec<Vec<u8>>,
@@ -82,25 +82,19 @@ impl ProgramDispatcher for LargeScratchPersistentBfsDispatcher {
     }
 }
 
-/// Expands one persistent-BFS step over [`linear_graph`] with every edge kind allowed, returning
-/// the changed and converged flags. The contracts below vary the dispatcher, the seed and the
-/// iteration budget; the graph itself is incidental to them.
+/// Expands one persistent-BFS step over [`graphs::CHAIN_4`] with every edge kind allowed,
+/// returning the changed and converged flags. The contracts below vary the dispatcher, the seed
+/// and the iteration budget; the graph itself is incidental to them.
 fn linear_expand_into(
     dispatcher: &dyn ProgramDispatcher,
     seed: &[u32],
     max_iters: u32,
     frontier: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
     bfs_expand_via_into(
         dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
+        CsrClosureInputs::allow_all(graphs::CHAIN_4, max_iters),
         seed,
-        0xFFFF_FFFF,
-        max_iters,
         frontier,
     )
 }
@@ -113,16 +107,10 @@ fn linear_expand_with_scratch(
     scratch: &mut PersistentBfsGpuScratch,
     frontier: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
     bfs_expand_via_with_scratch_into(
         dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
+        CsrClosureInputs::allow_all(graphs::CHAIN_4, max_iters),
         seed,
-        0xFFFF_FFFF,
-        max_iters,
         scratch,
         frontier,
     )
@@ -134,16 +122,10 @@ fn linear_expand(
     seed: &[u32],
     max_iters: u32,
 ) -> Result<(Vec<u32>, u32, u32), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
     bfs_expand_via(
         dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
+        CsrClosureInputs::allow_all(graphs::CHAIN_4, max_iters),
         seed,
-        0xFFFF_FFFF,
-        max_iters,
     )
 }
 
@@ -235,13 +217,16 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
 
     let (changed, converged) = bfs_expand_via_into(
         &dispatcher,
-        node_count,
-        &edge_offsets,
-        &[],
-        &[],
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: node_count,
+                edge_offsets: &edge_offsets,
+                edge_targets: &[],
+                edge_kind_mask: &[],
+            },
+            64,
+        ),
         &frontier_in,
-        0xFFFF_FFFF,
-        64,
         &mut frontier,
     )
     .expect("Fix: large persistent BFS dispatch should allocate internal active scratch.");
@@ -313,13 +298,16 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     ] {
         bfs_expand_via_with_scratch_into(
             &dispatcher,
-            4,
-            &edge_offsets,
-            edge_targets,
-            &edge_kind_mask,
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
+                    node_count: 4,
+                    edge_offsets: &edge_offsets,
+                    edge_targets: edge_targets,
+                    edge_kind_mask: &edge_kind_mask,
+                },
+                4,
+            ),
             &[0b0001],
-            0xFFFF_FFFF,
-            4,
             &mut scratch,
             &mut frontier,
         )
@@ -405,13 +393,16 @@ fn via_rejects_mismatched_edge_arrays() {
     };
     let err = bfs_expand_via(
         &dispatcher,
-        2,
-        &[0, 1, 1],
-        &[1],
-        &[],
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 2,
+                edge_offsets: &[0, 1, 1],
+                edge_targets: &[1],
+                edge_kind_mask: &[],
+            },
+            1,
+        ),
         &[0b01],
-        0xFFFF_FFFF,
-        1,
     )
     .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));

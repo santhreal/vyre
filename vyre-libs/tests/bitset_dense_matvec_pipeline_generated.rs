@@ -1,142 +1,79 @@
-//! Generated integration coverage for self-substrate dense bitset transforms.
+//! The substrate arm of the declared dense byte-tile Four-Russians matvec table.
 //!
 //! The primitive-level dense Four-Russians matvec is only useful if the
 //! self-substrate exposes it as a reusable transform for graph/dataflow
-//! schedulers. This test keeps that wiring broad and deterministic.
+//! schedulers. This file keeps that wiring broad and deterministic.
+//!
+//! Which cases exist, and what the answer is, belong to
+//! `tests/support/dense_matvec_cases.rs`. This file pins only what
+//! `vyre_libs::encoding::bitset_transform_pipeline` owes for those cases: its
+//! frontier and LUT sizing, its LUT builder, its CPU parity oracle, and the
+//! Program it composes.
 
 use vyre_libs::encoding::bitset_transform_pipeline::{
     dense_boolean_matvec_lut, dense_matvec_frontier_words, dense_matvec_lut_words,
-    four_russians_dense_matvec_program,
+    four_russians_dense_matvec_program, reference_dense_boolean_matvec,
 };
-use vyre_libs::test_support::u32_bytes;
-use vyre_reference::value::Value;
 
-const BYTE_TILE_WIDTH: u32 = 8;
+#[path = "../../tests/support/dense_matvec_cases.rs"]
+mod dense_matvec_cases;
 
+use dense_matvec_cases::{
+    arm_coverage, assert_program_overwrites_dirty_output, declared_groups, DenseMatvecCase,
+    LutCache,
+};
+
+/// Every declared group has a substrate arm, and every case in it holds.
+///
+/// The ledger reads the table at run time, so a group declared with no branch
+/// below fails here by name rather than silently going unrun.
 #[test]
-fn generated_dense_matvec_pipeline_matches_naive_semantics() {
-    let mut checked = 0usize;
-
-    for tile_count in 0..=24u32 {
-        for dst_words in 1..=4u32 {
-            for seed in 0..64u32 {
-                let columns = generated_columns(tile_count, dst_words, seed ^ 0x1357_2468);
-                let frontier = generated_frontier(tile_count, seed ^ 0xACE0_BDF1);
-                let lut = dense_boolean_matvec_lut(&columns, tile_count, dst_words);
-
-                assert_eq!(
-                    dense_matvec_frontier_words(tile_count) as usize,
-                    frontier.len(),
-                    "Fix: self-substrate frontier sizing drifted for tile_count={tile_count}."
-                );
-                assert_eq!(
-                    dense_matvec_lut_words(tile_count, dst_words) as usize,
-                    lut.len(),
-                    "Fix: self-substrate LUT sizing drifted for tile_count={tile_count}, dst_words={dst_words}."
-                );
-                assert_eq!(
-                    vyre_primitives::bitset::four_russians::dense_matvec_cpu_ref(
-                        &frontier, &lut, tile_count, dst_words,
-                    ),
-                    naive_dense_matvec(&frontier, &columns, tile_count, dst_words),
-                    "Fix: self-substrate dense matvec transform drifted for tile_count={tile_count}, dst_words={dst_words}, seed={seed}."
-                );
-                checked += 1;
+fn substrate_dense_matvec_arms_cover_every_declared_case_group() {
+    let mut coverage = arm_coverage();
+    for group in declared_groups() {
+        match group.name {
+            "frontier_sweep" | "single_tile_active_byte" | "saturated_frontier" => {
+                assert_transform_matches_naive(&group.cases);
             }
+            "dirty_output_overwrite" => {
+                assert_program_overwrites_dirty_output(
+                    "self-substrate",
+                    &group.cases,
+                    dense_boolean_matvec_lut,
+                    four_russians_dense_matvec_program,
+                );
+            }
+            _ => continue,
         }
+        coverage.record(group.name, group.cases.len());
     }
-
-    assert!(
-        checked >= 6_000,
-        "Fix: self-substrate dense matvec generated coverage must stay broad; got {checked}."
-    );
+    coverage.assert_covers_declared_table();
 }
 
-#[test]
-fn dense_matvec_pipeline_program_overwrites_dirty_output() {
-    let tile_count = 5u32;
-    let dst_words = 3u32;
-    let columns = generated_columns(tile_count, dst_words, 0xC0DE_5EED);
-    let frontier = generated_frontier(tile_count, 0xF00D_FACE);
-    let lut = dense_boolean_matvec_lut(&columns, tile_count, dst_words);
-    let expected = naive_dense_matvec(&frontier, &columns, tile_count, dst_words);
-    let program =
-        four_russians_dense_matvec_program("frontier", "tile_lut", "out", tile_count, dst_words);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(u32_bytes(&frontier)),
-            Value::from(u32_bytes(&lut)),
-            Value::from(u32_bytes(&vec![u32::MAX; dst_words as usize])),
-        ],
-    )
-    .expect("Fix: self-substrate dense matvec Program must execute in reference oracle.");
-
-    assert_eq!(
-        outputs[0].to_bytes(),
-        u32_bytes(&expected),
-        "Fix: dense matvec transform must overwrite dirty output with the exact boolean-semiring result."
-    );
-}
-
-fn generated_columns(tile_count: u32, dst_words: u32, seed: u32) -> Vec<u32> {
-    let len = tile_count as usize * BYTE_TILE_WIDTH as usize * dst_words as usize;
-    (0..len)
-        .map(|idx| mix(seed ^ (idx as u32).wrapping_mul(0x045D_9F3B)))
-        .collect()
-}
-
-fn generated_frontier(tile_count: u32, seed: u32) -> Vec<u32> {
-    let len = dense_matvec_frontier_words(tile_count) as usize;
-    (0..len)
-        .map(|idx| {
-            let mut word = mix(seed ^ idx as u32);
-            let used_tiles_in_word = tile_count.saturating_sub((idx as u32) * 4).min(4);
-            if used_tiles_in_word < 4 {
-                let used_bits = used_tiles_in_word * 8;
-                let mask = if used_bits == 0 {
-                    0
-                } else {
-                    u32::MAX >> (32 - used_bits)
-                };
-                word &= mask;
-            }
-            word
-        })
-        .collect()
-}
-
-fn naive_dense_matvec(
-    frontier: &[u32],
-    columns: &[u32],
-    tile_count: u32,
-    dst_words: u32,
-) -> Vec<u32> {
-    let mut out = vec![0u32; dst_words as usize];
-    for tile in 0..tile_count {
-        let active_byte = if frontier.is_empty() {
-            0
-        } else {
-            (frontier[(tile / 4) as usize] >> ((tile % 4) * 8)) & 0xFF
-        };
-        for source_bit in 0..BYTE_TILE_WIDTH {
-            if (active_byte & (1 << source_bit)) == 0 {
-                continue;
-            }
-            for dst_word in 0..dst_words {
-                let column_idx =
-                    ((tile * BYTE_TILE_WIDTH + source_bit) * dst_words + dst_word) as usize;
-                out[dst_word as usize] |= columns[column_idx];
-            }
-        }
+/// The substrate sizing helpers, LUT builder and parity oracle agree with the
+/// naive boolean-semiring oracle on every case.
+fn assert_transform_matches_naive(cases: &[DenseMatvecCase]) {
+    let mut cache = LutCache::new();
+    for case in cases {
+        let (columns, lut) = cache.get(case, dense_boolean_matvec_lut);
+        assert_eq!(
+            dense_matvec_lut_words(case.tile_count, case.dst_words) as usize,
+            lut.len(),
+            "Fix: self-substrate LUT sizing drifted for {}.",
+            case.label()
+        );
+        let frontier = case.frontier();
+        assert_eq!(
+            dense_matvec_frontier_words(case.tile_count) as usize,
+            frontier.len(),
+            "Fix: self-substrate frontier sizing drifted for {}.",
+            case.label()
+        );
+        assert_eq!(
+            reference_dense_boolean_matvec(&frontier, lut, case.tile_count, case.dst_words),
+            case.naive(columns, &frontier),
+            "Fix: self-substrate dense matvec transform drifted for {}.",
+            case.label()
+        );
     }
-    out
-}
-
-fn mix(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
 }

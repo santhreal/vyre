@@ -22,6 +22,10 @@ workspace = true
 xtask = { path = "../xtask" }
 vyre-bench.workspace = true
 vyre-driver.workspace = true
+# `vyre-foundation` owns the optimizer whose release corpus these subcommands
+# grade, so the set of pass families a gate demands is read from the generator
+# rather than restated here.
+vyre-foundation.workspace = true
 # The backend matrix judges every driver this binary links, and `vyre-bench`
 # links all of them, so the declared set is all of them. `vyre-registry-link`
 # owns the anchors and asserts that each one reached the registry.
@@ -35,7 +39,6 @@ vyre-registry-link = { workspace = true, features = [
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 toml.workspace = true
-walkdir.workspace = true
 
 [dev-dependencies]
 tempfile = { workspace = true }

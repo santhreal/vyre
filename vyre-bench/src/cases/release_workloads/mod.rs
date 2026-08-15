@@ -6,6 +6,7 @@ mod macro_registry;
 mod metadata_condition;
 mod registration;
 mod release_evidence;
+mod resident_batch;
 mod run_assembly;
 mod sparse_compaction;
 mod synthetic_count;

@@ -83,17 +83,7 @@ pub(crate) fn run(_args: &[String]) {
 }
 
 fn run_xtask_check(workspace_root: &PathBuf, args: &[&str], failures: &mut Vec<String>) {
-    let xtask = match std::env::current_exe() {
-        Ok(path) => path,
-        Err(error) => {
-            failures.push(format!(
-                "failed to locate current xtask binary for `xtask {}`: {error}",
-                args.join(" ")
-            ));
-            return;
-        }
-    };
-    let status = Command::new(&xtask)
+    let status = Command::new(crate::delegate::dispatcher())
         .args(args)
         .current_dir(workspace_root)
         .status();

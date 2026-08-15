@@ -73,15 +73,7 @@ pub const RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid that covers every packed RLE segment lane.
 #[must_use]
 pub const fn rle_segment_lengths_dispatch_grid(segment_count: u32) -> [u32; 3] {
-    let lanes_per_block = RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE[0];
-    let full_blocks = segment_count / lanes_per_block;
-    let tail_block = if segment_count % lanes_per_block == 0 {
-        0
-    } else {
-        1
-    };
-    let blocks = full_blocks + tail_block;
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::dispatch_grid::lane_grid(segment_count, RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE[0])
 }
 
 /// Pack errors raised by the host-side packer.

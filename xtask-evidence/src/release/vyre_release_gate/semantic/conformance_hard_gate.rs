@@ -29,17 +29,13 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     ] {
         check_backend_conformance_report(requirement, base_dir, suffix, failures);
     }
-    if let Some(log) = first_json_evidence(requirement, base_dir, "release-gate-log.json", failures)
-    {
-        let schema_version = log
-            .get("schema_version")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        if schema_version < 2 {
-            failures.push(format!(
-                "requirement `conformance-hard-gate` release log schema_version={schema_version}; expected schema>=2"
-            ));
-        }
+    if let Some(log) = schema_2_json_evidence(
+        requirement,
+        base_dir,
+        "release-gate-log.json",
+        "release log",
+        failures,
+    ) {
         let requested = log
             .get("requested_backends")
             .and_then(serde_json::Value::as_array)

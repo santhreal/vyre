@@ -28,8 +28,10 @@ pub const CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD: u32 =
 /// Dispatch grid for the one-lane-per-active-source low split pass.
 #[must_use]
 pub const fn csr_queue_split_low_dispatch_grid(queue_capacity: u32) -> [u32; 3] {
-    let blocks = queue_capacity.div_ceil(CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE[0]);
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(
+        queue_capacity,
+        CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE[0],
+    )
 }
 
 /// Logical lanes consumed by low split plus a high row-strided follow-up pass.

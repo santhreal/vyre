@@ -12,10 +12,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .get("packages")
         .and_then(serde_json::Value::as_array)
         .map_or(0, Vec::len);
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blockers = array_len(&matrix, "blockers");
     if packages == 0 {
         failures.push("requirement `crate-metadata` matrix contains zero packages".to_string());
     }
@@ -45,10 +42,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             ));
         }
     }
-    let missing_required = matrix
-        .get("missing_required_release_surfaces")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let missing_required = array_len(&matrix, "missing_required_release_surfaces");
     if missing_required != 0 {
         failures.push(format!(
             "requirement `crate-metadata` matrix has {missing_required} missing required release surface(s)"
@@ -124,10 +118,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .get("packages")
         .and_then(serde_json::Value::as_array)
         .map_or(0, Vec::len);
-    let feature_blockers = features
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let feature_blockers = array_len(&features, "blockers");
     if feature_packages == 0 {
         failures
             .push("requirement `crate-metadata` feature matrix contains zero packages".to_string());
@@ -137,10 +128,8 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             "requirement `crate-metadata` feature matrix still reports {feature_blockers} blocker(s)"
         ));
     }
-    let missing_required_feature_packages = features
-        .get("missing_required_release_packages")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let missing_required_feature_packages =
+        array_len(&features, "missing_required_release_packages");
     if missing_required_feature_packages != 0 {
         failures.push(format!(
             "requirement `crate-metadata` feature matrix has {missing_required_feature_packages} missing required release package(s)"
@@ -206,10 +195,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     else {
         return;
     };
-    let package_blockers = package_readiness
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let package_blockers = array_len(&package_readiness, "blockers");
     if package_blockers != 0 {
         failures.push(format!(
             "requirement `crate-metadata` package readiness still reports {package_blockers} blocker(s)"

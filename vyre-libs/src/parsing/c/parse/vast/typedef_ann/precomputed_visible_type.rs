@@ -121,16 +121,13 @@ fn c11_precompute_vast_visible_type_impl(
         Expr::var("vt_result"),
     ));
 
-    let n = node_count(&num_nodes).max(1);
+    let rows = declared_rows(&num_nodes);
     Program::wrapped(
         vec![
-            BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-            BufferDecl::storage(haystack, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_word_count(&haystack_len, packed_haystack)),
-            BufferDecl::storage(decl_contexts, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_DECL_CONTEXT_STRIDE_U32)),
-            BufferDecl::output(out_visible_type, 3, DataType::U32).with_count(n),
+            vast_nodes_input(vast_nodes, 0, rows),
+            haystack_input(haystack, 1, &haystack_len, packed_haystack),
+            decl_contexts_input(decl_contexts, 2, rows),
+            BufferDecl::output(out_visible_type, 3, DataType::U32).with_count(rows),
         ],
         [256, 1, 1],
         vec![wrap_anonymous(

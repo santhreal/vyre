@@ -2,6 +2,7 @@
 
 #![cfg(test)]
 
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
@@ -88,13 +89,17 @@ fn cpu_ref_single(
     max_iters: u32,
 ) -> (Vec<u32>, u32, u32) {
     let (frontier, outcome) = try_cpu_ref_converged(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+            },
+            allow_mask,
+            max_iters,
+        },
         frontier_in,
-        allow_mask,
-        max_iters,
     )
     .expect("Fix: CPU persistent BFS oracle must accept the single-query shape");
     (frontier, outcome.changed, u32::from(outcome.converged))
@@ -172,13 +177,17 @@ fn cpu_ref_batch(
         let start = query * words;
         let end = start + words;
         let (frontier, outcome) = try_cpu_ref_converged(
-            node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
+                },
+                allow_mask,
+                max_iters,
+            },
             &frontiers[start..end],
-            allow_mask,
-            max_iters,
         )
         .expect("Fix: CPU persistent BFS batch oracle must accept the query shape");
         frontier_out.extend_from_slice(&frontier);

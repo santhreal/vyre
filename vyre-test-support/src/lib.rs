@@ -38,16 +38,18 @@
 /// `floor` is the minimum builder count the source enumeration must find, and
 /// `waiver` lists builders that are knowingly uncovered. Both are the only
 /// crate-specific parts of the gate, so they are the only arguments; the test
-/// name and the crate directory are derived here. `env!("CARGO_MANIFEST_DIR")`
-/// expands at the call site, so it names the crate that declares the gate
-/// rather than this one.
+/// name and the crate directory are derived here. The directory is the run-time
+/// checkout root joined to `CARGO_PKG_NAME`, which expands at the call site and
+/// so names the crate that declares the gate. A compiled-in manifest directory
+/// would name whichever checkout built the binary, and every checkout here
+/// shares one target directory.
 #[macro_export]
 macro_rules! registry_closure_gate {
     (floor: $floor:expr, waiver: [$($waived:expr),* $(,)?] $(,)?) => {
         #[test]
         fn every_program_builder_is_tested_registered_or_explicitly_waived() {
             $crate::assert_registry_closure(
-                env!("CARGO_MANIFEST_DIR"),
+                $crate::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")),
                 &[$($waived),*],
                 $floor,
             );
@@ -148,8 +150,12 @@ macro_rules! test_node_extension {
 
 #[cfg(feature = "ir-fixtures")]
 pub mod binop_parity;
+pub mod case_table;
 pub mod cast_parity;
 pub mod consumer_boundary;
+pub mod exploded_ifds_cases;
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
 pub mod monorepo;

@@ -1,15 +1,19 @@
-//! Self-substrate wrappers for graph traversal and fixpoint-step primitives.
+//! Primitive contract pins for graph traversal and fixpoint-step kernels.
 //!
-//! Graph traversal semantics stay in `vyre-primitives`, while self-substrate
-//! owns the dispatch-facing names used by scheduler, resident fixed-point,
-//! and parity code.
+//! `vyre-primitives` owns these traversal algorithms, every builder that emits
+//! them, and every CPU oracle they are compared against. This module pins the
+//! contracts the graph dispatch layer above it relies on: each builder stamps
+//! its own generator on the Program or child Region it returns, each checked
+//! builder rejects a degenerate shape with a diagnostic instead of panicking,
+//! and each CPU oracle answers the worked cases the dispatch layer's parity
+//! runs assume.
+//!
+//! It used to also carry a `dispatch` module and a `references` module of
+//! one-line wrappers, one per primitive builder and per CPU oracle, each
+//! restating the primitive's parameter list and calling it with those
+//! parameters in that order. A wrapper that forwards is not an owner: it gave
+//! the algorithm a second name, no second behaviour, and a second signature to
+//! keep in step. Callers name `vyre_primitives::graph` directly.
 
-mod dispatch;
-#[cfg(any(test, feature = "cpu-parity"))]
-mod references;
 #[cfg(test)]
 mod tests;
-
-pub use dispatch::*;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use references::*;

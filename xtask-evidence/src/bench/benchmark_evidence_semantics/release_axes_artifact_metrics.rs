@@ -50,13 +50,11 @@ pub(crate) fn inspect_release_axis_source_artifact_metrics(
 
 #[cfg(test)]
 mod tests {
-    use super::super::release_axes_cuda::cuda_release_axes_source_artifact_issues;
-    use crate::report_fixture::EvidenceWorkspace;
+    use crate::report_fixture::cuda_release_axis_issues;
 
     #[test]
     fn cuda_release_axes_reject_source_artifacts_missing_axis_metrics() {
-        let workspace = EvidenceWorkspace::new();
-        let artifact = workspace.write_cuda_release_artifact(
+        let issues = cuda_release_axis_issues(
             "workload-missing-axis-metrics.json",
             serde_json::json!([
                 {
@@ -69,12 +67,6 @@ mod tests {
                 }
             ]),
         );
-        let axes = serde_json::json!({
-            "source_artifacts": [artifact]
-        });
-        let cuda_suite = EvidenceWorkspace::cuda_release_suite(&[&artifact]);
-
-        let issues = cuda_release_axes_source_artifact_issues(workspace.path(), &axes, &cuda_suite);
 
         assert!(
             issues.iter().any(|issue| issue.contains(

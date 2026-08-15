@@ -2,8 +2,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 #[cfg(test)]
 use crate::fixpoint::persistent_fixpoint::{
-    count_grid_sync, declared_words, fixpoint_route, persistent_fixpoint, persistent_fixpoint_grid,
-    required_workgroups, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+    declared_words, fixpoint_route, persistent_fixpoint, required_workgroups,
+    PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
 use crate::fixpoint::persistent_fixpoint::{routed_persistent_fixpoint, FixpointState};
 
@@ -31,6 +31,40 @@ pub struct BellmanBuffers<'a> {
     /// Convergence flag. Its width is decided by the routed harness, not the
     /// caller.
     pub changed: &'a str,
+}
+
+impl BellmanBuffers<'static> {
+    /// The canonical binding names for a Bellman-Ford program.
+    ///
+    /// A caller with no naming of its own gets one here instead of spelling six
+    /// strings, and every program built from it declares the same bindings in the
+    /// same order, which is what makes two such programs comparable byte for
+    /// byte. This is the only place the six names are spelled, so a transposed
+    /// `src`/`dst` or `dist`/`next_dist` is a one-line diff here rather than a
+    /// reordering inside a positional list nobody reads.
+    pub const CANONICAL: Self = Self {
+        src: "src",
+        dst: "dst",
+        weight: "weight",
+        dist: "dist",
+        next_dist: "next_dist",
+        changed: "changed",
+    };
+
+    /// Short binding names, for a caller that only cares about program shape.
+    ///
+    /// Deliberately disjoint from [`Self::CANONICAL`] so a test that reads a name
+    /// back out of a program cannot pass by matching the other set: with one
+    /// shared naming, an assertion against `"dist"` would hold whichever record
+    /// built the program.
+    pub const TERSE: Self = Self {
+        src: "s",
+        dst: "d",
+        weight: "w",
+        dist: "di",
+        next_dist: "nd",
+        changed: "c",
+    };
 }
 
 /// The graph extents and iteration cap one Bellman-Ford program is built for.
@@ -348,14 +382,7 @@ inventory::submit! {
         OP_ID,
         || {
             bellman_shortest_path(
-                BellmanBuffers {
-                    src: "src",
-                    dst: "dst",
-                    weight: "weight",
-                    dist: "dist",
-                    next_dist: "next_dist",
-                    changed: "changed",
-                },
+                BellmanBuffers::CANONICAL,
                 BellmanExtents {
                     n_nodes: 4,
                     n_edges: 4,
@@ -390,31 +417,12 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
-    /// The binding names the program tests in this module build against, with
-    /// each field named once.
-    ///
-    /// This is the only place the six names are spelled, so a transposition of
-    /// two of them is a one-line diff here rather than a reordering inside a
-    /// positional argument list nobody reads.
-    const FIXTURE: BellmanBuffers<'static> = BellmanBuffers {
-        src: "s",
-        dst: "d",
-        weight: "w",
-        dist: "di",
-        next_dist: "nd",
-        changed: "c",
-    };
+    /// The binding names the program tests in this module build against.
+    const FIXTURE: BellmanBuffers<'static> = BellmanBuffers::TERSE;
 
     /// The registry fixture's names, kept distinct so a test that reads them
     /// cannot pass by matching the short set above.
-    const VERBOSE_FIXTURE: BellmanBuffers<'static> = BellmanBuffers {
-        src: "src",
-        dst: "dst",
-        weight: "weight",
-        dist: "dist",
-        next_dist: "next_dist",
-        changed: "changed",
-    };
+    const VERBOSE_FIXTURE: BellmanBuffers<'static> = BellmanBuffers::CANONICAL;
 
     /// `BellmanExtents` for `n_nodes` nodes and `n_edges` edges under a cap.
     fn extents(n_nodes: u32, n_edges: u32, max_iterations: u32) -> BellmanExtents {
@@ -702,156 +710,46 @@ mod tests {
         assert!(p.stats().trap());
     }
 
-    /// Workgroups a host must launch to cover `program`.
+    /// Both ways a Bellman-Ford launch outgrows one workgroup, each registered
+    /// against the shared routing contract.
     ///
-    /// `bellman_shortest_path` emits atomics (`atomic_min` on `next_dist`,
-    /// `atomic_or` on the convergence flag), and for an atomic-carrying program
-    /// `vyre-driver`'s `dispatch_element_count_for_program` spans the LARGEST
-    /// declared buffer rather than just the output buffer, so the launch width is
-    /// `max(n_nodes, n_edges)` rounded up to whole workgroups.
-    /// Declared word count of the convergence-flag buffer (always named `"c"` in
-    /// these tests).
-    /// Locks out the multi-workgroup convergence-flag race.
-    ///
-    /// `persistent_fixpoint` keeps ONE `changed[0]` word, clears it from global
-    /// lane 0 with a plain store, and orders that clear against every other lane's
-    /// `atomic_or` with a workgroup-scoped `SeqCst` barrier only. Once the launch
-    /// spans more than one workgroup that ordering covers nothing across groups:
-    /// workgroup 0's next clear can erase workgroup 1's set (lost set, so
-    /// workgroup 1 reads 0 and `Return`s with unconverged distances), and the
-    /// post-dispatch flag read reports a convergence verdict no group agreed to.
-    /// A multi-workgroup build must therefore never be handed one shared cleared
-    /// word: this fails the moment that form comes back above the workgroup width.
-    #[test]
-    fn multi_workgroup_bellman_never_shares_one_cleared_convergence_word() {
-        let program = bellman_shortest_path(FIXTURE, extents(257, 256, 8));
-
-        assert_eq!(
-            required_workgroups(&program),
-            2,
-            "Fix: 257 nodes over a 256-wide workgroup must need two workgroups."
-        );
-        assert_eq!(
-            declared_words(&program, FIXTURE.changed),
-            8,
-            "Fix: a multi-workgroup bellman dispatch must use the per-iteration convergence-word protocol, not one shared cleared word."
-        );
+    /// The span is the widest declared buffer, so it can be widened from either
+    /// side: by the node count, which widens `dist`/`next_dist`, or by the edge
+    /// count, which widens `src`/`dst`/`weight`. Routing on `n_nodes` alone would
+    /// leave 4 nodes and 257 edges on the racing single-word flag while looking
+    /// comfortably small, so both sources are members here rather than one.
+    fn routed_forms() -> [(&'static str, u32, u32); 2] {
+        let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
+        [
+            ("bellman_shortest_path, node-widened span", width + 1, width),
+            ("bellman_shortest_path, edge-widened span", 4, width + 1),
+        ]
     }
 
-    /// Grid-wide fences in `nodes`, counted through every nesting construct.
-    /// Pins the routing threshold to the declared workgroup width.
-    ///
-    /// The threshold is `> PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0]`, read from the
-    /// same constant this program declares as its workgroup size, so the two can
-    /// never drift apart. At exactly that width the launch is one workgroup and
-    /// the compact single-word protocol is sound, so it stays in use; one element
-    /// past it the launch is two workgroups and must switch. An off-by-one here
-    /// puts a multi-workgroup dispatch back on the racing flag.
     #[test]
-    fn routing_threshold_is_the_declared_workgroup_width() {
+    fn every_routed_form_obeys_the_persistent_fixpoint_routing_contract() {
         let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-
-        let at_width = bellman_shortest_path(FIXTURE, extents(width, width, 8));
-        assert_eq!(
-            at_width.workgroup_size(),
-            PERSISTENT_FIXPOINT_WORKGROUP_SIZE
-        );
-        assert_eq!(required_workgroups(&at_width), 1);
-        assert_eq!(
-            declared_words(&at_width, FIXTURE.changed),
-            1,
-            "Fix: a single-workgroup launch must keep the compact one-word convergence flag."
-        );
-
-        let past_width = bellman_shortest_path(FIXTURE, extents(width + 1, width, 8));
-        assert_eq!(required_workgroups(&past_width), 2);
-        assert_eq!(
-            declared_words(&past_width, FIXTURE.changed),
-            8,
-            "Fix: one node past the workgroup width already needs the per-iteration convergence words."
-        );
-    }
-
-    /// The routing threshold is the DISPATCH SPAN, not the element count fed to
-    /// the fixpoint.
-    ///
-    /// `dispatch_element_count_for_program`
-    /// (`vyre-driver/src/program_walks/dispatch_params.rs:19`) forces a full span
-    /// over every non-shared binding once a program contains atomics, and this one
-    /// holds `atomic_min` on `next_dist` plus the harness's `atomic_or`. Full span
-    /// means the LARGEST declared buffer, so a wide edge list makes the launch
-    /// multi-workgroup even with four nodes: 4 nodes and 257 edges is already a
-    /// two-workgroup dispatch. Routing on `n_nodes` alone would leave that case on
-    /// the racing single-word flag while looking comfortably small.
-    #[test]
-    fn wide_edge_list_with_tiny_node_set_still_routes_to_the_grid_form() {
-        let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-        let program = bellman_shortest_path(FIXTURE, extents(4, width + 1, 8));
-
-        assert_eq!(
-            required_workgroups(&program),
-            2,
-            "Fix: 257 edges over a 256-wide workgroup must need two workgroups even with 4 nodes."
-        );
-        assert_eq!(
-            declared_words(&program, FIXTURE.changed),
-            8,
-            "Fix: the routing threshold must be the dispatch span (max declared buffer), not n_nodes."
-        );
-        assert!(
-            count_grid_sync(program.entry()) > 0,
-            "Fix: a two-workgroup dispatch must be grid-synchronized whichever buffer widened it."
-        );
-    }
-
-    /// The two routes must not silently converge to the same emission.
-    ///
-    /// The grid form's soundness IS its `MemoryOrdering::GridSync` fences: they
-    /// order the per-iteration flag write against every group's read. The
-    /// single-workgroup form must carry none of them, because emitting one there
-    /// would impose a cooperative launch on a dispatch that does not need it. If
-    /// both routes ever emit the same barrier set, the routing has stopped
-    /// selecting anything.
-    #[test]
-    fn grid_route_fences_the_grid_and_single_workgroup_route_does_not() {
-        let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-
-        let single = bellman_shortest_path(FIXTURE, extents(width, width, 4));
-        assert_eq!(
-            count_grid_sync(single.entry()),
-            0,
-            "Fix: a single-workgroup bellman program must not force a cooperative grid launch."
-        );
-
-        let grid = bellman_shortest_path(FIXTURE, extents(width + 1, width, 4));
-        assert_eq!(
-            count_grid_sync(grid.entry()),
-            8,
-            "Fix: the grid form must fence each of its 4 waves twice, once after the transfer step and once after the compare."
-        );
-    }
-
-    /// The grid form indexes `changed[iteration]`, so a one-word buffer there
-    /// would be an out-of-bounds atomic write on iteration 1. This wrapper
-    /// re-declares `changed` itself, so its count must equal the count the harness
-    /// declares, for every iteration budget.
-    #[test]
-    fn grid_route_sizes_changed_to_one_word_per_iteration() {
-        let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-        for max_iterations in [1_u32, 2, 8, 64] {
-            let program = bellman_shortest_path(FIXTURE, extents(width + 1, width, max_iterations));
-            let harness =
-                persistent_fixpoint_grid(Vec::new(), "di", "nd", "c", width + 1, max_iterations);
-
-            assert_eq!(
-                declared_words(&program, FIXTURE.changed),
-                max_iterations,
-                "Fix: the grid route needs one convergence word per iteration; {max_iterations} iterations need {max_iterations} words."
-            );
-            assert_eq!(
-                declared_words(&program, FIXTURE.changed),
-                declared_words(&harness, FIXTURE.changed),
-                "Fix: this wrapper's `changed` declaration must match persistent_fixpoint_grid's own."
+        for (name, n_nodes, n_edges) in routed_forms() {
+            crate::fixpoint::routing_contract::assert_routes_on_dispatch_span(
+                &crate::fixpoint::routing_contract::RoutedFixpointOp {
+                    name,
+                    changed: FIXTURE.changed,
+                    at_one_workgroup: &|max_iterations| {
+                        bellman_shortest_path(FIXTURE, extents(width, width, max_iterations))
+                    },
+                    past_one_workgroup: &|max_iterations| {
+                        bellman_shortest_path(FIXTURE, extents(n_nodes, n_edges, max_iterations))
+                    },
+                    grid_harness: &|max_iterations| {
+                        crate::fixpoint::routing_contract::bare_grid_harness(
+                            FIXTURE.dist,
+                            FIXTURE.next_dist,
+                            FIXTURE.changed,
+                            n_nodes,
+                            max_iterations,
+                        )
+                    },
+                },
             );
         }
     }

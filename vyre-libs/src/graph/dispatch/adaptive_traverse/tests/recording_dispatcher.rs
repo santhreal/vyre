@@ -4,7 +4,10 @@ use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
-use super::super::ResidentAdaptiveTraversalGraph;
+use super::super::{
+    AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch,
+    ResidentAdaptiveTraversalGraph,
+};
 
 #[derive(Default)]
 pub(super) struct RecordingResidentDispatcher {
@@ -163,5 +166,184 @@ impl ProgramDispatcher for RecordingResidentDispatcher {
         outputs.clear();
         outputs.extend(read_ranges.iter().map(|range| vec![0u8; range.byte_len]));
         Ok(())
+    }
+}
+
+/// Which packed frontier words a sparse-queue run starts from.
+///
+/// Both sparse-queue suites built these fills by hand, once per case, from the
+/// word count the graph implies. The fill is what selects the queue
+/// materializer, so it is data the case declares rather than a loop it spells.
+pub(super) enum Frontier {
+    /// Node 0 only: one active source, one nonzero packed word.
+    SingleSource,
+    /// Every bit of every packed word: the densest frontier the graph holds.
+    AllWords,
+    /// The lowest `n` node ids.
+    LowNodes(u32),
+}
+
+impl Frontier {
+    fn packed(&self, words: usize) -> Vec<u32> {
+        match *self {
+            Frontier::SingleSource => {
+                let mut frontier = vec![0; words];
+                frontier[0] = 1;
+                frontier
+            }
+            Frontier::AllWords => vec![u32::MAX; words],
+            Frontier::LowNodes(count) => {
+                let mut frontier = vec![0; words];
+                for node in 0..count {
+                    frontier[(node / 32) as usize] |= 1 << (node % 32);
+                }
+                frontier
+            }
+        }
+    }
+}
+
+/// One resident sparse-queue dispatch, and everything it produced.
+///
+/// Every sparse-queue case built the same five values by hand before it could
+/// assert anything: a recording dispatcher, a graph, default scratch, a packed
+/// frontier, and an output buffer. It then unwrapped the same scratch handles
+/// with the same diagnostics. That scaffold is here once; a case declares the
+/// graph and the frontier and asserts the contract.
+pub(super) struct SparseQueueRun {
+    dispatcher: RecordingResidentDispatcher,
+    pub(super) scratch: AdaptiveTraversalResidentScratch,
+    pub(super) frontier_out: Vec<u32>,
+    pub(super) words: usize,
+}
+
+impl SparseQueueRun {
+    /// Run one step over a synthetic resident graph whose buffers are the
+    /// handles the graph literal names.
+    pub(super) fn over_graph(
+        graph: &ResidentAdaptiveTraversalGraph,
+        frontier: &Frontier,
+    ) -> Result<Self, DispatchError> {
+        let dispatcher = RecordingResidentDispatcher::default();
+        let mut scratch = AdaptiveTraversalResidentScratch::default();
+        let mut frontier_out = Vec::new();
+        super::super::adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
+            &dispatcher,
+            graph,
+            &frontier.packed(graph.words),
+            u32::MAX,
+            &mut scratch,
+            &mut frontier_out,
+        )?;
+        Ok(Self {
+            dispatcher,
+            scratch,
+            frontier_out,
+            words: graph.words,
+        })
+    }
+
+    /// `[frontier_in, frontier_out, queue_len]`, in the order the resident step
+    /// allocates them.
+    pub(super) fn frontier_scratch(&self) -> [u64; 3] {
+        self.scratch
+            .handles
+            .expect("Fix: sparse-queue resident step must allocate frontier/queue-len handles")
+    }
+
+    pub(super) fn active_queue(&self) -> u64 {
+        self.scratch
+            .queue_handle
+            .expect("Fix: sparse-queue resident step must allocate an active queue")
+    }
+
+    /// `(word_partials, block_totals)`, allocated only by the deterministic
+    /// word-prefix materializer.
+    pub(super) fn word_prefix(&self) -> (u64, u64) {
+        (
+            self.scratch.word_partials_handle.expect(
+                "Fix: deterministic word-prefix sparse-queue step must allocate word partials",
+            ),
+            self.scratch.word_block_totals_handle.expect(
+                "Fix: deterministic word-prefix sparse-queue step must allocate block totals",
+            ),
+        )
+    }
+
+    pub(super) fn allocated_word_prefix(&self) -> bool {
+        self.scratch.word_partials_handle.is_some()
+            || self.scratch.word_block_totals_handle.is_some()
+    }
+
+    pub(super) fn steps(&self) -> Vec<Vec<u64>> {
+        self.dispatcher.last_step_handles()
+    }
+
+    pub(super) fn uploads(&self) -> Vec<u64> {
+        self.dispatcher.last_upload_handles()
+    }
+
+    pub(super) fn plan_cache(&self) -> AdaptiveTraversalPlanCacheSnapshot {
+        self.scratch.plan_cache_snapshot()
+    }
+
+    pub(super) fn high_degree_queue(&self) -> (u64, u64) {
+        (
+            self.scratch
+                .high_queue_handle
+                .expect("Fix: mixed split traversal must allocate a high-degree queue"),
+            self.scratch
+                .high_len_handle
+                .expect("Fix: mixed split traversal must allocate a high-degree queue length"),
+        )
+    }
+
+    pub(super) fn grids(&self) -> Vec<Option<[u32; 3]>> {
+        self.dispatcher.last_step_grids()
+    }
+
+    pub(super) fn alloc_lengths(&self) -> Vec<usize> {
+        self.dispatcher.resident_alloc_lengths()
+    }
+
+    pub(super) fn alloc_count(&self) -> usize {
+        self.dispatcher.alloc_count.get()
+    }
+
+    pub(super) fn freed_handles(&self) -> Vec<u64> {
+        self.dispatcher.freed.borrow().clone()
+    }
+
+    /// Run another step through the same dispatcher and scratch, which is how
+    /// the reuse contracts observe what the previous run left behind.
+    pub(super) fn step_again(
+        &mut self,
+        graph: &ResidentAdaptiveTraversalGraph,
+        frontier: &Frontier,
+    ) -> Result<(), DispatchError> {
+        super::super::adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
+            &self.dispatcher,
+            graph,
+            &frontier.packed(graph.words),
+            u32::MAX,
+            &mut self.scratch,
+            &mut self.frontier_out,
+        )
+    }
+}
+
+/// A synthetic resident traversal graph `node_count` nodes wide, with no edges
+/// and the packed frontier width that node count implies.
+///
+/// Every sparse-queue case recomputed that width by hand before it could write
+/// the graph literal. A case that varies degree or layout spreads this:
+/// `ResidentAdaptiveTraversalGraph { max_row_degree: 64, ..graph_of(2048) }`.
+pub(super) fn graph_of(node_count: u32) -> ResidentAdaptiveTraversalGraph {
+    ResidentAdaptiveTraversalGraph {
+        node_count,
+        edge_count: 0,
+        max_row_degree: 0,
+        words: vyre_primitives::bitset::bitset_words(node_count) as usize,
+        ..traversal_graph()
     }
 }

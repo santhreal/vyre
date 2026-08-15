@@ -17,10 +17,14 @@ mod common;
 
 mod architecture_docs;
 mod canonical_first_workgroup_guard;
+mod ci_workflow_references;
 mod cli_docs;
 mod crate_ownership_registry;
 mod crate_readmes;
+mod docs_manifest_completeness;
+mod evidence_blocker_reporting;
 mod feature_isolation;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
+mod subcommand_dispatch;
 mod testing_guides;

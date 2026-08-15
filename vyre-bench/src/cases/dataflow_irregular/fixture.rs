@@ -5,6 +5,7 @@ use crate::cases::queue_closure_oracle::{
 };
 use crate::cases::skewed_graph::{skewed_degree as shared_skewed_degree, skewed_target};
 use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_primitives::predicate::edge_kind;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
@@ -329,13 +330,17 @@ pub(super) fn ifds_skewed_closure_oracle(
     let mut next = Vec::new();
     let mut iterations = 0_u32;
     vyre_primitives::graph::csr_forward_or_changed::cpu_ref_closure_into_with_step_hook(
-        fixture.stats.nodes,
-        &fixture.edge_offsets,
-        &fixture.edge_targets,
-        &fixture.edge_kind_mask,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: fixture.stats.nodes,
+                edge_offsets: &fixture.edge_offsets,
+                edge_targets: &fixture.edge_targets,
+                edge_kind_mask: &fixture.edge_kind_mask,
+            },
+            allow_mask: IFDS_REACH_MASK,
+            max_iters,
+        },
         &fixture.frontier_in,
-        IFDS_REACH_MASK,
-        max_iters,
         &mut current,
         &mut next,
         |_| {

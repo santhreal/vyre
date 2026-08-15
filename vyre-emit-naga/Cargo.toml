@@ -27,12 +27,13 @@ vyre-foundation.workspace = true
 rustc-hash = { workspace = true }
 inventory = { workspace = true }
 serde_json.workspace = true
-blake3 = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
-vyre-test-support.workspace = true
+# `ir-fixtures` carries the per-Node-variant fixture set the atomic-scanner
+# descent gate derives its variant space from at run time.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # integration tests/benches assert against these crates' public APIs.
 # `c-parser` is required by carrier_scope_regression::dump_c11_lexer_naga, which
 # builds the real `vyre_libs::parsing::c::lex::lexer::c11_lexer` megakernel and

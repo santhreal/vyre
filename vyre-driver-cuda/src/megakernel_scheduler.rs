@@ -2,9 +2,9 @@
 
 use vyre_driver::megakernel_execution::{
     plan_megakernel_execution, select_megakernel_topology, select_megakernel_topology_stable,
-    MegakernelDeviceCapabilities, MegakernelExecutionPlan, MegakernelExecutionSample,
-    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
-    MegakernelMemoryError, MegakernelTopologyDecision,
+    MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionPlan,
+    MegakernelExecutionSample, MegakernelExecutionTopology, MegakernelGraphShape,
+    MegakernelMemoryBudget, MegakernelMemoryError, MegakernelTopologyDecision,
 };
 use vyre_libs::scheduling::megakernel_schedule::{
     try_schedule_via_scale_aware_samples_into, MegakernelScaleSample, MegakernelScheduleError,
@@ -101,28 +101,17 @@ pub fn select_cuda_megakernel_topology_stable(
 ///
 /// Returns [`MegakernelMemoryError`] when byte accounting overflows or the plan
 /// does not fit the approved budget.
-#[allow(clippy::too_many_arguments)]
 pub fn plan_cuda_megakernel_execution(
     sample: CudaMegakernelScheduleSample,
     graph: MegakernelGraphShape,
-    bytes_per_node: u64,
-    bytes_per_edge: u64,
-    frontier_bytes: u64,
-    scratch_bytes: u64,
-    output_bytes: u64,
-    budget_bytes: u64,
+    bytes: MegakernelByteLayout,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
 ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
     plan_megakernel_execution(
         sample.execution_sample(),
         graph,
-        bytes_per_node,
-        bytes_per_edge,
-        frontier_bytes,
-        scratch_bytes,
-        output_bytes,
-        budget_bytes,
+        bytes,
         launch_overhead_ns,
         fusion_pressure,
         CALLER_GATED,

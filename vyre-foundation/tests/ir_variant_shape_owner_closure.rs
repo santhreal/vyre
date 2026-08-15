@@ -1,0 +1,411 @@
+//! The class closed here: a second, hand-written enumeration of `Node`'s shape
+//! that disagrees with the owning one, and a descent that treats a variant it
+//! was never told about as a leaf.
+//!
+//! # What used to stand here
+//!
+//! `Node`'s shape was re-stated once per traversal direction and once per
+//! consumer. `visit::node_map::map_body` listed `If`/`Loop`/`Block`/`Region`
+//! and ended in `other => other`, so a body-bearing variant that list had not
+//! been told about was handed back UNCHANGED and every pass composed on it
+//! (`rematerialize_cheap_let`, the pass engine's constant propagation) reported
+//! success while doing nothing inside that variant. `visit::bound_names` ended
+//! in `_ => {}`, so a new binding form would have read as binding nothing and a
+//! scope pass would have hoisted across a live rebinding.
+//! `optimizer::cost::count_divergent_patterns` was checked against a
+//! hand-copied twin walker in its own test module, which is not a check: two
+//! copies of the same omission agree.
+//!
+//! # The property that replaced it
+//!
+//! Three owners, one per Rust reference mode, and nothing else may enumerate
+//! the shape:
+//!
+//! - `transform::visit::child_bodies` for a shared read,
+//! - `transform::visit::child_bodies_mut` for a move or an in-place mutation,
+//! - `transform::rewrite_walk::rewrite_node` for a borrow-preserving rebuild.
+//!
+//! Each is an independent exhaustive match, so this suite holds them to each
+//! other on arity, source order, and contents; a position added to one and
+//! forgotten in another is visible here and nowhere else. The scalar namespace
+//! has one owner, `transform::visit::node_scalars`, held to `node_shape` and to
+//! the rewriting walk the same way. The consumers that used to carry their own
+//! list (`map_body`, `walk_nodes_mut`, and the cost fold behind
+//! `CostCertificate::for_program`) are each required to reach a marker planted
+//! in every body slot.
+//!
+//! # Why it fails by default on a new variant
+//!
+//! The member set is not written here. It comes from
+//! `vyre_test_support::ir_variants`, whose fixtures are checked against
+//! `vyre_foundation::ir::NODE_VARIANT_NAMES`, which the registry macro emits
+//! from the enum body. Adding a `Node` variant turns this suite RED until
+//! somebody adds a fixture, and adding the fixture forces a decision about
+//! every owner and every consumer above.
+
+use vyre_foundation::ir::{BinOp, Expr, Ident, Node, Program};
+use vyre_foundation::optimizer::cost::CostCertificate;
+use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
+use vyre_foundation::transform::visit::{
+    child_bodies, child_bodies_mut, node_scalars, node_shape, walk_nodes_mut,
+};
+use vyre_foundation::visit::node_map::map_body;
+use vyre_foundation::MemoryOrdering;
+use vyre_test_support::ir_variants::{
+    assert_covers_every_node_variant, assert_samples_match_declared_shape, node_body_slot_samples,
+    node_operand_samples, node_variant_samples, NodeSample,
+};
+
+/// The node planted in one body slot at a time.
+fn body_marker() -> Node {
+    Node::barrier_with_ordering(MemoryOrdering::SeqCst)
+}
+
+/// The expression planted in one operand slot at a time.
+fn operand_marker() -> Expr {
+    Expr::var("vyre_shape_owner_marker")
+}
+
+/// Bare variants, plus one fixture per body slot and one per operand slot.
+fn every_fixture() -> Vec<NodeSample> {
+    let mut all = node_variant_samples();
+    all.extend(node_body_slot_samples(&body_marker()));
+    all.extend(node_operand_samples(&operand_marker()));
+    all
+}
+
+/// A policy that changes nothing and does not descend, so what it records is
+/// the positions of ONE node rather than of its whole subtree.
+#[derive(Default)]
+struct ObserveShallow {
+    bodies: Vec<Vec<Node>>,
+    operands: Vec<Expr>,
+    idents: Vec<Ident>,
+}
+
+impl NodeRewrite for ObserveShallow {
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        self.operands.push(expr.clone());
+        None
+    }
+
+    fn ident(&mut self, name: &Ident) -> Option<Ident> {
+        self.idents.push(name.clone());
+        None
+    }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        self.bodies.push(body.to_vec());
+        None
+    }
+}
+
+/// A policy that renames one identifier wherever it is offered.
+struct RenameIdent {
+    from: Ident,
+    to: Ident,
+}
+
+impl NodeRewrite for RenameIdent {
+    fn operand(&mut self, _expr: &Expr) -> Option<Expr> {
+        None
+    }
+
+    fn ident(&mut self, name: &Ident) -> Option<Ident> {
+        (name == &self.from).then(|| self.to.clone())
+    }
+}
+
+fn program_of(nodes: Vec<Node>) -> Program {
+    Program::wrapped(Vec::new(), [1, 1, 1], nodes)
+}
+
+/// `if invocation_id.x == 0 { buf[0] = 1 }`: the one shape the divergence
+/// dimension of the cost certificate scores.
+fn divergent_branch() -> Node {
+    Node::if_then(
+        Expr::BinOp {
+            op: BinOp::Eq,
+            left: Box::new(Expr::gid_x()),
+            right: Box::new(Expr::u32(0)),
+        },
+        vec![Node::store("buf", Expr::u32(0), Expr::u32(1))],
+    )
+}
+
+/// The fixtures name every declared variant, and each one plants its marker in
+/// a slot the declared shape says exists.
+///
+/// Without this the rest of the suite could pass by testing a subset: a
+/// traversal that misses a variant no fixture covers is invisible.
+#[test]
+fn the_fixture_set_covers_every_declared_node_variant() {
+    assert_covers_every_node_variant(&node_variant_samples());
+    assert_samples_match_declared_shape(&node_body_slot_samples(&body_marker()), true);
+    assert_samples_match_declared_shape(&node_operand_samples(&operand_marker()), false);
+}
+
+/// The three reference modes agree on which body slots a variant has, in which
+/// order, holding which nodes.
+///
+/// `child_bodies` pads its answer to two groups so a caller can flatten
+/// unconditionally; `child_bodies_mut` and the rewriting walk offer only the
+/// real slots. The comparison is therefore arity and contents against the
+/// rewriting walk, and flattened contents against `child_bodies`. A slot added
+/// to one match and forgotten in another is a body a moving map never takes
+/// out, which is the `other => other` defect wearing different clothes.
+#[test]
+fn every_reference_mode_reports_the_same_body_slots() {
+    for sample in every_fixture() {
+        let mut observed = ObserveShallow::default();
+        rewrite_walk::rewrite_node(&sample.node, &mut observed);
+
+        let mut owned = sample.node.clone();
+        let moving: Vec<Vec<Node>> = child_bodies_mut(&mut owned)
+            .into_iter()
+            .map(|slot| slot.clone())
+            .collect();
+
+        assert_eq!(
+            moving,
+            observed.bodies,
+            "Fix: child_bodies_mut and rewrite_node disagree about the body \
+             slots of {}; a body one owner cannot reach is a body a pass \
+             silently declines to rewrite",
+            sample.label()
+        );
+
+        let reading: Vec<&Node> = child_bodies(&sample.node).into_iter().flatten().collect();
+        let flattened: Vec<&Node> = moving.iter().flatten().collect();
+        assert_eq!(
+            flattened,
+            reading,
+            "Fix: child_bodies and child_bodies_mut disagree about the contents \
+             of {}",
+            sample.label()
+        );
+
+        assert_eq!(
+            node_shape(&sample.node).nests_nodes,
+            !moving.is_empty(),
+            "Fix: node_shape and child_bodies_mut disagree about whether {} \
+             nests statements",
+            sample.label()
+        );
+    }
+}
+
+/// `map_body` offers the caller every body slot the moving owner reports, and
+/// puts each result back in the slot it came from.
+///
+/// This is the defect itself: `map_body` used to end in `other => other`, so a
+/// slot it did not name was never offered and the caller's transform never ran
+/// inside it, with no error and no observable difference from a transform that
+/// legitimately changed nothing.
+#[test]
+fn map_body_offers_and_restores_every_body_slot() {
+    for sample in every_fixture() {
+        let mut owned = sample.node.clone();
+        let expected = child_bodies_mut(&mut owned).len();
+
+        let mut offered = 0usize;
+        let mapped = map_body(sample.node.clone(), &mut |body| {
+            offered += 1;
+            let mut body = body;
+            body.push(Node::Return);
+            body
+        });
+
+        assert_eq!(
+            offered,
+            expected,
+            "Fix: map_body skipped a body slot of {}; a pass composed on it is \
+             a silent no-op inside that slot",
+            sample.label()
+        );
+
+        let mut mapped_owned = mapped;
+        let after: Vec<Vec<Node>> = child_bodies_mut(&mut mapped_owned)
+            .into_iter()
+            .map(|slot| slot.clone())
+            .collect();
+        for (index, slot) in after.iter().enumerate() {
+            assert_eq!(
+                slot.last(),
+                Some(&Node::Return),
+                "Fix: map_body dropped the rewritten body of slot {index} of {}",
+                sample.label()
+            );
+        }
+    }
+}
+
+/// An identity map through `map_body` is an identity on the node.
+///
+/// Pairs with the test above: a `map_body` that offered every slot but wrote
+/// the results back into the wrong ones would still count correctly.
+#[test]
+fn map_body_with_an_identity_transform_changes_nothing() {
+    for sample in every_fixture() {
+        let mapped = map_body(sample.node.clone(), &mut |body| body);
+        assert_eq!(
+            mapped,
+            sample.node,
+            "Fix: map_body altered {} while applying an identity transform",
+            sample.label()
+        );
+    }
+}
+
+/// The in-place walk reaches a node planted in every body slot.
+///
+/// `walk_nodes_mut` drives every mutating analysis that rewrites nodes in
+/// place. A slot it does not descend into is a subtree those analyses believe
+/// is empty.
+#[test]
+fn walk_nodes_mut_reaches_every_body_slot() {
+    let marker = body_marker();
+    for sample in node_body_slot_samples(&marker) {
+        let mut program = program_of(vec![sample.node.clone()]);
+        let mut seen = 0usize;
+        walk_nodes_mut(&mut program, |node| {
+            if *node == marker {
+                seen += 1;
+            }
+        });
+        assert_eq!(
+            seen,
+            1,
+            "Fix: walk_nodes_mut never reached the node planted in {}",
+            sample.label()
+        );
+    }
+}
+
+/// The cost fold reaches a divergent branch planted in every body slot.
+///
+/// `CostCertificate` is the monotone-down post-condition gate: a dimension the
+/// fold cannot see is a dimension a pass is free to raise. A fold that stops at
+/// a variant it does not recognise reports a lower score than the program has,
+/// and the gate then accepts the rewrite it exists to refuse.
+#[test]
+fn the_cost_fold_scores_a_divergent_branch_in_every_body_slot() {
+    for sample in node_body_slot_samples(&divergent_branch()) {
+        let certificate = CostCertificate::for_program(&program_of(vec![sample.node.clone()]));
+        assert!(
+            certificate.divergence_score >= 1,
+            "Fix: the divergence fold never reached the branch planted in {}; \
+             the cost gate cannot refuse a rewrite that raises a dimension it \
+             cannot see",
+            sample.label()
+        );
+    }
+}
+
+/// A body slot with nothing divergent in it scores zero, so the test above
+/// cannot pass by counting everything.
+#[test]
+fn the_cost_fold_scores_nothing_for_a_non_divergent_branch() {
+    let benign = Node::if_then(
+        Expr::BinOp {
+            op: BinOp::Lt,
+            left: Box::new(Expr::var("a")),
+            right: Box::new(Expr::var("b")),
+        },
+        vec![Node::store("buf", Expr::u32(0), Expr::u32(1))],
+    );
+    for sample in node_body_slot_samples(&benign) {
+        let certificate = CostCertificate::for_program(&program_of(vec![sample.node.clone()]));
+        assert_eq!(
+            certificate.divergence_score,
+            0,
+            "Fix: the divergence fold counted a comparison that is not \
+             invocation-id divergence in {}",
+            sample.label()
+        );
+    }
+}
+
+/// `node_scalars` reports exactly the operand expressions the rewriting walk
+/// offers, in the same order.
+///
+/// Two independent exhaustive matches over the same enum. An operand position
+/// present in one and absent from the other is either an expression a scan
+/// never examines or an expression a substitution never rewrites, and the two
+/// halves of the IR then hold different values for the same variable.
+#[test]
+fn node_scalars_reports_every_operand_the_rewriting_walk_offers() {
+    for sample in every_fixture() {
+        let mut observed = ObserveShallow::default();
+        rewrite_walk::rewrite_node(&sample.node, &mut observed);
+
+        let scalars: Vec<Expr> = node_scalars(&sample.node)
+            .operands
+            .into_iter()
+            .flatten()
+            .cloned()
+            .collect();
+
+        assert_eq!(
+            scalars,
+            observed.operands,
+            "Fix: node_scalars and rewrite_node disagree about the operands of \
+             {}",
+            sample.label()
+        );
+
+        assert_eq!(
+            node_shape(&sample.node).carries_operands,
+            !scalars.is_empty(),
+            "Fix: node_shape and node_scalars disagree about whether {} \
+             carries operands",
+            sample.label()
+        );
+    }
+}
+
+/// The name `node_scalars` reports as bound is the one the rewriting walk
+/// renames.
+///
+/// The scope passes read the binding through `node_scalars` and the renaming
+/// passes write it through `rewrite_node`. If the two point at different
+/// fields of a variant, a rename leaves a scope pass looking at the old name
+/// and the pass extends a scope across a binding that is no longer there.
+#[test]
+fn the_reported_binding_is_the_ident_the_rewriting_walk_renames() {
+    let renamed = Ident::new("vyre_shape_owner_renamed".into());
+    for sample in every_fixture() {
+        let Some((binding, name)) = node_scalars(&sample.node).binding else {
+            continue;
+        };
+
+        let mut observed = ObserveShallow::default();
+        rewrite_walk::rewrite_node(&sample.node, &mut observed);
+        assert!(
+            observed.idents.contains(name),
+            "Fix: {} binds `{name}` as {binding:?}, but the rewriting walk \
+             never offers that identifier for renaming",
+            sample.label()
+        );
+
+        let mut rename = RenameIdent {
+            from: name.clone(),
+            to: renamed.clone(),
+        };
+        let rewritten =
+            rewrite_walk::rewrite_node(&sample.node, &mut rename).unwrap_or_else(|| {
+                panic!(
+                    "Fix: renaming the binding of {} changed nothing",
+                    sample.label()
+                )
+            });
+
+        assert_eq!(
+            node_scalars(&rewritten).binding.map(|(_, name)| name),
+            Some(&renamed),
+            "Fix: the rewriting walk and node_scalars name different fields of \
+             {} as its binding",
+            sample.label()
+        );
+    }
+}

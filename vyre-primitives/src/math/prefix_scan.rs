@@ -114,38 +114,11 @@ pub fn prefix_scan_with_op_id(
         ordering: vyre_foundation::MemoryOrdering::SeqCst,
     });
 
-    let mut stride = 1_u32;
-    while stride < lanes {
-        let previous_lane = Expr::add(lane.clone(), Expr::u32(u32::MAX.wrapping_sub(stride - 1)));
-        body.push(Node::store(
-            &scratch_b,
-            lane.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        ));
-        body.push(Node::if_then(
-            Expr::lt(Expr::u32(stride - 1), lane.clone()),
-            vec![Node::store(
-                &scratch_b,
-                lane.clone(),
-                Expr::add(
-                    Expr::load(&scratch_a, lane.clone()),
-                    Expr::load(&scratch_a, previous_lane),
-                ),
-            )],
-        ));
-        body.push(Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
-        });
-        body.push(Node::store(
-            &scratch_a,
-            lane.clone(),
-            Expr::load(&scratch_b, lane.clone()),
-        ));
-        body.push(Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
-        });
-        stride *= 2;
-    }
+    body.extend(
+        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
+            &scratch_a, &scratch_b, &lane, lanes,
+        ),
+    );
 
     body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(n)),

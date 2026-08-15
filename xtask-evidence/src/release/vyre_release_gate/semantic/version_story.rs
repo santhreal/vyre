@@ -19,10 +19,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     else {
         return;
     };
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blockers = array_len(&matrix, "blockers");
     if blockers != 0 {
         failures.push(format!(
             "requirement `version-story` matrix still reports {blockers} blocker(s)"
@@ -123,10 +120,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     if let Some(tag_plan) =
         first_json_evidence(requirement, base_dir, "release-tag-plan.json", failures)
     {
-        let tag_plan_blockers = tag_plan
-            .get("blockers")
-            .and_then(serde_json::Value::as_array)
-            .map_or(usize::MAX, Vec::len);
+        let tag_plan_blockers = array_len(&tag_plan, "blockers");
         if tag_plan_blockers != 0 {
             failures.push(format!(
                 "requirement `version-story` release-tag-plan reports {tag_plan_blockers} blocker(s)"
@@ -187,10 +181,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                     .to_string(),
         );
         }
-        let version_blockers = tag_plan
-            .get("version_matrix_blocker_count")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(u64::MAX);
+        let version_blockers = u64_field(&tag_plan, "version_matrix_blocker_count", u64::MAX);
         if version_blockers != 0 {
             failures.push(format!(
                 "requirement `version-story` release-tag-plan carries {version_blockers} version matrix blocker(s)"

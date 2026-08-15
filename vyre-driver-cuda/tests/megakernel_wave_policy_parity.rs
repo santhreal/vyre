@@ -10,9 +10,9 @@
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_execution::{
     plan_megakernel_execution, select_megakernel_topology, select_megakernel_topology_stable,
-    MegakernelDeviceCapabilities, MegakernelExecutionSample, MegakernelExecutionTopology,
-    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
-    NeutralMegakernelExecutionPlanner,
+    MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionSample,
+    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
+    MegakernelMemoryError, NeutralMegakernelExecutionPlanner,
 };
 // The wave and dependency corpora are the neutral policy's own definitions,
 // imported rather than restated: a table copied into this suite would let the
@@ -719,12 +719,40 @@ fn cuda_and_neutral_topology_selection_agree_decision_for_decision() {
 fn cuda_and_neutral_execution_planning_agree_decision_for_decision() {
     for density in DENSITIES {
         for graph in GRAPHS {
-            for (bytes_per_node, bytes_per_edge, frontier, scratch, output, budget) in [
-                (0u64, 0u64, 0u64, 0u64, 0u64, 0u64),
-                (16, 8, 8_192, 4_096, 2_048, 128 * 1024),
-                (16, 8, 8_192, 4_096, 2_048, 40_000),
-                (1, 1, 1, 1, 1, u64::MAX),
-                (u64::MAX, u64::MAX, 1, 1, 1, u64::MAX),
+            for bytes in [
+                MegakernelByteLayout::default(),
+                MegakernelByteLayout {
+                    bytes_per_node: 16,
+                    bytes_per_edge: 8,
+                    frontier_bytes: 8_192,
+                    scratch_bytes: 4_096,
+                    output_bytes: 2_048,
+                    budget_bytes: 128 * 1024,
+                },
+                MegakernelByteLayout {
+                    bytes_per_node: 16,
+                    bytes_per_edge: 8,
+                    frontier_bytes: 8_192,
+                    scratch_bytes: 4_096,
+                    output_bytes: 2_048,
+                    budget_bytes: 40_000,
+                },
+                MegakernelByteLayout {
+                    bytes_per_node: 1,
+                    bytes_per_edge: 1,
+                    frontier_bytes: 1,
+                    scratch_bytes: 1,
+                    output_bytes: 1,
+                    budget_bytes: u64::MAX,
+                },
+                MegakernelByteLayout {
+                    bytes_per_node: u64::MAX,
+                    bytes_per_edge: u64::MAX,
+                    frontier_bytes: 1,
+                    scratch_bytes: 1,
+                    output_bytes: 1,
+                    budget_bytes: u64::MAX,
+                },
             ] {
                 let sample = MegakernelExecutionSample {
                     dispatch_cost_ns: 1_000.0,
@@ -737,33 +765,17 @@ fn cuda_and_neutral_execution_planning_agree_decision_for_decision() {
                     readback_bytes: sample.readback_bytes,
                 };
                 assert_eq!(
-                    plan_cuda_megakernel_execution(
-                        cuda_sample,
-                        graph,
-                        bytes_per_node,
-                        bytes_per_edge,
-                        frontier,
-                        scratch,
-                        output,
-                        budget,
-                        250.0,
-                        0.95,
-                    ),
+                    plan_cuda_megakernel_execution(cuda_sample, graph, bytes, 250.0, 0.95),
                     plan_megakernel_execution(
                         sample,
                         graph,
-                        bytes_per_node,
-                        bytes_per_edge,
-                        frontier,
-                        scratch,
-                        output,
-                        budget,
+                        bytes,
                         250.0,
                         0.95,
                         MegakernelDeviceCapabilities::FUSION_CAPABLE,
                     ),
                     "Fix: CUDA execution planning diverged from the neutral policy for \
-                     density={density} graph={graph:?} budget={budget}."
+                     density={density} graph={graph:?} bytes={bytes:?}."
                 );
             }
         }

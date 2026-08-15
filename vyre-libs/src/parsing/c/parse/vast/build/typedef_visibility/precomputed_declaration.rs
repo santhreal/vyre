@@ -20,11 +20,7 @@ pub(crate) fn emit_precomputed_declaration_kind_for_index(
     let prefix_kind = format!("{prefix}_prefix_kind");
     let has_typedef = format!("{prefix}_has_typedef");
     let has_type = format!("{prefix}_has_type");
-    let prev_idx = format!("{prefix}_prev_idx");
-    let prev_base = format!("{prefix}_prev_base");
     let prev_kind = format!("{prefix}_prev_kind");
-    let next_idx = format!("{prefix}_next_idx");
-    let next_base = format!("{prefix}_next_base");
     let next_kind = format!("{prefix}_next_kind");
     let possible_declarator = format!("{prefix}_possible_declarator");
 
@@ -85,35 +81,18 @@ pub(crate) fn emit_precomputed_declaration_kind_for_index(
     ));
     nodes.extend([
         Node::let_bind(
-            &prev_idx,
-            Expr::select(
-                Expr::gt(idx.clone(), Expr::u32(0)),
-                Expr::sub(idx.clone(), Expr::u32(1)),
-                Expr::u32(0),
-            ),
-        ),
-        Node::let_bind(&prev_base, vast_row_base_expr(Expr::var(&prev_idx))),
-        Node::let_bind(
             &prev_kind,
-            Expr::select(
-                Expr::gt(idx.clone(), Expr::u32(0)),
-                Expr::load(vast_nodes, Expr::var(&prev_base)),
+            vast_prior_row_kind_expr(vast_nodes, idx.clone(), 1),
+        ),
+        Node::let_bind(
+            &next_kind,
+            vast_next_row_kind_expr(
+                vast_nodes,
+                idx,
+                &Expr::var("annot_num_nodes"),
                 Expr::u32(SENTINEL),
             ),
         ),
-        Node::let_bind(
-            &next_idx,
-            Expr::select(
-                Expr::lt(
-                    Expr::add(idx.clone(), Expr::u32(1)),
-                    Expr::var("annot_num_nodes"),
-                ),
-                Expr::add(idx.clone(), Expr::u32(1)),
-                idx,
-            ),
-        ),
-        Node::let_bind(&next_base, vast_row_base_expr(Expr::var(&next_idx))),
-        Node::let_bind(&next_kind, Expr::load(vast_nodes, Expr::var(&next_base))),
         Node::let_bind(
             &possible_declarator,
             is_declarator_follower_token(Expr::var(&next_kind)),

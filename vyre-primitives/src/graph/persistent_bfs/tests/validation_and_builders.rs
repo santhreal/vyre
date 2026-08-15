@@ -1,5 +1,7 @@
 use super::super::*;
 use crate::fixpoint::persistent_fixpoint::count_grid_sync;
+use crate::graph::csr_closure_inputs::graphs::{CHAIN_4, DIAMOND_4};
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::Node;
 
@@ -65,24 +67,18 @@ fn layout_hash_distinguishes_edges_and_masks() {
 
 #[test]
 fn program_cache_key_reuses_same_shape_graph_variants() {
-    let a = plan_persistent_bfs_dispatch(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
-        &[1],
-        0xFFFF_FFFF,
-        8,
-    )
-    .unwrap();
+    let a = plan_persistent_bfs_dispatch(CsrClosureInputs::allow_all(CHAIN_4, 8), &[1]).unwrap();
     let b = plan_persistent_bfs_dispatch(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[2, 3, 0],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 4,
+                edge_offsets: &[0, 1, 2, 3, 3],
+                edge_targets: &[2, 3, 0],
+                edge_kind_mask: &[1, 1, 1],
+            },
+            8,
+        ),
         &[1],
-        0xFFFF_FFFF,
-        8,
     )
     .unwrap();
 
@@ -93,15 +89,7 @@ fn program_cache_key_reuses_same_shape_graph_variants() {
 
 #[test]
 fn empty_frontier_stays_empty() {
-    let (frontier, changed) = cpu_ref(
-        4,
-        &[0, 2, 3, 4, 4],
-        &[1, 2, 3, 3],
-        &[1, 1, 1, 1],
-        &[0],
-        0xFFFF_FFFF,
-        4,
-    );
+    let (frontier, changed) = cpu_ref(CsrClosureInputs::allow_all(DIAMOND_4, 4), &[0]);
     assert_eq!(frontier, vec![0]);
     assert_eq!(changed, 0);
 }
@@ -110,13 +98,17 @@ fn empty_frontier_stays_empty() {
 fn edge_mask_limits_reachability() {
     // 0→1 (mask 0b10), 0→2 (mask 0b01), 1→3 (mask 0b01), 2→3 (mask 0b01)
     let (frontier, changed) = cpu_ref(
-        4,
-        &[0, 2, 3, 4, 4],
-        &[1, 2, 3, 3],
-        &[0b10, 0b01, 0b01, 0b01],
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &[0, 2, 3, 4, 4],
+                edge_targets: &[1, 2, 3, 3],
+                edge_kind_mask: &[0b10, 0b01, 0b01, 0b01],
+            },
+            allow_mask: 0b01,
+            max_iters: 4,
+        },
         &[0b0001],
-        0b01,
-        4,
     );
     // From 0, only 0→2 is allowed. Then 2→3 is allowed.
     assert_eq!(frontier, vec![0b1101]);
@@ -126,15 +118,7 @@ fn edge_mask_limits_reachability() {
 #[test]
 fn max_iters_caps_expansion() {
     // Chain: 0→1, 1→2, 2→3. Frontier = {0}.
-    let (frontier, changed) = cpu_ref(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
-        &[0b0001],
-        0xFFFF_FFFF,
-        2,
-    );
+    let (frontier, changed) = cpu_ref(CsrClosureInputs::allow_all(CHAIN_4, 2), &[0b0001]);
     // After 2 steps: {0,1,2}
     assert_eq!(frontier, vec![0b0111]);
     assert_eq!(changed, 1);
@@ -142,15 +126,7 @@ fn max_iters_caps_expansion() {
 
 #[test]
 fn zero_max_iters_is_noop() {
-    let (frontier, changed) = cpu_ref(
-        4,
-        &[0, 2, 3, 4, 4],
-        &[1, 2, 3, 3],
-        &[1, 1, 1, 1],
-        &[0b0001],
-        0xFFFF_FFFF,
-        0,
-    );
+    let (frontier, changed) = cpu_ref(CsrClosureInputs::allow_all(DIAMOND_4, 0), &[0b0001]);
     assert_eq!(frontier, vec![0b0001]);
     assert_eq!(changed, 0);
 }

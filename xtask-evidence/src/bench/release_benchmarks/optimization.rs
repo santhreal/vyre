@@ -3,18 +3,23 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use crate::bench::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
+use vyre_foundation::optimizer::corpus::RELEASE_OPTIMIZATION_FAMILIES;
+
+use crate::bench::benchmark_evidence_semantics::{
+    cuda_release_axes_source_artifact_issues, COLD_PIPELINE_BUILD_METRICS, SCAN_THROUGHPUT_METRICS,
+};
 
 use super::evidence_schema::{
     OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
     OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
 };
 use super::inspect_core::{
-    read_benchmark_report, read_text_bounded, suite_metric_percentile, WallClockMinima,
+    read_benchmark_report, read_text_bounded, report_cases, suite_metric_percentile,
+    WallClockMinima,
 };
 use super::metrics::{
-    max_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50, min_metric_p50,
-    release_axis_blockers, write_json,
+    max_first_available_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50,
+    min_metric_p50, release_axis_blockers, write_json,
 };
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
@@ -62,14 +67,7 @@ pub(super) fn inspect_optimization_benchmark_artifact(
             summary_total_time_ns: None,
             summary_cache_hit_rate: None,
             case_count: 0,
-            min_wall_samples: None,
-            min_wall_p50: None,
-            min_wall_p95: None,
-            min_wall_p99: None,
-            min_baseline_wall_samples: None,
-            min_baseline_wall_p50: None,
-            min_baseline_wall_p95: None,
-            min_baseline_wall_p99: None,
+            minima: WallClockMinima::default(),
             min_wall_speedup_x1000: None,
             missing_custom_metrics: required_custom_metrics
                 .iter()
@@ -122,14 +120,7 @@ pub(super) fn inspect_optimization_benchmark_artifact(
         &format!("optimization benchmark `{artifact}`"),
         &mut blockers,
     );
-    let cases = report
-        .get("cases")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    if cases.is_empty() {
-        blockers.push("cases array is empty or missing".to_string());
-    }
+    let cases = report_cases(&report, &mut blockers);
     let mut minima = WallClockMinima::default();
     let mut min_wall_speedup_x1000 = None::<u64>;
     let mut missing_custom_metrics = Vec::new();
@@ -212,14 +203,7 @@ pub(super) fn inspect_optimization_benchmark_artifact(
         summary_total_time_ns,
         summary_cache_hit_rate,
         case_count: cases.len(),
-        min_wall_samples: minima.wall_samples,
-        min_wall_p50: minima.wall_p50,
-        min_wall_p95: minima.wall_p95,
-        min_wall_p99: minima.wall_p99,
-        min_baseline_wall_samples: minima.baseline_wall_samples,
-        min_baseline_wall_p50: minima.baseline_wall_p50,
-        min_baseline_wall_p95: minima.baseline_wall_p95,
-        min_baseline_wall_p99: minima.baseline_wall_p99,
+        minima,
         min_wall_speedup_x1000,
         missing_custom_metrics,
         non_positive_required_metrics,
@@ -335,19 +319,10 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
         reports.push(value);
     }
     let warm_us_per_file = min_metric_p50(&reports, "wall_ns").map(|ns| ns as f64 / 1_000.0);
-    let cold_pipeline_build_ms = min_first_available_metric_p50(
-        &reports,
-        &[
-            "cold_compile_ns",
-            "cold_wall_ns",
-            "compile_ns",
-            "lower_ns",
-            "optimize_ns",
-        ],
-    )
-    .map(|ns| ns as f64 / 1_000_000.0);
-    let gbs_scan_throughput = max_metric_p50(&reports, "wall_gb_s_x1000")
-        .or_else(|| max_metric_p50(&reports, "device_gb_s_x1000"))
+    let cold_pipeline_build_ms =
+        min_first_available_metric_p50(&reports, COLD_PIPELINE_BUILD_METRICS)
+            .map(|ns| ns as f64 / 1_000_000.0);
+    let gbs_scan_throughput = max_first_available_metric_p50(&reports, SCAN_THROUGHPUT_METRICS)
         .map(|gb_s_x1000| gb_s_x1000 as f64 / 1_000.0);
     let ulp_drift_max = Some(max_observed_ulp(&reports).unwrap_or(0));
     let max_vram_mib = max_vram_mib(&reports);
@@ -384,16 +359,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
     let specs = [(
         "foundation.optimizer.impact",
         "release/evidence/optimization/optimizer-impact-cuda.json",
-        vec![
-            "scalar-algebra",
-            "strength-reduction",
-            "fusion-cse",
-            "dead-code",
-            "memory-dataflow",
-            "loop-transform",
-            "control-flow",
-            "canonicalization",
-        ],
+        RELEASE_OPTIMIZATION_FAMILIES.to_vec(),
         vec![
             "optimizer_input_nodes",
             "optimizer_output_nodes",
@@ -401,16 +367,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
         ],
         vec!["optimizer_input_nodes", "optimizer_output_nodes"],
     )];
-    let required_pass_families = vec![
-        "scalar-algebra",
-        "strength-reduction",
-        "fusion-cse",
-        "dead-code",
-        "memory-dataflow",
-        "loop-transform",
-        "control-flow",
-        "canonicalization",
-    ];
+    let required_pass_families = RELEASE_OPTIMIZATION_FAMILIES.to_vec();
     let required_case_count = specs.len();
     let mut blockers = Vec::new();
     let mut covered_pass_families = Vec::new();
@@ -443,9 +400,6 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             blockers.extend(inspection.blockers.iter().map(|blocker| {
                 format!("optimization benchmark `{case_id}` artifact `{artifact}`: {blocker}")
             }));
-            for family in &pass_families {
-                covered_pass_families.push(*family);
-            }
             if source_fingerprint.is_none() {
                 source_fingerprint = inspection.source_fingerprint.clone();
             }
@@ -460,11 +414,17 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             if let Some(cache_hit_rate) = inspection.summary_cache_hit_rate {
                 cache_hit_rates.push(cache_hit_rate);
             }
-            let status = if inspection.exists && inspection.blockers.is_empty() {
-                "pass"
-            } else {
-                "failed"
-            };
+            let passed = inspection.exists && inspection.blockers.is_empty();
+            // Coverage is a claim about what the run PROVED, so it is recorded
+            // only for a case that passed. Pushing a spec's families
+            // unconditionally made `uncovered_pass_families` derive from the
+            // same list as `required_pass_families`, so it was always empty and
+            // the release gate demanding it be empty could not fail on the one
+            // thing it exists to catch: a missing or blocked artifact.
+            if passed {
+                covered_pass_families.extend(pass_families.iter().copied());
+            }
+            let status = if passed { "pass" } else { "failed" };
             OptimizationBenchmarkEvidence {
                 id: case_id,
                 case_id,
@@ -480,14 +440,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
                 exists: inspection.exists,
                 read_error: inspection.read_error,
                 case_count: inspection.case_count,
-                min_wall_samples: inspection.min_wall_samples,
-                min_wall_p50: inspection.min_wall_p50,
-                min_wall_p95: inspection.min_wall_p95,
-                min_wall_p99: inspection.min_wall_p99,
-                min_baseline_wall_samples: inspection.min_baseline_wall_samples,
-                min_baseline_wall_p50: inspection.min_baseline_wall_p50,
-                min_baseline_wall_p95: inspection.min_baseline_wall_p95,
-                min_baseline_wall_p99: inspection.min_baseline_wall_p99,
+                minima: inspection.minima,
                 min_wall_speedup_x1000: inspection.min_wall_speedup_x1000,
                 missing_custom_metrics: inspection.missing_custom_metrics,
                 non_positive_required_metrics: inspection.non_positive_required_metrics,
@@ -971,5 +924,72 @@ mod tests {
             "Fix: optimization benchmark inspection must expose borrowed resident CUDA dispatch telemetry; blockers={:?}",
             borrowed_inspection.blockers
         );
+    }
+
+    /// A missing artifact must leave every required family UNCOVERED.
+    ///
+    /// The manifest used to push each spec's declared families whether or not
+    /// the artifact behind them was read, and the spec list is the same list as
+    /// `required_pass_families`. `uncovered_pass_families` was therefore always
+    /// empty and the release gate demanding it be empty could not fail. This
+    /// asserts the state that gate exists to catch, so restoring the
+    /// unconditional push turns it red rather than passing quietly.
+    #[test]
+    fn a_missing_optimization_artifact_leaves_every_family_uncovered() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for optimization coverage source test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+
+        write_optimization_benchmark_manifest(dir.path(), "cuda");
+
+        let manifest: Value = serde_json::from_str(
+            &fs::read_to_string(
+                dir.path()
+                    .join("release/evidence/optimization/pass-family-benchmark-manifest.json"),
+            )
+            .expect("Fix: read the manifest the writer just produced."),
+        )
+        .expect("Fix: the manifest must be JSON.");
+
+        let covered = manifest["covered_pass_families"]
+            .as_array()
+            .expect("Fix: the manifest must publish covered_pass_families.");
+        assert!(
+            covered.is_empty(),
+            "Fix: no family is covered when the artifact proving it does not exist; covered={covered:?}"
+        );
+
+        let uncovered = manifest["uncovered_pass_families"]
+            .as_array()
+            .expect("Fix: the manifest must publish uncovered_pass_families.")
+            .iter()
+            .map(|family| {
+                family
+                    .as_str()
+                    .expect("Fix: a family name is a string.")
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+        for family in RELEASE_OPTIMIZATION_FAMILIES {
+            assert!(
+                uncovered.iter().any(|name| name == family),
+                "Fix: `{family}` has no passing benchmark case, so it must be reported uncovered; uncovered={uncovered:?}"
+            );
+        }
+
+        let blockers = manifest["blockers"]
+            .as_array()
+            .expect("Fix: the manifest must publish blockers.");
+        for family in RELEASE_OPTIMIZATION_FAMILIES {
+            assert!(
+                blockers.iter().any(|blocker| {
+                    blocker.as_str().is_some_and(|text| {
+                        text.contains(family) && text.contains("no benchmark manifest coverage")
+                    })
+                }),
+                "Fix: an uncovered family must be named by a blocker; family={family} blockers={blockers:?}"
+            );
+        }
     }
 }

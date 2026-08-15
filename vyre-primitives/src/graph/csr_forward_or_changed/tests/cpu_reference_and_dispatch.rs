@@ -1,4 +1,6 @@
 use super::super::*;
+use crate::graph::csr_closure_inputs::graphs::CHAIN_4;
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::graph::program_graph::ProgramGraphShape;
 
 #[test]
@@ -17,15 +19,7 @@ fn cpu_ref_expands_in_place_frontier_pass() {
 
 #[test]
 fn cpu_ref_closure_reaches_fixpoint() {
-    let closure = cpu_ref_closure(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
-        &[0b0001],
-        0xFFFF_FFFF,
-        10,
-    );
+    let closure = cpu_ref_closure(CsrClosureInputs::allow_all(CHAIN_4, 10), &[0b0001]);
     assert_eq!(closure, vec![0b1111]);
 }
 
@@ -34,13 +28,8 @@ fn cpu_ref_closure_into_reuses_buffers() {
     let mut current = Vec::with_capacity(8);
     let mut next = Vec::with_capacity(8);
     cpu_ref_closure_into(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(CHAIN_4, 10),
         &[0b0001],
-        0xFFFF_FFFF,
-        10,
         &mut current,
         &mut next,
     );
@@ -49,13 +38,8 @@ fn cpu_ref_closure_into_reuses_buffers() {
     assert_eq!(current, vec![0b1111]);
 
     cpu_ref_closure_into(
-        4,
-        &[0, 1, 2, 3, 3],
-        &[1, 2, 3],
-        &[1, 1, 1],
+        CsrClosureInputs::allow_all(CHAIN_4, 10),
         &[0],
-        0xFFFF_FFFF,
-        10,
         &mut current,
         &mut next,
     );
@@ -121,8 +105,16 @@ fn empty_offsets_shorthand_is_empty_edge_set_only() {
 #[test]
 fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
     let edge_offsets = vec![0u32; 66];
-    let plan = plan_csr_forward_or_changed_dispatch(65, &edge_offsets, &[], &[], 0xFFFF_FFFF, 8)
-        .expect("Fix: bounded CSR forward-or-changed plan should validate");
+    let plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs::allow_all(
+        CsrGraphView {
+            node_count: 65,
+            edge_offsets: &edge_offsets,
+            edge_targets: &[],
+            edge_kind_mask: &[],
+        },
+        8,
+    ))
+    .expect("Fix: bounded CSR forward-or-changed plan should validate");
 
     assert_eq!(plan.layout().node_count, 65);
     assert_eq!(plan.frontier_words(), 3);
@@ -152,8 +144,16 @@ fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
 
 #[test]
 fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases() {
-    let plan = plan_csr_forward_or_changed_dispatch(0, &[], &[], &[], 0xFFFF_FFFF, 0)
-        .expect("Fix: zero-node zero-iteration plan should validate");
+    let plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs::allow_all(
+        CsrGraphView {
+            node_count: 0,
+            edge_offsets: &[],
+            edge_targets: &[],
+            edge_kind_mask: &[],
+        },
+        0,
+    ))
+    .expect("Fix: zero-node zero-iteration plan should validate");
     assert_eq!(plan.frontier_words(), 1);
     assert_eq!(plan.changed_words(), 1);
     assert!(!plan.uses_changed_history());
@@ -161,8 +161,16 @@ fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases(
     assert_eq!(plan.changed_read_index(99).unwrap(), 0);
     assert_eq!(plan.dispatch_grid(), [1, 1, 1]);
 
-    let long_plan = plan_csr_forward_or_changed_dispatch(1, &[0, 0], &[], &[], 0xFFFF_FFFF, 65)
-        .expect("Fix: long-running plan should validate without changed history");
+    let long_plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs::allow_all(
+        CsrGraphView {
+            node_count: 1,
+            edge_offsets: &[0, 0],
+            edge_targets: &[],
+            edge_kind_mask: &[],
+        },
+        65,
+    ))
+    .expect("Fix: long-running plan should validate without changed history");
     assert_eq!(long_plan.changed_words(), 1);
     assert!(!long_plan.uses_changed_history());
     assert!(

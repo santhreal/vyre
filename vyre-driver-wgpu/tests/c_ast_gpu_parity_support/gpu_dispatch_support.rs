@@ -40,17 +40,23 @@ pub(crate) fn dispatch_gpu_program(
     }
 }
 
-pub(crate) fn primary_output_with_optional_empty_scratch(
-    outputs: Vec<Vec<u8>>,
-    context: &str,
-) -> Vec<u8> {
-    assert!(
-        !outputs.is_empty(),
-        "{context}: expected at least one primary GPU output"
-    );
-    assert!(
-        outputs.iter().skip(1).all(Vec::is_empty),
-        "{context}: only zero-byte scratch outputs may follow the primary output"
-    );
-    outputs[0].clone()
+/// This crate's [`ParityArm`]: the shared C-AST parity matrix dispatched on the
+/// GPU.
+///
+/// The matrix itself, including every stage's [`Program`] and every comparison
+/// against the CPU oracle, is owned by `tests/support/c_frontend/parity_matrix`
+/// so the CPU-reference arm in `vyre-libs/tests` runs the same sequence. What is
+/// GPU-specific and stays here is [`dispatch_gpu_program`]'s serialization and
+/// watchdog.
+pub(crate) struct GpuArm;
+
+impl ParityArm for GpuArm {
+    fn dispatch(
+        &self,
+        context: &'static str,
+        program: Program,
+        inputs: Vec<Vec<u8>>,
+    ) -> Vec<Vec<u8>> {
+        dispatch_gpu_program(context, program, inputs)
+    }
 }

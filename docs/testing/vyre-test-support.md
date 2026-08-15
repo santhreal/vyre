@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --all-features
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `ir-fixtures`
+- Available manifest features: `default`, `ir-fixtures`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -32,6 +32,9 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --all-features
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support` |
+| `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test binop_parity_tables` |
+| `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | `ir-fixtures` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test binop_parity_tables` |
+| `test` | `cast_parity_tables` | `vyre-test-support/tests/cast_parity_tables.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test cast_parity_tables` |
 | `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes

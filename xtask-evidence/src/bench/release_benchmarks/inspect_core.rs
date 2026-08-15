@@ -11,6 +11,7 @@
 
 use std::path::Path;
 
+use serde::Serialize;
 use serde_json::Value;
 
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
@@ -121,20 +122,54 @@ pub(super) fn record_observed_metric_percentile(
     }
 }
 
+/// The cases a benchmark report carries, blocking a report that has none.
+pub(super) fn report_cases(report: &Value, blockers: &mut Vec<String>) -> Vec<Value> {
+    let cases = report
+        .get("cases")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if cases.is_empty() {
+        blockers.push("cases array is empty or missing".to_string());
+    }
+    cases
+}
+
 /// The wall-clock and baseline minima every release benchmark artifact reports.
-#[derive(Debug, Default)]
+///
+/// The eight `min_` keys are this record's own field names. Three evidence
+/// structs and one hand-written JSON object used to restate them, so a
+/// percentile added here reached an artifact only if someone remembered all
+/// four; they are serialized from here instead.
+#[derive(Debug, Default, Serialize)]
 pub(super) struct WallClockMinima {
+    #[serde(rename = "min_wall_samples")]
     pub(super) wall_samples: Option<u64>,
-    pub(super) baseline_wall_samples: Option<u64>,
+    #[serde(rename = "min_wall_p50")]
     pub(super) wall_p50: Option<u64>,
+    #[serde(rename = "min_wall_p95")]
     pub(super) wall_p95: Option<u64>,
+    #[serde(rename = "min_wall_p99")]
     pub(super) wall_p99: Option<u64>,
+    #[serde(rename = "min_baseline_wall_samples")]
+    pub(super) baseline_wall_samples: Option<u64>,
+    #[serde(rename = "min_baseline_wall_p50")]
     pub(super) baseline_wall_p50: Option<u64>,
+    #[serde(rename = "min_baseline_wall_p95")]
     pub(super) baseline_wall_p95: Option<u64>,
+    #[serde(rename = "min_baseline_wall_p99")]
     pub(super) baseline_wall_p99: Option<u64>,
 }
 
 impl WallClockMinima {
+    /// The `min_` keys this record contributes to a hand-built evidence object.
+    pub(super) fn into_object(self) -> serde_json::Map<String, Value> {
+        match serde_json::to_value(self) {
+            Ok(Value::Object(fields)) => fields,
+            _ => unreachable!("WallClockMinima serializes as a JSON object"),
+        }
+    }
+
     /// Fold one case in, blocking a short sample run or a missing percentile.
     ///
     /// `case_label` names the case in the sample-count blockers, because the
@@ -236,11 +271,44 @@ mod tests {
     use std::fs;
 
     use super::*;
+    use crate::bench::benchmark_evidence_semantics::AGGREGATE_WALL_PERCENTILE_FIELDS;
 
     use serde_json::json;
 
     fn metrics(value: &Value) -> Option<&serde_json::Map<String, Value>> {
         value.as_object()
+    }
+
+    /// WHY: `WallClockMinima` is the one owner of the `min_` keys three
+    /// artifacts publish, and `AGGREGATE_WALL_PERCENTILE_FIELDS` is the list
+    /// every reader checks for positivity. A ninth minimum added to the record
+    /// used to reach the artifacts while no reader looked at it, which reads as
+    /// evidence that was proved rather than evidence nobody checked. The key
+    /// set is taken from the serialized record at run time, so a new field goes
+    /// red here until a decision about it is recorded in one of the two lists.
+    ///
+    /// It does not catch a percentile that is checked but never populated: that
+    /// is what the fold tests below cover.
+    #[test]
+    fn every_serialized_wall_clock_minimum_is_checked_by_a_reader() {
+        let published = WallClockMinima::default().into_object();
+        for key in published.keys() {
+            assert!(
+                key.starts_with("min_"),
+                "Fix: WallClockMinima key `{key}` must be published under a `min_` name so readers can find it."
+            );
+            assert!(
+                key.ends_with("_samples")
+                    || AGGREGATE_WALL_PERCENTILE_FIELDS.contains(&key.as_str()),
+                "Fix: add `{key}` to AGGREGATE_WALL_PERCENTILE_FIELDS, or give it a `_samples` name, so a reader checks it."
+            );
+        }
+        for field in AGGREGATE_WALL_PERCENTILE_FIELDS {
+            assert!(
+                published.contains_key(*field),
+                "Fix: AGGREGATE_WALL_PERCENTILE_FIELDS demands `{field}`, which WallClockMinima no longer publishes."
+            );
+        }
     }
 
     fn full_case(samples: u64, wall: u64, baseline: u64) -> Value {

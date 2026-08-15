@@ -27,10 +27,7 @@ use vyre_registry_link::backend::{
 use vyre_registry_link::operation::{live_operation_registry, registration_sources};
 
 fn checkout_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: this crate sits one level under the checkout root")
-        .to_path_buf()
+    structure_gate::workspace_root()
 }
 
 fn workspace_members(root: &Path) -> Vec<String> {

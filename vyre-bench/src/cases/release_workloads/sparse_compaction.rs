@@ -2,16 +2,20 @@
 //! predicate, and resident batch dispatch path.
 
 use super::registration::{gpu_requirements, RELEASE_SUITES};
+use super::resident_batch::{
+    batch_metric_points, dispatch_batch_or_single, dispatch_single, BatchPlan,
+};
 use super::run_assembly::{
     bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
 };
 use super::synthetic_oracle::mixed_release_index;
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
-use crate::api::metric::MetricPoint;
 use crate::api::resident::{input_bytes_total, ResidentInputPool};
+use crate::cases::reference_sample::timed_reference;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub struct SparseOutputCompactionCount;
@@ -27,8 +31,6 @@ struct SparseOutputPrepared {
 const SPARSE_ITEMS: u32 = 1_048_576;
 
 const SPARSE_RESIDENT_BATCH_SIZE: usize = 16;
-
-const SPARSE_OUTPUT_RESET_BYTES: u64 = 4;
 
 impl BenchCase for SparseOutputCompactionCount {
     fn id(&self) -> BenchId {
@@ -112,96 +114,32 @@ impl BenchCase for SparseOutputCompactionCount {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<SparseOutputPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "sparse output prepared payload type mismatch".to_string(),
-                )
-            })?;
-        let mut batch_wall_ns = None;
-        let mut batch_len = None;
-        let (timed, resident_used, resident_reset_bytes) = if let Some(resident_batch) =
-            prepared.resident_batch.as_ref()
-        {
-            resident_batch.upload_resource_to_all_sets(
-                0,
-                &0u32.to_le_bytes(),
-                "sparse compaction resident batch counter reset",
-            )?;
-            let config = crate::api::case::dispatch_config_with_inferred_grid(
-                &prepared.program,
-                &prepared.inputs,
-                &ctx.dispatch_config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-            match resident_batch.dispatch_artifact_batch_timed(
-                ctx,
-                &prepared.program,
-                SPARSE_RESIDENT_BATCH_SIZE,
-                &config,
-            ) {
-                Ok(batch) => {
-                    if batch.outputs.len() != SPARSE_RESIDENT_BATCH_SIZE {
-                        return Err(BenchError::ExecutionFailed(format!(
-                                "sparse compaction resident batch returned {} output row(s), expected {}",
-                                batch.outputs.len(),
-                                SPARSE_RESIDENT_BATCH_SIZE
-                            )));
-                    }
-                    let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
-                        BenchError::ExecutionFailed(
-                            "sparse compaction resident batch returned no output rows".to_string(),
-                        )
-                    })?;
-                    if let Some((index, _)) = batch
-                        .outputs
-                        .iter()
-                        .enumerate()
-                        .find(|(_, outputs)| **outputs != first_outputs)
-                    {
-                        return Err(BenchError::CorrectnessViolation(format!(
-                                "sparse compaction resident batch output row {index} disagreed with row 0"
-                            )));
-                    }
-                    batch_wall_ns = Some(batch.wall_ns_total);
-                    batch_len = Some(batch.batch_len as u64);
-                    (
-                        vyre_driver::TimedDispatchResult {
-                            outputs: first_outputs,
-                            wall_ns: batch.per_item_wall_ns(),
-                            device_ns: batch.per_item_device_ns(),
-                            enqueue_ns: None,
-                            wait_ns: None,
-                        },
-                        true,
-                        SPARSE_OUTPUT_RESET_BYTES,
-                    )
-                }
-                Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
-                    let timed = ctx
-                        .dispatch_timed(&prepared.program, &prepared.inputs, &ctx.dispatch_config)
-                        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-                    (timed, false, 0)
-                }
-                Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
-            }
-        } else {
-            let timed = ctx
-                .dispatch_timed(&prepared.program, &prepared.inputs, &ctx.dispatch_config)
-                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-            (timed, false, 0)
-        };
+        let prepared = prepared_as::<SparseOutputPrepared>(prepared, "sparse output")?;
+        let sample = dispatch_batch_or_single(
+            ctx,
+            &prepared.program,
+            &prepared.inputs,
+            prepared.resident_batch.as_ref(),
+            &BatchPlan {
+                label: "sparse compaction",
+                batch_size: SPARSE_RESIDENT_BATCH_SIZE,
+                reset_resource: 0,
+                reset_resource_kind: "counter",
+                reset_payload: &0u32.to_le_bytes(),
+            },
+            || dispatch_single(ctx, &prepared.program, &prepared.inputs),
+        )?;
 
-        let baseline_start = std::time::Instant::now();
-        let mut fired_rules = Vec::new();
-        for index in 0..SPARSE_ITEMS {
-            if sparse_compaction_flag(index) != 0 {
-                fired_rules.push(index);
+        let (fired_rules, baseline_wall) = timed_reference(|| {
+            let mut fired_rules = Vec::new();
+            for index in 0..SPARSE_ITEMS {
+                if sparse_compaction_flag(index) != 0 {
+                    fired_rules.push(index);
+                }
             }
-        }
+            fired_rules
+        });
         let cpu_count = fired_rules.len() as u32;
-        let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
         if cpu_count != prepared.expected_count {
             return Err(BenchError::CorrectnessViolation(
                 "sparse CPU baseline count disagreed with generator expectation".to_string(),
@@ -209,16 +147,17 @@ impl BenchCase for SparseOutputCompactionCount {
         }
 
         let baseline_outputs = vec![cpu_count.to_le_bytes().to_vec()];
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let output_bytes = sample.timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
         let accounting = resident_reset_transfer_accounting(
             prepared.input_bytes_total,
             output_bytes,
-            resident_used,
-            resident_reset_bytes,
+            sample.resident_used,
+            sample.reset_bytes,
         );
+        let mut custom = batch_metric_points("sparse", &sample);
         let mut run = bench_run_from_timed_with_accounting(
-            timed,
+            sample.timed,
             prepared.input_bytes_total,
             baseline_outputs,
             baseline_wall,
@@ -227,26 +166,7 @@ impl BenchCase for SparseOutputCompactionCount {
             logical_bytes_touched,
             accounting,
         )?;
-        run.metrics.custom.push(MetricPoint {
-            name: "sparse_resident_buffers".to_string(),
-            value: u64::from(resident_used),
-        });
-        run.metrics.custom.push(MetricPoint {
-            name: "sparse_resident_reset_bytes".to_string(),
-            value: resident_reset_bytes,
-        });
-        if let Some(wall_ns) = batch_wall_ns {
-            run.metrics.custom.push(MetricPoint {
-                name: "sparse_resident_batch_wall_ns".to_string(),
-                value: wall_ns,
-            });
-        }
-        if let Some(len) = batch_len {
-            run.metrics.custom.push(MetricPoint {
-                name: "sparse_resident_batch_len".to_string(),
-                value: len,
-            });
-        }
+        run.metrics.custom.append(&mut custom);
         Ok(run)
     }
 

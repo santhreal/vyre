@@ -36,11 +36,7 @@ pub const DDNNF_EVALUATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid that covers every compiled d-DNNF node lane.
 #[must_use]
 pub const fn ddnnf_evaluate_dispatch_grid(n_nodes: u32) -> [u32; 3] {
-    let lanes_per_block = DDNNF_EVALUATE_WORKGROUP_SIZE[0];
-    let full_blocks = n_nodes / lanes_per_block;
-    let tail_block = if n_nodes % lanes_per_block == 0 { 0 } else { 1 };
-    let blocks = full_blocks + tail_block;
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(n_nodes, DDNNF_EVALUATE_WORKGROUP_SIZE[0])
 }
 
 /// Emit one bottom-up d-DNNF evaluation step. The dispatch is

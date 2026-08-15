@@ -27,7 +27,9 @@ fn i4x8_batched_matmul_f32_scaled_via_dispatches_boundary_batches() {
         rows,
         cols,
     )
-    .expect("Fix: CUDA parity tests require backend dispatch; skip test if GPU unavailable, do not panic - fake dispatcher computes batched scaled INT4 matmul");
+    .expect(
+        "Fix: fake batched matmul dispatcher must complete scaled INT4 matmul without a backend",
+    );
     let expected = i4x8_batched_matmul_f32_scaled_cpu(
         &weights,
         &activations,
@@ -39,14 +41,11 @@ fn i4x8_batched_matmul_f32_scaled_via_dispatches_boundary_batches() {
     );
 
     assert_eq!(out.len(), (batch * rows) as usize);
-    for (actual, expected) in out.iter().zip(expected.iter()) {
-        assert_eq!(actual.to_bits(), expected.to_bits());
-    }
+    assert_f32_bits_eq(&out, &expected, "INT4 batched matmul");
 }
 
 #[test]
 fn i4x8_batched_matmul_f32_scaled_via_reuses_cached_program_for_same_shape() {
-    let batch = 2_u32;
     let rows = 2_u32;
     let cols = 8_u32;
     let weights = pack_i4_rows(&[&[-8, -1, 0, 7, 3, -3, 6, -6], &[7, 1, -1, -8, 2, -2, 5, -5]]);
@@ -58,59 +57,35 @@ fn i4x8_batched_matmul_f32_scaled_via_reuses_cached_program_for_same_shape() {
     ]);
     let row_scales = [0.25, 0.5];
     let batch_scales = [0.125, 0.375, 0.625];
-    let mut scratch = QuantizedBatchedMatmulGpuScratch::default();
     let mut out = Vec::new();
 
-    i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
-        &QuantizedBatchedMatmulDispatcher,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales[..2],
-        batch,
-        rows,
-        cols,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - first batched matmul shape succeeds");
-    i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
-        &QuantizedBatchedMatmulDispatcher,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales[..2],
-        batch,
-        rows,
-        cols,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - same batched matmul shape succeeds");
-    assert_eq!(
-        scratch.program_cache.builds(),
-        1,
-        "Fix: repeated same-shape INT4 batched matmul dispatch must reuse the primitive Program."
+    assert_program_cache_keys_on_shape(
+        "INT4 batched matmul",
+        "batch/rows/cols",
+        |scratch: &QuantizedBatchedMatmulGpuScratch| scratch.program_cache.builds(),
+        |scratch, changed| {
+            let (activations, batch_scales, batch) = if changed {
+                (&changed_activations, &batch_scales[..], 3)
+            } else {
+                (&activations, &batch_scales[..2], 2)
+            };
+            i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
+                &QuantizedBatchedMatmulDispatcher,
+                &weights,
+                activations,
+                &row_scales,
+                batch_scales,
+                batch,
+                rows,
+                cols,
+                scratch,
+                &mut out,
+            )
+            .expect(
+                "Fix: fake batched matmul dispatcher must complete every shape this cache test drives",
+            );
+        },
     );
-
-    i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
-        &QuantizedBatchedMatmulDispatcher,
-        &weights,
-        &changed_activations,
-        &row_scales,
-        &batch_scales,
-        3,
-        rows,
-        cols,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - changed batched matmul shape succeeds");
-    assert_eq!(
-            scratch.program_cache.builds(),
-            2,
-            "Fix: INT4 batched matmul dispatch should rebuild the primitive Program only when batch/rows/cols changes."
-        );
 }
 
 #[test]
@@ -129,41 +104,4 @@ fn i4x8_batched_matmul_f32_scaled_via_rejects_shape_errors_before_dispatch() {
             )
         },
     );
-}
-
-#[test]
-fn i4x8_batched_matmul_f32_scaled_via_rejects_malformed_backend_outputs() {
-    let weights = pack_i4_rows(&[&[-1, 2, 3, -4, 5, -6, 7, -8]]);
-    let activations = pack_i4_rows(&[&[7, 5, 3, 1, -1, -3, -5, -7], &[-8, -6, -4, -2, 0, 2, 4, 6]]);
-    let row_scales = [0.5];
-    let batch_scales = [0.25, 0.375];
-    let no_outputs = MalformedDotDispatcher { outputs: vec![] };
-    let err = i4x8_batched_matmul_f32_scaled_via(
-        &no_outputs,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("missing output must fail");
-    assert!(err.to_string().contains("exactly one output"));
-
-    let trailing_output = MalformedDotDispatcher {
-        outputs: vec![vec![0; 12]],
-    };
-    let err = i4x8_batched_matmul_f32_scaled_via(
-        &trailing_output,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("trailing output bytes must fail");
-    assert!(err.to_string().contains("expected 8 output bytes"));
 }

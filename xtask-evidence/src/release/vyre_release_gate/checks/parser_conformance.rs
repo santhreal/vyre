@@ -7,10 +7,7 @@ pub(crate) fn check_backend_feature_marker_id(
     required_id: &str,
     failures: &mut Vec<String>,
 ) {
-    let Some(markers) = matrix.get(field).and_then(serde_json::Value::as_array) else {
-        failures.push(format!(
-            "requirement `{requirement_id}` backend matrix is missing `{field}`"
-        ));
+    let Some(markers) = backend_matrix_markers(requirement_id, matrix, field, failures) else {
         return;
     };
     let Some(marker) = markers
@@ -27,19 +24,13 @@ pub(crate) fn check_backend_feature_marker_id(
             "requirement `{requirement_id}` backend matrix `{field}` marker `{required_id}` does not exist"
         ));
     }
-    let missing_tokens = marker
-        .get("missing_tokens")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let missing_tokens = array_len(marker, "missing_tokens");
     if missing_tokens != 0 {
         failures.push(format!(
             "requirement `{requirement_id}` backend matrix `{field}` marker `{required_id}` reports {missing_tokens} missing token(s)"
         ));
     }
-    let unresolved_markers = marker
-        .get("unresolved_markers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let unresolved_markers = array_len(marker, "unresolved_markers");
     if unresolved_markers != 0 {
         failures.push(format!(
             "requirement `{requirement_id}` backend matrix `{field}` marker `{required_id}` reports {unresolved_markers} unresolved marker(s)"
@@ -52,19 +43,15 @@ pub(crate) fn check_backend_conformance_report(
     suffix: &str,
     failures: &mut Vec<String>,
 ) {
-    let Some(report) = first_json_evidence(requirement, base_dir, suffix, failures) else {
+    let Some(report) = schema_2_json_evidence(
+        requirement,
+        base_dir,
+        suffix,
+        "backend conformance",
+        failures,
+    ) else {
         return;
     };
-    let schema_version = report
-        .get("schema_version")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if schema_version < 2 {
-        failures.push(format!(
-            "requirement `{}` backend conformance `{suffix}` schema_version={schema_version}; expected schema>=2",
-            requirement.id
-        ));
-    }
     let expected_backend = match suffix {
         "cuda-conformance.json" => Some("cuda"),
         "wgpu-conformance.json" => Some("wgpu"),
@@ -81,46 +68,17 @@ pub(crate) fn check_backend_conformance_report(
             ));
         }
     }
-    let total_pairs = report
-        .get("total_pairs")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let failed_pairs = report
-        .get("failed_pairs")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(u64::MAX);
-    let distinct_op_count = report
-        .get("distinct_op_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let catalog_required_op_count = report
-        .get("catalog_required_op_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let catalog_covered_op_count = report
-        .get("catalog_covered_op_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let missing_catalog_ops = report
-        .get("missing_catalog_ops")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    let op_matrix_blocked_release_count = report
-        .get("op_matrix_blocked_release_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(u64::MAX);
-    let release_backend_row_count = report
-        .get("release_backend_row_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let missing_release_backend_rows = report
-        .get("missing_release_backend_rows")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    let op_matrix_errors = report
-        .get("op_matrix_errors")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let total_pairs = u64_field(&report, "total_pairs", 0);
+    let failed_pairs = u64_field(&report, "failed_pairs", u64::MAX);
+    let distinct_op_count = u64_field(&report, "distinct_op_count", 0);
+    let catalog_required_op_count = u64_field(&report, "catalog_required_op_count", 0);
+    let catalog_covered_op_count = u64_field(&report, "catalog_covered_op_count", 0);
+    let missing_catalog_ops = array_len(&report, "missing_catalog_ops");
+    let op_matrix_blocked_release_count =
+        u64_field(&report, "op_matrix_blocked_release_count", u64::MAX);
+    let release_backend_row_count = u64_field(&report, "release_backend_row_count", 0);
+    let missing_release_backend_rows = array_len(&report, "missing_release_backend_rows");
+    let op_matrix_errors = array_len(&report, "op_matrix_errors");
     if op_matrix_errors != 0 {
         failures.push(format!(
             "requirement `{}` backend conformance `{suffix}` reports {op_matrix_errors} OP_MATRIX read/parse error(s)",
