@@ -139,7 +139,7 @@ pub(crate) fn run(args: &[String]) {
     };
 
     crate::output_arg::write_json(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("metadata-matrix", &output, matrix.blockers.len());
+    crate::output_arg::report_evidence_artifact("metadata-matrix", &output, &matrix.blockers);
 }
 
 fn root_patch_section_count(manifests: &[PathBuf]) -> (usize, Vec<String>) {

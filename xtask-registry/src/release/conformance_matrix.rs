@@ -1,7 +1,6 @@
 //! Release conformance matrix evidence.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -366,17 +365,8 @@ pub(crate) fn run(args: &[String]) {
         return;
     }
 
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
     xtask::output_arg::write_json(&output, &matrix);
-    println!("conformance-matrix: wrote {}", output.display());
-    if !matrix.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    xtask::output_arg::report_evidence_artifact("conformance-matrix", &output, &matrix.blockers);
 }
 
 fn release_backend_case_rows(

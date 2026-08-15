@@ -1209,3 +1209,28 @@ text = "`vyre-primitives` gates three duplication classes it has reintroduced af
 id = "evidence-dispatch-runs-the-dispatcher"
 category = "Fixed"
 text = "`release-evidence` runs its thirteen child subcommands through `xtask::delegate::dispatcher`, the one owner of which binary runs a subcommand. It resolved that child from the running executable, which was correct only while it lived in `xtask`; after it moved to `xtask-evidence` it re-entered itself, met that crate's six-entry table, and exited 1 with `is not implemented in xtask-evidence` for twelve of the thirteen. Only `backend-matrix` worked, because `xtask-evidence` happens to own it. Each failure was still labelled `xtask <name>`, so one wrong process read as twelve gates failing and the release evidence surface reported sixteen blockers where seven exist. The same resolution in `xtask::gates::sweep` and `xtask::release::release_gate` was three copies of the same eight lines of failure handling and is now one call."
+
+[[fragments]]
+id = "evidence-blockers-named-not-implied"
+category = "Fixed"
+text = "Every evidence subcommand prints its blockers to stderr before exiting 1, through the one owner of that epilogue, `xtask::output_arg::report_evidence_artifact`. It wrote the artifact and exited on a non-empty blocker list without naming a single entry, so nine gates reported a bare exit code and the cause was readable only by opening the JSON. `xtask::release::release_conformance` returned a count of failing backends instead of the failures; it now returns each one prefixed by its backend id. `xtask_registry::release::conformance_matrix` kept a private write-then-exit epilogue beside the owner and is routed through it."
+
+[[fragments]]
+id = "evidence-blockers-hygiene-rule-reads-calls"
+category = "Fixed"
+text = "The unbounded-read rule in `xtask::gates::hygiene_matrix` matches a call to `fs::read` rather than the text `fs::read(`, which also matched `BufferRefs::read(count_buffer)` and reported a graph accessor as an unbounded filesystem read. The release-tooling scan reads `.py` alongside `.sh` and `.yml`, so a rule that a shell script cannot evade cannot be evaded by moving the body into a Python file beside it."
+
+[[fragments]]
+id = "evidence-blockers-structural-gate-registry"
+category = "Added"
+text = "A source-inspecting test is informational only when `docs/testing/STRUCTURAL_GATES.toml` declares it by file and test name with a reason, and a row the tree no longer backs is itself a release blocker. Twelve gates assert a property with no run-time witness, such as which crate owns a symbol or that no second file spells a constant; they cannot be rewritten as behaviour tests, and blocking on them permanently would have been answered by deleting them. Keying on the pair means a reviewed declaration exempts the gate it names and not the next one added to the same file."
+
+[[fragments]]
+id = "evidence-blockers-tooling-out-of-heredocs"
+category = "Changed"
+text = "Seven release gate scripts run `scripts/lib/<name>.py` instead of piping a Python program into an interpreter through a heredoc. A heredoc hides a whole second language from review, lint, and syntax checking, and these were the last seven. `scripts/cli_docs.py` invokes the workspace wrapper through `scripts/lib/cargo_runner.py`, the Python twin of the shell runner that already owned that decision."
+
+[[fragments]]
+id = "evidence-blockers-docs-and-features-complete"
+category = "Fixed"
+text = "`docs-check` and `feature-matrix` pass. The generated testing guide for `vyre-registry-link` had no row in the documentation manifest, and `vyre-test-support` declared features with no explicit default policy. A tree contract now derives the workspace member list at run time and fails when a member has no classified testing guide row, or when a row names a crate the workspace no longer has."

@@ -368,11 +368,7 @@ pub(crate) fn run(args: &[String]) {
         blockers,
     };
     crate::output_arg::write_json(&output, &readiness);
-    crate::output_arg::report_evidence_artifact(
-        "package-readiness",
-        &output,
-        readiness.blockers.len(),
-    );
+    crate::output_arg::report_evidence_artifact("package-readiness", &output, &readiness.blockers);
 }
 
 fn audit_package_contents(
