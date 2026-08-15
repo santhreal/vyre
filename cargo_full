@@ -5,7 +5,9 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 
 export CC="${CC:-gcc}"
-export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
+# Build parallelism is declared once, in .cargo/config.toml ([build] jobs).
+# An env var here would override that file for every invocation, which is how
+# this wrapper spent months serializing a 32-thread machine to one job.
 export VYRE_CARGO_RUNNER="${VYRE_CARGO_RUNNER:-$script_dir/cargo_full}"
 
 exec cargo "$@"
