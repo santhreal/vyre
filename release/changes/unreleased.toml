@@ -1683,3 +1683,8 @@ text = "The pass engine has one scope walk. `optimizer::rewrite_walk` owns the e
 id = "trap-program-one-owner"
 category = "Changed"
 text = "`vyre_foundation::algebra::composition::trap_program` builds the program a builder returns when its inputs cannot produce a valid one. `vyre-primitives` and `vyre-libs` each had their own copy, differing only in whether one output buffer of count 1 is declared, and a trap program is IR composed out of IR, so neither crate is its home. The declared output is an `Option` argument because that is the whole difference between the two former copies."
+
+[[fragments]]
+id = "single-output-program-fixture-owner"
+category = "Changed"
+text = "`vyre-test-support` states the minimal one-output test program once, as `ir_variants::single_u32_output_program`. Suites that needed a program with somewhere to store a result each declared the same buffer and workgroup size locally, so a change to the shape had to be found in every copy."

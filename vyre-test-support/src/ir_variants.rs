@@ -34,7 +34,10 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{CollectiveOp, CommGroup, Expr, Node, NodeExtension, NODE_VARIANT_NAMES};
+use vyre_foundation::ir::{
+    BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, NodeExtension, Program,
+    NODE_VARIANT_NAMES,
+};
 use vyre_foundation::transform::visit::node_shape;
 use vyre_foundation::MemoryOrdering;
 
@@ -143,6 +146,20 @@ pub fn node_body_slot_samples(marker: &Node) -> Vec<NodeSample> {
 #[must_use]
 pub fn node_operand_samples(marker: &Expr) -> Vec<NodeSample> {
     operand_samples(marker)
+}
+
+/// A program whose only buffer is one `u32` output of four elements.
+///
+/// This is the smallest program a validation or optimization test can build
+/// that still has somewhere to store a result. Every suite that spelled it
+/// locally agreed on the shape, so the shape is stated once here.
+#[must_use]
+pub fn single_u32_output_program(nodes: Vec<Node>) -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
+        [1, 1, 1],
+        nodes,
+    )
 }
 
 fn body_slot_samples(marker: &[Node]) -> Vec<NodeSample> {
