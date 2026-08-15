@@ -302,19 +302,7 @@ pub(super) fn c11_annotate_typedef_names_impl(
     identifier_annotation.extend([
         Node::let_bind(
             "possible_declarator",
-            any_token_eq(
-                Expr::var("next_kind"),
-                &[
-                    TOK_SEMICOLON,
-                    TOK_COMMA,
-                    TOK_ASSIGN,
-                    TOK_LPAREN,
-                    TOK_LBRACKET,
-                    TOK_COLON,
-                    TOK_RPAREN,
-                    TOK_RBRACKET,
-                ],
-            ),
+            is_typedef_symbol_link_follower_token(Expr::var("next_kind")),
         ),
         Node::let_bind("current_decl_flags", Expr::u32(0)),
         Node::let_bind(
@@ -322,12 +310,9 @@ pub(super) fn c11_annotate_typedef_names_impl(
             Expr::and(
                 Expr::var("possible_declarator"),
                 Expr::and(
-                    Expr::not(any_token_eq(
-                        Expr::var("prev_kind"),
-                        &[
-                            TOK_STRUCT, TOK_UNION, TOK_ENUM, TOK_DOT, TOK_ARROW, TOK_GOTO,
-                        ],
-                    )),
+                    Expr::not(is_declaration_previous_disqualifier_token(Expr::var(
+                        "prev_kind",
+                    ))),
                     Expr::ne(Expr::var("next_kind"), Expr::u32(TOK_COLON)),
                 ),
             ),

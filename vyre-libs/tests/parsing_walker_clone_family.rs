@@ -830,6 +830,16 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 /// `cursor != INVALID_POS` guard in the decorator dotted-name walk, and the GPU
 /// category chain that classified `C_AST_KIND_GNU_LOCAL_LABEL_DECL` as `NONE`
 /// where the CPU oracle classified it as `GNU`.
+///
+/// The two `c/typedef/annotate_precomputed_context*` values were re-recorded when
+/// the precomputed-context declaration classifier was routed onto
+/// `declaration_prefix_scan`, the single owner of the reverse prefix walk. Its own
+/// walk ran forwards with no delimiter depth, so it read the `int` inside a cast
+/// as the type of the identifier after the cast, and its type-specifier table was
+/// a 23-entry copy that omitted every C23 scalar type and the GNU specifiers. The
+/// self-contained `c/typedef/annotate*` values did not move: those programs reach
+/// the classifier through an op call, so the callee's body is outside their
+/// fingerprint.
 const EXPECTED: &[(&str, &str)] = &[
     (
         "python/structure",
@@ -901,11 +911,11 @@ const EXPECTED: &[(&str, &str)] = &[
     ),
     (
         "c/typedef/annotate_precomputed_context",
-        "abccd5a2d40f76baa7965ead0c16b32df00632dd730dfa425bde67d9a9c61e5d",
+        "6a48290196ff7477869227267fd83cbfc01d424a36943dadeef75bce0c447ad9",
     ),
     (
         "c/typedef/annotate_precomputed_context_packed",
-        "d3226140cc432183ffba55a3ed98caf8fe0f231530702456516ee4d00ee98e7c",
+        "73ae49cf5bd1733d719d4dab39aeb856c1ea851a8db824a6a3f7302ba475e704",
     ),
     (
         "core/ast/shunting",

@@ -137,7 +137,7 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 10710
+duplicate_lines = 10566
 total_lines = 187199
 
 [[crate]]

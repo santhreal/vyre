@@ -267,19 +267,9 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                                 ),
                                 Node::let_bind(
                                     &scan_possible_declarator,
-                                    any_token_eq(
-                                        Expr::var(&scan_next_kind),
-                                        &[
-                                            TOK_SEMICOLON,
-                                            TOK_COMMA,
-                                            TOK_ASSIGN,
-                                            TOK_LPAREN,
-                                            TOK_LBRACKET,
-                                            TOK_COLON,
-                                            TOK_RPAREN,
-                                            TOK_RBRACKET,
-                                        ],
-                                    ),
+                                    is_typedef_symbol_link_follower_token(Expr::var(
+                                        &scan_next_kind,
+                                    )),
                                 ),
                                 Node::if_then(
                                     Expr::and(

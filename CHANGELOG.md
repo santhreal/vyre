@@ -1814,6 +1814,30 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   the module that defines it; that one is now fully qualified. The five links
   naming a private item are plain code spans, because a link to an item a
   reader cannot reach is not a link.
+- The radix prefix table, digit-value decode, type-suffix set and digit
+  accumulator of a C integer literal are owned by
+  `parsing::c::preprocess::c_int_literal_grammar`. The standalone scanner and
+  the inline scan in the `#if` evaluator each carried a copy and the copies had
+  drifted: the evaluator accumulated with wrapping `u32` arithmetic, so a
+  literal above `u32::MAX` could carry to zero and flip a conditional, and it
+  consumed a type suffix after a radix prefix with no digits after it. The
+  scanner and the CPU `consume_integer` saturate and reject, and that is now
+  the only spelling.
+- The declaration-prefix walk in front of a VAST row is owned by
+  `parsing::c::parse::vast::declaration_prefix_scan`. The precomputed-context
+  declaration classifier walked the prefix forwards with no delimiter depth, so
+  the `int` inside a cast reached the identifier after it and `(int) a;`
+  classified `a` as an ordinary declarator; the self-contained classifier
+  skipped balanced paren and brace groups. Both call the same walk.
+- Four token tables that decide whether an identifier is a declarator name are
+  single-owner in `parsing::c::parse::vast::token_grammar::declarations`. The
+  declarator-follower set no longer admits `]`, which had made the bound in
+  `int a[N];` a declarator on the precomputed path only. The declaration-prefix
+  set gained `auto` and `register`, and the precomputed path now reads it
+  instead of a 23-entry copy that omitted every C23 scalar type, `_Alignas`,
+  `typeof` and the GNU specifiers. A new matrix reads the token vocabulary out
+  of `vyre-spec` at test time and fails when any kind is classified differently
+  by the two paths.
 
 ## [0.7.1] - 2026-08-01
 
