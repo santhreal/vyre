@@ -122,6 +122,14 @@ impl EvidenceCommand {
         }
     }
 
+    /// The subcommand this row names, which is what an artifact list is keyed on.
+    const fn subcommand(&self) -> &'static str {
+        match self.args.first() {
+            Some(first) => first,
+            None => "",
+        }
+    }
+
     const fn mode(&self) -> &'static str {
         if self.in_sweep {
             COMMAND_MODE_SPAWNED
@@ -160,7 +168,7 @@ fn inspect(workspace_root: &Path) -> Inspection {
     let mut records = Vec::new();
     for command in COMMANDS {
         let label = format!("xtask {}", command.args.join(" "));
-        let expected = expected_artifacts_for_command(&generator_command(command.args));
+        let expected = expected_artifacts_for_command(command.subcommand());
         if command.required && expected.is_empty() {
             failures.push(format!(
                 "`{label}` is required but declares no expected artifacts"
@@ -393,6 +401,28 @@ mod tests {
         assert!(status.source_fingerprint.is_some());
         assert!(status.freshness_fingerprint.is_some());
         assert!(status.blockers.is_empty(), "{:?}", status.blockers);
+    }
+
+    /// WHY: the lookup is keyed on the subcommand, and the census asked it for a
+    /// rendered command line ("xtask release-workload-matrix --enforce"), so every
+    /// row missed and all fourteen required generators read as declaring no
+    /// artifact at all. The table is enumerated here at run time, so adding a
+    /// generator without listing what it owes turns this red instead of producing
+    /// a census that reports fourteen defects nobody can act on.
+    #[test]
+    fn every_required_generator_declares_the_artifacts_it_owes() {
+        let undeclared: Vec<&str> = COMMANDS
+            .iter()
+            .filter(|command| {
+                command.required && expected_artifacts_for_command(command.subcommand()).is_empty()
+            })
+            .map(EvidenceCommand::subcommand)
+            .collect();
+        assert_eq!(
+            undeclared,
+            Vec::<&str>::new(),
+            "Fix: list the artifacts each of these generators owes in expected_artifacts_for_command"
+        );
     }
 
     #[test]
