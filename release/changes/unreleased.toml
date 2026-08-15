@@ -1681,3 +1681,66 @@ text = "The command-line contract no longer renders a book page. `scripts/cli_do
 id = "workflow-subcommand-resolution"
 category = "Added"
 text = "A CI step that passes a subcommand to `xtask`, `xtask-registry` or `xtask-evidence` is resolved against the registered subcommand table. A renamed or deleted row left the step naming a command that no longer exists, and nothing local went red: the package existed, the binary existed, and the name was one shell token in a `run:` line. `xtask gates` judges the other direction, that a registered row is wired into CI, so the pair is now closed. Names are extracted per step, including every command in a joined `run:` block, and resolved when the test runs rather than listed in it."
+id = "vyre-driver-backend-contract-one-owner"
+category = "Changed"
+text = "The `VyreBackend` trait contract has two owners in `vyre-driver`'s test surface instead of three overlapping files. `tests/backend_trait_contract.rs` owns the minimal and fully overriding backend fixtures and asserts that every capability default is conservative, that every override is observably different from its default, that lifecycle hooks succeed by default and receive every call once overridden, that the blanket `Backend` impl exposes the driver identity, and that the trait surface stays object safe and `Send + Sync`. `tests/backend_registry.rs` owns what the registry reports when nothing is registered, including that preferred-dispatch acquisition fails closed and never advertises a host fallback. The previous `backend_contract.rs`, `backend_capability_negotiation.rs`, and `backend_trait_compatibility.rs` each declared their own copy of the same fixtures and asserted overlapping subsets of the same contract, so an override that silently returned its default value was invisible in all three. That case is now a single invariant rather than two mirrored capability lists."
+
+[[fragments]]
+id = "vyre-driver-async-dispatch-one-owner"
+category = "Changed"
+text = "`vyre-driver/tests/async_dispatch_contract.rs` is the sole owner of what the default async dispatch adapter guarantees: error propagation before any await, a ready handle that never blocks, independent handles per dispatch, object safety through both awaits, and the default `dispatch_borrowed` and resident-async paths. The counting, failing, and resident backend fixtures are declared once. `async_dispatch_always_nonblocking.rs` carried byte-identical fixtures and three duplicate tests and is gone; every assertion it made is made here, and the borrowed-dispatch case now checks the forwarded payload rather than only that the call succeeded."
+
+[[fragments]]
+id = "vyre-driver-dispatch-policy-saturation"
+category = "Changed"
+text = "`vyre-driver`'s dispatch policy bundle is covered by a test that calls each policy directly and compares the verdicts to the bundle's, so the bundle cannot drift from the policies it composes. A test drives every policy at the extremes of its integer domain and asserts the resulting verdict, replacing a case that bound the results to `_` and only proved absence of a panic. The module and field documentation names the concern each policy decides instead of an internal plan label."
+
+[[fragments]]
+id = "driver-tests-skill-truth"
+category = "Fixed"
+text = "The test guides for `vyre-driver` and `vyre-driver-wgpu` describe what the crates contain. Both previously pointed at a category contract file that does not exist, listed bench and fuzz targets for directories neither crate has, and gave `cargo test --test` invocations for target names (`adversarial`, `property`, `gap`, `integration`) that were never declared. `vyre-driver`'s guide also claimed sealing through a macro name that is not in the source and invariants for a `DialectRegistry` the crate does not define. Every invariant now names a construct that exists, and the sealing entry names `backend::private::Sealed`."
+
+[[fragments]]
+id = "wgpu-loop-carrier-token-ids-from-owner"
+category = "Fixed"
+text = "`vyre-driver-wgpu`'s loop-carrier scope-latch dispatch test reads `TOK_LBRACE` and `TOK_RBRACE` from `vyre_spec::c11_token` instead of declaring its own pair with the values 1 and 2. Those two declarations were the only `TOK_`-prefixed constants outside `vyre-spec` in the tree, so `vyre-spec`'s `no_file_outside_the_owner_declares_a_token_id` failed on this file. The test pins the shape the c-parser scope walker emits, and it now pins that shape against the real numbering the walker actually sees: the canonical ids are 12 and 13. Nothing observable moves, because the program compares `scope_kind` for equality against the same constants the fixture inputs are built from, and every assertion is on `scope_open` and `scope_depth`."
+
+[[fragments]]
+id = "metal-test-program-shape-one-owner"
+category = "Changed"
+text = "The programs the native Metal tests dispatch have one owner in `vyre-driver-metal/src/tests/fixtures.rs`. The single WriteOnly `u32` output word, declared with count 1 and an output byte range of 0..4, was restated at nine call sites across four modules, and the ReadOnly-input-plus-WriteOnly-output pair at four more, twice byte for byte inside one file. The declared element count and the output byte range together decide how many bytes the backend collects, so every test asserting a single little-endian word was asserting against a shape it also restated: one edited count would have retargeted the assertion at a different number of bytes in one place and left the others agreeing with each other. Each module now imports what it uses once at module scope instead of repeating the same two `use` lines inside every test function."
+
+[[fragments]]
+id = "metal-wgpu-differential-own-module"
+category = "Changed"
+text = "The native Metal against wgpu-on-Metal comparison lives in `vyre-driver-metal/src/tests/wgpu_differential.rs`. It was the second test in the one-shot dispatch module, whose subject is what Metal does with a program rather than whether two backends agree."
+
+[[fragments]]
+id = "metal-metric-counter-table"
+category = "Changed"
+text = "`vyre-driver-metal`'s `backend_metric_snapshot` builds its scalar counters from a name-and-accessor table rather than fourteen hand-written pushes. A counter added to `MetalMetrics` and forgotten in the snapshot was previously invisible, because the push list carried no relation to the struct. The resident-buffer branch moved to `push_resident_table_metrics` next to the lock helper it shares a failure mode with, and the comment explaining the poison sentinel states the reason instead of citing an internal rule number."
+
+[[fragments]]
+id = "metal-poison-sentinel-test-poisons"
+category = "Fixed"
+text = "`vyre-driver-metal`'s poisoned-resident-table test poisons the lock. It was named for the poison path and documented the sentinel, then contained a comment-only block whose note explained that `MetalBackend` does not expose `resident_buffers`, and asserted only that a healthy snapshot carries both resident keys with a count of zero. It could not fail on the bug it existed for. It now allocates a resident buffer, poisons the table from a thread that panics while holding the lock, and asserts the count and byte total are both `u64::MAX`, that `metal_resident_buffer_error` is 1, and that the unrelated counters survive. The healthy test asserts the error key is absent, so the pair separates poison from emptiness instead of proving one state twice. `resident_buffers` is `pub(crate)` because poisoning the lock is the only way to observe the contract."
+
+[[fragments]]
+id = "instance-message-corrective-actions-one-owner"
+category = "Fixed"
+text = "The neutral rejection record in `vyre-driver/src/materialize.rs` owns the corrective action for a foreign artifact binding and for a completion consumed twice. Both were routed through `invalid_module`, whose suffix tells the caller to recompile the target payload from the neutral artifact, which is wrong advice for either: a binding aimed at another instance's digest is repaired by binding against the right digest, and a completion consumed twice is repaired by consuming it once. `vyre-driver-cuda` and `vyre-driver-spirv` had each independently overridden the foreign-artifact string with the same replacement text, which is the evidence that the action is not backend-specific."
+
+[[fragments]]
+id = "spirv-neutral-instance-messages"
+category = "Changed"
+text = "`vyre-driver-spirv` uses the neutral instance-rejection record instead of a local copy of five entries. Three of its overrides restated the neutral requirement without naming a corrective action, one restated the neutral text, and one is now the neutral text. The crate carries no rejection wording of its own for the shared materializer contract, so the words a caller reads do not depend on which backend rejected the call."
+
+[[fragments]]
+id = "spirv-elementwise-program-one-owner"
+category = "Changed"
+text = "The element-wise programs the SPIR-V dispatch tests and the Vulkan probe example run have one owner in `vyre-driver-spirv/tests/support/elementwise.rs`, shared by path include. The add, output-first add, and multiply-add programs plus the `u32` byte conversions were written twice, once in the test and once in the example, so the example could drift from the shape the test pins. The test also grew a reference-output helper and a lane comparison, which replaces two copied assertion loops and three copies of the little-endian input encoding."
+
+[[fragments]]
+id = "spirv-capability-queries-use-trait-defaults"
+category = "Changed"
+text = "`vyre-driver-spirv` answers the seven capability queries it does not probe from the `VyreBackend` defaults instead of restating `false` for each. The Vulkan compute path probes four limits and claims nothing else, and the trait default is already the conservative answer, so a capability added to the trait no longer needs a hand-written denial here to keep the backend honest."
