@@ -221,7 +221,12 @@ fn every_override_is_observably_different_from_its_default() {
     let minimal = MinimalBackend;
     let full = FullBackend::new();
 
-    assert_ne!(minimal.version(), full.version());
+    assert_ne!(
+        VyreBackend::version(&minimal),
+        VyreBackend::version(&*full),
+        "Backend and VyreBackend both declare version; this file judges the \
+         VyreBackend override contract"
+    );
     assert_ne!(
         minimal.supports_subgroup_ops(),
         full.supports_subgroup_ops()
