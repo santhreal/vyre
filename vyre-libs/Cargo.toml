@@ -143,9 +143,6 @@ vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 vyre-driver = { path = "../vyre-driver" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
-tempfile.workspace = true
-sha2.workspace = true
-criterion.workspace = true
 naga.workspace = true
 # PATH-ONLY (package = vyre-grammar-gen): see vyre-driver-wgpu. cargo strips path-only
 # dev-deps from the published manifest, so this creates no publish-ordering constraint

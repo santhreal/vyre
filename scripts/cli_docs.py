@@ -13,6 +13,10 @@ import tomllib
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+
+from cargo_runner import cargo_runner  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs/CLI.toml"
 OUTPUT_PATH = ROOT / "docs/CLI.md"
@@ -83,16 +87,20 @@ def inventory_bins(metadata: dict) -> set[tuple[str, str]]:
 
 
 def build_bins() -> None:
+    runner = cargo_runner(ROOT)
     environment = os.environ.copy()
     environment.setdefault("CARGO_BUILD_JOBS", "1")
     result = subprocess.run(
-        ["cargo", "build", "--workspace", "--bins"],
+        [runner, "build", "--workspace", "--bins"],
         cwd=ROOT,
         env=environment,
         check=False,
     )
     if result.returncode != 0:
-        fail("cargo build --workspace --bins failed; repair the CLI build before documenting it")
+        fail(
+            f"`{runner} build --workspace --bins` failed; "
+            "repair the CLI build before documenting it"
+        )
 
 
 def run_help(executable: Path, args: list[str]) -> str:

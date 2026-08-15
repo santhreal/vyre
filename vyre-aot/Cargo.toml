@@ -17,11 +17,11 @@ categories = ["compilers", "hardware-support"]
 workspace = true
 
 [dependencies]
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, default-features = false }
 vyre-foundation.workspace = true
 vyre-driver.workspace = true
 vyre-megakernel.workspace = true
-vyre-primitives = { workspace = true, default-features = false, features = ["math", "graph", "fixpoint", "bitset", "reduce", "inventory-registry"] }
-vyre-spec.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true

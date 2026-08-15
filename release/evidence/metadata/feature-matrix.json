@@ -308,7 +308,7 @@
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 46,
+      "feature_count": 47,
       "has_default_feature": true,
       "default_feature_members": [
         "math-linalg",
@@ -326,6 +326,7 @@
         "analysis",
         "bench",
         "c-parser",
+        "cat-a-builder-options",
         "cpu-parity",
         "crypto",
         "crypto-blake3",
@@ -498,6 +499,32 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
+      "name": "vyre-registry-link",
+      "manifest": "vyre-registry-link/Cargo.toml",
+      "feature_count": 7,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "operations",
+        "cuda",
+        "metal",
+        "reference",
+        "spirv",
+        "wgpu"
+      ],
+      "features": [
+        "cuda",
+        "default",
+        "metal",
+        "operations",
+        "reference",
+        "spirv",
+        "wgpu"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
       "name": "vyre-runtime",
       "manifest": "vyre-runtime/Cargo.toml",
       "feature_count": 6,
@@ -540,10 +567,13 @@
     {
       "name": "vyre-test-support",
       "manifest": "vyre-test-support/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
+      "feature_count": 2,
+      "has_default_feature": true,
       "default_feature_members": [],
-      "features": [],
+      "features": [
+        "default",
+        "ir-fixtures"
+      ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"

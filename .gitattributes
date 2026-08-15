@@ -1,2 +1,3 @@
-benches/competition/corpora/repo-* linguist-generated=true
-benches/competition/corpora/downloads/** linguist-generated=true
+# Release fragments are append-only; a textual three-way merge of two lanes
+# adding rows at the end drops the [[fragments]] header at the seam.
+release/changes/unreleased.toml merge=union

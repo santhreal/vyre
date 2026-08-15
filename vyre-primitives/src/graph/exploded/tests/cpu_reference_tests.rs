@@ -1,68 +1,142 @@
 use super::*;
 
+use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, ExplodedIfdsCase};
+
+/// Every declared exploded-IFDS group has a primitive arm, and every case in it
+/// holds.
+///
+/// The ledger reads the shared table at run time, so a group declared with no
+/// branch below fails here by name rather than silently going unrun. Which cases
+/// exist and what a correct CSR looks like belong to
+/// `vyre_test_support::exploded_ifds_cases`; this test pins only what the
+/// primitive CPU reference owes for them.
 #[test]
-fn generated_try_build_cpu_reference_emits_valid_csr_shapes() {
-    for procs in 1u32..=4 {
-        for blocks in 1u32..=16 {
-            for facts in 1u32..=16 {
-                let intra: Vec<(u32, u32, u32)> = (0..procs)
-                    .flat_map(|proc_id| {
-                        (0..blocks.saturating_sub(1)).map(move |block| (proc_id, block, block + 1))
-                    })
-                    .collect();
-                let inter: Vec<(u32, u32, u32, u32)> = if procs > 1 {
-                    (0..procs - 1)
-                        .map(|proc_id| (proc_id, blocks - 1, proc_id + 1, 0))
-                        .collect()
-                } else {
-                    Vec::new()
-                };
-                let gen_rules: Vec<(u32, u32, u32)> = (0..procs)
-                    .flat_map(|proc_id| {
-                        (0..blocks).filter_map(move |block| {
-                            if facts > 1 {
-                                Some((proc_id, block, (block % (facts - 1)) + 1))
-                            } else {
-                                None
-                            }
-                        })
-                    })
-                    .collect();
-                let kill_rules: Vec<(u32, u32, u32)> = (0..procs)
-                    .flat_map(|proc_id| {
-                        (0..blocks).filter_map(move |block| {
-                            (facts > 2 && block % 3 == 0).then_some((proc_id, block, 1))
-                        })
-                    })
-                    .collect();
-                let (row_ptr, col_idx) = try_build_cpu_reference(
-                    procs,
-                    blocks,
-                    facts,
-                    &intra,
-                    &inter,
-                    &gen_rules,
-                    &kill_rules,
-                )
-                .unwrap();
-                let total_nodes = procs as usize * blocks as usize * facts as usize;
-                assert_eq!(row_ptr.len(), total_nodes + 1);
-                assert_eq!(row_ptr[total_nodes] as usize, col_idx.len());
-                for window in row_ptr.windows(2) {
-                    assert!(window[0] <= window[1]);
-                }
-                for &dst in &col_idx {
-                    assert!((dst as usize) < total_nodes);
-                }
-            }
+fn primitive_exploded_ifds_arms_cover_every_declared_case_group() {
+    let mut coverage = arm_coverage();
+    for group in declared_groups() {
+        match group.name {
+            "mixed_flow_stream" => assert_reusable_oracle_matches_allocating(&group.cases),
+            "dense_chain" => assert_allocating_oracle_emits_valid_csr(&group.cases),
+            "flow_rule_edges" => assert_panicking_wrapper_agrees_with_try(&group.cases),
+            "empty_domain" => assert_domain_rejected(&group.cases),
+            _ => continue,
         }
+        coverage.record(group.name, group.cases.len());
+    }
+    coverage.assert_covers_declared_table();
+}
+
+/// The workspace-reusing oracle produces exactly what the allocating one does,
+/// case after case through one scratch.
+fn assert_reusable_oracle_matches_allocating(cases: &[ExplodedIfdsCase]) {
+    let mut row_ptr = Vec::new();
+    let mut col_idx = Vec::new();
+    let mut scratch = ExplodedIfdsCpuScratch::new();
+
+    for case in cases {
+        let expected = try_build_cpu_reference(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        )
+        .expect("Fix: declared exploded IFDS case must build through the allocating oracle.");
+        try_build_cpu_reference_into(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+            &mut row_ptr,
+            &mut col_idx,
+            &mut scratch,
+        )
+        .expect("Fix: declared exploded IFDS case must build through the reusable oracle.");
+
+        assert_eq!(
+            (row_ptr.clone(), col_idx.clone()),
+            expected,
+            "Fix: reusable exploded IFDS oracle diverged at {}.",
+            case.label
+        );
+        case.assert_csr("try_build_cpu_reference_into", &row_ptr, &col_idx);
     }
 }
 
-#[test]
-fn try_build_cpu_reference_rejects_empty_domain_without_panicking() {
-    let err = try_build_cpu_reference(0, 0, 0, &[], &[], &[], &[]).unwrap_err();
-    assert!(err.contains("nonzero"));
+/// The allocating oracle emits a well-formed CSR for every declared shape.
+fn assert_allocating_oracle_emits_valid_csr(cases: &[ExplodedIfdsCase]) {
+    for case in cases {
+        let (row_ptr, col_idx) = try_build_cpu_reference(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        )
+        .expect("Fix: declared exploded IFDS case must build through the allocating oracle.");
+        case.assert_csr("try_build_cpu_reference", &row_ptr, &col_idx);
+    }
+}
+
+/// The panicking wrapper answers exactly what the `Result` form answers, and
+/// both carry the declared rule semantics.
+fn assert_panicking_wrapper_agrees_with_try(cases: &[ExplodedIfdsCase]) {
+    for case in cases {
+        let built = build_cpu_reference(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        );
+        let tried = try_build_cpu_reference(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        )
+        .expect("Fix: declared exploded IFDS case must build through the allocating oracle.");
+        assert_eq!(
+            built, tried,
+            "Fix: panicking and fallible exploded IFDS references disagree at {}.",
+            case.label
+        );
+        case.assert_csr("build_cpu_reference", &built.0, &built.1);
+    }
+}
+
+/// An invalid domain is a reported error, not a fabricated empty CSR: parity
+/// needs a real exploded-supergraph domain.
+fn assert_domain_rejected(cases: &[ExplodedIfdsCase]) {
+    for case in cases {
+        let err = try_build_cpu_reference(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        )
+        .expect_err("Fix: an empty exploded IFDS domain must be rejected.");
+        assert!(
+            err.contains("nonzero"),
+            "Fix: empty-domain rejection must stay explicit at {}, got: {err}",
+            case.label
+        );
+    }
 }
 
 #[test]
@@ -193,44 +267,4 @@ fn try_build_cpu_reference_into_validates_before_mutating_storage() {
     assert_eq!(scratch.gen_cursor, vec![4]);
     assert_eq!(scratch.gen_facts, vec![5]);
     assert_eq!(scratch.cursor, vec![6]);
-}
-
-#[test]
-fn generated_try_build_cpu_reference_into_matches_allocating_reference() {
-    let mut row_ptr = Vec::new();
-    let mut col_idx = Vec::new();
-    let mut scratch = ExplodedIfdsCpuScratch::new();
-
-    for case in 0..EXPLODED_IFDS_CASE_COUNT {
-        let graph = exploded_ifds_case(case);
-
-        let expected = try_build_cpu_reference(
-            graph.num_procs,
-            graph.blocks_per_proc,
-            graph.facts_per_proc,
-            &graph.intra_edges,
-            &graph.inter_edges,
-            &graph.flow_gen,
-            &graph.flow_kill,
-        )
-        .expect("Fix: generated exploded IFDS graph must build through allocating oracle.");
-        try_build_cpu_reference_into(
-            graph.num_procs,
-            graph.blocks_per_proc,
-            graph.facts_per_proc,
-            &graph.intra_edges,
-            &graph.inter_edges,
-            &graph.flow_gen,
-            &graph.flow_kill,
-            &mut row_ptr,
-            &mut col_idx,
-            &mut scratch,
-        )
-        .expect("Fix: generated exploded IFDS graph must build through reusable oracle.");
-        assert_eq!(
-            (row_ptr.clone(), col_idx.clone()),
-            expected,
-            "Fix: reusable exploded IFDS oracle diverged at generated case {case}."
-        );
-    }
 }

@@ -136,6 +136,10 @@ pub mod resident_transfer_fusion;
 pub mod result_compaction;
 /// Runtime routing: profile-guided variant selection, algorithm heuristics.
 pub mod routing;
+/// Canonical self-hosted optimizer scaling bench shared by every concrete
+/// driver crate's scaling suite.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod self_optimizer_bench;
 /// Sampled CPU-reference shadow execution of live dispatches.
 pub mod shadow;
 /// N8 substrate: predicted-next-shape fingerprint API. Records

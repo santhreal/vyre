@@ -22,10 +22,9 @@ vyre-primitives = { workspace = true, features = ["hash", "matching"] }
 
 vyre-spec.workspace = true
 blake3.workspace = true
-bytemuck.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
-im.workspace = true
+imbl.workspace = true
 libm.workspace = true
 
 [dev-dependencies]
@@ -35,7 +34,6 @@ vyre-test-support.workspace = true
 # artifacts are instead of growing a second comparison spelling.
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 proptest.workspace = true
-criterion.workspace = true
 regex-automata.workspace = true
 hex.workspace = true
 fnv.workspace = true

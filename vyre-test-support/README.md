@@ -60,7 +60,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test binop_parity_ta
 
 ### Features
 
-- Manifest features: `ir-fixtures`
+- Manifest features: `default`, `ir-fixtures`
 - Default feature members: None
 
 ### Errors and unsupported behavior

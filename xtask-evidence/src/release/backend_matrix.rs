@@ -427,7 +427,7 @@ pub(crate) fn run(args: &[String]) {
     };
 
     xtask::output_arg::write_json(&output, &matrix);
-    xtask::output_arg::report_evidence_artifact("backend-matrix", &output, matrix.blockers.len());
+    xtask::output_arg::report_evidence_artifact("backend-matrix", &output, &matrix.blockers);
 }
 
 fn collect_cuda_feature_markers(

@@ -4,16 +4,14 @@
 //! with backtracking go superlinear (O(2^n)). GPU parallelism should dominate
 //! by evaluating all NFA states simultaneously.
 
-use crate::api::case::{
-    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, PerformanceContract, PreparedCase,
+use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::cases::harness::{
+    verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
-use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
+use crate::cases::reference_sample::{
+    measure_against_reference, referenced_bytes_touched, referenced_program, HostReferencePayload,
+    HostReferenced,
 };
-use crate::api::suite::SuiteKind;
-use crate::cases::honest_case::{honest_gpu_requirements, honest_metadata, HONEST_SUITES};
-use crate::cases::reference_sample::{run_against_reference, timed_reference, ReferenceSample};
 use pcre2::bytes::{Regex, RegexBuilder};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -23,268 +21,210 @@ const INPUT_LEN: u32 = 256; // words (1024 bytes)
 const INSTANCE_COUNT: u32 = 4096;
 const TOTAL_WORDS: u32 = INPUT_LEN * INSTANCE_COUNT;
 
-pub struct RegexBacktracking;
-
 struct RegexBacktrackingPrepared {
-    program: Program,
+    dispatch: HostReferencePayload,
     regex: Regex,
-    input_bytes: Vec<u8>,
-    inputs: Vec<Vec<u8>>,
-    input_bytes_total: u64,
-    resident: Option<ResidentInputSet>,
+    corpus: Vec<u8>,
 }
 
-impl BenchCase for RegexBacktracking {
-    fn id(&self) -> BenchId {
-        BenchId("regex.backtracking.adversarial".to_string())
+impl HostReferenced for RegexBacktrackingPrepared {
+    fn dispatch(&self) -> &HostReferencePayload {
+        &self.dispatch
     }
 
-    fn metadata(&self) -> BenchMetadata {
-        honest_metadata(
-            self.id(),
-            "Regex Backtracking Adversarial",
-            "Catastrophic backtracking: (a+)+b pattern on hostile 'aaaa...' input",
-            &["honest", "regex", "adversarial"],
+    fn reference(&self) -> Result<Vec<u8>, BenchError> {
+        cpu_pcre2_scan(
+            &self.regex,
+            &self.corpus,
+            INSTANCE_COUNT as usize,
+            INPUT_LEN as usize * 4,
         )
     }
 
-    fn suites(&self) -> &'static [SuiteKind] {
-        HONEST_SUITES
+    /// PCRE2 scans the corpus itself, which is the whole uploaded input set.
+    fn reference_input_bytes(&self) -> u64 {
+        self.corpus.len() as u64
     }
+}
 
-    fn requirements(&self) -> BenchRequirements {
-        honest_gpu_requirements((TOTAL_WORDS as u64 + INSTANCE_COUNT as u64) * 4)
-    }
+static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
+    "regex.backtracking.adversarial",
+    "Regex Backtracking Adversarial",
+    "Catastrophic backtracking: (a+)+b pattern on hostile 'aaaa...' input",
+    &["honest", "regex", "adversarial"],
+    (TOTAL_WORDS as u64 + INSTANCE_COUNT as u64) * 4,
+    Some(ContractDescription {
+        primitive: "Catastrophic backtracking regex",
+        baseline_crate: "pcre2",
+        baseline_name: "PCRE2 10.44 (backtracking engine)",
+        min_speedup_x: 3.0,
+    }),
+);
 
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        Some(PerformanceContract::cpu_sota_3x(
-            "Catastrophic backtracking regex",
-            "pcre2",
-            "PCRE2 10.44 (backtracking engine)",
-        ))
-    }
+static OPS: CaseOps<RegexBacktrackingPrepared> = CaseOps {
+    build: prepare_regex_backtracking,
+    measure: measure_against_reference::<RegexBacktrackingPrepared>,
+    verify: verify_exact,
+    program: referenced_program::<RegexBacktrackingPrepared>,
+    fingerprint: None,
+    bytes_touched: referenced_bytes_touched::<RegexBacktrackingPrepared>,
+};
 
-    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        // GPU kernel: NFA-style parallel state evaluation.
-        // For pattern (a+)+b, the NFA has states:
-        //   S0: start  -  on 'a' go to S1
-        //   S1: in (a+)  -  on 'a' stay in S1, on 'b' go to S2 (accept)
-        //   S2: accept
-        //
-        // Each thread scans its input slice byte-by-byte in a loop.
-        // Since all inputs are 'aaa...' with no 'b', result is always 0 (no match).
-        // The work is in the scanning, not the result.
-        //
-        // The GPU does this honestly: it walks every byte. The advantage is
-        // parallelism across instances, not algorithm tricks.
-        let prog = Program::wrapped(
-            vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(TOTAL_WORDS),
-                BufferDecl::output("results", 1, DataType::U32).with_count(INSTANCE_COUNT),
-            ],
-            [256, 1, 1],
-            vec![
-                Node::let_bind("tid", Expr::gid_x()),
-                Node::if_then(
-                    Expr::lt(Expr::var("tid"), Expr::u32(INSTANCE_COUNT)),
-                    vec![
-                        Node::let_bind("base", Expr::mul(Expr::var("tid"), Expr::u32(INPUT_LEN))),
-                        // NFA state: 0=start, 1=in_a_group, 2=matched
-                        Node::let_bind("state", Expr::u32(0)),
-                        Node::let_bind("match_count", Expr::u32(0)),
-                        // Scan each word
-                        Node::Loop {
-                            var: "i".into(),
-                            from: Expr::u32(0),
-                            to: Expr::u32(INPUT_LEN),
-                            body: vec![
-                                Node::let_bind(
-                                    "word",
-                                    Expr::load(
-                                        "input",
-                                        Expr::add(Expr::var("base"), Expr::var("i")),
+static CASE: HarnessCase<RegexBacktrackingPrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
+
+/// NFA-style parallel state evaluation of `(a+)+b`.
+///
+/// The NFA has three states: start, inside the `(a+)` group, and accept. Each
+/// thread walks its own input slice byte by byte. The hostile corpus is all
+/// `'a'` with no `'b'`, so every result is zero: the work is the scan, not the
+/// answer. The device does that scan honestly, and its advantage is parallelism
+/// across instances rather than an algorithmic shortcut.
+fn prepare_regex_backtracking(
+    ctx: &mut BenchContext,
+) -> Result<RegexBacktrackingPrepared, BenchError> {
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(TOTAL_WORDS),
+            BufferDecl::output("results", 1, DataType::U32).with_count(INSTANCE_COUNT),
+        ],
+        [256, 1, 1],
+        vec![
+            Node::let_bind("tid", Expr::gid_x()),
+            Node::if_then(
+                Expr::lt(Expr::var("tid"), Expr::u32(INSTANCE_COUNT)),
+                vec![
+                    Node::let_bind("base", Expr::mul(Expr::var("tid"), Expr::u32(INPUT_LEN))),
+                    // NFA state: 0=start, 1=in_a_group, 2=matched
+                    Node::let_bind("state", Expr::u32(0)),
+                    Node::let_bind("match_count", Expr::u32(0)),
+                    // Scan each word
+                    Node::Loop {
+                        var: "i".into(),
+                        from: Expr::u32(0),
+                        to: Expr::u32(INPUT_LEN),
+                        body: vec![
+                            Node::let_bind(
+                                "word",
+                                Expr::load("input", Expr::add(Expr::var("base"), Expr::var("i"))),
+                            ),
+                            // Extract each byte from the word and process
+                            // Byte 0
+                            Node::let_bind("b0", Expr::bitand(Expr::var("word"), Expr::u32(0xFF))),
+                            // 'a' = 0x61, 'b' = 0x62
+                            Node::if_then(
+                                Expr::eq(Expr::var("b0"), Expr::u32(0x61)),
+                                vec![Node::assign("state", Expr::u32(1))],
+                            ),
+                            Node::if_then(
+                                Expr::and(
+                                    Expr::eq(Expr::var("b0"), Expr::u32(0x62)),
+                                    Expr::eq(Expr::var("state"), Expr::u32(1)),
+                                ),
+                                vec![
+                                    Node::assign(
+                                        "match_count",
+                                        Expr::add(Expr::var("match_count"), Expr::u32(1)),
                                     ),
+                                    Node::assign("state", Expr::u32(0)),
+                                ],
+                            ),
+                            // Byte 1
+                            Node::let_bind(
+                                "b1",
+                                Expr::bitand(
+                                    Expr::shr(Expr::var("word"), Expr::u32(8)),
+                                    Expr::u32(0xFF),
                                 ),
-                                // Extract each byte from the word and process
-                                // Byte 0
-                                Node::let_bind(
-                                    "b0",
-                                    Expr::bitand(Expr::var("word"), Expr::u32(0xFF)),
+                            ),
+                            Node::if_then(
+                                Expr::eq(Expr::var("b1"), Expr::u32(0x61)),
+                                vec![Node::assign("state", Expr::u32(1))],
+                            ),
+                            Node::if_then(
+                                Expr::and(
+                                    Expr::eq(Expr::var("b1"), Expr::u32(0x62)),
+                                    Expr::eq(Expr::var("state"), Expr::u32(1)),
                                 ),
-                                // 'a' = 0x61, 'b' = 0x62
-                                Node::if_then(
-                                    Expr::eq(Expr::var("b0"), Expr::u32(0x61)),
-                                    vec![Node::assign("state", Expr::u32(1))],
-                                ),
-                                Node::if_then(
-                                    Expr::and(
-                                        Expr::eq(Expr::var("b0"), Expr::u32(0x62)),
-                                        Expr::eq(Expr::var("state"), Expr::u32(1)),
+                                vec![
+                                    Node::assign(
+                                        "match_count",
+                                        Expr::add(Expr::var("match_count"), Expr::u32(1)),
                                     ),
-                                    vec![
-                                        Node::assign(
-                                            "match_count",
-                                            Expr::add(Expr::var("match_count"), Expr::u32(1)),
-                                        ),
-                                        Node::assign("state", Expr::u32(0)),
-                                    ],
+                                    Node::assign("state", Expr::u32(0)),
+                                ],
+                            ),
+                            // Byte 2
+                            Node::let_bind(
+                                "b2",
+                                Expr::bitand(
+                                    Expr::shr(Expr::var("word"), Expr::u32(16)),
+                                    Expr::u32(0xFF),
                                 ),
-                                // Byte 1
-                                Node::let_bind(
-                                    "b1",
-                                    Expr::bitand(
-                                        Expr::shr(Expr::var("word"), Expr::u32(8)),
-                                        Expr::u32(0xFF),
+                            ),
+                            Node::if_then(
+                                Expr::eq(Expr::var("b2"), Expr::u32(0x61)),
+                                vec![Node::assign("state", Expr::u32(1))],
+                            ),
+                            Node::if_then(
+                                Expr::and(
+                                    Expr::eq(Expr::var("b2"), Expr::u32(0x62)),
+                                    Expr::eq(Expr::var("state"), Expr::u32(1)),
+                                ),
+                                vec![
+                                    Node::assign(
+                                        "match_count",
+                                        Expr::add(Expr::var("match_count"), Expr::u32(1)),
                                     ),
+                                    Node::assign("state", Expr::u32(0)),
+                                ],
+                            ),
+                            // Byte 3
+                            Node::let_bind("b3", Expr::shr(Expr::var("word"), Expr::u32(24))),
+                            Node::if_then(
+                                Expr::eq(Expr::var("b3"), Expr::u32(0x61)),
+                                vec![Node::assign("state", Expr::u32(1))],
+                            ),
+                            Node::if_then(
+                                Expr::and(
+                                    Expr::eq(Expr::var("b3"), Expr::u32(0x62)),
+                                    Expr::eq(Expr::var("state"), Expr::u32(1)),
                                 ),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("b1"), Expr::u32(0x61)),
-                                    vec![Node::assign("state", Expr::u32(1))],
-                                ),
-                                Node::if_then(
-                                    Expr::and(
-                                        Expr::eq(Expr::var("b1"), Expr::u32(0x62)),
-                                        Expr::eq(Expr::var("state"), Expr::u32(1)),
+                                vec![
+                                    Node::assign(
+                                        "match_count",
+                                        Expr::add(Expr::var("match_count"), Expr::u32(1)),
                                     ),
-                                    vec![
-                                        Node::assign(
-                                            "match_count",
-                                            Expr::add(Expr::var("match_count"), Expr::u32(1)),
-                                        ),
-                                        Node::assign("state", Expr::u32(0)),
-                                    ],
-                                ),
-                                // Byte 2
-                                Node::let_bind(
-                                    "b2",
-                                    Expr::bitand(
-                                        Expr::shr(Expr::var("word"), Expr::u32(16)),
-                                        Expr::u32(0xFF),
-                                    ),
-                                ),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("b2"), Expr::u32(0x61)),
-                                    vec![Node::assign("state", Expr::u32(1))],
-                                ),
-                                Node::if_then(
-                                    Expr::and(
-                                        Expr::eq(Expr::var("b2"), Expr::u32(0x62)),
-                                        Expr::eq(Expr::var("state"), Expr::u32(1)),
-                                    ),
-                                    vec![
-                                        Node::assign(
-                                            "match_count",
-                                            Expr::add(Expr::var("match_count"), Expr::u32(1)),
-                                        ),
-                                        Node::assign("state", Expr::u32(0)),
-                                    ],
-                                ),
-                                // Byte 3
-                                Node::let_bind("b3", Expr::shr(Expr::var("word"), Expr::u32(24))),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("b3"), Expr::u32(0x61)),
-                                    vec![Node::assign("state", Expr::u32(1))],
-                                ),
-                                Node::if_then(
-                                    Expr::and(
-                                        Expr::eq(Expr::var("b3"), Expr::u32(0x62)),
-                                        Expr::eq(Expr::var("state"), Expr::u32(1)),
-                                    ),
-                                    vec![
-                                        Node::assign(
-                                            "match_count",
-                                            Expr::add(Expr::var("match_count"), Expr::u32(1)),
-                                        ),
-                                        Node::assign("state", Expr::u32(0)),
-                                    ],
-                                ),
-                            ],
-                        },
-                        Node::store("results", Expr::var("tid"), Expr::var("match_count")),
-                    ],
-                ),
-            ],
-        );
-        let regex = RegexBuilder::new()
-            .jit(true)
-            .build(r"(a+)+b")
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let input_bytes = vec![0x61u8; TOTAL_WORDS as usize * 4];
-        let inputs = vec![input_bytes.clone()];
-        let input_bytes_total = input_bytes_total(&inputs);
-        // Raw-IR resident dispatch requires one resident handle per non-shared
-        // binding -- the `results` output included. Inputs-only `upload_optional`
-        // supplies just `input` (1) while the program has 2 non-shared bindings,
-        // so dispatch fails closed ("expected 2 ... received 1"). Build inputs +
-        // a zeroed output resource in binding order.
-        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+                                    Node::assign("state", Expr::u32(0)),
+                                ],
+                            ),
+                        ],
+                    },
+                    Node::store("results", Expr::var("tid"), Expr::var("match_count")),
+                ],
+            ),
+        ],
+    );
+    let regex = RegexBuilder::new()
+        .jit(true)
+        .build(r"(a+)+b")
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+    let corpus = vec![0x61u8; TOTAL_WORDS as usize * 4];
+    let inputs = vec![corpus.clone()];
+
+    Ok(RegexBacktrackingPrepared {
+        dispatch: HostReferencePayload::program_ordered_resident(
             ctx,
-            &prog,
-            &inputs,
-            "regex backtracking bench",
-        )?;
-        Ok(Box::new(RegexBacktrackingPrepared {
-            program: prog,
-            regex,
-            input_bytes,
+            prog,
             inputs,
-            input_bytes_total,
-            resident,
-        }))
-    }
-
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
-        prepared
-            .downcast_ref::<RegexBacktrackingPrepared>()
-            .map(|prepared| &prepared.program)
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared_as::<RegexBacktrackingPrepared>(prepared, "regex backtracking")?;
-
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )?;
-        let resident_used = dispatch.resident_used;
-        let timed = dispatch.timed;
-
-        // CPU baseline: PCRE2 backtracking engine on the exact same hostile corpus.
-        let (cpu_results, elapsed_ref) = timed_reference(|| {
-            cpu_pcre2_scan(
-                &prepared.regex,
-                &prepared.input_bytes,
-                INSTANCE_COUNT as usize,
-                INPUT_LEN as usize * 4,
-            )
-        });
-        let cpu_results = cpu_results?;
-        let input_bytes = prepared.input_bytes_total;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-
-        Ok(run_against_reference(
-            timed,
-            input_bytes,
-            transfer_accounting(input_bytes, output_bytes, resident_used),
-            ReferenceSample {
-                outputs: vec![cpu_results],
-                wall_ns: elapsed_ref,
-                input_bytes: prepared.input_bytes.len() as u64,
-            },
-        ))
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+            "regex backtracking bench",
+        )?,
+        regex,
+        corpus,
+    })
 }
 
 /// CPU PCRE2 scan  -  the advertised backtracking baseline, not a custom NFA.
@@ -314,5 +254,5 @@ fn cpu_pcre2_scan(
 }
 
 inventory::submit! {
-    &RegexBacktracking as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }

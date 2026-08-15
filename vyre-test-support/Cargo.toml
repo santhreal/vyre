@@ -14,6 +14,9 @@ categories = ["development-tools::testing"]
 publish = false
 
 [features]
+# Empty by default: `ir-fixtures` is the only feature and it is opt-in, so a
+# consumer that does not name it never pulls vyre-foundation into its dev graph.
+default = []
 # Fixtures over the IR statement enum. Opt-in because it pulls vyre-foundation
 # into the dev graph of whichever crate enables it, and most consumers of this
 # crate only want the source-text closure enumerator.
