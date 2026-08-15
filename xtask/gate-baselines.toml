@@ -48,7 +48,7 @@ output_lines = 6
 
 [[gate]]
 name = "hot-path-scan"
-output_lines = 170
+output_lines = 154
 
 [[gate]]
 name = "hygiene-matrix"

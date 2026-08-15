@@ -3181,6 +3181,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   fix text now names the rename. The gate also descends through
   `vyre_foundation::transform::visit::child_bodies` rather than its own list of
   node arms, so a new nesting variant cannot hide a region from it.
+- `hot-path-scan` counts runtime code only. It claimed to skip `#[cfg(test)]`,
+  calling those "intentional dev-only lines, not runtime cost", but an
+  attribute annotates the item that follows it and the scan skipped the
+  attribute line alone. Every `panic!`, `format!` and `.to_string()` inside a
+  `mod tests` body was reported as hot-path cost and weighted per kLOC, and the
+  same bodies inflated the `count_code_lines` denominator, so a file's real
+  density read lower than it is. Seventeen of 125 findings were test code, one
+  `mod tests` spanning 575 lines of a backend dispatch file. The scan now
+  tracks the item a `#[cfg(test)]` annotates to its closing brace, or to its
+  semicolon when it has no body, with a brace counter that ignores braces
+  inside string and character literals and a `'` that opens a lifetime rather
+  than a literal. The `hot-path-scan` pin falls from 170 to 154 and
+  `abstraction-gate` from 32 to 23.
 
 ## [0.7.1] - 2026-08-01
 
