@@ -360,37 +360,163 @@ pub(crate) fn resident_csr_queue_scratch_bytes_per_query_for_materializer_and_tr
     materializer: ResidentCsrQueueMaterializer,
     traverse_kind: ResidentCsrQueueTraverseKind,
 ) -> Result<usize, String> {
-    let frontier_bytes = words_to_bytes(frontier_words, "frontier")?;
-    let queue_bytes = words_to_bytes(queue_capacity as usize, "active_queue")?;
-    let mut bytes = frontier_bytes;
-    bytes = checked_add(bytes, queue_bytes, "active_queue")?;
-    bytes = checked_add(bytes, U32_BYTES, "queue_len")?;
-    bytes = checked_add(bytes, frontier_bytes, "frontier_out")?;
-    if materializer == ResidentCsrQueueMaterializer::DeterministicWordPrefix {
-        let word_prefix = frontier_word_prefix_scratch(frontier_words)?;
-        bytes = checked_add(
-            bytes,
-            words_to_bytes(word_prefix.partial_words, "word_partials")?,
-            "word_partials",
-        )?;
-        bytes = checked_add(
-            bytes,
-            words_to_bytes(word_prefix.block_total_words, "block_totals")?,
-            "block_totals",
-        )?;
+    ResidentCsrQueueSlotPlan::new(frontier_words, queue_capacity, materializer, traverse_kind)?
+        .total_bytes()
+}
+
+/// Resident buffers one CSR frontier-queue query owns, in allocation order.
+///
+/// The single-query and batched sites allocate the same slots from the same
+/// plan, so a materializer or traverse kind that gains a buffer gains it in
+/// both without a second edit.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ResidentCsrQueueSlots {
+    pub(crate) frontier: u64,
+    pub(crate) active_queue: u64,
+    pub(crate) queue_len: u64,
+    pub(crate) frontier_out: u64,
+    pub(crate) word_partials: Option<u64>,
+    pub(crate) block_totals: Option<u64>,
+    pub(crate) high_queue: Option<u64>,
+    pub(crate) high_len: Option<u64>,
+}
+
+impl ResidentCsrQueueSlots {
+    /// Append every allocated handle, base slots first.
+    pub(crate) fn extend_handles(&self, out: &mut Vec<u64>) {
+        out.extend([
+            self.frontier,
+            self.active_queue,
+            self.queue_len,
+            self.frontier_out,
+        ]);
+        out.extend(
+            [
+                self.word_partials,
+                self.block_totals,
+                self.high_queue,
+                self.high_len,
+            ]
+            .into_iter()
+            .flatten(),
+        );
     }
-    if let ResidentCsrQueueTraverseKind::MixedSplit {
-        high_queue_capacity,
-    } = traverse_kind
-    {
-        bytes = checked_add(
-            bytes,
-            words_to_bytes(high_queue_capacity as usize, "high_queue")?,
-            "high_queue",
-        )?;
-        bytes = checked_add(bytes, U32_BYTES, "high_len")?;
+
+    /// The two deterministic word-prefix slots, or why they are absent.
+    pub(crate) fn word_prefix(&self) -> Result<(u64, u64), String> {
+        match (self.word_partials, self.block_totals) {
+            (Some(word_partials), Some(block_totals)) => Ok((word_partials, block_totals)),
+            _ => Err(
+                "Fix: resident CSR queue word-prefix scratch is missing word_partials/block_totals; \
+                 rebuild scratch before dispatch."
+                    .to_string(),
+            ),
+        }
     }
-    Ok(bytes)
+
+    /// The two mixed-split slots, or why they are absent.
+    pub(crate) fn high_split(&self) -> Result<(u64, u64), String> {
+        match (self.high_queue, self.high_len) {
+            (Some(high_queue), Some(high_len)) => Ok((high_queue, high_len)),
+            _ => Err(
+                "Fix: resident CSR queue mixed-split scratch is missing high_queue/high_len; \
+                 rebuild scratch before dispatch."
+                    .to_string(),
+            ),
+        }
+    }
+}
+
+/// Byte lengths one query's resident slots need, in allocation order.
+///
+/// Four base slots are always present; deterministic word prefix adds two and
+/// mixed split adds two. This is the only place that arithmetic lives: the
+/// memory plan quotes `total_bytes` and the dispatch sites allocate
+/// `byte_lengths`, so a quote can never describe a different allocation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ResidentCsrQueueSlotPlan {
+    lengths: [usize; SLOT_CAPACITY],
+    count: usize,
+    word_prefix: bool,
+    high_split: bool,
+}
+
+/// Four base slots plus two word-prefix slots plus two mixed-split slots.
+const SLOT_CAPACITY: usize = 8;
+
+impl ResidentCsrQueueSlotPlan {
+    pub(crate) fn new(
+        frontier_words: usize,
+        queue_capacity: u32,
+        materializer: ResidentCsrQueueMaterializer,
+        traverse_kind: ResidentCsrQueueTraverseKind,
+    ) -> Result<Self, String> {
+        let frontier_bytes = words_to_bytes(frontier_words, "frontier")?;
+        let mut lengths = [0usize; SLOT_CAPACITY];
+        lengths[0] = frontier_bytes;
+        lengths[1] = words_to_bytes(queue_capacity as usize, "active_queue")?;
+        lengths[2] = U32_BYTES;
+        lengths[3] = frontier_bytes;
+        let mut count = 4;
+        let word_prefix = materializer == ResidentCsrQueueMaterializer::DeterministicWordPrefix;
+        if word_prefix {
+            let scratch = frontier_word_prefix_scratch(frontier_words)?;
+            lengths[count] = words_to_bytes(scratch.partial_words, "word_partials")?;
+            lengths[count + 1] = words_to_bytes(scratch.block_total_words, "block_totals")?;
+            count += 2;
+        }
+        let high_split = matches!(
+            traverse_kind,
+            ResidentCsrQueueTraverseKind::MixedSplit { .. }
+        );
+        if let ResidentCsrQueueTraverseKind::MixedSplit {
+            high_queue_capacity,
+        } = traverse_kind
+        {
+            lengths[count] = words_to_bytes(high_queue_capacity as usize, "high_queue")?;
+            lengths[count + 1] = U32_BYTES;
+            count += 2;
+        }
+        Ok(Self {
+            lengths,
+            count,
+            word_prefix,
+            high_split,
+        })
+    }
+
+    /// Byte lengths to allocate, in slot order.
+    pub(crate) fn byte_lengths(&self) -> &[usize] {
+        &self.lengths[..self.count]
+    }
+
+    pub(crate) fn total_bytes(&self) -> Result<usize, String> {
+        self.byte_lengths()
+            .iter()
+            .try_fold(0usize, |total, bytes| checked_add(total, *bytes, "slot"))
+    }
+
+    /// Name the handles a backend returned for this plan.
+    pub(crate) fn slots(&self, handles: &[u64]) -> Result<ResidentCsrQueueSlots, String> {
+        if handles.len() != self.count {
+            return Err(format!(
+                "Fix: resident CSR queue slot allocation returned {} handle(s), expected {}.",
+                handles.len(),
+                self.count
+            ));
+        }
+        let high_base = if self.word_prefix { 6 } else { 4 };
+        Ok(ResidentCsrQueueSlots {
+            frontier: handles[0],
+            active_queue: handles[1],
+            queue_len: handles[2],
+            frontier_out: handles[3],
+            word_partials: self.word_prefix.then(|| handles[4]),
+            block_totals: self.word_prefix.then(|| handles[5]),
+            high_queue: self.high_split.then(|| handles[high_base]),
+            high_len: self.high_split.then(|| handles[high_base + 1]),
+        })
+    }
 }
 
 fn words_to_bytes(words: usize, label: &str) -> Result<usize, String> {

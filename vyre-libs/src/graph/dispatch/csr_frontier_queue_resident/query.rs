@@ -1,22 +1,16 @@
-use super::{
-    ResidentCsrQueueGraph, ResidentCsrQueueProgramShape, ResidentCsrQueueScratch,
-    ResidentCsrQueueScratchHandles,
-};
+use super::{ResidentCsrQueueGraph, ResidentCsrQueueScratch, ResidentCsrQueueScratchShape};
 use vyre_primitives::graph::csr_frontier_queue::validate_frontier_queue_query;
 
 use crate::dispatch_buffers::u32_word_bytes;
-use crate::graph::dispatch::csr_frontier_queue_programs::{
-    resident_csr_queue_len_init_program, resident_csr_queue_materializer_programs,
-    resident_csr_queue_split_low_program, resident_csr_queue_traverse_program,
-};
+use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueueProgramShape;
 use crate::graph::dispatch::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_frontier_stats,
     resident_csr_queue_materializer_for_stats, resident_csr_queue_split_low_grid,
     resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind_for_graph_stats,
-    FrontierWordPrefixScratch, ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
+    FrontierWordPrefixScratch, ResidentCsrQueueMaterializer, ResidentCsrQueueSlotPlan,
+    ResidentCsrQueueTraverseKind,
 };
-use crate::graph::dispatch::dispatch_bridge::alloc_resident_buffers;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
@@ -56,250 +50,182 @@ pub fn run_resident_csr_queue_query_into(
         materializer,
         traverse_kind,
     )?;
-    let handles = scratch.handles.ok_or_else(|| {
+    let slots = scratch.slots.ok_or_else(|| {
         DispatchError::BackendError(
             "resident CSR queue scratch handles are missing after ensure_scratch. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
         )
     })?;
-    ensure_programs(
-        scratch,
-        graph,
-        effective_queue_capacity,
-        allow_mask,
+    let word_prefix_blocks = match materializer {
+        ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            word_prefix_scratch(graph.words)?.block_count
+        }
+        ResidentCsrQueueMaterializer::AtomicWordScan => 0,
+    };
+    let precomputed_block_offsets = matches!(
         materializer,
-        traverse_kind,
-    )?;
+        ResidentCsrQueueMaterializer::DeterministicWordPrefix
+    ) && frontier_word_prefix_uses_precomputed_offsets(word_prefix_blocks);
+    scratch.programs.ensure(
+        "frontier",
+        ResidentCsrQueueProgramShape {
+            node_count: graph.node_count,
+            edge_count: graph.edge_count,
+            words: graph.words,
+            queue_capacity: effective_queue_capacity,
+            allow_mask,
+            materializer,
+            traverse_kind,
+        },
+        precomputed_block_offsets,
+    );
+
     scratch.frontier_bytes.clear();
     vyre_primitives::wire::append_u32_slice_le_bytes(frontier_words, &mut scratch.frontier_bytes);
-    let frontier_bytes = u32_word_bytes(graph.words, "resident CSR queue query frontier")?;
+
+    // Handle-id arrays outlive `steps`, which borrows them.
+    let word_grid = frontier_word_grid(graph.words)?;
+    let (word_partials, block_totals) = match materializer {
+        ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            slots.word_prefix().map_err(DispatchError::BackendError)?
+        }
+        ResidentCsrQueueMaterializer::AtomicWordScan => (0, 0),
+    };
+    let (high_queue, high_len) = match traverse_kind {
+        ResidentCsrQueueTraverseKind::MixedSplit { .. } => {
+            slots.high_split().map_err(DispatchError::BackendError)?
+        }
+        ResidentCsrQueueTraverseKind::RowSerial | ResidentCsrQueueTraverseKind::RowStrided => (0, 0),
+    };
+    let clear_handles = [slots.frontier_out];
+    let queue_len_handles = [slots.queue_len];
+    let word_count_handles = [slots.frontier, word_partials, block_totals];
+    let block_offsets_handles = [block_totals];
+    let atomic_queue_handles = [
+        slots.frontier,
+        slots.active_queue,
+        slots.queue_len,
+        slots.frontier_out,
+    ];
+    let prefix_queue_handles = [
+        slots.frontier,
+        word_partials,
+        block_totals,
+        slots.active_queue,
+        slots.queue_len,
+    ];
     let base_traverse_handles = [
-        handles.active_queue,
-        handles.queue_len,
+        slots.active_queue,
+        slots.queue_len,
         graph.edge_offsets_handle,
         graph.edge_targets_handle,
         graph.edge_kind_mask_handle,
-        handles.frontier_out,
+        slots.frontier_out,
     ];
-    let traverse_program = scratch.traverse_program.as_ref().ok_or_else(|| {
-        DispatchError::BackendError(
-            "resident CSR queue traverse program is missing after ensure_programs. Fix: rebuild programs before resident CSR traverse dispatch.".to_string(),
-        )
-    })?;
-    let traverse_grid = resident_csr_queue_traverse_grid(effective_queue_capacity, traverse_kind);
-    let read_ranges = [ResidentReadRange {
-        handle_id: handles.frontier_out,
-        byte_offset: 0,
-        byte_len: frontier_bytes,
-    }];
-    macro_rules! append_traverse_steps {
-        ($steps:ident) => {
-            let high_len_handles;
-            let split_handles;
-            let high_traverse_handles;
-            if let ResidentCsrQueueTraverseKind::MixedSplit {
-                high_queue_capacity,
-            } = traverse_kind
-            {
-                let high_queue = handles.high_queue.ok_or_else(|| {
-                    DispatchError::BackendError(
-                        "resident CSR queue mixed split scratch is missing high_queue. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
-                    )
-                })?;
-                let high_len = handles.high_len.ok_or_else(|| {
-                    DispatchError::BackendError(
-                        "resident CSR queue mixed split scratch is missing high_len. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
-                    )
-                })?;
-                let high_len_init_program =
-                    scratch.high_len_init_program.as_ref().ok_or_else(|| {
-                        DispatchError::BackendError(
-                            "resident CSR queue high_len init program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                        )
-                    })?;
-                let split_low_program = scratch.split_low_program.as_ref().ok_or_else(|| {
-                    DispatchError::BackendError(
-                        "resident CSR queue split-low program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                    )
-                })?;
-                high_len_handles = [high_len];
-                split_handles = [
-                    handles.active_queue,
-                    handles.queue_len,
-                    graph.edge_offsets_handle,
-                    graph.edge_targets_handle,
-                    graph.edge_kind_mask_handle,
-                    handles.frontier_out,
-                    high_queue,
-                    high_len,
-                ];
-                high_traverse_handles = [
-                    high_queue,
-                    high_len,
-                    graph.edge_offsets_handle,
-                    graph.edge_targets_handle,
-                    graph.edge_kind_mask_handle,
-                    handles.frontier_out,
-                ];
-                let high_traverse_grid = resident_csr_queue_traverse_grid(
-                    high_queue_capacity,
-                    ResidentCsrQueueTraverseKind::RowStrided,
-                );
-                $steps.push(ResidentDispatchStep {
-                    program: high_len_init_program,
-                    handle_ids: &high_len_handles,
-                    grid_override: Some([1, 1, 1]),
-                });
-                $steps.push(ResidentDispatchStep {
-                    program: split_low_program,
-                    handle_ids: &split_handles,
-                    grid_override: Some(resident_csr_queue_split_low_grid(effective_queue_capacity)),
-                });
-                $steps.push(ResidentDispatchStep {
-                    program: traverse_program,
-                    handle_ids: &high_traverse_handles,
-                    grid_override: Some(high_traverse_grid),
-                });
-            } else {
-                $steps.push(ResidentDispatchStep {
-                    program: traverse_program,
-                    handle_ids: &base_traverse_handles,
-                    grid_override: Some(traverse_grid),
-                });
-            }
-        };
-    }
-    match handles.materializer {
+    let high_len_handles = [high_len];
+    let split_handles = [
+        slots.active_queue,
+        slots.queue_len,
+        graph.edge_offsets_handle,
+        graph.edge_targets_handle,
+        graph.edge_kind_mask_handle,
+        slots.frontier_out,
+        high_queue,
+        high_len,
+    ];
+    let high_traverse_handles = [
+        high_queue,
+        high_len,
+        graph.edge_offsets_handle,
+        graph.edge_targets_handle,
+        graph.edge_kind_mask_handle,
+        slots.frontier_out,
+    ];
+
+    let programs = &scratch.programs;
+    let mut steps = Vec::new();
+    match materializer {
         ResidentCsrQueueMaterializer::AtomicWordScan => {
-            let queue_len_handles = [handles.queue_len];
-            let queue_handles = [
-                handles.frontier,
-                handles.active_queue,
-                handles.queue_len,
-                handles.frontier_out,
-            ];
-            let queue_len_init_program = scratch.queue_len_init_program.as_ref().ok_or_else(|| {
-                DispatchError::BackendError(
-                    "resident CSR queue length init program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                )
-            })?;
-            let queue_program = scratch.queue_program.as_ref().ok_or_else(|| {
-                DispatchError::BackendError(
-                    "resident CSR queue program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                )
-            })?;
-            let mut steps = vec![
-                ResidentDispatchStep {
-                    program: queue_len_init_program,
-                    handle_ids: &queue_len_handles,
-                    grid_override: Some([1, 1, 1]),
-                },
-                ResidentDispatchStep {
-                    program: queue_program,
-                    handle_ids: &queue_handles,
-                    grid_override: Some(frontier_word_grid(graph.words)?),
-                },
-            ];
-            append_traverse_steps!(steps);
-            dispatcher.upload_resident_many_sequence_read_ranges_into(
-                &[(handles.frontier, scratch.frontier_bytes.as_slice())],
-                steps.as_slice(),
-                &read_ranges,
-                &mut scratch.readbacks,
-            )?;
+            steps.push(ResidentDispatchStep {
+                program: programs.queue_len_init()?,
+                handle_ids: &queue_len_handles,
+                grid_override: Some([1, 1, 1]),
+            });
+            steps.push(ResidentDispatchStep {
+                program: programs.queue()?,
+                handle_ids: &atomic_queue_handles,
+                grid_override: Some(word_grid),
+            });
         }
         ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
-            let clear_handles = [handles.frontier_out];
-            let word_prefix = word_prefix_scratch(graph.words)?;
-            let (word_partials, block_totals) = word_prefix_handles(handles)?;
-            let word_count_handles = [handles.frontier, word_partials, block_totals];
-            let queue_handles = [
-                handles.frontier,
-                word_partials,
-                block_totals,
-                handles.active_queue,
-                handles.queue_len,
-            ];
-            let word_counts_program = scratch.word_counts_program.as_ref().ok_or_else(|| {
-                DispatchError::BackendError(
-                    "resident CSR queue word-count scan program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                )
-            })?;
-            let clear_frontier_out_program =
-                scratch.clear_frontier_out_program.as_ref().ok_or_else(|| {
-                    DispatchError::BackendError(
-                        "resident CSR queue output clear program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                    )
-                })?;
-            let queue_program = scratch.queue_program.as_ref().ok_or_else(|| {
-                DispatchError::BackendError(
-                    "resident CSR queue word-prefix scatter program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                )
-            })?;
-            let block_offsets_handles = [block_totals];
-            if frontier_word_prefix_uses_precomputed_offsets(word_prefix.block_count) {
-                let block_offsets_program =
-                    scratch.word_block_offsets_program.as_ref().ok_or_else(|| {
-                    DispatchError::BackendError(
-                        "resident CSR queue block-offset scan program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                    )
-                })?;
-                let mut steps = vec![
-                    ResidentDispatchStep {
-                        program: clear_frontier_out_program,
-                        handle_ids: &clear_handles,
-                        grid_override: Some(frontier_word_grid(graph.words)?),
-                    },
-                    ResidentDispatchStep {
-                        program: word_counts_program,
-                        handle_ids: &word_count_handles,
-                        grid_override: Some([word_prefix.block_count, 1, 1]),
-                    },
-                    ResidentDispatchStep {
-                        program: block_offsets_program,
-                        handle_ids: &block_offsets_handles,
-                        grid_override: Some([1, 1, 1]),
-                    },
-                    ResidentDispatchStep {
-                        program: queue_program,
-                        handle_ids: &queue_handles,
-                        grid_override: Some(frontier_word_grid(graph.words)?),
-                    },
-                ];
-                append_traverse_steps!(steps);
-                dispatcher.upload_resident_many_sequence_read_ranges_into(
-                    &[(handles.frontier, scratch.frontier_bytes.as_slice())],
-                    steps.as_slice(),
-                    &read_ranges,
-                    &mut scratch.readbacks,
-                )?;
-            } else {
-                let mut steps = vec![
-                    ResidentDispatchStep {
-                        program: clear_frontier_out_program,
-                        handle_ids: &clear_handles,
-                        grid_override: Some(frontier_word_grid(graph.words)?),
-                    },
-                    ResidentDispatchStep {
-                        program: word_counts_program,
-                        handle_ids: &word_count_handles,
-                        grid_override: Some([word_prefix.block_count, 1, 1]),
-                    },
-                    ResidentDispatchStep {
-                        program: queue_program,
-                        handle_ids: &queue_handles,
-                        grid_override: Some(frontier_word_grid(graph.words)?),
-                    },
-                ];
-                append_traverse_steps!(steps);
-                dispatcher.upload_resident_many_sequence_read_ranges_into(
-                    &[(handles.frontier, scratch.frontier_bytes.as_slice())],
-                    steps.as_slice(),
-                    &read_ranges,
-                    &mut scratch.readbacks,
-                )?;
+            steps.push(ResidentDispatchStep {
+                program: programs.clear_frontier_out()?,
+                handle_ids: &clear_handles,
+                grid_override: Some(word_grid),
+            });
+            steps.push(ResidentDispatchStep {
+                program: programs.word_counts()?,
+                handle_ids: &word_count_handles,
+                grid_override: Some([word_prefix_blocks, 1, 1]),
+            });
+            if precomputed_block_offsets {
+                steps.push(ResidentDispatchStep {
+                    program: programs.word_block_offsets()?,
+                    handle_ids: &block_offsets_handles,
+                    grid_override: Some([1, 1, 1]),
+                });
             }
+            steps.push(ResidentDispatchStep {
+                program: programs.queue()?,
+                handle_ids: &prefix_queue_handles,
+                grid_override: Some(word_grid),
+            });
         }
     }
+    let traverse_program = programs.traverse()?;
+    if let ResidentCsrQueueTraverseKind::MixedSplit {
+        high_queue_capacity,
+    } = traverse_kind
+    {
+        steps.push(ResidentDispatchStep {
+            program: programs.high_len_init()?,
+            handle_ids: &high_len_handles,
+            grid_override: Some([1, 1, 1]),
+        });
+        steps.push(ResidentDispatchStep {
+            program: programs.split_low()?,
+            handle_ids: &split_handles,
+            grid_override: Some(resident_csr_queue_split_low_grid(effective_queue_capacity)),
+        });
+        steps.push(ResidentDispatchStep {
+            program: traverse_program,
+            handle_ids: &high_traverse_handles,
+            grid_override: Some(resident_csr_queue_traverse_grid(
+                high_queue_capacity,
+                ResidentCsrQueueTraverseKind::RowStrided,
+            )),
+        });
+    } else {
+        steps.push(ResidentDispatchStep {
+            program: traverse_program,
+            handle_ids: &base_traverse_handles,
+            grid_override: Some(resident_csr_queue_traverse_grid(
+                effective_queue_capacity,
+                traverse_kind,
+            )),
+        });
+    }
+
+    let frontier_bytes = u32_word_bytes(graph.words, "resident CSR queue query frontier")?;
+    dispatcher.upload_resident_many_sequence_read_ranges_into(
+        &[(slots.frontier, scratch.frontier_bytes.as_slice())],
+        steps.as_slice(),
+        &[ResidentReadRange {
+            handle_id: slots.frontier_out,
+            byte_offset: 0,
+            byte_len: frontier_bytes,
+        }],
+        &mut scratch.readbacks,
+    )?;
     output.clear();
     output.extend_from_slice(&scratch.readbacks[0]);
     Ok(())
@@ -321,245 +247,31 @@ fn ensure_scratch(
         ResidentCsrQueueTraverseKind::RowSerial | ResidentCsrQueueTraverseKind::RowStrided => 0,
     };
     if matches!(
-        scratch.handles,
-        Some(handles)
-            if handles.frontier_bytes == frontier_bytes
-                && handles.queue_capacity >= queue_capacity
-                && handles.high_queue_capacity >= high_queue_capacity
-                && handles.materializer == materializer
+        scratch.shape,
+        Some(shape)
+            if shape.frontier_bytes == frontier_bytes
+                && shape.queue_capacity >= queue_capacity
+                && shape.high_queue_capacity >= high_queue_capacity
+                && shape.materializer == materializer
     ) {
         return Ok(());
     }
     scratch.free(dispatcher)?;
-    match materializer {
-        ResidentCsrQueueMaterializer::AtomicWordScan => {
-            let active_queue_bytes = u32_word_bytes(
-                queue_capacity as usize,
-                "resident CSR queue scratch active_queue",
-            )?;
-            if high_queue_capacity == 0 {
-                let [frontier, active_queue, queue_len, frontier_out] = alloc_resident_buffers(
-                    dispatcher,
-                    [
-                        frontier_bytes,
-                        active_queue_bytes,
-                        u32_word_bytes(1, "resident CSR queue scratch queue_len")?,
-                        frontier_bytes,
-                    ],
-                    "resident CSR queue scratch",
-                )?;
-                scratch.handles = Some(ResidentCsrQueueScratchHandles {
-                    frontier,
-                    active_queue,
-                    queue_len,
-                    frontier_out,
-                    word_partials: None,
-                    block_totals: None,
-                    high_queue: None,
-                    high_len: None,
-                    queue_capacity,
-                    high_queue_capacity,
-                    frontier_bytes,
-                    materializer,
-                });
-            } else {
-                let [frontier, active_queue, queue_len, frontier_out, high_queue, high_len] =
-                    alloc_resident_buffers(
-                        dispatcher,
-                        [
-                            frontier_bytes,
-                            active_queue_bytes,
-                            u32_word_bytes(1, "resident CSR queue scratch queue_len")?,
-                            frontier_bytes,
-                            u32_word_bytes(
-                                high_queue_capacity as usize,
-                                "resident CSR queue scratch high_queue",
-                            )?,
-                            u32_word_bytes(1, "resident CSR queue scratch high_len")?,
-                        ],
-                        "resident CSR queue scratch",
-                    )?;
-                scratch.handles = Some(ResidentCsrQueueScratchHandles {
-                    frontier,
-                    active_queue,
-                    queue_len,
-                    frontier_out,
-                    word_partials: None,
-                    block_totals: None,
-                    high_queue: Some(high_queue),
-                    high_len: Some(high_len),
-                    queue_capacity,
-                    high_queue_capacity,
-                    frontier_bytes,
-                    materializer,
-                });
-            }
-        }
-        ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
-            let word_prefix = word_prefix_scratch(words)?;
-            let active_queue_bytes = u32_word_bytes(
-                queue_capacity as usize,
-                "resident CSR queue scratch active_queue",
-            )?;
-            let word_partials_bytes = u32_word_bytes(
-                word_prefix.partial_words,
-                "resident CSR queue scratch word_partials",
-            )?;
-            let block_totals_bytes = u32_word_bytes(
-                word_prefix.block_total_words,
-                "resident CSR queue scratch block_totals",
-            )?;
-            if high_queue_capacity == 0 {
-                let [frontier, active_queue, queue_len, frontier_out, word_partials, block_totals] =
-                    alloc_resident_buffers(
-                        dispatcher,
-                        [
-                            frontier_bytes,
-                            active_queue_bytes,
-                            u32_word_bytes(1, "resident CSR queue scratch queue_len")?,
-                            frontier_bytes,
-                            word_partials_bytes,
-                            block_totals_bytes,
-                        ],
-                        "resident CSR queue scratch",
-                    )?;
-                scratch.handles = Some(ResidentCsrQueueScratchHandles {
-                    frontier,
-                    active_queue,
-                    queue_len,
-                    frontier_out,
-                    word_partials: Some(word_partials),
-                    block_totals: Some(block_totals),
-                    high_queue: None,
-                    high_len: None,
-                    queue_capacity,
-                    high_queue_capacity,
-                    frontier_bytes,
-                    materializer,
-                });
-            } else {
-                let [frontier, active_queue, queue_len, frontier_out, word_partials, block_totals, high_queue, high_len] =
-                    alloc_resident_buffers(
-                        dispatcher,
-                        [
-                            frontier_bytes,
-                            active_queue_bytes,
-                            u32_word_bytes(1, "resident CSR queue scratch queue_len")?,
-                            frontier_bytes,
-                            word_partials_bytes,
-                            block_totals_bytes,
-                            u32_word_bytes(
-                                high_queue_capacity as usize,
-                                "resident CSR queue scratch high_queue",
-                            )?,
-                            u32_word_bytes(1, "resident CSR queue scratch high_len")?,
-                        ],
-                        "resident CSR queue scratch",
-                    )?;
-                scratch.handles = Some(ResidentCsrQueueScratchHandles {
-                    frontier,
-                    active_queue,
-                    queue_len,
-                    frontier_out,
-                    word_partials: Some(word_partials),
-                    block_totals: Some(block_totals),
-                    high_queue: Some(high_queue),
-                    high_len: Some(high_len),
-                    queue_capacity,
-                    high_queue_capacity,
-                    frontier_bytes,
-                    materializer,
-                });
-            }
-        }
-    }
-    Ok(())
-}
-
-fn ensure_programs(
-    scratch: &mut ResidentCsrQueueScratch,
-    graph: &ResidentCsrQueueGraph,
-    queue_capacity: u32,
-    allow_mask: u32,
-    materializer: ResidentCsrQueueMaterializer,
-    traverse_kind: ResidentCsrQueueTraverseKind,
-) -> Result<(), DispatchError> {
-    let shape = ResidentCsrQueueProgramShape {
-        node_count: graph.node_count,
-        edge_count: graph.edge_count,
+    let plan = ResidentCsrQueueSlotPlan::new(words, queue_capacity, materializer, traverse_kind)
+        .map_err(DispatchError::BadInputs)?;
+    let handles = dispatcher.alloc_resident_many(plan.byte_lengths())?;
+    scratch.slots = Some(plan.slots(&handles).map_err(DispatchError::BackendError)?);
+    scratch.shape = Some(ResidentCsrQueueScratchShape {
         queue_capacity,
-        allow_mask,
-        materializer,
-        traverse_kind,
-    };
-    if scratch.cached_shape == Some(shape) {
-        return Ok(());
-    }
-    let precomputed_block_offsets = match shape.materializer {
-        ResidentCsrQueueMaterializer::AtomicWordScan => false,
-        ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
-            frontier_word_prefix_uses_precomputed_offsets(
-                word_prefix_scratch(graph.words)?.block_count,
-            )
-        }
-    };
-    let materializer_programs = resident_csr_queue_materializer_programs(
-        "frontier",
-        graph.node_count,
-        graph.words as u32,
-        queue_capacity,
-        shape.materializer,
-        precomputed_block_offsets,
-    );
-    scratch.clear_frontier_out_program = materializer_programs.clear_frontier_out;
-    scratch.queue_len_init_program = materializer_programs.queue_len_init;
-    scratch.word_counts_program = materializer_programs.word_counts;
-    scratch.word_block_offsets_program = materializer_programs.word_block_offsets;
-    scratch.queue_program = Some(materializer_programs.queue);
-    scratch.traverse_program = Some(resident_csr_queue_traverse_program(
-        graph.node_count,
-        graph.edge_count,
-        queue_capacity,
-        allow_mask,
-        shape.traverse_kind,
-    ));
-    scratch.high_len_init_program = None;
-    scratch.split_low_program = None;
-    if let ResidentCsrQueueTraverseKind::MixedSplit {
         high_queue_capacity,
-    } = shape.traverse_kind
-    {
-        scratch.high_len_init_program = Some(resident_csr_queue_len_init_program("high_len"));
-        scratch.split_low_program = Some(resident_csr_queue_split_low_program(
-            graph.node_count,
-            graph.edge_count,
-            queue_capacity,
-            high_queue_capacity,
-            allow_mask,
-        ));
-    }
-    scratch.cached_shape = Some(shape);
+        frontier_bytes,
+        materializer,
+    });
     Ok(())
 }
 
 fn word_prefix_scratch(words: usize) -> Result<FrontierWordPrefixScratch, DispatchError> {
     frontier_word_prefix_scratch(words).map_err(DispatchError::BackendError)
-}
-
-fn word_prefix_handles(
-    handles: ResidentCsrQueueScratchHandles,
-) -> Result<(u64, u64), DispatchError> {
-    let word_partials = handles.word_partials.ok_or_else(|| {
-        DispatchError::BackendError(
-            "resident CSR queue word-prefix scratch is missing word_partials. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
-        )
-    })?;
-    let block_totals = handles.block_totals.ok_or_else(|| {
-        DispatchError::BackendError(
-            "resident CSR queue word-prefix scratch is missing block_totals. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
-        )
-    })?;
-    Ok((word_partials, block_totals))
 }
 
 fn frontier_word_grid(words: usize) -> Result<[u32; 3], DispatchError> {
