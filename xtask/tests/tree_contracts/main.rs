@@ -6,9 +6,11 @@
 //! asserts on the result. Ten separate integration targets linked the crate ten
 //! times and carried ten copies of the same three helpers.
 //!
-//! `docs_references` and `release_docs` stay separate targets because the
-//! workspace contract and `docs/DOCUMENTATION_COVERAGE.md` name their focused
-//! commands; they reach the same harness through `tests/common`.
+//! `docs_references` and `release_docs` stay separate targets so each can be
+//! run by name: they are the two suites a documentation or release change
+//! re-runs on its own, and folding them in here would make that a filter over
+//! the whole tree-contract link unit. They reach the same harness through
+//! `tests/common`.
 
 #![forbid(unsafe_code)]
 

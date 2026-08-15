@@ -43,7 +43,7 @@ const EXEMPT_PATH_FRAGMENTS: &[&str] = &[
 ///
 /// It lives in a data file rather than in this array so that
 /// `scripts/check_platform_consumer_docs.sh` can read the same list. The two
-/// guards previously carried separate copies and disagreed: `docs/RELEASE.md`
+/// guards previously carried separate copies and disagreed: a release runbook
 /// was exempt here and scanned there, so the same line passed one gate and
 /// failed the other.
 const RELEASE_COORDINATION_DOCS_FILE: &str = include_str!("../rules/release_coordination_docs.txt");

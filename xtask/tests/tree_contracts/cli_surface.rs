@@ -70,8 +70,8 @@ fn workspace_cli_documentation_is_current() {
 /// The count is read back out of the artifact rather than written here, so
 /// registering a binary or adding a subcommand does not need this test edited,
 /// and a generator that stopped verifying one of them cannot stay green. The
-/// artifact is the generated block in each crate README; the summary table this
-/// used to count lived in `docs/CLI.md`, which no longer exists.
+/// artifact is the `BEGIN GENERATED CLI CONTRACT` block in each crate README,
+/// and the count is the sum of its `Commands: ` lines.
 fn documented_subcommand_count(readme: &str) -> usize {
     let Some((_, after)) = readme.split_once("<!-- BEGIN GENERATED CLI CONTRACT -->") else {
         return 0;

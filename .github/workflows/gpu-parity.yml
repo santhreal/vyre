@@ -186,7 +186,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Generate release conformance evidence artifacts
-        run: ./cargo_full run --release --bin xtask -- release-conformance --backend all
+        run: ./cargo_full run --release --bin xtask -- release-conformance --backend all --write
       - uses: actions/upload-artifact@v4
         with:
           name: vyre-release-conformance-evidence
@@ -213,7 +213,7 @@ jobs:
       - name: Batched conditional eval evidence
         run: ./cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30
       - name: Generate release benchmark evidence artifacts
-        run: ./cargo_full run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30
+        run: ./cargo_full run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30 --write
       - uses: actions/upload-artifact@v4
         with:
           name: vyre-release-benchmark-evidence

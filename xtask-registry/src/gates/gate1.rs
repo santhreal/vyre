@@ -1,6 +1,10 @@
 //! `cargo xtask gate1`  -  Gate 1 complexity-budget enforcement.
 //!
-//! Spec: `docs/lego-block-rule.md` (the LEGO substrate enforcement loop).
+//! The rule this enforces, stated here because it has no other written owner:
+//! an op is either small enough to read whole, or mostly made of other
+//! registered ops. Nothing in between. Reuse count is not part of it; the
+//! two-caller promotion rule the deleted composition-policy document carried
+//! is void.
 //!
 //! For every registered op (vyre-libs + vyre-primitives inventories):
 //!

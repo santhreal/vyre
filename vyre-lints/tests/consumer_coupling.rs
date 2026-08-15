@@ -113,10 +113,10 @@ fn allows_release_train_product_names_in_release_runbooks() {
 
 /// The release-runbook exemption must not leak into ordinary documentation.
 ///
-/// `docs/RELEASE.md` is exempt; `docs/RELEASING_GUIDE.md`, `docs/ARCHITECTURE.md`, and
-/// a nested `docs/guide/release-notes.md` are not. Without this test, a suffix match
-/// like `ends_with("RELEASE.md")` or a substring match on "release" would silently
-/// exempt half the documentation tree.
+/// The fixture below exempts one release runbook and denies three neighbours: a
+/// releasing guide, an architecture page, and a nested release-notes page.
+/// Without this test, a suffix match on the runbook's filename or a substring
+/// match on "release" would silently exempt half the documentation tree.
 #[test]
 fn release_runbook_exemption_does_not_leak_to_neighbouring_docs() {
     let dir = tempfile::tempdir().expect("tempdir");
