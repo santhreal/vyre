@@ -1663,3 +1663,8 @@ text = "The public-API snapshot fixture no longer forces `CARGO_BUILD_JOBS=1` on
 id = "cli-contract-without-the-book"
 category = "Changed"
 text = "The command-line contract no longer renders a book page. `scripts/cli_docs.py` kept generating `docs/CLI.md`, which is deleted, so the gate compared a generated document against a file that is not there while its real verdicts went unread: the manifest schema, the README each binary names, the declared binary set against cargo metadata, every help route exiting zero with bounded non-empty output, and the xtask help table against the registered subcommands. Those verdicts stay and the CLI section of each crate README is still generated. The contract test reads the subcommand count back out of the generated README blocks instead of out of the deleted page, and the build it runs no longer forces one codegen job."
+
+[[fragments]]
+id = "workflow-subcommand-resolution"
+category = "Added"
+text = "A CI step that passes a subcommand to `xtask`, `xtask-registry` or `xtask-evidence` is resolved against the registered subcommand table. A renamed or deleted row left the step naming a command that no longer exists, and nothing local went red: the package existed, the binary existed, and the name was one shell token in a `run:` line. `xtask gates` judges the other direction, that a registered row is wired into CI, so the pair is now closed. Names are extracted per step, including every command in a joined `run:` block, and resolved when the test runs rather than listed in it."
