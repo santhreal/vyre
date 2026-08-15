@@ -33,55 +33,55 @@ const CORE_ROOTS: &[&str] = &[
 const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-libs/src/parsing/c/preprocess/mod.rs", 981),
     ("vyre-driver-wgpu/src/backend_impl.rs", 1360),
-    ("vyre-driver-wgpu/src/pipeline.rs", 900),
-    ("vyre-libs/src/parsing/c/parse/structure.rs", 844),
+    ("vyre-driver-wgpu/src/pipeline/mod.rs", 900),
+    ("vyre-libs/src/parsing/c/parse/structure/mod.rs", 844),
     ("vyre-driver-wgpu/src/buffer/handle/mod.rs", 674),
     ("vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs", 331),
-    ("vyre-driver-wgpu/src/engine/record_and_readback.rs", 829),
+    ("vyre-driver-wgpu/src/engine/record_and_readback/mod.rs", 829),
     ("vyre-reference/src/workgroup.rs", 810),
-    ("vyre-driver-wgpu/src/engine/multi_gpu.rs", 808),
-    ("vyre-foundation/src/optimizer/fact_cache.rs", 570),
+    ("vyre-driver-wgpu/src/engine/multi_gpu/mod.rs", 808),
+    ("vyre-foundation/src/optimizer/fact_cache/mod.rs", 570),
     ("vyre-runtime/src/tenant/handle.rs", 443),
     ("vyre-runtime/src/tenant/registry.rs", 302),
-    ("vyre-foundation/src/transform/visit.rs", 789),
+    ("vyre-foundation/src/transform/visit/mod.rs", 789),
     ("vyre-foundation/src/optimizer/rewrite.rs", 754),
     ("vyre-driver-wgpu/src/buffer/pool.rs", 910),
     ("vyre-runtime/src/uring/stream.rs", 830),
-    ("vyre-foundation/src/ir_inner/model/program/meta.rs", 940),
-    ("vyre-libs/src/parsing/c/sema/registry.rs", 660),
-    ("vyre-libs/src/parsing/c/lower/semantic_edges.rs", 650),
+    ("vyre-foundation/src/ir_inner/model/program/meta/mod.rs", 940),
+    ("vyre-libs/src/parsing/c/sema/registry/mod.rs", 660),
+    ("vyre-libs/src/parsing/c/lower/semantic_edges/mod.rs", 650),
     ("vyre-foundation/src/validate/expr_rules.rs", 646),
     (
-        "vyre-foundation/src/ir_inner/model/program/buffer_decl.rs",
+        "vyre-foundation/src/ir_inner/model/program/buffer_decl/mod.rs",
         725,
     ),
-    ("vyre-foundation/src/serial/wire/decode/from_wire.rs", 606),
-    ("vyre-foundation/src/transform/autodiff/grad.rs", 702),
+    ("vyre-foundation/src/serial/wire/decode/from_wire/mod.rs", 606),
+    ("vyre-foundation/src/transform/autodiff/grad/mod.rs", 702),
     ("vyre-libs/src/nn/attention/softmax.rs", 592),
     ("vyre-libs/src/parsing/python/parse/structure.rs", 700),
-    ("vyre-foundation/src/validate/typecheck.rs", 578),
+    ("vyre-foundation/src/validate/typecheck/mod.rs", 578),
     ("vyre-libs/src/math/linalg/matmul.rs", 815),
     ("vyre-driver-wgpu/src/runtime/readback_ring/ring.rs", 459),
     ("vyre-libs/src/decode/inflate.rs", 554),
-    ("vyre-foundation/src/serial/wire/encode/to_wire.rs", 690),
+    ("vyre-foundation/src/serial/wire/encode/to_wire/mod.rs", 690),
     ("vyre-libs/src/parsing/python/lex.rs", 660),
-    ("vyre-runtime/src/replay.rs", 549),
+    ("vyre-runtime/src/replay/mod.rs", 549),
     ("vyre-primitives/src/matching/region.rs", 544),
     ("vyre-primitives/src/matching/dfa_compile/compile.rs", 344),
     ("vyre-libs/src/parsing/go/parse/structure.rs", 539),
-    ("vyre-foundation/src/ir_inner/model/expr.rs", 539),
-    ("vyre-foundation/src/optimizer.rs", 970),
+    ("vyre-foundation/src/ir_inner/model/expr/mod.rs", 539),
+    ("vyre-foundation/src/optimizer/mod.rs", 970),
     ("vyre-foundation/src/execution_plan/mod.rs", 740),
     ("vyre-runtime/src/uring/ring.rs", 685),
     ("vyre-foundation/src/execution_plan/policy.rs", 660),
-    ("vyre-libs/src/parsing/c/sema/lookup.rs", 507),
-    ("vyre-primitives/src/math/semiring_gemm.rs", 535),
+    ("vyre-libs/src/parsing/c/sema/lookup/mod.rs", 507),
+    ("vyre-primitives/src/math/semiring_gemm/mod.rs", 535),
 ];
 
 /// Per-file ceilings for files the split audit tracks outside the core crates.
 /// A row naming a core-crate path is shadowed by the core ceiling above, which is
 /// the tighter of the two, and is reported so the row can be retired.
-const AUDIT_CEILINGS: &[(&str, usize)] = &[("vyre-driver-cuda/src/codegen.rs", 1160)];
+const AUDIT_CEILINGS: &[(&str, usize)] = &[("vyre-driver-cuda/src/codegen/mod.rs", 1160)];
 
 /// Production source files stay under their cap.
 pub struct FileSize;
@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn headroom_rounds_up() {
         assert_eq!(cap_for("vyre-libs/src/decode/inflate.rs"), 554 + 28);
-        assert_eq!(cap_for("vyre-driver-cuda/src/codegen.rs"), 1160 + 58);
+        assert_eq!(cap_for("vyre-driver-cuda/src/codegen/mod.rs"), 1160 + 58);
     }
 
     /// WHY: the core ratchet has to win over the audit ceiling, because it is the
@@ -211,7 +211,7 @@ mod tests {
     /// silently gain hundreds of lines of room.
     #[test]
     fn the_core_ratchet_wins_over_the_audit_ceiling() {
-        let path = "vyre-foundation/src/transform/visit.rs";
+        let path = "vyre-foundation/src/transform/visit/mod.rs";
         assert!(is_core(path));
         assert_eq!(cap_for(path), 789 + 40);
     }
@@ -221,7 +221,7 @@ mod tests {
     /// cap, and carries no measured row because every one of them is under it.
     #[test]
     fn the_resident_work_queue_tree_is_core() {
-        let path = "vyre-runtime/src/resident_work_queue/scheduler.rs";
+        let path = "vyre-runtime/src/resident_work_queue/scheduler/mod.rs";
 
         assert!(is_core(path));
         assert_eq!(cap_for(path), CORE_MAX_LINES);

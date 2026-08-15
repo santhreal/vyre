@@ -195,7 +195,7 @@ impl Gate for UnboundedRead {
                 line: &|line| line.contains("read_to_end"),
                 // The disk cache documents its byte cap, truncation and checksum
                 // length proof in-module.
-                reviewed: &["vyre-driver-wgpu/src/pipeline/disk_cache.rs"],
+                reviewed: &["vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs"],
                 reviewed_line: None,
                 message: "unbounded synchronous read-all",
                 fix: "read behind a bound (explicit max bytes, chunked read, capped mmap), \
@@ -234,7 +234,7 @@ impl Gate for InventoryWalk {
                     "vyre-driver-wgpu/src/async_dispatch.rs",
                     "vyre-driver-wgpu/src/engine",
                     "vyre-driver-wgpu/src/lib.rs",
-                    "vyre-driver-wgpu/src/pipeline.rs",
+                    "vyre-driver-wgpu/src/pipeline/mod.rs",
                     "vyre-driver-wgpu/src/pipeline",
                     "vyre-driver-wgpu/src/runtime",
                     "vyre-driver-cuda/src",
@@ -252,7 +252,7 @@ impl Gate for InventoryWalk {
                     "vyre-driver/src/backend/registry.rs",
                     "vyre-driver/src/backend/registry/inventory_streams.rs",
                     "vyre-driver/src/backend/registry/acquire.rs",
-                    "vyre-foundation/src/optimizer.rs",
+                    "vyre-foundation/src/optimizer/mod.rs",
                 ],
                 reviewed_line: None,
                 message: "per-dispatch registry walk",

@@ -229,7 +229,7 @@ required_commands = [
 purpose = "Frontend seam: source validation, syntax parsing, source diagnostics, and backend-neutral typed-IR construction."
 layer = "Frontend research seam"
 write = [
-  "vyre-foundation/src/vast.rs",
+  "vyre-foundation/src/vast/mod.rs",
   "vyre-libs/src/parsing/**",
   "vyre-libs/tests/*parser*",
   "vyre-libs/tests/*frontend*",
@@ -298,7 +298,7 @@ purpose = "Security and reliability seam: FFI safety, decode budgets, VAST valid
 layer = "Security/reliability"
 write = [
   "vyre-foundation/src/serial/**",
-  "vyre-foundation/src/vast.rs",
+  "vyre-foundation/src/vast/mod.rs",
   "vyre-driver/src/**",
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",

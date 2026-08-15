@@ -46,7 +46,7 @@ pub const DECLARED_VARIANT_FLOOR: usize = 25;
 /// enumeration rather than an empty enum.
 #[must_use]
 pub fn declared_data_type_variants() -> BTreeSet<String> {
-    let path = vyre_workspace_root().join("vyre-spec/src/data_type.rs");
+    let path = vyre_workspace_root().join("vyre-spec/src/data_type/mod.rs");
     let source = crate::read_source_file_bounded(&path).unwrap_or_else(|err| {
         panic!("Fix: cannot read the DataType declaration at {path:?}: {err}")
     });

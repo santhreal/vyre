@@ -103,7 +103,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-STARVATION_THRESHOLD"
-path = "vyre-runtime/src/resident_work_queue/scheduler.rs"
+path = "vyre-runtime/src/resident_work_queue/scheduler/mod.rs"
 name = "STARVATION_THRESHOLD"
 unit = "scheduler ticks"
 provenance = "Existing scheduler starvation threshold; controls tenant fairness intervention."
@@ -114,7 +114,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-TENANT_FAIRNESS_THRESHOLD"
-path = "vyre-runtime/src/resident_work_queue/scheduler.rs"
+path = "vyre-runtime/src/resident_work_queue/scheduler/mod.rs"
 name = "TENANT_FAIRNESS_THRESHOLD"
 unit = "scheduler ticks"
 provenance = "Existing scheduler tenant fairness threshold; controls cross-tenant intervention."

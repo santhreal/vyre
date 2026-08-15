@@ -143,7 +143,7 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-RING-RS-MAX-PANIC-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/resident_work_queue/telemetry.rs",
+    "file": "vyre-runtime/src/resident_work_queue/telemetry/mod.rs",
     "line": 40,
     "owner_lane": "runtime_resident_work_queue",
     "budget": "max_findings",
@@ -154,7 +154,7 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-TELEMETRY-RS-MAX-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/resident_work_queue/telemetry.rs",
+    "file": "vyre-runtime/src/resident_work_queue/telemetry/mod.rs",
     "line": 40,
     "owner_lane": "runtime_resident_work_queue",
     "budget": "max_allocation_findings",
@@ -165,7 +165,7 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-TELEMETRY-RS-MAX-ALLOCATION-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/resident_work_queue/telemetry.rs",
+    "file": "vyre-runtime/src/resident_work_queue/telemetry/mod.rs",
     "line": 69,
     "owner_lane": "runtime_resident_work_queue",
     "budget": "max_panic_findings",

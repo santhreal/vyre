@@ -82,16 +82,13 @@ macro_rules! define_unary_bitwise_dual {
     };
 }
 
-#[path = "and/mod.rs"]
 /// docs
 pub mod and;
 pub(crate) mod bit_walk_reference;
 /// docs
 pub mod clz;
-#[path = "not/mod.rs"]
 /// docs
 pub mod not;
-#[path = "or/mod.rs"]
 /// docs
 pub mod or;
 /// docs
@@ -100,6 +97,5 @@ pub mod popcount;
 pub mod shift_left;
 /// docs
 pub mod shift_right;
-#[path = "xor/mod.rs"]
 /// docs
 pub mod xor;

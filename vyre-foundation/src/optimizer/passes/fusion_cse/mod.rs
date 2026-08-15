@@ -17,6 +17,3 @@ pub use dce::DcePass;
 pub mod fuse_cse;
 /// Kernel fusion by eliminating pure single-use scalar intermediates.
 pub mod fusion;
-
-#[cfg(test)]
-pub(super) mod fusion_tests;

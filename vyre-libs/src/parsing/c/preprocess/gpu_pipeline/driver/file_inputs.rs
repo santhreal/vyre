@@ -58,7 +58,7 @@ pub(super) fn prepare_file_inputs(
             insert_classified_tokens(classified_key.clone(), Arc::clone(&classified))?;
             classified
         } else {
-            let filtered = crate::parsing::c::preprocess::gpu_pipeline::gpu_pipeline_filter::gpu_filter_source_bytes_with_scratch(
+            let filtered = crate::parsing::c::preprocess::gpu_pipeline::filter::gpu_filter_source_bytes_with_scratch(
                 run.dispatcher,
                 source,
                 &mut run.filter_scratch,

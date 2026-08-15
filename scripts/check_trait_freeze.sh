@@ -20,12 +20,12 @@ mkdir -p "$SNAPSHOT_DIR"
 CONTRACTS_NAME=(VyreBackend ExprVisitor Lowerable AlgebraicLaw EnforceGate MutationClass PassBoundaryClass)
 CONTRACTS_FILE=(
   "vyre-driver/src/backend/vyre_backend.rs"
-  "vyre-foundation/src/visit/expr.rs"
+  "vyre-foundation/src/visit/expr/mod.rs"
   "vyre-driver/src/backend/lowering.rs"
   "vyre-spec/src/algebraic_law.rs"
   "vyre-driver/src/registry/enforce.rs"
   "vyre-driver/src/registry/mutation.rs"
-  "vyre-foundation/src/optimizer.rs"
+  "vyre-foundation/src/optimizer/mod.rs"
 )
 CONTRACTS_KEYWORD=(
   "pub trait VyreBackend"

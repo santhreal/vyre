@@ -127,14 +127,14 @@ fn entry_points() -> Vec<EntryPoint> {
 }
 
 /// Names re-exported as dispatch entry points by
-/// `vyre-libs/src/solvers/quantized_dispatch.rs`, read from that file so a new
+/// `vyre-libs/src/solvers/quantized_dispatch/mod.rs`, read from that file so a new
 /// entry point enters this gate's member set without anyone editing the gate.
 ///
 /// The `_with_scratch_into` forms share the entry point's readback code and are
 /// reached through it, so only the owning `_via` name is a member.
 fn published_entry_point_names() -> BTreeSet<String> {
     let path = vyre_test_support::monorepo::vyre_workspace_root()
-        .join("vyre-libs/src/solvers/quantized_dispatch.rs");
+        .join("vyre-libs/src/solvers/quantized_dispatch/mod.rs");
     let source = std::fs::read_to_string(&path).unwrap_or_else(|error| {
         panic!("Fix: quantized dispatch module root must be readable at {path:?}: {error}")
     });

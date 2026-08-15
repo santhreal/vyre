@@ -31,5 +31,4 @@ pub use sizing::ResidentSizingPolicy;
 use super::task::TaskWorkItem;
 
 #[cfg(test)]
-#[path = "../core_tests.rs"]
 mod tests;

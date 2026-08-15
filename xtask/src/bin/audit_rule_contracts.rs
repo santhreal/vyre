@@ -7,8 +7,7 @@
 
 use std::fs;
 
-#[path = "rule_tree/mod.rs"]
-mod rule_tree;
+use xtask::rule_tree;
 
 fn print_help() {
     println!("Audit launch-rule contracts and truth-test directories.");

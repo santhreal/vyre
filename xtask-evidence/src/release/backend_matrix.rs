@@ -163,7 +163,7 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "cuda-resident-dispatch",
-        relative: "vyre-driver-cuda/src/backend/resident_dispatch.rs",
+        relative: "vyre-driver-cuda/src/backend/resident_dispatch/mod.rs",
         role: "CUDA resident dispatch release path",
         tokens: &["dispatch_resident", "ptx"],
     },
@@ -258,7 +258,7 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "wgpu-disk-cache",
-        relative: "vyre-driver-wgpu/src/pipeline/disk_cache.rs",
+        relative: "vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
         role: "WGPU pipeline disk cache",
         tokens: &["cache", "pipeline", "MAX_PENDING_DURABLE_CACHE_FILES"],
     },

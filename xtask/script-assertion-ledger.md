@@ -1479,15 +1479,15 @@ The `findings` column is the count with the injection applied, given the pin in
 | `backend-extension` | In `vyre-driver-wgpu/src/backend_impl.rs`, delete the `BackendPrecedence` inventory submission block. | 0 to 1 |
 | `backend-extension` | In `vyre-driver/src/backend/registry/acquire.rs`, rename `registered_backends_by_precedence_slice` at its definition and its call. | 0 to 1 |
 | `backend-extension` | Add `let id = "cuda";` to any file under `vyre-driver/src/backend/registry/`. | 0 to 1 |
-| `readback-ring` | In `vyre-driver-wgpu/src/engine/record_and_readback.rs`, rename `.arm_ticket(` to `.arm(` at its definition and its call sites. | 0 to 1 |
+| `readback-ring` | In `vyre-driver-wgpu/src/engine/record_and_readback/mod.rs`, rename `.arm_ticket(` to `.arm(` at its definition and its call sites. | 0 to 1 |
 | `readback-ring` | In `vyre-driver-wgpu/src/lib.rs`, replace `ReadbackRingSet::new()` with `ReadbackRingSet::default()`. | 0 to 1 |
 | `program-wire-fields` | Add `pub scratch_hint: u32,` to `Program` in `vyre-foundation/src/ir_inner/model/program/definition.rs`. | 0 to 1 |
-| `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire.rs` and `decode/from_wire.rs`. | 0 to 1 |
+| `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire/mod.rs` and `decode/from_wire.rs`. | 0 to 1 |
 | `program-wire-fields` | Rename `pub struct Program` to `pub struct ProgramInner`. | gate errors, which is the intended outcome: the declaration is located, not named, so losing it is unmeasurable rather than clean |
-| `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr.rs`. | 1 to 2 |
+| `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr/mod.rs`. | 1 to 2 |
 | `frozen-contracts` | Delete `docs/frozen-traits/MutationClass.txt`. | 1 to 2 |
 | `frozen-contracts` | Reindent the body of `pub enum AlgebraicLaw` by four spaces. | stays 1; indentation is not part of the contract |
-| `file-size` | Append 200 blank lines to `vyre-foundation/src/optimizer/fact_cache.rs` (measured 570, cap 599). | 75 to 76 |
+| `file-size` | Append 200 blank lines to `vyre-foundation/src/optimizer/fact_cache/mod.rs` (measured 570, cap 599). | 75 to 76 |
 | `file-size` | Append 60 lines to `vyre-libs/src/decode/inflate.rs` (measured 554, cap 582). | 75 to 76 |
 | `file-size` | Add a row to the audit ceilings naming `vyre-does-not-exist/src/lib.rs`. | 75 to 76 |
 | `gpu-loudness` | Add `#[cfg(not(feature = "gpu"))]` above a test in `vyre-driver-wgpu/tests/` with no loud abort within ten lines above or twenty below. | 2 to 3 |

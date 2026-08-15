@@ -29,6 +29,7 @@ pub mod json_output;
 pub mod manifest_walk;
 pub mod output_arg;
 pub mod release;
+pub mod rule_tree;
 pub mod source_provenance;
 pub mod subcommands;
 pub mod text_markers;

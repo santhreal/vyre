@@ -47,7 +47,7 @@ let outputs = backend.dispatch(&program, &inputs, &config)?;
 ## Where to look
 
 - `src/backend/mod.rs`  -  `VyreBackend` implementation and capability probing.
-- `src/codegen.rs`  -  PTX emit pipeline.
+- `src/codegen/mod.rs`  -  PTX emit pipeline.
 - The workspace [`README.md`](../README.md) places this crate: driver
   names, dialect names, and device quirks live here and nowhere else.
 - `docs/optimization/OWNERSHIP.toml` defines CUDA optimization lanes.

@@ -11,7 +11,7 @@ use syn::spanned::Spanned;
 use syn::visit::{self, Visit};
 use syn::{Expr, ExprCall, ExprStruct, Member};
 
-const CANONICAL_BUILDER: &str = "vyre-foundation/src/ir_inner/model/expr.rs";
+const CANONICAL_BUILDER: &str = "vyre-foundation/src/ir_inner/model/expr/mod.rs";
 
 #[derive(Default)]
 struct RawFirstWorkgroupVisitor {

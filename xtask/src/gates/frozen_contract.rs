@@ -208,7 +208,7 @@ impl Gate for ReadbackRing {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        const RECORD: &str = "vyre-driver-wgpu/src/engine/record_and_readback.rs";
+        const RECORD: &str = "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs";
         const RECORD_MODULES: &str = "vyre-driver-wgpu/src/engine/record_and_readback";
         const ARENA: &str = "vyre-driver-wgpu/src/lib.rs";
         /// Each of these is load-bearing for routing an output through a ring
@@ -269,8 +269,8 @@ impl Gate for ProgramWireFields {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        const ENCODE: &str = "vyre-foundation/src/serial/wire/encode/to_wire.rs";
-        const DECODE: &str = "vyre-foundation/src/serial/wire/decode/from_wire.rs";
+        const ENCODE: &str = "vyre-foundation/src/serial/wire/encode/to_wire/mod.rs";
+        const DECODE: &str = "vyre-foundation/src/serial/wire/decode/from_wire/mod.rs";
         const SERIALIZED: &[&str] = &[
             "entry_op_id",
             "buffers",
@@ -416,7 +416,7 @@ impl Gate for FrozenContracts {
             ),
             (
                 "ExprVisitor",
-                "vyre-foundation/src/visit/expr.rs",
+                "vyre-foundation/src/visit/expr/mod.rs",
                 "pub trait ExprVisitor",
             ),
             (
@@ -441,7 +441,7 @@ impl Gate for FrozenContracts {
             ),
             (
                 "PassBoundaryClass",
-                "vyre-foundation/src/optimizer.rs",
+                "vyre-foundation/src/optimizer/mod.rs",
                 "pub enum PassBoundaryClass",
             ),
         ];

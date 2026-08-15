@@ -25,7 +25,7 @@ forbidden_paths=(
     "vyre-driver-wgpu/src/async_dispatch.rs"
     "vyre-driver-wgpu/src/engine"
     "vyre-driver-wgpu/src/lib.rs"
-    "vyre-driver-wgpu/src/pipeline.rs"
+    "vyre-driver-wgpu/src/pipeline/mod.rs"
     "vyre-driver-wgpu/src/pipeline"
     "vyre-driver-wgpu/src/runtime"
     "vyre-driver-cuda/src"

@@ -545,7 +545,7 @@ inlined before validation reaches it.
 fix_plan = """
 Build the blake3_compress Program and walk it by node kind.
 Identify which Node variant is producing the `unknown` tag in
-`vyre-foundation/src/ir_inner/model/node.rs::node_kind`. Add the
+`vyre-foundation/src/ir_inner/model/node/mod.rs::node_kind`. Add the
 missing lowering arm to `vyre-driver-wgpu/src/lowering/naga_emit/node.rs`.
 """
 

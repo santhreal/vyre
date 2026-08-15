@@ -124,7 +124,7 @@ fn frozen_trait_contract_files_exist() {
 
     let contracts = [
         ("VyreBackend", "vyre-driver/src/backend/vyre_backend.rs"),
-        ("ExprVisitor", "vyre-foundation/src/visit/expr.rs"),
+        ("ExprVisitor", "vyre-foundation/src/visit/expr/mod.rs"),
         ("Lowerable", "vyre-driver/src/backend/lowering.rs"),
         ("AlgebraicLaw", "vyre-spec/src/algebraic_law.rs"),
         ("EnforceGate", "vyre-driver/src/registry/enforce.rs"),

@@ -69,7 +69,7 @@ use structure_gate::workspace_root;
 
 /// Field names that hold child nodes on some `Node` variant.
 ///
-/// Read off the three owners in `vyre-foundation/src/transform/visit.rs` and
+/// Read off the three owners in `vyre-foundation/src/transform/visit/mod.rs` and
 /// `rewrite_walk.rs`. A `Node` variant that gains a body slot under a new field
 /// name has to be added here, and the owners fail to compile until somebody
 /// looks at them, which is when that happens.

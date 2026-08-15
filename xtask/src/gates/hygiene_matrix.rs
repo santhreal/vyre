@@ -634,7 +634,7 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     }
     if normalized.contains("/vyre-foundation/src/serial/")
         || normalized.contains("/vyre-foundation/src/ir_inner/")
-        || normalized.contains("/vyre-foundation/src/vast.rs")
+        || normalized.contains("/vyre-foundation/src/vast/mod.rs")
         || normalized.contains("/vyre-foundation/fuzz/")
         || normalized.contains("/vyre-spec/")
         || normalized.contains("/vyre-libs/src/lib.rs")

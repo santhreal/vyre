@@ -36,7 +36,7 @@ max_panic_findings = 0
 
 # Validator skip cache  -  the K1 short-circuit.
 [[hot_path]]
-file = "vyre-foundation/src/ir_inner/model/program/meta.rs"
+file = "vyre-foundation/src/ir_inner/model/program/meta/mod.rs"
 reason = "Validator skip-cache; called on every Program::validate()."
 max_findings = 11
 max_allocation_findings = 11
@@ -121,7 +121,7 @@ max_panic_findings = 0
 
 # Wire encode/decode  -  per Program serialisation.
 [[hot_path]]
-file = "vyre-foundation/src/serial/wire/encode.rs"
+file = "vyre-foundation/src/serial/wire/encode/mod.rs"
 reason = "Wire encode; runs whenever a Program crosses the inter-process boundary."
 max_findings = 0
 max_allocation_findings = 0
@@ -164,7 +164,7 @@ max_panic_findings = 0
 
 # CUDA resident dispatch  -  long-lived buffer launch + sequence replay.
 [[hot_path]]
-file = "vyre-driver-cuda/src/backend/resident_dispatch.rs"
+file = "vyre-driver-cuda/src/backend/resident_dispatch/mod.rs"
 reason = "S4 CUDA resident launch; every fixed-graph replay and resident-sequence step."
 max_findings = 0
 max_allocation_findings = 0
@@ -205,7 +205,7 @@ max_sleep_findings = 0
 max_panic_findings = 0
 
 [[hot_path]]
-file = "vyre-runtime/src/resident_work_queue/telemetry.rs"
+file = "vyre-runtime/src/resident_work_queue/telemetry/mod.rs"
 reason = "Megakernel control/ring telemetry decode; release evidence and scheduler tuning consume this snapshot."
 max_findings = 9
 max_allocation_findings = 9

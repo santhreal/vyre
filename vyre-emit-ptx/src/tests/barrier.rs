@@ -80,7 +80,7 @@ fn nested_barrier_kernel_keeps_lanes_live_and_predicates_global_store() {
     );
 }
 /// Emit options with native cooperative grid-sync lowering enabled, matching what
-/// `vyre-driver-cuda/src/codegen.rs:75` passes unconditionally.
+/// `vyre-driver-cuda/src/codegen/mod.rs:75` passes unconditionally.
 fn cooperative_options() -> PtxEmitOptions {
     PtxEmitOptions {
         target: ComputeCapability::SM_70,

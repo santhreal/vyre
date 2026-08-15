@@ -9,8 +9,7 @@
 use std::fs;
 use std::path::Path;
 
-#[path = "rule_tree/mod.rs"]
-mod rule_tree;
+use xtask::rule_tree;
 
 fn fatal(message: &str) -> ! {
     eprintln!("Fix: {message}");

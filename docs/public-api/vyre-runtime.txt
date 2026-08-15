@@ -8,12 +8,6 @@
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::planner::ResidentWorkItem
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::task::TaskWorkItem
 #[repr(C)] pub struct vyre_runtime::uring::Iovec
-#[repr(C)] pub struct vyre_runtime::uring::ring::io_cqring_offsets
-#[repr(C)] pub struct vyre_runtime::uring::ring::io_sqring_offsets
-#[repr(C)] pub struct vyre_runtime::uring::ring::io_uring_cqe
-#[repr(C)] pub struct vyre_runtime::uring::ring::io_uring_params
-#[repr(C)] pub struct vyre_runtime::uring::ring::io_uring_sqe
-#[repr(C)] pub struct vyre_runtime::uring::stream::Iovec
 #[repr(u32)] pub enum vyre_runtime::resident_work_queue::task::TaskPriority
 #[repr(u32)] pub enum vyre_runtime::resident_work_queue::task::TaskState
 impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem
@@ -39,14 +33,14 @@ impl core::fmt::Debug for vyre_runtime::resource_residency::ArtifactInstanceBind
 impl core::fmt::Debug for vyre_runtime::resource_residency::ResourceResidency
 impl core::fmt::Debug for vyre_runtime::tenant::TenantHandle
 impl core::fmt::Display for vyre_runtime::pipeline_cache::PipelineCacheMetricError
-impl core::marker::Send for vyre_runtime::uring::ring::IoUringState
-impl core::marker::Send for vyre_runtime::uring::stream::AsyncUringStream<'_>
-impl core::marker::Send for vyre_runtime::uring::stream::GpuMappedBuffer<'_>
-impl core::marker::Sync for vyre_runtime::uring::ring::IoUringState
-impl core::marker::Sync for vyre_runtime::uring::stream::AsyncUringStream<'_>
-impl core::marker::Sync for vyre_runtime::uring::stream::GpuMappedBuffer<'_>
+impl core::marker::Send for vyre_runtime::uring::AsyncUringStream<'_>
+impl core::marker::Send for vyre_runtime::uring::GpuMappedBuffer<'_>
+impl core::marker::Send for vyre_runtime::uring::IoUringState
+impl core::marker::Sync for vyre_runtime::uring::AsyncUringStream<'_>
+impl core::marker::Sync for vyre_runtime::uring::GpuMappedBuffer<'_>
+impl core::marker::Sync for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
-impl core::ops::drop::Drop for vyre_runtime::uring::ring::IoUringState
+impl core::ops::drop::Drop for vyre_runtime::uring::IoUringState
 impl vyre_runtime::PipelineError
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -132,16 +126,16 @@ impl vyre_runtime::tenant::TenantHandle
 impl vyre_runtime::tenant::TenantQuota
 impl vyre_runtime::tenant::TenantRegistry
 impl vyre_runtime::tenant::TenantSelectionScratch
-impl vyre_runtime::uring::driver::NvmeGpuIngestTelemetry
-impl vyre_runtime::uring::gpudirect::GpuDirectCapability
-impl vyre_runtime::uring::io_loop::ResidentIoLoop
-impl vyre_runtime::uring::ring::IoUringState
+impl vyre_runtime::uring::GpuDirectCapability
+impl vyre_runtime::uring::IoUringState
+impl vyre_runtime::uring::NvmeGpuIngestTelemetry
+impl vyre_runtime::uring::ResidentIoLoop
 impl<'a> vyre_runtime::UringCompletionPump<'a>
 impl<'a> vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'a>
-impl<'a> vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>
-impl<'a> vyre_runtime::uring::pump::UringResidentQueuePump<'a>
-impl<'a> vyre_runtime::uring::stream::AsyncUringStream<'a>
-impl<'a> vyre_runtime::uring::stream::GpuMappedBuffer<'a>
+impl<'a> vyre_runtime::uring::AsyncUringStream<'a>
+impl<'a> vyre_runtime::uring::GpuMappedBuffer<'a>
+impl<'a> vyre_runtime::uring::NvmeGpuIngestDriver<'a>
+impl<'a> vyre_runtime::uring::UringResidentQueuePump<'a>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
@@ -327,11 +321,6 @@ pub const vyre_runtime::tenant::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::tenant::TENANT_ID_MAX: u32
 pub const vyre_runtime::tenant::TENANT_OPCODE_BASE: u32
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
-pub const vyre_runtime::uring::gpudirect::NVME_CMD_READ: u8
-pub const vyre_runtime::uring::ring::IOSQE_FIXED_FILE: u8
-pub const vyre_runtime::uring::stream::IORING_OP_READV: u8
-pub const vyre_runtime::uring::stream::IORING_OP_READ_FIXED: u8
-pub const vyre_runtime::uring::stream::IORING_OP_URING_CMD: u8
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::pipeline_cache::InMemoryEvictionReason
@@ -350,8 +339,6 @@ pub enum vyre_runtime::resident_work_queue::policy::ResidentGraphBlasSwitchClass
 pub enum vyre_runtime::resident_work_queue::policy::ResidentPromotionRoute
 pub enum vyre_runtime::resident_work_queue::policy::ResidentQueuePressure
 pub enum vyre_runtime::resident_work_queue::policy::ResidentQueueTopology
-pub enum vyre_runtime::resident_work_queue::scaling::ResidentExecutionMode
-pub enum vyre_runtime::resident_work_queue::scaling::ResidentQueuePressure
 pub enum vyre_runtime::resident_work_queue::telemetry::RingStatus
 pub enum vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily
 pub enum vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceLayoutError<R>
@@ -360,8 +347,6 @@ pub enum vyre_runtime::resource_residency::ResourceAdmissionStatus
 pub enum vyre_runtime::resource_residency::ResourceResidencyError
 pub enum vyre_runtime::uring::GpuDirectCapability
 pub enum vyre_runtime::uring::NativeReadPath
-pub enum vyre_runtime::uring::driver::NativeReadPath
-pub enum vyre_runtime::uring::gpudirect::GpuDirectCapability
 pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogError) -> Self
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
@@ -370,7 +355,7 @@ pub fn vyre_runtime::UringCompletionPump<'a>::is_shutdown_requested(&self) -> bo
 pub fn vyre_runtime::UringCompletionPump<'a>::new() -> Self
 pub fn vyre_runtime::UringCompletionPump<'a>::poll(&mut self) -> core::result::Result<vyre_runtime::UringPollState, vyre_runtime::PipelineError>
 pub fn vyre_runtime::UringCompletionPump<'a>::request_shutdown(&mut self)
-pub fn vyre_runtime::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::stream::AsyncUringStream<'a>) -> Self
+pub fn vyre_runtime::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::AsyncUringStream<'a>) -> Self
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::into_envelope(self) -> vyre_megakernel::envelope::ArtifactEnvelope
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload(&self) -> &vyre_megakernel::envelope::TargetPayload
 pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::from(source: vyre_megakernel::CompileError) -> Self
@@ -666,12 +651,6 @@ pub fn vyre_runtime::resident_work_queue::ring::RingConsumer::try_done_count(&se
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::name(&self) -> &'static str
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::publish(&mut self, slot_idx: u32, encoded: &[u8]) -> core::result::Result<(), vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::slot_count(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::scaling::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
-pub fn vyre_runtime::resident_work_queue::scaling::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
-pub fn vyre_runtime::resident_work_queue::scaling::padded_slot_count(slot_count: u32, workgroup_size_x: u32) -> u32
-pub fn vyre_runtime::resident_work_queue::scaling::try_diffuse_priority_across_siblings(priority_stalks: &[f64], restriction_diag: &[f64], damping: f64, iterations: u32) -> core::result::Result<alloc::vec::Vec<f64>, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::scaling::try_diffuse_priority_across_siblings_into(priority_stalks: &[f64], restriction_diag: &[f64], damping: f64, iterations: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::scaling::worker_workgroup_size(worker_count: u32, max_workgroup_size_x: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::scheduler::check_priority_fairness(priority: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_runtime::resident_work_queue::scheduler::check_tenant_fairness(tenant_id: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_runtime::resident_work_queue::scheduler::default_priority_offsets_array(total_slots: u32) -> [u32; 6]
@@ -815,54 +794,51 @@ pub fn vyre_runtime::tenant::TenantRegistry::runtime_counters_into(&self, out: &
 pub fn vyre_runtime::tenant::TenantRegistry::select_concurrent_tenants(&self, conflict_adj: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_runtime::tenant::TenantRegistry::select_concurrent_tenants_into(&self, conflict_adj: &[u32], out: &mut alloc::vec::Vec<u32>, scratch: &mut vyre_runtime::tenant::TenantSelectionScratch)
 pub fn vyre_runtime::tenant::TenantRegistry::unregister(&self, tenant_id: u32) -> core::option::Option<vyre_runtime::tenant::TenantHandle>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::megakernel_io_queue(&self) -> &vyre_runtime::resident_work_queue::io::ResidentIoQueue
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::megakernel_io_queue_mut(&mut self) -> &mut vyre_runtime::resident_work_queue::io::ResidentIoQueue
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::new(stream: vyre_runtime::uring::stream::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::io::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::new_gpudirect(stream: vyre_runtime::uring::stream::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::io::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::poll_completions(&mut self) -> core::result::Result<alloc::vec::Vec<vyre_runtime::uring::driver::CompletedIngest>, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::poll_completions_into(&mut self, completed: &mut alloc::vec::Vec<vyre_runtime::uring::driver::CompletedIngest>) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::read_path(&self) -> vyre_runtime::uring::driver::NativeReadPath
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::reset_telemetry(&mut self)
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::slot_bytes(&self) -> usize
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::slot_count(&self) -> usize
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::submit_file(&mut self, path: &std::path::Path, slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::telemetry_snapshot(&self) -> vyre_runtime::uring::driver::NvmeGpuIngestTelemetry
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::inflight_reads(self) -> u64
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::path_submissions(self, path: vyre_runtime::uring::driver::NativeReadPath) -> u64
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::validate_completed_zero_copy(self, path: vyre_runtime::uring::driver::NativeReadPath) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::AsyncUringStream<'a>::flush_submissions(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::AsyncUringStream<'a>::inflight(&self) -> u32
+pub fn vyre_runtime::uring::AsyncUringStream<'a>::new(ring_state: vyre_runtime::uring::IoUringState, gpu_buffer: vyre_runtime::uring::GpuMappedBuffer<'a>, megakernel_tail: &'a core::sync::atomic::AtomicU32) -> Self
+pub fn vyre_runtime::uring::AsyncUringStream<'a>::poll(&mut self) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::AsyncUringStream<'a>::replace_buffer(&mut self, gpu_buffer: vyre_runtime::uring::GpuMappedBuffer<'a>)
+pub fn vyre_runtime::uring::AsyncUringStream<'a>::wait_for_completion(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::GpuDirectCapability::is_available(&self) -> bool
+pub fn vyre_runtime::uring::GpuDirectCapability::probe() -> Self
+pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::is_empty(&self) -> bool
+pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::len(&self) -> usize
+pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::sub_region(&self, offset: usize, len: usize) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::IoUringState::advance_cq(&mut self)
+pub fn vyre_runtime::uring::IoUringState::commit_sqe(&mut self)
+pub fn vyre_runtime::uring::IoUringState::drop(&mut self)
+pub fn vyre_runtime::uring::IoUringState::enter(&self, to_submit: u32, min_complete: u32, flags: u32) -> core::result::Result<i32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::IoUringState::new(entries: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::IoUringState::register_buffers(&self, iovecs: &[vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::IoUringState::register_files(&self, fds: &[i32]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::IoUringState::sq_needs_wakeup(&self) -> bool
+pub fn vyre_runtime::uring::IoUringState::uses_sqpoll(&self) -> bool
+pub fn vyre_runtime::uring::IoUringState::wake_sqpoll(&self) -> core::result::Result<i32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::megakernel_io_queue(&self) -> &vyre_runtime::resident_work_queue::io::ResidentIoQueue
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::megakernel_io_queue_mut(&mut self) -> &mut vyre_runtime::resident_work_queue::io::ResidentIoQueue
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::new(stream: vyre_runtime::uring::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::io::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::new_gpudirect(stream: vyre_runtime::uring::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::io::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::poll_completions(&mut self) -> core::result::Result<alloc::vec::Vec<vyre_runtime::uring::CompletedIngest>, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::poll_completions_into(&mut self, completed: &mut alloc::vec::Vec<vyre_runtime::uring::CompletedIngest>) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::read_path(&self) -> vyre_runtime::uring::NativeReadPath
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::reset_telemetry(&mut self)
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::slot_bytes(&self) -> usize
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::slot_count(&self) -> usize
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::submit_file(&mut self, path: &std::path::Path, slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::telemetry_snapshot(&self) -> vyre_runtime::uring::NvmeGpuIngestTelemetry
+pub fn vyre_runtime::uring::NvmeGpuIngestTelemetry::inflight_reads(self) -> u64
+pub fn vyre_runtime::uring::NvmeGpuIngestTelemetry::path_submissions(self, path: vyre_runtime::uring::NativeReadPath) -> u64
+pub fn vyre_runtime::uring::NvmeGpuIngestTelemetry::validate_completed_zero_copy(self, path: vyre_runtime::uring::NativeReadPath) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::ResidentIoLoop::spawn(stream: vyre_runtime::uring::AsyncUringStream<'static>, io_queue_mapped: &'static mut [u8]) -> Self
+pub fn vyre_runtime::uring::ResidentIoLoop::spawn_with_registered_destinations(stream: vyre_runtime::uring::AsyncUringStream<'static>, io_queue_mapped: &'static mut [u8], registered_destinations: alloc::vec::Vec<vyre_runtime::uring::RegisteredIoDestination>) -> Self
+pub fn vyre_runtime::uring::ResidentIoLoop::stop(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::drain_into_ring(&mut self, ring_bytes: &mut [u8]) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::inflight(&self) -> u32
+pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::into_stream(self) -> vyre_runtime::uring::AsyncUringStream<'a>
+pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::new(stream: vyre_runtime::uring::AsyncUringStream<'a>, chunk_bytes: u32) -> Self
+pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::observe_epoch(&self, control_bytes: &[u8]) -> u32
 pub fn vyre_runtime::uring::encode_nvme_read_sqe(namespace_id: u32, starting_lba: u64, blocks: u32, dest_bar1_ptr: u64) -> [u8; 64]
-pub fn vyre_runtime::uring::gpudirect::GpuDirectCapability::is_available(&self) -> bool
-pub fn vyre_runtime::uring::gpudirect::GpuDirectCapability::probe() -> Self
-pub fn vyre_runtime::uring::gpudirect::encode_nvme_read_sqe(namespace_id: u32, starting_lba: u64, blocks: u32, dest_bar1_ptr: u64) -> [u8; 64]
-pub fn vyre_runtime::uring::io_loop::ResidentIoLoop::spawn(stream: vyre_runtime::uring::stream::AsyncUringStream<'static>, io_queue_mapped: &'static mut [u8]) -> Self
-pub fn vyre_runtime::uring::io_loop::ResidentIoLoop::spawn_with_registered_destinations(stream: vyre_runtime::uring::stream::AsyncUringStream<'static>, io_queue_mapped: &'static mut [u8], registered_destinations: alloc::vec::Vec<vyre_runtime::uring::io_loop::RegisteredIoDestination>) -> Self
-pub fn vyre_runtime::uring::io_loop::ResidentIoLoop::stop(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::pump::UringResidentQueuePump<'a>::drain_into_ring(&mut self, ring_bytes: &mut [u8]) -> core::result::Result<u32, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::pump::UringResidentQueuePump<'a>::inflight(&self) -> u32
-pub fn vyre_runtime::uring::pump::UringResidentQueuePump<'a>::into_stream(self) -> vyre_runtime::uring::stream::AsyncUringStream<'a>
-pub fn vyre_runtime::uring::pump::UringResidentQueuePump<'a>::new(stream: vyre_runtime::uring::stream::AsyncUringStream<'a>, chunk_bytes: u32) -> Self
-pub fn vyre_runtime::uring::pump::UringResidentQueuePump<'a>::observe_epoch(&self, control_bytes: &[u8]) -> u32
-pub fn vyre_runtime::uring::ring::IoUringState::advance_cq(&mut self)
-pub fn vyre_runtime::uring::ring::IoUringState::commit_sqe(&mut self)
-pub fn vyre_runtime::uring::ring::IoUringState::drop(&mut self)
-pub fn vyre_runtime::uring::ring::IoUringState::enter(&self, to_submit: u32, min_complete: u32, flags: u32) -> core::result::Result<i32, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::ring::IoUringState::get_sqe(&mut self) -> core::option::Option<&mut vyre_runtime::uring::ring::io_uring_sqe>
-pub fn vyre_runtime::uring::ring::IoUringState::new(entries: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::ring::IoUringState::peek_cqe(&mut self) -> core::option::Option<&vyre_runtime::uring::ring::io_uring_cqe>
-pub fn vyre_runtime::uring::ring::IoUringState::register_buffers(&self, iovecs: &[vyre_runtime::uring::stream::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::ring::IoUringState::register_files(&self, fds: &[i32]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::ring::IoUringState::sq_needs_wakeup(&self) -> bool
-pub fn vyre_runtime::uring::ring::IoUringState::uses_sqpoll(&self) -> bool
-pub fn vyre_runtime::uring::ring::IoUringState::wake_sqpoll(&self) -> core::result::Result<i32, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::stream::AsyncUringStream<'a>::flush_submissions(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::stream::AsyncUringStream<'a>::inflight(&self) -> u32
-pub fn vyre_runtime::uring::stream::AsyncUringStream<'a>::new(ring_state: vyre_runtime::uring::ring::IoUringState, gpu_buffer: vyre_runtime::uring::stream::GpuMappedBuffer<'a>, megakernel_tail: &'a core::sync::atomic::AtomicU32) -> Self
-pub fn vyre_runtime::uring::stream::AsyncUringStream<'a>::poll(&mut self) -> core::result::Result<u32, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::stream::AsyncUringStream<'a>::replace_buffer(&mut self, gpu_buffer: vyre_runtime::uring::stream::GpuMappedBuffer<'a>)
-pub fn vyre_runtime::uring::stream::AsyncUringStream<'a>::wait_for_completion(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::is_empty(&self) -> bool
-pub fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::len(&self) -> usize
-pub fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::sub_region(&self, offset: usize, len: usize) -> core::result::Result<Self, vyre_runtime::PipelineError>
 pub mod vyre_runtime
 pub mod vyre_runtime::artifact_admission
 pub mod vyre_runtime::persistent_executor
@@ -890,7 +866,6 @@ pub mod vyre_runtime::resident_work_queue::protocol::slot
 pub mod vyre_runtime::resident_work_queue::readback
 pub mod vyre_runtime::resident_work_queue::resident
 pub mod vyre_runtime::resident_work_queue::ring
-pub mod vyre_runtime::resident_work_queue::scaling
 pub mod vyre_runtime::resident_work_queue::scheduler
 pub mod vyre_runtime::resident_work_queue::scheduler::priority
 pub mod vyre_runtime::resident_work_queue::speculation
@@ -904,12 +879,6 @@ pub mod vyre_runtime::routing::standard_policy
 pub mod vyre_runtime::scheduler
 pub mod vyre_runtime::tenant
 pub mod vyre_runtime::uring
-pub mod vyre_runtime::uring::driver
-pub mod vyre_runtime::uring::gpudirect
-pub mod vyre_runtime::uring::io_loop
-pub mod vyre_runtime::uring::pump
-pub mod vyre_runtime::uring::ring
-pub mod vyre_runtime::uring::stream
 pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -973,15 +942,6 @@ pub struct vyre_runtime::resident_work_queue::readback::ResidentQueueReadback
 pub struct vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters
 pub struct vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 pub struct vyre_runtime::resident_work_queue::ring::HostRing
-pub struct vyre_runtime::resident_work_queue::scaling::PriorityRequeueAccounting
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentGridLimits
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentGridPlan
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentGridRequest
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentLaunchGeometry
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest
-pub struct vyre_runtime::resident_work_queue::scaling::ResidentSizingPolicy
 pub struct vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample
 pub struct vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate
 pub struct vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow
@@ -1031,15 +991,6 @@ pub struct vyre_runtime::uring::NvmeGpuIngestTelemetry
 pub struct vyre_runtime::uring::RegisteredIoDestination
 pub struct vyre_runtime::uring::ResidentIoLoop
 pub struct vyre_runtime::uring::UringResidentQueuePump<'a>
-pub struct vyre_runtime::uring::driver::CompletedIngest
-pub struct vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>
-pub struct vyre_runtime::uring::driver::NvmeGpuIngestTelemetry
-pub struct vyre_runtime::uring::io_loop::RegisteredIoDestination
-pub struct vyre_runtime::uring::io_loop::ResidentIoLoop
-pub struct vyre_runtime::uring::pump::UringResidentQueuePump<'a>
-pub struct vyre_runtime::uring::ring::IoUringState
-pub struct vyre_runtime::uring::stream::AsyncUringStream<'a>
-pub struct vyre_runtime::uring::stream::GpuMappedBuffer<'a>
 pub trait vyre_runtime::pipeline_cache::PipelineCacheStore: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::resident_work_queue::ring::RingConsumer
 pub trait vyre_runtime::resident_work_queue::ring::RingProducer
@@ -1047,20 +998,20 @@ pub trait vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspac
 pub trait vyre_runtime::resource_residency::ResidentResourceDevice: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::routing::RoutingPolicy: core::marker::Send + core::marker::Sync
 pub unsafe fn vyre_runtime::UringCompletionPump<'a>::wait_for_observable(host_visible_addr: *const u32, current: u32, timeout_ns: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, _nvme_fd: i32, _namespace_id: u32, _starting_lba: u64, _blocks: u32, _bytes_per_block: u32, _slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::pump::UringResidentQueuePump<'a>::submit_file_scan(&mut self, fd: i32, file_offset: u64, len: u32, chunk_idx: u32, slot_idx: u32, tenant_id: u32, opcode: u32, args: [u32; 3]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_nvme_passthrough(&mut self, _fd: i32, _user_data: u64, _nvme_sqe_bytes: &[u8]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_read_fixed(&mut self, fd: i32, offset: u64, len: u32, chunk_idx: usize, buf_index: u16) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_read_fixed_at(&mut self, fd: i32, offset: u64, len: u32, target_offset: u64, buf_index: u16, user_data: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_read_to_gpu(&mut self, fd: i32, offset: u64, len: u32, chunk_idx: usize, iovs_storage: &mut [vyre_runtime::uring::stream::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_read_to_gpu_at(&mut self, fd: i32, offset: u64, len: u32, target_offset: u64, iovs_storage: &mut [vyre_runtime::uring::stream::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_read_to_gpu_at_with_user_data(&mut self, fd: i32, offset: u64, len: u32, target_offset: u64, user_data: u64, iovs_storage: &mut [vyre_runtime::uring::stream::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_read_to_gpu_fixed_file(&mut self, file_index: i32, offset: u64, len: u32, chunk_idx: usize, iovs_storage: &mut [vyre_runtime::uring::stream::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::as_mut_slice(&mut self) -> &mut [u8]
-pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::duplicate(&self) -> Self
-pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::from_bar1_peer_with_owner<O: ?core::marker::Sized>(_owner: &'a mut O, peer_ptr: *mut u8, len: usize) -> Self
-pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::from_host_visible_owner<O: ?core::marker::Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self
-pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_nvme_passthrough(&mut self, _fd: i32, _user_data: u64, _nvme_sqe_bytes: &[u8]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_fixed(&mut self, fd: i32, offset: u64, len: u32, chunk_idx: usize, buf_index: u16) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_fixed_at(&mut self, fd: i32, offset: u64, len: u32, target_offset: u64, buf_index: u16, user_data: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_to_gpu(&mut self, fd: i32, offset: u64, len: u32, chunk_idx: usize, iovs_storage: &mut [vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_to_gpu_at(&mut self, fd: i32, offset: u64, len: u32, target_offset: u64, iovs_storage: &mut [vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_to_gpu_at_with_user_data(&mut self, fd: i32, offset: u64, len: u32, target_offset: u64, user_data: u64, iovs_storage: &mut [vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_to_gpu_fixed_file(&mut self, file_index: i32, offset: u64, len: u32, chunk_idx: usize, iovs_storage: &mut [vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::as_mut_slice(&mut self) -> &mut [u8]
+pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::duplicate(&self) -> Self
+pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_bar1_peer_with_owner<O: ?core::marker::Sized>(_owner: &'a mut O, peer_ptr: *mut u8, len: usize) -> Self
+pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<O: ?core::marker::Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self
+pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
+pub unsafe fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, _nvme_fd: i32, _namespace_id: u32, _starting_lba: u64, _blocks: u32, _bytes_per_block: u32, _slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::UringResidentQueuePump<'a>::submit_file_scan(&mut self, fd: i32, file_offset: u64, len: u32, chunk_idx: u32, slot_idx: u32, tenant_id: u32, opcode: u32, args: [u32; 3]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
 pub vyre_runtime::PipelineError::DrainIncomplete
 pub vyre_runtime::PipelineError::DrainIncomplete::claimed: u32
@@ -1467,66 +1418,6 @@ pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::debug
 pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::io_queue_bytes: usize
 pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::ring_bytes: usize
 pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::total_bytes: usize
-pub vyre_runtime::resident_work_queue::scaling::PriorityRequeueAccounting::aged_promotions: u64
-pub vyre_runtime::resident_work_queue::scaling::PriorityRequeueAccounting::max_priority_age: u32
-pub vyre_runtime::resident_work_queue::scaling::PriorityRequeueAccounting::requeue_count: u64
-pub vyre_runtime::resident_work_queue::scaling::ResidentExecutionMode::Interpreter
-pub vyre_runtime::resident_work_queue::scaling::ResidentExecutionMode::Jit
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridLimits::max_compute_invocations_per_workgroup: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridLimits::max_compute_workgroups_per_dimension: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridLimits::max_workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridPlan::geometry: vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridPlan::worker_groups: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridRequest::queue_len: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridRequest::requested_worker_groups: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchGeometry::dispatch_grid: [u32; 3]
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchGeometry::slot_count: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchGeometry::workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::dense_frontier_threshold_bps: u16
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::fusion_edge_threshold: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::hit_capacity_multiplier: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::hot_opcode_threshold: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::hot_window_threshold: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::jit_queue_len_threshold: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::memory_pressure_threshold_bps: u16
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::min_hit_capacity: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::priority_age_threshold: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::saturated_waves: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::scratch_bytes_per_hit: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::sizing: vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::sparse_frontier_threshold_bps: u16
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::age_priority_work: bool
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::device_memory_budget_bytes: u64
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::estimated_peak_device_bytes: u64
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::execution_mode: vyre_runtime::resident_work_queue::policy::ResidentExecutionMode
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::geometry: vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::hit_capacity: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::pressure: vyre_runtime::resident_work_queue::policy::ResidentQueuePressure
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::promote_hot_opcodes: bool
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::promote_hot_windows: bool
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::topology: vyre_runtime::resident_work_queue::policy::ResidentQueueTopology
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::worker_groups: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::device_memory_budget_bytes: u64
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::expected_hits_per_item: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::frontier_density_bps: u16
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::graph_edge_count: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::graph_node_count: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::hot_opcode_count: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::hot_window_count: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::max_compute_invocations_per_workgroup: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::max_compute_workgroups_per_dimension: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::max_priority_age: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::max_workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::memory_pressure_bps: u16
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::queue_len: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::requested_hit_capacity: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::requested_worker_groups: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::requeue_count: u64
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRequest::resident_device_bytes: u64
-pub vyre_runtime::resident_work_queue::scaling::ResidentQueuePressure::Balanced
-pub vyre_runtime::resident_work_queue::scaling::ResidentQueuePressure::Empty
-pub vyre_runtime::resident_work_queue::scaling::ResidentQueuePressure::Light
-pub vyre_runtime::resident_work_queue::scaling::ResidentQueuePressure::Saturated
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::conservative_compile_ns: u64
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::conservative_dispatch_ns: u64
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::conservative_record: vyre_driver::autotune_store::AutotuneRecord
@@ -1837,71 +1728,3 @@ pub vyre_runtime::uring::NvmeGpuIngestTelemetry::submitted_reads: u64
 pub vyre_runtime::uring::RegisteredIoDestination::buf_index: u16
 pub vyre_runtime::uring::RegisteredIoDestination::handle: u32
 pub vyre_runtime::uring::RegisteredIoDestination::target_offset: u64
-pub vyre_runtime::uring::driver::CompletedIngest::byte_count: u32
-pub vyre_runtime::uring::driver::CompletedIngest::slot: u32
-pub vyre_runtime::uring::driver::CompletedIngest::tag: u32
-pub vyre_runtime::uring::driver::NativeReadPath::GpuDirectNvmePassthrough
-pub vyre_runtime::uring::driver::NativeReadPath::RegisteredMappedRead
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::completed_bytes: u64
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::completed_reads: u64
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::cpu_bounce_bytes: u64
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::failed_completions: u64
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::gpudirect_nvme_submissions: u64
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::registered_mapped_read_submissions: u64
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::submitted_bytes: u64
-pub vyre_runtime::uring::driver::NvmeGpuIngestTelemetry::submitted_reads: u64
-pub vyre_runtime::uring::gpudirect::GpuDirectCapability::Available
-pub vyre_runtime::uring::gpudirect::GpuDirectCapability::Available::stats: alloc::string::String
-pub vyre_runtime::uring::gpudirect::GpuDirectCapability::FeatureDisabled
-pub vyre_runtime::uring::gpudirect::GpuDirectCapability::Unavailable
-pub vyre_runtime::uring::gpudirect::GpuDirectCapability::Unavailable::reason: &'static str
-pub vyre_runtime::uring::io_loop::RegisteredIoDestination::buf_index: u16
-pub vyre_runtime::uring::io_loop::RegisteredIoDestination::handle: u32
-pub vyre_runtime::uring::io_loop::RegisteredIoDestination::target_offset: u64
-pub vyre_runtime::uring::ring::io_cqring_offsets::cqes: u32
-pub vyre_runtime::uring::ring::io_cqring_offsets::flags: u32
-pub vyre_runtime::uring::ring::io_cqring_offsets::head: u32
-pub vyre_runtime::uring::ring::io_cqring_offsets::overflow: u32
-pub vyre_runtime::uring::ring::io_cqring_offsets::resv1: u32
-pub vyre_runtime::uring::ring::io_cqring_offsets::resv2: u64
-pub vyre_runtime::uring::ring::io_cqring_offsets::ring_entries: u32
-pub vyre_runtime::uring::ring::io_cqring_offsets::ring_mask: u32
-pub vyre_runtime::uring::ring::io_cqring_offsets::tail: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::array: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::dropped: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::flags: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::head: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::resv1: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::resv2: u64
-pub vyre_runtime::uring::ring::io_sqring_offsets::ring_entries: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::ring_mask: u32
-pub vyre_runtime::uring::ring::io_sqring_offsets::tail: u32
-pub vyre_runtime::uring::ring::io_uring_cqe::flags: u32
-pub vyre_runtime::uring::ring::io_uring_cqe::res: i32
-pub vyre_runtime::uring::ring::io_uring_cqe::user_data: u64
-pub vyre_runtime::uring::ring::io_uring_params::cq_entries: u32
-pub vyre_runtime::uring::ring::io_uring_params::cq_off: vyre_runtime::uring::ring::io_cqring_offsets
-pub vyre_runtime::uring::ring::io_uring_params::features: u32
-pub vyre_runtime::uring::ring::io_uring_params::flags: u32
-pub vyre_runtime::uring::ring::io_uring_params::resv: [u32; 3]
-pub vyre_runtime::uring::ring::io_uring_params::sq_entries: u32
-pub vyre_runtime::uring::ring::io_uring_params::sq_off: vyre_runtime::uring::ring::io_sqring_offsets
-pub vyre_runtime::uring::ring::io_uring_params::sq_thread_cpu: u32
-pub vyre_runtime::uring::ring::io_uring_params::sq_thread_idle: u32
-pub vyre_runtime::uring::ring::io_uring_params::wq_fd: u32
-pub vyre_runtime::uring::ring::io_uring_sqe::__pad2: [u64; 1]
-pub vyre_runtime::uring::ring::io_uring_sqe::addr3: u64
-pub vyre_runtime::uring::ring::io_uring_sqe::addr: u64
-pub vyre_runtime::uring::ring::io_uring_sqe::buf_index: u16
-pub vyre_runtime::uring::ring::io_uring_sqe::fd: i32
-pub vyre_runtime::uring::ring::io_uring_sqe::file_index: i32
-pub vyre_runtime::uring::ring::io_uring_sqe::flags: u8
-pub vyre_runtime::uring::ring::io_uring_sqe::ioprio: u16
-pub vyre_runtime::uring::ring::io_uring_sqe::len: u32
-pub vyre_runtime::uring::ring::io_uring_sqe::op_flags: u32
-pub vyre_runtime::uring::ring::io_uring_sqe::opcode: u8
-pub vyre_runtime::uring::ring::io_uring_sqe::personality: u16
-pub vyre_runtime::uring::ring::io_uring_sqe::user_data: u64
-pub vyre_runtime::uring::ring::io_uring_sqe::user_data_or_off: u64
-pub vyre_runtime::uring::stream::Iovec::iov_base: *mut core::ffi::c_void
-pub vyre_runtime::uring::stream::Iovec::iov_len: usize

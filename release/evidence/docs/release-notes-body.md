@@ -1528,6 +1528,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   gate without a row and a row without a gate both fail. A gate that owns a
   generated artifact checks it against the tree and rewrites it under
   `--write`, so regeneration is never a subcommand of its own.
+- Every module directory under a `src/` tree is entered through its own
+  `mod.rs`. The workspace carried both layouts at once: 363 directories had a
+  `mod.rs` while 113 modules were a file sitting beside the directory holding
+  their children, so where a module began depended on which crate you were
+  reading. The 113 files moved into their directories, and the 189 `path`
+  attributes that had been pointing the compiler back out of those directories
+  are deleted, because the default resolution now finds every child. No item
+  moved between modules and no public path changed.
 - Eleven builders computed their own buffer cell count and wrote their own
   overflow message. `vyre_primitives::math::matrix_cells` and
   `square_matrix_cells` now own both: the count of a `rows x cols` operand, the
@@ -2186,6 +2194,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   buffer of count 1 is declared, and a trap program is IR composed out of IR,
   so neither crate is its home. The declared output is an `Option` argument
   because that is the whole difference between the two former copies.
+- `rule_tree` is a module of the xtask library. Two binaries each declared it
+  with a `path` attribute pointing into `src/bin/`, which compiled the same
+  layout rules twice and put a shared module in the directory reserved for
+  binary roots. Both binaries now use `xtask::rule_tree`.
 - Five domains left `vyre-primitives` for `vyre-libs`, because an operation
   belongs in `vyre-primitives` only when it cannot be composed, meaning it
   needs its own backend emitter arm and its own reference-interpreter arm. None
@@ -2520,6 +2532,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every crate to find the rows describing one, and the generated per-crate page
   is what answers the question. The section now links `docs/testing/<crate>.md`
   and names the TOML as its authority.
+- Seven modules whose source file lived outside the directory of the module
+  that declared it are moved inside it. A `path` attribute was carrying each
+  one across a directory boundary: the typecheck critical-contract tests, the
+  resident work queue telemetry tests, the C preprocessor GPU byte filter and
+  its eleven program files, the validate rule-pipeline tests, the fusion tests,
+  the resident planner contracts (which were named `core_tests` two directories
+  up), and the reference round-robin node stepper. Each now sits under the
+  module it belongs to and is declared without an attribute. The fusion tests
+  had two declaring owners, the parent module and the file they prove; only the
+  file that proves them declares them now.
 - The contract that a failing xtask command says why it failed judges the exit
   itself. It used to match one shape of the original defect, an `if` whose
   condition named a blocker and whose branch exited, and the gate architecture
@@ -3881,6 +3903,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   while the edge enables `full` and `matching-regex`, so the derived crate
   graph described a build nothing performs. The row now names both, and the
   graph is regenerated from it.
+- The runtime publishes 4 items at more than one path, down from the recorded
+  119, and the pin records it. Deleting the re-export-only `scaling` module and
+  making the uring submodules private removed 115 second paths; the committed
+  snapshots are refreshed to the surface that remains.
 - The sweep runner's name has one owner. `gates` was a literal in the
   dispatcher, in the generated help and in the check that every subcommand a
   workflow names is dispatchable, and that check compared against the gate

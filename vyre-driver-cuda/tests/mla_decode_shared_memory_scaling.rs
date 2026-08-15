@@ -300,7 +300,7 @@ fn mla_decode_head_dim_64_exactly_at_cap_matches_cpu() {
 /// memory.
 ///
 /// Second bug locked out: the diagnostic regressing to the unhelpful one.
-/// Before the pre-check in `vyre-driver-cuda/src/backend/host_dispatch.rs`,
+/// Before the pre-check in `vyre-driver-cuda/src/backend/host_dispatch/mod.rs`,
 /// this surfaced as `CUDA_ERROR_INVALID_PTX` from `cuModuleLoadData`, which
 /// points at PTX ISA support for sm_120 when the cause is the scratch
 /// request. The message must keep naming the measured bytes, the cap, and

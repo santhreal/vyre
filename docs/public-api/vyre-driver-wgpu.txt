@@ -77,7 +77,6 @@ pub const vyre_driver_wgpu::runtime::serializer::MAX_SERIALIZED_PART_BYTES: usiz
 pub const vyre_driver_wgpu::runtime::serializer::encode_parts::MAX_SERIALIZED_PART_BYTES: usize
 pub const vyre_driver_wgpu::spirv_backend::SPIRV_BACKEND_ID: &str
 pub enum vyre_driver_wgpu::engine::graph::GpuResource
-pub enum vyre_driver_wgpu::runtime::readback_ring::SlotState
 pub enum vyre_driver_wgpu::runtime::serializer::SerializerError
 pub fn vyre_driver_wgpu::DispatchArena::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver_wgpu::DispatchArena::new(device: wgpu::api::device::Device, queue: wgpu::api::queue::Queue, config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> Self
@@ -557,10 +556,6 @@ pub vyre_driver_wgpu::runtime::readback_ring::GpuSlot::state: alloc::sync::Arc<c
 pub vyre_driver_wgpu::runtime::readback_ring::RingStats::dispatches: core::sync::atomic::AtomicU64
 pub vyre_driver_wgpu::runtime::readback_ring::RingStats::peak_inflight: core::sync::atomic::AtomicU64
 pub vyre_driver_wgpu::runtime::readback_ring::RingStats::readback_stalls: core::sync::atomic::AtomicU64
-pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Error
-pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Free
-pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Pending
-pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Ready
 pub vyre_driver_wgpu::runtime::router::Override::Explicit(&'a str)
 pub vyre_driver_wgpu::runtime::router::Override::FromEnv
 pub vyre_driver_wgpu::runtime::router::Override::None
