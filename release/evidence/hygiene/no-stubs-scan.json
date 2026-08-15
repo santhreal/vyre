@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=c768c66d122670599138b5a439342ae2e1a855268eb9effcf3fcb5edbd1407a8",
+  "source_fingerprint": "git:3356274ef6472913070264718bbc2ed30b6b9490:dirty=true:worktree=59fc35f455859d98a29fddf840ef45b51758163a2e7fe10958fc497788707a74",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -74,6 +74,30 @@
       "line": 165,
       "pattern": "placeholder_text",
       "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
+    },
+    {
+      "path": "xtask/src/gates/lint_hygiene.rs",
+      "line": 224,
+      "pattern": "placeholder_text",
+      "text": "format!(\"unsafe block with a placeholder SAFETY comment: {justification}\"),"
+    },
+    {
+      "path": "xtask-evidence/src/report_fixture.rs",
+      "line": 68,
+      "pattern": "placeholder_text",
+      "text": "/// it rather than carrying a placeholder."
+    },
+    {
+      "path": "xtask-registry/src/gates/cross_target.rs",
+      "line": 245,
+      "pattern": "placeholder_text",
+      "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
+    },
+    {
+      "path": "xtask-registry/src/gates/cross_target.rs",
+      "line": 248,
+      "pattern": "placeholder_text",
+      "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     }
   ],
   "release_blocking_findings": [],

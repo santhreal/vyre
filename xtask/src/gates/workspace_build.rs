@@ -1,4 +1,4 @@
-//! The gates that run a full cargo build of the workspace.
+//! The gates that build the whole workspace.
 //!
 //! These four used to be steps inside a `check-cat-a` composite, which was a
 //! registered subcommand with its own control flow, its own pass summary and no

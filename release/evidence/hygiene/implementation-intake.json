@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:b1f19c47ec6930df539b4b719a7aa1d3efedbaf8:dirty=true:worktree=8a9764d2540fa21ea90837da3dd8da0211c6a556e715305ca74d4be7ebdfcc13",
+  "source_fingerprint": "git:3356274ef6472913070264718bbc2ed30b6b9490:dirty=true:worktree=59fc35f455859d98a29fddf840ef45b51758163a2e7fe10958fc497788707a74",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -9,24 +9,6 @@
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "TODO",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "docs",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "invalid_cargo_full_xtask",
-      "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "docs",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
       "release_blocker": false,
       "count": 1
     },
@@ -56,15 +38,6 @@
       "pattern": "panic_macro",
       "release_blocker": false,
       "count": 1
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": false,
-      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -114,15 +87,6 @@
     {
       "owner_lane": "driver_cuda",
       "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "driver_cuda",
-      "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "TODO",
@@ -146,15 +110,6 @@
       "pattern": "expect_call",
       "release_blocker": false,
       "count": 8
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": false,
-      "count": 1
     },
     {
       "owner_lane": "driver_shared",
@@ -312,20 +267,83 @@
     {
       "owner_lane": "testing_evidence",
       "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
       "count": 1
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "expect_call",
+      "release_blocker": false,
+      "count": 19
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "panic_macro",
+      "release_blocker": false,
+      "count": 3
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "std_thread_sleep",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "thread_sleep",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "tokio_sleep",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "unwrap_call",
+      "release_blocker": false,
+      "count": 3
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 4
     },
     {
       "owner_lane": "testing_evidence",

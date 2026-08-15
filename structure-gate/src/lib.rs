@@ -1,7 +1,7 @@
 //! Workspace structural gate: crate roster, one operation identity per
 //! semantic operation, and one home per concept.
 //!
-//! Run it with `cargo run -p structure-gate`. It reads source text and depends
+//! Run it with `./cargo_full run -p structure-gate`. It reads source text and depends
 //! on no vyre crate, so it still judges the workspace while the workspace does
 //! not compile.
 //!
@@ -16,7 +16,7 @@
 //! two, which is the defect this gate exists to make impossible. A tier
 //! boundary is not a reason to re-register a kernel under a second id.
 //!
-//! Re-verifying a change to this gate means running `cargo test -p
+//! Re-verifying a change to this gate means running `./cargo_full test -p
 //! structure-gate`, which rebuilds first. The contract tests read the live tree
 //! when they run but carry their rules from when they were built, and a target
 //! directory shared by several checkouts used to hand this crate a binary built

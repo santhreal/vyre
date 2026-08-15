@@ -33,7 +33,7 @@ const DISPATCHER_PACKAGE: &str = "xtask";
 pub fn dispatcher() -> &'static Path {
     static DISPATCHER: LazyLock<PathBuf> = LazyLock::new(|| {
         let current = std::env::current_exe().unwrap_or_else(|error| {
-            eprintln!("Fix: cannot resolve the running binary: {error}. Rebuild it with `cargo build -p {DISPATCHER_PACKAGE}`.");
+            eprintln!("Fix: cannot resolve the running binary: {error}. Rebuild it with `./cargo_full build -p {DISPATCHER_PACKAGE}`.");
             std::process::exit(1);
         });
         dispatcher_from(&current).unwrap_or_else(|| {
@@ -70,7 +70,7 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
     let output = output.map_err(|error| {
         GateError::new(
             format!("cannot run {} for `{name}`: {error}", executable.display()),
-            format!("rebuild it with `cargo build -p {package}`"),
+            format!("rebuild it with `./cargo_full build -p {package}`"),
         )
     })?;
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -81,7 +81,7 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
                 output.status.code().unwrap_or(-1),
                 stderr.trim()
             ),
-            format!("run `cargo xtask {name}` and fix what it reports"),
+            format!("run `./cargo_full run --bin xtask -- {name}` and fix what it reports"),
         ));
     }
     serde_json::from_slice(&output.stdout).map_err(|error| {
@@ -117,11 +117,11 @@ pub fn run_delegated_main(package: &str, purpose: &str, gates: &[&dyn Gate]) -> 
         std::process::exit(0);
     }
     let Some(name) = args.get(1) else {
-        eprintln!("Fix: missing subcommand. Run `cargo xtask --help`.");
+        eprintln!("Fix: missing subcommand. Run `./cargo_full run --bin xtask -- --help`.");
         std::process::exit(1);
     };
     let Some(gate) = gates.iter().find(|gate| gate.name() == name.as_str()) else {
-        eprintln!("Fix: `{name}` is not implemented in {package}. Run `cargo xtask --help`.");
+        eprintln!("Fix: `{name}` is not a subcommand of {package}. Run `./cargo_full run --bin xtask -- --help`.");
         std::process::exit(1);
     };
     let root = crate::checkout::checkout_root();
@@ -159,12 +159,12 @@ pub fn print_dispatch_help(
     subcommands: impl IntoIterator<Item = &'static str>,
 ) {
     println!("USAGE");
-    println!("  cargo run -p {package} -- <subcommand> [options]");
+    println!("  ./cargo_full run -p {package} -- <subcommand> [options]");
     println!();
     println!("{purpose}");
     println!();
-    println!("Run `cargo xtask --help` for every workspace command, and");
-    println!("`cargo xtask <subcommand> --help` for one command's options.");
+    println!("Run `./cargo_full run --bin xtask -- --help` for every command, and");
+    println!("`./cargo_full run --bin xtask -- <subcommand> --help` for one command.");
     println!();
     println!("SUBCOMMANDS:");
     for name in subcommands {

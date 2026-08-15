@@ -1610,6 +1610,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   vyre-grammar-gen, vyre-megakernel, vyre-reference and vyre-runtime publish
   each item at one path; submodules that exist because a file was split are
   private and their owning module re-exports what it holds.
+- A composition region is wrapped through vyre_foundation::composition and
+  nowhere else. vyre_libs::region re-exported the three wrappers under shorter
+  aliases, vyre_libs::operation_catalog re-exported those aliases again, and
+  vyre_primitives::hardware::region reimplemented all three over Node::Region,
+  so one fact had four names and two implementations. Both modules are deleted
+  and every caller in vyre-libs and vyre-primitives names wrap_region,
+  wrap_anonymous_region, wrap_child_region, tag_program and
+  reparent_program_children directly, as the rest of the workspace already did.
+  The dialect template, the authoring guide and the gate fix messages name the
+  same path.
 - The benchmark harness delegates the source fingerprint and the dirty worktree
   digest to xtask::source_provenance, the one producer. Two implementations
   kept in agreement by a test were one duplication; the test now proves the
@@ -2686,6 +2696,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Fixed
 
+- The wrapper rule reads an instruction, not any sentence containing the word
+  cargo. A comment is a finding when a run verb comes before the command and
+  the command is quoted as code, because prose says a full cargo build while an
+  instruction quotes what to type. Sentences describing what a build sees were
+  previously findings whose only repair was to describe the build less
+  precisely.
 - Each crate README links the testing guide rendered for that crate instead of
   the data file every guide is rendered from. The generated Testing section
   pointed at `docs/testing/TESTING.toml`, which sends a reader to a table of
@@ -2716,6 +2732,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   nothing. It now derives every nonzero `process::exit` in the xtask crates at
   run time and requires an enclosing block to write the cause on either stream,
   so a silent exit added anywhere in the tooling fails it.
+- A gate that detects a stub may spell it. A code-call pattern found only
+  inside a string literal is a rule definition, the same reason a doc comment
+  was already exempt, so a pattern table row reading text equals todo-open no
+  longer reports the gate that owns the rule. A real call still blocks the
+  release. The two lists of files that own a rule are named once and a test
+  requires every row to resolve, after two rows had outlived the tree they
+  named.
 - A test that compiles a scratch crate builds it in the cargo build directory.
   vyre_test_support::monorepo::cargo_target_directory reports where cargo is
   writing this run's artifacts, resolved from the running test binary, so no
@@ -2737,6 +2760,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   them was a format inside a return Err. Each file's note now ends with its
   error-path count, and every hot-path budget in
   docs/optimization/HOT_PATHS.toml is lowered to the measurement that remains.
+- Every command this workspace tells a reader to run names the wrapper. The
+  dispatcher usage text, its rebuild and help messages, the scaffold and audit
+  binaries, the structure gate header, the error catalog regeneration note, the
+  conformance witness fix, the benchmark crossback header and the optimization
+  docs note all spelled a bare cargo invocation, which builds with a different
+  configuration than the wrapper in the same checkout.
 - `abstraction-gate` no longer demands an operation registration for a region
   that names no operation. Two prefixes mean the same thing: `inline::`, minted
   by `reparent_entry_node` for a body the composer reparented onto its caller,
@@ -4086,6 +4115,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now proves it. It named a path only the core table listed, so it asserted a
   core cap and never exercised the precedence; cap_from takes both tables, and
   the test injects one path into both and asserts the tighter number wins.
+- The release hygiene scan reads every xtask source file. It named thirteen
+  command modules by hand, so a release command added beside them was never
+  scanned and a renamed module kept its row while resolving to nothing, which
+  reads as coverage. The set is the tree now, and one owner answers whether a
+  path holds test source for both the workspace walk and the tooling walk.
 - The crate ownership registry records the feature selection each dependency
   edge is built with. The `xtask-registry` to `vyre-libs` row named no features
   while the edge enables `full` and `matching-regex`, so the derived crate

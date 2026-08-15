@@ -62,7 +62,7 @@ fn build() -> Result<String, String> {
     let mut output = String::new();
     output.push_str(
         "# Generated from the live vyre-foundation optimizer registry by \
-         `cargo xtask optimization-docs --write`.\n\
+         `./cargo_full run --bin xtask -- optimization-docs --write`.\n\
          # Edit the pass registration metadata, not this file. The optimizer has one \
          semantic layer\n\
          # before verified lowering; concrete target strategy is not registered in this \

@@ -685,7 +685,7 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
                 observation
                     .first_error
                     .as_deref()
-                    .unwrap_or("cargo check failed")
+                    .unwrap_or("the feature check reported no error line")
             )
         });
         text.push_str(&format!("reason = {}\n", quote(&reason)));

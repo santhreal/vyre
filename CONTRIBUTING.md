@@ -21,7 +21,7 @@ Before claiming a backend test failure is environmental, run:
 
 ```bash
 nvidia-smi
-cargo test -p vyre-driver-wgpu --test capability_contract -- --nocapture
+./cargo_full test -p vyre-driver-wgpu --test capability_contract -- --nocapture
 ```
 
 Tests must fail loudly when a GPU probe is broken. Do not add silent CPU fallbacks or `skipped: no GPU` behavior for GPU-required lanes.
@@ -86,15 +86,15 @@ repository, and keep `sccache` on `PATH`.
 Public API or crate boundary:
 
 ```bash
-./cargo_full xtask release-gate
+./cargo_full run --bin xtask -- release-gate
 ./cargo_full test --workspace
 ```
 
 LEGO primitive, composite op, or registry behavior:
 
 ```bash
-./cargo_full xtask gate1
-./cargo_full xtask lego-audit
+./cargo_full run --bin xtask -- gate1
+./cargo_full run --bin xtask -- lego-audit
 ./cargo_full test -p vyre-primitives --all-features
 ```
 

@@ -1,75 +1,8 @@
 {
-  "source_fingerprint": "git:b1f19c47ec6930df539b4b719a7aa1d3efedbaf8:dirty=true:worktree=8a9764d2540fa21ea90837da3dd8da0211c6a556e715305ca74d4be7ebdfcc13",
+  "source_fingerprint": "git:3356274ef6472913070264718bbc2ed30b6b9490:dirty=true:worktree=f7bc1830f4831f9ec8c7c0416d06cb5d99e031568131a7e9f36ee0c8a64f3745",
   "schema_version": 1,
   "scan": "cargo-wrapper",
-  "findings": [
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 4,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! Run it with `cargo run -p structure-gate`. It reads source text and depends"
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 19,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! Re-verifying a change to this gate means running `cargo test -p"
-    },
-    {
-      "path": "vyre-driver/src/backend/error_catalog.rs",
-      "line": 30,
-      "pattern": "raw_workspace_cargo",
-      "text": "out.push_str(\"# Regenerate: VYRE_WRITE_ERROR_CATALOG=1 cargo test -p vyre-driver\\n\");"
-    },
-    {
-      "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
-      "line": 77,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! These are `#[ignore]`d so `cargo test -p vyre-driver-cuda --lib` stays fast."
-    },
-    {
-      "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
-      "line": 80,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! cargo test -p vyre-driver-cuda --lib -- --ignored --nocapture host_cost"
-    },
-    {
-      "path": "vyre-foundation/src/fp_parity.rs",
-      "line": 61,
-      "pattern": "raw_workspace_cargo",
-      "text": "/// contracts, so `cargo test --workspace --all-features`, which the release"
-    },
-    {
-      "path": "conform/vyre-conform/src/lens.rs",
-      "line": 169,
-      "pattern": "raw_workspace_cargo",
-      "text": "Fix: regenerate the witness via `cargo xtask trace-f32 {}` or repair the reference.\","
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "line": 24,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo test -p vyre-driver-wgpu --test capability_contract -- --nocapture"
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "line": 89,
-      "pattern": "invalid_cargo_full_xtask",
-      "text": "./cargo_full xtask release-gate"
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "line": 96,
-      "pattern": "invalid_cargo_full_xtask",
-      "text": "./cargo_full xtask gate1"
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "line": 97,
-      "pattern": "invalid_cargo_full_xtask",
-      "text": "./cargo_full xtask lego-audit"
-    }
-  ],
+  "findings": [],
   "release_blocking_findings": [],
   "blockers": []
 }

@@ -1,7 +1,7 @@
 //! Audit every `rules/launch/<slug>` rule contract and report the missing
 //! contract or truth-data directories.
 //!
-//! Run via `cargo run -p xtask --bin audit_rule_contracts`. The binary exits
+//! Run via `./cargo_full run -p xtask --bin audit_rule_contracts`. The binary exits
 //! non-zero when any rule deviates from `rules/SCHEMA.md`. `rule_tree` owns the
 //! layout it audits, so the auditor and `scaffold_rule` cannot disagree.
 

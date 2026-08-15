@@ -28,7 +28,7 @@ const MAX_TABLE_BYTES: u64 = 262_144;
 const TIMING_ITERATIONS: usize = 100;
 
 const BANNER: &str = "# cross-backend comparison\n\n\
-    Produced by `cargo xtask bench-crossback`. ms values are CPU-reference\n\
+    Produced by `./cargo_full run --bin xtask -- bench-crossback`. ms values are CPU-reference\n\
     oracle wall-clock per call. GPU release evidence comes from the dedicated\n\
     CUDA and WGPU benchmark suites.\n\n";
 

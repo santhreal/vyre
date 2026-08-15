@@ -166,7 +166,7 @@ pub fn witness(entry: &SemanticOperation) -> LensOutcome {
                         detail: format!(
                             "CPU reference output diverged from declared expected_output: {detail}\n\
                              ACTUAL:\n{:?}\nEXPECTED:\n{:?}\n\
-                             Fix: regenerate the witness via `cargo xtask trace-f32 {}` or repair the reference.",
+                             Fix: regenerate the witness via `./cargo_full run --bin xtask -- trace-f32 {}` or repair the reference.",
                             outputs, expected_buffers, entry.id
                         ),
                     };

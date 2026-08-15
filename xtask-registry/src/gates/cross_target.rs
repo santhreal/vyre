@@ -198,7 +198,7 @@ fn first_error_line(stderr: &str) -> String {
     stderr
         .lines()
         .find(|line| line.starts_with("error"))
-        .unwrap_or("cargo check failed with no error line")
+        .unwrap_or("the target check reported no error line")
         .trim()
         .to_string()
 }

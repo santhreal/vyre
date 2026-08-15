@@ -1,6 +1,6 @@
 //! Scaffold one launch-rule contract and its truth-data directories.
 //!
-//! Run via `cargo run -p xtask --bin scaffold_rule -- <slug>`.
+//! Run via `./cargo_full run -p xtask --bin scaffold_rule -- <slug>`.
 //! The command writes a contract plus positive, negative, evasion and
 //! cross-file case directories and the CVE replay, property, differential and
 //! end-to-end truth manifests, all under `rules/launch/<slug>/` in this

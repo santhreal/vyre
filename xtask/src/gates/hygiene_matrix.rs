@@ -1352,6 +1352,23 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     ),
 ];
 
+/// Whether a path holds test source rather than the production surface.
+///
+/// One owner for the question: the root walk and the xtask walk both ask it, and
+/// a scan that answered it differently would hold one tree to a rule it did not
+/// hold the other to.
+fn is_test_source_path(path: &Path) -> bool {
+    let path = path.display().to_string();
+    path.contains("/tests/")
+        || path.contains("/benches/")
+        || path.contains("/examples/")
+        || path.ends_with("/tests.rs")
+        || path.ends_with("_test.rs")
+        || path.ends_with("_tests.rs")
+        || path.contains("_tests_")
+        || path.contains("_test_")
+}
+
 fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for entry in tree_walk::pruned_by(root, |name| {
         !BUILD_OUTPUT_AND_VCS.contains(&name) && name != "release" && !is_xtask_tree_directory(name)
@@ -1370,16 +1387,7 @@ fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
         if path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs") {
             continue;
         }
-        let path_string = path.display().to_string();
-        if path_string.contains("/tests/")
-            || path_string.contains("/benches/")
-            || path_string.contains("/examples/")
-            || path_string.ends_with("/tests.rs")
-            || path_string.ends_with("_test.rs")
-            || path_string.ends_with("_tests.rs")
-            || path_string.contains("_tests_")
-            || path_string.contains("_test_")
-        {
+        if is_test_source_path(path) {
             continue;
         }
         scan_file(path, scanned_files, findings);
@@ -1426,29 +1434,6 @@ fn scan_source_inspection_test_files(
     }
 }
 
-/// The xtask command modules whose own source the release hygiene scan reads.
-///
-/// `release_gate` was a composite subcommand that ran other subcommands. It is
-/// the `prepublish` subset now, and its lockfile step is the `lockfile-clean`
-/// gate, so this reads `lockfile` in its place. A name here that resolves to no
-/// source file scans nothing while reading as coverage, which is what the
-/// resolution test below prevents.
-const RELEASE_XTASK_COMMAND_MODULES: &[&str] = &[
-    "backend_matrix",
-    "conformance_matrix",
-    "feature_matrix",
-    "hygiene_matrix",
-    "lockfile",
-    "metadata_matrix",
-    "optimization_corpus",
-    "optimization_matrix",
-    "release_benchmarks",
-    "release_conformance",
-    "release_evidence",
-    "version_matrix",
-    "vyre_release_gate",
-];
-
 /// Whether a directory name is one of the xtask tooling crates.
 fn is_xtask_tree_directory(name: &str) -> bool {
     name == "xtask" || name.starts_with("xtask-")
@@ -1475,60 +1460,35 @@ fn xtask_source_roots(root: &Path) -> Vec<PathBuf> {
     roots
 }
 
-fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
-    for module in RELEASE_XTASK_COMMAND_MODULES {
-        match resolve_xtask_module_source(root, module) {
-            Ok(path) => scan_file(&path, scanned_files, findings),
-            Err(error) => findings.push(HygieneFinding {
-                path: root
-                    .join("xtask/src")
-                    .join(format!("{module}.rs"))
-                    .display()
-                    .to_string(),
-                line: 1,
-                pattern: "unreadable_source_file",
-                text: error,
-                test: None,
-            }),
-        }
-    }
-}
-
-/// Find the source file of an xtask command module.
+/// Hold every xtask source file to the same command hygiene as the tree it gates.
 ///
-/// A command module is either `<module>.rs` or `<module>/mod.rs`, and it sits
-/// either at the top of an xtask crate's `src` or inside one of its group
-/// directories. Neither which group owns a module nor which xtask crate it
-/// ended up in is a layout decision this scan has a stake in, so search every
-/// xtask source root and every group directory under it instead of pinning the
-/// path a module happens to have today.
-fn resolve_xtask_module_source(root: &Path, module: &str) -> Result<PathBuf, String> {
-    let mut search_roots = Vec::new();
+/// This read thirteen hand-typed command modules, so a release command added
+/// beside them was never scanned, and a renamed module could keep its row here
+/// and read as coverage while resolving to nothing. The set is the tree: every
+/// xtask crate's non-test source, which cannot fall out of date.
+fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for source_root in xtask_source_roots(root) {
-        search_roots.push(source_root.clone());
-        if let Ok(entries) = fs::read_dir(&source_root) {
-            let mut groups: Vec<PathBuf> = entries
-                .flatten()
-                .map(|entry| entry.path())
-                .filter(|path| path.is_dir())
-                .collect();
-            groups.sort();
-            search_roots.extend(groups);
+        for entry in tree_walk::pruned(&source_root, BUILD_OUTPUT_AND_VCS) {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) => {
+                    push_walk_error(&source_root, &error, findings);
+                    continue;
+                }
+            };
+            let path = entry.path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                continue;
+            }
+            if is_test_source_path(path) {
+                continue;
+            }
+            if path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs") {
+                continue;
+            }
+            scan_file(path, scanned_files, findings);
         }
     }
-    for base in search_roots {
-        let file = base.join(format!("{module}.rs"));
-        if file.is_file() {
-            return Ok(file);
-        }
-        let module_file = base.join(module).join("mod.rs");
-        if module_file.is_file() {
-            return Ok(module_file);
-        }
-    }
-    Err(format!(
-        "xtask command module `{module}` has no source file"
-    ))
 }
 
 fn scan_release_tooling(
@@ -2325,7 +2285,9 @@ fn line_contains_blocked_pattern(
     lower: &str,
 ) -> bool {
     let trimmed = line.trim();
-    if is_rust_doc_comment_line(trimmed) && is_code_call_blocker(name) {
+    if is_code_call_blocker(name)
+        && (is_rust_doc_comment_line(trimmed) || pattern_only_inside_literal(pattern, line))
+    {
         return false;
     }
     if is_hygiene_rule_source(path) {
@@ -2368,6 +2330,19 @@ fn is_code_call_blocker(name: &str) -> bool {
     )
 }
 
+/// Whether a code-call pattern appears only inside string literals on `line`.
+///
+/// A gate that detects `todo!(` has to spell `todo!(` to detect it, and a
+/// pattern table row reading `text: "todo!(",` is that spelling, not a stub.
+/// The rule already exempted a doc comment for the same reason. This is the
+/// other half: a string literal names a call, it does not make one. It applies
+/// to the code-call family only, because the hidden-fallback family is meant to
+/// read prose and printed excuses, where the literal IS the evidence.
+fn pattern_only_inside_literal(pattern: &str, line: &str) -> bool {
+    let masked = crate::gates::scan::mask_literals(line);
+    line.contains(pattern) && !masked.contains(pattern)
+}
+
 fn is_hidden_fallback_pattern(name: &str) -> bool {
     matches!(
         name,
@@ -2400,6 +2375,70 @@ fn line_cfg_not_gpu_hides_work(lower: &str) -> bool {
         || lower.contains("success")
 }
 
+/// The workspace commands a reader is told to run through the wrapper.
+const RAW_CARGO_COMMANDS: [&str; 14] = [
+    "cargo build",
+    "cargo check",
+    "cargo test",
+    "cargo clippy",
+    "cargo doc",
+    "cargo fmt",
+    "cargo run",
+    "cargo xtask",
+    "cargo bench",
+    "cargo publish",
+    "cargo machete",
+    "cargo udeps",
+    "cargo fuzz",
+    "cargo public-api",
+];
+
+/// Whether a comment tells a reader to run the command it names.
+///
+/// A comment that says what cargo does with a member, or which build a rule is
+/// about, is a description: the sentence is true and there is nothing to fix in
+/// it. A comment that tells a maintainer to run something is an instruction,
+/// and an instruction in this workspace names the wrapper.
+///
+/// Two signals have to agree. The verb comes before the command, because the
+/// command itself contains the word run and matching the whole line read every
+/// sentence that mentioned `cargo run` as an order to run it. And the command
+/// is delimited as code, because prose says a full cargo build while an
+/// instruction quotes what to type: a first attempt on the verb alone read
+/// `the gates that run a full cargo build` as an order.
+fn comment_instructs_a_run(before_command: &str) -> bool {
+    let quoted_as_code = before_command.ends_with('`')
+        || before_command.ends_with('"')
+        || before_command.ends_with("`./")
+        || before_command.ends_with("\"./");
+    if !quoted_as_code {
+        return false;
+    }
+    let lower = before_command.to_ascii_lowercase();
+    [
+        "run ",
+        "runs ",
+        "running ",
+        "invoke",
+        "rebuild",
+        "regenerate",
+        "reproduce",
+        "re-run",
+        "rerun",
+        "reverify",
+        "re-verify",
+        "via ",
+        "with ",
+    ]
+    .iter()
+    .any(|verb| lower.contains(verb))
+}
+
+/// Whether a line is a comment rather than code or an emitted string.
+fn is_comment_line(trimmed: &str) -> bool {
+    trimmed.starts_with("//") || trimmed.starts_with("* ") || trimmed == "*"
+}
+
 fn line_contains_raw_workspace_cargo(line: &str) -> bool {
     let trimmed = line.trim();
     if trimmed.is_empty()
@@ -2415,25 +2454,14 @@ fn line_contains_raw_workspace_cargo(line: &str) -> bool {
     {
         return false;
     }
-    [
-        "cargo build",
-        "cargo check",
-        "cargo test",
-        "cargo clippy",
-        "cargo doc",
-        "cargo fmt",
-        "cargo run",
-        "cargo xtask",
-        "cargo bench",
-        "cargo publish",
-        "cargo machete",
-        "cargo udeps",
-        "cargo fuzz",
-        "cargo public-api",
-    ]
-    .iter()
-    .any(|needle| trimmed.contains(needle))
-        || trimmed.starts_with("cargo +")
+    let Some(offset) = RAW_CARGO_COMMANDS
+        .iter()
+        .filter_map(|needle| trimmed.find(needle))
+        .min()
+    else {
+        return trimmed.starts_with("cargo +");
+    };
+    !is_comment_line(trimmed) || comment_instructs_a_run(&trimmed[..offset])
 }
 
 fn line_contains_invalid_cargo_full_xtask(line: &str) -> bool {
@@ -2463,36 +2491,46 @@ fn is_release_rule_text(trimmed: &str) -> bool {
         || trimmed.contains("No shipped stubs")
 }
 
+/// The files that own a hygiene rule and therefore spell what it forbids.
+///
+/// Two rows named generator scripts that were deleted with the ticket tree they
+/// belonged to, so the list exempted files that do not exist. The test below
+/// reads this array and requires every row to resolve, because an exemption that
+/// names nothing reads as a decision while doing nothing.
+const HYGIENE_RULE_SOURCES: [&str; 8] = [
+    "scripts/check_unsafe_justifications.sh",
+    "scripts/check_primitive_contract.sh",
+    "xtask/src/release/feature_matrix.rs",
+    "xtask/src/gates/hygiene_matrix.rs",
+    "xtask-evidence/src/release/backend_matrix.rs",
+    "xtask-evidence/src/release/vyre_release_gate/mod.rs",
+    "xtask-registry/src/release/optimization_matrix.rs",
+    "xtask-registry/src/gates/whats_similar.rs",
+];
+
+/// The files that own the hidden-fallback rule and spell the prose it catches.
+const HIDDEN_FALLBACK_GUARD_SOURCES: [&str; 7] = [
+    "xtask/src/gates/gpu_loudness.rs",
+    "vyre-lints/src/production_cpu_fallbacks.rs",
+    "vyre-lints/src/gpu_skip_guards.rs",
+    "vyre-lints/src/lib.rs",
+    "vyre-lints/src/main.rs",
+    "vyre-lints/tests/production_cpu_fallbacks.rs",
+    "vyre-lints/tests/gpu_skip_guards.rs",
+];
+
 fn is_hygiene_rule_source(path: &Path) -> bool {
     let normalized = path.to_string_lossy().replace('\\', "/");
-    [
-        "scripts/check_unsafe_justifications.sh",
-        "scripts/check_primitive_contract.sh",
-        "jules_tickets/_generate.py",
-        "jules_tickets/test_dump.py",
-        "xtask/src/release/feature_matrix.rs",
-        "xtask/src/gates/hygiene_matrix.rs",
-        "xtask-evidence/src/release/backend_matrix.rs",
-        "xtask-evidence/src/release/vyre_release_gate/mod.rs",
-        "xtask-registry/src/release/optimization_matrix.rs",
-        "xtask-registry/src/gates/whats_similar.rs",
-    ]
-    .iter()
-    .any(|suffix| normalized.ends_with(suffix))
+    HYGIENE_RULE_SOURCES
+        .iter()
+        .any(|suffix| normalized.ends_with(suffix))
 }
 
 fn is_hidden_fallback_guard_source(path: &Path) -> bool {
     let normalized = path.to_string_lossy().replace('\\', "/");
-    [
-        "vyre-lints/src/production_cpu_fallbacks.rs",
-        "vyre-lints/src/gpu_skip_guards.rs",
-        "vyre-lints/src/lib.rs",
-        "vyre-lints/src/main.rs",
-        "vyre-lints/tests/production_cpu_fallbacks.rs",
-        "vyre-lints/tests/gpu_skip_guards.rs",
-    ]
-    .iter()
-    .any(|suffix| normalized.ends_with(suffix))
+    HIDDEN_FALLBACK_GUARD_SOURCES
+        .iter()
+        .any(|suffix| normalized.ends_with(suffix))
 }
 
 fn contains_word(haystack: &str, needle: &str) -> bool {
@@ -2673,6 +2711,86 @@ mod tests {
         }
     }
 
+    /// WHY: the wrapper rule read every line that spelled a cargo command, so a
+    /// sentence describing what a build does was a finding a reader could only
+    /// clear by describing the build less precisely. An instruction is what the
+    /// rule is about, and the verb that makes it one comes before the command.
+    #[test]
+    fn a_cargo_command_is_a_finding_when_a_comment_tells_a_reader_to_run_it() {
+        for instruction in [
+            "//! Run it with `cargo run -p structure-gate`.",
+            "/// Regenerate the table with `cargo test -p vyre-driver`.",
+            "// rebuild it with `cargo build -p xtask`",
+            "let usage = \"cargo xtask gate1\";",
+            "println!(\"  cargo run -p {package} -- <subcommand>\");",
+        ] {
+            assert!(
+                line_contains_raw_workspace_cargo(instruction),
+                "missed the instruction `{instruction}`"
+            );
+        }
+        for description in [
+            "//! The gates that run a full cargo build of the workspace.",
+            "//! `cargo check -p <member>` is what the plain default build gets.",
+            "// A cargo test target that does not exist fails before it runs.",
+            "//! `cargo check -p <member>` is what the plain default build gets.",
+        ] {
+            assert!(
+                !line_contains_raw_workspace_cargo(description),
+                "read the description `{description}` as an instruction"
+            );
+        }
+    }
+
+    /// WHY: widening the release scan to every xtask source made each gate that
+    /// detects a stub report itself: the pattern table row `text: "todo!(",` is
+    /// how the hot-path scan spells the thing it looks for. A string literal
+    /// names a call and does not make one, which is the same reason a doc
+    /// comment was already exempt. The call itself must still block.
+    #[test]
+    fn a_code_call_named_in_a_literal_is_not_a_call() {
+        let rule_row = "        text: \"todo!(\",";
+        assert!(
+            !line_contains_blocked_pattern(
+                Path::new("/w/xtask/src/gates/hot_path_scan.rs"),
+                "todo_macro",
+                "todo!(",
+                rule_row,
+                &rule_row.to_ascii_lowercase()
+            ),
+            "Fix: a pattern table row is a rule definition, not a stub."
+        );
+        let call = "        todo!(\"finish the lowering\");";
+        assert!(
+            line_contains_blocked_pattern(
+                Path::new("/w/vyre-driver/src/backend/dispatch.rs"),
+                "todo_macro",
+                "todo!(",
+                call,
+                &call.to_ascii_lowercase()
+            ),
+            "Fix: a real todo call must still block the release."
+        );
+    }
+
+    /// WHY: two path lists exempt the files that own a rule from the rule. A row
+    /// naming a file that no longer exists exempts nothing while reading as a
+    /// decision, which is how an exemption list rots into a lie.
+    #[test]
+    fn every_exempted_rule_source_exists() {
+        let root = crate::checkout::checkout_root();
+        for candidate in HYGIENE_RULE_SOURCES
+            .iter()
+            .chain(HIDDEN_FALLBACK_GUARD_SOURCES.iter())
+        {
+            let path = root.join(candidate);
+            assert!(
+                path.is_file(),
+                "Fix: exempted rule source `{candidate}` does not exist; delete the row."
+            );
+        }
+    }
+
     /// WHY: `CHANGELOG.md` is generated from `release/changes`, and a released
     /// entry records what a version did instead of telling a reader what to
     /// run. Scanning it recorded eleven line numbers that every added fragment
@@ -2792,38 +2910,58 @@ mod tests {
         );
     }
 
-    /// WHY: the release hygiene scan names its xtask command modules by module
-    /// name and then has to find the file behind each one. That resolution used
-    /// to assume every command module sat directly in `xtask/src`, so grouping
-    /// the modules into subdirectories turned thirteen of them into
-    /// `unreadable_source_file` release blockers while the modules themselves
-    /// were fine. Pin the contract that matters: every module the scan names
-    /// resolves to a file that exists, wherever the layout puts it.
+    /// WHY: the release hygiene scan named thirteen xtask command modules by
+    /// hand and resolved each to a file. A command added beside them was never
+    /// scanned, and a renamed module kept its row while resolving to nothing,
+    /// which reads as coverage. The scan walks every xtask crate instead, so
+    /// the contract is that a command module the tree holds is scanned, and a
+    /// test source beside it is not.
     #[test]
-    fn every_named_release_command_module_resolves_to_a_source_file() {
+    fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
         let root = crate::checkout::checkout_root();
-        let unresolved: Vec<&str> = RELEASE_XTASK_COMMAND_MODULES
-            .iter()
-            .filter(|module| resolve_xtask_module_source(&root, module).is_err())
-            .copied()
-            .collect();
+        let mut expected = 0usize;
+        for source_root in xtask_source_roots(&root) {
+            for entry in tree_walk::pruned(&source_root, BUILD_OUTPUT_AND_VCS).flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+                if is_test_source_path(path)
+                    || path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs")
+                {
+                    continue;
+                }
+                expected += 1;
+            }
+        }
+        let mut scanned = 0usize;
+        let mut findings = Vec::new();
+        scan_release_xtask(&root, &mut scanned, &mut findings);
         assert!(
-            unresolved.is_empty(),
-            "Fix: release hygiene names xtask command modules that have no source file: {unresolved:?}"
+            expected > 0,
+            "Fix: the xtask crates hold production source; the enumeration found none."
         );
-    }
-
-    /// WHY: resolution searches group directories, so it must not start
-    /// matching modules it was never asked about. A name with no file anywhere
-    /// has to stay an error rather than resolve to a neighbour.
-    #[test]
-    fn unknown_command_module_stays_unresolved() {
-        let root = crate::checkout::checkout_root();
-        let error = resolve_xtask_module_source(&root, "no_such_command_module")
-            .expect_err("Fix: an xtask module with no source file must not resolve.");
         assert_eq!(
-            error,
-            "xtask command module `no_such_command_module` has no source file"
+            scanned, expected,
+            "Fix: the walk scanned {scanned} of the {expected} xtask production source file(s)."
+        );
+        for finding in &findings {
+            assert!(
+                !is_test_source_path(Path::new(&finding.path)),
+                "Fix: `{}` is test source and must stay out of the production scan.",
+                finding.path
+            );
+        }
+        assert!(
+            findings
+                .iter()
+                .all(|finding| finding.pattern != "unreadable_source_file"),
+            "Fix: every file the walk reached must be readable: {:?}",
+            findings
+                .iter()
+                .filter(|finding| finding.pattern == "unreadable_source_file")
+                .map(|finding| finding.path.clone())
+                .collect::<Vec<_>>()
         );
     }
 

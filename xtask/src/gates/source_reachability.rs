@@ -9,7 +9,7 @@
 //! answer for a scaffolding template are both "no target", and one of those is
 //! allowed to not be Rust.
 //!
-//! Neither gate runs cargo. `cargo build` cannot see an orphan at all: a file
+//! Neither gate compiles anything. A build cannot see an orphan at all: a file
 //! outside every target is exactly what a green build produces.
 
 use std::collections::{BTreeMap, BTreeSet};

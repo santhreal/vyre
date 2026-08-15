@@ -96,7 +96,7 @@ pub fn parse_output_arg(
     description: &str,
     default_output: impl FnOnce() -> PathBuf,
 ) -> Result<PathBuf, String> {
-    let usage = format!("USAGE:\n  cargo xtask {command} [--output PATH]\n\n  {description}");
+    let usage = format!("USAGE:\n  ./cargo_full run --bin xtask -- {command} [--output PATH]\n\n  {description}");
     parse_output_options(args, command, None, &usage, default_output).map(|(output, _)| output)
 }
 

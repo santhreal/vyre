@@ -97,7 +97,7 @@ struct WorkflowNames {
 /// Every `-- <name>` invocation appearing in an in-repo workflow.
 ///
 /// Only lines that mention `xtask` are read for subcommands, and a token
-/// beginning with `-` is not a subcommand, so `cargo test -- --nocapture` is not
+/// beginning with `-` is not a subcommand, so `./cargo_full test -- --nocapture` is not
 /// mistaken for one. The old scan kept only names beginning with `vyre`, which
 /// made the check near-vacuous: a workflow could invoke any misspelled gate and
 /// pass.
