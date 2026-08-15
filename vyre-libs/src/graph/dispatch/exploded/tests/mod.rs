@@ -3,83 +3,138 @@ use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
 use std::sync::Mutex;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::exploded::{
-    build_cpu_reference, exploded_ifds_case, EXPLODED_IFDS_CASE_COUNT,
-};
+use vyre_primitives::graph::exploded::build_cpu_reference;
+use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, ExplodedIfdsCase};
 
 mod ifds_doubles;
 
 use ifds_doubles::{canonical_expected, MalformedIfdsDispatcher, RecordingIfdsOracle};
 
-/// Two procs, 2 blocks each, 2 facts each. One intra edge per
-/// proc, no inter, no flow. The CSR row count must equal the
-/// total node count.
+/// Every declared exploded-IFDS group has a substrate arm, and every case in it
+/// holds.
+///
+/// The ledger reads the shared table at run time, so a group declared with no
+/// branch below fails here by name rather than silently going unrun. Which cases
+/// exist and what a correct CSR looks like belong to
+/// `vyre_test_support::exploded_ifds_cases`; this test pins only what the
+/// substrate consumer owes for them.
 #[test]
-fn csr_row_count_matches_node_count() {
-    let (row_ptr, _) = reference_build_ifds_csr(2, 2, 2, &[(0, 0, 1), (1, 0, 1)], &[], &[], &[]);
-    // Total = 2 * 2 * 2 = 8.
-    assert_eq!(row_ptr.len(), 9);
-    assert_eq!(ifds_node_count(2, 2, 2), 8);
+fn substrate_exploded_ifds_arms_cover_every_declared_case_group() {
+    let mut coverage = arm_coverage();
+    for group in declared_groups() {
+        match group.name {
+            "mixed_flow_stream" => assert_via_dispatch_matches_reference(&group.cases),
+            "dense_chain" | "flow_rule_edges" => assert_reference_matches_primitive(&group.cases),
+            "empty_domain" => assert_domain_rejected(&group.cases),
+            _ => continue,
+        }
+        coverage.record(group.name, group.cases.len());
+    }
+    coverage.assert_covers_declared_table();
 }
 
-/// Closure-bar: substrate output equals primitive output.
-#[test]
-fn matches_primitive_directly() {
-    let intra = vec![(0, 0, 1), (1, 0, 1)];
-    let inter = vec![(0, 1, 1, 0)];
-    let gen_edges = vec![(0, 0, 1)];
-    let kill = vec![(1, 0, 0)];
-    let via_substrate = reference_build_ifds_csr(2, 2, 2, &intra, &inter, &gen_edges, &kill);
-    let via_primitive = build_cpu_reference(2, 2, 2, &intra, &inter, &gen_edges, &kill);
-    assert_eq!(via_substrate, via_primitive);
+/// The dispatched path decodes to exactly what the host reference builds.
+fn assert_via_dispatch_matches_reference(cases: &[ExplodedIfdsCase]) {
+    let dispatcher = CpuOracleDispatcher::new();
+    for case in cases {
+        let expected = canonical_expected(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        );
+        let actual = build_ifds_csr_via(
+            &dispatcher,
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        )
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: declared IFDS case must dispatch through the CPU oracle at {}: {error:?}",
+                case.label
+            )
+        });
+        assert_eq!(
+            actual, expected,
+            "Fix: CPU oracle via path diverged from the substrate reference at {}.",
+            case.label
+        );
+        case.assert_csr("build_ifds_csr_via", &actual.0, &actual.1);
+    }
 }
 
-/// Empty IFDS domains are invalid: parity/reference graph construction
-/// needs a real exploded-supergraph domain, not a fake host-side empty CSR.
-#[test]
-fn empty_graph_rejects_zero_domain() {
-    let message = try_reference_build_ifds_csr(0, 0, 0, &[], &[], &[], &[])
-        .expect_err("empty IFDS reference domain must fail");
-    assert!(
-        message.contains("exploded IFDS CPU reference dimensions must be nonzero"),
-        "Fix: empty-domain rejection must remain explicit, got: {message}"
-    );
+/// Closure bar: the substrate reference is the primitive reference, and the node
+/// count helper agrees with the CSR it sizes.
+fn assert_reference_matches_primitive(cases: &[ExplodedIfdsCase]) {
+    for case in cases {
+        let via_substrate = reference_build_ifds_csr(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        );
+        let via_primitive = build_cpu_reference(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        );
+        assert_eq!(
+            via_substrate, via_primitive,
+            "Fix: substrate exploded IFDS reference diverged from the primitive owner at {}.",
+            case.label
+        );
+        assert_eq!(
+            ifds_node_count(case.num_procs, case.blocks_per_proc, case.facts_per_proc) as usize,
+            case.node_count(),
+            "Fix: substrate node-count helper disagrees with the CSR row count at {}.",
+            case.label
+        );
+        case.assert_csr(
+            "reference_build_ifds_csr",
+            &via_substrate.0,
+            &via_substrate.1,
+        );
+    }
 }
 
-/// Adversarial: KILL must suppress fact propagation along an
-/// intra edge. (proc 0, block 0, fact 1) is killed → no edge
-/// emitted from (0, 0, 1) to (0, 1, 1).
-#[test]
-fn kill_suppresses_fact_propagation() {
-    let intra = vec![(0, 0, 1)];
-    let kill = vec![(0, 0, 1)];
-    let (row_ptr, col_idx) = reference_build_ifds_csr(1, 2, 2, &intra, &[], &[], &kill);
-    // Node (0, 0, 1) is at dense index 0 * 4 + 0 * 2 + 1 = 1.
-    let src = 1usize;
-    let row_start = row_ptr[src] as usize;
-    let row_end = row_ptr[src + 1] as usize;
-    let neighbors = &col_idx[row_start..row_end];
-    // Should have NO edge to (0, 1, 1) (= dense 0*4 + 1*2 + 1 = 3).
-    assert!(!neighbors.contains(&3), "killed fact must not propagate");
+/// An invalid domain is a reported error, not a fabricated host-side empty CSR:
+/// parity needs a real exploded-supergraph domain.
+fn assert_domain_rejected(cases: &[ExplodedIfdsCase]) {
+    for case in cases {
+        let message = try_reference_build_ifds_csr(
+            case.num_procs,
+            case.blocks_per_proc,
+            case.facts_per_proc,
+            &case.intra_edges,
+            &case.inter_edges,
+            &case.flow_gen,
+            &case.flow_kill,
+        )
+        .expect_err("Fix: an empty IFDS reference domain must fail.");
+        assert!(
+            message.contains("exploded IFDS CPU reference dimensions must be nonzero"),
+            "Fix: empty-domain rejection must remain explicit at {}, got: {message}",
+            case.label
+        );
+    }
 }
 
-/// Adversarial: GEN must inject the new fact along the intra
-/// edge. (proc 0, block 0, gen fact 1) → edge from (0, 0, 0)
-/// (the 0-fact) to (0, 1, 1).
-#[test]
-fn gen_injects_new_fact() {
-    let intra = vec![(0, 0, 1)];
-    let gen_edges = vec![(0, 0, 1)];
-    let (row_ptr, col_idx) = reference_build_ifds_csr(1, 2, 2, &intra, &[], &gen_edges, &[]);
-    // 0-fact at (0, 0, 0) → dense index 0.
-    let row_start = row_ptr[0] as usize;
-    let row_end = row_ptr[1] as usize;
-    let neighbors = &col_idx[row_start..row_end];
-    // Edge to (0, 1, 1) → dense 3.
-    assert!(neighbors.contains(&3), "gen must emit edge to new fact");
-}
-
-/// Round-trip dense ↔ encoded must be identity for valid indices.
+/// Round-trip dense to encoded must be identity for valid indices.
 #[test]
 fn round_trip_dense_is_identity() {
     let blocks_per_proc = 4;
@@ -90,23 +145,6 @@ fn round_trip_dense_is_identity() {
             Some(dense)
         );
     }
-}
-
-/// Adversarial: inter-procedural edge propagates EVERY fact
-/// (IFDS upper bound). For 2 facts, expect 2 edges from
-/// (sp, sb, *) to (dp, db, *).
-#[test]
-fn inter_edge_propagates_every_fact() {
-    let inter = vec![(0, 0, 1, 1)];
-    let (row_ptr, col_idx) = reference_build_ifds_csr(2, 2, 2, &[], &inter, &[], &[]);
-    let dense_src_f0 = 0; // (0, 0, 0)
-    let dense_src_f1 = 1; // (0, 0, 1)
-    let row0 = &col_idx[row_ptr[dense_src_f0] as usize..row_ptr[dense_src_f0 + 1] as usize];
-    let row1 = &col_idx[row_ptr[dense_src_f1] as usize..row_ptr[dense_src_f1 + 1] as usize];
-    // (1, 1, 0) = 1*4 + 1*2 + 0 = 6
-    // (1, 1, 1) = 1*4 + 1*2 + 1 = 7
-    assert!(row0.contains(&6), "fact 0 must propagate via inter edge");
-    assert!(row1.contains(&7), "fact 1 must propagate via inter edge");
 }
 
 #[test]
@@ -335,41 +373,6 @@ fn empty_via_path_does_not_materialize_program_or_dispatch() {
         scratch.inputs.is_empty(),
         "empty IFDS plan should not prepare upload buffers"
     );
-}
-
-#[test]
-fn via_matches_reference_on_generated_ifds_graphs() {
-    let dispatcher = CpuOracleDispatcher::new();
-    for case in 0..EXPLODED_IFDS_CASE_COUNT {
-        let graph = exploded_ifds_case(case);
-
-        let expected = canonical_expected(
-            graph.num_procs,
-            graph.blocks_per_proc,
-            graph.facts_per_proc,
-            &graph.intra_edges,
-            &graph.inter_edges,
-            &graph.flow_gen,
-            &graph.flow_kill,
-        );
-        let actual = build_ifds_csr_via(
-            &dispatcher,
-            graph.num_procs,
-            graph.blocks_per_proc,
-            graph.facts_per_proc,
-            &graph.intra_edges,
-            &graph.inter_edges,
-            &graph.flow_gen,
-            &graph.flow_kill,
-        )
-        .unwrap_or_else(|error| {
-            panic!("Fix: generated IFDS case {case} must dispatch through CPU oracle: {error:?}")
-        });
-        assert_eq!(
-            actual, expected,
-            "Fix: CPU oracle via path diverged from reference at generated case {case}."
-        );
-    }
 }
 
 #[test]

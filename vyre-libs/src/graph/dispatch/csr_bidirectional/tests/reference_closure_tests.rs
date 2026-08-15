@@ -29,9 +29,16 @@ fn closure_does_not_bridge_disjoint_components() {
 /// the same bitset.
 #[test]
 fn closure_is_idempotent_at_fixpoint() {
-    let (off, tgt, msk) = linear_graph();
+    let g = graphs::CHAIN_4;
     let saturated = vec![0b1111];
-    let out = reference_bidirectional_step(4, &off, &tgt, &msk, &saturated, 0xFFFF_FFFF);
+    let out = reference_bidirectional_step(
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+        &saturated,
+        u32::MAX,
+    );
     // Bidirectional step from saturated set keeps everything set.
     assert_eq!(out, saturated);
 }

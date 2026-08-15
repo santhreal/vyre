@@ -269,6 +269,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   do cannot pass for one that consulted the owner. Registering a third memory
   pass with its own copy of the analysis turns the suite red on the day it is
   registered rather than on the day someone diffs two files.
+- `vyre_test_support::case_table::ArmCoverage` reads a shared case table's
+  declared group names at run time, records which groups a crate's arm actually
+  asserted, and fails naming every declared group that crate has no branch for.
+  A corpus shared through an include has a hole a per-crate copy also had: the
+  table declares a group, one crate grows an arm, the other does not, and the
+  crate without the arm still passes because nothing in it mentions the group.
+  Group-count and case-count floors make a collapsed table fail rather than
+  report a clean sweep of an empty set. Both the dense-matvec and exploded-IFDS
+  tables are enrolled, in four arms across two crates.
 
 ### Changed
 
@@ -1457,16 +1466,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   by their graph and rustfmt put every field on its own row. The redundant
   `name: name` half of eighty-four fields the positional-to-named rewrite left
   behind is gone as well.
-- Three concepts that a consumer crate had re-derived now have one owner.
-  `vyre_primitives::graph::exploded::exploded_ifds_case` owns the generated
-  exploded-IFDS graph family both the owner oracle sweep and the consumer
-  dispatch sweep walk; the two copies of its generator had already drifted to
-  different case counts, 1024 against 512, with no reason recorded on either
-  side. `vyre_test_support::ir_regions` owns the three helpers that slice a
-  stretch of generated IR out of a program and compare it against a sibling,
-  which `vyre_primitives` and `vyre_libs` each wrote out; a comparison helper
-  decides what its test can see, so a widened slice in one copy weakened an
-  assertion in a crate whose author never read the change.
+- Two concepts that a consumer crate had re-derived now have one owner.
+  `vyre_test_support::ir_regions` owns the three helpers that slice a stretch
+  of generated IR out of a program and compare it against a sibling, which
+  `vyre_primitives` and `vyre_libs` each wrote out; a comparison helper decides
+  what its test can see, so a widened slice in one copy weakened an assertion
+  in a crate whose author never read the change.
   `vyre_libs::solvers::bellman_tn_order` no longer re-proves the shortest-path
   relaxation of `vyre_primitives::math::bellman_shortest_path`: what it owes is
   the routing assertion it already carries, that its composition emits the
@@ -1483,6 +1488,52 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `vyre_foundation::optimizer::passes::fusion_cse::dce::LiveSet` is new and is
   the one place the live-set type is named, replacing the concrete set spelled
   in four files.
+- The dense byte-tile Four-Russians matvec corpus has one owner,
+  `tests/support/dense_matvec_cases.rs`, with one arm per crate:
+  `vyre_primitives::bitset::four_russians` pins its byte-LUT builder,
+  word-count helper, CPU reference and dispatch Program, and
+  `vyre_libs::encoding::bitset_transform_pipeline` pins its own sizing, LUT
+  builder, parity oracle and composed Program. The corpus generator, the
+  frontier masking and the naive boolean-semiring oracle were written twice,
+  and the two copies swept different bounds: 0..=18 byte tiles by 1..=5
+  destination words on the primitive side, 0..=24 by 1..=4 on the substrate
+  side, so 384 cases in the union were exercised by neither. Both arms now run
+  the union, plus a saturated-frontier group neither had, which is the only way
+  the all-ones LUT row of every tile is reached at once.
+- The exploded-supergraph (IFDS) CPU-reference corpus has one owner,
+  `vyre_test_support::exploded_ifds_cases`, which declares the cases and owns
+  what a correct CSR for them is. `vyre_primitives::graph::exploded` pins its
+  allocating, fallible and workspace-reusing builders against it, and
+  `vyre_libs::graph::dispatch::exploded` pins its host reference, its
+  node-count helper and its dispatched path. The mixed intra/inter/GEN/KILL
+  case stream was written twice and the copies ran different counts, 1024
+  against 512, so the dispatched path was never asked about the upper half of a
+  corpus its own file defined. The rule semantics that were hand-checked per
+  suite, KILL suppression, GEN injection and inter-edge fact propagation, are
+  now declared as dense edge expectations both arms are held to.
+- The fixed CSR graphs the closure contracts are written against have one
+  owner, `vyre_primitives::graph::csr_closure_inputs::graphs`, and an
+  unrestricted edge filter has one spelling,
+  `vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs::allow_all`.
+  The four-node chain and the four-node diamond were rebuilt from three array
+  literals at each call site, four crate-local `linear_graph` helpers returned
+  the chain as an owned triple so a caller had to keep `off`, `tgt` and `msk`
+  alive to borrow a view from them, and more than thirty call sites restated
+  the whole seven-field closure group only to set the allow mask to every kind.
+  `CsrGraphShape` owns the arrays with `'static` lifetime and borrows itself as
+  the view, so a contract now names the shape it means instead of agreeing with
+  its siblings by coincidence.
+- The dirty-output contract for a dense byte-tile matvec Program is asserted
+  once, by `tests/support/dense_matvec_cases.rs`, which drives the reference
+  interpreter with the all-ones output buffer and takes the LUT builder and
+  Program builder as arguments. The two arms ran byte-identical interpreter
+  setups and differed only in which builders they named, which is why they were
+  the largest cross-crate duplicate pair in the repository. The primitive arm
+  passes
+  `vyre_primitives::bitset::four_russians::four_russians_dense_matvec_byte_lut`
+  and the substrate arm passes
+  `vyre_libs::encoding::bitset_transform_pipeline::four_russians_dense_matvec_program`,
+  and the failure message names which arm failed.
 
 ### Removed
 
