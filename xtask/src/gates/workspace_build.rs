@@ -26,13 +26,20 @@ struct Diagnostic {
 ///
 /// `--message-format=json` is the only reason this is reliable: a gate that
 /// scraped human output counted the same error twice as soon as cargo repeated
-/// its summary. Nothing here sets a build-affecting flag or variable, because
-/// build configuration is declared once in `.cargo/config.toml`.
+/// its summary. It goes before any `--`, because everything after that
+/// separator reaches the compiler driver instead of cargo, and clippy-driver
+/// answers an unknown option with `Unrecognized option` and exit 101 per crate.
+/// Appended blindly, it turned the clippy gate into one that could only report
+/// that it had not run, so the workspace was neither clippy-clean nor dirty for
+/// as long as it stood. Nothing here sets a build-affecting flag or variable,
+/// because build configuration is declared once in `.cargo/config.toml`.
 fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Vec<Diagnostic>, GateError> {
     let cargo = crate::output_arg::cargo_runner(root);
+    let (cargo_arguments, driver_arguments) = split_at_driver(arguments);
     let output = Command::new(&cargo)
-        .args(arguments)
+        .args(cargo_arguments)
         .arg("--message-format=json")
+        .args(driver_arguments)
         .current_dir(root)
         .output()
         .map_err(|error| {
@@ -254,5 +261,48 @@ impl Gate for WorkspaceTests {
         }
         report.note(format!("tested {}", TESTED_PACKAGES.join(", ")));
         Ok(report)
+    }
+}
+
+/// Split an argument list into what cargo reads and what the compiler driver
+/// reads, at the first `--`.
+fn split_at_driver<'a>(arguments: &'a [&'a str]) -> (&'a [&'a str], &'a [&'a str]) {
+    match arguments.iter().position(|argument| *argument == "--") {
+        Some(at) => (&arguments[..at], &arguments[at..]),
+        None => (arguments, &arguments[arguments.len()..]),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: `--message-format=json` after the `--` reaches clippy-driver, which
+    /// answers with `Unrecognized option: 'message-format'` and exit 101 for
+    /// every crate. The gate then had no diagnostic to count and could only
+    /// report that it had not run, so the workspace was neither clippy-clean nor
+    /// dirty while that stood. The split is what keeps the flag on cargo's side.
+    #[test]
+    fn the_driver_separator_bounds_the_cargo_arguments() {
+        let clippy = [
+            "clippy",
+            "--workspace",
+            "--all-features",
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ];
+        let (cargo, driver) = split_at_driver(&clippy);
+        assert_eq!(
+            cargo,
+            ["clippy", "--workspace", "--all-features", "--all-targets"]
+        );
+        assert_eq!(driver, ["--", "-D", "warnings"]);
+
+        let check = ["check", "--workspace"];
+        let (cargo, driver) = split_at_driver(&check);
+        assert_eq!(cargo, ["check", "--workspace"]);
+        assert!(driver.is_empty());
     }
 }
