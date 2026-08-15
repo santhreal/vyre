@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_foundation::optimizer::passes::loops::substitution` no longer re-exports `vyre_foundation::transform::subst` under a second path; the loop passes name the owner. A module whose body is a re-export is not an owner, and it leaves a reader with a question that has no answer: which of the two paths is the real one."

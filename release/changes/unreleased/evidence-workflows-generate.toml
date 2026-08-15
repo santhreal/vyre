@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workflows named \"Generate release evidence\", \"Generate measured evidence\", \"Generate release conformance evidence artifacts\" and \"Generate release benchmark evidence artifacts\" pass `--write`. A gate only touches the tree under that flag, so every one of them judged the artifacts already committed and uploaded them unchanged, which is indistinguishable from generating them until the evidence goes stale. The measured-evidence job also stopped forcing `CARGO_BUILD_JOBS=1`; parallelism is declared in `.cargo/config.toml`."

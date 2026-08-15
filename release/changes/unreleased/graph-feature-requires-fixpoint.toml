@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`vyre-primitives` feature `graph` enables `fixpoint`. `graph::persistent_bfs::program` reads `fixpoint::persistent_fixpoint::grid_sync_barrier`, the single owner of the grid-wide fence node, so the crate did not compile with `graph` alone. Nothing was red because every aggregate that exercises graph also turns `fixpoint` on."

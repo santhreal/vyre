@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every current public guide is now revalidated for Vyre 0.7.2. Historical architecture, migration, release, operation, and testing documents are explicitly archived or superseded, generated views identify their source, and crate-local paths remain reproducible in a clean checkout."

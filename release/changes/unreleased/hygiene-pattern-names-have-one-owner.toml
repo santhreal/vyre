@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The hygiene scan's pattern names are declared where the scan emits them. `xtask::gates::hygiene_matrix` exports the hidden-fallback, resource-bound and cargo-wrapper pattern lists, and the release-evidence check that requires each family to have been covered now references them instead of restating nineteen names. Adding a pattern to the scan previously left the gate accepting evidence that never looked for it."

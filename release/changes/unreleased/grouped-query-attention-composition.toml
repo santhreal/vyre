@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Grouped-query attention now composes the canonical max, normalization-sum, and weighted-write primitives with explicit KV-head bases. Overflowing row or element counts fail with a sharding error before buffer declarations are built."

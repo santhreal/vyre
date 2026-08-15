@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The documentation matrix now covers every indexed public document and workspace crate README. Each row records audience, owner, authority, source artifacts, verification date, executable examples, version coherence, support status, and claim-evidence blockers."
