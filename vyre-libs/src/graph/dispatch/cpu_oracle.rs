@@ -140,13 +140,17 @@ fn persistent_bfs_oracle(
 
     let (frontier_out, convergence) =
         vyre_primitives::graph::persistent_bfs::try_cpu_ref_converged(
-            node_count,
-            &edge_offsets,
-            edge_targets,
-            edge_kind_mask,
+            vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs {
+                graph: vyre_primitives::graph::csr_closure_inputs::CsrGraphView {
+                    node_count,
+                    edge_offsets: &edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
+                },
+                allow_mask,
+                max_iters,
+            },
             &frontier_in,
-            allow_mask,
-            max_iters,
         )
         .map_err(DispatchError::BadInputs)?;
 

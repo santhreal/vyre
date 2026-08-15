@@ -17,6 +17,7 @@
 //!    bound plus row lookup, one edge-walk loop. Only the resident-buffer
 //!    additions may differ.
 
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_bidirectional::plan_csr_bidirectional_step;
 use vyre_primitives::graph::csr_forward_or_changed::plan_csr_forward_or_changed_launch;
@@ -171,9 +172,7 @@ fn bidirectional_program() -> Program {
 
 fn forward_or_changed_program(max_iters: u32) -> Program {
     let (offsets, targets, masks, _) = csr_fixture();
-    plan_csr_forward_or_changed_launch(
-        NODE_COUNT, &offsets, &targets, &masks, ALLOW_MASK, max_iters,
-    )
+    plan_csr_forward_or_changed_launch(CsrClosureInputs { graph: CsrGraphView { node_count: NODE_COUNT, edge_offsets: &offsets, edge_targets: &targets, edge_kind_mask: &masks }, allow_mask: ALLOW_MASK, max_iters: max_iters })
     .expect("Fix: forward-or-changed fixture must be a valid CSR graph")
     .program()
     .expect("Fix: forward-or-changed fixture must be representable")

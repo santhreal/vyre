@@ -1,5 +1,7 @@
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::validate::validate_persistent_bfs_inputs;
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 
 /// Convergence outcome of one persistent-BFS CPU reference run.
 ///
@@ -25,30 +27,13 @@ pub struct PersistentBfsConvergence {
     pub stop_iter: u32,
 }
 
-/// CPU reference: run BFS up to `max_iters` steps, accumulating into a
+/// CPU reference: run BFS up to `inputs.max_iters` steps, accumulating into a
 /// running bitset.  Returns the final frontier and a sticky `changed`
 /// flag (`1` if any step added new nodes, else `0`).
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> (Vec<u32>, u32) {
-    try_cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-    )
-    .expect(
+pub fn cpu_ref(inputs: CsrClosureInputs<'_>, frontier_in: &[u32]) -> (Vec<u32>, u32) {
+    try_cpu_ref(inputs, frontier_in).expect(
         "Fix: reject malformed CSR/frontier via try_cpu_ref; parity wrappers must not pass hostile layouts",
     )
 }
@@ -59,25 +44,11 @@ pub fn cpu_ref(
 /// hostile CSR/frontier inputs without panicking.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
 ) -> Result<(Vec<u32>, u32), String> {
     let mut out = Vec::new();
-    let changed = try_cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-        &mut out,
-    )?;
+    let changed = try_cpu_ref_into(inputs, frontier_in, &mut out)?;
     Ok((out, changed))
 }
 
@@ -103,32 +74,15 @@ impl PersistentBfsCpuScratch {
 
 /// CPU reference into caller-owned output storage.
 ///
-/// Runs BFS up to `max_iters` steps, accumulating into `frontier_out`. Returns
-/// a sticky changed flag (`1` if any step added new nodes, else `0`).
+/// Runs BFS up to `inputs.max_iters` steps, accumulating into `frontier_out`.
+/// Returns a sticky changed flag (`1` if any step added new nodes, else `0`).
 #[cfg(any(test, feature = "cpu-parity"))]
 pub(crate) fn cpu_ref_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     frontier_out: &mut Vec<u32>,
 ) -> u32 {
-    let mut scratch = PersistentBfsCpuScratch::default();
-    try_cpu_ref_into_with_scratch(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-        frontier_out,
-        &mut scratch,
-    )
-    .expect(
+    try_cpu_ref_into(inputs, frontier_in, frontier_out).expect(
         "Fix: reject malformed CSR/frontier via try_cpu_ref_into; parity wrappers must not pass hostile layouts",
     )
 }
@@ -140,27 +94,12 @@ pub(crate) fn cpu_ref_into(
 /// instead of a panic or partially clobbered oracle output.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     frontier_out: &mut Vec<u32>,
 ) -> Result<u32, String> {
     let mut scratch = PersistentBfsCpuScratch::default();
-    try_cpu_ref_into_with_scratch(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-        frontier_out,
-        &mut scratch,
-    )
+    try_cpu_ref_into_with_scratch(inputs, frontier_in, frontier_out, &mut scratch)
 }
 
 /// Fallible CPU reference into caller-owned output and scratch storage.
@@ -171,29 +110,15 @@ pub fn try_cpu_ref_into(
 /// state.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub(crate) fn try_cpu_ref_into_with_scratch(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     frontier_out: &mut Vec<u32>,
     scratch: &mut PersistentBfsCpuScratch,
 ) -> Result<u32, String> {
-    Ok(try_cpu_ref_converged_into_with_scratch(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-        frontier_out,
-        scratch,
-        None,
-    )?
-    .changed)
+    Ok(
+        try_cpu_ref_converged_into_with_scratch(inputs, frontier_in, frontier_out, scratch, None)?
+            .changed,
+    )
 }
 
 /// Fallible CPU reference reporting convergence into caller-owned output and
@@ -204,33 +129,31 @@ pub(crate) fn try_cpu_ref_into_with_scratch(
 /// convergence detail; callers that must distinguish a reached fixpoint from a
 /// `max_iters` exhaustion use this entry point directly.
 ///
-/// `density_active`, when `Some`, is filled with exactly `max_iters` entries
-/// where entry `i` is the popcount of the frontier after traversal step `i`.
-/// Once the closure converges every later entry repeats the converged popcount,
-/// mirroring the device density buffer (whose loop keeps running the remaining
-/// budget over an unchanged frontier). This is the CPU source of truth for the
-/// device per-iteration density readback; it shares the one accumulation loop so
-/// the popcount trajectory cannot diverge from the convergence trajectory.
+/// `density_active`, when `Some`, is filled with exactly `inputs.max_iters`
+/// entries where entry `i` is the popcount of the frontier after traversal step
+/// `i`. Once the closure converges every later entry repeats the converged
+/// popcount, mirroring the device density buffer (whose loop keeps running the
+/// remaining budget over an unchanged frontier). This is the CPU source of truth
+/// for the device per-iteration density readback; it shares the one accumulation
+/// loop so the popcount trajectory cannot diverge from the convergence
+/// trajectory.
 ///
 /// On validation error, `frontier_out` and `scratch` are left unchanged.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub(crate) fn try_cpu_ref_converged_into_with_scratch(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     frontier_out: &mut Vec<u32>,
     scratch: &mut PersistentBfsCpuScratch,
     mut density_active: Option<&mut Vec<u32>>,
 ) -> Result<PersistentBfsConvergence, String> {
+    let graph = inputs.graph;
+    let max_iters = inputs.max_iters;
     let layout = validate_persistent_bfs_inputs(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        graph.node_count,
+        graph.edge_offsets,
+        graph.edge_targets,
+        graph.edge_kind_mask,
         frontier_in,
     )?;
     let words = layout.words;
@@ -261,12 +184,12 @@ pub(crate) fn try_cpu_ref_converged_into_with_scratch(
 
     for iter in 0..max_iters {
         crate::graph::csr_forward_traverse::cpu_ref_into(
-            node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
+            graph.node_count,
+            graph.edge_offsets,
+            graph.edge_targets,
+            graph.edge_kind_mask,
             frontier_out,
-            allow_mask,
+            inputs.allow_mask,
             &mut scratch.step,
         );
         stop_iter = iter + 1;
@@ -312,28 +235,13 @@ pub(crate) fn try_cpu_ref_converged_into_with_scratch(
 /// This is the CPU source of truth for the device converged readback.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_converged(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
 ) -> Result<(Vec<u32>, PersistentBfsConvergence), String> {
     let mut out = Vec::new();
     let mut scratch = PersistentBfsCpuScratch::default();
-    let outcome = try_cpu_ref_converged_into_with_scratch(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        max_iters,
-        &mut out,
-        &mut scratch,
-        None,
-    )?;
+    let outcome =
+        try_cpu_ref_converged_into_with_scratch(inputs, frontier_in, &mut out, &mut scratch, None)?;
     Ok((out, outcome))
 }
 
@@ -350,25 +258,15 @@ pub fn try_cpu_ref_converged(
 /// device trajectory matches the reference bit-for-bit.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_density(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
 ) -> Result<(Vec<u32>, PersistentBfsConvergence, Vec<u32>), String> {
     let mut out = Vec::new();
     let mut active = Vec::new();
     let mut scratch = PersistentBfsCpuScratch::default();
     let outcome = try_cpu_ref_converged_into_with_scratch(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        inputs,
         frontier_in,
-        allow_mask,
-        max_iters,
         &mut out,
         &mut scratch,
         Some(&mut active),

@@ -3,6 +3,7 @@
 #![cfg(all(feature = "graph", feature = "bitset", feature = "cpu-parity"))]
 
 use vyre_primitives::bitset::bitset_words;
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_primitives::graph::csr_forward_or_changed;
 use vyre_primitives::graph::persistent_bfs;
 
@@ -76,12 +77,18 @@ fn persistent_bfs_matches_csr_forward_closure_for_generated_graphs() {
         let allow = allow_mask(seed);
         let max_iters = node_count.saturating_add(2);
 
-        let via_csr = csr_forward_or_changed::cpu_ref_closure(
-            node_count, &offsets, &targets, &masks, &frontier, allow, max_iters,
-        );
-        let (via_bfs, _changed) = persistent_bfs::cpu_ref(
-            node_count, &offsets, &targets, &masks, &frontier, allow, max_iters,
-        );
+        let inputs = CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count,
+                edge_offsets: &offsets,
+                edge_targets: &targets,
+                edge_kind_mask: &masks,
+            },
+            allow_mask: allow,
+            max_iters,
+        };
+        let via_csr = csr_forward_or_changed::cpu_ref_closure(inputs, &frontier);
+        let (via_bfs, _changed) = persistent_bfs::cpu_ref(inputs, &frontier);
 
         assert_eq!(via_bfs, via_csr, "seed {seed}");
     }
@@ -95,12 +102,18 @@ fn persistent_bfs_generated_fixpoints_are_idempotent() {
         let allow = allow_mask(seed);
         let max_iters = node_count.saturating_add(2);
 
-        let (closure, _first_changed) = persistent_bfs::cpu_ref(
-            node_count, &offsets, &targets, &masks, &frontier, allow, max_iters,
-        );
-        let (closure_again, second_changed) = persistent_bfs::cpu_ref(
-            node_count, &offsets, &targets, &masks, &closure, allow, max_iters,
-        );
+        let inputs = CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count,
+                edge_offsets: &offsets,
+                edge_targets: &targets,
+                edge_kind_mask: &masks,
+            },
+            allow_mask: allow,
+            max_iters,
+        };
+        let (closure, _first_changed) = persistent_bfs::cpu_ref(inputs, &frontier);
+        let (closure_again, second_changed) = persistent_bfs::cpu_ref(inputs, &closure);
 
         assert_eq!(closure_again, closure, "idempotent closure seed {seed}");
         assert_eq!(

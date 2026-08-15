@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::validate::validate_csr_inputs;
 use crate::graph::csr_closure_entry_points::define_csr_closure_entry_points;
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 
 /// CPU reference for one in-place expansion pass.
 #[must_use]
@@ -93,39 +94,33 @@ define_csr_closure_entry_points! {
 ///
 /// The hook lets consumers attach observability without owning the
 /// fixed-point algorithm.
-#[allow(clippy::too_many_arguments)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_closure_into_with_step_hook<F>(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
     mut on_step: F,
 ) where
     F: FnMut(u32),
 {
+    let graph = inputs.graph;
     current.clear();
     current.extend_from_slice(seed);
-    for iteration in 0..max_iters {
+    for iteration in 0..inputs.max_iters {
         on_step(iteration);
         let changed = cpu_ref_into(
-            node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
+            graph.node_count,
+            graph.edge_offsets,
+            graph.edge_targets,
+            graph.edge_kind_mask,
             current,
-            allow_mask,
+            inputs.allow_mask,
             next,
         );
+        std::mem::swap(current, next);
         if changed == 0 {
-            std::mem::swap(current, next);
             return;
         }
-        std::mem::swap(current, next);
     }
 }

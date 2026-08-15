@@ -1224,3 +1224,18 @@ text = "`scan_prefilter_width_closure` reads the `PrefilterWidth` variants out o
 id = "vyre-libs-duplication-pin-lowered-to-measured"
 category = "Changed"
 text = "The `vyre-libs` duplication pin records what the tree measures after the width table lands: 10649 to 10598 duplicated lines, with `total_lines` measured. What remains between the three match-emitting entry points is their frozen positional signatures and the shared value they each construct from them, which no owner can absorb without changing the public ABI."
+
+[[fragments]]
+id = "csr-arglists-closure-input-bundle"
+category = "Changed"
+text = "CSR closure entry points take the graph as one named bundle. `vyre_primitives::graph::csr_closure_inputs` owns `CsrGraphView { node_count, edge_offsets, edge_targets, edge_kind_mask }` and `CsrClosureInputs { graph, allow_mask, max_iters }`, and every closure entry point in `vyre_primitives::graph::csr_bidirectional`, `vyre_primitives::graph::csr_forward_or_changed`, `vyre_primitives::graph::csr_backward_or_changed` and `vyre_primitives::graph::persistent_bfs` now receives them instead of seven or nine positional slots. Neither struct has a constructor: a struct literal is the only way to build one, so a transposed buffer is a compile error rather than a wrong closure. The dispatcher-backed consumers in `vyre_libs::graph::dispatch::csr_bidirectional`, `vyre_libs::graph::dispatch::csr_forward_or_changed` and `vyre_libs::graph::dispatch::persistent_bfs` take the same bundle, so the flat shape no longer exists at any layer."
+
+[[fragments]]
+id = "csr-arglists-backward-mask-role-names"
+category = "Fixed"
+text = "`vyre_primitives::graph::csr_backward_or_changed` named the per-edge kind array `masks` and the scalar edge-kind filter `edge_kind_mask`, inverting the roles every sibling CSR module gives those two names. A call repointed from a sibling module fed the scalar where the per-edge array belonged. Both parameters now carry the tree-wide role names."
+
+[[fragments]]
+id = "csr-arglists-transposition-gate"
+category = "Added"
+text = "A gate over `vyre_primitives::graph` rejects the argument-transposition class. It walks the module directory and parses every declared signature at run time, so a CSR entry point added later is covered without editing a list: closure entry points must receive the graph as a bundle and must not declare three or more consecutive parameters of one type, and the wider slice-taking family must give each role a single name across the tree."

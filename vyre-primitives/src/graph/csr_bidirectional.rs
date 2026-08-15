@@ -11,6 +11,7 @@ use crate::graph::csr_backward_traverse::csr_backward_traverse;
 use crate::graph::csr_closure_entry_points::{
     define_panicking_csr_closure_entry_points, define_try_csr_closure_entry_points,
 };
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;
 use crate::graph::program_graph::ProgramGraphShape;
@@ -813,16 +814,10 @@ define_panicking_csr_closure_entry_points! {
 }
 
 /// Fallible CPU reference: closure into caller-owned buffers with a per-step hook.
-#[allow(clippy::too_many_arguments)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_closure_into_with_step_hook<F>(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    inputs: CsrClosureInputs<'_>,
     seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
     mut on_step: F,
@@ -830,18 +825,19 @@ pub fn try_cpu_ref_closure_into_with_step_hook<F>(
 where
     F: FnMut(),
 {
+    let graph = inputs.graph;
     let plan = plan_csr_bidirectional_step(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
+        graph.node_count,
+        graph.edge_offsets,
+        graph.edge_targets,
+        graph.edge_kind_mask,
         seed,
-        allow_mask,
+        inputs.allow_mask,
     )?;
     run_csr_bidirectional_closure_plan_with_step(
         &plan,
         seed,
-        max_iters,
+        inputs.max_iters,
         current,
         next,
         |message| message,
@@ -849,11 +845,11 @@ where
             on_step();
             cpu_ref_into_validated(
                 plan.layout,
-                edge_offsets,
-                edge_targets,
-                edge_kind_mask,
+                graph.edge_offsets,
+                graph.edge_targets,
+                graph.edge_kind_mask,
                 frontier,
-                allow_mask,
+                inputs.allow_mask,
                 out,
             )
         },
@@ -905,6 +901,7 @@ fn csr_bidir_u32_to_usize(value: u32, label: &'static str) -> Result<usize, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::csr_closure_inputs::CsrGraphView;
 
     fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
         // 0 -> 1 -> 2 -> 3
@@ -942,26 +939,39 @@ mod tests {
         assert!(out[0] & 0b0100 != 0, "fwd should reach node 2");
     }
 
+    /// The linear-graph closure inputs, named so no pair of CSR slices can
+    /// transpose across the closure tests below.
+    fn linear_closure(
+        graph: &(Vec<u32>, Vec<u32>, Vec<u32>),
+        max_iters: u32,
+    ) -> CsrClosureInputs<'_> {
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &graph.0,
+                edge_targets: &graph.1,
+                edge_kind_mask: &graph.2,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters,
+        }
+    }
+
     #[test]
     fn closure_reaches_full_linear_component() {
-        let (off, tgt, msk) = linear_graph();
-        let out = cpu_ref_closure(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 5);
+        let graph = linear_graph();
+        let out = cpu_ref_closure(linear_closure(&graph, 5), &[0b0001]);
         assert_eq!(out, vec![0b1111]);
     }
 
     #[test]
     fn closure_into_reuses_caller_buffers() {
-        let (off, tgt, msk) = linear_graph();
+        let graph = linear_graph();
         let mut current = Vec::with_capacity(8);
         let mut next = Vec::with_capacity(8);
         cpu_ref_closure_into(
-            4,
-            &off,
-            &tgt,
-            &msk,
+            linear_closure(&graph, 5),
             &[0b0001],
-            0xFFFF_FFFF,
-            5,
             &mut current,
             &mut next,
         );
@@ -1053,19 +1063,17 @@ mod tests {
 
     #[test]
     fn try_cpu_ref_closure_rejects_bad_seed_without_clobbering_buffers() {
-        let (off, tgt, msk) = linear_graph();
+        let graph = linear_graph();
         let mut current = vec![0xCAFE_BABEu32];
         let mut next = vec![0xDEAD_BEEFu32];
         let current_capacity = current.capacity();
         let next_capacity = next.capacity();
         let err = try_cpu_ref_closure_into(
-            4,
-            &off,
-            &tgt,
-            &msk,
+            CsrClosureInputs {
+                allow_mask: u32::MAX,
+                ..linear_closure(&graph, 4)
+            },
             &[],
-            u32::MAX,
-            4,
             &mut current,
             &mut next,
         )
@@ -1084,12 +1092,14 @@ mod tests {
             .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid step should succeed");
         assert_eq!(step, cpu_ref(4, &off, &tgt, &msk, &[0b0010], u32::MAX));
 
-        let closure = try_cpu_ref_closure(4, &off, &tgt, &msk, &[0b0001], u32::MAX, 5)
+        let graph = linear_graph();
+        let inputs = CsrClosureInputs {
+            allow_mask: u32::MAX,
+            ..linear_closure(&graph, 5)
+        };
+        let closure = try_cpu_ref_closure(inputs, &[0b0001])
             .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid closure should succeed");
-        assert_eq!(
-            closure,
-            cpu_ref_closure(4, &off, &tgt, &msk, &[0b0001], u32::MAX, 5)
-        );
+        assert_eq!(closure, cpu_ref_closure(inputs, &[0b0001]));
     }
 
     #[test]
