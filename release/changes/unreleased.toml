@@ -1613,3 +1613,23 @@ text = "The C11 hostile-parser fixtures are spelled through `c_frontend::spellin
 id = "vyre-lints-workspace-root-discovery"
 category = "Fixed"
 text = "`vyre-lints` resolves the workspace root by walking ancestors for a manifest that declares `[workspace]`, and `--print-default-roots` prints those roots relative to it. A run from inside a member directory previously enumerated no members at all, because the default root is the current directory and a member manifest declares no `workspace.members`. Manifest reading also goes through `toml::from_str::<toml::Table>` rather than parsing a whole document into `toml::Value`, which the pinned toml release rejects at run time with `unexpected content, expected nothing`, and source reading goes through the one bounded reader `vyre_lints::read_source_bounded` so a single cap covers every file the lint walks."
+
+[[fragments]]
+id = "vyre-driver-backend-contract-one-owner"
+category = "Changed"
+text = "The `VyreBackend` trait contract has two owners in `vyre-driver`'s test surface instead of three overlapping files. `tests/backend_trait_contract.rs` owns the minimal and fully overriding backend fixtures and asserts that every capability default is conservative, that every override is observably different from its default, that lifecycle hooks succeed by default and receive every call once overridden, that the blanket `Backend` impl exposes the driver identity, and that the trait surface stays object safe and `Send + Sync`. `tests/backend_registry.rs` owns what the registry reports when nothing is registered, including that preferred-dispatch acquisition fails closed and never advertises a host fallback. The previous `backend_contract.rs`, `backend_capability_negotiation.rs`, and `backend_trait_compatibility.rs` each declared their own copy of the same fixtures and asserted overlapping subsets of the same contract, so an override that silently returned its default value was invisible in all three. That case is now a single invariant rather than two mirrored capability lists."
+
+[[fragments]]
+id = "vyre-driver-async-dispatch-one-owner"
+category = "Changed"
+text = "`vyre-driver/tests/async_dispatch_contract.rs` is the sole owner of what the default async dispatch adapter guarantees: error propagation before any await, a ready handle that never blocks, independent handles per dispatch, object safety through both awaits, and the default `dispatch_borrowed` and resident-async paths. The counting, failing, and resident backend fixtures are declared once. `async_dispatch_always_nonblocking.rs` carried byte-identical fixtures and three duplicate tests and is gone; every assertion it made is made here, and the borrowed-dispatch case now checks the forwarded payload rather than only that the call succeeded."
+
+[[fragments]]
+id = "vyre-driver-dispatch-policy-saturation"
+category = "Changed"
+text = "`vyre-driver`'s dispatch policy bundle is covered by a test that calls each policy directly and compares the verdicts to the bundle's, so the bundle cannot drift from the policies it composes. A test drives every policy at the extremes of its integer domain and asserts the resulting verdict, replacing a case that bound the results to `_` and only proved absence of a panic. The module and field documentation names the concern each policy decides instead of an internal plan label."
+
+[[fragments]]
+id = "driver-tests-skill-truth"
+category = "Fixed"
+text = "The test guides for `vyre-driver` and `vyre-driver-wgpu` describe what the crates contain. Both previously pointed at a category contract file that does not exist, listed bench and fuzz targets for directories neither crate has, and gave `cargo test --test` invocations for target names (`adversarial`, `property`, `gap`, `integration`) that were never declared. `vyre-driver`'s guide also claimed sealing through a macro name that is not in the source and invariants for a `DialectRegistry` the crate does not define. Every invariant now names a construct that exists, and the sealing entry names `backend::private::Sealed`."
