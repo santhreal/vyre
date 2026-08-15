@@ -17,6 +17,8 @@
 //! a device. Program identity for the ctx-free builders is pinned in-crate by
 //! `crate::cases::clone_family_guard`.
 
+use std::collections::BTreeSet;
+
 use vyre_bench::api::case::BenchCase;
 
 /// Every benchmark id the registry publishes, in registry order.
@@ -25,6 +27,11 @@ use vyre_bench::api::case::BenchCase;
 /// the workspace. They measured that crate's whole-pipeline parse, and no
 /// surviving crate publishes an equivalent; `release.c_ast_traversal.1m` covers
 /// the traversal throughput the release plan requires.
+///
+/// The three `frontend.rust.*` cases went the same way in a2e24fcdf1, which
+/// moved the Rust front end to `software/frontend-rust` and took the case tree
+/// that existed to exercise it. `parser.c_lexer.small_state_transition.4k` and
+/// `release.c_ast_traversal.1m` are the parsing workloads that remain.
 const EXPECTED_CASE_IDS: &[&str] = &[
     "adversarial.register_exhaustion.u32_1024",
     "bigint.modexp.4096",
@@ -49,9 +56,6 @@ const EXPECTED_CASE_IDS: &[&str] = &[
     "foundation.reduce.sum.crossover",
     "foundation.stencil3.u32.1m",
     "foundation.transpose.512",
-    "frontend.rust.lexer.batch_ir_execute",
-    "frontend.rust.lexer.ir_execute",
-    "frontend.rust.range_loop.ir_execute",
     "hashtable.openaddr.probe.10m",
     "interpreter.bytecode.dispatch.10m",
     "metadata.condition.filesize_header.1m",
@@ -149,11 +153,23 @@ fn case_surface(case: &'static dyn BenchCase) -> serde_json::Value {
 #[test]
 fn registry_publishes_exactly_the_pinned_case_enumeration() {
     let actual = registry_ids();
+    let pinned: Vec<String> = EXPECTED_CASE_IDS.iter().map(|id| (*id).to_string()).collect();
 
+    let published: BTreeSet<&String> = actual.iter().collect();
+    let recorded: BTreeSet<&String> = pinned.iter().collect();
+    let unrecorded: Vec<&&String> = published.difference(&recorded).collect();
+    let vanished: Vec<&&String> = recorded.difference(&published).collect();
+
+    assert!(
+        unrecorded.is_empty() && vanished.is_empty(),
+        "Fix: the benchmark case enumeration changed. Cases {unrecorded:?} are published and not \
+         recorded in EXPECTED_CASE_IDS; cases {vanished:?} are recorded and no longer published. \
+         Record each one with the decision that justifies it.",
+    );
     assert_eq!(
-        actual,
-        EXPECTED_CASE_IDS.iter().map(|id| (*id).to_string()).collect::<Vec<_>>(),
-        "Fix: the benchmark case enumeration changed. Record the added or removed case in EXPECTED_CASE_IDS with the decision that justifies it."
+        actual, pinned,
+        "Fix: the published case set matches EXPECTED_CASE_IDS but the order differs. Registry \
+         order is observable, so reorder the pin to the order the registry publishes."
     );
 }
 

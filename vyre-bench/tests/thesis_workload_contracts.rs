@@ -11,6 +11,12 @@ use std::collections::BTreeSet;
 /// literal-set engine it measured left the workspace with the scan product, so
 /// nothing here can execute it; `scan.ac.irregular_literals.4m` keeps irregular
 /// literal scanning covered through the matching kernels that stayed.
+///
+/// The three `frontend.rust.*` lexer and loop workloads are absent for the same
+/// reason: the crate they lexed moved to `software/frontend-rust`, so no case in
+/// this workspace can execute them. Parsing stays a proven class through the C
+/// front end that remains in `vyre-libs`, which is what the two `c_lexer` and
+/// `c_ast_traversal` ids below measure.
 #[test]
 fn benchmark_registry_contains_program_level_thesis_workloads() {
     let registry = vyre_bench::registry::collect_all();
@@ -20,9 +26,8 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
         .collect::<BTreeSet<_>>();
 
     for required_id in [
-        "frontend.rust.lexer.batch_ir_execute",
-        "frontend.rust.lexer.ir_execute",
-        "frontend.rust.range_loop.ir_execute",
+        "parser.c_lexer.small_state_transition.4k",
+        "release.c_ast_traversal.1m",
         "dataflow.ifds.skewed.closure.1m",
         "dataflow.ifds.skewed.step.1m",
         "scan.ac.irregular_literals.4m",
@@ -51,7 +56,11 @@ fn release_suite_cannot_regress_to_elementwise_only_evidence() {
         let metadata = case.metadata();
         let id = metadata.id.0;
         let tags = metadata.tags;
-        if id.starts_with("frontend.c.") || id.starts_with("frontend.rust.") {
+        // Keyed on the workload's own tag, not on a crate-shaped id prefix: the
+        // `frontend.rust.*` and `frontend.c.*` ids this used to name left with
+        // their crates, and an id prefix that matches nothing detects no class
+        // while reading as though it does.
+        if tags.iter().any(|tag| tag == "parser" || tag == "ast") {
             evidence_classes.insert("parsing");
         }
         if tags.iter().any(|tag| tag == "graph" || tag == "frontier") {

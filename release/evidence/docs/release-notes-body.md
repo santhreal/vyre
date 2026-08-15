@@ -2688,6 +2688,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   by the two paths.
 - Driver decorators now preserve the concrete backend device profile, including
   device-timestamp capability and timing quality.
+- The two benchmark pins that named the three `frontend.rust.*` cases record
+  their departure. Those cases left with the Rust front end, so the registry
+  stopped publishing them and both pins had been red since; the thesis-workload
+  list now names the C parsing workloads that remain, and the release suite
+  detects parsing evidence from a workload's own `parser`/`ast` tag rather than
+  from an id prefix that no longer matches any case. The enumeration pin
+  reports which ids appeared or vanished instead of printing two truncated
+  lists.
 - The lane-count-to-dispatch-grid ceiling division has one owner,
   `vyre_primitives::dispatch_grid::lane_grid`, ungated at the crate root and
   re-exported from `vyre_primitives::graph` so every existing call path
