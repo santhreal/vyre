@@ -1,12 +1,11 @@
 use super::*;
-use crate::c_frontend::rows::assert_pg_preserves_fixture_row;
-use crate::c_frontend::token_fixture::annotate_and_classify;
+use crate::c_frontend::parity_matrix::{assert_pg_mirrors_every_vast_row, cpu_stages};
+use crate::c_frontend::token_fixture::{annotate_and_classify, classify_without_annotation};
 
 #[test]
 fn cpu_pointer_to_array_classifies_correctly() {
     let fix = fixture_pointer_to_array();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_POINTER_DECL),
@@ -34,8 +33,7 @@ fn cpu_pointer_to_array_classifies_correctly() {
 #[test]
 fn cpu_storage_class_multi_declarator_specifiers_stay_raw() {
     let fix = fixture_storage_class_multi_declarator();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     // static and const must stay raw syntax
     assert_eq!(kind_at(&typed, 0), 0, "`static` must remain raw syntax");
@@ -73,8 +71,7 @@ fn cpu_storage_class_multi_declarator_specifiers_stay_raw() {
 #[test]
 fn cpu_parameter_array_static_restrict_stays_raw() {
     let fix = fixture_parameter_array_static_restrict();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         kind_at(&typed, 1),
@@ -147,8 +144,7 @@ fn cpu_nested_typedef_complex_declarator_annotations() {
 #[test]
 fn cpu_struct_tag_with_mixed_declarators() {
     let fix = fixture_struct_tag_with_mixed_declarators();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_STRUCT_DECL),
@@ -192,8 +188,7 @@ fn cpu_struct_tag_with_mixed_declarators() {
 #[test]
 fn cpu_union_tag_with_mixed_declarators() {
     let fix = fixture_union_tag_with_mixed_declarators();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_UNION_DECL),
@@ -232,8 +227,7 @@ fn cpu_union_tag_with_mixed_declarators() {
 #[test]
 fn cpu_enum_tag_with_mixed_declarators() {
     let fix = fixture_enum_tag_with_mixed_declarators();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_ENUM_DECL),
@@ -267,8 +261,7 @@ fn cpu_enum_tag_with_mixed_declarators() {
 #[test]
 fn cpu_heavy_qualifiers_and_storage_multi_decl_specifiers_stay_raw() {
     let fix = fixture_heavy_qualifiers_and_storage_multi_decl();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     // All specifiers must stay raw
     assert_eq!(kind_at(&typed, 0), 0, "`extern` must remain raw syntax");
@@ -323,8 +316,7 @@ fn cpu_heavy_qualifiers_and_storage_multi_decl_specifiers_stay_raw() {
 #[test]
 fn cpu_abstract_declarator_with_qualifiers_classifies() {
     let fix = fixture_abstract_declarator_with_qualifiers();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     // The outer parens are a cast expression
     assert_eq!(
@@ -367,8 +359,7 @@ fn cpu_abstract_declarator_with_qualifiers_classifies() {
 #[test]
 fn cpu_gnu_restrict_spelling_normalizes_to_qualifier() {
     let fix = fixture_gnu_restrict_qualifier();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
+    let typed = classify_without_annotation(&fix);
 
     assert_eq!(
         fix.tok_types[2], TOK_RESTRICT,
@@ -387,17 +378,20 @@ fn cpu_gnu_restrict_spelling_normalizes_to_qualifier() {
 }
 
 // ---------------------------------------------------------------------------
-// PG lowering preservation contracts
+// PG lowering preservation contract
 // ---------------------------------------------------------------------------
 
+/// Every declarator-matrix case's property graph mirrors its typed VAST at
+/// every row.
+///
+/// This replaces a single hand-written index list for one of the ten cases.
+/// `assert_pg_mirrors_every_vast_row` checks all rows the fixture produces, and
+/// iterating `CASES` reaches every case, so there is no index list and no case
+/// list to leave a construct out of.
 #[test]
-fn pg_lower_preserves_struct_tag_mixed_declarator_rows() {
-    let fix = fixture_struct_tag_with_mixed_declarators();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
-    let pg = reference_ast_to_pg_nodes(&typed);
-
-    for idx in [0usize, 4, 7, 8, 10, 11] {
-        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
+fn pg_lower_mirrors_every_row_of_every_case() {
+    for case in declarator_matrix_constructs::CASES {
+        let fix = (case.build)();
+        assert_pg_mirrors_every_vast_row(&fix, &cpu_stages(&fix), case.name);
     }
 }
