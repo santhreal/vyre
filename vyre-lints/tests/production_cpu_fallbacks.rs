@@ -82,22 +82,42 @@ fn cli_default_production_roots_are_vyre_owned_only() {
         "a lint that declares no default root scans nothing"
     );
 
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     for root in &roots {
-        let crate_dir = root
-            .split('/')
-            .next()
-            .expect("a root always has a first component");
+        let path = std::path::Path::new(root);
         assert!(
-            crate_dir == "vyre" || crate_dir.starts_with("vyre-"),
-            "default production root `{root}` sits outside the Vyre workspace, so a \
-             default scan would need an external consumer checkout"
+            path.is_relative(),
+            "default production root `{root}` is absolute, so the printed list names this \
+             checkout rather than the workspace members a caller would scan"
+        );
+        assert!(
+            path.file_name().and_then(std::ffi::OsStr::to_str) == Some("src"),
+            "default production root `{root}` is not a member `src` directory"
+        );
+        assert!(
+            workspace.join(path).is_dir(),
+            "default production root `{root}` does not exist in this workspace, so a default \
+             scan would need an external consumer checkout"
         );
     }
 
+    // The declared roots are the workspace members, so the fixture needs the
+    // manifest they are derived from. A bare directory tree would test a root
+    // list nothing produced.
     let dir = tempfile::tempdir().expect("tempdir");
+    let mut members = String::new();
     for root in &roots {
         fs::create_dir_all(dir.path().join(root)).expect("create default production root");
+        let member = root
+            .strip_suffix("/src")
+            .expect("a default root is a member `src` directory");
+        members.push_str(&format!("    \"{member}\",\n"));
     }
+    fs::write(
+        dir.path().join("Cargo.toml"),
+        format!("[workspace]\nresolver = \"2\"\nmembers = [\n{members}]\n"),
+    )
+    .expect("write the fixture workspace manifest");
 
     let output = Command::new(env!("CARGO_BIN_EXE_vyre-lints"))
         .arg("--check-production-cpu-fallbacks")

@@ -1608,3 +1608,8 @@ text = "The cross-backend u32 parity suites read one op table instead of one han
 id = "c-hostile-fixtures-spelled"
 category = "Changed"
 text = "The C11 hostile-parser fixtures are spelled through `c_frontend::spelling::c_rows` rather than one `TOK_` constant per line. Six distinct constructs shared long runs of `LBRACE DOT IDENTIFIER ASSIGN` and `LPAREN IDENTIFIER RPAREN`, which read as copied text and buried each construct in thirty lines of scaffolding plus an identical three-line span tail. A contract test pins the token count and the load-bearing rows of every fixture, because a spelling is a second way to say the same thing and a mistyped kind name would retarget a positional contract at another token while every assertion still passed. The union field designator both initializer-designator families index is one stream in `tests/support/c_frontend/fixtures/initializer_designator_streams.rs`, under one name in both."
+
+[[fragments]]
+id = "vyre-lints-workspace-root-discovery"
+category = "Fixed"
+text = "`vyre-lints` resolves the workspace root by walking ancestors for a manifest that declares `[workspace]`, and `--print-default-roots` prints those roots relative to it. A run from inside a member directory previously enumerated no members at all, because the default root is the current directory and a member manifest declares no `workspace.members`. Manifest reading also goes through `toml::from_str::<toml::Table>` rather than parsing a whole document into `toml::Value`, which the pinned toml release rejects at run time with `unexpected content, expected nothing`, and source reading goes through the one bounded reader `vyre_lints::read_source_bounded` so a single cap covers every file the lint walks."

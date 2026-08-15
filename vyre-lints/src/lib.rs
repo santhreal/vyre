@@ -31,7 +31,11 @@ use std::path::Path;
 
 const LINT_SOURCE_READ_CAP: usize = 64 * 1024 * 1024;
 
-pub(crate) fn read_source_bounded(path: &Path) -> Result<String> {
+/// Read one file as text, bounded by [`LINT_SOURCE_READ_CAP`].
+///
+/// The binary reads the workspace manifest through this too: one reader with one
+/// cap, so a pathological file cannot exhaust memory on either path.
+pub fn read_source_bounded(path: &Path) -> Result<String> {
     let mut file = std::fs::File::open(path).with_context(|| format!("open {}", path.display()))?;
     let len = file
         .metadata()

@@ -28,14 +28,22 @@ NEUTRAL_LAYERS = {
     "emitter": False,
     "facade": True,
     "foundation": True,
-    "frontend": True,
     "libraries": True,
     "lowering": True,
     "packaging": True,
+    # Optimizer passes expressed as Vyre programs, dispatched through the
+    # `ProgramDispatcher` seam, so the crate names no backend API.
+    "pass-engine": True,
     "primitives": True,
+    # Substrate-bound by function, not by accident: the link crate must name
+    # every source whose registrations a build links, and the concrete drivers
+    # are sources, so it reaches each backend API through them.
+    "registry-link": False,
     "runtime": True,
-    "scheduler": True,
     "semantics": True,
+    # `structure-gate` depends on no vyre crate, so it keeps running while the
+    # workspace does not compile. Nothing it reads is substrate-bound.
+    "standalone-tooling": True,
     "test-tooling": False,
     "tooling": False,
 }

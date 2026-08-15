@@ -3017,6 +3017,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   Operand positions now come from the one owner. Because that walk is
   bottom-up, a call site is reached with its arguments already inlined, so the
   argument loop that walked every argument a second time is gone.
+- `vyre-lints` resolves the workspace root by walking ancestors for a manifest
+  that declares `[workspace]`, and `--print-default-roots` prints those roots
+  relative to it. A run from inside a member directory previously enumerated no
+  members at all, because the default root is the current directory and a
+  member manifest declares no `workspace.members`. Manifest reading also goes
+  through `toml::from_str::<toml::Table>` rather than parsing a whole document
+  into `toml::Value`, which the pinned toml release rejects at run time with
+  `unexpected content, expected nothing`, and source reading goes through the
+  one bounded reader `vyre_lints::read_source_bounded` so a single cap covers
+  every file the lint walks.
 
 ## [0.7.1] - 2026-08-01
 

@@ -139,6 +139,24 @@ fn write_fixture(root: &Path) {
         "schema_version = 1\n\n[[page]]\npath = \"ARCHITECTURE.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"OPTIMIZATION_ARCHITECTURE.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"RUNTIME_PIPELINE.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"megakernel-wiring.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"rfcs/0005-persistent-megakernel.md\"\nstatus = \"superseded\"\n",
     )
     .unwrap();
+    // Member manifests and one optimization lane: the checker also asserts that
+    // every lane names paths that exist and `-p` packages a manifest declares,
+    // so a fixture without them is not a coherent workspace.
+    for member in ["a", "vyre-megakernel"] {
+        fs::create_dir_all(root.join(member).join("src")).unwrap();
+        fs::write(
+            root.join(member).join("Cargo.toml"),
+            format!("[package]\nname = \"{member}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n"),
+        )
+        .unwrap();
+        fs::write(root.join(member).join("src/lib.rs"), "").unwrap();
+    }
+    fs::create_dir_all(root.join("docs/optimization")).unwrap();
+    fs::write(
+        root.join("docs/optimization/OWNERSHIP.toml"),
+        "[lane.megakernel]\npurpose = \"Artifact freeze\"\nlayer = \"compiler-boundary\"\nwrite = [\"vyre-megakernel/src/**\"]\nrequired_commands = [\"test -p vyre-megakernel\"]\n",
+    )
+    .unwrap();
 }
 
 /// Current architecture guides must agree with live workspace, operation, backend, and ownership authorities.

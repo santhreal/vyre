@@ -35,7 +35,6 @@ const LAYER_ORDER: &[&str] = &[
     "foundation",
     "test-tooling",
     "primitives",
-    "frontend",
     "lowering",
     "semantics",
     "libraries",

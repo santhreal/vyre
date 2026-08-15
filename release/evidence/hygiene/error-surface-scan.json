@@ -351,6 +351,24 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-test-support/src/binop_parity.rs",
+      "line": 344,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot list the workspace root {root:?}: {err}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/data_type_variants.rs",
+      "line": 51,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read the DataType declaration at {path:?}: {err}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/data_type_variants.rs",
+      "line": 53,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration\")"
+    },
+    {
       "path": "vyre-test-support/src/ir_regions.rs",
       "line": 51,
       "pattern": "documented_panic_contract",
@@ -412,19 +430,19 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 249,
+      "line": 281,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 268,
+      "line": 300,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 348,
+      "line": 384,
       "pattern": "documented_panic_contract",
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },
@@ -574,7 +592,7 @@
     },
     {
       "path": "vyre-primitives/src/graph/csr_bidirectional.rs",
-      "line": 874,
+      "line": 875,
       "pattern": "documented_panic_contract",
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },

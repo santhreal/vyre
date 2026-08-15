@@ -183,7 +183,9 @@ def validate(root: Path) -> None:
         raise ContractError("workspace members must be explicit paths")
     if "vyre-megakernel" not in members:
         raise ContractError("workspace.members must include vyre-megakernel")
-    validate_optimization_lanes(root, workspace_package_names(root, members))
+    # Lane validation runs LAST, at the end of `validate`. It reads two files no
+    # other contract here needs, so raising from it early masks the finding a
+    # caller was actually looking for.
 
     train = read_toml(root / "release/release-train.toml")
     version = train.get("versions", {}).get("vyre")
@@ -339,6 +341,7 @@ def validate(root: Path) -> None:
             "workspace member",
         ],
     )
+    validate_optimization_lanes(root, workspace_package_names(root, members))
 
 
 def main() -> int:

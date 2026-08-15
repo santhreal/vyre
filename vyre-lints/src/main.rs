@@ -10,8 +10,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::{Path, PathBuf};
 use vyre_lints::{
-    run_consumer_coupling, run_gpu_skip_guards, run_module_forks, run_production_cpu_fallbacks,
-    run_raw_ir_in_libs, Violation, ViolationKind,
+    read_source_bounded, run_consumer_coupling, run_gpu_skip_guards, run_module_forks,
+    run_production_cpu_fallbacks, run_raw_ir_in_libs, Violation, ViolationKind,
 };
 
 #[derive(Parser, Debug)]
@@ -232,6 +232,40 @@ const CPU_GUARD_EXEMPT_CRATES: &[(&str, &str)] = &[
     ("vyre-macros", "proc macros run at compile time, not on a dispatch path"),
 ];
 
+/// The nearest ancestor of `start`, itself included, whose manifest declares a
+/// `[workspace]` table.
+///
+/// The CLI defaults its root to the working directory, so a run from inside a
+/// member directory read that member's manifest, found no members, and reported
+/// the workspace as undeclared. Walking up answers the question the caller
+/// meant, and a tree with no workspace manifest above it is an error naming
+/// where the walk started rather than an empty scan.
+fn workspace_manifest_root(start: &Path) -> Result<PathBuf> {
+    let start = if start.is_absolute() {
+        start.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("resolving the working directory for the workspace root walk")?
+            .join(start)
+    };
+    for candidate in start.ancestors() {
+        let manifest = candidate.join("Cargo.toml");
+        if !manifest.is_file() {
+            continue;
+        }
+        let text = read_source_bounded(&manifest)?;
+        let parsed: toml::Table =
+            toml::from_str(&text).with_context(|| format!("parsing {}", manifest.display()))?;
+        if parsed.contains_key("workspace") {
+            return Ok(candidate.to_path_buf());
+        }
+    }
+    anyhow::bail!(
+        "Fix: no Cargo.toml declaring `[workspace]` at or above {}. Pass --workspace-root.",
+        start.display()
+    )
+}
+
 /// Every workspace member's `src` directory, minus the recorded exemptions.
 ///
 /// Read from the workspace manifest at run time. A crate added to the workspace
@@ -240,11 +274,15 @@ const CPU_GUARD_EXEMPT_CRATES: &[(&str, &str)] = &[
 /// `vyre-foundation` and `vyre-primitives`, so the guard reported success while
 /// never reading either of them.
 fn production_source_roots(workspace: &Path) -> Result<Vec<PathBuf>> {
-    let manifest = std::fs::read_to_string(workspace.join("Cargo.toml"))
-        .with_context(|| format!("reading {}", workspace.join("Cargo.toml").display()))?;
-    let manifest: toml::Value = manifest.parse().context("parsing the workspace manifest")?;
+    let workspace = workspace_manifest_root(workspace)?;
+    let manifest = read_source_bounded(&workspace.join("Cargo.toml"))?;
+    // `toml::Table` rather than `toml::Value`: with the pinned toml, a whole
+    // document does not deserialize into `Value`, which is why the rest of the
+    // workspace parses a table and reads fields off it.
+    let manifest: toml::Table = toml::from_str(&manifest).context("parsing the workspace manifest")?;
     let members = manifest
         .get("workspace")
+        .and_then(toml::Value::as_table)
         .and_then(|workspace| workspace.get("members"))
         .and_then(toml::Value::as_array)
         .context(
@@ -283,8 +321,13 @@ const DEFAULT_RUN_KINDS: &[ViolationKind] = &[
 /// Run one lint: resolve its roots, fail closed on a missing one, emit, exit.
 fn run_lint(cli: &Cli, lint: &Lint, overrides: &[PathBuf]) -> Result<()> {
     if cli.print_default_roots {
+        // Printed relative to the workspace root: the roots are workspace
+        // members, so a caller reading this list is reading member paths, not
+        // paths into this checkout.
+        let workspace = workspace_manifest_root(&cli.workspace_root)?;
         for root in (lint.default_roots)(&cli.workspace_root)? {
-            println!("{}", root.display());
+            let shown = root.strip_prefix(&workspace).unwrap_or(&root);
+            println!("{}", shown.display());
         }
         return Ok(());
     }
@@ -457,7 +500,8 @@ fn emit_json(violations: &[Violation]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        production_source_roots, Lint, CPU_GUARD_EXEMPT_CRATES, DEFAULT_RUN_KINDS, LINTS,
+        production_source_roots, read_source_bounded, Lint, CPU_GUARD_EXEMPT_CRATES,
+        DEFAULT_RUN_KINDS, LINTS,
     };
     use std::collections::BTreeMap;
     use std::path::PathBuf;
@@ -560,10 +604,10 @@ mod tests {
     #[test]
     fn every_workspace_member_is_scanned_for_host_execution_or_exempt_with_a_reason() {
         let workspace = vyre_test_support::monorepo::vyre_workspace_root();
-        let manifest: toml::Value = std::fs::read_to_string(workspace.join("Cargo.toml"))
-            .expect("the workspace manifest is readable")
-            .parse()
-            .expect("the workspace manifest is valid TOML");
+        let text = read_source_bounded(&workspace.join("Cargo.toml"))
+            .expect("the workspace manifest is readable");
+        let manifest: toml::Table =
+            toml::from_str(&text).expect("the workspace manifest is valid TOML");
         let members: Vec<String> = manifest["workspace"]["members"]
             .as_array()
             .expect("the workspace declares members")

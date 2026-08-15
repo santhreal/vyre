@@ -195,3 +195,33 @@ The same derived vocabulary in the declaration-prefix position, where the two
 annotators disagreed on TOK_RBRACKET and TOK_RPAREN before the prefix walk was
 given one owner.
 """
+
+[[gate]]
+file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+test = "no_production_crate_outside_the_oracle_ships_a_host_dispatcher"
+reason = """
+Asserts that no crate except the parity oracle ships a `ProgramDispatcher` a
+default build can construct. The subject is the absence of a type in crates this
+test does not link, and a type nobody constructed is invisible to every running
+program; the failure it prevents is a consumer reaching a host dispatcher years
+later.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+test = "the_walk_actually_reaches_the_dispatchers_it_judges"
+reason = """
+Floor check for the walk the gate above depends on. Its subject is the file set
+that walk produced, which exists only inside the source scan.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/expr_type_single_owner.rs"
+test = "owner_answers_every_expr_variant"
+reason = """
+Requires a recorded type answer for every declared `Expr` variant, with the
+variant roster read from the source of the enum. Rust has no reflection, so a
+variant added without an answer cannot be observed at run time: the typecheck
+walk simply returns nothing for it, which is also what a legitimately untyped
+expression returns.
+"""
