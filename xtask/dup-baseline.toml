@@ -76,18 +76,18 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 623
-total_lines = 36601
+duplicate_lines = 598
+total_lines = 36689
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 2328
-total_lines = 65967
+duplicate_lines = 2315
+total_lines = 65914
 
 [[crate]]
 name = "vyre-driver-metal"
-duplicate_lines = 73
-total_lines = 4545
+duplicate_lines = 61
+total_lines = 4481
 
 [[crate]]
 name = "vyre-driver-reference"
@@ -126,8 +126,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2707
-total_lines = 96013
+duplicate_lines = 2625
+total_lines = 95535
 
 [[crate]]
 name = "vyre-grammar-gen"
@@ -136,8 +136,8 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 9430
-total_lines = 186780
+duplicate_lines = 9285
+total_lines = 186195
 
 [[crate]]
 name = "vyre-lints"
@@ -161,23 +161,23 @@ total_lines = 3605
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 5314
-total_lines = 100403
+duplicate_lines = 4859
+total_lines = 100404
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 480
+duplicate_lines = 476
 total_lines = 15554
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 237
-total_lines = 28982
+duplicate_lines = 235
+total_lines = 28909
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 221
-total_lines = 9082
+duplicate_lines = 213
+total_lines = 9326
 
 [[crate]]
 name = "vyre-test-support"
@@ -191,15 +191,15 @@ total_lines = 9706
 
 [[crate]]
 name = "xtask"
-duplicate_lines = 8
-total_lines = 20015
+duplicate_lines = 0
+total_lines = 29798
 
 [[crate]]
 name = "xtask-evidence"
-duplicate_lines = 58
-total_lines = 26123
+duplicate_lines = 50
+total_lines = 26007
 
 [[crate]]
 name = "xtask-registry"
-duplicate_lines = 16
-total_lines = 8018
+duplicate_lines = 0
+total_lines = 8429

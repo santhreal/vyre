@@ -99,12 +99,7 @@ impl Binary {
     /// Read one row, treating a missing or non-string key as empty. An empty
     /// required field fails the rule that names that field.
     fn from_row(row: &toml::Table) -> Self {
-        let text = |key: &str| {
-            row.get(key)
-                .and_then(toml::Value::as_str)
-                .unwrap_or_default()
-                .to_string()
-        };
+        let text = |key: &str| crate::toml_text::string_field(row, key);
         Self {
             package: text("package"),
             name: text("name"),

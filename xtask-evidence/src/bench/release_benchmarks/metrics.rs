@@ -8,7 +8,7 @@ use crate::bench::benchmark_evidence_semantics::{
 };
 
 pub(super) fn write_json(path: &Path, value: &impl Serialize) {
-    if let Err(error) = xtask::json_output::write_pretty_json(path, value) {
+    if let Err(error) = xtask::json_document::write(path, value) {
         eprintln!("Fix: {error}");
         std::process::exit(1);
     }

@@ -3404,6 +3404,7 @@ dependencies = [
  "vyre-spec",
  "vyre-test-support",
  "wide",
+ "xtask",
 ]
 
 [[package]]

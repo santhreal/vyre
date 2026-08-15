@@ -12,8 +12,6 @@ use metal::{
     Buffer, CommandBuffer, ComputePipelineState, Device, MTLCommandBufferStatus,
     MTLResourceOptions, MTLSize, NSUInteger,
 };
-use vyre_driver::{private, BackendError, PendingDispatch};
-use vyre_driver::{PipelineCacheIdentity, PipelineCacheMissReason};
 use vyre_driver::resident_transfer_fusion::{
     fuse_resident_transfer_intervals, ResidentTransferInterval, ResidentTransferView,
 };
@@ -23,6 +21,8 @@ use vyre_driver::{
     DeviceTimingQuality, DispatchConfig, OutputBindingLayout, PipelineCacheSnapshot,
     ResidentHandle, ResidentOwner, Resource, TimedDispatchResult, VyreBackend,
 };
+use vyre_driver::{private, BackendError, PendingDispatch};
+use vyre_driver::{PipelineCacheIdentity, PipelineCacheMissReason};
 use vyre_foundation::ir::{OpId, Program};
 
 use crate::METAL_BACKEND_ID;
@@ -921,42 +921,14 @@ impl VyreBackend for MetalBackend {
     }
 
     fn device_profile(&self) -> DeviceProfile {
-        let max_workgroup_size = self.max_workgroup_size();
         let max_shared_memory_bytes =
             ns_uint_to_u32_saturating(self.device.max_threadgroup_memory_length());
         DeviceProfile {
-            backend: self.id(),
-            supports_subgroup_ops: self.supports_subgroup_ops(),
-            supports_indirect_dispatch: self.supports_indirect_dispatch(),
-            supports_distributed_collectives: self.supports_distributed_collectives(),
-            supports_specialization_constants: false,
-            supports_f16: self.supports_f16(),
-            supports_bf16: self.supports_bf16(),
-            supports_trap_propagation: false,
-            supports_tensor_cores: self.supports_tensor_cores(),
-            has_mul_high: false,
-            has_dual_issue_fp32_int32: false,
-            has_subgroup_shuffle: self.supports_subgroup_ops(),
             has_shared_memory: max_shared_memory_bytes > 0,
-            max_native_int_width: 32,
-            max_workgroup_size,
-            max_invocations_per_workgroup: self.max_compute_invocations_per_workgroup(),
             max_shared_memory_bytes,
-            max_storage_buffer_binding_size: self.max_storage_buffer_bytes(),
-            subgroup_size: self.subgroup_size().unwrap_or(0),
-            compute_units: 0,
-            regs_per_thread_max: 0,
-            l1_cache_bytes: 0,
-            l2_cache_bytes: 0,
             mem_bw_gbps: bytes_per_second_to_gbps(self.device.max_transfer_rate()),
             timing_quality: DeviceTimingQuality::HostEnqueueWait,
-            supports_device_timestamps: false,
-            supports_hardware_counters: false,
-            ideal_unroll_depth: 0,
-            ideal_vector_pack_bits: 0,
-            ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 0,
-            shared_memory_bank_width_bytes: 0,
+            ..DeviceProfile::from_backend(self)
         }
     }
 
@@ -2301,12 +2273,8 @@ fn metal_pipeline_cache_key(
         env!("CARGO_PKG_VERSION"),
         device_name
     );
-    let fingerprint = vyre_driver::PipelineDeviceFingerprint::from_parts(
-        0x106b,
-        0,
-        "metal",
-        &revision_extra,
-    );
+    let fingerprint =
+        vyre_driver::PipelineDeviceFingerprint::from_parts(0x106b, 0, "metal", &revision_extra);
     PipelineCacheIdentity::try_from_program(program, config, fingerprint).map_err(|error| {
         BackendError::InvalidProgram {
             fix: format!(

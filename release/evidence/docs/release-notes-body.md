@@ -408,6 +408,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Changed
 
+- DeviceProfile::from_backend is the one spelling of the neutral device
+  profile. The backend trait default and the Metal runtime override now take it
+  and restate only the fields the backend knows better, instead of each writing
+  out all forty.
 - The heuristic audit reads an author's note, not any sentence that names a
   policy. A marker now has to open a plain comment: a doc comment describing a
   cache's eviction policy to its caller, a term used mid-paragraph while
@@ -1573,6 +1577,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   attributes that had been pointing the compiler back out of those directories
   are deleted, because the default resolution now finds every child. No item
   moved between modules and no public path changed.
+- The gate tooling reads and writes a JSON document through one module.
+  xtask::json_document owns both directions; the package readiness matrix, the
+  release benchmark metrics and the release backend suite all read through it
+  instead of each spelling its own bounded read and serde parse.
+- A gate that reads a string field out of a TOML row now calls
+  xtask::toml_text::string_field. The CLI documentation generator and the
+  documentation checker had the same row-to-scalar closure.
 - Eleven builders computed their own buffer cell count and wrote their own
   overflow message. `vyre_primitives::math::matrix_cells` and
   `square_matrix_cells` now own both: the count of a `rows x cols` operand, the
@@ -1595,6 +1606,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   vyre-grammar-gen, vyre-megakernel, vyre-reference and vyre-runtime publish
   each item at one path; submodules that exist because a file was split are
   private and their owning module re-exports what it holds.
+- The benchmark harness delegates the source fingerprint and the dirty worktree
+  digest to xtask::source_provenance, the one producer. Two implementations
+  kept in agreement by a test were one duplication; the test now proves the
+  delegation and goes red if a second implementation returns.
+- vyre_driver::materialize owns the projection from a binding plan to the
+  resident buffer names a dispatch must supply, and the unbound-resident
+  rejection. The CUDA and Metal materializers each carried the same filter; the
+  scratch-exclusion proof moved to a test beside the projection.
 - Every `vyre-foundation` module has one public path. `algebra`, `analysis` and
   `dispatch` were grouping directories, each holding one or two unrelated
   modules, and each needed a crate-root re-export because callers named the
@@ -2197,6 +2216,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose generator was retired is stale by construction, and the README sections
   plus `--help` are the live surface. `scripts/cli_docs.py` and
   `scripts/lib/cargo_runner.py` are gone.
+- The duplication scanner lists source files through the shared tree scanner
+  instead of invoking git itself, so one rule decides what counts as a source
+  file in the tree.
 - A frozen-contract snapshot records the declaration and nothing else: the item
   line, its signatures and its closer. Default method bodies, doc comments and
   blank lines are left out. Before, a refactor inside a default body or a

@@ -900,46 +900,14 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// Unified backend-neutral device profile.
     ///
     /// Shared planner code should prefer this single profile over reading
-    /// individual capability methods one by one. Concrete backends may
-    /// override it when they can report richer device facts such as shared
-    /// memory size or native lowering-strategy features.
+    /// individual capability methods one by one. A concrete backend overrides
+    /// the facts it can report better, such as shared memory size or a native
+    /// lowering-strategy feature, and takes the rest from
+    /// [`crate::DeviceProfile::from_backend`], which is the one place the
+    /// neutral profile is spelled.
     #[must_use]
     fn device_profile(&self) -> crate::DeviceProfile {
-        let max_workgroup_size = self.max_workgroup_size();
-        crate::DeviceProfile {
-            backend: self.id(),
-            supports_subgroup_ops: self.supports_subgroup_ops(),
-            supports_indirect_dispatch: self.supports_indirect_dispatch(),
-            supports_distributed_collectives: self.supports_distributed_collectives(),
-            supports_specialization_constants: false,
-            supports_f16: self.supports_f16(),
-            supports_bf16: self.supports_bf16(),
-            supports_trap_propagation: false,
-            supports_tensor_cores: self.supports_tensor_cores(),
-            has_mul_high: false,
-            has_dual_issue_fp32_int32: false,
-            has_subgroup_shuffle: self.supports_subgroup_ops(),
-            has_shared_memory: false,
-            max_native_int_width: 32,
-            max_workgroup_size,
-            max_invocations_per_workgroup: self.max_compute_invocations_per_workgroup(),
-            max_shared_memory_bytes: 0,
-            max_storage_buffer_binding_size: self.max_storage_buffer_bytes(),
-            subgroup_size: self.subgroup_size().unwrap_or(0),
-            compute_units: 0,
-            regs_per_thread_max: 0,
-            l1_cache_bytes: 0,
-            l2_cache_bytes: 0,
-            mem_bw_gbps: 0,
-            timing_quality: crate::DeviceTimingQuality::HostOnly,
-            supports_device_timestamps: false,
-            supports_hardware_counters: false,
-            ideal_unroll_depth: 0,
-            ideal_vector_pack_bits: 0,
-            ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 0,
-            shared_memory_bank_width_bytes: 0,
-        }
+        crate::DeviceProfile::from_backend(self)
     }
 
     // ---------------------------------------------------------------

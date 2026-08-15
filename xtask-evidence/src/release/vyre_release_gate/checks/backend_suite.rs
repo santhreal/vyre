@@ -1705,24 +1705,12 @@ fn read_release_suite_json(
     failures: &mut Vec<String>,
 ) -> Option<serde_json::Value> {
     let path = resolve_manifest_path(base_dir, evidence);
-    let text = match read_text_bounded(&path) {
-        Ok(text) => text,
-        Err(error) => {
-            failures.push(format!(
-                "requirement `{}` failed to read backend suite parity artifact `{}`: {error}",
-                requirement.id,
-                path.display()
-            ));
-            return None;
-        }
-    };
-    match serde_json::from_str::<serde_json::Value>(&text) {
+    match read_json(&path) {
         Ok(value) => Some(value),
         Err(error) => {
             failures.push(format!(
-                "requirement `{}` backend suite parity artifact `{}` is invalid JSON: {error}",
-                requirement.id,
-                path.display()
+                "requirement `{}` cannot use the backend suite parity artifact: {error}",
+                requirement.id
             ));
             None
         }

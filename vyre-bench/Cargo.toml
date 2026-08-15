@@ -33,6 +33,10 @@ vyre-primitives = { workspace = true, features = ["bitset", "graph", "cpu-parity
 vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }
+# The source fingerprint every recorded artifact names its tree with has one
+# producer, and it is the crate that links no vyre crate so it still identifies a
+# checkout while the workspace does not compile.
+xtask = { path = "../xtask" }
 blake3 = { workspace = true }
 
 aho-corasick = { workspace = true }

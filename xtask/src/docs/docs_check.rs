@@ -126,12 +126,7 @@ impl Page {
     /// An empty field fails its own rule below with the sentence that names the
     /// field, which reads better than one sentence about a malformed row.
     fn from_row(row: &toml::Table) -> Self {
-        let text = |key: &str| {
-            row.get(key)
-                .and_then(toml::Value::as_str)
-                .unwrap_or_default()
-                .to_string()
-        };
+        let text = |key: &str| crate::toml_text::string_field(row, key);
         Self {
             path: text("path"),
             title: text("title"),

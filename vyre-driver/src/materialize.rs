@@ -23,8 +23,8 @@ use vyre_megakernel::{
 };
 
 use crate::{
-    BackendError, BindingPlan, BindingSet, BoundResource, Completion, Device, DeviceIdentity,
-    DispatchConfig, Resource, Submission, TimedDispatchResult,
+    BackendError, BindingPlan, BindingRole, BindingSet, BoundResource, Completion, Device,
+    DeviceIdentity, DispatchConfig, Resource, Submission, TimedDispatchResult,
 };
 
 /// Build the shared "recompile the payload" rejection.
@@ -387,6 +387,39 @@ pub fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
             value.0
         ),
     }
+}
+
+/// Rejection for a declared resident buffer whose canonical value carries no
+/// resource.
+///
+/// A resident launch is handed device memory the caller already filled, so the
+/// refusal names the buffer and the value rather than the submission: this is
+/// the wording two backends shipped byte-for-byte beside their own copy of the
+/// binding walk.
+#[must_use]
+pub fn unbound_resident_buffer(value: ArtifactValueId, name: &str) -> BackendError {
+    BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: bind canonical artifact value {} for resident Program buffer `{name}`.",
+            value.0
+        ),
+    }
+}
+
+/// The Program buffer names a resident launch takes a resource for, in binding
+/// order.
+///
+/// A shared binding is filled by the launch itself rather than by the caller,
+/// so it takes no resource. Two backends read the same order off the same plan
+/// through their own copy of this filter.
+pub fn resident_buffer_names<'plan>(
+    plan: &'plan BindingPlan,
+    program: &'plan Program,
+) -> impl Iterator<Item = &'plan str> {
+    plan.bindings
+        .iter()
+        .filter(|binding| binding.role != BindingRole::Shared)
+        .map(|binding| program.buffers()[binding.buffer_index].name())
 }
 
 /// Rejection for a declared output slot the target module never produced.

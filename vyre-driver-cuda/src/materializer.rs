@@ -5,7 +5,7 @@ use vyre_driver::materialize::{
     self, ExecutableModule, InstanceCore, InstanceMessages, MaterializerDevice,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
     CompiledPipeline, Completion, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
 };
 use vyre_foundation::ir::Program;
@@ -157,15 +157,9 @@ impl CudaArtifactInstance {
         )?;
         let plan = BindingPlan::build(&module.program)?;
         let ordered = self.core.ordered_resident_resources(
-            resident_resource_bindings(&plan)
-                .map(|binding| module.program.buffers()[binding.buffer_index].name()),
+            materialize::resident_buffer_names(&plan, &module.program),
             resources,
-            |value, name| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: bind canonical artifact value {} for resident Program buffer `{name}`.",
-                    value.0
-                ),
-            },
+            materialize::unbound_resident_buffer,
         )?;
         let dispatched = module
             .pipeline
@@ -178,12 +172,6 @@ impl CudaArtifactInstance {
             &self.core.messages,
         )
     }
-}
-
-fn resident_resource_bindings(plan: &BindingPlan) -> impl Iterator<Item = &vyre_driver::Binding> {
-    plan.bindings
-        .iter()
-        .filter(|binding| binding.role != BindingRole::Shared)
 }
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
@@ -211,33 +199,4 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
             profile,
         ),
     }))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
-
-    /// WHY: workgroup scratch is module-internal memory, not an artifact value. Resident
-    /// materialization must bind every host-visible role while excluding shared scratch.
-    #[test]
-    fn resident_resource_projection_excludes_workgroup_scratch() {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::F32)
-                    .with_count(16),
-                BufferDecl::workgroup("scratch", 16, DataType::F32),
-                BufferDecl::output("output", 1, DataType::F32).with_count(16),
-            ],
-            [16, 1, 1],
-            Vec::new(),
-        );
-        let plan = BindingPlan::build(&program)
-            .expect("Fix: resident resource projection fixture must build a binding plan.");
-        let names = resident_resource_bindings(&plan)
-            .map(|binding| binding.name.as_ref())
-            .collect::<Vec<_>>();
-
-        assert_eq!(names, ["input", "output"]);
-    }
 }

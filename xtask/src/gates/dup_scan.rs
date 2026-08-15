@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gates::scan;
 
 /// Shingle length in normalized lines.
 const SHINGLE: usize = 8;
@@ -64,74 +65,32 @@ fn normalize(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn crate_of(root: &Path, path: &Path) -> Option<String> {
-    let relative = path.strip_prefix(root).ok()?;
-    relative
-        .components()
+/// The crate a repository-relative path belongs to.
+fn crate_of(path: &Path) -> Option<String> {
+    path.components()
         .next()
         .map(|component| component.as_os_str().to_string_lossy().into_owned())
 }
 
-/// Every Rust source file the repository will carry, in sorted order.
-///
-/// The set is what git would commit: tracked files plus untracked files no
-/// ignore rule excludes. A working tree also holds scratch that git ignores,
-/// and counting it made the measurement local. Twenty-two `.rs` files ignored
-/// by one rule were once counted into their crates' totals here, so a pin
-/// recorded on a workstation described that workstation and CI measured a
-/// smaller tree, which is the direction that lets a gate pass by accident.
-fn source_files(root: &Path) -> Result<Vec<PathBuf>, GateError> {
-    let listing = std::process::Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args([
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            "*.rs",
-        ])
-        .output();
-    let listing = match listing {
-        Ok(listing) if listing.status.success() => listing.stdout,
-        Ok(listing) => {
-            return Err(GateError::new(
-                format!(
-                    "cannot list the repository's source files: git ls-files exited {}",
-                    listing.status
-                ),
-                "run the gate inside a git checkout of this repository",
-            ));
-        }
-        Err(error) => {
-            return Err(GateError::new(
-                format!("cannot list the repository's source files: {error}"),
-                "install git, or run the gate inside a git checkout of this repository",
-            ));
-        }
-    };
-    let mut files: Vec<PathBuf> = listing
-        .split(|byte| *byte == 0)
-        .filter(|entry| !entry.is_empty())
-        .map(|entry| root.join(String::from_utf8_lossy(entry).as_ref()))
-        .filter(|path| path.is_file())
-        .collect();
-    files.sort();
-    Ok(files)
-}
-
 /// Measure duplicated lines per crate across the workspace.
+///
+/// The file set is what git would commit: tracked files plus untracked files no
+/// ignore rule excludes, which is [`scan::Tree`]. A working tree also holds
+/// scratch that git ignores, and counting it made the measurement local.
+/// Twenty-two `.rs` files ignored by one rule were once counted into their
+/// crates' totals here, so a pin recorded on a workstation described that
+/// workstation while CI measured a smaller tree, which is the direction that
+/// lets a gate pass by accident.
 #[must_use]
 pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateError> {
-    let files = source_files(root)?;
+    let tree = scan::Tree::open(root)?;
+    let files = tree.all_rust();
     let mut normalized: Vec<(usize, String, Vec<String>)> = Vec::new();
     for (index, path) in files.iter().enumerate() {
-        let Ok(text) = fs::read_to_string(path) else {
+        let Ok(text) = fs::read_to_string(tree.absolute(path)) else {
             continue;
         };
-        let Some(owner) = crate_of(root, path) else {
+        let Some(owner) = crate_of(path) else {
             continue;
         };
         normalized.push((index, owner, normalize(&text)));
@@ -225,18 +184,15 @@ pub(crate) struct FileReport {
 #[must_use]
 pub(crate) fn report_for(root: &Path, only: Option<&str>) -> Result<Vec<FileReport>, GateError> {
     let mut normalized: Vec<(String, String, Vec<String>)> = Vec::new();
-    for path in source_files(root)? {
-        let Ok(text) = fs::read_to_string(&path) else {
+    let tree = scan::Tree::open(root)?;
+    for path in tree.all_rust() {
+        let Ok(text) = fs::read_to_string(tree.absolute(&path)) else {
             continue;
         };
-        let Some(owner) = crate_of(root, &path) else {
+        let Some(owner) = crate_of(&path) else {
             continue;
         };
-        let relative = path
-            .strip_prefix(root)
-            .unwrap_or(&path)
-            .to_string_lossy()
-            .into_owned();
+        let relative = path.to_string_lossy().into_owned();
         normalized.push((owner, relative, normalize(&text)));
     }
 

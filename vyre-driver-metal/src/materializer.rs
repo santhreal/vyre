@@ -7,9 +7,8 @@ mod native {
 
     use vyre_driver::materialize::{self, ExecutableModule, InstanceCore, MaterializerDevice};
     use vyre_driver::{
-        ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
-        Completion, DeviceIdentity, DispatchConfig, Resource, ResidentOwner, Submission,
-        VyreBackend,
+        ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, Completion,
+        DeviceIdentity, DispatchConfig, ResidentOwner, Resource, Submission, VyreBackend,
     };
     use vyre_foundation::ir::Program;
     use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
@@ -162,15 +161,9 @@ mod native {
             )?;
             let plan = BindingPlan::build(&module.program)?;
             let ordered = self.core.ordered_resident_resources(
-                resident_resource_bindings(&plan)
-                    .map(|binding| module.program.buffers()[binding.buffer_index].name()),
+                materialize::resident_buffer_names(&plan, &module.program),
                 resources,
-                |value, name| BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: bind canonical artifact value {} for resident Program buffer `{name}`.",
-                        value.0
-                    ),
-                },
+                materialize::unbound_resident_buffer,
             )?;
             let mut config = module.config.clone();
             if let Some(grid) = invocation_grid {
@@ -191,15 +184,6 @@ mod native {
                 &self.core.messages,
             )
         }
-    }
-
-    /// The bindings a resident launch takes a resource for, in binding order.
-    fn resident_resource_bindings(
-        plan: &BindingPlan,
-    ) -> impl Iterator<Item = &vyre_driver::Binding> {
-        plan.bindings
-            .iter()
-            .filter(|binding| binding.role != BindingRole::Shared)
     }
 
     pub(super) fn factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {

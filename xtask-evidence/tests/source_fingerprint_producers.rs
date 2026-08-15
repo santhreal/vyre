@@ -1,12 +1,11 @@
-//! The two source-fingerprint producers must spell the same tree the same way.
+//! The benchmark probe names a tree with the one fingerprint producer.
 //!
-//! `xtask` links no vyre crate, so the recorder that stamps a gate artifact and
-//! the probe that stamps a measured benchmark report cannot share an
-//! implementation. This crate links both, and it is the only place that can
-//! hold them to the same string. Without this test the two would drift and the
-//! first thing to notice would be a release gate comparing a gate artifact's
-//! fingerprint against a benchmark artifact's and finding two trees where there
-//! is one.
+//! `vyre-bench` used to measure the dirty worktree itself, and the two digests
+//! agreed only because this file compared them. The probe now delegates to
+//! `xtask::source_provenance`, and these tests are what makes a second
+//! implementation loud: reintroduce one and a release gate comparing a gate
+//! artifact's fingerprint against a benchmark artifact's would otherwise find
+//! two trees where there is one.
 
 use std::path::Path;
 
@@ -29,8 +28,7 @@ fn both_producers_fingerprint_a_dirty_checkout_identically() {
     xtask::fixture_checkout::seeded(dir.path());
     std::fs::write(dir.path().join("tracked.txt"), "changed\n")
         .expect("Fix: dirty the tracked file.");
-    std::fs::write(dir.path().join("untracked.txt"), "new\n")
-        .expect("Fix: add an untracked file.");
+    std::fs::write(dir.path().join("untracked.txt"), "new\n").expect("Fix: add an untracked file.");
 
     let probe = probe_fingerprint(dir.path());
     let recorder = xtask::source_provenance::capture(dir.path())
@@ -69,4 +67,3 @@ fn both_producers_ignore_the_evidence_the_run_is_writing() {
 fn probe_fingerprint(root: &Path) -> String {
     vyre_bench::probes::source_fingerprint(&vyre_bench::probes::capture_git_info_at(root))
 }
-

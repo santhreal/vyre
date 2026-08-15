@@ -1,0 +1,2 @@
+category = "Changed"
+text = "vyre_driver::materialize owns the projection from a binding plan to the resident buffer names a dispatch must supply, and the unbound-resident rejection. The CUDA and Metal materializers each carried the same filter; the scratch-exclusion proof moved to a test beside the projection."

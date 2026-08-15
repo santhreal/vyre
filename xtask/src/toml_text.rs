@@ -1,4 +1,4 @@
-//! TOML scalars a gate writes into a document it generates.
+//! TOML scalars a gate reads from a row and writes into a document.
 
 /// One TOML basic string, so a value containing a quote or a backslash
 /// round-trips through the document.
@@ -18,6 +18,20 @@ pub fn array<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
     }
     text.push(']');
     text
+}
+
+/// One string field of a row, empty when the key is absent or not a string.
+///
+/// Every generated-document row declares its fields as strings, and each field
+/// has its own rule that reports the empty case with the sentence naming that
+/// field, which reads better than one sentence about a malformed row. The two
+/// document generators held the same closure.
+#[must_use]
+pub fn string_field(row: &toml::Table, key: &str) -> String {
+    row.get(key)
+        .and_then(toml::Value::as_str)
+        .unwrap_or_default()
+        .to_string()
 }
 
 #[cfg(test)]

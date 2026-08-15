@@ -1553,6 +1553,17 @@ default_features = false
 boundary = "private"
 seam = "registry-link"
 
+[[crate.dependency]]
+package = "xtask"
+purpose = "the one producer of the source fingerprint a recorded artifact names its tree with"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
+
 [[crate]]
 package = "vyre-lints"
 path = "vyre-lints"

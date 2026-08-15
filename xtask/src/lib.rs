@@ -27,7 +27,7 @@ pub mod gate;
 pub mod gates;
 pub mod generated_document;
 pub mod hash;
-pub mod json_output;
+pub mod json_document;
 pub mod manifest_walk;
 pub mod output_arg;
 pub mod release;

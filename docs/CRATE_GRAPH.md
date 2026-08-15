@@ -72,6 +72,7 @@ graph TD
   C3 --> C27
   C3 --> C28
   C3 --> C30
+  C3 --> C32
   C4 --> C1
   C4 --> C5
   C4 --> C7
@@ -219,6 +220,7 @@ graph TD
 | `vyre-bench` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `vyre-bench` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
 | `vyre-bench` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
+| `vyre-bench` | `xtask` | the one producer of the source fingerprint a recorded artifact names its tree with | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `vyre-conform` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
 | `vyre-conform` | `vyre-conform-spec` | versioned conformance schemas | None | `always` | `normal` | `false` | `true` | `private` | `conformance` |
 | `vyre-conform` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |

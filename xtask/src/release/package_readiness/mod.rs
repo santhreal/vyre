@@ -790,23 +790,10 @@ pub fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<String>
 }
 
 fn read_metadata_matrix(path: &Path, blockers: &mut Vec<String>) -> Option<serde_json::Value> {
-    let text = match crate::output_arg::read_text_bounded(path, MAX_JSON_BYTES, "") {
-        Ok(text) => text,
-        Err(error) => {
-            blockers.push(format!(
-                "failed to read metadata matrix `{}`: {error}",
-                path.display()
-            ));
-            return None;
-        }
-    };
-    match serde_json::from_str::<serde_json::Value>(&text) {
+    match crate::json_document::read(path, MAX_JSON_BYTES) {
         Ok(value) => Some(value),
         Err(error) => {
-            blockers.push(format!(
-                "failed to parse metadata matrix `{}`: {error}",
-                path.display()
-            ));
+            blockers.push(format!("cannot use the metadata matrix: {error}"));
             None
         }
     }

@@ -52,6 +52,11 @@ pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
     xtask::output_arg::read_text_bounded(path, MAX_RELEASE_GATE_TEXT_BYTES, "release gate")
 }
 
+/// One JSON artifact this gate judges, read under the same bound.
+pub(super) fn read_json(path: &Path) -> Result<serde_json::Value, String> {
+    xtask::json_document::read(path, MAX_RELEASE_GATE_TEXT_BYTES)
+}
+
 /// Whether a manifest evidence entry resolves outside the repository.
 ///
 /// Evidence paths are written relative to the manifest's directory, which is
@@ -104,8 +109,8 @@ mod tests {
     fn rejects_the_removed_prepublish_flag() {
         let args = vec!["--prepublish".to_string()];
 
-        let error = options_from_args(Path::new("/w"), &args)
-            .expect_err("removed flag must not parse");
+        let error =
+            options_from_args(Path::new("/w"), &args).expect_err("removed flag must not parse");
 
         assert!(error.contains("--prepublish"), "{error}");
     }

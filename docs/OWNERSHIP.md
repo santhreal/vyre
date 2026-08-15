@@ -63,7 +63,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 - Path: `vyre-bench`
 - Owner: `benchmarks`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`
+- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -81,6 +81,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `private` | `registry-link` |
 | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | `private` | `runtime` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
+| `xtask` | the one producer of the source fingerprint a recorded artifact names its tree with | `private` | `release-tooling` |
 
 ### `vyre-conform`
 

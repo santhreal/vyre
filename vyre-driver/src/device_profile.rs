@@ -150,8 +150,14 @@ impl DeviceProfile {
     }
 
     /// Build a profile from the stable backend trait capability methods.
+    ///
+    /// This is the neutral profile: every fact the trait can answer, and a
+    /// conservative value for every fact it cannot. A backend that knows more
+    /// overrides the fields it knows and takes the rest from here, rather than
+    /// respelling forty fields; one that spelled them all had already lost two
+    /// of them.
     #[must_use]
-    pub fn from_backend(backend: &dyn crate::backend::VyreBackend) -> Self {
+    pub fn from_backend<B: crate::backend::VyreBackend + ?Sized>(backend: &B) -> Self {
         let max_workgroup_size = backend.max_workgroup_size();
         Self {
             backend: backend.id(),
