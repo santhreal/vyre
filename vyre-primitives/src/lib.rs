@@ -75,9 +75,10 @@ pub mod wire;
 /// One classification of every Cargo feature this crate declares.
 ///
 /// A domain feature that is in neither list is how a third admission category
-/// returns, so `tests/feature_classification.rs` holds the lists to the
-/// manifest.
-pub mod organization;
+/// returns, so the module's own tests hold the lists to the manifest. The lists
+/// are crate-private: they describe which compositions are still parked here,
+/// and nothing outside may depend on that.
+mod organization;
 #[cfg(feature = "vyre-foundation")]
 use std::sync::Arc;
 
