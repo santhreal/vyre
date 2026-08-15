@@ -2290,6 +2290,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   of those needs no edit. The default-feature public-API snapshots for
   `vyre-primitives` and `vyre-libs` are unaffected, since `graph` is not a
   default feature.
+- Twenty-seven files under `scripts/` are gone. Each was a check whose rule a
+  registered gate already owns, a helper only such a check called, or a
+  baseline nothing read. Nothing in the tree invoked any of them, so they were
+  a second statement of a rule that could drift from the gate that enforces it,
+  and two pinned baselines that no reader compared against. The script
+  assertion ledger now records only scripts that are still on disk, and states
+  that a row leaves it by the script being deleted.
 - Forty declared dependencies that no source file references are gone, across
   sixteen crates. `cargo deny`'s sibling gate, `cargo machete`, had never run
   to completion in CI because it could not install under the workspace

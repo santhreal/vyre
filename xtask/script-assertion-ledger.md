@@ -1,18 +1,21 @@
 # Script assertion ledger
 
-`scripts/` holds 96 tracked files: 71 shell scripts, 21 Python scripts, 3 text
-baselines and 1 lockfile. Each one is recorded below with its assertions, what
-makes it exit nonzero, every caller found in the tree, whether the files it reads
-still exist after the documentation deletion at commit b1ed746d1c, and the gate
-that owns its assertions after the port. The rows carry 332 assertions and
-118 findings.
+`scripts/` holds 65 tracked files: 49 shell scripts and 16 Python scripts.
+Each one is recorded below with its assertions, what makes it exit nonzero, every
+caller found in the tree, whether the files it reads still exist, and the gate
+that owns its assertions after the port. The rows carry 261 assertions and
+89 findings.
+
+A script leaves this document by being deleted: its rule belongs to a registered
+gate, so the row is a record of a port that is finished, not of a file that still
+runs. The ledger is empty when the registry owns every rule.
 
 ## Totals
 
-- Files: 96. Assertions: 332. Findings: 118.
-- Files whose subject is partly or wholly gone: 18.
-- Files nothing invokes: 34.
-- Files that assert nothing: 6, being 4 data files and 2 run wrappers.
+- Files: 65. Assertions: 261. Findings: 89.
+- Files whose subject is partly or wholly gone: 11.
+- Files nothing invokes: 27.
+- Files that assert nothing: 1.
 
 ### Subject gone
 
@@ -21,42 +24,30 @@ that owns its assertions after the port. The rows carry 332 assertions and
 - `scripts/check_docs_index.sh`
 - `scripts/check_docs_links.sh`
 - `scripts/check_docs_references.py`
-- `scripts/check_error_codes_cataloged.sh`
-- `scripts/check_no_hot_path_inventory.sh`
-- `scripts/check_no_string_wgsl.sh`
-- `scripts/check_op_names.sh`
 - `scripts/check_platform_consumer_docs.sh`
-- `scripts/check_unification_baselines.sh`
 - `scripts/cli_docs.py`
 - `scripts/crate_ownership.py`
-- `scripts/crate_readmes.py`
 - `scripts/docs_manifest.py`
 - `scripts/final-launch.sh`
 - `scripts/testing_guides.py`
-- `scripts/wgsl_to_rust/Cargo.lock`
 
 ### Nothing invokes it
 
 - `scripts/apply-branch-protection.sh`
-- `scripts/baselines/unfailing_tests.txt`
-- `scripts/baselines/unwrap.txt`
 - `scripts/bench/cross_backend_comparison.sh`
 - `scripts/bench_smoke.sh`
 - `scripts/check_bench_baselines.sh`
 - `scripts/check_docs_index.sh`
 - `scripts/check_docs_links.sh`
-- `scripts/check_error_codes_cataloged.sh`
 - `scripts/check_evidence_paths.sh`
 - `scripts/check_expect_has_fix.sh`
 - `scripts/check_gpu_test_loudness.sh`
 - `scripts/check_invariant_paths_exist.sh`
 - `scripts/check_max_file_size.sh`
 - `scripts/check_metal_macbook.sh`
-- `scripts/check_no_default_feature_megacrate.sh`
 - `scripts/check_no_string_wgsl.sh`
 - `scripts/check_op_names.sh`
 - `scripts/check_parity_testing_not_leaked.sh`
-- `scripts/check_performance_inventory_wave1.sh`
 - `scripts/check_platform_consumer_docs.sh`
 - `scripts/check_primitive_contract.sh`
 - `scripts/check_signed_conformance_certificate.sh`
@@ -68,18 +59,11 @@ that owns its assertions after the port. The rows carry 332 assertions and
 - `scripts/install_wire_precommit_hook.sh`
 - `scripts/release_docs.py`
 - `scripts/testing_guides.py`
-- `scripts/vyre_smoke.sh`
-- `scripts/wgsl_to_rust/Cargo.lock`
 - `scripts/wire_ci_local.sh`
 
 ### Asserts nothing
 
-- `scripts/baselines/unfailing_tests.txt`
-- `scripts/baselines/unwrap.txt`
-- `scripts/bench/cross_backend_comparison.sh`
 - `scripts/bench_smoke.sh`
-- `scripts/unsafe_budget.txt`
-- `scripts/wgsl_to_rust/Cargo.lock`
 
 ## Rows
 
@@ -148,46 +132,6 @@ Findings:
 - validate raises on the first failure, so a tree with ten violations reports one. The gate collects findings instead, which is also what makes the pinned count meaningful.
 - OPERATION_SCHEMA_VERSION = 4 is duplicated here and in xtask-registry/src/docs/operation_schema.rs. The gate reads the Rust constant instead of restating the number.
 
-### `scripts/baselines/unfailing_tests.txt`
-
-Subject: present.
-
-Invoked by: nothing found.
-
-Gate: reported: no script or workflow reads this file.
-
-Assertions:
-
-- Data. A pinned count of tests that cannot fail.
-
-Exits nonzero on:
-
-- not executable
-
-Findings:
-
-- Nothing reads it.
-
-### `scripts/baselines/unwrap.txt`
-
-Subject: present.
-
-Invoked by: nothing found.
-
-Gate: reported: no script or workflow reads this file.
-
-Assertions:
-
-- Data. A pinned unwrap count.
-
-Exits nonzero on:
-
-- not executable
-
-Findings:
-
-- Nothing reads it. A baseline nothing compares against pins nothing.
-
 ### `scripts/bench/cross_backend_comparison.sh`
 
 Subject: gone: it writes into docs/perf/, and docs/ carries no Markdown after b1ed746d1c.
@@ -223,79 +167,6 @@ Assertions:
 Exits nonzero on:
 
 - any bench failure
-
-### `scripts/check_architectural_invariants.sh`
-
-Subject: present (cites the deleted docs/ARCHITECTURE.md in prose only). File
-deleted; every assertion is in `neutral-crates`.
-
-Invoked by: nothing. architectural-invariants.yml now names `neutral-crates` and
-`layering`, and the gates.yml step is gone.
-
-Gate: xtask/src/gates/layering.rs, as the direct-edge half beside the transitive half.
-
-Assertions:
-
-- Each of six substrate-neutral crates has a manifest on disk.
-- None of those six declares vyre-driver-wgpu, vyre-driver-cuda, vyre-driver-spirv, vyre-runtime, vyre-aot, wgpu or naga outside [dev-dependencies], excluding optional entries.
-- No tracked Cargo.toml names the retired crates vyre-ir or vyre-wgpu.
-
-Exits nonzero on:
-
-- missing neutral crate manifest
-- forbidden direct dependency edge
-- stale legacy crate name
-
-Findings:
-
-- The legacy-name check runs `rg ... 2>/dev/null` and reads a nonzero exit as `no hits`. A ripgrep that is absent or that errors makes this assertion unreachable, which is the same class source_scan.sh was written to remove.
-- It writes hits to /tmp/vyre_arch_legacy_hits.$$, a file outside the repository.
-- The crate and dependency lists are hardcoded, so a new neutral crate is unchecked until someone edits the list. check_layering.py derives both from the registry.
-- The forbidden-edge rule matched `^name =`, so it could not see a dependency written in the dotted form `name.workspace = true`, which is how nearly every manifest in this tree writes one. Rule B was unreachable for its whole life. The gate reads the parsed manifest, so both forms are one entry, and it reports what the shell form could not: `vyre` depends on `vyre-runtime` in `[dependencies]`. That is a real finding and it is left standing. Either the facade stops re-exporting the runtime or `vyre` leaves the neutral list, and neither is a gate author's decision.
-- The optional-entry exclusion is kept, so an optional forbidden edge is a note rather than a finding. `vyre` carries two, to `vyre-driver-cuda` and `vyre-driver-wgpu`, behind its `cuda` and `wgpu` features.
-
-### `scripts/check_audit_status_tags.sh`
-
-Subject: present (audits/*.md are tracked).
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/audit_status.rs.
-
-Assertions:
-
-- Every numbered finding row in a status-managed audits/*.md file, above the `## Highest Leverage Execution Order` heading, begins with `open`, `in_progress` or `fixed`.
-- At least one status-managed audit file exists.
-
-Exits nonzero on:
-
-- untagged finding row
-- no status-managed audit file found
-
-### `scripts/check_backend_extension_contract.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/frozen_contract.rs.
-
-Assertions:
-
-- vyre-driver inventory_streams.rs collects BackendRegistration, BackendPrecedence and BackendCapability, freezes them in one LazyLock<Result<BackendRegistry, BackendError>>, and populates from inventory::iter::<BackendRegistration>.
-- acquire.rs routes acquisition through registered_backends_by_precedence_slice and consults backend_dispatches.
-- The core registry directory contains no concrete backend id literal (cuda, wgpu, spirv, metal, dxil).
-- Each of five concrete driver crates has a manifest and src directory, depends on vyre-driver and inventory, implements VyreBackend, and submits BackendRegistration, BackendPrecedence, BackendCapability and supported_ops through inventory::submit!.
-
-Exits nonzero on:
-
-- any of the seven core requirements unmet
-- concrete id literal in the core registry
-- any of the eight per-crate requirements unmet for any of the five crates
-
-Findings:
-
-- The five driver crate names are hardcoded, so a sixth backend crate is unchecked until someone edits the list. The roster is derivable from the crates that depend on vyre-driver and submit BackendRegistration.
 
 ### `scripts/check_bench_baselines.sh`
 
@@ -410,28 +281,6 @@ Exits nonzero on:
 
 - whatever check_deep_bench_coverage.py exits nonzero on
 
-### `scripts/check_direct_readback_ring_default.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/frozen_contract.rs.
-
-Assertions:
-
-- record_and_readback.rs and its module directory contain readback_rings:, SubmittedReadback::Ring, .record_copy(, .arm_ticket( and .with_mapped_ticket(.
-- vyre-driver-wgpu/src/lib.rs constructs ReadbackRingSet::new().
-
-Exits nonzero on:
-
-- any of the five patterns absent
-- arena not owning a ReadbackRingSet
-
-Findings:
-
-- A third assertion was removed after being found unreachable: a multi-line regex against a line-oriented search matched nothing on any tree. Its invariant is which branch the code sits in, which no line scan can see, and it is now owned by two GPU tests in vyre-driver-wgpu/src/pipeline/tests/readback_ring_contracts.rs. The comment recording that is preserved in the gate as a note.
-
 ### `scripts/check_doc_claim_to_test.sh`
 
 Subject: present (contracts/doc_claims_manifest.toml is tracked).
@@ -521,30 +370,6 @@ Exits nonzero on:
 
 - any unresolvable reference
 
-### `scripts/check_error_codes_cataloged.sh`
-
-Subject: gone: docs/error-codes.md was deleted at b1ed746d1c.
-
-Invoked by: nothing.
-
-Gate: xtask/src/gates/doc_contract.rs, which reports the missing catalog as one finding and keeps the code extraction live.
-
-Assertions:
-
-- docs/error-codes.md exists.
-- Every V### or E-/W-/B-/C- prefixed code appearing in a string literal under six crate src directories has a `code` row in the catalog.
-
-Exits nonzero on:
-
-- missing catalog
-- uncataloged code
-
-Findings:
-
-- It exits 1 on every tree today, and nothing invokes it, so a documented-error-code contract has been unenforced since the deletion.
-- The character class `[E|W|B|C]` includes a literal pipe, so `|-FOO` is accepted as a code prefix. Inside a bracket expression `|` is not alternation.
-- `2>/dev/null` on the recursive grep turns a search failure into an empty code set, which reads as a fully cataloged tree.
-
 ### `scripts/check_every_source_file_is_reachable.sh`
 
 Subject: present.
@@ -560,24 +385,6 @@ Assertions:
 Exits nonzero on:
 
 - whatever check_every_source_file_is_reachable.py exits nonzero on
-
-### `scripts/check_every_source_file_parses.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/source_reachability.rs.
-
-Assertions:
-
-- rustfmt is installed before the scan runs, because a missing parser is not a clean tree.
-- Delegates to scripts/lib/check_every_source_file_parses.py.
-
-Exits nonzero on:
-
-- rustfmt not installed
-- whatever check_every_source_file_parses.py exits nonzero on
 
 ### `scripts/check_evidence_paths.sh`
 
@@ -694,22 +501,6 @@ Findings:
 - `grep -nE ... 2>/dev/null` inside an `if` reads a failed search as no hits.
 - Nothing invokes it, so the AGENTS.md silent-fallback rule it cites has no enforcement in CI.
 
-### `scripts/check_internal_deps_have_versions.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/manifest_contract.rs.
-
-Assertions:
-
-- Delegates to scripts/lib/check_internal_deps_have_versions.py. Invokes no cargo.
-
-Exits nonzero on:
-
-- whatever check_internal_deps_have_versions.py exits nonzero on
-
 ### `scripts/check_invariant_paths_exist.sh`
 
 Subject: present.
@@ -729,51 +520,6 @@ Exits nonzero on:
 Findings:
 
 - Nothing invokes it.
-
-### `scripts/check_ir_wire_field_sync.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/frozen_contract.rs.
-
-Assertions:
-
-- Some tracked file under vyre-foundation/src declares `pub struct Program`, located by search rather than by a hardcoded path.
-- vyre-foundation/src/serial/wire/encode/to_wire.rs and decode/from_wire.rs both exist.
-- Each of five serialized Program fields appears in the Program declaration.
-- Each of those fields is mentioned in encode or decode.
-- Every `pub` field of Program is either in the serialized list or in the transient list, so a new field cannot land unclassified.
-
-Exits nonzero on:
-
-- no Program declaration found
-- missing encode or decode file
-- serialized field absent from the struct
-- serialized field absent from both encode and decode
-- unclassified Program field
-
-Findings:
-
-- The per-field presence test is a substring search, so the field `entry` is satisfied by `entry_op_id` and by any prose containing the word. The gate matches the field declaration instead.
-- It shells into perl to list struct fields. The Rust gate parses the field list directly.
-
-### `scripts/check_layering.sh`
-
-Subject: present. File deleted; every assertion is in `layering`.
-
-Invoked by: nothing. The gates workflow now names the `manifest-rules` subset.
-
-Gate: xtask/src/gates/layering.rs.
-
-Assertions:
-
-- Delegates to scripts/lib/check_layering.py after selecting the cargo runner.
-
-Exits nonzero on:
-
-- whatever check_layering.py exits nonzero on
 
 ### `scripts/check_max_file_size.sh`
 
@@ -833,53 +579,6 @@ Findings:
 - Roughly 60 assertions are `grep -q` over JSON, so a counter renamed inside a nested object still matches, and a field present with a null value passes. The gate parses the JSON and asserts the fields.
 - The artifact count of 7 is a literal in a grep pattern, so adding an eighth artifact fails with a message about a missing string rather than about the count.
 
-### `scripts/check_no_default_feature_megacrate.sh`
-
-Subject: present.
-
-Invoked by: nothing.
-
-Gate: xtask/src/gates/manifest_contract.rs.
-
-Assertions:
-
-- The number of quoted feature slugs under [features].default in vyre-libs/Cargo.toml does not exceed 14.
-- Under --strict, that count is 0.
-
-Exits nonzero on:
-
-- count above 14 in default mode
-- count above 0 under --strict
-
-Findings:
-
-- --strict compares a live count of 14 against a ceiling of 0, so --strict can only fail. A mode that cannot pass is not a mode; the number is the ratchet and belongs in gate-baselines.toml.
-- The count is taken with sed over manifest text rather than a TOML reader, so a default list written inline or across lines is miscounted.
-- Nothing invokes it, so the megacrate default-feature ratchet has no enforcement.
-
-### `scripts/check_no_hot_path_blocking_wait.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- Occurrences of Maintain::Wait, pollster::block_on, thread::sleep, thread::yield_now, thread::park and park_timeout in vyre-driver-wgpu production sources equal 2, excluding tests, benches and wait_backoff.rs.
-- Under --strict, every occurrence sits in one of four reviewed files.
-
-Exits nonzero on:
-
-- count above the ceiling
-- count below the ceiling
-- a strict-mode hit outside the allowed prefixes
-
-Findings:
-
-- The equality ratchet is deliberate and is preserved: slack above the measured count is room a regression hides in. Under the registry it becomes a pinned findings count that only ever moves down.
-
 ### `scripts/check_no_hot_path_inventory.sh`
 
 Subject: present (docs/inventory-contract.md, cited in the header, is gone).
@@ -923,42 +622,6 @@ Findings:
 
 - The previous ceiling of 35 sat above an actual 24, so eleven new nested-Vec sites could land unseen. The equality ratchet replaced it and is preserved.
 
-### `scripts/check_no_missing_docs_override.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/lint_hygiene.rs.
-
-Assertions:
-
-- No crate-root `#![allow(... missing_docs ...)]` inner attribute appears in any src/lib.rs, so the workspace `missing_docs = deny` floor cannot be opted out of.
-
-Exits nonzero on:
-
-- any crate-root override
-
-Findings:
-
-- `find . -maxdepth 4 -name lib.rs` decides the roster, so a crate whose lib.rs sits deeper than four levels is never scanned, and an untracked lib.rs in a dev tree is. The Rust gate derives the roster from workspace.members.
-
-### `scripts/check_no_owned_dispatch_hot_paths.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- No `.dispatch(` call appears in vyre-libs/src, vyre-runtime/src or conform/vyre-conform/src outside test modules, so production and conformance paths use dispatch_borrowed.
-
-Exits nonzero on:
-
-- any hit
-
 ### `scripts/check_no_string_wgsl.sh`
 
 Subject: present (the allowlist still names docs/ paths that are gone, which widens nothing because those files cannot appear).
@@ -983,84 +646,6 @@ Findings:
 - Both `progress` branches compare a count against 0 with `-lt`, so neither can ever fire. A branch that cannot execute is not a report, and the two messages it would print have never been printed.
 - `grep -rl ... 2>/dev/null || true` on the outer file listing reads a failed search as no files, which reads as a clean tree.
 - It scans the filesystem rather than tracked files, and it excludes only target and .git.
-
-### `scripts/check_no_unbounded_cache.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- Occurrences of HashMap::new() or VecDeque::new() in vyre-driver-wgpu/src and vyre-runtime/src equal 2, excluding tests, benches and fuzz.
-- Under --strict, every occurrence is one of two reviewed files.
-
-Exits nonzero on:
-
-- count above the ceiling
-- count below the ceiling
-- a strict-mode hit outside the allowed files
-
-### `scripts/check_no_unbounded_external_read.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- Every read_to_end site in vyre-driver-wgpu/src outside tests is in the one reviewed cache module.
-- The allow-prefix matches at least one live hit, so a stale exemption cannot sit unused.
-
-Exits nonzero on:
-
-- a hit outside the allow prefix
-- an allow prefix matching nothing
-
-Findings:
-
-- The stale-exemption half is the shape every allowlist in this layer should have and most do not. The Rust gate applies it to every allowlist it carries.
-
-### `scripts/check_no_under_reserve.py`
-
-Subject: present.
-
-Invoked by: check_no_under_reserve.sh.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- No try_reserve or try_reserve_exact call derives additional capacity from capacity(), measured over the call statement up to eight lines.
-- A `//` line is documentation and is not a call site.
-
-Exits nonzero on:
-
-- never; it exits 0 and prints findings, and the shell wrapper decides
-
-Findings:
-
-- It walks the filesystem with rglob rather than tracked files, so untracked scratch is scanned.
-
-### `scripts/check_no_under_reserve.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/hot_path.rs.
-
-Assertions:
-
-- Delegates to check_no_under_reserve.py and fails when it prints anything.
-
-Exits nonzero on:
-
-- any under-reserve site
 
 ### `scripts/check_op_names.sh`
 
@@ -1108,43 +693,6 @@ Findings:
 - It walks the filesystem with find rather than tracked manifests, so a Cargo.toml inside an untracked scratch checkout is judged.
 - The section tracker is line-based, so `features = ["parity-testing"]` written inside an inline table on the crate line is not attributed to a section.
 
-### `scripts/check_path_deps_resolve.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/manifest_contract.rs.
-
-Assertions:
-
-- Delegates to scripts/lib/check_path_deps_resolve.py. Invokes no cargo, because the defect it detects is a workspace cargo cannot load.
-
-Exits nonzero on:
-
-- whatever check_path_deps_resolve.py exits nonzero on
-
-### `scripts/check_performance_inventory_wave1.sh`
-
-Subject: present.
-
-Invoked by: nothing.
-
-Gate: xtask/src/gates/bench_contract.rs, as two named test targets the gate runs.
-
-Assertions:
-
-- vyre-foundation optimizer_reference_parity_smoke passes.
-- vyre-driver-wgpu dispatch_allocation_contract passes.
-
-Exits nonzero on:
-
-- either test failing
-
-Findings:
-
-- Nothing invokes it, so two P0 performance contracts named in the inventory are proven by no workflow.
-
 ### `scripts/check_platform_consumer_docs.sh`
 
 Subject: partly gone: all 17 entries of PLATFORM_MARKDOWN_FILES were deleted at b1ed746d1c, and each is guarded by [[ -f ]], so that whole loop now scans nothing. Crate sources, crate READMEs and OP_MATRIX.toml survive.
@@ -1189,26 +737,6 @@ Exits nonzero on:
 Findings:
 
 - It is a compatibility entry point in front of a registered subcommand, which is exactly the shim shape the port removes. Its own assertion, that path arguments are refused, disappears with it because the registry gate takes no paths.
-
-### `scripts/check_proptest_coverage.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/proptest_coverage.rs.
-
-Assertions:
-
-- The number of tracked .rs files importing proptest is at least 181.
-
-Exits nonzero on:
-
-- count below the floor
-
-Findings:
-
-- This is a floor, not a ceiling, so the pinned number is inverted relative to every other ratchet here: growth is the goal and a fall is the failure. The gate reports one finding per missing file below the floor so the pin still counts findings, and the pin still only moves down.
 
 ### `scripts/check_public_api_snapshot.sh`
 
@@ -1290,30 +818,6 @@ Exits nonzero on:
 Findings:
 
 - It sets `export RUSTC_WRAPPER=""`, a build-affecting variable outside .cargo/config.toml. The gate does not set it; if the wrapper breaks a release build that belongs in the config file.
-
-### `scripts/check_single_backlog.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/repo_hygiene.rs.
-
-Assertions:
-
-- CHANGELOG.md exists.
-- If BACKLOG.md exists it uses the four-column contract and does not carry the superseded seven-column table.
-- No tracked .md file has a name containing PLAN, ROADMAP, BACKLOG, STATUS, HANDOFF, TASKS, BUILDOUT, PRD, BRIEF, TRAJECTORY, SEGMENTATION or GENERALIZATION.
-
-Exits nonzero on:
-
-- missing CHANGELOG.md
-- wrong backlog table shape
-- any committed parallel plan surface
-
-Findings:
-
-- An earlier revision asserted `-f BACKLOG.md` first, so the gate could never pass in CI and was never wired. The absence of a gitignored local file is not a violation, and the current shape is correct.
 
 ### `scripts/check_spirv_parity_perf_gate.sh`
 
@@ -1434,28 +938,6 @@ Findings:
 - Nothing invokes it, so Law H has no CI enforcement.
 - `grep -rn ... 2>/dev/null` reads a failed search as no unsafe blocks.
 - It scans the filesystem from the repository root rather than tracked files, and it runs one `sed -n` per candidate line, so the cost is one process per line of backward scan.
-
-### `scripts/check_workspace_filesystem.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/manifest_contract.rs.
-
-Assertions:
-
-- Every Cargo.toml within four levels is either listed in [workspace.members] or declares its own [workspace].
-
-Exits nonzero on:
-
-- any orphan crate
-
-Findings:
-
-- `set -uo pipefail` without `-e`.
-- `find -maxdepth 4` decides the roster, so a crate nested deeper is never checked, and the members list is parsed with awk over manifest text rather than a TOML reader.
-- Two path patterns are excluded by name (target-codex/package, vyre-bench/competitors). The gate keeps `vyre-bench/competitors` as a declared exemption and reports it, so the orphan stays visible. `target-codex/package` is a build output directory, never tracked, so it could not match anything the gate reads; the gate reported it as an allowance naming no manifest and the allowance is deleted. `workspace-membership` therefore reports 1, the reviewed orphan, which is its honest number.
 
 ### `scripts/cli_docs.py`
 
@@ -1766,28 +1248,6 @@ Exits nonzero on:
 - trybuild pattern matching nothing
 - no tracked .rs or Cargo.toml
 
-### `scripts/lib/check_every_source_file_parses.py`
-
-Subject: present.
-
-Invoked by: check_every_source_file_parses.sh from gates.yml.
-
-Gate: xtask/src/gates/source_reachability.rs.
-
-Assertions:
-
-- Every tracked .rs file outside a scaffolding template root parses under edition 2021, measured by rustfmt --check.
-- rustfmt exiting other than 0 or 1 without an error line is a tool failure, not a clean tree.
-- A template exemption whose files all parse is slack and fails.
-
-Exits nonzero on:
-
-- unparseable tracked .rs file
-- rustfmt tool failure
-- exemption covering no file
-- template exemption no longer needed
-- every file exempt
-
 ### `scripts/lib/check_feature_msrv.py`
 
 Subject: present.
@@ -1814,94 +1274,6 @@ Exits nonzero on:
 Findings:
 
 - --list mode checks nothing and exits 0. It is a listing, not a gate mode, and the gate exposes it as a note rather than a pass.
-
-### `scripts/lib/check_internal_deps_have_versions.py`
-
-Subject: present.
-
-Invoked by: check_internal_deps_have_versions.sh from gates.yml.
-
-Gate: xtask/src/gates/manifest_contract.rs.
-
-Assertions:
-
-- Every `workspace = true` internal dependency names an existing [workspace.dependencies] entry.
-- Every internal dependency on a published member carries a version outside dev-dependencies.
-- No internal dependency on a `publish = false` member carries a version.
-- [workspace.dependencies] entries naming members obey both halves, since every inheritor gets them.
-- The workspace has at least one publishable and one unpublished member, so neither half scans nothing.
-
-Exits nonzero on:
-
-- dangling workspace inheritance
-- path-only dependency on a published member
-- versioned dependency on an unpublishable member
-- root Cargo.toml untracked
-- member manifest untracked
-- empty members
-- one half of the roster empty
-
-### `scripts/lib/check_layering.py`
-
-Subject: present. File deleted; every assertion is in `layering`.
-
-Invoked by: nothing. It ran from check_layering.sh, which is also deleted.
-
-Gate: xtask/src/gates/layering.rs.
-
-Assertions:
-
-- Every workspace member has a docs/CRATE_OWNERSHIP.toml [[crate]] entry.
-- Every layer a member declares has a neutrality decision in NEUTRAL_LAYERS.
-- Every NEUTRAL_LAYERS decision is used by at least one member.
-- Every BACKEND_APIS name is present in [workspace.dependencies].
-- Every resolved internal cargo edge stays inside the crate's declared dependency closure.
-- No crate in a substrate-neutral layer reaches ash, cudarc, metal, naga or wgpu.
-- `cargo tree` resolves; a failure is fatal rather than an empty graph.
-
-Exits nonzero on:
-
-- unregistered member
-- layer with no neutrality decision
-- unused neutrality decision
-- BACKEND_APIS name absent from workspace deps
-- layer violation
-- cargo tree failure
-- empty workspace.members
-- empty [[crate]] registry
-
-The gate reads the graph from the manifests and `Cargo.lock` rather than from
-`cargo tree`, so the cargo-failure assertion has no subject left: there is no
-cargo invocation to fail. The manifest edge set is the member's own default
-features, which is what `cargo tree --edges=normal` prints, and the lockfile
-supplies third-party edges, so a neutral crate that reaches a backend API only
-through another third-party crate is now caught where the tree-based form saw it
-only if cargo printed it.
-
-### `scripts/lib/check_path_deps_resolve.py`
-
-Subject: present.
-
-Invoked by: check_path_deps_resolve.sh from gates.yml.
-
-Gate: xtask/src/gates/manifest_contract.rs.
-
-Assertions:
-
-- Every `path` in every dependency table of every tracked manifest resolves to a tracked Cargo.toml inside the repository.
-- Every `workspace = true` dependency and inherited package field names an existing root table entry.
-- Every workspace.members entry resolves, and every glob pattern matches at least one Cargo.toml.
-- Every [patch] path entry resolves.
-- root workspace.dependencies is non-empty, so the inheritance scan is not vacuous.
-
-Exits nonzero on:
-
-- unresolvable or escaping path
-- untracked target manifest
-- dangling workspace inheritance
-- members glob matching nothing
-- no tracked Cargo.toml
-- empty root workspace.dependencies
 
 ### `scripts/lib/read_toml_values.py`
 
@@ -2258,49 +1630,6 @@ Findings:
 - The extras assertion at line 397 globs docs/testing/*.md and reports guides no member owns. The directory is empty, so that assertion is now vacuous and stays vacuous until the guides come back.
 - The stale assertion is the opposite: every one of the 31 expected guides is missing, so --check fails with 31 names. Both assertions survive in the gate, and the missing guides are the pinned findings.
 
-### `scripts/unsafe_budget.txt`
-
-Subject: present.
-
-Invoked by: check_unsafe_budget.sh.
-
-Gate: kept as data at scripts/unsafe_budget.txt is not an option once scripts/ is gone; it moves to xtask/unsafe-budget.txt beside gate-baselines.toml.
-
-Assertions:
-
-- Data. The reviewed list of files permitted to carry allow(unsafe_code).
-
-Exits nonzero on:
-
-- not executable
-
-### `scripts/vyre_smoke.sh`
-
-Subject: present.
-
-Invoked by: nothing.
-
-Gate: xtask/src/gates/smoke.rs.
-
-Assertions:
-
-- rustc, cargo and the workspace MSRV are reported.
-- vyre-driver-wgpu compiles in release, used as the adapter-probe signal.
-- examples/three_substrate_parity/manifest.toml exists.
-- dispatch_allocation_contract, pipeline_cache_contract and dispatch_hot_path pass.
-
-Exits nonzero on:
-
-- compile failure
-- missing parity manifest
-- any of the three contract suites failing
-
-Findings:
-
-- Nothing invokes it, so three named wgpu contract suites have no scheduled run outside the workspace default suite.
-- Step 2 calls itself an adapter probe and is a compile check, so it cannot observe an adapter at all. The comment admits it. The gate keeps the compile assertion under an honest name and reports the missing probe as a finding.
-- `set -uo pipefail` without `-e`.
-
 ### `scripts/wait-crates-index.sh`
 
 Subject: present.
@@ -2326,26 +1655,6 @@ Exits nonzero on:
 Findings:
 
 - Its assertions are all about its own arguments and an external service, so no tree property is lost when it goes. It is the one file here whose subject is not this repository.
-
-### `scripts/wgsl_to_rust/Cargo.lock`
-
-Subject: gone: scripts/wgsl_to_rust holds only this lockfile.
-
-Invoked by: nothing.
-
-Gate: reported: a lockfile with no manifest and no source beside it.
-
-Assertions:
-
-- Data. A lockfile for a tool directory that carries no Cargo.toml and no source.
-
-Exits nonzero on:
-
-- not executable
-
-Findings:
-
-- scripts/wgsl_to_rust/ contains one file, Cargo.lock. The crate it locked does not exist in the tree. Nothing reads it and nothing can.
 
 ### `scripts/wire_ci_local.sh`
 
