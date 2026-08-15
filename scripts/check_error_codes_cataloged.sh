@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Every stable error code emitted by vyre source must appear in
-# docs/error-codes.md. Prose drifts; codes don't. Catching a code that's
-# been added to source without a doc entry lets tooling keep up.
+# Every stable error code emitted by vyre source must appear in a registry.
+# Prose drifts; codes don't. Catching a code that's been added to source
+# without a registry entry lets tooling keep up.
 #
 # Scans for V### (3-digit), E-*, W-*, B-*, C-* tokens inside Rust string
-# literals and verifies each appears in the doc.
+# literals. V### codes are verified against docs/generated/error-codes.toml,
+# which is rendered from vyre-foundation/src/validate/catalog.rs. The other
+# families are verified against docs/error-codes.md.
 
 set -euo pipefail
 
@@ -14,6 +16,12 @@ cd "$ROOT"
 DOC="docs/error-codes.md"
 if [[ ! -f "$DOC" ]]; then
     echo "Missing catalog: $DOC. Fix: create the registry before adding new codes." >&2
+    exit 1
+fi
+
+VALIDATION_CATALOG="docs/generated/error-codes.toml"
+if [[ ! -f "$VALIDATION_CATALOG" ]]; then
+    echo "Missing catalog: $VALIDATION_CATALOG. Fix: run cargo test -p vyre-foundation --test validator_error_docs with VYRE_WRITE_ERROR_CATALOG=1." >&2
     exit 1
 fi
 
@@ -40,7 +48,12 @@ codes_in_source="$(
 missing=0
 while IFS= read -r code; do
     if [[ -z "$code" ]]; then continue; fi
-    if ! grep -Fq "\`${code}\`" "$DOC"; then
+    if [[ "$code" =~ ^V[0-9]{3}$ ]]; then
+        if ! grep -Fq "code = \"${code}\"" "$VALIDATION_CATALOG"; then
+            echo "Uncataloged error code: ${code}. Fix: add a ValidationRule to vyre-foundation/src/validate/catalog.rs and regenerate ${VALIDATION_CATALOG}." >&2
+            missing=1
+        fi
+    elif ! grep -Fq "\`${code}\`" "$DOC"; then
         echo "Uncataloged error code: ${code}. Fix: add a row to ${DOC}." >&2
         missing=1
     fi
@@ -48,4 +61,4 @@ done <<< "$codes_in_source"
 
 if [[ "$missing" -ne 0 ]]; then exit 1; fi
 count="$(echo "$codes_in_source" | grep -c . || true)"
-echo "Error codes cataloged: ${count} codes verified against ${DOC}."
+echo "Error codes cataloged: ${count} codes verified against ${VALIDATION_CATALOG} and ${DOC}."

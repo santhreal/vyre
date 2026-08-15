@@ -1646,3 +1646,8 @@ text = "Five operations now own the pieces the Jacobi eigensolver used to spell 
 id = "test-skill-contracts-true-to-source"
 category = "Changed"
 text = "The `tests/SKILL.md` contracts for `vyre-spec`, `vyre-foundation`, `vyre-macros`, `vyre-reference` and `vyre-primitives` now state the category contract where it is read instead of pointing at a file the tree does not contain, and every claim in them is checked against source. They previously routed op semantics to `vyre-ops`, which is not a package here; listed bench and fuzz targets for directories four of the five crates do not have; named `--test adversarial`, `--test property`, `--test gap` and `--test integration` where only two of those targets are declared anywhere; and described `vyre-primitives` as marker types with no runtime behavior and no bench, while it owns the Tier 2.5 substrate and declares the `wire_throughput` bench."
+
+[[fragments]]
+id = "validation-rule-catalog-generated"
+category = "Changed"
+text = "The validation rule registry is one table in `vyre-foundation/src/validate/catalog.rs`, carrying each code's phase, invariant and corrective action. `docs/generated/error-codes.toml` is rendered from it and `vyre-foundation/tests/validator_error_docs.rs` fails on divergence, reporting one finding per divergent code. `ValidationCode` gained `phase`, `invariant` and `corrective_action` accessors. The hand-maintained table in `docs/error-codes.md` was a second copy that had already drifted: four codes carried the placeholder text `Program validation error 0NN` with the corrective action `See diagnostic output`, which the catalog replaces with the invariant each emission site actually checks."
