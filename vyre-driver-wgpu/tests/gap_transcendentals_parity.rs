@@ -66,7 +66,7 @@ fn assert_bitwise_parity(op: UnOp, x: f32, gpu: f32) {
         cpu.to_bits(),
         gpu.to_bits(),
         "gap_transcendentals_parity: {op:?}({x}) cpu={cpu} ({:#010x}) vs gpu={gpu} ({:#010x}) \
-         must be byte-identical per contracts/release.md gap #1",
+         must be byte-identical; see this file's header for the two blockers",
         cpu.to_bits(),
         gpu.to_bits()
     );

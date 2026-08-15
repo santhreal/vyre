@@ -20,7 +20,7 @@ use vyre_driver::resident_transfer_fusion::{
 use vyre_driver::{
     dispatch_element_count_for_program, enforce_actual_output_budget,
     infer_dispatch_grid_for_count, output_binding_layouts, BindingPlan, BindingRole, DeviceProfile,
-    DeviceTimingQuality, DispatchConfig, OutputBindingLayout, OutputBuffers, PipelineCacheSnapshot,
+    DeviceTimingQuality, DispatchConfig, OutputBindingLayout, PipelineCacheSnapshot,
     ResidentHandle, ResidentOwner, Resource, TimedDispatchResult, VyreBackend,
 };
 use vyre_foundation::ir::{OpId, Program};
@@ -1556,7 +1556,7 @@ impl PendingDispatch for MetalPendingDispatch {
 #[derive(Clone)]
 pub(crate) struct MetalResidentBuffer {
     buffer: Buffer,
-    byte_len: usize,
+    pub(crate) byte_len: usize,
 }
 
 #[derive(Clone)]
@@ -1592,7 +1592,7 @@ fn lock_resident_buffer_table<'a>(
 /// `metal_resident_buffer_error` key appears. Every downstream metric gate
 /// compares against real buffer counts, so the sentinel fires immediately
 /// instead of reading as a quiet gap in the snapshot.
-fn push_resident_table_metrics(
+pub(crate) fn push_resident_table_metrics(
     resident_buffers: &MetalResidentBufferTable,
     metrics: &mut Vec<(&'static str, u64)>,
 ) {

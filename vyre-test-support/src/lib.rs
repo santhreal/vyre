@@ -412,7 +412,6 @@ fn program_builders_in(text: &str) -> Vec<String> {
             continue;
         }
         let after_name = &rest[name.len()..];
-        let window = after_name.split('{').next().unwrap_or("");
         // Skip `impl`-block methods (`pub fn m(&self, ...) -> Program`).
         if takes_self_receiver(after_name) {
             continue;
@@ -424,7 +423,7 @@ fn program_builders_in(text: &str) -> Vec<String> {
         if first_param_is_program(after_name) {
             continue;
         }
-        if returns_program(window) {
+        if returns_program(after_name) {
             names.push(name);
         }
     }
@@ -484,18 +483,79 @@ fn first_param_is_program(after_name: &str) -> bool {
     })
 }
 
-fn returns_program(window: &str) -> bool {
-    for arrow in ["-> Program", "->Program"] {
-        if let Some(i) = window.find(arrow) {
-            let next = window[i + arrow.len()..].chars().next();
-            match next {
-                None => return true,
-                Some(c) if !(c.is_alphanumeric() || c == '_') => return true,
+/// The return-type text of a `fn` signature: everything between the parameter
+/// list's closing paren and the body's opening brace, `where` clause included.
+///
+/// Reading the whole signature instead is what misclassified
+/// `vyre_driver::self_optimizer_bench::report_scaling`, which returns `()` and
+/// takes a `fn(Program, &dyn ProgramDispatcher) -> Program` callback: the arrow
+/// in the parameter type was read as the function's own return type.
+fn return_type_window(after_name: &str) -> Option<&str> {
+    let mut rest = after_name;
+    // A generic parameter list carries parens and arrows of its own
+    // (`<F: Fn(u32) -> Program>`), so the parameter list does not start at the
+    // first `(`. `>` preceded by `-` is an arrow, not a closing bracket.
+    if rest.starts_with('<') {
+        let mut depth = 0i32;
+        let mut previous = ' ';
+        let mut end = None;
+        for (i, ch) in rest.char_indices() {
+            match ch {
+                '<' => depth += 1,
+                '>' if previous != '-' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = Some(i);
+                        break;
+                    }
+                }
                 _ => {}
             }
+            previous = ch;
+        }
+        rest = &rest[end? + 1..];
+    }
+    let open = rest.find('(')?;
+    let mut depth = 0i32;
+    let mut close = None;
+    for (i, ch) in rest[open..].char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    close = Some(open + i);
+                    break;
+                }
+            }
+            _ => {}
         }
     }
-    false
+    let tail = &rest[close? + 1..];
+    Some(tail.split('{').next().unwrap_or(tail))
+}
+
+/// True iff the signature's declared return type is exactly `Program`.
+///
+/// Anchored at the arrow: a `where` clause bound such as
+/// `where F: Fn() -> Program` sits in the same window and must not count, and
+/// neither must `-> Result<Program, E>` or `-> Arc<Program>`.
+fn returns_program(after_name: &str) -> bool {
+    let window = match return_type_window(after_name) {
+        Some(window) => window.trim_start(),
+        None => return false,
+    };
+    let Some(after_arrow) = window.strip_prefix("->") else {
+        return false;
+    };
+    after_arrow
+        .trim_start()
+        .strip_prefix("Program")
+        .is_some_and(|rest| {
+            rest.chars()
+                .next()
+                .is_none_or(|c| !(c.is_alphanumeric() || c == '_'))
+        })
 }
 
 /// Extract the brace-balanced body of every `inventory::submit! { ... }` block.
@@ -594,6 +654,55 @@ mod tests {
     fn requires_exact_program_return() {
         assert!(program_builders_in("pub fn f(n: u32) -> ProgramGraph { x }").is_empty());
         assert!(program_builders_in("pub fn f(n: u32) -> Result<Program> { x }").is_empty());
+    }
+
+    /// WHY: the enumerator used to search the WHOLE signature for `-> Program`,
+    /// so a function returning `()` was reported as an unregistered builder as
+    /// soon as one of its parameters was a callback returning a `Program`. That
+    /// misfire had `vyre-driver`'s closure gate red on a function that builds
+    /// nothing. The arrow only counts in return position.
+    ///
+    /// Not caught: a builder hidden behind a type alias (`-> MyProgram` where
+    /// `type MyProgram = Program`). The enumerator reads text, not types.
+    #[test]
+    fn ignores_program_arrows_outside_return_position() {
+        assert!(program_builders_in(
+            "pub fn report(dispatch: fn(Program, &dyn D) -> Program) { x }"
+        )
+        .is_empty());
+        assert!(program_builders_in(
+            "pub fn report(\n    backend: &str,\n    build: fn(u32) -> Program,\n) {\n    x\n}"
+        )
+        .is_empty());
+        assert!(
+            program_builders_in("pub fn run<F: Fn(u32) -> Program>(f: F) -> u32 { 0 }").is_empty()
+        );
+        assert!(program_builders_in("pub fn run<F>(f: F) -> u32 where F: Fn() -> Program { 0 }")
+            .is_empty());
+    }
+
+    /// The same anchoring must not lose a real builder whose signature carries a
+    /// generic list, a `where` clause, or a nested-paren parameter type.
+    #[test]
+    fn keeps_builder_through_generics_and_where_clauses() {
+        assert_eq!(
+            program_builders_in("pub fn build<T: Shape>(shape: T) -> Program { p }"),
+            vec!["build".to_string()]
+        );
+        assert_eq!(
+            program_builders_in(
+                "pub fn build<T>(shape: T) -> Program\nwhere\n    T: Shape,\n{\n    p\n}"
+            ),
+            vec!["build".to_string()]
+        );
+        assert_eq!(
+            program_builders_in("pub fn build(pairs: Vec<(u32, u32)>) -> Program { p }"),
+            vec!["build".to_string()]
+        );
+        assert_eq!(
+            program_builders_in("pub fn build<F: Fn() -> u32>(f: F) -> Program { p }"),
+            vec!["build".to_string()]
+        );
     }
 
     #[test]
