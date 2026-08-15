@@ -179,77 +179,65 @@ fn apple_backend_metric_snapshot_exposes_cache_and_resident_counters() {
         .expect("Fix: native Metal must free metric-snapshot resident handles.");
 }
 
-/// When the `resident_buffers` Mutex is poisoned (a background thread
-/// panicked while holding it), `backend_metric_snapshot` must NOT silently
-/// omit the `metal_resident_buffer_count` and `metal_resident_bytes` keys.
-/// Before this fix, the `if let Ok(table) = ...` arm discarded the
-/// `PoisonError` silently, leaving two fewer entries in the snapshot and
-/// making it impossible for callers to distinguish "zero resident buffers"
-/// from "poisoned backend".
+/// When the `resident_buffers` Mutex is poisoned (a background thread panicked
+/// while holding it), the resident-buffer metric rows must NOT silently vanish.
+/// The pre-fix `if let Ok(table) = ...` arm discarded the `PoisonError`, leaving
+/// two fewer entries in the snapshot and making "zero resident buffers"
+/// indistinguishable from "poisoned backend".
 ///
-/// After this fix, the snapshot contains both keys with the `u64::MAX`
-/// sentinel value AND a `metal_resident_buffer_error` key so callers can
-/// detect the poison unambiguously.
+/// This exercises `push_resident_buffer_metrics` directly against a genuinely
+/// poisoned table. `MetalBackend::backend_metric_snapshot` needs a live
+/// `MTLDevice` and offers no way to poison the lock it owns, so a test written
+/// against the backend can only ever observe the healthy arm, which is what the
+/// previous version of this test did while claiming to prove the poisoned one.
+/// The emitting function is device-free, so the sentinel contract is provable
+/// without a device.
 #[test]
 fn metric_snapshot_poisoned_mutex_is_loud() {
-    let backend =
-        acquire().expect("Fix: Apple Metal builds must acquire the system default MTLDevice.");
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
 
-    // Poison the resident_buffers mutex by spawning a thread that locks it
-    // and then panics. After the thread exits, the mutex is in a poisoned
-    // state. Any subsequent `lock()` call returns `Err(PoisonError)`.
-    {
-        // SAFETY: We clone the Arc<Mutex<...>> through the backend's public
-        // resident_buffers field. Since MetalBackend stores it as an
-        // Arc<Mutex<...>>, we can Arc::clone it for the poison thread.
-        // However, MetalBackend does not expose resident_buffers publicly.
-        // We use allocate_resident + a well-known panic pattern instead:
-        // allocate a resident buffer on a background thread and then panic
-        // inside the lock on the same thread-local drop path.
-        //
-        // Simpler approach: call backend_metric_snapshot before poisoning
-        // and verify the normal path works, then verify the error path
-        // by checking the returned keys are present regardless of mutex state.
-    }
+    use crate::runtime::{push_resident_buffer_metrics, MetalResidentBufferTable};
 
-    // Before any dispatch (no resident buffers), the healthy snapshot must
-    // contain both resident-buffer metric keys.
-    let snapshot = backend.backend_metric_snapshot();
-    let has_count = snapshot
-        .iter()
-        .any(|(k, _)| *k == "metal_resident_buffer_count");
-    let has_bytes = snapshot.iter().any(|(k, _)| *k == "metal_resident_bytes");
-    assert!(
-        has_count,
-        "Fix: healthy backend snapshot must contain `metal_resident_buffer_count`; \
-         got: {snapshot:?}"
-    );
-    assert!(
-        has_bytes,
-        "Fix: healthy backend snapshot must contain `metal_resident_bytes`; \
-         got: {snapshot:?}"
-    );
+    let table: MetalResidentBufferTable = Arc::new(Mutex::new(HashMap::new()));
 
-    // The healthy snapshot must NOT contain the error sentinel.
-    let has_error = snapshot
-        .iter()
-        .any(|(k, _)| *k == "metal_resident_buffer_error");
-    assert!(
-        !has_error,
-        "Fix: healthy backend snapshot must not contain `metal_resident_buffer_error`; \
-         got: {snapshot:?}"
-    );
-
-    // Verify the count is 0 (no resident buffers allocated yet), a
-    // concrete value assertion, not just shape.
-    let count_entry = snapshot
-        .iter()
-        .find(|(k, _)| *k == "metal_resident_buffer_count")
-        .map(|(_, v)| *v)
-        .expect("Fix: metal_resident_buffer_count must be present in the snapshot");
+    // Healthy arm: an empty table reports zero for both counters and emits no
+    // error row. This is the value the poisoned arm must be distinguishable
+    // from, so it is asserted here rather than assumed.
+    let mut healthy = Vec::new();
+    push_resident_buffer_metrics(&table, &mut healthy);
     assert_eq!(
-        count_entry, 0,
-        "Fix: metal_resident_buffer_count must be 0 before any resident allocations; \
-         if this fails with u64::MAX the mutex is unexpectedly poisoned"
+        healthy,
+        vec![
+            ("metal_resident_buffer_count", 0),
+            ("metal_resident_bytes", 0),
+        ],
+        "Fix: a healthy resident table must report zero counters and no error row"
+    );
+
+    // Poison the lock for real: a thread panics while holding the guard.
+    let poisoner = Arc::clone(&table);
+    std::thread::spawn(move || {
+        let _guard = poisoner.lock().expect("Fix: a fresh Mutex must lock");
+        panic!("deliberate panic to poison the resident buffer table");
+    })
+    .join()
+    .expect_err("Fix: the poisoning thread must panic so the Mutex is poisoned");
+    assert!(
+        table.is_poisoned(),
+        "Fix: the resident buffer table must be poisoned before the sentinel is asserted"
+    );
+
+    let mut poisoned = Vec::new();
+    push_resident_buffer_metrics(&table, &mut poisoned);
+    assert_eq!(
+        poisoned,
+        vec![
+            ("metal_resident_buffer_count", u64::MAX),
+            ("metal_resident_bytes", u64::MAX),
+            ("metal_resident_buffer_error", 1),
+        ],
+        "Fix: a poisoned resident table must report the u64::MAX sentinel for both \
+         counters and add `metal_resident_buffer_error`, never drop the rows"
     );
 }

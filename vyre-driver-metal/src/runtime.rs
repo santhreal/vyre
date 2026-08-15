@@ -20,7 +20,7 @@ use vyre_driver::resident_transfer_fusion::{
 use vyre_driver::{
     dispatch_element_count_for_program, enforce_actual_output_budget,
     infer_dispatch_grid_for_count, output_binding_layouts, BindingPlan, BindingRole, DeviceProfile,
-    DeviceTimingQuality, DispatchConfig, OutputBindingLayout, OutputBuffers, PipelineCacheSnapshot,
+    DeviceTimingQuality, DispatchConfig, OutputBindingLayout, PipelineCacheSnapshot,
     ResidentHandle, ResidentOwner, Resource, TimedDispatchResult, VyreBackend,
 };
 use vyre_foundation::ir::{OpId, Program};
@@ -1368,40 +1368,7 @@ impl VyreBackend for MetalBackend {
             "metal_output_readback_bytes",
             self.metrics.output_readback_bytes.load(Ordering::Relaxed),
         ));
-        // Law 10: do NOT silently discard Mutex-poisoned state. If a background
-        // thread panicked while holding `resident_buffers`, callers cannot
-        // distinguish "zero resident buffers" from "poisoned backend". We push
-        // u64::MAX as an unambiguous sentinel so any downstream metric gate or
-        // benchmark comparison fires immediately rather than observing a silent
-        // gap.
-        match self.resident_buffers.lock() {
-            Ok(table) => {
-                metrics.push(("metal_resident_buffer_count", table.len() as u64));
-                let resident_bytes = table
-                    .values()
-                    .try_fold(0_u64, |total, resident| {
-                        u64::try_from(resident.byte_len)
-                            .ok()
-                            .and_then(|byte_len| total.checked_add(byte_len))
-                    })
-                    .unwrap_or(u64::MAX);
-                metrics.push(("metal_resident_bytes", resident_bytes));
-            }
-            Err(_poison) => {
-                // Sentinel values: u64::MAX is unambiguously wrong and will
-                // trigger any downstream alert that compares against normal
-                // buffer counts or byte totals.
-                metrics.push(("metal_resident_buffer_count", u64::MAX));
-                metrics.push(("metal_resident_bytes", u64::MAX));
-                metrics.push(("metal_resident_buffer_error", 1_u64));
-                tracing::error!(
-                    "metal resident_buffers Mutex is poisoned; \
-                     resident buffer metrics are sentinel values (u64::MAX). \
-                     Fix: a background dispatch thread panicked while holding \
-                     the resident buffer table lock."
-                );
-            }
-        }
+        push_resident_buffer_metrics(&self.resident_buffers, &mut metrics);
         metrics
     }
 
@@ -1464,7 +1431,48 @@ impl VyreBackend for MetalBackend {
     }
 }
 
-type MetalResidentBufferTable = Arc<Mutex<HashMap<ResidentHandle, MetalResidentBuffer>>>;
+pub(crate) type MetalResidentBufferTable =
+    Arc<Mutex<HashMap<ResidentHandle, MetalResidentBuffer>>>;
+
+/// Append the resident-buffer metric rows for `resident_buffers`.
+///
+/// Law 10: do NOT silently discard Mutex-poisoned state. If a background thread
+/// panicked while holding `resident_buffers`, callers cannot distinguish "zero
+/// resident buffers" from "poisoned backend". The poisoned arm pushes
+/// `u64::MAX` for both counters plus a `metal_resident_buffer_error` row, so a
+/// downstream metric gate or benchmark comparison fires immediately rather than
+/// observing a silent gap.
+pub(crate) fn push_resident_buffer_metrics(
+    resident_buffers: &MetalResidentBufferTable,
+    metrics: &mut Vec<(&'static str, u64)>,
+) {
+    match resident_buffers.lock() {
+        Ok(table) => {
+            metrics.push(("metal_resident_buffer_count", table.len() as u64));
+            let resident_bytes = table
+                .values()
+                .try_fold(0_u64, |total, resident| {
+                    u64::try_from(resident.byte_len)
+                        .ok()
+                        .and_then(|byte_len| total.checked_add(byte_len))
+                })
+                .unwrap_or(u64::MAX);
+            metrics.push(("metal_resident_bytes", resident_bytes));
+        }
+        Err(_poison) => {
+            metrics.push(("metal_resident_buffer_count", u64::MAX));
+            metrics.push(("metal_resident_bytes", u64::MAX));
+            metrics.push(("metal_resident_buffer_error", 1_u64));
+            tracing::error!(
+                "metal resident_buffers Mutex is poisoned; \
+                 resident buffer metrics are sentinel values (u64::MAX). \
+                 Fix: a background dispatch thread panicked while holding \
+                 the resident buffer table lock."
+            );
+        }
+    }
+}
+
 type MetalMetricCounters = Arc<MetalMetrics>;
 
 #[derive(Default)]
@@ -1611,9 +1619,9 @@ impl PendingDispatch for MetalPendingDispatch {
 }
 
 #[derive(Clone)]
-struct MetalResidentBuffer {
+pub(crate) struct MetalResidentBuffer {
     buffer: Buffer,
-    byte_len: usize,
+    pub(crate) byte_len: usize,
 }
 
 #[derive(Clone)]
