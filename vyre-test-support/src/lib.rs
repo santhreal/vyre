@@ -150,6 +150,7 @@ macro_rules! test_node_extension {
 
 #[cfg(feature = "ir-fixtures")]
 pub mod binop_parity;
+#[cfg(feature = "ir-fixtures")]
 pub mod cast_parity;
 pub mod consumer_boundary;
 #[cfg(feature = "ir-fixtures")]
