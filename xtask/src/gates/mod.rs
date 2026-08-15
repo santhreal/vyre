@@ -13,6 +13,7 @@ pub mod check_tier_deps;
 pub mod dedup_report;
 pub mod dep_drift;
 pub mod dup_scan;
+pub mod evidence_paths;
 pub mod feature_isolation;
 pub mod file_size;
 pub mod frozen_contract;
@@ -48,6 +49,7 @@ pub static GATES: &[&dyn Gate] = &[
     &check_tier_deps::CheckTierDeps,
     &dep_drift::DepDrift,
     &dup_scan::DupScan,
+    &evidence_paths::EvidencePaths,
     &feature_isolation::FeatureIsolation,
     &file_size::FileSize,
     &frozen_contract::BackendExtension,

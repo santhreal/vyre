@@ -14,6 +14,16 @@
 //! Tracked files only. A count taken over whatever is on disk moves with
 //! untracked scratch, which makes a ratchet disagree between a development tree
 //! and CI.
+//!
+//! There are two scanners in this workspace on purpose, and collapsing them
+//! would undo what this one is for. `structure_gate::source_scan` walks the
+//! filesystem with `walkdir`, prunes build output, and skips a file it cannot
+//! read, which is right for a contract test that judges whatever source is
+//! present. This one lists from `git ls-files` and makes a missing scan path a
+//! hard error, which is right for a ratchet whose number must mean the same
+//! thing in a development tree and in CI. The two split their work: the file set
+//! and the ratchet engine belong here, and masking comments and string literals
+//! and finding the end of a brace-delimited block belong to `source_scan`.
 
 use std::collections::BTreeSet;
 use std::fs;

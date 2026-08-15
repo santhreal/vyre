@@ -63,6 +63,10 @@ name = "dup-scan"
 findings = 0
 
 [[gate]]
+name = "evidence-paths"
+findings = 18
+
+[[gate]]
 name = "feature-isolation"
 findings = 0
 
