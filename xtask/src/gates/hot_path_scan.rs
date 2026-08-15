@@ -31,10 +31,10 @@
 use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{self};
 
 use serde::{Deserialize, Serialize};
 
+use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::ownership::{load_ownership_lanes, owner_lane_for_file, OwnershipLaneRule};
 
 const MAX_HOT_PATH_SCAN_FILE_BYTES: u64 = 2_097_152;
@@ -67,7 +67,7 @@ struct HotPathEntry {
 }
 
 #[derive(Debug)]
-struct Finding {
+struct Hit {
     file: String,
     line: u32,
     pattern: &'static str,
@@ -103,7 +103,7 @@ struct FindingCounts {
 }
 
 impl FindingCounts {
-    fn add(&mut self, finding: &Finding) {
+    fn add(&mut self, finding: &Hit) {
         self.total = self.total.saturating_add(1);
         match finding.kind {
             PatternKind::Allocation => self.allocations = self.allocations.saturating_add(1),
@@ -246,179 +246,181 @@ const PATTERNS: &[PatternSpec] = &[
     },
 ];
 
-pub(crate) fn run(args: &[String]) {
-    let strict = args.iter().any(|a| a == "--strict");
-    let budget_vx_json = match parse_budget_vx_json(args) {
-        Ok(path) => path,
-        Err(error) => {
-            eprintln!("Fix: {error}");
-            process::exit(2);
-        }
-    };
-    let root = crate::checkout::checkout_root();
-    let config_path = root
-        .join("docs")
-        .join("optimization")
-        .join("HOT_PATHS.toml");
-    let entries = match load_config(&config_path) {
-        Ok(e) => e,
-        Err(err) => {
-            eprintln!("Fix: failed to load {}: {err}", config_path.display());
-            process::exit(1);
-        }
-    };
-    let ownership_path = root
-        .join("docs")
-        .join("optimization")
-        .join("OWNERSHIP.toml");
-    let ownership_lanes = match load_ownership_lanes(&ownership_path) {
-        Ok(lanes) => lanes,
-        Err(err) => {
-            eprintln!("Fix: failed to load {}: {err}", ownership_path.display());
-            process::exit(1);
-        }
-    };
-    let mut findings: Vec<Finding> = Vec::new();
-    let mut code_lines_by_file: BTreeMap<String, usize> = BTreeMap::new();
-    let mut scanned = 0usize;
-    let mut missing: Vec<String> = Vec::new();
-    for entry in &entries {
-        let path = root.join(&entry.file);
-        if !path.exists() {
-            missing.push(entry.file.clone());
-            continue;
-        }
-        scanned += 1;
-        match read_text_bounded(&path) {
-            Ok(text) => {
-                code_lines_by_file.insert(entry.file.clone(), count_code_lines(&text));
-                collect_findings(&entry.file, &text, &mut findings);
-            }
-            Err(err) => eprintln!("warn: could not read {}: {err}", path.display()),
-        }
-    }
-    findings.sort_by(|a, b| {
-        (a.file.as_str(), a.line, a.pattern).cmp(&(b.file.as_str(), b.line, b.pattern))
-    });
-    let mut by_file: BTreeMap<&str, FindingCounts> = BTreeMap::new();
-    for f in &findings {
-        by_file.entry(f.file.as_str()).or_default().add(f);
-    }
-    let budget_deltas = collect_budget_deltas(&entries, &by_file);
-    let unowned_hot_paths = unowned_hot_path_files(&entries, &ownership_lanes);
-    let budget_vx_candidates = budget_vx_candidates(&budget_deltas, &findings, &ownership_lanes);
-    let heatmap = build_hot_path_heatmap(&entries, &by_file, &code_lines_by_file, &ownership_lanes);
+/// What an overspent hot-path budget costs, and how to close it.
+const BUDGET_FIX: &str = "reuse a scratch buffer, borrow instead of cloning, or hoist the allocation out of the measured path; raise the budget in docs/optimization/HOT_PATHS.toml only with a measurement that says the pattern is not the cost";
 
-    println!("=== vyre hot-path scan ===");
-    println!(
-        "Listed: {} | scanned: {} | missing: {} | findings: {}",
-        entries.len(),
-        scanned,
-        missing.len(),
-        findings.len()
-    );
-    if !missing.is_empty() {
-        println!();
-        println!("Missing files (listed in HOT_PATHS.toml but not on disk):");
+/// Scans every file docs/optimization/HOT_PATHS.toml lists against its budget.
+pub struct HotPathScan;
+
+impl Gate for HotPathScan {
+    fn name(&self) -> &'static str {
+        "hot-path-scan"
+    }
+
+    fn help(&self) -> &'static str {
+        "Hold every file listed in docs/optimization/HOT_PATHS.toml to its allocation, clone, lock, sleep and panic budget; --budget-vx-json PATH writes the overage candidates"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let root = &ctx.root;
+        let mut report = Report::clean();
+        let budget_vx_json = parse_budget_vx_json(&ctx.args)
+            .map_err(|error| GateError::new(error, "pass a path after --budget-vx-json"))?;
+        let config_path = root
+            .join("docs")
+            .join("optimization")
+            .join("HOT_PATHS.toml");
+        let entries = load_config(&config_path).map_err(|error| {
+            GateError::new(
+                format!("cannot load {}: {error}", config_path.display()),
+                "repair docs/optimization/HOT_PATHS.toml",
+            )
+        })?;
+        let ownership_path = root
+            .join("docs")
+            .join("optimization")
+            .join("OWNERSHIP.toml");
+        let ownership_lanes = load_ownership_lanes(&ownership_path).map_err(|error| {
+            GateError::new(
+                format!("cannot load {}: {error}", ownership_path.display()),
+                "repair docs/optimization/OWNERSHIP.toml",
+            )
+        })?;
+
+        let mut hits: Vec<Hit> = Vec::new();
+        let mut code_lines_by_file: BTreeMap<String, usize> = BTreeMap::new();
+        let mut scanned = 0usize;
+        let mut missing: Vec<String> = Vec::new();
+        for entry in &entries {
+            let path = root.join(&entry.file);
+            if !path.exists() {
+                missing.push(entry.file.clone());
+                continue;
+            }
+            scanned += 1;
+            match read_text_bounded(&path) {
+                Ok(text) => {
+                    code_lines_by_file.insert(entry.file.clone(), count_code_lines(&text));
+                    collect_findings(&entry.file, &text, &mut hits);
+                }
+                // An unreadable file used to warn and go unscanned, which is a
+                // budget nobody measured reported as a budget held.
+                Err(error) => report.find(Finding::in_file(
+                    &entry.file,
+                    format!("listed as a hot path and cannot be read: {error}"),
+                    "make the file readable, or drop its row from docs/optimization/HOT_PATHS.toml",
+                )),
+            }
+        }
+        hits.sort_by(|a, b| {
+            (a.file.as_str(), a.line, a.pattern).cmp(&(b.file.as_str(), b.line, b.pattern))
+        });
+        let mut by_file: BTreeMap<&str, FindingCounts> = BTreeMap::new();
+        for hit in &hits {
+            by_file.entry(hit.file.as_str()).or_default().add(hit);
+        }
+        let budget_deltas = collect_budget_deltas(&entries, &by_file);
+        let unowned_hot_paths = unowned_hot_path_files(&entries, &ownership_lanes);
+        let candidates = budget_vx_candidates(&budget_deltas, &hits, &ownership_lanes);
+        let heatmap =
+            build_hot_path_heatmap(&entries, &by_file, &code_lines_by_file, &ownership_lanes);
+
         for path in &missing {
-            println!("  ✗ {path}");
+            report.find(Finding::in_file(
+                path,
+                "listed in docs/optimization/HOT_PATHS.toml and not on disk",
+                "point the row at where the code moved, or delete the row with the code",
+            ));
         }
-    }
-    if !unowned_hot_paths.is_empty() {
-        println!();
-        println!(
-            "Unowned hot paths (listed in HOT_PATHS.toml but missing OWNERSHIP.toml coverage):"
-        );
         for path in &unowned_hot_paths {
-            println!("  ✗ {path}");
+            report.find(Finding::in_file(
+                path,
+                "is a hot path with no owner lane",
+                "give the file a lane in docs/optimization/OWNERSHIP.toml",
+            ));
         }
-    }
-    if !heatmap.is_empty() {
-        print_hot_path_heatmap(&heatmap);
-    }
-    if !findings.is_empty() {
-        println!();
-        println!("Per-file finding counts:");
-        // Attach the operator-supplied `reason` (from HOT_PATHS.toml) so
-        // the report explains WHY each file is on the hot-path watchlist.
-        // Without this the `reason` field is read but never surfaced  -
-        // dead documentation.
-        let reason_by_file: std::collections::BTreeMap<&str, &str> = entries
+        for delta in &budget_deltas {
+            report.find(Finding::at(
+                &delta.file,
+                first_budget_finding_line(delta, &hits),
+                format!(
+                    "{} is {} against a budget of {}",
+                    delta.budget, delta.actual, delta.limit
+                ),
+                BUDGET_FIX,
+            ));
+        }
+
+        report.note(format!(
+            "listed {} | scanned {scanned} | pattern hits {}",
+            entries.len(),
+            hits.len()
+        ));
+        let reason_by_file: BTreeMap<&str, &str> = entries
             .iter()
-            .map(|e| (e.file.as_str(), e.reason.as_str()))
+            .map(|entry| (entry.file.as_str(), entry.reason.as_str()))
             .collect();
         for (file, counts) in &by_file {
             let reason = reason_by_file.get(file).copied().unwrap_or("");
-            if reason.is_empty() {
-                println!(
-                    "  {file}: total={} allocations={} clones={} locks={} sleeps={} panics={} formats={}",
-                    counts.total, counts.allocations, counts.clones, counts.locks, counts.sleeps, counts.panics, counts.formats
-                );
-            } else {
-                println!(
-                    "  {file}: total={} allocations={} clones={} locks={} sleeps={} panics={} formats={}   -  {reason}",
-                    counts.total, counts.allocations, counts.clones, counts.locks, counts.sleeps, counts.panics, counts.formats
-                );
-            }
+            report.note(format!(
+                "{file}: total={} allocations={} clones={} locks={} sleeps={} panics={} formats={}{}{reason}",
+                counts.total,
+                counts.allocations,
+                counts.clones,
+                counts.locks,
+                counts.sleeps,
+                counts.panics,
+                counts.formats,
+                if reason.is_empty() { "" } else { " | " }
+            ));
         }
-        if !budget_deltas.is_empty() {
-            println!();
-            println!("Budget deltas:");
-            for delta in &budget_deltas {
-                println!(
-                    "  {} | {} | actual={} budget={} delta=+{}",
-                    delta.file,
-                    delta.budget,
-                    delta.actual,
-                    delta.limit,
-                    delta.actual.saturating_sub(delta.limit)
-                );
-            }
+        for row in &heatmap {
+            report.note(format!(
+                "owner={} | file={} | score={} code_loc={} findings/kLOC={} allocations/kLOC={} clones/kLOC={} locks/kLOC={} formats/kLOC={} panics/kLOC={}",
+                row.owner_lane,
+                row.file,
+                row.score,
+                row.code_lines,
+                row.findings_per_kloc,
+                row.allocations_per_kloc,
+                row.clones_per_kloc,
+                row.locks_per_kloc,
+                row.formats_per_kloc,
+                row.panics_per_kloc
+            ));
         }
-        println!();
-        println!("Findings:");
-        for f in &findings {
-            println!(
-                "  {}:{} | {} | {}",
-                f.file,
-                f.line,
-                f.pattern,
-                f.content.trim()
-            );
+        for hit in &hits {
+            report.note(format!(
+                "{}:{} | {} | {}",
+                hit.file,
+                hit.line,
+                hit.pattern,
+                hit.content.trim()
+            ));
         }
-    } else {
-        println!();
-        println!("✓ no hot-path patterns found");
-    }
-    if let Some(path) = budget_vx_json {
-        if let Err(error) = write_budget_vx_candidates(&path, &budget_vx_candidates) {
-            eprintln!(
-                "Fix: could not write hot-path budget VX candidates `{}`: {error}",
+
+        if let Some(path) = budget_vx_json {
+            write_budget_vx_candidates(&path, &candidates).map_err(|error| {
+                GateError::new(
+                    format!(
+                        "cannot write hot-path budget candidates to {}: {error}",
+                        path.display()
+                    ),
+                    "name a writable path after --budget-vx-json",
+                )
+            })?;
+            report.note(format!(
+                "wrote {} budget candidate(s) to {}",
+                candidates.len(),
                 path.display()
-            );
-            process::exit(1);
+            ));
         }
-        println!(
-            "hot-path-scan: wrote {} budget VX candidate(s) to {}",
-            budget_vx_candidates.len(),
-            path.display()
-        );
-    }
-    if strict && (!budget_deltas.is_empty() || !missing.is_empty() || !unowned_hot_paths.is_empty())
-    {
-        println!();
-        println!(
-            "hot-path-scan: STRICT mode failed  -  {} budget overage(s), {} missing file(s), {} unowned hot path(s).",
-            budget_deltas.len(),
-            missing.len(),
-            unowned_hot_paths.len()
-        );
-        process::exit(1);
+        Ok(report)
     }
 }
 
 fn parse_budget_vx_json(args: &[String]) -> Result<Option<PathBuf>, String> {
-    let mut index = 2usize;
+    let mut index = 0usize;
     while index < args.len() {
         match args[index].as_str() {
             "--budget-vx-json" => {
@@ -462,7 +464,7 @@ fn write_budget_vx_candidates(path: &Path, candidates: &[BudgetVxCandidate]) -> 
     std::fs::write(path, format!("{text}\n"))
 }
 
-fn collect_findings(file: &str, text: &str, out: &mut Vec<Finding>) {
+fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) {
     let lines: Vec<&str> = text.lines().collect();
     let test_only = cfg_test_lines(&lines);
     for (line_no, line) in lines.iter().enumerate() {
@@ -475,7 +477,7 @@ fn collect_findings(file: &str, text: &str, out: &mut Vec<Finding>) {
         }
         for spec in PATTERNS {
             if scan_line.contains(spec.text) {
-                out.push(Finding {
+                out.push(Hit {
                     file: file.to_string(),
                     line: (line_no + 1) as u32,
                     pattern: spec.name,
@@ -689,7 +691,7 @@ fn unowned_hot_path_files(
 
 fn budget_vx_candidates(
     deltas: &[BudgetDelta],
-    findings: &[Finding],
+    findings: &[Hit],
     ownership_lanes: &[OwnershipLaneRule],
 ) -> Vec<BudgetVxCandidate> {
     deltas
@@ -712,7 +714,7 @@ fn budget_vx_candidates(
         .collect()
 }
 
-fn first_budget_finding_line(delta: &BudgetDelta, findings: &[Finding]) -> u32 {
+fn first_budget_finding_line(delta: &BudgetDelta, findings: &[Hit]) -> u32 {
     findings
         .iter()
         .find(|finding| finding.file == delta.file && finding_matches_budget(finding, delta.budget))
@@ -720,7 +722,7 @@ fn first_budget_finding_line(delta: &BudgetDelta, findings: &[Finding]) -> u32 {
         .unwrap_or(0)
 }
 
-fn finding_matches_budget(finding: &Finding, budget: &str) -> bool {
+fn finding_matches_budget(finding: &Hit, budget: &str) -> bool {
     match budget {
         "max_findings" => true,
         "max_allocation_findings" => finding.kind == PatternKind::Allocation,
@@ -802,26 +804,6 @@ fn per_kloc(count: usize, code_lines: usize) -> u64 {
         0
     } else {
         (count as u64).saturating_mul(1000) / code_lines as u64
-    }
-}
-
-fn print_hot_path_heatmap(rows: &[HotPathHeatmapRow]) {
-    println!();
-    println!("Hot-path bloat heatmap:");
-    for row in rows {
-        println!(
-            "  owner={} | file={} | score={} code_loc={} findings/kLOC={} allocations/kLOC={} clones/kLOC={} locks/kLOC={} formats/kLOC={} panics/kLOC={}",
-            row.owner_lane,
-            row.file,
-            row.score,
-            row.code_lines,
-            row.findings_per_kloc,
-            row.allocations_per_kloc,
-            row.clones_per_kloc,
-            row.locks_per_kloc,
-            row.formats_per_kloc,
-            row.panics_per_kloc
-        );
     }
 }
 
@@ -1000,14 +982,14 @@ write = ["vyre-driver/src/**"]
             },
         ];
         let findings = vec![
-            Finding {
+            Hit {
                 file: "vyre-emit-naga/src/lib.rs".to_string(),
                 line: 86,
                 pattern: "clone",
                 kind: PatternKind::Clone,
                 content: "Some(cached.module.clone())".to_string(),
             },
-            Finding {
+            Hit {
                 file: "vyre-runtime/src/megakernel/telemetry.rs".to_string(),
                 line: 69,
                 pattern: "panic!",

@@ -1,12 +1,13 @@
-//! Platform source/documentation boundary lint.
+//! The `platform-boundary` gate: platform crate docs stay consumer-neutral.
 //!
 //! The tier system is meaningless if platform crate docs name downstream
-//! consumers. This command scans Rust comments and Markdown in platform
-//! crates for known consumer names and fails with file/line evidence.
+//! consumers. This gate scans Rust comments and Markdown in platform crates for
+//! known consumer names and reports each one with its file and line.
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process;
+
+use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 const PLATFORM_ROOTS: &[&str] = &[
     "vyre-foundation",
@@ -20,71 +21,56 @@ const PLATFORM_ROOTS: &[&str] = &[
 const FORBIDDEN_CONSUMERS: &[&str] = &["surgec", "weir", "gossan", "keyhog"];
 const MAX_PLATFORM_BOUNDARY_FILE_BYTES: u64 = 16_777_216;
 
+/// One consumer name found in one platform line.
 #[derive(Debug, Clone, Eq, PartialEq)]
-struct Finding {
+struct Hit {
     path: PathBuf,
     line: usize,
     term: &'static str,
     text: String,
 }
 
-/// Run the platform-boundary lint.
-pub(crate) fn run(args: &[String]) {
-    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
-        println!(
-            "USAGE:\n  cargo xtask platform-boundary\n\n\
-             Scans platform crate Rust comments and Markdown for downstream consumer names."
-        );
-        return;
-    }
-    if args.len() > 2 {
-        eprintln!("Fix: platform-boundary takes no positional arguments.");
-        process::exit(2);
+/// Reports a downstream consumer name written into a platform crate's prose.
+pub struct PlatformBoundary;
+
+impl Gate for PlatformBoundary {
+    fn name(&self) -> &'static str {
+        "platform-boundary"
     }
 
-    let root = crate::checkout::checkout_root();
-    let mut findings = Vec::new();
-    let mut errors = Vec::new();
-    for relative in PLATFORM_ROOTS {
-        scan_tree(&root.join(relative), &root, &mut findings, &mut errors);
+    fn help(&self) -> &'static str {
+        "Reject consumer names in platform crate docs and comments"
     }
 
-    if !errors.is_empty() {
-        eprintln!("platform-boundary: {} scan error(s):", errors.len());
-        for error in errors {
-            eprintln!("  {error}");
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut hits = Vec::new();
+        let mut errors = Vec::new();
+        for relative in PLATFORM_ROOTS {
+            scan_tree(&ctx.root.join(relative), &ctx.root, &mut hits, &mut errors);
         }
-        eprintln!("Fix: make all platform source/doc files readable before release.");
-        process::exit(1);
-    }
-    if findings.is_empty() {
-        println!("platform-boundary: platform docs/comments are consumer-neutral.");
-        return;
-    }
 
-    eprintln!(
-        "platform-boundary: {} consumer-name layering violation(s):",
-        findings.len()
-    );
-    for finding in findings.iter().take(50) {
-        eprintln!(
-            "  {}:{} contains `{}`: {}",
-            finding.path.display(),
-            finding.line,
-            finding.term,
-            finding.text.trim()
+        let mut report = Report::from_messages(
+            errors,
+            "make every platform source and doc file readable; a file this gate cannot read is a file it cannot judge",
         );
+        report.note(format!(
+            "scanned {} platform crates for {} consumer names",
+            PLATFORM_ROOTS.len(),
+            FORBIDDEN_CONSUMERS.len()
+        ));
+        for hit in hits {
+            report.find(Finding::at(
+                hit.path,
+                u32::try_from(hit.line).unwrap_or(u32::MAX),
+                format!("names the downstream consumer `{}`: {}", hit.term, hit.text.trim()),
+                "replace the downstream name with neutral platform, dataflow or frontend wording, or move the doc to the consumer-owned crate",
+            ));
+        }
+        Ok(report)
     }
-    if findings.len() > 50 {
-        eprintln!("  ... {} more", findings.len() - 50);
-    }
-    eprintln!(
-        "Fix: replace downstream names with neutral platform/dataflow/frontend wording, or move the doc to the consumer-owned crate."
-    );
-    process::exit(1);
 }
 
-fn scan_tree(root: &Path, workspace: &Path, findings: &mut Vec<Finding>, errors: &mut Vec<String>) {
+fn scan_tree(root: &Path, workspace: &Path, hits: &mut Vec<Hit>, errors: &mut Vec<String>) {
     let mut stack = vec![root.to_path_buf()];
     while let Some(path) = stack.pop() {
         let metadata = match fs::metadata(&path) {
@@ -127,7 +113,7 @@ fn scan_tree(root: &Path, workspace: &Path, findings: &mut Vec<Finding>, errors:
                 continue;
             }
         };
-        collect_findings(&path, workspace, &text, findings);
+        collect_hits(&path, workspace, &text, hits);
     }
 }
 
@@ -138,7 +124,7 @@ fn is_scanned_file(path: &Path) -> bool {
     )
 }
 
-fn collect_findings(path: &Path, workspace: &Path, text: &str, findings: &mut Vec<Finding>) {
+fn collect_hits(path: &Path, workspace: &Path, text: &str, hits: &mut Vec<Hit>) {
     let markdown = path.extension().and_then(|ext| ext.to_str()) == Some("md");
     for (line_index, line) in text.lines().enumerate() {
         if !markdown && !is_rust_comment_line(line) {
@@ -146,7 +132,7 @@ fn collect_findings(path: &Path, workspace: &Path, text: &str, findings: &mut Ve
         }
         for term in FORBIDDEN_CONSUMERS {
             if contains_word_case_insensitive(line, term) {
-                findings.push(Finding {
+                hits.push(Hit {
                     path: path.strip_prefix(workspace).unwrap_or(path).to_path_buf(),
                     line: line_index + 1,
                     term,
@@ -204,7 +190,7 @@ mod tests {
     #[test]
     fn finds_consumer_names_in_comments_but_not_identifiers() {
         let mut findings = Vec::new();
-        collect_findings(
+        collect_hits(
             Path::new("vyre-libs/src/example.rs"),
             Path::new(""),
             "let weir_internal = 1;\n//! Weir owns this downstream wording\n// keyhog should not appear here",
@@ -218,7 +204,7 @@ mod tests {
     #[test]
     fn scans_markdown_docs_for_consumer_names() {
         let mut findings = Vec::new();
-        collect_findings(
+        collect_hits(
             Path::new("vyre-primitives/README.md"),
             Path::new(""),
             "# Graph primitives\n\nThis platform doc mentions SurgeC and Gossan.",

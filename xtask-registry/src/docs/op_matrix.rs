@@ -1,17 +1,18 @@
-//! `cargo xtask op-matrix`  -  generate and check the canonical op matrix.
+//! Hold `docs/optimization/OP_MATRIX.toml` to the live operation registry.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::io;
-use std::path::Path;
-use std::process;
 
 use vyre_foundation::operation::{
     classify_operation_id as classify_op_id, OperationTier as OpTier,
 };
+use xtask::artifact_gate::{self, Inspection};
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
-const DEFAULT_MATRIX_PATH: &str = "docs/optimization/OP_MATRIX.toml";
-const MAX_OP_MATRIX_TEXT_BYTES: u64 = 4_194_304;
+/// The artifact this gate owns, relative to the workspace root.
+///
+/// It used to be a caller flag defaulting to a relative path, so the matrix a
+/// run compared against depended on the working directory the run started in.
+const MATRIX_PATH: &str = "docs/optimization/OP_MATRIX.toml";
 
 const SCAN_CONSTRUCT_MATRIX: &str = r#"# Manual scan construct tier data owned by VX-621/VX-622. Generated `[[op]]`
 # rows below remain generator-owned.
@@ -122,85 +123,63 @@ struct OpRecord {
     bench_targets: Vec<String>,
 }
 
-pub(crate) fn run(args: &[String]) {
-    let mut check = false;
-    let mut write = false;
-    let mut path = DEFAULT_MATRIX_PATH.to_string();
+/// Holds `docs/optimization/OP_MATRIX.toml` to the live operation registry.
+pub struct OpMatrixGate;
 
-    let mut i = 2;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--check" => check = true,
-            "--write" => {
-                write = true;
-                if let Some(next) = args.get(i + 1).filter(|value| !value.starts_with("--")) {
-                    path = next.clone();
-                    i += 1;
-                }
-            }
-            other => {
-                eprintln!(
-                    "Fix: unknown op-matrix argument `{other}`. Use --check or --write [PATH]."
-                );
-                process::exit(1);
-            }
-        }
-        i += 1;
+impl Gate for OpMatrixGate {
+    fn name(&self) -> &'static str {
+        "op-matrix"
     }
 
-    if !check && !write {
-        write = true;
+    fn help(&self) -> &'static str {
+        "Render the canonical op matrix from the live operation registry and the manual scan \
+         construct rows, and report each line docs/optimization/OP_MATRIX.toml disagrees on. \
+         Proves every registered op id carries a canonical tier namespace, is registered by one \
+         semantic source, appears in one family, and that every family declares owners and \
+         tests. Proves nothing about whether the named owner and test paths exist."
     }
 
-    let matrix = match build_matrix() {
-        Ok(matrix) => matrix,
-        Err(error) => {
-            eprintln!("{error}");
-            process::exit(1);
-        }
-    };
-
-    if check {
-        let current = match read_text_bounded(Path::new(&path)) {
-            Ok(value) => value,
-            Err(error) => {
-                eprintln!("Fix: read `{path}` before op-matrix check: {error}");
-                process::exit(1);
-            }
-        };
-        if normalize_newline(&current) != normalize_newline(&matrix) {
-            eprintln!(
-                "Fix: `{path}` is not the source-backed op matrix. Run `cargo_full run --bin xtask -- op-matrix --write`."
-            );
-            process::exit(1);
-        }
+    fn generates(&self) -> bool {
+        true
     }
 
-    if write {
-        if let Some(parent) = Path::new(&path).parent() {
-            if let Err(error) = fs::create_dir_all(parent) {
-                eprintln!(
-                    "Fix: create `{}` before writing op matrix: {error}",
-                    parent.display()
-                );
-                process::exit(1);
-            }
-        }
-        if let Err(error) = fs::write(&path, matrix) {
-            eprintln!("Fix: write `{path}`: {error}");
-            process::exit(1);
-        }
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(),
+        ))
     }
 }
 
-fn normalize_newline(value: &str) -> String {
-    value.replace("\r\n", "\n")
+/// The matrix the registry generates, and every row problem found producing it.
+fn inspect() -> Inspection {
+    let mut inspection = Inspection::new();
+    let (matrix, problems) = build_matrix();
+    for problem in problems {
+        inspection.blocked(
+            MATRIX_PATH,
+            problem,
+            "Correct the registration or the manual scan row the sentence names. The row is left \
+             out of the matrix until it is, so the artifact understates the op surface.",
+        );
+    }
+    inspection.generates_text(MATRIX_PATH, matrix);
+    inspection
 }
 
-fn build_matrix() -> Result<String, String> {
+/// The rendered matrix, and every problem found in the rows that produced it.
+///
+/// Validation used to stop at the first violation and abort the run before
+/// anything was rendered, so a second duplicate family stayed invisible until
+/// the first was fixed and the artifact went unrefreshed exactly when it was
+/// most wrong. Every violation is now collected and the matrix is rendered from
+/// the rows that survived.
+fn build_matrix() -> (String, Vec<String>) {
+    let mut problems = Vec::new();
     let mut records = manual_records();
-    records.extend(registered_records()?);
-    validate_records(&records)?;
+    records.extend(registered_records(&mut problems));
+    problems.extend(validate_records(&records));
 
     records.sort_by(|left, right| {
         (
@@ -215,7 +194,7 @@ fn build_matrix() -> Result<String, String> {
             ))
     });
 
-    Ok(render_matrix(&records))
+    (render_matrix(&records), problems)
 }
 
 fn manual_records() -> Vec<OpRecord> {
@@ -268,16 +247,28 @@ fn manual_records() -> Vec<OpRecord> {
     ]
 }
 
-fn registered_records() -> Result<Vec<OpRecord>, String> {
+/// Every registered op that produced a row, recording the ones that could not.
+///
+/// A registration problem used to abort the whole matrix. It now excludes that
+/// one id and is reported, so the remaining rows are still checked.
+fn registered_records(problems: &mut Vec<String>) -> Vec<OpRecord> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
 
     let registry = vyre_registry_link::operation::live_operation_registry();
     for entry in registry.iter() {
-        push_registered(&mut ids, entry.id, "vyre-foundation::operation")?;
+        push_registered(&mut ids, entry.id, "vyre-foundation::operation", problems);
     }
 
     ids.into_iter()
-        .map(|(id, sources)| record_for_registered_id(&id, sources))
+        .filter_map(
+            |(id, sources)| match record_for_registered_id(&id, sources) {
+                Ok(record) => Some(record),
+                Err(problem) => {
+                    problems.push(problem);
+                    None
+                }
+            },
+        )
         .collect()
 }
 
@@ -285,15 +276,15 @@ fn push_registered(
     ids: &mut BTreeMap<String, BTreeSet<String>>,
     id: &str,
     source: &str,
-) -> Result<(), String> {
+    problems: &mut Vec<String>,
+) {
     let sources = ids.entry(id.to_string()).or_default();
     if !sources.insert(source.to_string()) {
-        return Err(format!(
+        problems.push(format!(
             "Fix: duplicate op id `{id}` registered more than once by `{source}`. \
              Keep one canonical registration in that registry."
         ));
     }
-    Ok(())
 }
 
 fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRecord, String> {
@@ -405,31 +396,37 @@ fn release_notes(_id: &str, tier: OpTier) -> String {
     }
 }
 
-fn validate_records(records: &[OpRecord]) -> Result<(), String> {
+/// Every rule an op matrix row breaks.
+///
+/// This used to return the first violation and abort the run, so a second
+/// duplicate family was invisible until the first was fixed. The count of
+/// sentences returned here is what the gate's pin holds level.
+fn validate_records(records: &[OpRecord]) -> Vec<String> {
+    let mut problems = Vec::new();
     let mut families = BTreeSet::new();
     let mut ops = BTreeMap::<&str, &str>::new();
     for record in records {
         if !families.insert(record.family.as_str()) {
-            return Err(format!(
+            problems.push(format!(
                 "Fix: duplicate OP_MATRIX family `{}`.",
                 record.family
             ));
         }
         if record.owners.is_empty() {
-            return Err(format!(
+            problems.push(format!(
                 "Fix: OP_MATRIX row `{}` has no owners.",
                 record.family
             ));
         }
         if record.tests.is_empty() {
-            return Err(format!(
+            problems.push(format!(
                 "Fix: OP_MATRIX row `{}` has no tests.",
                 record.family
             ));
         }
         for op in &record.ops {
             if let Some(first_family) = ops.insert(op, record.family.as_str()) {
-                return Err(format!(
+                problems.push(format!(
                     "Fix: op `{op}` appears in both OP_MATRIX families `{first_family}` and `{}`.",
                     record.family
                 ));
@@ -442,7 +439,7 @@ fn validate_records(records: &[OpRecord]) -> Result<(), String> {
             // Category A ids, making op truth ambiguous to the matrix).
             let observed = classify_op_id(op);
             if observed != OpTier::Unknown && tier_id_mismatch(record.tier, observed) {
-                return Err(format!(
+                problems.push(format!(
                     "Fix: op `{op}` is namespaced as {observed:?} but lives in OP_MATRIX family \
                      `{}` declared as {:?}. Move the id to the matching namespace, change the \
                      row tier, or split the row.",
@@ -451,7 +448,7 @@ fn validate_records(records: &[OpRecord]) -> Result<(), String> {
             }
         }
     }
-    Ok(())
+    problems
 }
 
 /// Two operation tiers mismatch when one is `Intrinsic` and the other
@@ -525,8 +522,4 @@ fn push_array(out: &mut String, key: &str, values: &[String]) {
         out.push_str(&format!("{value:?}"));
     }
     out.push_str("]\n");
-}
-
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(path, MAX_OP_MATRIX_TEXT_BYTES, "op matrix")
 }

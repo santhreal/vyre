@@ -12,7 +12,49 @@ use std::path::Path;
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
 /// Largest `Cargo.toml` this tooling will read.
-pub(crate) const MAX_MANIFEST_BYTES: u64 = 1_048_576;
+pub const MAX_MANIFEST_BYTES: u64 = 1_048_576;
+
+/// One parsed package manifest: the whole document, and the package name.
+pub struct PackageManifest {
+    /// The parsed manifest.
+    pub document: toml::Table,
+    /// The value of `package.name`.
+    pub name: String,
+}
+
+/// Read and parse `path`, returning its document with the package name.
+///
+/// Three release generators carried this same bounded read, parse and
+/// name-lookup with three different error sentences, so one malformed manifest
+/// was reported three different ways depending on which gate reached it first.
+///
+/// `Ok(None)` means the manifest declares no `[package]`. A workspace root
+/// manifest is not a defect, so the caller skips it rather than reporting it.
+///
+/// # Errors
+///
+/// One sentence naming the manifest when it cannot be read, cannot be parsed,
+/// or declares a `[package]` without a `name`.
+pub fn parse_package_manifest(
+    path: &Path,
+    surface: &str,
+) -> Result<Option<PackageManifest>, String> {
+    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, surface)
+        .map_err(|error| format!("failed to read manifest `{}`: {error}", path.display()))?;
+    let document = toml::from_str::<toml::Table>(&text)
+        .map_err(|error| format!("failed to parse manifest `{}`: {error}", path.display()))?;
+    let Some(package) = document.get("package").and_then(toml::Value::as_table) else {
+        return Ok(None);
+    };
+    let Some(name) = package.get("name").and_then(toml::Value::as_str) else {
+        return Err(format!(
+            "package manifest `{}` is missing package.name",
+            path.display()
+        ));
+    };
+    let name = name.to_string();
+    Ok(Some(PackageManifest { document, name }))
+}
 
 /// The `[workspace.package]` table of the workspace root manifest.
 ///
@@ -88,34 +130,3 @@ pub(crate) fn collect_manifests<T>(
     }
 }
 
-/// Read a package manifest and hand its document and `[package]` table to
-/// `build`.
-///
-/// `read_context` names the read cap in an over-size error and `noun` names the
-/// manifest in a read or parse failure, because two generators read the same
-/// file for different reasons and each says which reason it was serving.
-///
-/// `Ok(None)` for a manifest that declares no `[package]` table, which is what
-/// the workspace root manifest is. A manifest that declares one without a name
-/// is an error: an unnamed package cannot be reported against.
-pub(crate) fn parse_package_manifest<T>(
-    path: &Path,
-    read_context: &str,
-    noun: &str,
-    build: impl FnOnce(&str, &toml::Value, &toml::value::Table) -> Result<Option<T>, String>,
-) -> Result<Option<T>, String> {
-    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, read_context)
-        .map_err(|error| format!("failed to read {noun} `{}`: {error}", path.display()))?;
-    let document = toml::from_str::<toml::Value>(&text)
-        .map_err(|error| format!("failed to parse {noun} `{}`: {error}", path.display()))?;
-    let Some(package) = document.get("package").and_then(toml::Value::as_table) else {
-        return Ok(None);
-    };
-    let Some(name) = package.get("name").and_then(toml::Value::as_str) else {
-        return Err(format!(
-            "package manifest `{}` is missing package.name",
-            path.display()
-        ));
-    };
-    build(name, &document, package)
-}

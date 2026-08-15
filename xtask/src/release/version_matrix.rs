@@ -1,11 +1,25 @@
-//! Generate release version-story evidence for Vyre.
+//! Hold the release version story to the manifests, lockfile and release docs.
 
 use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::artifact_gate::{self, Inspection};
+use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::manifest_walk;
 use crate::release::release_train;
+
+/// The two artifacts this gate owns, relative to the workspace root.
+const MATRIX: &str = "release/evidence/version/version-matrix.json";
+const TAG_PLAN: &str = "release/evidence/version/release-tag-plan.json";
+
+/// The command an operator must see green before creating either release tag.
+///
+/// It used to name `version-matrix --output release/evidence/version/version-matrix.json`, a
+/// flag that no longer exists because the artifact path is owned by the gate.
+const REQUIRED_GATE_BEFORE_TAG: &str = "cargo_full run --bin xtask -- version-matrix && \
+     cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main";
 
 const MAX_VERSION_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
 
@@ -85,16 +99,64 @@ struct ReleaseNoteTokenFinding {
     issue: String,
 }
 
-pub(crate) fn run(args: &[String]) {
-    let output = crate::output_arg::parsed_or_exit(parse_output(args));
-    let vyre_root = crate::checkout::checkout_root();
+/// Holds the version-story evidence to the manifests, lockfile and release docs.
+pub struct VersionMatrixGate;
+
+impl Gate for VersionMatrixGate {
+    fn name(&self) -> &'static str {
+        "version-matrix"
+    }
+
+    fn help(&self) -> &'static str {
+        "Regenerate release/evidence/version/version-matrix.json and release-tag-plan.json from \
+         the workspace manifests, Cargo.lock and the release docs, and report each line the \
+         committed copies disagree on. Proves every publishable crate carries the version the \
+         release train declares, that every required release package is present at its expected \
+         version, that pinned dependency and lockfile versions match, that no release doc gives \
+         a bare tag command, and that release notes carry no stale version token. Proves nothing \
+         about what is published on a registry: every fact here is read from this checkout."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(&ctx.root),
+        ))
+    }
+}
+
+/// The version story the tree tells, and the two artifacts recording it.
+fn inspect(vyre_root: &Path) -> Inspection {
+    let mut inspection = Inspection::new();
+    let matrix = build_matrix(vyre_root);
+    for blocker in &matrix.blockers {
+        inspection.blocked(
+            MATRIX,
+            blocker.clone(),
+            "Correct the version, dependency pin, lockfile entry or release doc the sentence \
+             names. The blocker is recorded in the artifact as well, so committing it does not \
+             clear this finding.",
+        );
+    }
+    inspection.generates(MATRIX, &matrix);
+    inspection.generates(TAG_PLAN, &release_tag_plan(&matrix));
+    inspection
+}
+
+/// Every version fact this gate reads out of the checkout.
+fn build_matrix(vyre_root: &Path) -> VersionMatrix {
     let mut crates = Vec::new();
     let mut collection_blockers = Vec::new();
-    collect_workspace_versions(&vyre_root, "vyre", &mut crates, &mut collection_blockers);
+    collect_workspace_versions(vyre_root, "vyre", &mut crates, &mut collection_blockers);
     crates.sort_by(|left, right| left.package.cmp(&right.package));
     let missing_required_release_packages = missing_required_release_packages(&crates);
     let mut dependency_hints = Vec::new();
-    collect_workspace_dependency_hints(&vyre_root, &mut dependency_hints, &mut collection_blockers);
+    collect_workspace_dependency_hints(vyre_root, &mut dependency_hints, &mut collection_blockers);
     dependency_hints.sort_by(|left, right| {
         left.manifest
             .cmp(&right.manifest)
@@ -153,7 +215,7 @@ pub(crate) fn run(args: &[String]) {
             ));
         }
     }
-    let (release_doc_tag_findings, doc_scan_blockers) = scan_bare_release_tags(&vyre_root);
+    let (release_doc_tag_findings, doc_scan_blockers) = scan_bare_release_tags(vyre_root);
     blockers.extend(doc_scan_blockers);
     for finding in &release_doc_tag_findings {
         blockers.push(format!(
@@ -161,7 +223,7 @@ pub(crate) fn run(args: &[String]) {
             finding.path, finding.line, finding.text
         ));
     }
-    let release_note_token_findings = scan_release_note_tokens(&vyre_root);
+    let release_note_token_findings = scan_release_note_tokens(vyre_root);
     for finding in &release_note_token_findings {
         blockers.push(format!(
             "{} has a release-note version issue: {}",
@@ -169,7 +231,7 @@ pub(crate) fn run(args: &[String]) {
         ));
     }
 
-    let matrix = VersionMatrix {
+    VersionMatrix {
         schema_version: 2,
         requested_vyre_release: release_train::vyre_version(),
         tag_story: release_tag_story(),
@@ -184,11 +246,7 @@ pub(crate) fn run(args: &[String]) {
         release_doc_tag_findings,
         release_note_token_findings,
         blockers,
-    };
-
-    crate::output_arg::write_json(&output, &matrix);
-    write_release_tag_plan(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("version-matrix", &output, &matrix.blockers);
+    }
 }
 
 fn missing_required_release_packages(crates: &[CrateVersion]) -> Vec<String> {
@@ -205,27 +263,19 @@ fn missing_required_release_packages(crates: &[CrateVersion]) -> Vec<String> {
         .collect()
 }
 
-fn write_release_tag_plan(output: &Path, matrix: &VersionMatrix) {
-    let Some(parent) = output.parent() else {
-        eprintln!(
-            "Fix: version matrix output `{}` has no parent directory.",
-            output.display()
-        );
-        std::process::exit(1);
-    };
+/// The tag plan the version story implies, recorded beside the matrix.
+fn release_tag_plan<'a>(matrix: &'a VersionMatrix) -> ReleaseTagPlan<'a> {
     let tag_story = &matrix.tag_story;
-    let plan = ReleaseTagPlan {
+    ReleaseTagPlan {
         schema_version: 2,
         vyre_rc_tag: tag_story.vyre_rc_tag,
         vyre_tag: tag_story.vyre_tag,
         tag_creation_order: release_train::tag_creation_order().to_vec(),
-        required_gate_before_rc_tag: "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
-        required_gate_before_tag: "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+        required_gate_before_rc_tag: REQUIRED_GATE_BEFORE_TAG,
+        required_gate_before_tag: REQUIRED_GATE_BEFORE_TAG,
         version_matrix_blocker_count: matrix.blockers.len(),
         blockers: matrix.blockers.clone(),
-    };
-    let path = parent.join("release-tag-plan.json");
-    crate::output_arg::write_json(&path, &plan);
+    }
 }
 
 fn scan_bare_release_tags(vyre_root: &Path) -> (Vec<ReleaseDocTagFinding>, Vec<String>) {
@@ -575,15 +625,19 @@ fn collect_workspace_versions(
     blockers: &mut Vec<String>,
 ) {
     let workspace_version = workspace_package_version(root, blockers);
+    let root_manifest = root.join("Cargo.toml");
     collect_one_version(
-        &root.join("Cargo.toml"),
+        &root_manifest,
         release_group,
         workspace_version.as_deref(),
         versions,
         blockers,
     );
-    let root_manifest = root.join("Cargo.toml");
-    let text = match read_text_bounded(&root_manifest) {
+    let text = match crate::output_arg::read_text_bounded(
+        &root_manifest,
+        manifest_walk::MAX_MANIFEST_BYTES,
+        "version evidence",
+    ) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -593,8 +647,8 @@ fn collect_workspace_versions(
             return;
         }
     };
-    let value = match toml::from_str::<toml::Value>(&text) {
-        Ok(value) => value,
+    let document = match toml::from_str::<toml::Table>(&text) {
+        Ok(document) => document,
         Err(error) => {
             blockers.push(format!(
                 "failed to parse workspace manifest `{}` for version collection: {error}",
@@ -603,7 +657,7 @@ fn collect_workspace_versions(
             return;
         }
     };
-    let Some(members) = value
+    let Some(members) = document
         .get("workspace")
         .and_then(|workspace| workspace.get("members"))
         .and_then(toml::Value::as_array)
@@ -634,6 +688,11 @@ fn workspace_package_version(root: &Path, blockers: &mut Vec<String>) -> Option<
         .map(str::to_string)
 }
 
+/// One crate's declared version, resolving `version.workspace = true`.
+///
+/// The read, parse and name lookup were a fourth copy of a sequence three other
+/// release generators also carried. A `[package]` without a `name` used to be
+/// skipped in silence here; `parse_package_manifest` reports it.
 fn collect_one_version(
     path: &Path,
     release_group: &'static str,
@@ -641,30 +700,15 @@ fn collect_one_version(
     versions: &mut Vec<CrateVersion>,
     blockers: &mut Vec<String>,
 ) {
-    let text = match read_text_bounded(path) {
-        Ok(text) => text,
+    let manifest = match manifest_walk::parse_package_manifest(path, "version evidence") {
+        Ok(Some(manifest)) => manifest,
+        Ok(None) => return,
         Err(error) => {
-            blockers.push(format!(
-                "failed to read package manifest `{}`: {error}",
-                path.display()
-            ));
+            blockers.push(error);
             return;
         }
     };
-    let value = match toml::from_str::<toml::Value>(&text) {
-        Ok(value) => value,
-        Err(error) => {
-            blockers.push(format!(
-                "failed to parse package manifest `{}`: {error}",
-                path.display()
-            ));
-            return;
-        }
-    };
-    let Some(package) = value.get("package").and_then(toml::Value::as_table) else {
-        return;
-    };
-    let Some(name) = package.get("name").and_then(toml::Value::as_str) else {
+    let Some(package) = manifest.document.get("package").and_then(toml::Value::as_table) else {
         return;
     };
     let version = package
@@ -682,27 +726,14 @@ fn collect_one_version(
         return;
     };
     let publishable = !matches!(package.get("publish"), Some(toml::Value::Boolean(false)))
-        && name != "vyre-conform";
+        && manifest.name != "vyre-conform";
     versions.push(CrateVersion {
-        package: name.to_string(),
+        package: manifest.name,
         version: version.to_string(),
         manifest: path.display().to_string(),
         release_group,
         publishable,
     });
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    crate::output_arg::parse_output_arg(
-        args,
-        "version-matrix",
-        "Writes release version evidence for Vyre.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    crate::checkout::checkout_root().join("release/evidence/version/version-matrix.json")
 }
 
 /// Read version evidence text under this generator's cap.

@@ -31,4 +31,4 @@ pub(crate) use frontier_leaderboard::{
     frontier_leaderboard_required_artifact_fields, validate_frontier_leaderboard_artifact_bytes,
     FRONTIER_LEADERBOARD_SCHEMA_VERSION, FRONTIER_LEADERBOARD_SEMANTIC_VALIDATOR,
 };
-pub(crate) use run::run;
+pub use run::ReleaseBenchmarksGate;

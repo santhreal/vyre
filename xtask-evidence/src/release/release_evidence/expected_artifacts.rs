@@ -1,4 +1,3 @@
-use std::path::Path;
 
 use serde::Serialize;
 
@@ -181,14 +180,6 @@ pub(crate) fn build_expected_artifact_registry(
         artifact_count,
         commands,
     }
-}
-
-pub(crate) fn write_expected_artifact_registry(
-    workspace_root: &Path,
-    registry: &ReleaseExpectedArtifactRegistry,
-) {
-    let output = super::release_evidence_output(workspace_root, EXPECTED_ARTIFACT_REGISTRY);
-    xtask::output_arg::write_json(&output, registry);
 }
 
 pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {

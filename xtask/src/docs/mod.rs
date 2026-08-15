@@ -8,3 +8,8 @@
 pub mod docs_check;
 pub mod research_key;
 pub mod research_source_ledger;
+
+use crate::gate::Gate;
+
+/// Every gate this module owns.
+pub static GATES: &[&dyn Gate] = &[&docs_check::DocsCheck];

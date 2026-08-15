@@ -1,8 +1,8 @@
 //! Every registration an operation-owning crate submits is visible to this
 //! walker.
 //!
-//! WHY: this crate's subcommands generate `docs/generated/OP_INVENTORY.md`,
-//! `docs/generated/OP_SCHEMA.json`, `docs/catalog/*.md` and the backend matrix
+//! WHY: this crate's gates generate `docs/generated/op-inventory.toml`,
+//! `docs/generated/OP_SCHEMA.json`, `docs/generated/catalog.toml` and the backend matrix
 //! check from the live registry. A registration behind a Cargo feature this
 //! crate's dependency edge does not enable is not absent, it is invisible: the
 //! walker reports a smaller registry, every generated document agrees with that
