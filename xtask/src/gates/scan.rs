@@ -399,6 +399,10 @@ pub struct Rule<'r> {
     /// An occurrence form that is reviewed wherever it appears, such as a hit
     /// inside a doc comment.
     pub reviewed_line: Option<&'r dyn Fn(&str) -> bool>,
+    /// A second condition on the whole statement the line sits in. An occurrence
+    /// counts only when this also holds, which is how a rule judges a method
+    /// chain whose bound is spelled on an earlier line of the same expression.
+    pub statement: Option<&'r dyn Fn(&str) -> bool>,
     /// What an occurrence means.
     pub message: &'r str,
     /// The corrective action for an occurrence.
@@ -426,7 +430,10 @@ pub fn ratchet(tree: &Tree, rule: &Rule<'_>) -> Result<crate::gate::Report, Gate
         .into_iter()
         .filter(|path| !(rule.skip)(path))
         .collect();
-    let hits = tree.hits(&files, |line| (rule.line)(line))?;
+    let mut hits = tree.hits(&files, |line| (rule.line)(line))?;
+    if let Some(predicate) = rule.statement {
+        hits = retain_by_statement(tree, hits, predicate)?;
+    }
     let mut report = Report::clean();
     if let Some(note) = tree.absence_note() {
         report.note(note);
@@ -475,6 +482,71 @@ pub fn ratchet(tree: &Tree, rule: &Rule<'_>) -> Result<crate::gate::Report, Gate
         }
     }
     Ok(report)
+}
+
+/// Keep the hits whose whole statement satisfies `predicate`.
+///
+/// Hits arrive grouped by file, so one file's text is held while its hits are
+/// judged and dropped when the next file starts.
+fn retain_by_statement(
+    tree: &Tree,
+    hits: Vec<Hit>,
+    predicate: &dyn Fn(&str) -> bool,
+) -> Result<Vec<Hit>, GateError> {
+    let mut kept = Vec::with_capacity(hits.len());
+    let mut current: Option<(PathBuf, String)> = None;
+    for hit in hits {
+        let text = match &current {
+            Some((file, text)) if *file == hit.file => text,
+            _ => {
+                let text = tree.read(&hit.file)?;
+                &current.insert((hit.file.clone(), text)).1
+            }
+        };
+        let lines: Vec<&str> = text.lines().collect();
+        let index = (hit.line as usize).saturating_sub(1);
+        if predicate(&statement_at(&lines, index)) {
+            kept.push(hit);
+        }
+    }
+    Ok(kept)
+}
+
+/// The whole statement the line at `index` belongs to, joined into one line.
+///
+/// A method chain spans lines, so a rule that judges a call by what the rest of
+/// its chain carries cannot read one line. The statement starts after the nearest
+/// earlier line whose code closes a statement, opens or closes a block, or holds
+/// no code at all, and ends at the first line from `index` that closes one.
+#[must_use]
+pub fn statement_at(lines: &[&str], index: usize) -> String {
+    fn closes_statement(line: &str) -> bool {
+        let code = scan_code(line).code;
+        let code = code.trim_end();
+        code.is_empty()
+            || code.ends_with(';')
+            || code.ends_with('{')
+            || code.ends_with('}')
+            || code.ends_with(',')
+    }
+
+    if lines.is_empty() {
+        return String::new();
+    }
+    let index = index.min(lines.len() - 1);
+    let mut start = index;
+    while start > 0 && !closes_statement(lines[start - 1]) {
+        start -= 1;
+    }
+    let mut end = index;
+    while end + 1 < lines.len() && !closes_statement(lines[end]) {
+        end += 1;
+    }
+    lines[start..=end]
+        .iter()
+        .map(|line| line.trim())
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Whether a path sits under a test or bench tree, which is not a dispatch path.
@@ -911,5 +983,80 @@ mod tests {
                 "{attribute} still compiles outside the harness"
             );
         }
+    }
+
+    /// WHY: a bound spelled on an earlier line of the same method chain is the
+    /// whole reason the read-all rule had a module-wide exemption, under which an
+    /// unbounded read added beside the bounded one reported nothing. The statement
+    /// is the unit that carries the bound, so it is the unit the rule reads.
+    ///
+    /// What this does not catch: a bound applied to a different value in the same
+    /// statement, or one applied in a helper the statement calls.
+    #[test]
+    fn a_statement_carries_every_line_of_its_own_chain() {
+        let lines = vec![
+            "    let mut bytes = Vec::new();",
+            "    Read::by_ref(&mut file)",
+            "        .take(limit)",
+            "        .read_to_end(&mut bytes)?;",
+            "    file.read_to_end(&mut bytes)?;",
+        ];
+
+        assert_eq!(
+            statement_at(&lines, 3),
+            "Read::by_ref(&mut file) .take(limit) .read_to_end(&mut bytes)?;"
+        );
+        assert_eq!(statement_at(&lines, 4), "file.read_to_end(&mut bytes)?;");
+        assert_eq!(statement_at(&lines, 0), "let mut bytes = Vec::new();");
+        assert_eq!(statement_at(&[], 7), "");
+    }
+
+    /// WHY: the statement filter is what turns the read-all rule from a
+    /// per-module waiver into a per-expression judgement, so both directions are
+    /// proved: a chain that carries its bound is not an occurrence, and one that
+    /// does not is, in the same file.
+    #[test]
+    fn a_statement_filter_keeps_only_the_occurrences_its_chain_condemns() {
+        let directory = tempfile::TempDir::new().expect("temporary directory");
+        let root = directory.path();
+        std::fs::create_dir_all(root.join("src")).expect("source directory");
+        std::fs::write(
+            root.join("src/read.rs"),
+            "fn bounded(file: &mut File, bytes: &mut Vec<u8>) {\n    Read::by_ref(file)\n        .take(64)\n        .read_to_end(bytes);\n}\nfn unbounded(file: &mut File, bytes: &mut Vec<u8>) {\n    file.read_to_end(bytes);\n}\n",
+        )
+        .expect("source file");
+        Command::new("git")
+            .arg("init")
+            .arg("-q")
+            .arg(".")
+            .current_dir(root)
+            .status()
+            .expect("git init");
+
+        let tree = Tree::open(root).expect("fixture tree");
+        let report = ratchet(
+            &tree,
+            &Rule {
+                roots: &["src"],
+                skip: &|_| false,
+                line: &|line| line.contains("read_to_end"),
+                reviewed: &[],
+                reviewed_line: None,
+                statement: Some(&|statement| !statement.contains(".take(")),
+                message: "unbounded read",
+                fix: "cap the read",
+                unreviewed_message: "unbounded read nobody signed off",
+                unreviewed_fix: "cap the read",
+            },
+        )
+        .expect("rule runs");
+
+        let lines: Vec<Option<u32>> =
+            report.findings.iter().map(|finding| finding.line).collect();
+        assert_eq!(
+            lines,
+            vec![Some(7), Some(7)],
+            "only the chain without a bound counts"
+        );
     }
 }

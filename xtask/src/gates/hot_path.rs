@@ -39,6 +39,7 @@ impl Gate for NestedRows {
                 line: &|line| line.contains("Vec<Vec<u8>>"),
                 reviewed: &[],
                 reviewed_line: Some(&scan::is_comment),
+                statement: None,
                 message: "nested byte rows on the dispatch surface",
                 fix: "migrate to borrowed row handles, one flat buffer plus offsets, \
                       or arena-backed rows, then lower the pin",
@@ -62,8 +63,13 @@ impl Gate for BlockingWait {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        // The spellings a blocking wait actually has in this tree. `PollType::Wait`
+        // and `PollType::wait_for` are wgpu's current names for the device wait
+        // that used to be `Maintain::Wait`; searching only the retired name left
+        // every live device wait uncovered.
         const NEEDLES: &[&str] = &[
-            "Maintain::Wait",
+            "PollType::Wait",
+            "PollType::wait_for",
             "pollster::block_on",
             "std::thread::sleep(",
             "std::thread::yield_now()",
@@ -75,28 +81,28 @@ impl Gate for BlockingWait {
             &tree,
             &Rule {
                 roots: &["vyre-driver-wgpu/src"],
+                // Two files own waiting and are out of scope rather than reviewed:
+                // wait_backoff.rs is the sanctioned home for adaptive backoff, and
+                // acquire.rs holds the single blocking wait a synchronous driver API
+                // owes an asynchronous device request, plus the one device poll every
+                // readback path calls. Everything else is a dispatch path, where a
+                // wait is a defect.
                 skip: &|path| {
                     is_test_path(path)
                         || path.to_string_lossy().contains("/benches/")
                         || path == Path::new("vyre-driver-wgpu/src/wait_backoff.rs")
+                        || path == Path::new("vyre-driver-wgpu/src/runtime/device/acquire.rs")
                 },
                 line: &|line| scan::contains_any(line, NEEDLES),
-                // One-shot device acquisition and teardown polling. wait_backoff.rs
-                // is the one sanctioned home for adaptive backoff and is out of
-                // scope rather than reviewed.
-                reviewed: &[
-                    "vyre-driver-wgpu/src/lib.rs",
-                    "vyre-driver-wgpu/src/backend_impl.rs",
-                    "vyre-driver-wgpu/src/runtime/device/device.rs",
-                    "vyre-driver-wgpu/src/runtime/device/selector.rs",
-                ],
+                reviewed: &[],
                 reviewed_line: None,
+                statement: None,
                 message: "blocking wait on a throughput path",
-                fix: "prefer Poll, fence callbacks or Maintain::Poll, consolidate the \
-                      wait, then lower the pin",
-                unreviewed_message: "blocking wait outside the reviewed init and teardown files",
-                unreviewed_fix: "move the wait off the dispatch path, or review the site and \
-                                 add its file to the reviewed list in this gate",
+                fix: "prefer a nonblocking PollType::Poll, a fence callback, or the backoff \
+                      helper, then lower the pin",
+                unreviewed_message: "blocking wait outside the two files that own waiting",
+                unreviewed_fix: "call the device-acquisition wait or the backoff helper instead \
+                                 of blocking here, or move the work off the dispatch path",
             },
         )
     }
@@ -125,14 +131,13 @@ impl Gate for UnboundedCache {
                     scan::contains_word(line, "HashMap::new()")
                         || scan::contains_word(line, "VecDeque::new()")
                 },
-                // The reviewed site bounds both queues by the ring's outstanding
-                // submissions and documents that on each field.
-                reviewed: &["vyre-runtime/src/uring/pump.rs"],
+                reviewed: &[],
                 reviewed_line: None,
+                statement: None,
                 message: "unbounded associative container construction",
                 fix: "construct with a bound (capacity, eviction, pool) or move the site \
                       off the hot tier, then lower the pin",
-                unreviewed_message: "unbounded container outside the two reviewed sites",
+                unreviewed_message: "unbounded container construction on a hot tier",
                 unreviewed_fix: "give the container an explicit capacity budget, tier eviction \
                                  or a pool, and document the bound in the module",
             },
@@ -162,6 +167,7 @@ impl Gate for OwnedDispatch {
                 line: &|line| line.contains(".dispatch("),
                 reviewed: &[],
                 reviewed_line: None,
+                statement: None,
                 message: "owned-row dispatch call",
                 fix: "build borrowed rows with inputs.iter().map(Vec::as_slice) and call \
                       dispatch_borrowed",
@@ -193,16 +199,19 @@ impl Gate for UnboundedRead {
                 roots: &["vyre-driver-wgpu/src"],
                 skip: &is_test_path,
                 line: &|line| line.contains("read_to_end"),
-                // The disk cache documents its byte cap, truncation and checksum
-                // length proof in-module.
-                reviewed: &["vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs"],
+                reviewed: &[],
                 reviewed_line: None,
+                // A read-all is bounded by the `take` in its own chain, wherever
+                // that chain spells it, so the statement is what decides. Judging
+                // the line alone forced a whole-module exemption, under which an
+                // unbounded read added beside a bounded one reported nothing.
+                statement: Some(&|statement| !statement.contains(".take(")),
                 message: "unbounded synchronous read-all",
                 fix: "read behind a bound (explicit max bytes, chunked read, capped mmap), \
                       then lower the pin",
-                unreviewed_message: "read-all outside the reviewed cache modules",
-                unreviewed_fix: "read behind an explicit byte cap, or document the module's \
-                                 cap policy and add it to the reviewed list in this gate",
+                unreviewed_message: "read-all with no byte bound in its own chain",
+                unreviewed_fix: "cap the read with `take` in the same expression, or read a \
+                                 bounded prefix, so the bound is visible where the read is",
             },
         )
     }
@@ -255,6 +264,7 @@ impl Gate for InventoryWalk {
                     "vyre-foundation/src/optimizer/mod.rs",
                 ],
                 reviewed_line: None,
+                statement: None,
                 message: "per-dispatch registry walk",
                 fix: "route the lookup through the registry's frozen OnceLock index",
                 unreviewed_message: "registry walk outside the reviewed init-only sites",
