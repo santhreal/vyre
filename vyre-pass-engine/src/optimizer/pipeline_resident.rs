@@ -1,6 +1,6 @@
 //! Self-hosted optimizer pipeline running on persistent GPU buffers.
 //!
-//! For dispatchers that support the persistent surface (CUDA today),
+//! For dispatchers that support the persistent surface,
 //! this orchestrator encodes the input Program once, allocates and
 //! uploads the arena RO buffers once, dispatches all four passes
 //! (canonicalize, const-fold, pattern-match, DCE) against the same

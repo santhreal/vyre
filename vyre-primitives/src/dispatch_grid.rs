@@ -12,7 +12,7 @@
 /// Every lane-per-item primitive launches the same shape: `ceil(lanes /
 /// lanes_per_group)` groups on x, one on y and z, floored at one group. The floor
 /// matters because a zero-length input must still produce a launchable grid: the
-/// CUDA launcher rejects `grid[axis] == 0` outright, and the kernel bodies already
+/// launcher rejects `grid[axis] == 0` outright, and the kernel bodies already
 /// guard every lane against the element count, so one group of bounds-guarded
 /// lanes is a no-op while zero groups is a launch failure.
 ///
@@ -37,7 +37,7 @@ mod tests {
         assert_eq!(
             lane_grid(0, 256),
             [1, 1, 1],
-            "Fix: a zero-length input must launch one bounds-guarded group; the CUDA launcher rejects a zero extent outright."
+            "Fix: a zero-length input must launch one bounds-guarded group; the launcher rejects a zero extent outright."
         );
     }
 

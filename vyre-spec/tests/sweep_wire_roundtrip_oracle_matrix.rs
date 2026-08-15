@@ -12,7 +12,7 @@ mod spec_variant_tables;
 mod sweep_rng;
 
 use smallvec::smallvec;
-use spec_variant_tables::{buffer_data_types, builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
 use sweep_rng::Rng;
 use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
 use vyre_spec::extension::{
@@ -21,6 +21,7 @@ use vyre_spec::extension::{
 use vyre_spec::{
     AtomicOp, BinOp, DataType, QuantizationScale, QuantizationZeroPoint, TypeId, UnOp,
 };
+use vyre_test_support::data_type_elements::flat_buffer_element_types;
 
 const CASES: usize = 1024;
 
@@ -208,7 +209,7 @@ fn hostile_un_op(rng: &mut Rng) -> UnOp {
 
 fn hostile_buffer_datatype(rng: &mut Rng) -> DataType {
     let element_size = 1 + rng.range(64) as usize;
-    rng.pick_cloned(&buffer_data_types(element_size))
+    rng.pick_cloned(&flat_buffer_element_types(element_size))
 }
 
 fn hostile_datatype(rng: &mut Rng) -> DataType {

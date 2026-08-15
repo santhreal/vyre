@@ -1,13 +1,21 @@
-//! Public launch completion evidence.
+//! Hold the public launch state to the completion marker the launch writes.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Serialize;
 
+use crate::artifact_gate::{self, Inspection};
+use crate::gate::{Gate, GateCtx, GateError, Report};
 use crate::release::launch_contract::{required_external_actions, GIT_PUSH_ACTION, PUBLISH_ACTION};
 use crate::release::release_train;
 use crate::release::repo_boundary;
+
+/// The artifact this gate owns, relative to the workspace root.
+const ARTIFACT: &str = "release/evidence/final/public-launch-state.json";
+
+/// The marker `final-launch` writes when the external actions are done.
+const COMPLETION_MARKER: &str = "release/evidence/final/public-launch-completion.json";
 
 #[derive(Debug, Serialize)]
 struct LaunchState {
@@ -29,6 +37,20 @@ struct PrepublishGates {
     package_readiness: &'static str,
 }
 
+/// The four prepublish gates, and the artifact each one has to have left behind.
+///
+/// These four fields used to be the literal string `pass`, four times, written
+/// without consulting anything. The artifact asserted that four gates had
+/// passed on every run including runs where all four had never been invoked,
+/// which is the worst kind of evidence: a reader saw four passes and there was
+/// nothing behind them. Each is now the state of that gate's own artifact.
+const PREPUBLISH_GATES: &[(&str, &str)] = &[
+    ("version-matrix", "release/evidence/version/version-matrix.json"),
+    ("metadata-matrix", "release/evidence/metadata/metadata-matrix.json"),
+    ("feature-matrix", "release/evidence/metadata/feature-matrix.json"),
+    ("package-readiness", "release/evidence/package/publish-readiness.json"),
+];
+
 #[derive(Debug, Serialize)]
 struct ExternalAction {
     action: &'static str,
@@ -36,13 +58,45 @@ struct ExternalAction {
     evidence: Option<&'static str>,
 }
 
-pub(crate) fn run(args: &[String]) {
-    let output = crate::output_arg::parsed_or_exit(parse_output(args));
-    let completion_marker = output
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .join("public-launch-completion.json");
-    let complete = completion_marker_complete(&completion_marker);
+/// Holds the public launch state to the completion marker and the gate artifacts.
+pub struct LaunchStateGate;
+
+impl Gate for LaunchStateGate {
+    fn name(&self) -> &'static str {
+        "launch-state"
+    }
+
+    fn help(&self) -> &'static str {
+        "Regenerate release/evidence/final/public-launch-state.json from the launch completion \
+         marker and the four prepublish gate artifacts, and report each line the committed \
+         artifact disagrees on. Proves the recorded launch state matches the marker on disk, and \
+         that each prepublish gate left an artifact carrying no blockers. Proves nothing about \
+         whether the external actions were really performed: the marker is written by the launch \
+         script and this gate reads it, it does not contact crates.io or the git remote."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(&ctx.root),
+        ))
+    }
+}
+
+/// What the marker and the gate artifacts say, and the artifact recording it.
+fn inspect(root: &Path) -> Inspection {
+    let mut inspection = Inspection::new();
+    let complete = completion_marker_complete(&root.join(COMPLETION_MARKER));
+    let status = if complete {
+        "complete"
+    } else {
+        "blocked_pending_user_approval"
+    };
     let state = LaunchState {
         schema_version: 2,
         objective: "publish the canonical Vyre release artifacts",
@@ -52,38 +106,21 @@ pub(crate) fn run(args: &[String]) {
             "prepublish_release_ready"
         },
         public_repository: repo_boundary::vyre_public_repository(),
-        prepublish_gates: PrepublishGates {
-            version_matrix: "pass",
-            metadata_matrix: "pass",
-            feature_matrix: "pass",
-            package_readiness: "pass",
-        },
+        prepublish_gates: prepublish_gates(root, &mut inspection),
         external_actions: vec![
             ExternalAction {
                 action: PUBLISH_ACTION,
-                status: if complete {
-                    "complete"
-                } else {
-                    "blocked_pending_user_approval"
-                },
+                status,
                 evidence: Some("scripts/final-launch.sh + scripts/publish-release.sh + release/evidence/package/publish-readiness.json"),
             },
             ExternalAction {
                 action: repo_boundary::verify_public_repo_action(),
-                status: if complete {
-                    "complete"
-                } else {
-                    "blocked_pending_user_approval"
-                },
+                status,
                 evidence: Some(repo_boundary::verify_public_repo_evidence()),
             },
             ExternalAction {
                 action: GIT_PUSH_ACTION,
-                status: if complete {
-                    "complete"
-                } else {
-                    "blocked_pending_user_approval"
-                },
+                status,
                 evidence: Some("scripts/final-launch.sh"),
             },
         ],
@@ -102,8 +139,71 @@ pub(crate) fn run(args: &[String]) {
             "not_complete_until_external_actions_are_approved_and_done"
         },
     };
-    crate::output_arg::write_json(&output, &state);
-    crate::output_arg::report_evidence_artifact("launch-state", &output, &state.blockers);
+    for blocker in &state.blockers {
+        inspection.blocked(
+            ARTIFACT,
+            (*blocker).to_string(),
+            format!(
+                "Perform the external action, then run `scripts/final-launch.sh` so it records \
+                 `{COMPLETION_MARKER}`. Until that marker names this release train with every \
+                 required action complete, the launch is not closed."
+            ),
+        );
+    }
+    inspection.generates(ARTIFACT, &state);
+    inspection
+}
+
+/// The state of each prepublish gate, read from the artifact that gate owns.
+fn prepublish_gates(root: &Path, inspection: &mut Inspection) -> PrepublishGates {
+    let mut status = Vec::new();
+    for (gate, artifact) in PREPUBLISH_GATES {
+        status.push(prepublish_gate_status(root, gate, artifact, inspection));
+    }
+    PrepublishGates {
+        version_matrix: status[0],
+        metadata_matrix: status[1],
+        feature_matrix: status[2],
+        package_readiness: status[3],
+    }
+}
+
+/// Whether one prepublish gate left an artifact, and whether it carried blockers.
+fn prepublish_gate_status(
+    root: &Path,
+    gate: &str,
+    artifact: &str,
+    inspection: &mut Inspection,
+) -> &'static str {
+    let Ok(text) = fs::read_to_string(root.join(artifact)) else {
+        inspection.blocked(
+            ARTIFACT,
+            format!("prepublish gate `{gate}` has written no `{artifact}`"),
+            format!("Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact."),
+        );
+        return "missing";
+    };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else {
+        inspection.blocked(
+            ARTIFACT,
+            format!("prepublish gate artifact `{artifact}` is not valid JSON"),
+            format!("Run `cargo_full run --bin xtask -- {gate} --write` to rewrite it."),
+        );
+        return "unreadable";
+    };
+    let blockers = value
+        .get("blockers")
+        .and_then(serde_json::Value::as_array)
+        .map_or(0, Vec::len);
+    if blockers == 0 {
+        return "pass";
+    }
+    inspection.blocked(
+        ARTIFACT,
+        format!("prepublish gate `{gate}` recorded {blockers} blocker(s) in `{artifact}`"),
+        format!("Run `cargo_full run --bin xtask -- {gate}` and clear what it reports."),
+    );
+    "blocked"
 }
 
 fn completion_marker_complete(path: &Path) -> bool {
@@ -153,19 +253,6 @@ fn completion_marker_complete(path: &Path) -> bool {
                     })
                 })
             })
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    crate::output_arg::parse_output_arg(
-        args,
-        "launch-state",
-        "Writes public launch completion evidence.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    crate::checkout::checkout_root().join("release/evidence/final/public-launch-state.json")
 }
 
 #[cfg(test)]

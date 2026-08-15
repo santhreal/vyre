@@ -7,14 +7,18 @@
 //! Emits `semiring_gemm_wide`-equivalent Lineage semantics inside a
 //! GPU-resident fixpoint kernel. Small matrices use a block-local
 //! convergence loop; large matrices expose split-visible GridSync phases for
-//! multi-block CUDA dispatch.
+//! multi-block dispatch.
 
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::math::scallop_persistent::{wide_lineage_body, wide_lineage_grid_sync_body};
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::math::scallop_persistent::accumulate_lineage_words;
+use crate::math::scallop_persistent::{
+    lineage_fixpoint_program, wide_lineage_body, wide_lineage_grid_sync_body,
+};
 
 /// Stable registry id for the wide Scallop lineage join primitive.
 pub const OP_ID: &str = "vyre-primitives::math::scallop_join_wide";
@@ -236,22 +240,15 @@ pub fn scallop_join_wide(
         )
     };
 
-    let entry: Vec<Node> = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(body),
-    }];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(state, 0, BufferAccess::ReadWrite, DataType::U32).with_count(words),
-            BufferDecl::storage(next, 1, BufferAccess::ReadWrite, DataType::U32).with_count(words),
-            BufferDecl::storage(changed, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::storage(join_rules, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-        ],
+    lineage_fixpoint_program(
+        OP_ID,
+        state,
+        next,
+        join_rules,
+        changed,
+        words,
         SCALLOP_JOIN_WIDE_WORKGROUP_SIZE,
-        entry,
+        body,
     )
 }
 
@@ -354,16 +351,7 @@ pub fn cpu_ref_into(
             }
         }
 
-        let mut changed = false;
-        for (current_word, next_word) in current.iter_mut().zip(next.iter()) {
-            let merged = *current_word | *next_word;
-            if merged != *current_word {
-                *current_word = merged;
-                changed = true;
-            }
-        }
-
-        if !changed {
+        if !accumulate_lineage_words(current, next) {
             return iter;
         }
     }

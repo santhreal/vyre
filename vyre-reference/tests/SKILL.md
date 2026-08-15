@@ -1,91 +1,103 @@
-# tests/SKILL.md  -  vyre-reference
+# tests/SKILL.md, vyre-reference
 
-Read `../../.internals/skills/testing/SKILL.md` first for the category contract.
+One test file per contract. A file is named for the contract it proves, and
+the directory has no catch-all target. `docs/testing/TESTING.toml` holds the
+workspace-level default command, hardware expectation and failure behavior
+for every package.
 
 ## Purpose
 
-`vyre-reference` is the **pure-Rust CPU interpreter**. Every GPU
-backend's conformance proof is anchored against the byte-for-byte
-output this crate produces for every witnessed input. Determinism
-is the contract.
+`vyre-reference` is the pure-Rust host interpreter for IR programs and the
+parity oracle every backend is compared against. Every backend's conformance
+proof is anchored against the bytes this crate produces for a witnessed
+input. Determinism is the contract.
 
 ## Critical invariants
 
-- **Determinism.** Same `Program` + same inputs + same reference
-  version → same output bytes, forever. No HashMap iteration
-  order, no random ordering, no thread-scheduler dependence.
-- **Bit-identical to spec.** Every arithmetic / bitwise / atomic op
-  follows the exact semantics documented in `vyre-spec` +
-  `docs/memory-model.md`. Reference is the oracle.
-- **Sequential workgroup ordering.** The reference runs workgroups
-  in index order; GPU can legally interleave, but the reference
-  fixes ONE legal interleaving so certificates are reproducible.
-- **Zero unsafe.** The interpreter is pure safe Rust (unsafe is
-  denied crate-wide).
-- **No panic on any validated program.** If `validate(p)` returns
-  `Ok`, `run(p, inputs)` never panics (errors may arise from
-  runtime conditions like OOB; those are structured errors).
+- Determinism. The same `Program`, the same inputs and the same reference
+  version produce the same output bytes. No hash-map iteration order, no
+  random ordering, no thread-scheduler dependence.
+- Order independence where the model allows it. The interpreter can replay a
+  program with the workgroup and invocation step order forward, reversed or
+  rotated. A program whose result depends on which order was chosen is a
+  program the model does not permit.
+- Zero unsafe. The crate declares `#![forbid(unsafe_code)]`, so an `unsafe`
+  block cannot be added without removing that line.
+- No panic on a validated program. If `validate(p)` succeeds, execution
+  returns a structured `ReferenceError` for a runtime condition such as an
+  out-of-bounds access, and never aborts.
+- Every diagnostic names the correction. A resolution failure says which
+  registration is missing and what to add.
 
 ## Adversarial surface
 
-- Program with maximum-size workgroup memory  -  budget enforced
-- Program with 10 000 loop iterations  -  bounded, no overflow
-- Atomic operations on the same slot from every invocation in a
-  workgroup  -  serialization correct
-- Shared memory write from invocation N visible to invocation N+1
-  (sequential semantics)
-- Barrier semantics  -  invocations replay from the barrier
-- Integer overflow on every arithmetic op  -  spec-defined wrap
+- Arithmetic at the defined edges. `expr_adversarial_proptest` pins unsigned
+  division by zero as the maximum value and signed modulo by zero as an
+  error, and `saturating_binops_contract` pins the saturating forms.
+- Subnormal inputs. `subnormal_contract` and the subnormal case in
+  `adversarial_gaps` pin canonical results for square root, sine and cosine
+  rather than whatever the host happens to produce.
+- Degenerate programs. `adversarial_empty` and the no-buffer case in
+  `adversarial_gaps` prove a program with no work and a program with no
+  buffers both execute and return.
+- Value width edges. The `value_*_property_contracts` and the generated
+  `value_extend_bytes_width` and `value_write_bytes_width` matrices pin
+  narrowing, widening and byte layout at every declared width.
+- Atomics under contention. `atomic_law_property_contracts` and
+  `atomic_oracle_contract` pin the algebraic laws and the serialization the
+  oracle fixes.
+- Lane identity. `subgroup_collectives_are_lane_identified` and
+  `subgroup_edge_contract` prove a collective result names which lane
+  produced it.
 
 ## Active coverage
 
-- Workgroup execution uses the hashmap interpreter oracle with
-  persistent locals for cheap subgroup snapshots.
-- `NodeStorage` graph execution is covered by randomized DAG
-  tests that compare against an independent recursive oracle.
-- Dual-reference coverage is enforced by the registry tests for the
-  bitwise primitives that currently publish independent references.
+- Workgroup execution runs on the hashmap interpreter with persistent locals,
+  which makes a subgroup snapshot cheap.
+- `run_storage_graph` is covered by `storage_graph_generated_adversarial`,
+  which builds 32768 generated acyclic graphs from a fixed seed and compares
+  the oracle against an independent recursive shadow evaluator.
+- 11 `sweep_*_oracle_matrix` targets enumerate a dimension exhaustively
+  instead of sampling it, and the crate declares each one in `Cargo.toml` so
+  a new dimension is a visible manifest change.
+- Dual-reference coverage is enforced by the registry tests for the bitwise
+  primitives that publish an independent second reference.
 
 ## Cross-crate contracts
 
-- Backend conformance uses `vyre-driver::shadow::ReferenceExecutor`
-  to wire this interpreter without creating a driver/reference
-  dependency cycle.
-- Consumes `vyre_foundation::Program`, `vyre_foundation::ir::*`
-- Consumes `DialectLookup`  -  routes `Expr::Call` through
-  the registry rather than matching on op-id strings
-- Output `Value` is consumed by conform runners + byte-identity
-  proofs in every backend
+- `vyre-driver::shadow::ReferenceExecutor` wires this interpreter into the
+  driver without creating a driver-to-reference dependency cycle.
+- The crate consumes `vyre_foundation::Program` and the `vyre_foundation::ir`
+  types.
+- `Expr::Call` is resolved through `OperationRegistry::global()` and the CPU
+  body through `reference_fn(op_id)`. No evaluator matches on an op-id
+  string.
+- `dual_op_ids`, `resolve_dual` and `DualReferenceFacet` publish which
+  operations carry a second independent reference.
+- The `Value` output is consumed by the conform runners and by the
+  byte-identity proofs in every backend.
 
 ## Bench targets
 
-- `run_arena_reference`  -  programs / sec for small programs
-- `run_hashmap_reference` (differential oracle)  -  programs / sec;
-  target 10× slower than arena reference is acceptable (that's
-  the oracle's whole point)
-- Throughput under shared-memory loads
+The crate declares no bench target. Interpreter throughput is not a shipped
+property: the interpreter is the oracle, and it is allowed to be slow.
 
 ## Fuzz targets
 
-- `run_fuzz`  -  arbitrary valid `Program` + arbitrary inputs → no
-  panic, never silent wrong answer
-- `differential_fuzz`  -  same Program through `run_arena_reference`
-  and `run_hashmap_reference` → outputs match
+The crate declares no fuzz target. Coverage of the input space is enumerated
+by the `sweep_*_oracle_matrix` targets and the property tests rather than
+sampled, because the oracle has to be right on every point of a dimension,
+not on a random subset.
 
 ## What NOT to test here
 
-- GPU dispatch  -  concrete driver tests
-- Wire format  -  `vyre-foundation/tests`
-- Op metadata  -  `vyre-spec/tests`
+- Device dispatch. That belongs to the concrete driver crates.
+- Wire format. That belongs to `vyre-foundation` tests.
+- Op metadata. That belongs to `vyre-spec` tests.
 
 ## Running
 
 ```bash
 ./cargo_full test -p vyre-reference
-./cargo_full test -p vyre-reference --test adversarial
-./cargo_full test -p vyre-reference --test property
-./cargo_full test -p vyre-reference --test gap
-./cargo_full test -p vyre-reference --test integration
-./cargo_full bench -p vyre-reference
-cd vyre-reference/fuzz && ../../cargo_full fuzz run differential_fuzz
+./cargo_full test -p vyre-reference --all-features
 ```

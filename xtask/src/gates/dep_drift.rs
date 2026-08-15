@@ -1,4 +1,4 @@
-//! `cargo xtask dep-drift`  -  verify workspace-managed dependency pins stay aligned.
+//! The `dep-drift` gate: workspace-managed dependency pins stay aligned.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -7,51 +7,71 @@ use std::path::{Path, PathBuf};
 
 use toml::Value;
 
+use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+
 const MAX_DEP_DRIFT_MANIFEST_BYTES: u64 = 1_048_576;
 
-pub(crate) fn run(_args: &[String]) {
-    let workspace_root = crate::checkout::checkout_root();
+/// What a manifest that disagrees with the workspace table must do about it.
+const FIX: &str = "pin the dependency with `workspace = true`, or align the version with the workspace-managed dependency table";
 
-    let workspace_manifest = workspace_root.join("Cargo.toml");
-    let workspace_text = read_text_bounded(&workspace_manifest).unwrap_or_else(|error| {
-        panic!(
-            "Fix: failed to read workspace manifest {}: {error}",
-            workspace_manifest.display()
-        );
-    });
-    let workspace_toml = parse_manifest(&workspace_manifest, &workspace_text);
+/// Holds every manifest to the version the workspace table manages.
+pub struct DepDrift;
 
-    let managed = managed_dependency_versions(&workspace_toml);
-    let mut manifests = BTreeSet::new();
-    let mut failures = Vec::new();
-    collect_manifests(&workspace_root, &mut manifests, &mut failures);
-    manifests.remove(&workspace_manifest);
-
-    for manifest in manifests {
-        let text = read_text_bounded(&manifest).unwrap_or_else(|error| {
-            panic!("Fix: failed to read {}: {error}", manifest.display());
-        });
-        let parsed = parse_manifest(&manifest, &text);
-        collect_manifest_failures(&manifest, &parsed, &managed, &mut failures);
+impl Gate for DepDrift {
+    fn name(&self) -> &'static str {
+        "dep-drift"
     }
 
-    if failures.is_empty() {
-        println!("dep-drift: all workspace-managed dependency pins are aligned");
-    } else {
-        eprintln!("dep-drift: detected {} drift issue(s):", failures.len());
-        for failure in failures {
-            eprintln!("  - {failure}");
+    fn help(&self) -> &'static str {
+        "Reject a manifest that pins a workspace-managed dependency to a different version"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let workspace_manifest = ctx.root.join("Cargo.toml");
+        let workspace_text = read_text_bounded(&workspace_manifest).map_err(|error| {
+            GateError::new(
+                format!(
+                    "cannot read the workspace manifest {}: {error}",
+                    workspace_manifest.display()
+                ),
+                "restore the workspace manifest before running any gate",
+            )
+        })?;
+        let workspace_toml = parse_manifest(&workspace_manifest, &workspace_text)?;
+
+        let managed = managed_dependency_versions(&workspace_toml);
+        let mut manifests = BTreeSet::new();
+        let mut report = Report::clean();
+        collect_manifests(&ctx.root, &mut manifests, &mut report);
+        manifests.remove(&workspace_manifest);
+
+        report.note(format!(
+            "{} workspace-managed dependencies across {} manifests",
+            managed.len(),
+            manifests.len()
+        ));
+        for manifest in &manifests {
+            let text = read_text_bounded(manifest).map_err(|error| {
+                GateError::new(
+                    format!("cannot read {}: {error}", manifest.display()),
+                    "make every tracked manifest readable",
+                )
+            })?;
+            let parsed = parse_manifest(manifest, &text)?;
+            collect_manifest_findings(manifest, &parsed, &managed, &ctx.root, &mut report);
         }
-        eprintln!("Fix: align every pinned version with the workspace-managed dependency table.");
-        std::process::exit(1);
+        Ok(report)
     }
 }
 
-fn parse_manifest(path: &Path, text: &str) -> Value {
-    let table: toml::Table = toml::from_str(text).unwrap_or_else(|error| {
-        panic!("Fix: failed to parse manifest {}: {error}", path.display());
-    });
-    Value::Table(table)
+fn parse_manifest(path: &Path, text: &str) -> Result<Value, GateError> {
+    let table: toml::Table = toml::from_str(text).map_err(|error| {
+        GateError::new(
+            format!("cannot parse the manifest {}: {error}", path.display()),
+            "repair the manifest syntax; a manifest this gate cannot read is a manifest it cannot judge",
+        )
+    })?;
+    Ok(Value::Table(table))
 }
 
 fn managed_dependency_versions(workspace_toml: &Value) -> BTreeMap<String, String> {
@@ -70,11 +90,12 @@ fn managed_dependency_versions(workspace_toml: &Value) -> BTreeMap<String, Strin
         .unwrap_or_default()
 }
 
-fn collect_manifests(root: &Path, sink: &mut BTreeSet<PathBuf>, failures: &mut Vec<String>) {
+fn collect_manifests(root: &Path, sink: &mut BTreeSet<PathBuf>, report: &mut Report) {
     if !root.exists() {
-        failures.push(format!(
-            "manifest scan root `{}` does not exist",
-            root.display()
+        report.find(Finding::in_file(
+            root,
+            "manifest scan root does not exist",
+            "restore the directory, or stop naming it as a scan root",
         ));
         return;
     }
@@ -88,9 +109,10 @@ fn collect_manifests(root: &Path, sink: &mut BTreeSet<PathBuf>, failures: &mut V
     let entries = match fs::read_dir(root) {
         Ok(entries) => entries,
         Err(error) => {
-            failures.push(format!(
-                "could not read manifest scan directory `{}`: {error}",
-                root.display()
+            report.find(Finding::in_file(
+                root,
+                format!("cannot read the manifest scan directory: {error}"),
+                "make the directory readable; an unreadable directory hides every manifest under it",
             ));
             return;
         }
@@ -99,9 +121,10 @@ fn collect_manifests(root: &Path, sink: &mut BTreeSet<PathBuf>, failures: &mut V
         let entry = match entry {
             Ok(entry) => entry,
             Err(error) => {
-                failures.push(format!(
-                    "could not read manifest scan entry in `{}`: {error}",
-                    root.display()
+                report.find(Finding::in_file(
+                    root,
+                    format!("cannot read a manifest scan entry: {error}"),
+                    "make every entry in the directory readable",
                 ));
                 continue;
             }
@@ -117,15 +140,16 @@ fn collect_manifests(root: &Path, sink: &mut BTreeSet<PathBuf>, failures: &mut V
         if matches!(name, "target" | ".git") {
             continue;
         }
-        collect_manifests(&path, sink, failures);
+        collect_manifests(&path, sink, report);
     }
 }
 
-fn collect_manifest_failures(
+fn collect_manifest_findings(
     manifest_path: &Path,
     manifest: &Value,
     managed: &BTreeMap<String, String>,
-    failures: &mut Vec<String>,
+    root: &Path,
+    report: &mut Report,
 ) {
     for section in ["dependencies", "dev-dependencies", "build-dependencies"] {
         check_dependency_table(
@@ -133,7 +157,8 @@ fn collect_manifest_failures(
             section,
             manifest.get(section).and_then(Value::as_table),
             managed,
-            failures,
+            root,
+            report,
         );
     }
 
@@ -148,7 +173,8 @@ fn collect_manifest_failures(
                         .and_then(|table| table.get(section))
                         .and_then(Value::as_table),
                     managed,
-                    failures,
+                    root,
+                    report,
                 );
             }
         }
@@ -160,7 +186,8 @@ fn check_dependency_table(
     section: &str,
     table: Option<&toml::map::Map<String, Value>>,
     managed: &BTreeMap<String, String>,
-    failures: &mut Vec<String>,
+    root: &Path,
+    report: &mut Report,
 ) {
     let Some(table) = table else {
         return;
@@ -173,14 +200,16 @@ fn check_dependency_table(
             continue;
         };
         if &pinned_version != managed_version {
-            failures.push(format!(
-                "{}: `{}` in [{}] pins `{}` but the workspace manages `{}`",
-                manifest_path.display(),
-                dependency,
-                section,
-                pinned_version,
-                managed_version
-            ));
+            report.find(
+                Finding::in_file(
+                    manifest_path,
+                    format!(
+                        "`{dependency}` in [{section}] pins `{pinned_version}` but the workspace manages `{managed_version}`"
+                    ),
+                    FIX,
+                )
+                .relative_to(root),
+            );
         }
     }
 }

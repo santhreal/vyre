@@ -1,5 +1,6 @@
 //! Workspace-level platform documentation boundary contract.
 
+use std::fs;
 use std::process::Command;
 
 #[test]
@@ -26,60 +27,99 @@ fn platform_crate_docs_and_comments_do_not_name_consumers() {
     );
 }
 
-/// docs/INDEX.md must list every markdown document that exists under `docs/`
-/// and is not gitignored, and must link nothing else: not a file that does not
-/// exist, and not a gitignored file.
+/// No Rust source file may defer its contract to a document under the
+/// repository's documentation directory.
 ///
-/// The oracle is the FILESYSTEM, not git's index. A documentation index is a
-/// set of links, and "this link resolves" is answered by whether the file is
-/// there, which is a stat(2) question. Tracking state answers a different
-/// question, namely whether a change has been staged yet, and using it here
-/// inverted the gate in both directions at once. It called
-/// docs/archive/README.md (2172 bytes on disk) and docs/legacy/README.md (1199
-/// bytes on disk) "missing files" purely because they had been written that day
-/// and not committed: a present-but-uncommitted file is NOT a missing file.
-/// Symmetrically it demanded rows for docs/catalog/anonymous.md,
-/// docs/catalogs/coverage-matrix.md and docs/catalogs/op-id-catalog.md, three
-/// documents already deleted from disk, because the deletions had not been
-/// committed: a deleted-but-still-tracked file is NOT a present file. A gate
-/// wrong in both directions is worse than no gate, and while red it hides the
-/// next real INDEX.md drift.
+/// A comment that says the rule lives elsewhere is not a statement of the
+/// rule. It costs a reader a second file to learn what the code promises, and
+/// it outlives the file it names, because nothing links the two. That is not
+/// hypothetical: the book that held those documents was deleted, and every
+/// comment pointing into it became a pointer to nothing on the same commit,
+/// with no gate red to show for it. Several of them cited the same document
+/// twice in one sentence, which is what a pointer looks like once nobody
+/// reads the far end.
 ///
-/// Ignore status is the one thing still read from git, deliberately.
-/// `git check-ignore` answers "will this file ever reach another reader",
-/// which is not the same question as "is it committed right now". .gitignore
-/// excludes `**/*PLAN*.md`, `**/*STATUS*.md`, `**/*ROADMAP*.md`,
-/// `**/*AUDIT*.md`, `**/*BACKLOG*.md` and `**/AGENT_*.md` as private working
-/// notes, so a row pointing at one is a link every reader outside the authoring
-/// working copy finds broken. Listing it is worse than omitting it. The check
-/// is index-aware, so a file matching an ignore pattern that is already tracked
-/// is already in public history and stays indexed.
+/// SCOPE IS A RULE, NOT A FILE LIST. Every Rust file tracked by git is
+/// scanned, and a hit is a comment line naming a markdown path in the
+/// documentation directory. Comments only, deliberately: a path in code is an
+/// artifact the program reads or writes, and a generator naming its own
+/// output owns that output rather than deferring to it. A path nested under
+/// another directory is not a hit either, because the rule is about the
+/// published documentation tree and not about the word.
 ///
-/// `scripts/check_docs_index.sh` owns the rule; this test is the cargo-visible
-/// entry point. An uncommitted new document fails CI, a deleted document cannot
-/// retain a dead index row, and private plans cannot enter public navigation.
+/// Breaks if it regresses: a contract moves back into a document nobody
+/// ships, and deleting that document silently deletes the contract.
 #[test]
-fn docs_index_covers_every_public_markdown_document() {
+fn no_source_file_defers_its_contract_to_a_document() {
     let workspace = vyre_test_support::monorepo::vyre_workspace_root();
-    let script = workspace.join("scripts/check_docs_index.sh");
-
-    let output = Command::new("bash")
-        .arg(&script)
-        .current_dir(workspace)
+    let listing = Command::new("git")
+        .args(["ls-files", "-z", "*.rs"])
+        .current_dir(&workspace)
         .output()
-        .expect("documentation index contract script should execute");
+        .expect("git ls-files should run in the workspace");
+    assert!(
+        listing.status.success(),
+        "git ls-files failed:\n{}",
+        String::from_utf8_lossy(&listing.stderr)
+    );
+
+    let mut deferrals = Vec::new();
+    for relative in String::from_utf8_lossy(&listing.stdout).split('\0') {
+        if relative.is_empty() {
+            continue;
+        }
+        let Ok(source) = fs::read_to_string(workspace.join(relative)) else {
+            continue;
+        };
+        for (index, line) in source.lines().enumerate() {
+            let trimmed = line.trim_start();
+            if !trimmed.starts_with("//") && !trimmed.starts_with('*') {
+                continue;
+            }
+            for document in documents_named_in(line) {
+                deferrals.push(format!("{relative}:{}: {document}", index + 1));
+            }
+        }
+    }
 
     assert!(
-        output.status.success(),
-        "documentation index contract failed.\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        deferrals.is_empty(),
+        "{} comment(s) defer a contract to a document instead of stating it:\n{}\n\
+         Fix: state the rule in the source that has to follow it, then delete the pointer.",
+        deferrals.len(),
+        deferrals.join("\n")
     );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr).as_ref(),
-        "",
-        "documentation index contract must be quiet on success"
-    );
+}
+
+/// Every documentation-directory markdown path one comment line names.
+///
+/// A match must start the path: a directory of the same name nested under
+/// another one, such as the release evidence tree, is a different tree and
+/// carries no contract.
+fn documents_named_in(line: &str) -> Vec<&str> {
+    const DIRECTORY: &str = "docs/";
+    const SUFFIX: &str = ".md";
+
+    let path_character =
+        |character: char| character.is_ascii_alphanumeric() || matches!(character, '.' | '/' | '-' | '_');
+    let bytes = line.as_bytes();
+    let mut found = Vec::new();
+    let mut cursor = 0;
+    while let Some(offset) = line[cursor..].find(DIRECTORY) {
+        let start = cursor + offset;
+        cursor = start + DIRECTORY.len();
+        if start > 0 && path_character(char::from(bytes[start - 1])) {
+            continue;
+        }
+        let end = line[start..]
+            .find(|character| !path_character(character))
+            .map_or(line.len(), |length| start + length);
+        let candidate = &line[start..end];
+        if candidate.ends_with(SUFFIX) {
+            found.push(candidate);
+        }
+    }
+    found
 }
 
 /// No public document may link a target a reader cannot open. Three classes, in
@@ -88,16 +128,17 @@ fn docs_index_covers_every_public_markdown_document() {
 /// target exists here but is gitignored, so it resolves for the author and fails
 /// for every other reader.
 ///
-/// This exists because docs_index_covers_every_public_markdown_document only
-/// guards docs/INDEX.md, and the same defect was sitting one directory down:
-/// docs/archive/README.md listed fourteen sibling documents that .gitignore keeps
-/// out of public history, so it read as a complete directory listing to us and as
-/// fourteen dead links to everyone else. docs/TESTING_PROGRAM.md was worse: it
-/// linked `../../../../../STANDARD.md`, five levels above the repository root into
-/// a private monorepo, which is both unresolvable for every clone and a disclosure
-/// of internal layout inside a crate we intend to publish. That link is gone and
-/// the rule it pointed at is now stated inline in that document, which removes the
-/// dependency rather than renaming it.
+/// This exists because no_source_file_defers_its_contract_to_a_document guards
+/// what source says about a document, not what one document says about
+/// another, and the same defect was sitting one directory down: the archive
+/// directory's README listed fourteen sibling documents that .gitignore keeps
+/// out of public history, so it read as a complete directory listing to us and
+/// as fourteen dead links to everyone else. The testing-program document was
+/// worse: it linked `../../../../../STANDARD.md`, five levels above the
+/// repository root into a private monorepo, which is both unresolvable for
+/// every clone and a disclosure of internal layout inside a crate we intend to
+/// publish. That link is gone and the rule it pointed at is now stated inline
+/// in that document, which removes the dependency rather than renaming it.
 ///
 /// SCOPE IS A RULE, NOT A FILE LIST. An allowlist of exempt paths is a deferral
 /// that rots when someone adds the next file. The rule: a HISTORICAL RECORD is not

@@ -43,12 +43,20 @@ fi
 
 extract_api() {
     local crate_name="$1"
-    local current
+    local current reason
+    reason="$(mktemp)"
 
-    if ! current="$(./cargo_full public-api -sss -p "$crate_name")"; then
-        echo "Fix: cargo public-api could not extract the $crate_name surface." >&2
+    # `-p` is load-bearing: the workspace root is a virtual manifest and
+    # `cargo public-api` refuses to list one. Without the package the gate
+    # fails for every crate with the same unrelated message.
+    if ! current="$(./cargo_full public-api -sss -p "$crate_name" 2>"$reason")"; then
+        echo "EXTRACTION FAILED: $crate_name. cargo public-api said:" >&2
+        sed 's/^/  /' "$reason" >&2
+        echo "Fix: build $crate_name alone and rerun. A parallel build against the shared target dir can leave a zero-byte .rmeta, which reads as a crate with no items." >&2
+        rm -f "$reason"
         return 1
     fi
+    rm -f "$reason"
 
     # LC_ALL=C is LOAD-BEARING, not tidiness. Without it `sort` collates under
     # the caller's locale, so the snapshot's line order becomes a function of
@@ -110,7 +118,11 @@ for entry in "${PUBLISHED_CRATES[@]}"; do
     src="$crate_dir/src"
     snap="$SNAPSHOT_DIR/${crate_name}.txt"
 
-    [[ ! -d "$src" ]] && continue
+    if [[ ! -d "$src" ]]; then
+        echo "NO SOURCE ROOT: $src is missing for publishable package $crate_name. Fix: restore the crate's source root, or drop the package from the publishable set so the gate stops promising a surface for it." >&2
+        failed=1
+        continue
+    fi
     if [[ "$refresh" -eq 1 && -n "$only_crate" && "$only_crate" != "$crate_dir" && "$only_crate" != "$crate_name" ]]; then
         continue
     fi
@@ -120,7 +132,15 @@ for entry in "${PUBLISHED_CRATES[@]}"; do
         failed=1
         continue
     fi
-    [[ -z "$current" ]] && continue
+    # An empty extraction used to skip the crate. No committed snapshot is
+    # empty, so "no public items" is never the answer for a publishable
+    # package: it is a truncated rustdoc or a zero-byte .rmeta, and skipping
+    # it silently is how a crate can drop out of the gate unnoticed.
+    if [[ -z "$current" ]]; then
+        echo "EMPTY SURFACE: $crate_name extracted no public items. Fix: build $crate_name alone and rerun; a publishable crate exports something." >&2
+        failed=1
+        continue
+    fi
 
     if [[ "$refresh" -eq 1 ]]; then
 

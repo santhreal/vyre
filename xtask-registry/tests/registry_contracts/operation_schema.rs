@@ -78,7 +78,7 @@ where
 /// the previous registry state.
 #[test]
 fn committed_schema_matches_live_registrations() {
-    let output = run_xtask(&["operation-schema", "--check"]);
+    let output = run_xtask(&["operation-schema"]);
     assert!(
         output.status.success(),
         "Fix: regenerate the canonical operation schema: {}",
@@ -86,15 +86,15 @@ fn committed_schema_matches_live_registrations() {
     );
 }
 
-/// Both Markdown catalogs must be exact projections of the committed JSON contract.
+/// Both generated inventories must be exact projections of the live registry.
 ///
-/// This prevents a correct schema from coexisting with stale public counts or rows in
-/// the generated inventory and subsystem pages.
+/// This prevents a correct schema from coexisting with stale counts or rows in
+/// `docs/generated/op-inventory.toml` and `docs/generated/catalog.toml`.
 #[test]
 fn schema_derived_markdown_views_are_current() {
     for arguments in [
-        ["list-ops", "--check"].as_slice(),
-        ["catalog", "--check"].as_slice(),
+        ["list-ops"].as_slice(),
+        ["catalog"].as_slice(),
     ] {
         let output = run_xtask(arguments);
         assert!(

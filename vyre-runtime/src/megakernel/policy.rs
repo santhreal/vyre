@@ -676,7 +676,7 @@ impl ResidentLaunchPolicy {
     /// Recommend a launch while preserving the previous topology inside a
     /// narrow hysteresis band.
     ///
-    /// CUDA resident graphs and long-running dataflow streams should use this
+    /// Resident device graphs and long-running dataflow streams should use this
     /// entry point when they can track the last successful topology. It prevents
     /// borderline frontier-density or memory-pressure telemetry from repeatedly
     /// switching kernel variants, invalidating launch plans, and disturbing

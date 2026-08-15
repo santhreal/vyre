@@ -521,8 +521,7 @@ impl BufferDecl {
     /// `MemoryClass::Scratch` cases of `vyre_lower::lower::memory_class`, which
     /// is the single Program-to-descriptor boundary every emitter reads. Those
     /// two classes are the ones whose `element_count` becomes a fixed-length
-    /// array in emitted code (`.shared` byte length in PTX,
-    /// `array<T, N>` in WGSL); every other class emits a runtime-sized array
+    /// array in emitted code; every other class emits a runtime-sized array
     /// and ignores the count.
     ///
     /// `Persistent` is excluded because it is rejected before classification.

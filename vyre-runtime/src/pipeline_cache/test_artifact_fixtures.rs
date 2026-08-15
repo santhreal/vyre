@@ -1,14 +1,24 @@
 //! Shared canonical artifact and unique-name fixtures for pipeline-cache tests.
+//!
+//! Every pipeline-cache test needs the same input: a Program compiled into a
+//! neutral artifact under fixed facts and a bounded search. The unit tests reach
+//! it as a crate module and the `pipeline_fingerprint_surface` and
+//! `fingerprint_cross_host` integration tests include this file with `#[path]`,
+//! the same way `tests/support/artifact_fixtures.rs` is shared. Those tests
+//! compare artifact digests, so their fixtures only mean what they say while
+//! they compile the same way, which is one function rather than three copies.
+
+#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
+    BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
 use vyre_megakernel::{compile, Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget};
 
-pub(in crate::pipeline_cache) fn tiny_artifact() -> Artifact {
+pub(crate) fn tiny_artifact() -> Artifact {
     artifact_for_program(Program::wrapped(
         vec![BufferDecl::read_write("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
@@ -16,20 +26,26 @@ pub(in crate::pipeline_cache) fn tiny_artifact() -> Artifact {
     ))
 }
 
-pub(in crate::pipeline_cache) fn artifact_for_program(program: Program) -> Artifact {
-    let buffer = &program.buffers()[0];
+/// Compile `program` into its neutral artifact.
+///
+/// Every buffer the program declares becomes an external value carrying that
+/// buffer's own element type, count, and access, so a fixture's graph contract
+/// cannot disagree with the program it wraps.
+pub(crate) fn artifact_for_program(program: Program) -> Artifact {
     let mut graph = ProgramGraph::new();
-    graph
-        .add_external_value(
-            buffer.name(),
-            ValueContract {
-                dtype: buffer.element(),
-                shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
-                access: BufferAccess::ReadWrite,
-                lifetime: ValueLifetime::Invocation,
-            },
-        )
-        .unwrap();
+    for buffer in program.buffers() {
+        graph
+            .add_external_value(
+                buffer.name(),
+                ValueContract {
+                    dtype: buffer.element(),
+                    shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
+                    access: buffer.access(),
+                    lifetime: ValueLifetime::Invocation,
+                },
+            )
+            .unwrap();
+    }
     graph
         .add_node("main", program, Vec::new(), Vec::new())
         .unwrap();
@@ -44,7 +60,7 @@ pub(in crate::pipeline_cache) fn artifact_for_program(program: Program) -> Artif
     compile(&request).unwrap()
 }
 
-pub(in crate::pipeline_cache) fn unique_u64() -> u64 {
+pub(crate) fn unique_u64() -> u64 {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(duration) => duration.as_nanos() as u64,
         Err(_) => 0,

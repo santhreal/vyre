@@ -1,95 +1,207 @@
 # Pinned finding count of every registered gate, written by
 # `xtask gates --write-baseline`.
 #
-# `output_lines` is the combined stdout and stderr line count, used as the
-# finding count. More lines than the pin fails; fewer is reported so the pin
-# can be lowered here. A gate that exits nonzero fails outright: no row makes
-# a failing gate legal, and the writer refuses to record one.
+# One row per registered gate, and the sweep fails on a gate with no row
+# or a row with no gate. More findings than the pin fails; fewer is
+# reported so the pin can be lowered here, and the pin only ever moves
+# down. A gate that cannot run at all fails outright: no row makes a
+# failing gate legal, and the writer refuses to record one.
+#
+# Every pin below is 0 because the registry was rebuilt against the gate
+# contract and no gate had run under it yet. Zero is the only pin that
+# cannot excuse a finding, so a gate that reports one fails until the
+# number here is recorded from a real run. Record them all at once with
+# `xtask gates --write-baseline`, which refuses to write while any gate
+# cannot run.
 
 [[gate]]
 name = "abstraction-gate"
-output_lines = 32
+findings = 0
+
+[[gate]]
+name = "backend-matrix"
+findings = 0
+
+[[gate]]
+name = "bench-crossback"
+findings = 0
+
+[[gate]]
+name = "bench-release"
+findings = 0
 
 [[gate]]
 name = "catalog"
-output_lines = 1
+findings = 0
 
 [[gate]]
 name = "check-tier-deps"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "compile"
+findings = 0
 
 [[gate]]
 name = "conformance-matrix"
-output_lines = 1
+findings = 0
 
 [[gate]]
 name = "dep-drift"
-output_lines = 1
+findings = 0
 
 [[gate]]
 name = "docs-check"
-output_lines = 0
+findings = 0
 
 [[gate]]
 name = "dup-scan"
-output_lines = 1
+findings = 0
 
 [[gate]]
 name = "feature-isolation"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "feature-matrix"
+findings = 0
 
 [[gate]]
 name = "gate1"
-output_lines = 372
+findings = 0
 
 [[gate]]
 name = "heuristic-audit"
-output_lines = 6
+findings = 0
 
 [[gate]]
 name = "hot-path-scan"
-output_lines = 170
+findings = 0
 
 [[gate]]
 name = "hygiene-matrix"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "launch-state"
+findings = 0
 
 [[gate]]
 name = "lego-audit"
-output_lines = 47
+findings = 0
 
 [[gate]]
 name = "lego-quick"
-output_lines = 13292
+findings = 0
 
 [[gate]]
 name = "list-ops"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "lockfile-clean"
+findings = 0
+
+[[gate]]
+name = "metadata-matrix"
+findings = 0
+
+[[gate]]
+name = "op-matrix"
+findings = 0
+
+[[gate]]
+name = "op-names"
+findings = 0
 
 [[gate]]
 name = "operation-schema"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "optimization-corpus"
+findings = 0
 
 [[gate]]
 name = "optimization-docs"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "optimization-matrix"
+findings = 0
+
+[[gate]]
+name = "package-readiness"
+findings = 0
+
+[[gate]]
+name = "parity-testing-isolated"
+findings = 0
 
 [[gate]]
 name = "platform-boundary"
-output_lines = 1
+findings = 0
 
 [[gate]]
 name = "primitive-admission-gate"
-output_lines = 3
+findings = 0
+
+[[gate]]
+name = "print-composition"
+findings = 0
+
+[[gate]]
+name = "release-benchmarks"
+findings = 0
+
+[[gate]]
+name = "release-conformance"
+findings = 0
+
+[[gate]]
+name = "release-evidence"
+findings = 0
+
+[[gate]]
+name = "release-workload-matrix"
+findings = 0
+
+[[gate]]
+name = "shrink"
+findings = 0
+
+[[gate]]
+name = "trace-f32"
+findings = 0
 
 [[gate]]
 name = "verify-rewrite-proofs"
-output_lines = 5
+findings = 0
+
+[[gate]]
+name = "version-matrix"
+findings = 0
 
 [[gate]]
 name = "vyre-release-gate"
-output_lines = 250
+findings = 0
 
 [[gate]]
 name = "whats-similar"
-output_lines = 5
+findings = 0
+
+[[gate]]
+name = "workspace-check"
+findings = 0
+
+[[gate]]
+name = "workspace-clippy"
+findings = 0
+
+[[gate]]
+name = "workspace-docs"
+findings = 0
+
+[[gate]]
+name = "workspace-tests"
+findings = 0

@@ -31,7 +31,7 @@
 //!   comparison is *unsound* for float operands: a float `x` that is
 //!   `NaN` at runtime makes `x == x` false and `x != x` true under
 //!   IEEE-754, which the reference oracle (`vyre-reference`
-//!   `binop_f32`) and the SPIR-V emitter (`OpFOrdEqual`) both honor.
+//!   `binop_f32`) and every target emitter honor.
 //!   Folding it to a bool literal here would (a) miscompile NaN checks
 //!   and (b) corrupt the content-addressed cache by giving the
 //!   genuinely-distinct programs `x == x` and `true` the same
@@ -473,7 +473,7 @@ mod tests {
         // canonicalize must NOT fold `a == a` to `true`. The pass is
         // type-blind, and for a float `a` that is NaN at runtime
         // `a == a` is *false* under IEEE-754 (the reference oracle's
-        // `binop_f32` and the SPIR-V `OpFOrdEqual` emitter both agree).
+        // `binop_f32` and every target emitter agree).
         // Folding it to a bool literal would miscompile NaN checks and
         // collide distinct programs in the content-addressed cache.
         // The Eq node is preserved verbatim (operand order unchanged

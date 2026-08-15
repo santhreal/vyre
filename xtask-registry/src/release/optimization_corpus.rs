@@ -1,16 +1,23 @@
-//! Generate release evidence for the canonical semantic `Program` optimizer.
+//! Hold the semantic `Program` optimizer corpus evidence to the corpus generator.
 
 use std::collections::BTreeSet;
-use std::fs;
-use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use vyre_foundation::optimizer::corpus::{
     generate_release_corpus, manifest_for, OptimizationCorpusCase, OptimizationCorpusManifest,
     RELEASE_OPTIMIZATION_FAMILIES,
 };
+use xtask::artifact_gate::{self, Inspection};
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 use crate::release::optimizer_pass_rows::{self, OptimizerPassRow};
+
+/// The five artifacts this gate owns, relative to the workspace root.
+const CORPUS: &str = "release/evidence/optimization/optimization-corpus.json";
+const CONTRACTS: &str = "release/evidence/optimization/optimization-corpus-contracts.json";
+const FAMILIES: &str = "release/evidence/optimization/optimization-family-manifest.json";
+const CASES: &str = "release/evidence/optimization/optimization-case-manifest.json";
+const PASSES: &str = "release/evidence/optimization/optimizer-pass-manifest.json";
 
 /// The families this generator must produce, read from the generator itself so
 /// the manifest cannot demand a set the corpus never emits.
@@ -73,57 +80,116 @@ struct OptimizerPassManifest {
     blockers: Vec<String>,
 }
 
-pub(crate) fn run(args: &[String]) {
-    let output = xtask::output_arg::parsed_or_exit(parse_output(args));
-    let cases = generate_release_corpus();
-    let manifest = manifest_for(&cases);
-    if manifest.generated_cases < manifest.required_min_cases
-        || manifest.verified_cases != manifest.generated_cases
-        || manifest.optimized_cases == 0
-        || manifest.changed_pass_instances == 0
-        || manifest.non_converged_cases != 0
-        || !manifest.blockers.is_empty()
-    {
-        eprintln!(
-            "optimization-corpus: semantic optimizer evidence is incomplete: generated={}, verified={}, optimized={}, changed_pass_instances={}, non_converged={}, blockers={}",
-            manifest.generated_cases,
-            manifest.verified_cases,
-            manifest.optimized_cases,
-            manifest.changed_pass_instances,
-            manifest.non_converged_cases,
-            manifest.blockers.len(),
-        );
-        for blocker in manifest.blockers.iter().take(20) {
-            eprintln!("  - {blocker}");
-        }
-        std::process::exit(1);
+/// Holds the five optimizer corpus artifacts to the corpus the generator emits.
+pub struct OptimizationCorpusGate;
+
+impl Gate for OptimizationCorpusGate {
+    fn name(&self) -> &'static str {
+        "optimization-corpus"
     }
-    let Some(parent) = output.parent() else {
-        eprintln!(
-            "Fix: optimization corpus output `{}` has no parent",
-            output.display()
-        );
-        std::process::exit(1);
-    };
-    if let Err(error) = fs::create_dir_all(parent) {
-        eprintln!("Fix: create `{}`: {error}", parent.display());
-        std::process::exit(1);
+
+    fn help(&self) -> &'static str {
+        "Regenerate the five artifacts under release/evidence/optimization from the semantic \
+         Program optimizer corpus and report each line the committed copies disagree on. Proves \
+         the corpus reaches its case floor, that every case verifies after optimization, that at \
+         least one pass instance changed a program, that no case failed to converge, that every \
+         required family carries its minimum case count, that no case id repeats, and that no \
+         optimizer pass id repeats. Proves nothing about runtime performance: the corpus is \
+         optimized and re-verified in process, never executed on a device."
     }
-    xtask::output_arg::write_json(&output, &manifest);
-    write_contracts(parent, &manifest);
-    write_family_manifest(parent, &manifest);
-    write_case_manifest(parent, &cases, &manifest);
-    write_pass_manifest(parent);
-    println!(
-        "optimization-corpus: wrote {} semantic Program cases to {}",
-        manifest.generated_cases,
-        output.display()
-    );
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(),
+        ))
+    }
 }
 
-fn write_contracts(parent: &Path, manifest: &OptimizationCorpusManifest) {
-    xtask::output_arg::write_json(
-        &parent.join("optimization-corpus-contracts.json"),
+/// What the corpus generator produces, and the five artifacts recording it.
+///
+/// The generator used to exit before writing anything when the corpus came out
+/// incomplete, so the run that most needed fresh evidence was the run that left
+/// the stalest. Every artifact is now rendered whatever the corpus says, and the
+/// incompleteness is reported as findings beside it.
+fn inspect() -> Inspection {
+    let mut inspection = Inspection::new();
+    let cases = generate_release_corpus();
+    let manifest = manifest_for(&cases);
+    report_corpus_completeness(&manifest, &mut inspection);
+    inspection.generates(CORPUS, &manifest);
+    contracts(&manifest, &mut inspection);
+    family_manifest(&manifest, &mut inspection);
+    case_manifest(&cases, &manifest, &mut inspection);
+    pass_manifest(&mut inspection);
+    inspection
+}
+
+/// Every way the generated corpus falls short of the release floor.
+fn report_corpus_completeness(manifest: &OptimizationCorpusManifest, inspection: &mut Inspection) {
+    if manifest.generated_cases < manifest.required_min_cases {
+        inspection.blocked(
+            CORPUS,
+            format!(
+                "semantic optimizer corpus generated {} case(s), below the release floor {}",
+                manifest.generated_cases, manifest.required_min_cases
+            ),
+            "Widen the corpus generator in vyre-foundation until it reaches the floor.",
+        );
+    }
+    if manifest.verified_cases != manifest.generated_cases {
+        inspection.blocked(
+            CORPUS,
+            format!(
+                "{} of {} corpus case(s) verified after optimization",
+                manifest.verified_cases, manifest.generated_cases
+            ),
+            "A case that does not verify means a pass changed program semantics. Fix the pass.",
+        );
+    }
+    if manifest.optimized_cases == 0 {
+        inspection.blocked(
+            CORPUS,
+            "no corpus case was optimized at all",
+            "Every pass is a no-op on this corpus, so the evidence proves nothing. Check that the \
+             pass registry is populated and the corpus holds optimizable programs.",
+        );
+    }
+    if manifest.changed_pass_instances == 0 {
+        inspection.blocked(
+            CORPUS,
+            "no pass instance changed a program",
+            "The corpus exercises no pass. Widen it, or register the passes it was written for.",
+        );
+    }
+    if manifest.non_converged_cases != 0 {
+        inspection.blocked(
+            CORPUS,
+            format!(
+                "{} corpus case(s) did not converge",
+                manifest.non_converged_cases
+            ),
+            "A pass pipeline that does not reach a fixpoint can loop in production. Find the pass \
+             pair that keeps undoing each other.",
+        );
+    }
+    for blocker in &manifest.blockers {
+        inspection.blocked(
+            CORPUS,
+            blocker.clone(),
+            "Correct the corpus generator in vyre-foundation to satisfy the sentence.",
+        );
+    }
+}
+
+fn contracts(manifest: &OptimizationCorpusManifest, inspection: &mut Inspection) {
+    inspection.generates(
+        CONTRACTS,
         &OptimizationCorpusContracts {
             schema_version: 2,
             required_min_cases: manifest.required_min_cases,
@@ -140,7 +206,7 @@ fn write_contracts(parent: &Path, manifest: &OptimizationCorpusManifest) {
     );
 }
 
-fn write_family_manifest(parent: &Path, manifest: &OptimizationCorpusManifest) {
+fn family_manifest(manifest: &OptimizationCorpusManifest, inspection: &mut Inspection) {
     let missing_required_families = REQUIRED_FAMILIES
         .iter()
         .filter(|required| {
@@ -158,8 +224,18 @@ fn write_family_manifest(parent: &Path, manifest: &OptimizationCorpusManifest) {
             missing_required_families.join(", ")
         ));
     }
-    xtask::output_arg::write_json(
-        &parent.join("optimization-family-manifest.json"),
+    for blocker in &blockers {
+        inspection.blocked(
+            FAMILIES,
+            blocker.clone(),
+            format!(
+                "Each required family needs at least {MIN_CASES_PER_FAMILY} case(s). Extend the \
+                 generator for the named families."
+            ),
+        );
+    }
+    inspection.generates(
+        FAMILIES,
         &OptimizationFamilyManifest {
             schema_version: 2,
             required_family_count: REQUIRED_FAMILIES.len(),
@@ -171,10 +247,10 @@ fn write_family_manifest(parent: &Path, manifest: &OptimizationCorpusManifest) {
     );
 }
 
-fn write_case_manifest(
-    parent: &Path,
+fn case_manifest(
     cases: &[OptimizationCorpusCase],
     manifest: &OptimizationCorpusManifest,
+    inspection: &mut Inspection,
 ) {
     let mut seen = BTreeSet::new();
     let mut duplicate_case_ids = BTreeSet::new();
@@ -204,8 +280,18 @@ fn write_case_manifest(
             duplicate_case_ids.len()
         ));
     }
-    xtask::output_arg::write_json(
-        &parent.join("optimization-case-manifest.json"),
+    for blocker in &blockers {
+        inspection.blocked(
+            CASES,
+            blocker.clone(),
+            format!(
+                "Two cases sharing an id collapse into one row and hide a case. Rename: {}",
+                duplicate_case_ids.join(", ")
+            ),
+        );
+    }
+    inspection.generates(
+        CASES,
         &OptimizationCaseManifest {
             schema_version: 2,
             required_min_cases: manifest.required_min_cases,
@@ -218,11 +304,19 @@ fn write_case_manifest(
     );
 }
 
-fn write_pass_manifest(parent: &Path) {
+fn pass_manifest(inspection: &mut Inspection) {
     let (executable_passes, entries) = optimizer_pass_rows::collect();
     let blockers = optimizer_pass_rows::duplicate_id_blockers(&entries);
-    xtask::output_arg::write_json(
-        &parent.join("optimizer-pass-manifest.json"),
+    for blocker in &blockers {
+        inspection.blocked(
+            PASSES,
+            blocker.clone(),
+            "Two optimizer passes sharing an id make the catalog ambiguous. Give each pass its \
+             own id.",
+        );
+    }
+    inspection.generates(
+        PASSES,
         &OptimizerPassManifest {
             schema_version: 1,
             executable_passes,
@@ -241,17 +335,4 @@ fn hex(bytes: &[u8]) -> String {
         output.push(DIGITS[(byte & 0x0f) as usize] as char);
     }
     output
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    xtask::output_arg::parse_output_arg(
-        args,
-        "optimization-corpus",
-        "Generates semantic Program optimizer release evidence.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    xtask::checkout::checkout_root().join("release/evidence/optimization/optimization-corpus.json")
 }

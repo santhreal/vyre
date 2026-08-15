@@ -1,4 +1,4 @@
-//! Pre-publish package graph evidence for the Vyre release.
+//! Hold the pre-publish package graph evidence to the manifests and archives.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
@@ -7,8 +7,13 @@ use std::process::Command;
 
 use serde::Serialize;
 
+use crate::artifact_gate::{self, Inspection};
+use crate::gate::{Gate, GateCtx, GateError, Report};
 use crate::manifest_walk::MAX_MANIFEST_BYTES;
 use crate::release::release_train;
+
+/// The artifact this gate owns, relative to the workspace root.
+const ARTIFACT: &str = "release/evidence/package/publish-readiness.json";
 
 const MAX_JSON_BYTES: u64 = 8_388_608;
 
@@ -260,13 +265,58 @@ fn internal_dependencies(
     dependencies
 }
 
-pub(crate) fn run(args: &[String]) {
-    let output = crate::output_arg::parsed_or_exit(parse_output(args));
-    let vyre_root = crate::checkout::checkout_root();
+/// Holds the publish-readiness evidence to the manifests and the package archives.
+pub struct PackageReadinessGate;
+
+impl Gate for PackageReadinessGate {
+    fn name(&self) -> &'static str {
+        "package-readiness"
+    }
+
+    fn help(&self) -> &'static str {
+        "Regenerate release/evidence/package/publish-readiness.json by deriving the publish order \
+         from the manifests and listing each crate's package archive, and report each line the \
+         committed copy disagrees on. Proves the derived order covers exactly the publishable set \
+         the metadata matrix names, that no dependency publishes after its consumer, that every \
+         local path dependency carries a crates.io version, and that each archive holds its \
+         required files and none of its forbidden ones. Proves nothing about crates.io: no \
+         version is looked up and nothing is uploaded."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(&ctx.root),
+        ))
+    }
+}
+
+/// The publish story the tree tells, and the artifact recording it.
+fn inspect(vyre_root: &Path) -> Inspection {
+    let mut inspection = Inspection::new();
+    let readiness = build_readiness(vyre_root);
+    for blocker in &readiness.blockers {
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Correct the manifest, the publish order or the packaged file set the sentence names. \
+             The blocker stays in the artifact, so committing it does not clear this finding.",
+        );
+    }
+    inspection.generates(ARTIFACT, &readiness);
+    inspection
+}
+
+fn build_readiness(vyre_root: &Path) -> PackageReadiness {
     let metadata_path = vyre_root.join("release/evidence/metadata/metadata-matrix.json");
     let mut blockers = Vec::new();
     let (publish_order, metadata_packages) =
-        publish_order(&vyre_root, &metadata_path, &mut blockers);
+        publish_order(vyre_root, &metadata_path, &mut blockers);
     let ordered_packages = publish_order
         .iter()
         .map(|step| step.package.clone())
@@ -317,7 +367,7 @@ pub(crate) fn run(args: &[String]) {
 
     let package_content_checks = publish_order
         .iter()
-        .map(|step| audit_package_contents(&vyre_root, step, &publish_order))
+        .map(|step| audit_package_contents(vyre_root, step, &publish_order))
         .collect::<Vec<_>>();
     for check in &package_content_checks {
         blockers.extend(
@@ -339,7 +389,7 @@ pub(crate) fn run(args: &[String]) {
             .then(left.dependency.cmp(&right.dependency))
     });
 
-    let readiness = PackageReadiness {
+    PackageReadiness {
         schema_version: 3,
         release_train: ReleaseTrain {
             vyre: release_train::vyre_version(),
@@ -366,9 +416,7 @@ pub(crate) fn run(args: &[String]) {
         versioned_local_dependencies,
         package_content_checks,
         blockers,
-    };
-    crate::output_arg::write_json(&output, &readiness);
-    crate::output_arg::report_evidence_artifact("package-readiness", &output, &readiness.blockers);
+    }
 }
 
 fn audit_package_contents(
@@ -1001,19 +1049,6 @@ fn read_manifest(path: &Path, blockers: &mut Vec<String>) -> Option<toml::Value>
             None
         }
     }
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    crate::output_arg::parse_output_arg(
-        args,
-        "package-readiness",
-        "Writes pre-publish package-order evidence.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    crate::checkout::checkout_root().join("release/evidence/package/publish-readiness.json")
 }
 
 #[cfg(test)]

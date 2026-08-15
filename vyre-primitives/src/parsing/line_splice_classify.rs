@@ -38,8 +38,8 @@
 //! ±2-byte neighbor reads keep the kernel readable; the buffer edge is
 //! handled by clamping the load index to the buffer length IN THE IR (the
 //! `Expr::select` neighbor guards evaluate both arms, so the load must be
-//! made in-bounds explicitly, not left to a backend's OOB clamp. CUDA does
-//! not clamp).
+//! made in-bounds explicitly, not left to a backend's OOB clamp, which not
+//! every backend performs).
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -116,8 +116,8 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
             // shared ONE-PLACE helper `crate::ir_safe::clamped_load_to`. The ±N
             // neighbor guards are `Expr::select` (both arms evaluated), so this load
             // still runs for edge lanes whose `addr` underflowed/overflowed; the clamp
-            // keeps it in bounds on EVERY backend (Law 10; CUDA does not clamp OOB
-            // reads). The outer `in_bounds` select restores the 0 sentinel for the
+            // keeps it in bounds on EVERY backend (Law 10; not every backend clamps
+            // OOB reads). The outer `in_bounds` select restores the 0 sentinel for the
             // out-of-range case, so semantics are unchanged, only the illegal access
             // is removed.
             let buf_len = Expr::buf_len("bytes_in");
@@ -144,8 +144,8 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
             // are `Expr::select`, which evaluates BOTH arms, so this load still runs
             // for edge lanes whose `addr` underflowed (i-2 at i=0) or overflowed
             // (i+1 at the last byte → word past the end). The clamp keeps the load in
-            // bounds on EVERY backend instead of relying on the PTX backend's OOB
-            // clamp (Law 10; CUDA does not clamp); the value is discarded by the
+            // bounds on EVERY backend instead of relying on a backend's OOB
+            // clamp (Law 10; not every backend clamps); the value is discarded by the
             // outer `load(off)` select when the address was out of range, so
             // semantics are unchanged (only the illegal access is removed).
             let word = Expr::cast(

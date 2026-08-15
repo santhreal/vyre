@@ -414,8 +414,8 @@ fn put_metadata_payload(
 /// SAME function for program equality. Both keys are derived over the same
 /// struct, so giving them one encoder means a new `LinearType` variant breaks
 /// one build site and fixes both keys at once. The alternative, a second
-/// private copy of this match, is exactly how `binding` went missing from the
-/// PTX digest while remaining present in the code generator.
+/// private copy of this match, is exactly how `binding` went missing from a
+/// target digest while remaining present in the code generator.
 pub(crate) const fn linear_type_tag(value: LinearType) -> u8 {
     match value {
         LinearType::Linear => 0,

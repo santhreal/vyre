@@ -2,87 +2,66 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::fs;
-use std::path::PathBuf;
+
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 use vyre_foundation::optimizer::pass_catalog::{
     optimization_catalog, OptimizationCatalogEntryKind,
 };
 use vyre_foundation::optimizer::{registered_pass_registrations, PassMetadata};
 
-pub(crate) fn run(args: &[String]) {
-    let (path, check) = parse_args(args);
-    let body = build().unwrap_or_else(|error| {
-        eprintln!("Fix: build optimization pass reference: {error}");
-        std::process::exit(1);
-    });
-    let path = path.unwrap_or_else(default_path);
-    if check {
-        match fs::read_to_string(&path) {
-            Ok(current) if current == body => {
-                println!("optimization-docs: source registry agrees");
-            }
-            Ok(_) => {
-                eprintln!(
-                    "Fix: {} differs from the source optimizer registry; regenerate it",
-                    path.display()
-                );
-                std::process::exit(1);
-            }
-            Err(error) => {
-                eprintln!("Fix: read {}: {error}", path.display());
-                std::process::exit(1);
-            }
-        }
-    } else {
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).unwrap_or_else(|error| {
-                eprintln!("Fix: create {}: {error}", parent.display());
-                std::process::exit(1);
-            });
-        }
-        fs::write(&path, body).unwrap_or_else(|error| {
-            eprintln!("Fix: write {}: {error}", path.display());
-            std::process::exit(1);
-        });
-        println!("optimization-docs: wrote {}", path.display());
+/// Holds the optimizer pass reference to the passes the source declares.
+pub struct OptimizationDocs;
+
+impl Gate for OptimizationDocs {
+    fn name(&self) -> &'static str {
+        "optimization-docs"
+    }
+
+    fn help(&self) -> &'static str {
+        "Hold docs/generated/optimizer-passes.toml to the passes the source declares; --write regenerates it"
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let body = build().map_err(|error| {
+            GateError::new(
+                format!("the optimizer pass reference does not build: {error}"),
+                "repair the pass catalog the builder rejects, then run the gate again",
+            )
+        })?;
+        let mut inspection = xtask::artifact_gate::Inspection::new();
+        inspection.generates_text(PASSES_PATH, body);
+        Ok(xtask::artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspection,
+        ))
     }
 }
 
-fn parse_args(args: &[String]) -> (Option<PathBuf>, bool) {
-    let mut path = None;
-    let mut check = false;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                index += 1;
-                path = Some(PathBuf::from(args.get(index).unwrap_or_else(|| {
-                    eprintln!("Fix: --output needs a path");
-                    std::process::exit(2);
-                })));
-            }
-            "--check" => check = true,
-            other => {
-                eprintln!("Fix: unknown optimization-docs argument `{other}`");
-                std::process::exit(2);
-            }
+/// Repository-relative document this gate owns.
+const PASSES_PATH: &str = "docs/generated/optimizer-passes.toml";
+
+/// One TOML basic string.
+fn quote(value: &str) -> String {
+    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+/// One TOML array of basic strings, rendered on one line.
+fn array(values: &[&str]) -> String {
+    let mut text = String::from("[");
+    for (index, value) in values.iter().enumerate() {
+        if index > 0 {
+            text.push_str(", ");
         }
-        index += 1;
+        text.push_str(&quote(value));
     }
-    (path, check)
-}
-
-fn default_path() -> PathBuf {
-    xtask::checkout::checkout_root().join("docs/optimization/PASSES.md")
-}
-
-fn join(values: &[&str]) -> String {
-    if values.is_empty() {
-        "none".to_string()
-    } else {
-        values.join("<br>")
-    }
+    text.push(']');
+    text
 }
 
 fn metadata_by_name() -> Result<BTreeMap<&'static str, PassMetadata>, String> {
@@ -98,18 +77,13 @@ fn build() -> Result<String, String> {
     let catalog = optimization_catalog().map_err(|error| error.to_string())?;
     let mut output = String::new();
     output.push_str(
-        "# Optimizer pass reference\n\n\
-         This page is generated from the live `vyre-foundation` optimizer registry by \
-         `cargo_full run --bin xtask -- optimization-docs`. Edit pass registration \
-         metadata, not this page.\n\n\
-         The optimizer has one semantic layer before verified lowering. Concrete target \
-         strategy is not registered in this catalog.\n\n",
-    );
-    output.push_str(
-        "| id | kind | owner | phase | boundary | requires | invalidates | capabilities | ABI | invariant | termination | proof | benchmark |\n",
-    );
-    output.push_str(
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n",
+        "# Generated from the live vyre-foundation optimizer registry by \
+         `cargo xtask optimization-docs --write`.\n\
+         # Edit the pass registration metadata, not this file. The optimizer has one \
+         semantic layer\n\
+         # before verified lowering; concrete target strategy is not registered in this \
+         catalog.\n\
+         schema_version = 1\n",
     );
     for entry in catalog {
         let registered = metadata.get(entry.name);
@@ -117,9 +91,8 @@ fn build() -> Result<String, String> {
             OptimizationCatalogEntryKind::ExecutablePass => "executable pass",
             OptimizationCatalogEntryKind::SupplementalRule => "supplemental rule",
         };
-        let requires = registered.map_or_else(|| "none".to_string(), |row| join(row.requires));
-        let invalidates =
-            registered.map_or_else(|| "none".to_string(), |row| join(row.invalidates));
+        let requires = registered.map_or_else(|| array(&[]), |row| array(row.requires));
+        let invalidates = registered.map_or_else(|| array(&[]), |row| array(row.invalidates));
         let termination = match entry.kind {
             OptimizationCatalogEntryKind::ExecutablePass => {
                 "bounded by the scheduler restart and iteration budgets"
@@ -136,22 +109,33 @@ fn build() -> Result<String, String> {
                 "owning pass differential and invariant fixtures"
             }
         };
-        let _ = writeln!(
+        let _ = write!(
             output,
-            "| `{}` | {} | `{}` | `{:?}` | `{:?}` | {} | {} | {} | `{}` | {} | {} | {} | `{}` |",
-            entry.name,
-            kind,
-            entry.owner,
-            entry.phase,
-            entry.boundary_class,
-            requires,
-            invalidates,
-            join(entry.requires_caps),
-            entry.preserves_abi,
-            entry.invariant,
-            termination,
-            proof,
-            entry.benchmark,
+            "\n[[pass]]\n\
+             id = {}\n\
+             kind = {}\n\
+             owner = {}\n\
+             phase = {}\n\
+             boundary_class = {}\n\
+             requires = {requires}\n\
+             invalidates = {invalidates}\n\
+             requires_capabilities = {}\n\
+             preserves_abi = {}\n\
+             invariant = {}\n\
+             termination = {}\n\
+             proof = {}\n\
+             benchmark = {}\n",
+            quote(entry.name),
+            quote(kind),
+            quote(entry.owner),
+            quote(&format!("{:?}", entry.phase)),
+            quote(&format!("{:?}", entry.boundary_class)),
+            array(entry.requires_caps),
+            quote(&format!("{}", entry.preserves_abi)),
+            quote(entry.invariant),
+            quote(termination),
+            quote(proof),
+            quote(entry.benchmark),
         );
     }
     Ok(output)
@@ -167,15 +151,15 @@ mod tests {
     #[test]
     fn generated_reference_covers_every_catalog_entry() {
         let catalog = optimization_catalog().expect("live optimizer catalog must build");
-        let markdown = build().expect("optimizer reference must render");
-        let row_count = markdown
+        let document = build().expect("optimizer reference must render");
+        let row_count = document
             .lines()
-            .filter(|line| line.starts_with("| `"))
+            .filter(|line| line.trim() == "[[pass]]")
             .count();
         assert_eq!(row_count, catalog.len());
         for entry in catalog {
             assert!(
-                markdown.contains(&format!("| `{}` |", entry.name)),
+                document.contains(&format!("id = \"{}\"", entry.name)),
                 "missing optimizer catalog row {}",
                 entry.name
             );
@@ -187,15 +171,18 @@ mod tests {
     #[test]
     fn executable_rows_include_live_ordering_metadata() {
         let registrations = registered_pass_registrations().expect("pass order must derive");
-        let markdown = build().expect("optimizer reference must render");
+        let document = build().expect("optimizer reference must render");
         for registration in registrations.iter() {
             let metadata = registration.metadata;
-            assert!(markdown.contains(&format!("| `{}` | executable pass", metadata.name)));
+            assert!(document.contains(&format!(
+                "id = \"{}\"\nkind = \"executable pass\"",
+                metadata.name
+            )));
             for requirement in metadata.requires {
-                assert!(markdown.contains(requirement));
+                assert!(document.contains(requirement));
             }
             for invalidation in metadata.invalidates {
-                assert!(markdown.contains(invalidation));
+                assert!(document.contains(invalidation));
             }
         }
     }

@@ -1,14 +1,16 @@
-//! Backend release-policy evidence for CUDA-first / WGPU-fallback.
+//! Hold the CUDA-first, WGPU-fallback backend policy to the tree and the probe.
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use serde::Serialize;
 use vyre_driver::backend::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
 };
+use xtask::artifact_gate::{self, Inspection};
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 const MAX_BACKEND_EVIDENCE_TEXT_BYTES: u64 = 4_194_304;
 
@@ -306,27 +308,245 @@ const BACKEND_PRODUCTION_SCAN_ROOTS: &[&str] = &[
     "vyre-runtime/src",
 ];
 
-pub(crate) fn run(args: &[String]) {
-    let output = xtask::output_arg::parsed_or_exit(parse_output(args));
-    let registrations = vyre_registry_link::backend::live_backend_registry_by_precedence()
-        .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
+/// Holds the backend release policy evidence to the tree and to the recorded probe.
+pub struct BackendMatrixGate;
+
+impl Gate for BackendMatrixGate {
+    fn name(&self) -> &'static str {
+        "backend-matrix"
+    }
+
+    fn help(&self) -> &'static str {
+        "Judge the CUDA-first, WGPU-fallback backend policy. Proves, on any host, that every \
+         backend implementation file the policy names exists and carries its implementation \
+         tokens with no unresolved marker left in it, and that no backend production source \
+         states a hidden fallback. Proves, from the recorded probe, that CUDA acquires first, \
+         that the WGPU fallback acquires, that the preferred dispatch backend is never the \
+         reference one, and that the host met the release GPU floor. The probe is only as \
+         current as the run that recorded it; --write re-probes this host and rewrites the \
+         artifact."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(&ctx.root, ctx.write),
+        ))
+    }
+}
+
+/// The artifact this gate owns, relative to the workspace root.
+const ARTIFACT: &str = "release/evidence/backends/backend-matrix.json";
+
+/// Backend facts that come out of the source tree, with no device present.
+///
+/// These are checked on every run, including on a host with no GPU, because a
+/// backend file that lost its implementation tokens is a defect of the tree and
+/// not of the machine the evidence was recorded on.
+struct SourceScan {
+    cuda_feature_markers: Vec<BackendFeatureMarker>,
+    wgpu_feature_markers: Vec<BackendFeatureMarker>,
+    hidden_fallback_findings: Vec<BackendSourceFinding>,
+    hidden_fallback_scan_errors: Vec<String>,
+    blockers: Vec<String>,
+}
+
+fn scan_backend_sources(workspace_root: &Path) -> SourceScan {
+    let mut blockers = Vec::new();
+    let cuda_feature_markers = collect_cuda_feature_markers(workspace_root, &mut blockers);
+    let wgpu_feature_markers =
+        collect_feature_markers(workspace_root, WGPU_FEATURE_MARKERS, &mut blockers);
+    let (hidden_fallback_findings, hidden_fallback_scan_errors) =
+        scan_hidden_fallback_language(workspace_root, &mut blockers);
+    for finding in &hidden_fallback_findings {
+        blockers.push(format!(
+            "backend production source `{}`:{} contains hidden fallback language `{}`",
+            finding.path, finding.line, finding.pattern
+        ));
+    }
+    SourceScan {
+        cuda_feature_markers,
+        wgpu_feature_markers,
+        hidden_fallback_findings,
+        hidden_fallback_scan_errors,
+        blockers,
+    }
+}
+
+fn inspect(workspace_root: &Path, write: bool) -> Inspection {
+    let mut inspection = Inspection::new();
+    let scan = scan_backend_sources(workspace_root);
+    for blocker in &scan.blockers {
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Repair the backend source the sentence names. This is read from the tree, so it is \
+             true on every host and no re-probe clears it.",
+        );
+    }
+    if write {
+        let (matrix, device_blockers) = probe_backend_matrix(scan);
+        for blocker in &device_blockers {
+            inspection.blocked(
+                ARTIFACT,
+                blocker.clone(),
+                "Repair the driver, the registry precedence or the device the sentence names, \
+                 then rerun with --write.",
+            );
+        }
+        inspection.generates(ARTIFACT, &matrix);
+    } else {
+        audit_recorded_matrix(workspace_root, &scan, &mut inspection);
+    }
+    inspection
+}
+
+/// Judge the committed backend matrix without touching a device.
+///
+/// The device side is taken as recorded. The source side is regenerated and
+/// compared, because a committed artifact that still lists yesterday's feature
+/// markers reads as coverage of today's tree.
+fn audit_recorded_matrix(workspace_root: &Path, scan: &SourceScan, inspection: &mut Inspection) {
+    let text = match read_text_bounded(&workspace_root.join(ARTIFACT)) {
+        Ok(text) => text,
+        Err(error) => {
+            inspection.blocked(
+                ARTIFACT,
+                format!("the backend matrix could not be read: {error}"),
+                "Run `cargo_full run --bin xtask -- backend-matrix --write` on a release host \
+                 and commit the artifact.",
+            );
+            return;
+        }
+    };
+    let recorded: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(value) => value,
+        Err(error) => {
+            inspection.blocked(
+                ARTIFACT,
+                format!("the backend matrix is not readable as JSON: {error}"),
+                "Regenerate it with --write.",
+            );
+            return;
+        }
+    };
+    for blocker in recorded
+        .get("blockers")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str)
+    {
+        inspection.blocked(
+            ARTIFACT,
+            format!("the recorded backend probe was blocked: {blocker}"),
+            "Resolve the blocker on a release host and rerun with --write so the artifact \
+             records a clean probe.",
+        );
+    }
+    compare_recorded_field(
+        &recorded,
+        "cuda_feature_markers",
+        &scan.cuda_feature_markers,
+        inspection,
+    );
+    compare_recorded_field(
+        &recorded,
+        "wgpu_feature_markers",
+        &scan.wgpu_feature_markers,
+        inspection,
+    );
+    compare_recorded_field(
+        &recorded,
+        "hidden_fallback_findings",
+        &scan.hidden_fallback_findings,
+        inspection,
+    );
+    compare_recorded_field(
+        &recorded,
+        "hidden_fallback_scan_errors",
+        &scan.hidden_fallback_scan_errors,
+        inspection,
+    );
+}
+
+/// Report `field` when the committed artifact and the current tree disagree.
+fn compare_recorded_field(
+    recorded: &serde_json::Value,
+    field: &str,
+    derived: &impl Serialize,
+    inspection: &mut Inspection,
+) {
+    let derived = match serde_json::to_value(derived) {
+        Ok(value) => value,
+        Err(error) => {
+            inspection.blocked(
+                ARTIFACT,
+                format!("`{field}` could not be rendered for comparison: {error}"),
+                "Correct the field type so serde can represent it.",
+            );
+            return;
+        }
+    };
+    if recorded.get(field) != Some(&derived) {
+        inspection.blocked(
+            ARTIFACT,
+            format!("`{field}` in the artifact is not what the current tree produces"),
+            "Run `cargo_full run --bin xtask -- backend-matrix --write` and commit the artifact. \
+             This field is read from source, so it is stale rather than host-specific.",
+        );
+    }
+}
+
+/// Probe this host's backend registry and devices, folding in the source scan.
+///
+/// The registry lookups used to panic. A gate that panics reports nothing at
+/// all, so a registry that fails to start is a blocker like any other.
+fn probe_backend_matrix(scan: SourceScan) -> (BackendMatrix, Vec<String>) {
+    let mut blockers = Vec::new();
     let mut backends = Vec::new();
-    for registration in registrations {
-        let dispatches = backend_dispatches(registration.id)
-            .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
-        let acquire_result = acquire(registration.id);
-        let (acquire_ok, acquire_error) = match acquire_result {
-            Ok(_) => (true, None),
-            Err(error) => (false, Some(error.to_string())),
-        };
-        backends.push(BackendEntry {
-            id: registration.id.to_string(),
-            precedence: backend_precedence(registration.id)
-                .unwrap_or_else(|error| panic!("backend registry startup failed: {error}")),
-            dispatches,
-            acquire_ok,
-            acquire_error,
-        });
+    match vyre_registry_link::backend::live_backend_registry_by_precedence() {
+        Ok(registrations) => {
+            for registration in registrations {
+                let dispatches = match backend_dispatches(registration.id) {
+                    Ok(dispatches) => dispatches,
+                    Err(error) => {
+                        blockers.push(format!(
+                            "backend `{}` dispatch lookup failed: {error}",
+                            registration.id
+                        ));
+                        false
+                    }
+                };
+                let precedence = match backend_precedence(registration.id) {
+                    Ok(precedence) => precedence,
+                    Err(error) => {
+                        blockers.push(format!(
+                            "backend `{}` precedence lookup failed: {error}",
+                            registration.id
+                        ));
+                        u32::MAX
+                    }
+                };
+                let (acquire_ok, acquire_error) = match acquire(registration.id) {
+                    Ok(_) => (true, None),
+                    Err(error) => (false, Some(error.to_string())),
+                };
+                backends.push(BackendEntry {
+                    id: registration.id.to_string(),
+                    precedence,
+                    dispatches,
+                    acquire_ok,
+                    acquire_error,
+                });
+            }
+        }
+        Err(error) => blockers.push(format!("backend registry startup failed: {error}")),
     }
 
     let cuda = backends.iter().find(|backend| backend.id == "cuda");
@@ -348,7 +568,6 @@ pub(crate) fn run(args: &[String]) {
     };
     let wgpu_fallback_present =
         wgpu.is_some_and(|backend| backend.dispatches && backend.acquire_ok);
-    let mut blockers = Vec::new();
     if !cuda_first {
         blockers.push(
             "CUDA is not the first acquired dispatch backend. Fix: link/configure CUDA and give it higher precedence than WGPU.".to_string(),
@@ -377,18 +596,6 @@ pub(crate) fn run(args: &[String]) {
             "preferred runtime backend is not GPU-only ({detail}). Fix: acquire_preferred_dispatch_backend must never select cpu-ref/reference as an implicit fallback."
         ));
     }
-    let workspace_root = xtask::checkout::checkout_root();
-    let cuda_feature_markers = collect_cuda_feature_markers(&workspace_root, &mut blockers);
-    let wgpu_feature_markers =
-        collect_feature_markers(&workspace_root, WGPU_FEATURE_MARKERS, &mut blockers);
-    let (hidden_fallback_findings, hidden_fallback_scan_errors) =
-        scan_hidden_fallback_language(&workspace_root, &mut blockers);
-    for finding in &hidden_fallback_findings {
-        blockers.push(format!(
-            "backend production source `{}`:{} contains hidden fallback language `{}`",
-            finding.path, finding.line, finding.pattern
-        ));
-    }
     let gpu_probe = probe_nvidia_smi();
     if !gpu_probe.nvidia_smi_ok {
         blockers.push(
@@ -410,6 +617,9 @@ pub(crate) fn run(args: &[String]) {
     }
     let capability_rows = collect_backend_capability_rows(&backends, &gpu_probe);
     blockers.extend(capability_contract_blockers(&capability_rows));
+
+    let device_blockers = blockers.clone();
+    blockers.extend(scan.blockers);
     let matrix = BackendMatrix {
         schema_version: 3,
         cuda_first,
@@ -417,17 +627,15 @@ pub(crate) fn run(args: &[String]) {
         preferred_backend_id,
         preferred_backend_gpu_only,
         gpu_probe,
-        cuda_feature_markers,
-        wgpu_feature_markers,
+        cuda_feature_markers: scan.cuda_feature_markers,
+        wgpu_feature_markers: scan.wgpu_feature_markers,
         capability_rows,
-        hidden_fallback_findings,
-        hidden_fallback_scan_errors,
+        hidden_fallback_findings: scan.hidden_fallback_findings,
+        hidden_fallback_scan_errors: scan.hidden_fallback_scan_errors,
         backends,
         blockers,
     };
-
-    xtask::output_arg::write_json(&output, &matrix);
-    xtask::output_arg::report_evidence_artifact("backend-matrix", &output, &matrix.blockers);
+    (matrix, device_blockers)
 }
 
 fn collect_cuda_feature_markers(
@@ -944,20 +1152,6 @@ fn parse_header_value(line: &str, label: &str) -> Option<String> {
     let value = rest.get(..end)?.trim();
     (!value.is_empty()).then(|| value.to_string())
 }
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    xtask::output_arg::parse_output_arg(
-        args,
-        "backend-matrix",
-        "Probes linked dispatch backends and writes CUDA-first/WGPU-fallback evidence JSON.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    xtask::checkout::checkout_root().join("release/evidence/backends/backend-matrix.json")
-}
-
 fn read_text_bounded(path: &Path) -> io::Result<String> {
     xtask::output_arg::read_text_bounded(path, MAX_BACKEND_EVIDENCE_TEXT_BYTES, "backend evidence")
 }

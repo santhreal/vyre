@@ -175,7 +175,7 @@ pub fn p2m_step(
 ///
 /// Lane `t` owns one cell and scans all regions, summing `scores[i]` when
 /// `cell_assignment[i] == t`. This keeps the primitive deterministic without
-/// atomics and maps directly to CUDA workgroups for the release path.
+/// atomics and maps directly to backend workgroups for the release path.
 #[must_use]
 pub fn p2m_zeroth_f32_step(
     scores: &str,

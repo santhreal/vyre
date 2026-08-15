@@ -340,7 +340,6 @@ write = [
   "vyre-libs/tests/*gemm*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",
-  "docs/OWNERSHIP.md",
 ]
 avoid = [
   "vyre-libs/src/security/**",

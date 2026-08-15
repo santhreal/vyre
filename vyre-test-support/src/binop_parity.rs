@@ -13,12 +13,19 @@
 //!
 //! # What this crate must NOT own
 //!
-//! The CPU reference arm stays in each backend's suite, and so does the
-//! dispatch. A shared reference would make one arm answer for both, and the
-//! whole point of a per-backend gate is that naga's multi-step `select`
-//! synthesis and the PTX native instructions are different implementations of
-//! the same contract: each needs its own live proof against the reference, and
-//! neither may ever be compared against the other in place of it.
+//! The dispatch stays in each backend's suite, and so does the live comparison
+//! against the reference. naga's multi-step `select` synthesis and the PTX
+//! native instructions are different implementations of the same contract: each
+//! needs its own live proof, and neither may ever be compared against the other
+//! in place of it.
+//!
+//! The CPU reference arm used to be per backend too, on the same reasoning. It
+//! did not survive contact: the wgpu and CUDA copies were byte-identical, so
+//! there was one restatement of the contract stored twice, and a typo in it
+//! would have been copied rather than caught. The reference is Rust std over
+//! host integers with no backend in it, so it has one owner here, and the two
+//! things that genuinely differ per backend - what the op lowered to and where
+//! it ran - stay in the suites.
 
 use vyre_foundation::ir::Expr;
 
@@ -452,4 +459,97 @@ pub fn assert_covers_every_total_op(backend: &str, covered: &[&str]) {
         "Fix: the {backend} total-contract arm names {unknown:?}, which TOTAL_U32_CASES does not \
          declare. Add the case to the table or drop the name."
     );
+}
+
+/// The CPU answer for each op in [`SYNTHETIC_U32_BINOPS`].
+///
+/// Written here and never read from the case row, because the row also builds
+/// the IR the dispatch runs: a reference taken from the same row would compare a
+/// lowering against itself. Every entry is Rust std or one expression over it,
+/// which is the oracle contract for these ops.
+const SYNTHETIC_U32_REFERENCES: &[(&str, fn(u32, u32) -> u32)] = &[
+    ("mulhi", |a, b| ((u64::from(a) * u64::from(b)) >> 32) as u32),
+    ("abs_diff", u32::abs_diff),
+    ("saturating_add", u32::saturating_add),
+    ("saturating_sub", u32::saturating_sub),
+    ("saturating_mul", u32::saturating_mul),
+    ("rotate_left", |a, b| a.rotate_left(b & 31)),
+    ("rotate_right", |a, b| a.rotate_right(b & 31)),
+];
+
+/// The CPU answer for each op in [`TOTAL_U32_CASES`].
+///
+/// The total contract restated in Rust, so the `oracle` pin in each row has an
+/// independently computed value to disagree with.
+const TOTAL_U32_REFERENCES: &[(&str, fn(u32, u32) -> u32)] = &[
+    ("div", |a, b| if b == 0 { u32::MAX } else { a / b }),
+    ("rem", |a, b| if b == 0 { 0 } else { a % b }),
+    // Oracle `shift_u32`: left << (right & 31). wrapping_shl masks identically.
+    ("shl", u32::wrapping_shl),
+    ("shr", u32::wrapping_shr),
+];
+
+/// The reference for one synthetic op.
+///
+/// # Panics
+/// Panics naming `op` when no reference is declared, so a case row added without
+/// a reference fails at the lookup instead of dispatching nothing.
+#[must_use]
+pub fn synthetic_u32_reference(op: &str) -> fn(u32, u32) -> u32 {
+    reference_for(SYNTHETIC_U32_REFERENCES, "SYNTHETIC_U32_REFERENCES", op)
+}
+
+/// The reference for one total-contract op.
+///
+/// # Panics
+/// Panics naming `op` when no reference is declared.
+#[must_use]
+pub fn total_u32_reference(op: &str) -> fn(u32, u32) -> u32 {
+    reference_for(TOTAL_U32_REFERENCES, "TOTAL_U32_REFERENCES", op)
+}
+
+fn reference_for(
+    table: &[(&str, fn(u32, u32) -> u32)],
+    table_name: &str,
+    op: &str,
+) -> fn(u32, u32) -> u32 {
+    table
+        .iter()
+        .find(|(name, _)| *name == op)
+        .map(|(_, reference)| *reference)
+        .unwrap_or_else(|| {
+            panic!("Fix: no reference for `{op}`; add a row to {table_name} in vyre-test-support")
+        })
+}
+
+/// Op names [`SYNTHETIC_U32_REFERENCES`] declares.
+#[must_use]
+pub fn synthetic_u32_reference_ops() -> Vec<&'static str> {
+    SYNTHETIC_U32_REFERENCES.iter().map(|(op, _)| *op).collect()
+}
+
+/// Op names [`TOTAL_U32_REFERENCES`] declares.
+#[must_use]
+pub fn total_u32_reference_ops() -> Vec<&'static str> {
+    TOTAL_U32_REFERENCES.iter().map(|(op, _)| *op).collect()
+}
+
+/// The reference answer for every operand pair in `case`, checked against the pin.
+///
+/// A reference that drifts row-for-row with the pin makes both agree about a
+/// wrong answer, so the comparison happens here, before any device is touched,
+/// and every caller gets it.
+///
+/// # Panics
+/// Panics naming the op when the reference and the pinned oracle disagree.
+#[must_use]
+pub fn total_u32_reference_values(case: &TotalU32Case) -> Vec<u32> {
+    let reference = expected_u32(total_u32_reference(case.op), case.pairs);
+    assert_eq!(
+        reference, case.oracle,
+        "Fix: the u32 `{}` reference drifted from the pinned oracle. One of the two is wrong; the \
+         pin is data and the reference is code, so decide which before touching a backend.",
+        case.op
+    );
+    reference
 }
