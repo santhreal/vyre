@@ -23,7 +23,32 @@ def load_toml(path: Path) -> dict:
         with path.open("rb") as handle:
             return tomllib.load(handle)
     except (OSError, tomllib.TOMLDecodeError) as error:
-        raise ValueError(f"{path.relative_to(ROOT)}: {error}") from error
+        raise ValueError(f"{path.relative_to(ROOT)}: {error}{fused_fragment_hint(path)}") from error
+
+
+def fused_fragment_hint(path: Path) -> str:
+    """Name the fragment whose `[[fragments]]` header is missing, if that is why.
+
+    An `id` key appended without its table header parses as a second `id` in the
+    preceding fragment, and tomllib reports only "cannot overwrite a value" with a
+    line and column. That reads as a corrupt file rather than as one absent line,
+    and every verdict behind the parse is unreachable until someone recognizes it.
+    Four merges in one day produced this, so the parser's position is not enough.
+    """
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ""
+    fused: list[str] = []
+    previous = ""
+    for number, line in enumerate(lines, start=1):
+        if line.startswith("id = ") and previous != "[[fragments]]":
+            fused.append(f"line {number}: {line.strip()} has no `[[fragments]]` header")
+        if line.strip():
+            previous = line.strip()
+    if not fused:
+        return ""
+    return "\n  " + "\n  ".join(fused)
 
 
 def normalize(text: str) -> str:

@@ -1868,6 +1868,8 @@ text = "`release/changes/unreleased.toml` parses again. Two fragments had been a
 id = "over-width-shift-chain-folds-to-zero"
 category = "Fixed"
 text = "Strength reduction folds a chained shift whose counts reach the register width to zero again. It had been changed to leave both shifts standing, on the reasoning that a right shift on a signed operand replicates the sign bit, but V094 rejects a shift whose operands are not `u32`, so that operand cannot reach the pass. The fused shift is not an alternative: the target text masks a shift count with `& 31`, so emitting `x << 32` would emit `x`."
+
+[[fragments]]
 id = "public-api-gate-no-silent-skip"
 category = "Fixed"
 text = "The public-API snapshot gate reports a crate it could not read instead of skipping it. Two paths dropped a package out of the comparison without a word: a publishable package whose `src` directory was missing, and an extraction that succeeded but returned nothing. No committed snapshot is empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta` from a parallel build sharing one target directory, which is exactly the state in which a crate most needs to be checked. Both are findings now, and an extraction that exits nonzero prints what `cargo public-api` said rather than a bare sentence naming the crate."

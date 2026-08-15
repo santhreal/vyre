@@ -1977,10 +1977,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   buffer of count 1 is declared, and a trap program is IR composed out of IR,
   so neither crate is its home. The declared output is an `Option` argument
   because that is the whole difference between the two former copies.
-- `vyre-test-support` states the minimal one-output test program once, as
-  `ir_variants::single_u32_output_program`. Suites that needed a program with
-  somewhere to store a result each declared the same buffer and workgroup size
-  locally, so a change to the shape had to be found in every copy.
 - The workspace contract suite no longer compiles into `vyre-foundation`'s test
   target. `tests/contract/mod.rs` was included by
   `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the
@@ -3506,6 +3502,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   appended without their `[[fragments]]` header, so the second `id` key
   overwrote the first and every release-docs command failed at the TOML parser
   before it reached a verdict.
+- Strength reduction folds a chained shift whose counts reach the register
+  width to zero again. It had been changed to leave both shifts standing, on
+  the reasoning that a right shift on a signed operand replicates the sign bit,
+  but V094 rejects a shift whose operands are not `u32`, so that operand cannot
+  reach the pass. The fused shift is not an alternative: the target text masks
+  a shift count with `& 31`, so emitting `x << 32` would emit `x`.
 - The public-API snapshot gate reports a crate it could not read instead of
   skipping it. Two paths dropped a package out of the comparison without a
   word: a publishable package whose `src` directory was missing, and an
