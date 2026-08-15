@@ -363,6 +363,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   direction, that a registered row is wired into CI, so the pair is now closed.
   Names are extracted per step, including every command in a joined `run:`
   block, and resolved when the test runs rather than listed in it.
+- `vyre_foundation::algebra::composition::single_invocation` and
+  `single_invocation_region` build the entry of a serial kernel: one anonymous
+  composition region whose body runs on invocation zero of axis zero. The shape
+  was written out by hand in every serial primitive.
 
 ### Changed
 
@@ -2097,6 +2101,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   actions complete and zero blockers, so the gate every sweep runs with no
   arguments could not pass before the version it guards had shipped. The
   removed `--prepublish` flag is rejected rather than ignored.
+- An artifact-inspection gate is declared, not hand-written. Eleven gates
+  across xtask, xtask-registry and xtask-evidence each spelled the same struct,
+  the same four trait methods and the same call into `settle_inspection`,
+  differing only in a name, a help string and one inspection expression.
+  `xtask::artifact_gate!` now owns that shape and the eleven declarations state
+  only what differs. Gates whose `run` does real work, such as
+  release-conformance argument parsing, keep their own implementation.
 - Five enforcement sites state the contract they enforce instead of citing a
   document. `structure-gate` names the composition rule at `CATEGORY_A_CRATE`
   and the one-owner rule at `substrate_home_failures`; `gate1` states its
@@ -3571,3 +3582,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   backend uses once it has probed one, and a scheduler built without an adapter
   states the conservative fallback at the place that chose it instead of
   leaving it to whichever pass reached for a profile first.
+- Chained shift fusion has one owner and one answer. Constant folding and
+  strength reduction each carried the rule, and they disagreed: folding
+  declined a pair whose counts reach the word width and left the double shift
+  for the backend, reduction folded it to zero. Both were also wrong about a
+  count above 31, which the target text masks with `& 31`, so `(x << 40) << 1`
+  shifts by nine and not off the end. `algebra::shift_fusion::reduce_shift`
+  masks each count, folds to zero once the sum reaches the width, and fuses
+  otherwise, checked against an evaluation of the chain it replaces for every
+  count pair up to 40.
