@@ -141,8 +141,8 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 10584
-total_lines = 186953
+duplicate_lines = 10049
+total_lines = 185693
 
 [[crate]]
 name = "vyre-lints"
