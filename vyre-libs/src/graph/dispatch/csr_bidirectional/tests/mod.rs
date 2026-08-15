@@ -1,58 +1,17 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::test_support::NeverDispatches;
-use std::sync::Mutex;
+use crate::test_support::{NeverDispatches, StaticOutputs};
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 mod reference_closure_tests;
 
-struct BidirDispatcher {
-    outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for BidirDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        // 4 nodes dispatched at CSR_FRONTIER_STEP_WORKGROUP_SIZE (256 threads/group):
-        // ceil(4/256) == 1 workgroup, NOT 4. The grid was corrected from a 256x
-        // over-dispatch in plan_csr_bidirectional_step (vyre-primitives
-        // csr-bidir-grid-miscompile); the dispatcher now sees the right block count.
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 7 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: bidirectional test dispatcher expected 7 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        Ok(self.outputs.clone())
-    }
-}
-
-struct StaticBidirInputRecordingDispatcher {
-    outputs: Vec<Vec<u8>>,
-    edge_targets: Mutex<Vec<Vec<u32>>>,
-}
-
-impl ProgramDispatcher for StaticBidirInputRecordingDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.edge_targets
-            .lock()
-            .expect("Fix: bidirectional static-input recorder mutex should not be poisoned")
-            .push(crate::dispatch_buffers::read_u32s(&inputs[2]));
-        Ok(self.outputs.clone())
-    }
-}
+/// 4 nodes dispatched at CSR_FRONTIER_STEP_WORKGROUP_SIZE (256 threads/group):
+/// ceil(4/256) == 1 workgroup, NOT 4. The grid was corrected from a 256x
+/// over-dispatch in plan_csr_bidirectional_step (vyre-primitives
+/// csr-bidir-grid-miscompile), so every contract below asserts 1 workgroup.
+const BIDIR_CONTRACT: &str = "bidirectional step dispatch";
 
 fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> 3
@@ -255,9 +214,9 @@ fn closure_matches_primitive_directly() {
 
 #[test]
 fn via_step_decodes_exact_output_into_reused_buffer() {
-    let dispatcher = BidirDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1010])],
-    };
+    let dispatcher = StaticOutputs::new(BIDIR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1010])])
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[7]);
     let mut out = Vec::with_capacity(4);
     let ptr = out.as_ptr();
     linear_step_into(&dispatcher, &[0b0010], &mut out).expect("Fix: dispatch succeeds");
@@ -267,9 +226,9 @@ fn via_step_decodes_exact_output_into_reused_buffer() {
 
 #[test]
 fn via_step_with_scratch_reuses_dispatch_storage() {
-    let dispatcher = BidirDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1010])],
-    };
+    let dispatcher = StaticOutputs::new(BIDIR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1010])])
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[7]);
     let mut scratch = BidirectionalGpuScratch::default();
     let mut out = Vec::with_capacity(1);
 
@@ -297,10 +256,8 @@ fn via_step_with_scratch_reuses_dispatch_storage() {
 
 #[test]
 fn via_step_refreshes_static_inputs_when_same_shape_graph_content_changes() {
-    let dispatcher = StaticBidirInputRecordingDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1010])],
-        edge_targets: Mutex::new(Vec::new()),
-    };
+    let dispatcher = StaticOutputs::new(BIDIR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1010])])
+        .recording_input(2);
     let edge_offsets = vec![0, 1, 2, 3, 3];
     let first_targets = vec![1, 2, 3];
     let second_targets = vec![2, 3, 0];
@@ -332,10 +289,7 @@ fn via_step_refreshes_static_inputs_when_same_shape_graph_content_changes() {
         .expect(why);
     }
 
-    let recorded_targets = dispatcher
-        .edge_targets
-        .lock()
-        .expect("Fix: bidirectional static-input recorder mutex should not be poisoned");
+    let recorded_targets = dispatcher.recorded();
     assert_eq!(
         recorded_targets.as_slice(),
         &[first_targets, second_targets]
@@ -376,12 +330,15 @@ fn via_step_uses_bridge_zero_inputs_for_graph_scratch() {
 
 #[test]
 fn via_step_rejects_extra_outputs() {
-    let dispatcher = BidirDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BIDIR_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1010]),
             u32_slice_to_le_bytes(&[0]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[7]);
     let err = linear_step(&dispatcher, &[0b0010]).expect_err("extra outputs must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
@@ -391,9 +348,9 @@ fn via_step_rejects_extra_outputs() {
 
 #[test]
 fn via_step_rejects_trailing_output_bytes() {
-    let dispatcher = BidirDispatcher {
-        outputs: vec![vec![0, 0, 0, 0, 1]],
-    };
+    let dispatcher = StaticOutputs::new(BIDIR_CONTRACT, vec![vec![0, 0, 0, 0, 1]])
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[7]);
     let err =
         linear_step(&dispatcher, &[0b0010]).expect_err("trailing output bytes must be rejected");
     assert!(
@@ -404,9 +361,9 @@ fn via_step_rejects_trailing_output_bytes() {
 
 #[test]
 fn via_step_rejects_mismatched_edge_arrays() {
-    let dispatcher = BidirDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1010])],
-    };
+    let dispatcher = StaticOutputs::new(BIDIR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1010])])
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[7]);
     let err = bidirectional_step_via(&dispatcher, 2, &[0, 1, 1], &[1], &[], &[0b01], 0xFFFF_FFFF)
         .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));

@@ -515,29 +515,8 @@ mod tests {
         scc_components_via_substrate_with_scratch_into, semiring_gemm_via, semiring_gemm_via_into,
     };
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::test_support::StaticOutputs;
     use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-    struct SemiringDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
-
-    impl ProgramDispatcher for SemiringDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            if inputs.len() != 3 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: semiring test dispatcher expected 3 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
-        }
-    }
 
     struct SequenceDispatcher {
         outputs: Vec<Vec<Vec<u8>>>,
@@ -567,9 +546,10 @@ mod tests {
 
     #[test]
     fn semiring_via_into_decodes_exact_output_into_reused_buffer() {
-        let dispatcher = SemiringDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[7])],
-        };
+        let dispatcher =
+            StaticOutputs::new("semiring gemm dispatch", vec![u32_slice_to_le_bytes(&[7])])
+                .expecting_grid([1, 1, 1])
+                .expecting_inputs(&[3]);
         let mut c = Vec::with_capacity(4);
         let ptr = c.as_ptr();
         semiring_gemm_via_into(&dispatcher, &[2], &[3], 1, 1, 1, Semiring::Real, &mut c)
@@ -580,9 +560,12 @@ mod tests {
 
     #[test]
     fn semiring_via_rejects_extra_outputs() {
-        let dispatcher = SemiringDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[7]), u32_slice_to_le_bytes(&[0])],
-        };
+        let dispatcher = StaticOutputs::new(
+            "semiring gemm dispatch",
+            vec![u32_slice_to_le_bytes(&[7]), u32_slice_to_le_bytes(&[0])],
+        )
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[3]);
         let err = semiring_gemm_via(&dispatcher, &[2], &[3], 1, 1, 1, Semiring::Real)
             .expect_err("extra outputs must be rejected");
         assert!(
@@ -593,9 +576,9 @@ mod tests {
 
     #[test]
     fn semiring_via_rejects_trailing_output_bytes() {
-        let dispatcher = SemiringDispatcher {
-            outputs: vec![vec![7, 0, 0, 0, 1]],
-        };
+        let dispatcher = StaticOutputs::new("semiring gemm dispatch", vec![vec![7, 0, 0, 0, 1]])
+            .expecting_grid([1, 1, 1])
+            .expecting_inputs(&[3]);
         let err = semiring_gemm_via(&dispatcher, &[2], &[3], 1, 1, 1, Semiring::Real)
             .expect_err("trailing output bytes must be rejected");
         assert!(

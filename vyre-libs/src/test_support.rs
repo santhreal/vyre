@@ -200,3 +200,128 @@ impl ProgramDispatcher for NeverDispatches {
         panic!("{}", self.0);
     }
 }
+
+/// A dispatcher that returns fixed output buffers and states its dispatch-side
+/// contract as data.
+///
+/// Fourteen structs across the graph-dispatch, encoding, analysis and solver
+/// suites carried this one shape. Each restated the same three checks by hand:
+/// an expected grid override, an expected dispatch-input count with a `Fix:`
+/// message, and one input buffer recorded as `u32`s for a later assertion. The
+/// copies had already drifted - one recorded through a `RefCell` while its
+/// siblings used a `Mutex`, so the same double was `Sync` in some suites and
+/// not in others, and two spelled the same input-count rejection with different
+/// wording.
+///
+/// `contract` names what the dispatcher stands in for, so a failure reads as
+/// the contract that was violated rather than as an anonymous double.
+#[cfg(test)]
+pub(crate) struct StaticOutputs {
+    contract: &'static str,
+    outputs: Vec<Vec<u8>>,
+    expect_inputs: &'static [usize],
+    expect_grid: Option<[u32; 3]>,
+    expect_input_bytes: Option<(usize, usize)>,
+    record_input: Option<usize>,
+    recorded: std::sync::Mutex<Vec<Vec<u32>>>,
+}
+
+#[cfg(test)]
+impl StaticOutputs {
+    /// Returns `outputs` from every dispatch, checking nothing.
+    pub(crate) fn new(contract: &'static str, outputs: Vec<Vec<u8>>) -> Self {
+        Self {
+            contract,
+            outputs,
+            expect_inputs: &[],
+            expect_grid: None,
+            expect_input_bytes: None,
+            record_input: None,
+            recorded: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+
+    /// Rejects a dispatch whose input count is not one of `counts`.
+    ///
+    /// More than one count is a real contract: a builder that grew an optional
+    /// buffer accepts both the shape with it and the shape without.
+    pub(crate) fn expecting_inputs(mut self, counts: &'static [usize]) -> Self {
+        self.expect_inputs = counts;
+        self
+    }
+
+    /// Asserts the planner passed `grid` as the grid override.
+    pub(crate) fn expecting_grid(mut self, grid: [u32; 3]) -> Self {
+        self.expect_grid = Some(grid);
+        self
+    }
+
+    /// Rejects a dispatch whose input at `index` is not `bytes` long.
+    pub(crate) fn expecting_input_bytes(mut self, index: usize, bytes: usize) -> Self {
+        self.expect_input_bytes = Some((index, bytes));
+        self
+    }
+
+    /// Records the input at `index`, decoded as little-endian `u32`s, once per
+    /// dispatch.
+    pub(crate) fn recording_input(mut self, index: usize) -> Self {
+        self.record_input = Some(index);
+        self
+    }
+
+    /// The recorded inputs in dispatch order.
+    pub(crate) fn recorded(&self) -> Vec<Vec<u32>> {
+        self.recorded
+            .lock()
+            .expect("Fix: static-output dispatcher recorder mutex should not be poisoned")
+            .clone()
+    }
+}
+
+#[cfg(test)]
+impl ProgramDispatcher for StaticOutputs {
+    fn dispatch(
+        &self,
+        _program: &Program,
+        inputs: &[Vec<u8>],
+        grid_override: Option<[u32; 3]>,
+    ) -> Result<Vec<Vec<u8>>, DispatchError> {
+        if let Some(grid) = self.expect_grid {
+            assert_eq!(
+                grid_override,
+                Some(grid),
+                "{} must dispatch at {grid:?}",
+                self.contract
+            );
+        }
+        if !self.expect_inputs.is_empty() && !self.expect_inputs.contains(&inputs.len()) {
+            let expected = self
+                .expect_inputs
+                .iter()
+                .map(usize::to_string)
+                .collect::<Vec<_>>()
+                .join(" or ");
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: {} expected {expected} dispatch inputs, got {}.",
+                self.contract,
+                inputs.len()
+            )));
+        }
+        if let Some((index, bytes)) = self.expect_input_bytes {
+            if inputs[index].len() != bytes {
+                return Err(DispatchError::BadInputs(format!(
+                    "Fix: {} expected input {index} to be {bytes} bytes, got {}.",
+                    self.contract,
+                    inputs[index].len()
+                )));
+            }
+        }
+        if let Some(index) = self.record_input {
+            self.recorded
+                .lock()
+                .expect("Fix: static-output dispatcher recorder mutex should not be poisoned")
+                .push(crate::dispatch_buffers::read_u32s(&inputs[index]));
+        }
+        Ok(self.outputs.clone())
+    }
+}

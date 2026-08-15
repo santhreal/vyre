@@ -1,62 +1,15 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use std::sync::Mutex;
+use crate::test_support::StaticOutputs;
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_foundation::program_dispatch::DispatchError;
 use vyre_primitives::graph::motif::{
     cpu_ref as reference_motif, cpu_ref_matches as reference_motif_matches,
     cpu_ref_participation_count as reference_motif_participation_count, plan_motif_launch,
     MotifEdge,
 };
 
-struct MotifDispatcher {
-    outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for MotifDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 7 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: motif test dispatcher expected 7 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        Ok(self.outputs.clone())
-    }
-}
-
-struct RecordingMotifDispatcher {
-    outputs: Vec<Vec<u8>>,
-    edge_targets: Mutex<Vec<Vec<u32>>>,
-}
-
-impl ProgramDispatcher for RecordingMotifDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 7 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: motif recording dispatcher expected 7 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        self.edge_targets
-            .lock()
-            .expect("Fix: motif recording mutex should not be poisoned")
-            .push(crate::dispatch_buffers::read_u32s(&inputs[2]));
-        Ok(self.outputs.clone())
-    }
-}
+const MOTIF_CONTRACT: &str = "motif match dispatch";
 
 fn chain_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<MotifEdge>) {
     (
@@ -155,12 +108,15 @@ fn missing_edge_clears_match_and_participation() {
 
 #[test]
 fn via_decodes_exact_output_into_reused_buffer() {
-    let dispatcher = MotifDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MOTIF_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[1, 1, 1]),
             u32_slice_to_le_bytes(&[1, 1, 1]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[7]);
     let (offsets, targets, masks, motif) = chain_graph();
     let mut witness = Vec::with_capacity(4);
     let ptr = witness.as_ptr();
@@ -181,13 +137,16 @@ fn via_decodes_exact_output_into_reused_buffer() {
 
 #[test]
 fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
-    let dispatcher = RecordingMotifDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MOTIF_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[1, 1, 1]),
             u32_slice_to_le_bytes(&[1, 1, 1]),
         ],
-        edge_targets: Mutex::new(Vec::new()),
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[7])
+    .recording_input(2);
     let (offsets, targets, masks, motif) = chain_graph();
     let changed_targets = vec![2, 2];
     let mut scratch = MotifGpuScratch::default();
@@ -216,10 +175,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     )
     .expect("Fix: second motif same-shape dispatch should refresh graph inputs");
 
-    let recorded = dispatcher
-        .edge_targets
-        .lock()
-        .expect("Fix: motif recording mutex should not be poisoned");
+    let recorded = dispatcher.recorded();
     assert_eq!(recorded.as_slice(), &[targets, changed_targets]);
     assert_eq!(
         scratch.program_builds(),
@@ -230,12 +186,15 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
 
 #[test]
 fn via_with_scratch_reuses_dispatch_storage() {
-    let dispatcher = MotifDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MOTIF_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[1, 1, 1]),
             u32_slice_to_le_bytes(&[1, 1, 1]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[7]);
     let (offsets, targets, masks, motif) = chain_graph();
     let mut scratch = MotifGpuScratch::default();
     let mut witness = Vec::with_capacity(3);
@@ -308,13 +267,16 @@ fn via_with_scratch_reuses_dispatch_storage() {
 
 #[test]
 fn via_rejects_extra_outputs() {
-    let dispatcher = MotifDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MOTIF_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[0]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[7]);
     let err = match_motif_via(&dispatcher, 1, &[0, 0], &[], &[], &[])
         .expect_err("extra outputs must be rejected");
     assert!(matches!(err, DispatchError::BackendError(_)));
@@ -322,12 +284,15 @@ fn via_rejects_extra_outputs() {
 
 #[test]
 fn via_rejects_non_boolean_witness() {
-    let dispatcher = MotifDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MOTIF_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0, 0, 0]),
             u32_slice_to_le_bytes(&[1, 2, 0]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[7]);
     let (offsets, targets, masks, motif) = chain_graph();
     let err = match_motif_via(&dispatcher, 3, &offsets, &targets, &masks, &motif)
         .expect_err("non-boolean witness output must be rejected");
@@ -337,9 +302,9 @@ fn via_rejects_non_boolean_witness() {
 
 #[test]
 fn via_rejects_malformed_csr_before_dispatch() {
-    let dispatcher = MotifDispatcher {
-        outputs: Vec::new(),
-    };
+    let dispatcher = StaticOutputs::new(MOTIF_CONTRACT, Vec::new())
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[7]);
     let err = match_motif_via(&dispatcher, 2, &[0, 1, 1], &[1], &[], &[])
         .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));

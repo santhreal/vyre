@@ -1,73 +1,15 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::test_support::NeverDispatches;
-use std::sync::Mutex;
-use vyre_foundation::ir::Program;
+use crate::test_support::{NeverDispatches, StaticOutputs};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 mod reference_contracts;
 
-struct CsrChangedDispatcher {
-    outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for CsrChangedDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        if inputs.len() != 7 && inputs.len() != 8 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: csr_forward_or_changed test dispatcher expected 7 legacy inputs or 8 changed-history inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        Ok(self.outputs.clone())
-    }
-}
-
-struct RecordingCsrChangedDispatcher {
-    outputs: Vec<Vec<u8>>,
-    frontier_inputs: Mutex<Vec<Vec<u32>>>,
-}
-
-impl ProgramDispatcher for RecordingCsrChangedDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.frontier_inputs
-            .lock()
-            .expect("Fix: frontier recording mutex should not be poisoned")
-            .push(crate::dispatch_buffers::read_u32s(&inputs[5]));
-        Ok(self.outputs.clone())
-    }
-}
-
-struct StaticCsrInputRecordingDispatcher {
-    outputs: Vec<Vec<u8>>,
-    edge_targets: Mutex<Vec<Vec<u32>>>,
-}
-
-impl ProgramDispatcher for StaticCsrInputRecordingDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.edge_targets
-            .lock()
-            .expect("Fix: static input recording mutex should not be poisoned")
-            .push(crate::dispatch_buffers::read_u32s(&inputs[2]));
-        Ok(self.outputs.clone())
-    }
-}
+/// Seven inputs is the legacy shape; eight is the changed-history shape. Both
+/// are live, so a dispatcher that accepts only one of them would reject a
+/// correct plan.
+const CSR_CHANGED_CONTRACT: &str = "csr_forward_or_changed dispatch";
 
 fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> 3
@@ -153,12 +95,14 @@ fn linear_closure_with_scratch(
 
 #[test]
 fn gpu_into_decodes_exact_outputs_into_reused_frontier() {
-    let dispatcher = CsrChangedDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
         ],
-    };
+    )
+    .expecting_inputs(&[7, 8]);
     let mut frontier = Vec::with_capacity(4);
     let ptr = frontier.as_ptr();
     linear_closure_into(&dispatcher, 4, &mut frontier).expect("Fix: dispatch succeeds");
@@ -168,13 +112,15 @@ fn gpu_into_decodes_exact_outputs_into_reused_frontier() {
 
 #[test]
 fn gpu_rejects_extra_outputs() {
-    let dispatcher = CsrChangedDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
             u32_slice_to_le_bytes(&[99]),
         ],
-    };
+    )
+    .expecting_inputs(&[7, 8]);
     let err = linear_closure(&dispatcher, 4).expect_err("extra outputs must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
@@ -184,9 +130,11 @@ fn gpu_rejects_extra_outputs() {
 
 #[test]
 fn gpu_rejects_trailing_changed_bytes() {
-    let dispatcher = CsrChangedDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1111]), vec![0, 0, 0, 0, 1]],
-    };
+    let dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![u32_slice_to_le_bytes(&[0b1111]), vec![0, 0, 0, 0, 1]],
+    )
+    .expecting_inputs(&[7, 8]);
     let err = linear_closure(&dispatcher, 4).expect_err("trailing changed bytes must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
@@ -196,12 +144,14 @@ fn gpu_rejects_trailing_changed_bytes() {
 
 #[test]
 fn gpu_rejects_non_boolean_changed_flag() {
-    let dispatcher = CsrChangedDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[2]),
         ],
-    };
+    )
+    .expecting_inputs(&[7, 8]);
     let err =
         linear_closure(&dispatcher, 1).expect_err("non-boolean changed flag must be rejected");
     assert!(
@@ -235,12 +185,14 @@ fn gpu_rejects_bad_seed_width_without_clobbering_frontier() {
 
 #[test]
 fn gpu_reuses_dispatch_input_buffers() {
-    let dispatcher = CsrChangedDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
         ],
-    };
+    )
+    .expecting_inputs(&[7, 8]);
     let mut scratch =
         ForwardChangedGpuScratch::with_input_capacities(&[32, 32, 32, 32, 32, 32, 32, 8], 1);
     let mut frontier = Vec::with_capacity(4);
@@ -265,13 +217,14 @@ fn gpu_reuses_dispatch_input_buffers() {
 
 #[test]
 fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
-    let dispatcher = StaticCsrInputRecordingDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b0001]),
             u32_slice_to_le_bytes(&[0]),
         ],
-        edge_targets: Mutex::new(Vec::new()),
-    };
+    )
+    .recording_input(2);
     let edge_offsets = vec![0, 1, 2, 3, 3];
     let first_targets = vec![1, 2, 3];
     let second_targets = vec![2, 3, 0];
@@ -307,10 +260,7 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
         .expect(why);
     }
 
-    let recorded_targets = dispatcher
-        .edge_targets
-        .lock()
-        .expect("Fix: static input recording mutex should not be poisoned");
+    let recorded_targets = dispatcher.recorded();
     assert_eq!(
         recorded_targets.as_slice(),
         &[first_targets, second_targets]
@@ -324,18 +274,22 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
 
 #[test]
 fn gpu_reuses_cached_program_by_primitive_key() {
-    let history_dispatcher = CsrChangedDispatcher {
-        outputs: vec![
+    let history_dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
         ],
-    };
-    let legacy_dispatcher = CsrChangedDispatcher {
-        outputs: vec![
+    )
+    .expecting_inputs(&[7, 8]);
+    let legacy_dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[0]),
         ],
-    };
+    )
+    .expecting_inputs(&[7, 8]);
     let mut scratch = ForwardChangedGpuScratch::default();
     let mut frontier = Vec::new();
 
@@ -393,12 +347,14 @@ fn gpu_reuses_cached_program_by_primitive_key() {
 #[test]
 
 fn gpu_rejects_mismatched_edge_arrays() {
-    let dispatcher = CsrChangedDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        CSR_CHANGED_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
         ],
-    };
+    )
+    .expecting_inputs(&[7, 8]);
     let err = forward_closure_via_change_flag_gpu(
         &dispatcher,
         CsrClosureInputs::allow_all(
@@ -426,13 +382,14 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
             let seed = (0..seed_len)
                 .map(|idx| 0xA5A5_0000u32 ^ idx as u32 ^ node_count)
                 .collect::<Vec<_>>();
-            let dispatcher = RecordingCsrChangedDispatcher {
-                outputs: vec![
+            let dispatcher = StaticOutputs::new(
+                CSR_CHANGED_CONTRACT,
+                vec![
                     u32_slice_to_le_bytes(&vec![0; frontier_words]),
                     u32_slice_to_le_bytes(&[0]),
                 ],
-                frontier_inputs: Mutex::new(Vec::new()),
-            };
+            )
+            .recording_input(5);
             let mut frontier = Vec::new();
 
             let result = forward_closure_via_change_flag_gpu_into(
@@ -452,10 +409,7 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
 
             if extra_words == 0 {
                 result.expect("Fix: exact-width empty-edge generated CSR closure should dispatch");
-                let observed = dispatcher
-                    .frontier_inputs
-                    .lock()
-                    .expect("Fix: frontier recording mutex should not be poisoned");
+                let observed = dispatcher.recorded();
                 assert_eq!(
                     observed.len(),
                     1,
@@ -474,10 +428,7 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
                     matches!(err, DispatchError::BadInputs(_)),
                     "node_count={node_count} extra_words={extra_words} err={err:?}"
                 );
-                let observed = dispatcher
-                    .frontier_inputs
-                    .lock()
-                    .expect("Fix: frontier recording mutex should not be poisoned");
+                let observed = dispatcher.recorded();
                 assert!(
                     observed.is_empty(),
                     "node_count={node_count} extra_words={extra_words}"

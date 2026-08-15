@@ -1,6 +1,6 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use std::sync::Mutex;
+use crate::test_support::StaticOutputs;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::path_reconstruct::try_cpu_ref_batched;
 
@@ -34,25 +34,7 @@ impl ProgramDispatcher for PathDispatcher {
     }
 }
 
-struct RecordingPathDispatcher {
-    outputs: Vec<Vec<u8>>,
-    parents: Mutex<Vec<Vec<u32>>>,
-}
-
-impl ProgramDispatcher for RecordingPathDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.parents
-            .lock()
-            .expect("Fix: path parent recorder mutex should not be poisoned")
-            .push(crate::dispatch_buffers::read_u32s(&inputs[0]));
-        Ok(self.outputs.clone())
-    }
-}
+const PATH_CONTRACT: &str = "path reconstruct dispatch";
 
 #[test]
 fn reconstructs_chain_to_root() {
@@ -176,13 +158,14 @@ fn reconstruct_path_via_with_scratch_reuses_program_by_depth() {
 
 #[test]
 fn reconstruct_path_via_with_scratch_refreshes_same_shape_parent_content() {
-    let dispatcher = RecordingPathDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        PATH_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
             u32_slice_to_le_bytes(&[1]),
         ],
-        parents: Mutex::new(Vec::new()),
-    };
+    )
+    .recording_input(0);
     let first_parent = vec![0, 0, 1, 2];
     let second_parent = vec![0, 0, 0, 0];
     let mut dispatch_scratch = PathReconstructGpuScratch::default();
@@ -207,10 +190,7 @@ fn reconstruct_path_via_with_scratch_refreshes_same_shape_parent_content() {
     )
     .expect("Fix: same-shape parent content change should refresh static parent input");
 
-    let recorded = dispatcher
-        .parents
-        .lock()
-        .expect("Fix: path parent recorder mutex should not be poisoned");
+    let recorded = dispatcher.recorded();
     assert_eq!(recorded.as_slice(), &[first_parent, second_parent]);
     assert_eq!(
         dispatch_scratch.single_program_builds(),
@@ -230,13 +210,14 @@ fn path_to_root_via_truncates_padding() {
 
 #[test]
 fn reconstruct_path_via_rejects_len_readback_beyond_primitive_depth() {
-    let dispatcher = RecordingPathDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        PATH_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[3, 2, 1, 0]),
             u32_slice_to_le_bytes(&[5]),
         ],
-        parents: Mutex::new(Vec::new()),
-    };
+    )
+    .recording_input(0);
     let parent = vec![0, 0, 1, 2];
     let mut dispatch_scratch = PathReconstructGpuScratch::default();
     let mut path = Vec::new();
@@ -269,13 +250,14 @@ fn reconstruct_paths_via_batches_targets_in_one_dispatch() {
 
 #[test]
 fn reconstruct_paths_via_rejects_any_batched_len_beyond_primitive_depth() {
-    let dispatcher = RecordingPathDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        PATH_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[3, 2, 1, 0, 2, 1, 0, 0]),
             u32_slice_to_le_bytes(&[4, 5]),
         ],
-        parents: Mutex::new(Vec::new()),
-    };
+    )
+    .recording_input(0);
     let parent = vec![0, 0, 1, 2];
     let mut dispatch_scratch = PathReconstructGpuScratch::default();
     let mut paths = Vec::new();

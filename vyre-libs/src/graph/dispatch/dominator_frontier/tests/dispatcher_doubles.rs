@@ -1,28 +1,6 @@
 use super::*;
 use vyre_foundation::ir::Program;
 
-pub(super) struct DominatorDispatcher {
-    pub(super) outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for DominatorDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 6 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: dominator frontier test dispatcher expected 6 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        Ok(self.outputs.clone())
-    }
-}
-
 pub(super) struct DominatorInputShapeDispatcher;
 
 impl ProgramDispatcher for DominatorInputShapeDispatcher {

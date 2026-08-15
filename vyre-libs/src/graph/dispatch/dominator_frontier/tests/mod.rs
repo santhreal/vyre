@@ -6,9 +6,10 @@ use vyre_primitives::graph::dominator_frontier::cpu_ref as reference_dominator_f
 
 mod dispatcher_doubles;
 
-use dispatcher_doubles::{
-    DominatorDispatcher, DominatorInputShapeDispatcher, RecordingDominatorDispatcher,
-};
+use crate::test_support::StaticOutputs;
+use dispatcher_doubles::{DominatorInputShapeDispatcher, RecordingDominatorDispatcher};
+
+const DOMINATOR_CONTRACT: &str = "dominance frontier dispatch";
 
 #[test]
 fn checked_reference_surfaces_bad_seed_width() {
@@ -158,9 +159,9 @@ fn frontier_size_counts_set_bits() {
 
 #[test]
 fn via_decodes_exact_frontier_into_reused_buffer() {
-    let dispatcher = DominatorDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1000])],
-    };
+    let dispatcher = StaticOutputs::new(DOMINATOR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1000])])
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[6]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
@@ -184,9 +185,9 @@ fn via_decodes_exact_frontier_into_reused_buffer() {
 
 #[test]
 fn via_with_scratch_reuses_dispatch_storage() {
-    let dispatcher = DominatorDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1000])],
-    };
+    let dispatcher = StaticOutputs::new(DOMINATOR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1000])])
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[6]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
@@ -384,12 +385,15 @@ fn via_zero_edge_graph_uses_primitive_padding_plan() {
 
 #[test]
 fn via_rejects_extra_outputs() {
-    let dispatcher = DominatorDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        DOMINATOR_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1000]),
             u32_slice_to_le_bytes(&[0]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[6]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
@@ -412,9 +416,9 @@ fn via_rejects_extra_outputs() {
 
 #[test]
 fn via_rejects_trailing_frontier_bytes() {
-    let dispatcher = DominatorDispatcher {
-        outputs: vec![vec![0, 0, 0, 0, 1]],
-    };
+    let dispatcher = StaticOutputs::new(DOMINATOR_CONTRACT, vec![vec![0, 0, 0, 0, 1]])
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[6]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
