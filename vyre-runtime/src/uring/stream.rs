@@ -454,6 +454,12 @@ impl<'a> AsyncUringStream<'a> {
         self.inflight
     }
 
+    /// Submission entries this stream's ring holds, the bound on inflight work.
+    #[must_use]
+    pub fn submission_entries(&self) -> u32 {
+        self.ring_state.submission_entries()
+    }
+
     /// Submit an NVMe passthrough command via `IORING_OP_URING_CMD`.
     /// Requires the `uring-cmd-nvme` feature and Linux kernel 6.0+.
     ///

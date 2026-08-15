@@ -73,14 +73,16 @@ pub struct UringResidentQueuePump<'a> {
     chunk_bytes: u32,
     /// Scratch storage for `submit_read_to_gpu` iovecs. Each boxed iovec has a
     /// stable address for the SQE's raw pointer and is retired FIFO with the
-    /// matching CQE.
+    /// matching CQE. Bounded by the ring's submission entries: one entry per
+    /// outstanding iovec, and a submission without an SQ slot is rejected.
     iovec_scratch: VecDeque<Box<super::stream::Iovec>>,
     /// Reusable stable iovec boxes retired from completed CQEs.
     // Boxes keep every SQE-visible iovec address stable across free-list growth.
     #[allow(clippy::vec_box)]
     iovec_free: Vec<Box<super::stream::Iovec>>,
     /// Chunks submitted and pending drain, in submission order.
-    /// Iterated FIFO by `drain_into_ring` as each CQE arrives.
+    /// Iterated FIFO by `drain_into_ring` as each CQE arrives. Bounded by the
+    /// ring's submission entries for the same reason as `iovec_scratch`.
     pending: VecDeque<PendingPublish>,
 }
 
@@ -91,14 +93,18 @@ impl<'a> UringResidentQueuePump<'a> {
     ///
     /// The pump takes ownership of `stream`; reclaim it via
     /// [`into_stream`](Self::into_stream) on shutdown.
+    ///
+    /// Every queue is sized to the ring's submission entries at construction,
+    /// which is both their bound and the reason no submission reallocates.
     #[must_use]
     pub fn new(stream: AsyncUringStream<'a>, chunk_bytes: u32) -> Self {
+        let depth = stream.submission_entries() as usize;
         Self {
             stream,
             chunk_bytes,
-            iovec_scratch: VecDeque::new(),
-            iovec_free: Vec::new(),
-            pending: VecDeque::new(),
+            iovec_scratch: VecDeque::with_capacity(depth),
+            iovec_free: Vec::with_capacity(depth),
+            pending: VecDeque::with_capacity(depth),
         }
     }
 

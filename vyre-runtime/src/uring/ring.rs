@@ -350,6 +350,15 @@ impl IoUringState {
         (self.params.flags & IORING_SETUP_SQPOLL) != 0
     }
 
+    /// Submission entries the kernel allocated for this ring.
+    ///
+    /// This is the hard bound on outstanding submissions: a submission needs an
+    /// SQ slot, so anything tracking one submission each cannot exceed it.
+    #[must_use]
+    pub fn submission_entries(&self) -> u32 {
+        self.params.sq_entries
+    }
+
     /// True when the SQPOLL thread has slept and must be explicitly woken.
     #[must_use]
     pub fn sq_needs_wakeup(&self) -> bool {
