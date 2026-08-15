@@ -608,7 +608,7 @@ pub fn numbered(text: &str) -> Vec<(u32, &str)> {
         .collect()
 }
 
-/// Which lines belong to a `#[cfg(test)]` item, by 0-based index.
+/// Which lines belong to a test-only item, by 0-based index.
 ///
 /// The scan always meant to exclude test code: it skipped a line that WAS the
 /// `#[cfg(test)]` attribute, and called that "intentional dev-only lines, not
@@ -629,7 +629,7 @@ pub fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
     let mut index = 0usize;
     while index < lines.len() {
         let scan = scan_code(lines[index]);
-        if scan.code.trim() != "#[cfg(test)]" {
+        if !is_test_only_attribute(scan.code) {
             depth += scan.brace_delta;
             index += 1;
             continue;
@@ -651,6 +651,31 @@ pub fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
         }
     }
     test_only
+}
+
+/// Whether a `#[cfg(..)]` attribute gates its item on the test harness alone.
+///
+/// `test` and `all(test, feature = "x")` cannot compile outside `cargo test`, so
+/// the item below them is test code. `any(test, feature = "cpu-parity")` is a
+/// different claim: it compiles in a release build with that feature on, and the
+/// 864 items carrying it in this workspace are shipped code. `not(test)` is the
+/// opposite of a test item.
+fn is_test_only_attribute(code: &str) -> bool {
+    let Some(predicate) = code
+        .trim()
+        .strip_prefix("#[cfg(")
+        .and_then(|rest| rest.strip_suffix(")]"))
+    else {
+        return false;
+    };
+    let predicate = predicate.trim();
+    if predicate == "test" {
+        return true;
+    }
+    predicate
+        .strip_prefix("all(")
+        .and_then(|rest| rest.strip_suffix(')'))
+        .is_some_and(|inner| inner.split(',').any(|term| term.trim() == "test"))
 }
 
 /// One line's runtime code and the nesting it contributes.
@@ -824,5 +849,56 @@ mod tests {
             .rust(&["a-directory-that-does-not-exist"])
             .expect_err("a missing scan path is fatal");
         assert!(error.message.contains("scan path does not exist"));
+    }
+
+    /// WHY: a production rule that must skip test code has to know where the test
+    /// item ends. A nested module inside it, or a brace inside a string, must not
+    /// end the extent early, and nothing above the attribute may be swept in.
+    #[test]
+    fn a_cfg_test_item_covers_itself_and_nothing_above_it() {
+        let text = "fn production() {}\n#[cfg(test)]\nmod tests {\n    mod inner {\n        fn helper() {}\n    }\n    fn probe() {\n        let brace = \"}\";\n    }\n}\nfn after() {}\n";
+        let lines: Vec<&str> = text.lines().collect();
+        let flags = cfg_test_lines(&lines);
+        assert_eq!(
+            flags,
+            vec![
+                false, true, true, true, true, true, true, true, true, true, false
+            ],
+            "the extent is the attribute through the item's closing brace"
+        );
+    }
+
+    /// WHY: this workspace spells a test gate four ways, and only two of them
+    /// mean test-only. `any(test, feature = "cpu-parity")` sits on 864 items
+    /// that ship whenever that feature is on, so reading it as test code would
+    /// hide real production panics and real hot-path cost from every rule built
+    /// on this scan. The predicate, not the word `test`, decides.
+    #[test]
+    fn only_a_predicate_that_requires_test_marks_test_code() {
+        for attribute in [
+            "#[cfg(test)]",
+            "    #[cfg(all(test, feature = \"subgroup-ops\"))]",
+            "#[cfg(all(feature = \"gpu\", test))]",
+        ] {
+            let lines = vec![attribute, "mod tests {", "}", "fn after() {}"];
+            assert_eq!(
+                cfg_test_lines(&lines),
+                vec![true, true, true, false],
+                "{attribute} gates its item on the harness"
+            );
+        }
+        for attribute in [
+            "#[cfg(any(test, feature = \"cpu-parity\"))]",
+            "#[cfg(not(test))]",
+            "#[cfg(feature = \"test-utils\")]",
+            "#[cfg_attr(test, allow(dead_code))]",
+        ] {
+            let lines = vec![attribute, "mod shipped {", "}", "fn after() {}"];
+            assert_eq!(
+                cfg_test_lines(&lines),
+                vec![false, false, false, false],
+                "{attribute} still compiles outside the harness"
+            );
+        }
     }
 }

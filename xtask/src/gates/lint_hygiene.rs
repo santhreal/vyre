@@ -15,9 +15,12 @@ use crate::gates::scan::{self, Tree};
 /// The reviewed list of files permitted to carry `allow(unsafe_code)`.
 const BUDGET: &str = "xtask/unsafe-budget.txt";
 
-/// Every `.expect("...")` states the corrective action.
+/// Every production `.expect("...")` states the corrective action.
 ///
-/// A panic message a reader cannot act on is a crash with extra words.
+/// A panic message a reader cannot act on is a crash with extra words. The
+/// reader in question is whoever hit the panic in a shipped run, so the scan
+/// covers production code: `tests/` and `benches/` trees are out of scope and so
+/// is an inline `#[cfg(test)]` item, which is the same code in a different file.
 pub struct ExpectHasFix;
 
 impl Gate for ExpectHasFix {
@@ -44,13 +47,25 @@ impl Gate for ExpectHasFix {
         for file in &files {
             let text = tree.read(file)?;
             let lines: Vec<&str> = text.lines().collect();
+            // A `#[cfg(test)]` item is the same code as a `tests/` tree, which
+            // this scan already leaves alone: its panic text is read by whoever
+            // broke the test, and the corrective action is in the change, not in
+            // the fixture. A production panic is the subject of the rule.
+            let in_test_item = scan::cfg_test_lines(&lines);
             for (index, line) in lines.iter().enumerate() {
                 if !line.contains(".expect(\"") {
                     continue;
                 }
+                if in_test_item.get(index).copied().unwrap_or(false) {
+                    continue;
+                }
                 // A gate that scans for the string `.expect("` writes that
-                // string, and its own source is not a panic site.
-                if line.contains("contains(\".expect(\"") || line.contains("concat!") {
+                // string, in code and in the prose beside it, and neither is a
+                // panic site.
+                if scan::is_comment(line)
+                    || line.contains("contains(\".expect(\"")
+                    || line.contains("concat!")
+                {
                     continue;
                 }
                 let end = (index + 4).min(lines.len());
@@ -437,6 +452,38 @@ mod tests {
         assert_eq!(
             safety_justification("// SAFETY:\n// TODO work out the aliasing"),
             Some("TODO work out the aliasing".to_string())
+        );
+    }
+
+    /// WHY: the rule is about a panic a shipped run can hit. It already skips
+    /// `tests/` and `benches/` trees, and an inline `#[cfg(test)]` item is the
+    /// same code in another place, so 412 of the 466 findings were fixture text
+    /// whose corrective action lives in the change that broke the test. The
+    /// production site next to it must still be reported, or the rule cannot fail.
+    #[test]
+    fn a_production_expect_owes_a_fix_and_a_test_item_does_not() {
+        let (_directory, root) = fixture_tree(&[(
+            "site.rs",
+            "fn load(path: &str) -> String {\n    std::fs::read_to_string(path).expect(\"the config file\")\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn it_loads() {\n        let value = super::load(\"x\").expect(\"a loaded config\");\n        assert!(!value.is_empty());\n    }\n}\n",
+        )]);
+
+        let report = ExpectHasFix
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("Fix: the gate must read the fixture tree; check the fixture git step");
+        let lines: Vec<u32> = report
+            .findings
+            .iter()
+            .filter_map(|finding| finding.line)
+            .collect();
+        assert_eq!(
+            lines,
+            [2],
+            "only the production site owes a corrective action: {:?}",
+            report
+                .findings
+                .iter()
+                .map(|finding| finding.message.clone())
+                .collect::<Vec<_>>()
         );
     }
 
