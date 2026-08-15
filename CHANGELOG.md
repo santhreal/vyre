@@ -176,6 +176,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   grid-sync wrapper reaches a `Program`-carrying entry point without deciding
   the split, and when the wrapper hand-writes a forward the owner already
   emits.
+- A gate resolves every name a `run:` step passes to cargo or to a shell
+  against this tree: each `-p` package is a workspace member, each `--test` and
+  `--bin` target is declared or auto-discovered by the package the same command
+  line addresses, and each `scripts/` path is published. Steps are extracted by
+  indentation and each is its own scope, so a target is never resolved against
+  a neighbouring step's package. Nothing is listed in the test: a workflow
+  added tomorrow is judged tomorrow, and renaming a target without updating its
+  workflow is red locally instead of in CI.
 
 ### Changed
 
@@ -1992,6 +2000,17 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   allocation. A kernel body restated per primitive drifts where no per-op
   oracle looks, because an oracle compares evaluated output and never sees the
   grid or the allocation size.
+- Two CI jobs named cargo test targets that do not exist and would have failed
+  with `no test target named` on the first run that reached them. The
+  architecture gate ran `--test architecture_docs --test
+  canonical_first_workgroup_guard` after both became modules of the
+  `tree_contracts` target, and the conformance CPU job ran `--test
+  generated_graph_oracle_matrix`, a `vyre-primitives` target deleted when its
+  content moved and never repointed, so the nine `sweep_graph_*_oracle_matrix`
+  sweeps it stood for went unrun there. The existing CI inspector could not see
+  either, because it asserts that a command STRING appears in a workflow file,
+  which is as true of a command naming a deleted target as of one naming a live
+  target.
 
 ## [0.7.1] - 2026-08-01
 
