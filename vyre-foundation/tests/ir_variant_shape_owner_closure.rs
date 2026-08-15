@@ -520,7 +520,7 @@ fn hook_for_variant(variant: &str) -> String {
 /// The hook names the trait declares, read from its declaration.
 fn declared_visitor_hooks() -> BTreeSet<String> {
     let source = read_workspace_file("vyre-foundation/src/visit/traits.rs");
-    let body = trait_body(&source, "NodeVisitor").expect(
+    let body = vyre_test_support::braced_body(&source, "pub trait NodeVisitor {").expect(
         "Fix: no `pub trait NodeVisitor` in vyre-foundation/src/visit/traits.rs; this scan is \
          reading the wrong file",
     );
@@ -731,26 +731,6 @@ fn impl_blocks_for_trait<'a>(source: &'a str, trait_name: &str) -> Vec<(String, 
         out.push((name, &source[open..close]));
     }
     out
-}
-
-/// The brace-delimited body of `pub trait <name>` in `source`.
-fn trait_body<'a>(source: &'a str, name: &str) -> Option<&'a str> {
-    let declaration = format!("pub trait {name} {{");
-    let start = source.find(&declaration)? + declaration.len();
-    let mut depth = 1usize;
-    for (offset, ch) in source[start..].char_indices() {
-        match ch {
-            '{' => depth += 1,
-            '}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Some(&source[start..start + offset]);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
 }
 
 fn read_workspace_file(relative: &str) -> String {
