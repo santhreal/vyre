@@ -18,7 +18,6 @@ mod common;
 
 use common::decode_u32_words as words_from_bytes;
 use common::u32_bytes as bytes;
-use std::path::PathBuf;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::{TOK_IDENTIFIER, TOK_INT, TOK_SEMICOLON};
 use vyre_libs::parsing::c::parse::vast::{
@@ -37,9 +36,7 @@ const SENTINEL: u32 = u32::MAX;
 /// A hardcoded copy of this list would go stale in silence, which is the same
 /// failure as having no matrix at all.
 fn token_vocabulary() -> Vec<(String, u32)> {
-    let spec = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("vyre-spec")
+    let spec = vyre_test_support::monorepo::vyre_crate_directory("vyre-spec")
         .join("src")
         .join("c11_token.rs");
     let text = std::fs::read_to_string(&spec)

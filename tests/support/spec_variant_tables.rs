@@ -26,7 +26,6 @@
 #![allow(dead_code)]
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 
 use vyre_spec::{AtomicOp, BinOp, DataType, TernaryOp, UnOp};
 
@@ -152,15 +151,9 @@ pub(crate) fn buffer_data_types(element_size: usize) -> Vec<DataType> {
 /// `vyre-spec/tests/spec_variant_tables_cover_the_frozen_surface.rs` goes red
 /// until somebody records a decision for it.
 pub(crate) fn public_api_variant_names(enum_name: &str) -> BTreeSet<String> {
-    let snapshot_path = vyre_spec_api_snapshot();
-    let snapshot = std::fs::read_to_string(&snapshot_path).unwrap_or_else(|error| {
-        panic!(
-            "Fix: the public-API snapshot at {} must be readable to enumerate {enum_name} variants: {error}",
-            snapshot_path.display()
-        )
-    });
+    const PACKAGE: &str = "vyre-spec";
     let prefix = format!("pub vyre_spec::{enum_name}::");
-    let names: BTreeSet<String> = snapshot
+    let names: BTreeSet<String> = vyre_test_support::public_api::snapshot_text(PACKAGE)
         .lines()
         .filter_map(|line| line.strip_prefix(&prefix))
         // A field of a struct-like variant reads `Enum::Variant::field: T`, and
@@ -172,22 +165,8 @@ pub(crate) fn public_api_variant_names(enum_name: &str) -> BTreeSet<String> {
         .collect();
     assert!(
         !names.is_empty(),
-        "Fix: the public-API snapshot at {} lists no `{enum_name}` variants. Refresh it with scripts/check_public_api_snapshot.sh --refresh vyre-spec.",
-        snapshot_path.display()
+        "Fix: the public-API snapshot at {} lists no `{enum_name}` variants. Refresh it with scripts/check_public_api_snapshot.sh --refresh {PACKAGE}.",
+        vyre_test_support::public_api::snapshot_path(PACKAGE).display()
     );
     names
-}
-
-fn vyre_spec_api_snapshot() -> PathBuf {
-    let manifest = vyre_test_support::monorepo::vyre_workspace_root();
-    manifest
-        .ancestors()
-        .map(|directory| directory.join("docs/public-api/vyre-spec.txt"))
-        .find(|candidate| candidate.is_file())
-        .unwrap_or_else(|| {
-            panic!(
-                "Fix: no docs/public-api/vyre-spec.txt above {}. The variant tables enumerate the frozen operator surface from that snapshot.",
-                manifest.display()
-            )
-        })
 }

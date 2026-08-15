@@ -11,7 +11,6 @@
 //! This file is the one owner.
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{
@@ -565,34 +564,14 @@ fn enforcement_cases() -> Vec<EnforcementCase> {
     ]
 }
 
-/// The path of the checked-in public-API snapshot for this crate.
+/// The checked-in public-API snapshot of this crate, as text.
 ///
 /// The snapshot is regenerated from rustdoc by
 /// `scripts/check_public_api_snapshot.sh` and a byte-stability gate keeps it
 /// equal to the crate's real surface, so it is the one place a new capability
 /// field or a new advertised parameter is guaranteed to appear.
-fn api_snapshot() -> PathBuf {
-    let manifest = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"));
-    manifest
-        .ancestors()
-        .map(|directory| directory.join("docs/public-api/vyre-foundation.txt"))
-        .find(|candidate| candidate.is_file())
-        .unwrap_or_else(|| {
-            panic!(
-                "Fix: no docs/public-api/vyre-foundation.txt above {}. The capability gate enumerates the capability surface from that snapshot.",
-                manifest.display()
-            )
-        })
-}
-
 fn snapshot_text() -> String {
-    let path = api_snapshot();
-    std::fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!(
-            "Fix: the public-API snapshot at {} must be readable: {error}",
-            path.display()
-        )
-    })
+    vyre_test_support::public_api::snapshot_text(env!("CARGO_PKG_NAME"))
 }
 
 /// Boolean field names of `RequiredCapabilities`, from the snapshot.

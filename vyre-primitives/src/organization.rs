@@ -67,7 +67,7 @@ mod tests {
     use super::{COMPOSITION_FEATURES, INTRINSIC_FEATURES, SUPPORT_FEATURES};
 
     fn cargo_toml() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml")
+        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("Cargo.toml")
     }
 
     fn feature_names(toml: &str) -> BTreeSet<String> {

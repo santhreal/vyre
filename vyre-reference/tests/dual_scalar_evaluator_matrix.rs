@@ -12,7 +12,6 @@
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
 
 use vyre_primitives::{
     ArithAdd, ArithMul, Clz, CompareEq, CompareLt, Popcount, ShiftLeft, ShiftRight,
@@ -290,14 +289,8 @@ fn every_reference_evaluator_is_swept_or_recorded_as_non_scalar() {
 fn evaluator_markers() -> BTreeSet<String> {
     const PREFIX: &str =
         "impl vyre_reference::dual_impls::evaluator::ReferenceEvaluator for vyre_primitives::markers::";
-    let path = reference_api_snapshot();
-    let snapshot = std::fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!(
-            "Fix: the public-API snapshot at {} must be readable to enumerate the evaluators: {error}",
-            path.display()
-        )
-    });
-    let markers: BTreeSet<String> = snapshot
+    const PACKAGE: &str = "vyre-reference";
+    let markers: BTreeSet<String> = vyre_test_support::public_api::snapshot_text(PACKAGE)
         .lines()
         .filter_map(|line| line.trim().strip_prefix(PREFIX))
         .map(str::to_string)
@@ -305,23 +298,8 @@ fn evaluator_markers() -> BTreeSet<String> {
     assert!(
         !markers.is_empty(),
         "Fix: the public-API snapshot at {} lists no ReferenceEvaluator implementations. Refresh \
-         it with scripts/check_public_api_snapshot.sh --refresh vyre-reference.",
-        path.display()
+         it with scripts/check_public_api_snapshot.sh --refresh {PACKAGE}.",
+        vyre_test_support::public_api::snapshot_path(PACKAGE).display()
     );
     markers
-}
-
-fn reference_api_snapshot() -> PathBuf {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest
-        .ancestors()
-        .map(|directory| directory.join("docs/public-api/vyre-reference.txt"))
-        .find(|candidate| candidate.is_file())
-        .unwrap_or_else(|| {
-            panic!(
-                "Fix: no docs/public-api/vyre-reference.txt above {}. This sweep enumerates the \
-                 evaluator surface from that snapshot.",
-                manifest.display()
-            )
-        })
 }

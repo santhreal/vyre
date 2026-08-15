@@ -163,6 +163,7 @@ pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
 pub mod monorepo;
+pub mod public_api;
 #[cfg(feature = "ir-fixtures")]
 pub mod pass_programs;
 
