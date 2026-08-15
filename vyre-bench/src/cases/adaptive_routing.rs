@@ -18,8 +18,7 @@ use super::triplet_pass::{
     TripletSpec,
 };
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, DeterminismClass,
-    WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, WorkloadClass,
 };
 use crate::api::metric::MetricPoint;
 use crate::api::suite::SuiteKind;
@@ -49,11 +48,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Runtime,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
-    owner_crate: "vyre-bench",
     suites: SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(ITEM_COUNT as u64 * 16),
     min_input_bytes: Some(ITEM_COUNT as u64 * 12),
     feature_set: &["runtime.adaptive-routing", "resident"],
@@ -63,6 +58,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         baseline_name: "Rayon-parallel CPU scheduler over equivalent routing predicates",
         min_speedup_x: 10.0,
     }),
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<TripletPrepared> = CaseOps {

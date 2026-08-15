@@ -5,9 +5,7 @@
 //! [`crate::cases::frontier_step`]. What is this case's own: the fixture, the
 //! traversal program it expands with, and its metric points.
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, WorkloadClass};
 use crate::cases::frontier_step::{
     dispatch_frontier_step, frontier_step, frontier_step_bytes_touched, frontier_step_run,
     FrontierStep, StepGrid,
@@ -45,13 +43,9 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "atomic",
         "irregular",
     ],
-    layer: BenchLayer::Foundation,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(CSR_NODE_COUNT as u64 * 20),
     feature_set: &[
@@ -59,7 +53,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "graph.frontier.bitset",
         "graph.skewed-degree",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<GraphCsrSkewedPrepared> = CaseOps {

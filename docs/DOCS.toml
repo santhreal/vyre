@@ -1546,6 +1546,19 @@ generator = "../scripts/testing_guides.py"
 nav = true
 
 [[page]]
+path = "testing/vyre-registry-link.md"
+title = "Testing `vyre-registry-link`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
 path = "testing/vyre-runtime.md"
 title = "Testing `vyre-runtime`"
 status = "generated"

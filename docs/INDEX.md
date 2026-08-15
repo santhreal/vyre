@@ -27,14 +27,14 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 
 ## Cargo-derived workspace facts
 
-- Workspace packages: 35.
-- Shipped library, binary, and example targets: 74.
+- Workspace packages: 36.
+- Shipped library, binary, and example targets: 75.
 - Source: `cargo metadata --no-deps --format-version 1`.
 
 ## Lifecycle counts
 
 - current: 43.
-- generated: 69.
+- generated: 70.
 - superseded: 3.
 - archived: 17.
 
@@ -162,6 +162,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-pass-engine.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-primitives.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-registry-link.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-runtime.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-safetensors.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |

@@ -8,10 +8,140 @@
 //! 18 seconds into a small number instead of a large one, and some published a
 //! baseline record with no byte accounting at all.
 
-use crate::api::case::BenchRun;
+use crate::api::case::{BenchContext, BenchError, BenchRun};
 use crate::api::metric::{elapsed_ns, BenchMetrics};
-use crate::api::resident::TransferAccounting;
+use crate::api::resident::{
+    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
+    TransferAccounting,
+};
 use std::time::Instant;
+use vyre_foundation::ir::Program;
+
+/// One IR program, the host inputs it was built for, and the resident resources
+/// those inputs were uploaded into.
+///
+/// Every case whose measured sample is a single program dispatch scored against
+/// a host answer carried these four fields under four spellings, followed by the
+/// same upload call and the same `input_bytes_total` sum. Naming the group once
+/// means the byte total cannot be summed from a different set of buffers than the
+/// ones that were uploaded.
+pub(crate) struct HostReferencePayload {
+    pub(crate) program: Program,
+    pub(crate) inputs: Vec<Vec<u8>>,
+    pub(crate) input_bytes_total: u64,
+    pub(crate) resident: Option<ResidentInputSet>,
+}
+
+impl HostReferencePayload {
+    /// Upload the inputs plus a zeroed resource per output binding, in the
+    /// program's declaration order.
+    ///
+    /// Raw-IR resident dispatch requires one resident handle per non-shared
+    /// binding, the output bindings included, so an inputs-only upload fails
+    /// closed at dispatch with a resource-count mismatch.
+    pub(crate) fn program_ordered_resident(
+        ctx: &BenchContext,
+        program: Program,
+        inputs: Vec<Vec<u8>>,
+        cleanup_label: &'static str,
+    ) -> Result<Self, BenchError> {
+        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &program,
+            &inputs,
+            cleanup_label,
+        )?;
+        Ok(Self {
+            input_bytes_total: input_bytes_total(&inputs),
+            program,
+            inputs,
+            resident,
+        })
+    }
+
+    /// Dispatch from host buffers every sample, with nothing left resident.
+    pub(crate) fn host_buffers(program: Program, inputs: Vec<Vec<u8>>) -> Self {
+        Self {
+            input_bytes_total: input_bytes_total(&inputs),
+            program,
+            inputs,
+            resident: None,
+        }
+    }
+}
+
+/// A prepared payload whose measured sample is one program dispatch scored
+/// against a host reference.
+///
+/// The case supplies the dispatch state and the host answer; the measured loop,
+/// the transfer accounting and the record assembly are not the case's to write.
+pub(crate) trait HostReferenced {
+    /// The program, inputs and resident resources this sample dispatches.
+    fn dispatch(&self) -> &HostReferencePayload;
+
+    /// The host answer the device sample is scored against.
+    fn reference(&self) -> Result<Vec<u8>, BenchError>;
+
+    /// Input bytes the host reference itself read.
+    ///
+    /// The default is the dispatched input total, which is right whenever the
+    /// reference consumes the same buffers the device does. A case whose
+    /// reference reads only part of them, such as a keystream cipher that never
+    /// reads its round-key table, reports the part it read.
+    fn reference_input_bytes(&self) -> u64 {
+        self.dispatch().input_bytes_total
+    }
+}
+
+/// Run one measured sample for a `HostReferenced` payload.
+///
+/// Usable directly as `CaseOps::measure`: instantiate it at the payload type.
+pub(crate) fn measure_against_reference<P: HostReferenced>(
+    ctx: &mut BenchContext,
+    prepared: &mut P,
+) -> Result<BenchRun, BenchError> {
+    let dispatch = prepared.dispatch();
+    let dispatched = dispatch_program_timed(
+        ctx,
+        &dispatch.program,
+        dispatch.resident.as_ref(),
+        &dispatch.inputs,
+        &ctx.dispatch_config,
+    )?;
+    let resident_used = dispatched.resident_used;
+    let timed = dispatched.timed;
+
+    let (reference, wall_ns) = timed_reference(|| prepared.reference());
+    let input_bytes = prepared.dispatch().input_bytes_total;
+    let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+
+    Ok(run_against_reference(
+        timed,
+        input_bytes,
+        transfer_accounting(input_bytes, output_bytes, resident_used),
+        ReferenceSample {
+            outputs: vec![reference?],
+            wall_ns,
+            input_bytes: prepared.reference_input_bytes(),
+        },
+    ))
+}
+
+/// The IR program a `HostReferenced` payload dispatches.
+///
+/// Usable directly as `CaseOps::program`.
+pub(crate) fn referenced_program<P: HostReferenced>(prepared: &P) -> Option<&Program> {
+    Some(&prepared.dispatch().program)
+}
+
+/// Bytes one `HostReferenced` sample reads and writes, from the program's own
+/// declared buffer sizes.
+///
+/// Usable directly as `CaseOps::bytes_touched` by a case whose traffic is exactly
+/// what its bindings declare.
+pub(crate) fn referenced_bytes_touched<P: HostReferenced>(prepared: &P) -> (u64, u64) {
+    crate::api::case::static_program_bytes_touched(&prepared.dispatch().program)
+}
 
 /// Run a CPU reference and report how long it took.
 ///

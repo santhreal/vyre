@@ -278,6 +278,24 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   Group-count and case-count floors make a collapsed table fail rather than
   report a clean sweep of an empty set. Both the dense-matvec and exploded-IFDS
   tables are enrolled, in four arms across two crates.
+- A source-inspecting test is informational only when
+  `docs/testing/STRUCTURAL_GATES.toml` declares it by file and test name with a
+  reason, and a row the tree no longer backs is itself a release blocker.
+  Twelve gates assert a property with no run-time witness, such as which crate
+  owns a symbol or that no second file spells a constant; they cannot be
+  rewritten as behaviour tests, and blocking on them permanently would have
+  been answered by deleting them. Keying on the pair means a reviewed
+  declaration exempts the gate it names and not the next one added to the same
+  file.
+- `scripts/check_branch_accounting.py` derives the campaign's own branch and
+  worktree state from git at run time and fails when it is inconsistent: a
+  branch no owner branch holds and no worktree carries is work nobody is doing
+  and nobody is merging, and a branch an owner already holds while a worktree
+  keeps it alive is a source tree every scan walks for nothing. Owners are the
+  integration branch and the subsystem tier, and a branch never accounts for
+  itself. The derivation refuses to run against a repository with fewer than
+  two local branches or no integration branch, because a check that silently
+  derives nothing is the same defect as no check.
 
 ### Changed
 
@@ -1534,6 +1552,37 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   and the substrate arm passes
   `vyre_libs::encoding::bitset_transform_pipeline::four_russians_dense_matvec_program`,
   and the failure message names which arm failed.
+- Seven release gate scripts run `scripts/lib/<name>.py` instead of piping a
+  Python program into an interpreter through a heredoc. A heredoc hides a whole
+  second language from review, lint, and syntax checking, and these were the
+  last seven. `scripts/cli_docs.py` invokes the workspace wrapper through
+  `scripts/lib/cargo_runner.py`, the Python twin of the shell runner that
+  already owned that decision.
+- Benchmark case declarations have one owner, `vyre_bench::cases::harness`.
+  Each of the eight honest cases open-coded the same ten-method `BenchCase`
+  block, and the copies had drifted: `search.binary.u32.1m` omitted the smoke
+  suite from its private list and so ran in no smoke suite, and
+  `regex.backtracking.adversarial` inherited a byte-accounting default that
+  reported reading and writing nothing because its prepared payload was not a
+  bare program. A case is now a static `WorkloadDescription` plus a `CaseOps`
+  record of the operations a description cannot carry, and it reports which
+  owner built it through `BenchCase::declaration_owner`.
+  `vyre_bench::cases::harness::HONEST_SUITES` is the single honest suite list,
+  replacing two verbatim copies and one per-case spelling. The two YARA-like
+  condition workloads likewise share one owner each for the nine per-rule
+  parameters, for the five-condition conjunction their device programs are
+  scored against, and for the four IR predicate blocks, in
+  `vyre_bench::cases::conditional`; both previously held a private copy of all
+  three, so a predicate dropped from one copy of the host oracle would have
+  read as a device correctness violation rather than a host bug. Callers still
+  concatenate the IR blocks in their own order, so both programs keep their
+  recorded fingerprints. A new gate walks the inventory registry at run time
+  and fails when an honest case reports no declaration owner or an owner
+  serving only itself.
+- Two coverage gates that derive their member set from source are declared in
+  `docs/testing/STRUCTURAL_GATES.toml`: the resident queue materializer variant
+  scan and the published quantized entry-point scan. Each asserts the absence
+  of a case or a row, which no execution of the covered code can witness.
 
 ### Removed
 
@@ -2624,6 +2673,27 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `Shl`/`Shr` are now total, matching IEEE-754 division and the
   shift-count-modulo-width rule the backends lower to, instead of bailing on
   NaN, zero or a negative count.
+- Every evidence subcommand prints its blockers to stderr before exiting 1,
+  through the one owner of that epilogue,
+  `xtask::output_arg::report_evidence_artifact`. It wrote the artifact and
+  exited on a non-empty blocker list without naming a single entry, so nine
+  gates reported a bare exit code and the cause was readable only by opening
+  the JSON. `xtask::release::release_conformance` returned a count of failing
+  backends instead of the failures; it now returns each one prefixed by its
+  backend id. `xtask_registry::release::conformance_matrix` kept a private
+  write-then-exit epilogue beside the owner and is routed through it.
+- The unbounded-read rule in `xtask::gates::hygiene_matrix` matches a call to
+  `fs::read` rather than the text `fs::read(`, which also matched
+  `BufferRefs::read(count_buffer)` and reported a graph accessor as an
+  unbounded filesystem read. The release-tooling scan reads `.py` alongside
+  `.sh` and `.yml`, so a rule that a shell script cannot evade cannot be evaded
+  by moving the body into a Python file beside it.
+- `docs-check` and `feature-matrix` pass. The generated testing guide for
+  `vyre-registry-link` had no row in the documentation manifest, and
+  `vyre-test-support` declared features with no explicit default policy. A tree
+  contract now derives the workspace member list at run time and fails when a
+  member has no classified testing guide row, or when a row names a crate the
+  workspace no longer has.
 
 ## [0.7.1] - 2026-08-01
 

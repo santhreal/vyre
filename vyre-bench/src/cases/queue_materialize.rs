@@ -131,7 +131,7 @@ pub(crate) fn queue_materialize_sequence_fingerprint<S>(
     prepared: &QueueMaterializePrepared<S>,
     extra_values: &[u32],
 ) -> [u8; 32] {
-    crate::cases::queue_stage::queue_materialize_sequence_fingerprint(
+    crate::cases::queue_stage::staged_sequence_fingerprint(
         domain,
         [
             &prepared.reset_program,

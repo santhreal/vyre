@@ -1,5 +1,6 @@
 //! Shared `--output` parsing for evidence-producing xtask commands.
 
+use std::fmt::{Display, Write as _};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
@@ -143,11 +144,43 @@ pub fn parsed_or_exit<T>(parsed: Result<T, String>) -> T {
 /// what to open, and a non-empty blocker list is a failing gate. Each command
 /// carried its own copy, so a command that forgot the exit would have written a
 /// blocked artifact and reported success.
-pub fn report_evidence_artifact(command: &str, output: &Path, blockers: usize) {
+///
+/// The blockers themselves go to stderr before the exit. A command that printed
+/// only the artifact path and exited 1 left a caller with an exit code and no
+/// cause, so a wrong binary reporting "not implemented" and a real gate failure
+/// were indistinguishable at the terminal. Reading the reason out of the JSON is
+/// not the caller's job.
+pub fn report_evidence_artifact(command: &str, output: &Path, blockers: &[impl Display]) {
     println!("{command}: wrote {}", output.display());
-    if blockers != 0 {
-        std::process::exit(1);
+    let Some(report) = evidence_blocker_report(command, output, blockers) else {
+        return;
+    };
+    eprint!("{report}");
+    std::process::exit(1);
+}
+
+/// Render the stderr blocker report, or `None` when the gate passed.
+///
+/// Separate from the printing so the contract can be asserted without a process
+/// exit: every blocker reaches the reader, not just their count.
+fn evidence_blocker_report(
+    command: &str,
+    output: &Path,
+    blockers: &[impl Display],
+) -> Option<String> {
+    if blockers.is_empty() {
+        return None;
     }
+    let mut report = format!("{command}: {} blocker(s):\n", blockers.len());
+    for blocker in blockers {
+        let _ = writeln!(report, "  {blocker}");
+    }
+    let _ = writeln!(
+        report,
+        "Fix: resolve every blocker listed above; the full record is in {}.",
+        output.display()
+    );
+    Some(report)
 }
 
 /// Create `path`'s parent directory, reporting the failure and exiting 1.
@@ -228,6 +261,43 @@ pub(crate) fn cargo_runner(workspace_root: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// WHY: `release-evidence` spawned the wrong binary for twelve of its
+    /// thirteen children and every one reported "not implemented". Nothing
+    /// noticed for a merge cycle, because a failing evidence command printed the
+    /// artifact path and exited 1: a wrong process and a real gate failure were
+    /// the same two lines. Every blocker the artifact records must reach stderr,
+    /// so the cause is on the terminal and not only inside the JSON.
+    #[test]
+    fn every_blocker_reaches_the_reader() {
+        let blockers = [
+            "vyre-test-support defines 1 feature(s) but no explicit default feature policy"
+                .to_string(),
+            "23 release-blocking source hygiene finding(s) remain".to_string(),
+        ];
+
+        let report = evidence_blocker_report("feature-matrix", Path::new("out/m.json"), &blockers)
+            .expect("Fix: a non-empty blocker list must produce a report.");
+
+        for blocker in &blockers {
+            assert!(
+                report.contains(blocker.as_str()),
+                "Fix: `{blocker}` never reached the reader; report was:\n{report}"
+            );
+        }
+        assert!(report.contains("feature-matrix: 2 blocker(s):"), "{report}");
+        assert!(report.contains("out/m.json"), "{report}");
+    }
+
+    /// A passing gate says nothing extra, so a clean run stays one line.
+    #[test]
+    fn an_empty_blocker_list_produces_no_report() {
+        let empty: [String; 0] = [];
+        assert_eq!(
+            evidence_blocker_report("feature-matrix", Path::new("out/m.json"), &empty),
+            None
+        );
+    }
 
     /// Locks the shared default path contract when no override is supplied.
     #[test]
