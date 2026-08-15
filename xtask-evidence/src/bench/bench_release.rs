@@ -1,28 +1,20 @@
-//! R1  -  single release-bench surface.
+//! Hold the canonical release benchmark axes to the recorded CUDA evidence.
 //!
-//! `cargo xtask bench-release` runs the canonical cold + warm + scale
-//! + correctness sweep and prints **one number per axis** as the final
-//! output. Designed to be pasted into release notes / marketing without
-//! editing  -  every line is `axis_name=value units`.
+//! The five headline axes a release quotes are read from
+//! `release/evidence/benchmarks/bench-release-axes.json`, and this gate is what
+//! stands between that file and a release note. It measures nothing itself: the
+//! measurement is `release-benchmarks`, and the axes are only as current as the
+//! run that recorded them.
 //!
-//! This is intentionally a thin coordinator. The actual measurement is
-//! delegated to existing benches and probes (criterion harnesses in
-//! `vyre-bench`, GPU dispatch latency probes in `vyre-driver-wgpu`, and
-//! conformance parity evidence in `vyre-conform`). This xtask collapses the
-//! measurement surfaces into one canonical entry point, so the active Vyre
-//! release numbers are reproducible by anyone running one command.
-//!
-//! Substrate-attribution per-axis (which optimization fired and saved
-//! how much) lives behind `VYRE_TRACE=1` and the substrate audit log
-//! (R4  -  `DriverObservability::to_audit_log`); this xtask just surfaces
-//! the headline numbers.
+//! Substrate attribution per axis, which optimization fired and how much it
+//! saved, lives behind `VYRE_TRACE=1` and the substrate audit log. This gate
+//! reports the headline numbers as notes and judges only their provenance.
 
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
-use std::time::Instant;
 
 use serde_json::Value;
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 use crate::bench::benchmark_evidence_semantics::{
     benchmark_evidence_blocker_issues, cuda_release_axes_source_artifact_issues,
@@ -37,91 +29,121 @@ const AXIS_ULP_DRIFT_MAX: &str = "ulp_drift_max";
 const AXIS_MAX_VRAM_MIB: &str = "max_vram_mib";
 const MAX_BENCH_RELEASE_REPORT_BYTES: u64 = 16_777_216;
 
-pub(crate) fn run(args: &[String]) {
-    let started = Instant::now();
-    eprintln!(
-        "vyre xtask bench-release  -  canonical v{} release axes",
-        xtask::release::release_train::vyre_version()
-    );
-    eprintln!("  source: release benchmark evidence artifacts");
-    eprintln!();
+/// Default location of the recorded release benchmark evidence.
+const DEFAULT_EVIDENCE_DIR: &str = "release/evidence/benchmarks";
 
-    let evidence_dir = parse_evidence_dir(args).unwrap_or_else(|message| fatal(&message));
-    eprintln!("==> reading evidence from {}", evidence_dir.display());
-    let axes = load_release_axes(&evidence_dir).unwrap_or_else(|message| fatal(&message));
+/// Holds the quotable release axes to the CUDA evidence they claim to come from.
+pub struct BenchReleaseGate;
 
-    let report = ReleaseReport {
-        warm_us_per_file: require_f64_axis(&axes, AXIS_WARM_US_PER_FILE)
-            .unwrap_or_else(|message| fatal(&message)),
-        cold_pipeline_build_ms: require_f64_axis(&axes, AXIS_COLD_PIPELINE_BUILD_MS)
-            .unwrap_or_else(|message| fatal(&message)),
-        gbs_scan_throughput: require_f64_axis(&axes, AXIS_GBS_SCAN_THROUGHPUT)
-            .unwrap_or_else(|message| fatal(&message)),
-        ulp_drift_max: require_u32_axis(&axes, AXIS_ULP_DRIFT_MAX)
-            .unwrap_or_else(|message| fatal(&message)),
-        max_vram_mib: require_u64_axis(&axes, AXIS_MAX_VRAM_MIB)
-            .unwrap_or_else(|message| fatal(&message)),
-    };
+impl Gate for BenchReleaseGate {
+    fn name(&self) -> &'static str {
+        "bench-release"
+    }
 
-    let elapsed = started.elapsed();
-    eprintln!();
-    eprintln!("==> bench-release complete in {elapsed:.2?}");
-    eprintln!();
-    report.print_release_notes_block(xtask::release::release_train::vyre_version());
-}
+    fn help(&self) -> &'static str {
+        "Judge the five canonical release axes recorded in \
+         release/evidence/benchmarks/bench-release-axes.json. Proves the axes file and the CUDA \
+         release suite beside it are readable, carry no blocker, pass the CUDA source-artifact \
+         validation that ties an axis to the run that produced it, and that every one of the \
+         five axes is present and parses as its declared numeric type. Reports the axis values \
+         as notes. Proves nothing about current performance: it runs no benchmark, and an axis \
+         recorded a month ago reads exactly the same as one recorded today."
+    }
 
-struct ReleaseReport {
-    warm_us_per_file: f64,
-    cold_pipeline_build_ms: f64,
-    gbs_scan_throughput: f64,
-    ulp_drift_max: u32,
-    max_vram_mib: u64,
-}
-
-impl ReleaseReport {
-    fn print_release_notes_block(&self, vyre_version: &str) {
-        println!("# vyre v{vyre_version}  -  bench-release axes");
-        println!();
-        println!("{AXIS_WARM_US_PER_FILE}={} us", self.warm_us_per_file);
-        println!(
-            "{AXIS_COLD_PIPELINE_BUILD_MS}={} ms",
-            self.cold_pipeline_build_ms
-        );
-        println!(
-            "{AXIS_GBS_SCAN_THROUGHPUT}={} GiB/s",
-            self.gbs_scan_throughput
-        );
-        println!("{AXIS_ULP_DRIFT_MAX}={} ulp", self.ulp_drift_max);
-        println!("{AXIS_MAX_VRAM_MIB}={} MiB", self.max_vram_mib);
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let evidence_dir = match evidence_dir(ctx) {
+            Ok(directory) => directory,
+            Err(message) => {
+                return Ok(Report::with_findings(vec![Finding::new(
+                    message,
+                    "Pass --evidence-dir with the directory holding the recorded release \
+                     benchmark artifacts.",
+                )]))
+            }
+        };
+        Ok(judge(&evidence_dir))
     }
 }
 
-#[allow(dead_code)]
-fn _ignore_exit_code_warning() -> ExitCode {
-    ExitCode::SUCCESS
+/// Every judgement the recorded axes support.
+///
+/// Each axis used to abort the command on the first failure, so a release note
+/// author learned about one missing axis per run. All five are judged here.
+fn judge(evidence_dir: &Path) -> Report {
+    let mut report = Report::clean();
+    let axes = match load_release_axes(evidence_dir, &mut report) {
+        Some(axes) => axes,
+        None => return report,
+    };
+    let mut values = Vec::new();
+    for (axis, units, kind) in [
+        (AXIS_WARM_US_PER_FILE, "us", AxisKind::Float),
+        (AXIS_COLD_PIPELINE_BUILD_MS, "ms", AxisKind::Float),
+        (AXIS_GBS_SCAN_THROUGHPUT, "GiB/s", AxisKind::Float),
+        (AXIS_ULP_DRIFT_MAX, "ulp", AxisKind::U32),
+        (AXIS_MAX_VRAM_MIB, "MiB", AxisKind::U64),
+    ] {
+        match axis_value(&axes, axis, kind) {
+            Ok(value) => values.push(format!("{axis}={value} {units}")),
+            Err(message) => report.find(Finding::in_file(
+                evidence_dir.join("bench-release-axes.json"),
+                message,
+                "Rerun `cargo_full run --bin xtask -- release-benchmarks --backend cuda` on a \
+                 release host so the axis is recorded with the run that measured it.",
+            )),
+        }
+    }
+    report.note(format!(
+        "vyre v{} release axes: {}",
+        xtask::release::release_train::vyre_version(),
+        values.join(", ")
+    ));
+    report
 }
 
-fn parse_evidence_dir(args: &[String]) -> Result<PathBuf, String> {
-    let mut evidence_dir = PathBuf::from("release/evidence/benchmarks");
-    let mut i = 2usize;
-    while i < args.len() {
-        match args[i].as_str() {
+/// Which numeric type an axis must parse as.
+#[derive(Clone, Copy)]
+enum AxisKind {
+    Float,
+    U32,
+    U64,
+}
+
+/// One axis's recorded value, or why it cannot be quoted.
+fn axis_value(axes: &Value, axis: &str, kind: AxisKind) -> Result<String, String> {
+    let raw = json_axis_text(axes, axis).ok_or_else(|| {
+        format!(
+            "canonical bench-release axes are missing `{axis}`"
+        )
+    })?;
+    let parsed = match kind {
+        AxisKind::Float => raw.parse::<f64>().is_ok(),
+        AxisKind::U32 => raw.parse::<u32>().is_ok(),
+        AxisKind::U64 => raw.parse::<u64>().is_ok(),
+    };
+    if parsed {
+        Ok(raw)
+    } else {
+        Err(format!(
+            "axis `{axis}` value `{raw}` is not the number type the axis declares"
+        ))
+    }
+}
+
+/// The directory holding the recorded artifacts, resolved against the checkout.
+fn evidence_dir(ctx: &GateCtx) -> Result<PathBuf, String> {
+    let mut evidence_dir = PathBuf::from(DEFAULT_EVIDENCE_DIR);
+    let mut index = 0;
+    while index < ctx.args.len() {
+        match ctx.args[index].as_str() {
+            "--write" => index += 1,
             "--evidence-dir" => {
-                let value = args.get(i + 1).ok_or_else(|| {
+                let value = ctx.args.get(index + 1).ok_or_else(|| {
                     "Fix: --evidence-dir requires a path to release benchmark artifacts."
                         .to_string()
                 })?;
                 evidence_dir = PathBuf::from(value);
-                i += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo xtask bench-release [--evidence-dir PATH]\n\n\
-                     Reads release benchmark evidence and prints the canonical v{} axes.\n\
-                     Generate evidence first with `cargo_full run --bin xtask -- release-benchmarks --backend cuda`.",
-                    xtask::release::release_train::vyre_version()
-                );
-                std::process::exit(0);
+                index += 2;
             }
             other => {
                 return Err(format!(
@@ -130,60 +152,61 @@ fn parse_evidence_dir(args: &[String]) -> Result<PathBuf, String> {
             }
         }
     }
-    Ok(evidence_dir)
+    Ok(ctx.root.join(evidence_dir))
 }
 
-fn require_f64_axis(axes: &Value, axis: &str) -> Result<f64, String> {
-    let raw = require_axis_text(axes, axis)?;
-    raw.parse::<f64>().map_err(|_| {
-        format!("Fix: axis `{axis}` value `{raw}` is not a floating-point benchmark number.")
-    })
-}
-
-fn require_u32_axis(axes: &Value, axis: &str) -> Result<u32, String> {
-    let raw = require_axis_text(axes, axis)?;
-    raw.parse::<u32>()
-        .map_err(|_| format!("Fix: axis `{axis}` value `{raw}` is not an unsigned integer."))
-}
-
-fn require_u64_axis(axes: &Value, axis: &str) -> Result<u64, String> {
-    let raw = require_axis_text(axes, axis)?;
-    raw.parse::<u64>()
-        .map_err(|_| format!("Fix: axis `{axis}` value `{raw}` is not an unsigned integer."))
-}
-
-fn require_axis_text(axes: &Value, axis: &str) -> Result<String, String> {
-    json_axis_text(axes, axis).ok_or_else(|| {
-        format!(
-            "Fix: canonical bench-release axes are missing `{axis}`. Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` with current CUDA evidence."
-        )
-    })
-}
-
-fn load_release_axes(evidence_dir: &Path) -> Result<Value, String> {
+/// The recorded axes, once both artifacts have been judged fit to read.
+///
+/// Every blocker in either artifact and every source-artifact validation issue
+/// is reported. The command used to stop at the first one, so a reader learned
+/// about a single issue per run and could not tell a lone problem from a wall
+/// of them.
+fn load_release_axes(evidence_dir: &Path, report: &mut Report) -> Option<Value> {
     let axes_path = evidence_dir.join("bench-release-axes.json");
-    let axes = read_json_report(&axes_path, "canonical bench-release axes")?;
-    reject_report_blockers(&axes_path, &axes)?;
+    let axes = read_json_report(&axes_path, "canonical bench-release axes", report);
     let suite_path = evidence_dir.join("cuda-release-suite.json");
-    let cuda_suite = read_json_report(&suite_path, "CUDA release suite")?;
-    reject_report_blockers(&suite_path, &cuda_suite)?;
+    let cuda_suite = read_json_report(&suite_path, "CUDA release suite", report);
+    let (Some(axes), Some(cuda_suite)) = (axes, cuda_suite) else {
+        return None;
+    };
+    report_blockers(&axes_path, &axes, report);
+    report_blockers(&suite_path, &cuda_suite, report);
     let workspace_root = workspace_root_for_evidence_dir(evidence_dir);
-    let issues = cuda_release_axes_source_artifact_issues(&workspace_root, &axes, &cuda_suite);
-    if let Some(first) = issues.first() {
-        return Err(format!(
-            "Fix: canonical bench-release axes `{}` failed CUDA source artifact validation with {} issue(s); first issue: {first}",
-            axes_path.display(),
-            issues.len()
+    for issue in cuda_release_axes_source_artifact_issues(&workspace_root, &axes, &cuda_suite) {
+        report.find(Finding::in_file(
+            axes_path.clone(),
+            format!("CUDA source artifact validation: {issue}"),
+            "An axis whose source artifact does not back it is a number with no run behind it. \
+             Rerun release-benchmarks --backend cuda on a release host.",
         ));
     }
-    Ok(axes)
+    Some(axes)
 }
 
-fn read_json_report(path: &Path, label: &str) -> Result<Value, String> {
-    let contents =
-        read_text_bounded(path).map_err(|error| format!("Fix: cannot read {label} `{}`: {error}. Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` first.", path.display()))?;
-    serde_json::from_str::<Value>(&contents)
-        .map_err(|error| format!("Fix: invalid {label} JSON `{}`: {error}.", path.display()))
+fn read_json_report(path: &Path, label: &str, report: &mut Report) -> Option<Value> {
+    let contents = match read_text_bounded(path) {
+        Ok(contents) => contents,
+        Err(error) => {
+            report.find(Finding::in_file(
+                path.to_path_buf(),
+                format!("cannot read {label}: {error}"),
+                "Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` on a \
+                 release host and commit the artifact.",
+            ));
+            return None;
+        }
+    };
+    match serde_json::from_str::<Value>(&contents) {
+        Ok(value) => Some(value),
+        Err(error) => {
+            report.find(Finding::in_file(
+                path.to_path_buf(),
+                format!("invalid {label} JSON: {error}"),
+                "Regenerate the artifact. Benchmark evidence nothing can parse records nothing.",
+            ));
+            None
+        }
+    }
 }
 
 fn workspace_root_for_evidence_dir(evidence_dir: &Path) -> PathBuf {
@@ -207,16 +230,16 @@ fn workspace_root_for_evidence_dir(evidence_dir: &Path) -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
-fn reject_report_blockers(path: &Path, value: &Value) -> Result<(), String> {
+/// Every blocker contract issue one benchmark artifact records.
+fn report_blockers(path: &Path, value: &Value, report: &mut Report) {
     let evidence = path.to_string_lossy();
-    let blockers = benchmark_evidence_blocker_issues(&evidence, value);
-    match blockers.first() {
-        Some(first) => Err(format!(
-            "Fix: benchmark evidence `{}` reports {} blocker contract issue(s); first issue: {first}",
-            path.display(),
-            blockers.len()
-        )),
-        None => Ok(()),
+    for issue in benchmark_evidence_blocker_issues(&evidence, value) {
+        report.find(Finding::in_file(
+            path.to_path_buf(),
+            format!("benchmark evidence blocker contract: {issue}"),
+            "Resolve the blocker on a release host and rerun release-benchmarks so the artifact \
+             records a clean run.",
+        ));
     }
 }
 
@@ -228,17 +251,15 @@ fn json_axis_text(value: &Value, axis: &str) -> Option<String> {
     }
 }
 
-fn fatal(message: &str) -> ! {
-    eprintln!("error: {message}");
-    std::process::exit(1);
-}
-
 fn read_text_bounded(path: &Path) -> io::Result<String> {
     xtask::output_arg::read_text_bounded(
         path,
         MAX_BENCH_RELEASE_REPORT_BYTES,
         "release bench report",
     )
+}
+        _ => None,
+    }
 }
 
 #[cfg(test)]

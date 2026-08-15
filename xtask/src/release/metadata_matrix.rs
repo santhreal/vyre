@@ -1,11 +1,18 @@
-//! Crate metadata release evidence for Vyre.
+//! Hold the crate metadata evidence to the package tables the manifests declare.
 
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::manifest_walk::{workspace_package as load_workspace_package, MAX_MANIFEST_BYTES};
+use crate::artifact_gate::{self, Inspection};
+use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::manifest_walk::{
+    self, workspace_package as load_workspace_package, PackageManifest, MAX_MANIFEST_BYTES,
+};
 use crate::release::release_train;
+
+/// The artifact this gate owns, relative to the workspace root.
+const ARTIFACT: &str = "release/evidence/metadata/metadata-matrix.json";
 
 #[derive(Debug, Serialize)]
 struct MetadataMatrix {
@@ -72,15 +79,46 @@ fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
     ]
 }
 
-pub(crate) fn run(args: &[String]) {
-    let output = crate::output_arg::parsed_or_exit(parse_output(args));
-    let vyre_root = crate::checkout::checkout_root();
+/// Holds the metadata matrix to the package tables in the manifests.
+pub struct MetadataMatrixGate;
+
+impl Gate for MetadataMatrixGate {
+    fn name(&self) -> &'static str {
+        "metadata-matrix"
+    }
+
+    fn help(&self) -> &'static str {
+        "Regenerate release/evidence/metadata/metadata-matrix.json from every workspace manifest \
+         and report each line the committed artifact disagrees on. Proves every publishable crate \
+         declares version, description, license, an https repository and a readme that exists and \
+         is not empty, that its version is the one the release train names, that no manifest \
+         carries a [patch.crates-io] section, and that the three required release surfaces are \
+         present. Proves nothing about whether a crate packages or publishes: that is \
+         package-readiness."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(&ctx.root),
+        ))
+    }
+}
+
+/// What the manifests declare about metadata, and the artifact recording it.
+fn inspect(vyre_root: &Path) -> Inspection {
+    let mut inspection = Inspection::new();
     let mut packages = Vec::new();
     let mut metadata_blockers = Vec::new();
     let workspace_package =
-        load_workspace_package(&vyre_root, "release metadata", &mut metadata_blockers);
+        load_workspace_package(vyre_root, "release metadata", &mut metadata_blockers);
     collect_packages(
-        &vyre_root,
+        vyre_root,
         workspace_package.as_ref(),
         &mut packages,
         &mut metadata_blockers,
@@ -102,17 +140,56 @@ pub(crate) fn run(args: &[String]) {
                 .map(|blocker| format!("{}: {blocker}", package.name))
         })
         .collect();
+    for package in &packages {
+        for blocker in &package.blockers {
+            inspection.blocked(
+                ARTIFACT,
+                format!("{}: {blocker}", package.name),
+                format!("Correct the [package] table in {}.", package.manifest),
+            );
+        }
+    }
+    for blocker in &metadata_blockers {
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Repair the manifest the sentence names. A metadata matrix built from a tree it could \
+             not finish reading describes a smaller workspace than the one that ships.",
+        );
+    }
+    for blocker in &patch_blockers {
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Make the root manifest readable so the patch scan can run. A scan that cannot read \
+             its input reports zero patches, which is indistinguishable from a clean tree.",
+        );
+    }
     blockers.extend(metadata_blockers);
     blockers.extend(patch_blockers);
-    blockers.extend(
-        missing_required_release_surfaces
-            .iter()
-            .map(|surface| format!("missing required release surface `{surface}`")),
-    );
+    for surface in &missing_required_release_surfaces {
+        let blocker = format!("missing required release surface `{surface}`");
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            format!(
+                "The release train names `{surface}` at the declared version with a README and \
+                 publishable-crate kind. Add the crate, or drop the surface from the release train."
+            ),
+        );
+        blockers.push(blocker);
+    }
     if root_patch_section_count > 0 {
-        blockers.push(format!(
+        let blocker = format!(
             "release manifests contain {root_patch_section_count} [patch.crates-io] section(s); remove root patches before publishing"
-        ));
+        );
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Delete the [patch.crates-io] section from the root manifest. A published crate built \
+             against a patched dependency is not the crate anyone else will build.",
+        );
+        blockers.push(blocker);
     }
     let publishable_package_count = packages
         .iter()
@@ -137,9 +214,8 @@ pub(crate) fn run(args: &[String]) {
         packages,
         blockers,
     };
-
-    crate::output_arg::write_json(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("metadata-matrix", &output, &matrix.blockers);
+    inspection.generates(ARTIFACT, &matrix);
+    inspection
 }
 
 fn root_patch_section_count(manifests: &[PathBuf]) -> (usize, Vec<String>) {
@@ -175,7 +251,7 @@ fn collect_packages(
     packages: &mut Vec<PackageMetadata>,
     blockers: &mut Vec<String>,
 ) {
-    crate::manifest_walk::collect_manifests(root, "metadata", packages, blockers, |path| {
+    manifest_walk::collect_manifests(root, "metadata", packages, blockers, |path| {
         parse_package(path, workspace_package)
     });
 }
@@ -184,31 +260,13 @@ fn parse_package(
     path: &Path,
     workspace_package: Option<&toml::value::Table>,
 ) -> Result<Option<PackageMetadata>, String> {
-    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "release metadata")
-        .map_err(|error| {
-        format!(
-            "failed to read package manifest `{}`: {error}",
-            path.display()
-        )
-    })?;
-    let value = toml::from_str::<toml::Value>(&text).map_err(|error| {
-        format!(
-            "failed to parse package manifest `{}`: {error}",
-            path.display()
-        )
-    })?;
-    let Some(table) = value.get("package").and_then(toml::Value::as_table) else {
+    let Some(PackageManifest { document, name }) =
+        manifest_walk::parse_package_manifest(path, "release metadata")?
+    else {
         return Ok(None);
     };
-    let Some(name) = table
-        .get("name")
-        .and_then(toml::Value::as_str)
-        .map(str::to_string)
-    else {
-        return Err(format!(
-            "package manifest `{}` is missing package.name",
-            path.display()
-        ));
+    let Some(table) = document.get("package").and_then(toml::Value::as_table) else {
+        return Ok(None);
     };
     let version = inherited_string(table, workspace_package, "version");
     let description = inherited_string(table, workspace_package, "description");
@@ -398,19 +456,6 @@ fn expected_version(name: &str, release_group: &str, release_kind: &str) -> Opti
         return Some(required.expected_version);
     }
     release_train::release_group_version(release_group)
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    crate::output_arg::parse_output_arg(
-        args,
-        "metadata-matrix",
-        "Writes Vyre crate metadata evidence.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    crate::checkout::checkout_root().join("release/evidence/metadata/metadata-matrix.json")
 }
 
 #[cfg(test)]

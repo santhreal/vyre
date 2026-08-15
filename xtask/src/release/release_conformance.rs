@@ -1,4 +1,4 @@
-//! Generate real backend conformance evidence artifacts.
+//! Hold the recorded backend conformance evidence to the op matrix and to itself.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -8,6 +8,8 @@ use std::process::Command;
 
 // The op matrix and everything derived from it have one owner, so a second
 // copy here cannot drift from the registered-op matrix again.
+use crate::artifact_gate::{self, Inspection};
+use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
 };
@@ -34,7 +36,7 @@ struct PairResult {
     replay_capsule: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 struct BackendDiffSummary {
     op_id: String,
     backend_id: String,
@@ -46,7 +48,7 @@ struct BackendDiffSummary {
     source: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct BackendConformanceArtifact {
     schema_version: u32,
     backend_id: String,
@@ -75,56 +77,258 @@ struct BackendConformanceArtifact {
     blockers: Vec<String>,
 }
 
-pub(crate) fn run(args: &[String]) {
-    let config = match parse_args(args) {
-        Ok(config) => config,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
-    let workspace_root = crate::checkout::checkout_root();
-    let mut failures = Vec::new();
-    for backend in &config.backends {
-        let artifact = match backend.as_str() {
-            "cuda" => "release/evidence/conformance/cuda-conformance.json",
-            "wgpu" => "release/evidence/conformance/wgpu-conformance.json",
-            "metal" => "release/evidence/conformance/metal-conformance.json",
-            "cpu-ref" | "reference" => "release/evidence/conformance/reference-conformance.json",
-            other => {
-                failures.push(format!("unsupported release conformance backend `{other}`"));
-                continue;
+/// Holds the recorded backend conformance evidence to the op matrix and to itself.
+pub struct ReleaseConformanceGate;
+
+impl Gate for ReleaseConformanceGate {
+    fn name(&self) -> &'static str {
+        "release-conformance"
+    }
+
+    fn help(&self) -> &'static str {
+        "Judge the recorded backend conformance artifacts under \
+         release/evidence/conformance. Proves each requested backend recorded an artifact, that \
+         it covers every op id the op matrix requires, reaches the release op-pair floor, \
+         repeats no op id, emits no empty op id, carries no failed pair, carries no pair from \
+         another backend, and that its diff summaries are the ones its own pairs imply. Proves \
+         nothing by itself about the hardware: no dispatch runs unless --write is passed, and a \
+         recorded artifact is only as current as the run that wrote it. With --write it runs \
+         vyre-conform against each requested backend and rewrites the artifacts."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let config = match parse_args(&ctx.args) {
+            Ok(config) => config,
+            Err(message) => {
+                return Ok(Report::with_findings(vec![Finding::new(
+                    message,
+                    "Pass --backend with one of cuda, wgpu, metal, cpu-ref, reference, or all.",
+                )]))
             }
         };
-        if let Err(errors) = run_backend_conformance(&workspace_root, backend, artifact) {
-            failures.extend(errors);
-        }
+        let inspection = if ctx.write {
+            measure(&ctx.root, &config)
+        } else {
+            audit(&ctx.root, &config)
+        };
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspection,
+        ))
     }
-    write_release_log(&workspace_root, &config.backends, &failures);
-    if !failures.is_empty() {
-        eprintln!("release-conformance: {} blocker(s):", failures.len());
-        for failure in failures {
-            eprintln!("  - {failure}");
-        }
-        std::process::exit(1);
-    }
-    println!("release-conformance: wrote backend conformance artifacts");
 }
 
-/// Run one backend's conformance sweep, returning every blocker it recorded.
-///
-/// The blockers are returned individually rather than as a count, because the
-/// artifact they were also written to is not what a caller reads at the terminal.
-fn run_backend_conformance(
-    workspace_root: &Path,
-    backend: &str,
-    artifact: &str,
-) -> Result<(), Vec<String>> {
-    let backend_id = if backend == "reference" {
+/// The artifact each backend records, keyed by its normalised backend id.
+const BACKEND_ARTIFACTS: &[(&str, &str)] = &[
+    ("cuda", "release/evidence/conformance/cuda-conformance.json"),
+    ("wgpu", "release/evidence/conformance/wgpu-conformance.json"),
+    ("metal", "release/evidence/conformance/metal-conformance.json"),
+    (
+        "cpu-ref",
+        "release/evidence/conformance/reference-conformance.json",
+    ),
+];
+
+const RELEASE_LOG: &str = "release/evidence/conformance/release-gate-log.json";
+
+/// `reference` is the caller's spelling of the backend the runner calls `cpu-ref`.
+fn backend_id_of(backend: &str) -> &str {
+    if backend == "reference" {
         "cpu-ref"
     } else {
         backend
+    }
+}
+
+fn artifact_of(backend_id: &str) -> Option<&'static str> {
+    BACKEND_ARTIFACTS
+        .iter()
+        .find(|(id, _)| *id == backend_id)
+        .map(|(_, artifact)| *artifact)
+}
+
+/// Judge the artifacts already on disk, running no dispatch.
+///
+/// This is what the sweep does. Every assertion the generator made at write
+/// time is made again here against the committed record, so an artifact that
+/// was correct when written and is wrong against today's op matrix is caught by
+/// a run that needs no device.
+fn audit(workspace_root: &Path, config: &Config) -> Inspection {
+    let mut inspection = Inspection::new();
+    for backend in &config.backends {
+        let backend_id = backend_id_of(backend);
+        let Some(artifact) = artifact_of(backend_id) else {
+            inspection.find(Finding::new(
+                format!("unsupported release conformance backend `{backend}`"),
+                "Pass one of cuda, wgpu, metal, cpu-ref, reference, or all.",
+            ));
+            continue;
+        };
+        let recorded = match read_text_bounded(&workspace_root.join(artifact)) {
+            Ok(text) => text,
+            Err(error) => {
+                inspection.blocked(
+                    artifact,
+                    format!("{backend_id} conformance evidence could not be read: {error}"),
+                    "Run `cargo_full run --bin xtask -- release-conformance --backend \
+                     <backend> --write` on a host with that device and commit the artifact.",
+                );
+                continue;
+            }
+        };
+        let recorded: BackendConformanceArtifact = match serde_json::from_str(&recorded) {
+            Ok(value) => value,
+            Err(error) => {
+                inspection.blocked(
+                    artifact,
+                    format!("{backend_id} conformance evidence is not readable as a conformance artifact: {error}"),
+                    "Regenerate it with --write. A conformance artifact nothing can parse records nothing.",
+                );
+                continue;
+            }
+        };
+        if recorded.backend_id != backend_id {
+            inspection.blocked(
+                artifact,
+                format!(
+                    "{artifact} records backend `{}`, not `{backend_id}`",
+                    recorded.backend_id
+                ),
+                "One artifact holds one backend. Regenerate it for the backend its path names.",
+            );
+        }
+        let assessed = assess(
+            workspace_root,
+            backend_id,
+            &recorded.pairs,
+            &recorded.stdout_diagnostics,
+            Vec::new(),
+        );
+        for blocker in &assessed.blockers {
+            inspection.blocked(
+                artifact,
+                format!("{backend_id}: {blocker}"),
+                "Fix the operation, the op matrix row, or the conformance runner the sentence \
+                 names, then rerun with --write on a host with that device.",
+            );
+        }
+        for divergence in recorded_summary_divergences(&recorded, &assessed) {
+            inspection.blocked(
+                artifact,
+                divergence,
+                "The artifact's own summary no longer follows from the pairs beside it, so one \
+                 of the two was edited. Regenerate it with --write.",
+            );
+        }
+    }
+    audit_release_log(workspace_root, &mut inspection);
+    inspection
+}
+
+/// Blockers the release log recorded, and whether it is there to read at all.
+fn audit_release_log(workspace_root: &Path, inspection: &mut Inspection) {
+    let text = match read_text_bounded(&workspace_root.join(RELEASE_LOG)) {
+        Ok(text) => text,
+        Err(error) => {
+            inspection.blocked(
+                RELEASE_LOG,
+                format!("the release conformance log could not be read: {error}"),
+                "Run `cargo_full run --bin xtask -- release-conformance --backend all --write` \
+                 and commit the log.",
+            );
+            return;
+        }
     };
+    let log: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(value) => value,
+        Err(error) => {
+            inspection.blocked(
+                RELEASE_LOG,
+                format!("the release conformance log is not readable as JSON: {error}"),
+                "Regenerate it with --write.",
+            );
+            return;
+        }
+    };
+    for status in log
+        .get("artifact_statuses")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let path = status
+            .get("path")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("(unnamed)");
+        if status.get("exists").and_then(serde_json::Value::as_bool) != Some(true) {
+            inspection.blocked(
+                RELEASE_LOG,
+                format!("the release conformance log records `{path}` as absent"),
+                "Run the sweep for that backend with --write on a host with the device.",
+            );
+        }
+        if status.get("bytes").and_then(serde_json::Value::as_u64) == Some(0) {
+            inspection.blocked(
+                RELEASE_LOG,
+                format!("the release conformance log records `{path}` as empty"),
+                "An empty conformance artifact records nothing. Rerun with --write.",
+            );
+        }
+    }
+    for blocker in log
+        .get("blockers")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str)
+    {
+        inspection.blocked(
+            RELEASE_LOG,
+            format!("the last recorded release conformance run was blocked: {blocker}"),
+            "Resolve the blocker and rerun with --write so the log records a clean run.",
+        );
+    }
+}
+
+/// Run each requested backend and rewrite its artifact and the release log.
+fn measure(workspace_root: &Path, config: &Config) -> Inspection {
+    let mut inspection = Inspection::new();
+    let mut failures = Vec::new();
+    for backend in &config.backends {
+        let backend_id = backend_id_of(backend);
+        let Some(artifact) = artifact_of(backend_id) else {
+            failures.push(format!(
+                "unsupported release conformance backend `{backend}`"
+            ));
+            inspection.find(Finding::new(
+                format!("unsupported release conformance backend `{backend}`"),
+                "Pass one of cuda, wgpu, metal, cpu-ref, reference, or all.",
+            ));
+            continue;
+        };
+        let body = measure_backend(workspace_root, backend_id);
+        for blocker in &body.blockers {
+            failures.push(format!("{backend_id}: {blocker}"));
+            inspection.blocked(
+                artifact,
+                format!("{backend_id}: {blocker}"),
+                "Fix the operation, the op matrix row, or the conformance runner the sentence \
+                 names, then rerun.",
+            );
+        }
+        inspection.generates(artifact, &body);
+    }
+    inspection.generates(RELEASE_LOG, &release_log(workspace_root, config, &failures));
+    inspection
+}
+
+/// Dispatch one backend and record what it produced.
+fn measure_backend(workspace_root: &Path, backend_id: &str) -> BackendConformanceArtifact {
     let mut args = vec![
         "run".to_string(),
         "-p".to_string(),
@@ -146,26 +350,72 @@ fn run_backend_conformance(
         "all".to_string(),
     ]);
     let runner = cargo_runner(workspace_root);
+    let command = format!("{} {}", runner.display(), args.join(" "));
     let output = Command::new(&runner)
         .args(&args)
         .current_dir(workspace_root)
-        .output()
-        .map_err(|error| {
+        .output();
+    let (pairs, stdout_diagnostics, mut blockers) = match &output {
+        Ok(output) => match parse_pairs(&output.stdout) {
+            Ok(parsed) => (parsed.pairs, parsed.diagnostics, Vec::new()),
+            Err(error) => (Vec::new(), Vec::new(), vec![error]),
+        },
+        Err(error) => (
+            Vec::new(),
+            Vec::new(),
             vec![format!(
-                "failed to run `{} {}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`.",
-                runner.display(),
-                args.join(" ")
-            )]
-        })?;
-    let command = format!("{} {}", runner.display(), args.join(" "));
-    let (pairs, stdout_diagnostics, mut blockers) = match parse_pairs(&output.stdout) {
-        Ok(parsed) => (parsed.pairs, parsed.diagnostics, Vec::new()),
-        Err(error) => (Vec::new(), Vec::new(), vec![error]),
+                "failed to run `{command}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
+            )],
+        ),
     };
+    if let Ok(output) = &output {
+        if !output.status.success() {
+            blockers.push(format!(
+                "`{command}` exited with {}; stderr: {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+    }
+    let assessed = assess(
+        workspace_root,
+        backend_id,
+        &pairs,
+        &stdout_diagnostics,
+        blockers,
+    );
+    artifact_body(backend_id, command, pairs, stdout_diagnostics, assessed)
+}
+
+/// Every judgement a set of recorded pairs supports, and the derived fields.
+struct Assessment {
+    blockers: Vec<String>,
+    catalog: crate::release::conformance_op_matrix::OpMatrixCatalog,
+    coverage: crate::release::conformance_op_matrix::OpMatrixCoverage,
+    distinct_op_count: usize,
+    duplicate_op_ids: Vec<String>,
+    failed_pairs: usize,
+    diff_summaries: Vec<BackendDiffSummary>,
+    diff_summary_errors: Vec<String>,
+}
+
+/// Judge `pairs` against the release floors and the live op matrix.
+///
+/// Nothing here reads a device. The same function judges pairs that were just
+/// measured and pairs read back out of a committed artifact, so a recorded run
+/// answers to the current op matrix rather than to the one it was written
+/// against.
+fn assess(
+    workspace_root: &Path,
+    backend_id: &str,
+    pairs: &[PairResult],
+    stdout_diagnostics: &[String],
+    mut blockers: Vec<String>,
+) -> Assessment {
     let failed_pairs = pairs.iter().filter(|pair| !pair.passed).count();
     let mut seen_ops = BTreeSet::new();
     let mut duplicate_op_ids = BTreeSet::new();
-    for pair in &pairs {
+    for pair in pairs {
         if pair.op_id.trim().is_empty() {
             blockers.push(format!("{backend_id} conformance emitted an empty op_id"));
         }
@@ -177,13 +427,6 @@ fn run_backend_conformance(
         blockers.push(format!(
             "{backend_id} conformance stdout contained {} non-evidence line(s); fix the runner to emit JSONL evidence on stdout and diagnostics on stderr",
             stdout_diagnostics.len()
-        ));
-    }
-    if !output.status.success() {
-        blockers.push(format!(
-            "`{command}` exited with {}; stderr: {}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr).trim()
         ));
     }
     if pairs.is_empty() {
@@ -233,49 +476,136 @@ fn run_backend_conformance(
             "{backend_id} conformance artifact contains {wrong_backend_pairs} pair(s) with a different backend_id"
         ));
     }
-    let diff_summaries = backend_diff_summaries(&pairs);
-    let diff_summary_errors = validate_backend_diff_summaries(backend_id, &pairs, &diff_summaries);
+    let diff_summaries = backend_diff_summaries(pairs);
+    let diff_summary_errors = validate_backend_diff_summaries(backend_id, pairs, &diff_summaries);
     for error in &diff_summary_errors {
         blockers.push(error.clone());
     }
-    let artifact_body = BackendConformanceArtifact {
+    Assessment {
+        blockers,
+        catalog,
+        coverage,
+        distinct_op_count: seen_ops.len(),
+        duplicate_op_ids: duplicate_op_ids.into_iter().collect(),
+        failed_pairs,
+        diff_summaries,
+        diff_summary_errors,
+    }
+}
+
+/// Assemble the artifact from the pairs and the judgement they earned.
+fn artifact_body(
+    backend_id: &str,
+    command: String,
+    pairs: Vec<PairResult>,
+    stdout_diagnostics: Vec<String>,
+    assessed: Assessment,
+) -> BackendConformanceArtifact {
+    BackendConformanceArtifact {
         schema_version: 3,
         backend_id: backend_id.to_string(),
         command,
         stdout_diagnostics,
         total_pairs: pairs.len(),
-        distinct_op_count: seen_ops.len(),
-        catalog_required_op_count: coverage.catalog_required_op_count,
-        catalog_covered_op_count: coverage.catalog_covered_op_count,
-        missing_catalog_ops: coverage.missing_catalog_ops,
-        release_backend_row_count: coverage.release_backend_row_count,
-        supported_release_backend_row_count: coverage.supported_release_backend_row_count,
-        release_backend_rows: catalog.release_backend_rows,
-        missing_release_backend_rows: catalog.missing_release_backend_rows,
-        op_matrix_blocked_release_count: coverage.op_matrix_blocked_release_count,
-        op_matrix_blocked_release_rows: catalog.blocked_release_rows,
-        op_matrix_errors: catalog.errors,
-        passed_pairs: pairs.len().saturating_sub(failed_pairs),
-        failed_pairs,
-        duplicate_op_ids: duplicate_op_ids.into_iter().collect(),
+        distinct_op_count: assessed.distinct_op_count,
+        catalog_required_op_count: assessed.coverage.catalog_required_op_count,
+        catalog_covered_op_count: assessed.coverage.catalog_covered_op_count,
+        missing_catalog_ops: assessed.coverage.missing_catalog_ops,
+        release_backend_row_count: assessed.coverage.release_backend_row_count,
+        supported_release_backend_row_count: assessed
+            .coverage
+            .supported_release_backend_row_count,
+        release_backend_rows: assessed.catalog.release_backend_rows,
+        missing_release_backend_rows: assessed.catalog.missing_release_backend_rows,
+        op_matrix_blocked_release_count: assessed.coverage.op_matrix_blocked_release_count,
+        op_matrix_blocked_release_rows: assessed.catalog.blocked_release_rows,
+        op_matrix_errors: assessed.catalog.errors,
+        passed_pairs: pairs.len().saturating_sub(assessed.failed_pairs),
+        failed_pairs: assessed.failed_pairs,
+        duplicate_op_ids: assessed.duplicate_op_ids,
         diff_schema_version: 1,
-        diff_summary_count: diff_summaries.len(),
-        diff_summary_errors,
-        diff_summaries,
+        diff_summary_count: assessed.diff_summaries.len(),
+        diff_summary_errors: assessed.diff_summary_errors,
+        diff_summaries: assessed.diff_summaries,
         pairs,
-        blockers,
-    };
-    crate::json_output::write_pretty_json(&workspace_root.join(artifact), &artifact_body)
-        .map_err(|error| vec![error])?;
-    if artifact_body.blockers.is_empty() {
-        Ok(())
-    } else {
-        Err(artifact_body
-            .blockers
-            .iter()
-            .map(|blocker| format!("{}: {blocker}", artifact_body.backend_id))
-            .collect())
+        blockers: assessed.blockers,
     }
+}
+
+/// Every summary field a recorded artifact states that its own pairs deny.
+///
+/// A conformance artifact carries both the pairs and a summary of them, so the
+/// two can be edited apart. Recomputing the summary from the recorded pairs is
+/// the only way a reader learns which of the two is lying.
+fn recorded_summary_divergences(
+    recorded: &BackendConformanceArtifact,
+    assessed: &Assessment,
+) -> Vec<String> {
+    let mut divergences = Vec::new();
+    let mut compare = |field: &str, recorded_value: usize, derived: usize| {
+        if recorded_value != derived {
+            divergences.push(format!(
+                "records {field} as {recorded_value}; its own pairs give {derived}"
+            ));
+        }
+    };
+    compare("total_pairs", recorded.total_pairs, recorded.pairs.len());
+    compare(
+        "distinct_op_count",
+        recorded.distinct_op_count,
+        assessed.distinct_op_count,
+    );
+    compare(
+        "failed_pairs",
+        recorded.failed_pairs,
+        assessed.failed_pairs,
+    );
+    compare(
+        "passed_pairs",
+        recorded.passed_pairs,
+        recorded.pairs.len().saturating_sub(assessed.failed_pairs),
+    );
+    compare(
+        "catalog_required_op_count",
+        recorded.catalog_required_op_count,
+        assessed.coverage.catalog_required_op_count,
+    );
+    compare(
+        "catalog_covered_op_count",
+        recorded.catalog_covered_op_count,
+        assessed.coverage.catalog_covered_op_count,
+    );
+    compare(
+        "release_backend_row_count",
+        recorded.release_backend_row_count,
+        assessed.coverage.release_backend_row_count,
+    );
+    compare(
+        "op_matrix_blocked_release_count",
+        recorded.op_matrix_blocked_release_count,
+        assessed.coverage.op_matrix_blocked_release_count,
+    );
+    compare(
+        "diff_summary_count",
+        recorded.diff_summary_count,
+        assessed.diff_summaries.len(),
+    );
+    if recorded.diff_summaries != assessed.diff_summaries {
+        divergences
+            .push("records diff summaries its own pairs do not produce".to_string());
+    }
+    if recorded.missing_catalog_ops != assessed.coverage.missing_catalog_ops {
+        divergences.push(
+            "records a missing-op list the current op matrix and its own pairs do not produce"
+                .to_string(),
+        );
+    }
+    if recorded.release_backend_rows != assessed.catalog.release_backend_rows {
+        divergences.push(
+            "records release backend rows the current op matrix does not declare".to_string(),
+        );
+    }
+    divergences
 }
 
 struct ParsedPairs {
@@ -549,29 +879,32 @@ fn validate_backend_diff_summaries(
     errors
 }
 
-fn write_release_log(workspace_root: &Path, requested_backends: &[String], failures: &[String]) {
-    #[derive(Serialize)]
-    struct ReleaseLog<'a> {
-        schema_version: u32,
-        command: &'static str,
-        requested_backends: &'a [String],
-        required_artifacts: Vec<&'static str>,
-        artifact_statuses: Vec<ReleaseArtifactStatus>,
-        blockers: &'a [String],
-    }
-    #[derive(Serialize)]
-    struct ReleaseArtifactStatus {
-        path: &'static str,
-        exists: bool,
-        bytes: u64,
-        read_error: Option<String>,
-    }
+#[derive(Serialize)]
+struct ReleaseLog {
+    schema_version: u32,
+    command: &'static str,
+    requested_backends: Vec<String>,
+    required_artifacts: Vec<&'static str>,
+    artifact_statuses: Vec<ReleaseArtifactStatus>,
+    blockers: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct ReleaseArtifactStatus {
+    path: &'static str,
+    exists: bool,
+    bytes: u64,
+    read_error: Option<String>,
+}
+
+/// What the requested sweep left on disk, recorded beside the artifacts.
+fn release_log(workspace_root: &Path, config: &Config, failures: &[String]) -> ReleaseLog {
     let mut required_artifacts = vec![
         "cuda-conformance.json",
         "wgpu-conformance.json",
         "reference-conformance.json",
     ];
-    if requested_backends.iter().any(|backend| backend == "metal") {
+    if config.backends.iter().any(|backend| backend == "metal") {
         required_artifacts.push("metal-conformance.json");
     }
     let artifact_statuses = required_artifacts
@@ -596,20 +929,13 @@ fn write_release_log(workspace_root: &Path, requested_backends: &[String], failu
             }
         })
         .collect();
-    let log = ReleaseLog {
+    ReleaseLog {
         schema_version: 2,
         command: "cargo_full run --bin xtask -- release-conformance",
-        requested_backends,
+        requested_backends: config.backends.clone(),
         required_artifacts,
         artifact_statuses,
-        blockers: failures,
-    };
-    if let Err(error) = crate::json_output::write_pretty_json(
-        &workspace_root.join("release/evidence/conformance/release-gate-log.json"),
-        &log,
-    ) {
-        eprintln!("{error}");
-        std::process::exit(1);
+        blockers: failures.to_vec(),
     }
 }
 
@@ -617,15 +943,21 @@ struct Config {
     backends: Vec<String>,
 }
 
+/// The backends the caller asked for.
+///
+/// `args` holds the flags after the subcommand name, so the scan starts at
+/// zero. `--write` is read by the runner before the gate sees it and is skipped
+/// here rather than rejected as unknown.
 fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut backends = vec![
         "cuda".to_string(),
         "wgpu".to_string(),
         "cpu-ref".to_string(),
     ];
-    let mut index = 2;
+    let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
+            "--write" => index += 1,
             "--backend" => {
                 let Some(value) = args.get(index + 1) else {
                     return Err(
@@ -651,13 +983,6 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
                     );
                 };
                 index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo xtask release-conformance [--backend all|cuda|wgpu|metal|cpu-ref]\n\n\
-                     Runs real vyre-conform dispatch for release conformance artifacts."
-                );
-                std::process::exit(0);
             }
             other => {
                 return Err(format!(

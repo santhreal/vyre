@@ -1,10 +1,13 @@
-//! Generate source-owned optimization integration evidence.
-
-use std::path::PathBuf;
+//! Hold the optimizer integration matrix to the pass catalog the source declares.
 
 use serde::Serialize;
+use xtask::artifact_gate::{self, Inspection};
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 use crate::release::optimizer_pass_rows::{self, OptimizerPassRow};
+
+/// The artifact this gate owns, relative to the workspace root.
+const ARTIFACT: &str = "release/evidence/optimization/optimization-integration-matrix.json";
 
 #[derive(Debug, Serialize)]
 struct OptimizationMatrix {
@@ -27,10 +30,49 @@ struct OptimizationMatrixEntry {
     output: &'static str,
 }
 
-pub(crate) fn run(args: &[String]) {
-    let output = xtask::output_arg::parsed_or_exit(parse_output(args));
+/// Holds the optimizer integration matrix to the live pass catalog.
+pub struct OptimizationMatrixGate;
+
+impl Gate for OptimizationMatrixGate {
+    fn name(&self) -> &'static str {
+        "optimization-matrix"
+    }
+
+    fn help(&self) -> &'static str {
+        "Regenerate release/evidence/optimization/optimization-integration-matrix.json from the \
+         live optimizer pass catalog and report every line the committed artifact disagrees on. \
+         Proves the artifact lists exactly the catalog entries the source registers, that no pass \
+         id repeats, and that every entry names an owner, invariant, proof and benchmark. Proves \
+         nothing about whether a pass is correct, ever fires, or improves anything: the named \
+         proof and benchmark are strings the catalog carries, not results this gate reads."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(),
+        ))
+    }
+}
+
+/// What the optimizer catalog says, and the artifact that records it.
+fn inspect() -> Inspection {
+    let mut inspection = Inspection::new();
     let (executable_passes, rows) = optimizer_pass_rows::collect();
     let mut blockers = optimizer_pass_rows::duplicate_id_blockers(&rows);
+    for blocker in &blockers {
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Give each optimizer catalog entry a unique id. An id is the only handle the published \
+             evidence offers, so a repeated one makes every row under it ambiguous.",
+        );
+    }
     let entries = rows
         .into_iter()
         .map(|pass| OptimizationMatrixEntry {
@@ -45,10 +87,16 @@ pub(crate) fn run(args: &[String]) {
             || entry.pass.proof.is_empty()
             || entry.pass.benchmark.is_empty()
     }) {
-        blockers.push(
+        let blocker =
             "optimizer catalog contains an entry without owner, invariant, proof, or benchmark"
-                .to_string(),
+                .to_string();
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Fill in the missing field in vyre-foundation's optimizer pass catalog. An entry \
+             without an owner or an invariant publishes a pass nobody answers for.",
         );
+        blockers.push(blocker);
     }
     let matrix = OptimizationMatrix {
         schema_version: 2,
@@ -61,20 +109,6 @@ pub(crate) fn run(args: &[String]) {
         entries,
         blockers,
     };
-    xtask::output_arg::write_json(&output, &matrix);
-    xtask::output_arg::report_evidence_artifact("optimization-matrix", &output, &matrix.blockers);
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    xtask::output_arg::parse_output_arg(
-        args,
-        "optimization-matrix",
-        "Writes source-owned semantic optimizer integration evidence.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    xtask::checkout::checkout_root()
-        .join("release/evidence/optimization/optimization-integration-matrix.json")
+    inspection.generates(ARTIFACT, &matrix);
+    inspection
 }

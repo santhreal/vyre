@@ -10,13 +10,22 @@ pub mod release;
 #[cfg(test)]
 pub(crate) mod report_fixture;
 
+/// Every gate this crate implements, in the shape the dispatcher runs them.
+///
+/// `xtask` links no vyre crate, so it cannot call these directly. It builds
+/// this crate's binary and runs it, and the binary resolves the name against
+/// this table, runs the gate and prints one `Report` on stdout.
+pub static GATES: &[&dyn xtask::gate::Gate] = &[
+    &release::backend_matrix::BackendMatrixGate,
+    &bench::bench_release::BenchReleaseGate,
+    &release::release_workload_matrix::ReleaseWorkloadMatrixGate,
+];
+
 /// Every subcommand this crate implements, keyed by the name typed on the
 /// command line. `xtask` routes to this crate by name and this table resolves
 /// it, so the two lists have to agree; the test below is what enforces that.
 pub const IMPLEMENTED: &[(&str, fn(&[String]))] = &[
-    ("backend-matrix", release::backend_matrix::run),
     ("bench-crossback", bench::bench_crossback::run),
-    ("bench-release", bench::bench_release::run),
     ("release-benchmarks", bench::release_benchmarks::run),
     ("release-evidence", release::release_evidence::run),
     ("vyre-release-gate", release::vyre_release_gate::run),

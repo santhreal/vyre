@@ -15,6 +15,17 @@ pub mod print_composition;
 pub mod release;
 pub mod trace_f32;
 
+/// Every gate this crate implements, in the shape the dispatcher runs them.
+///
+/// `xtask` links no vyre crate, so it cannot call these directly. It builds
+/// this crate's binary and runs it, and the binary resolves the name against
+/// this table, runs the gate and prints one `Report` on stdout.
+pub static GATES: &[&dyn xtask::gate::Gate] = &[
+    &docs::op_matrix::OpMatrixGate,
+    &release::optimization_corpus::OptimizationCorpusGate,
+    &release::optimization_matrix::OptimizationMatrixGate,
+];
+
 /// Every subcommand this crate implements, keyed by the name typed on the
 /// command line. `xtask` routes to this crate by name and this table resolves
 /// it, so the two lists have to agree; the test below is what enforces that.
@@ -28,11 +39,8 @@ pub const IMPLEMENTED: &[(&str, fn(&[String]))] = &[
     ("lego-audit", gates::lego_audit::run),
     ("lego-quick", gates::lego_quick::run),
     ("list-ops", docs::list_ops::run),
-    ("op-matrix", docs::op_matrix::run),
     ("operation-schema", docs::operation_schema::run),
-    ("optimization-corpus", release::optimization_corpus::run),
     ("optimization-docs", docs::optimization_docs::run),
-    ("optimization-matrix", release::optimization_matrix::run),
     ("primitive-admission-gate", |_args| {
         gates::lego_audit::run_primitive_admission_gate()
     }),
