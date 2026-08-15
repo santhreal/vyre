@@ -530,7 +530,17 @@ impl InstanceCore {
         Ok(inputs)
     }
 
-    /// Write dispatch results back onto the canonical values they implement.
+    /// Move dispatch results onto the canonical values they implement.
+    ///
+    /// `produced` is consumed. It was borrowed and each buffer cloned, which
+    /// copied every output byte a dispatch returned, on every dispatch, into a
+    /// map whose only reader then cloned it again on the way out. The caller
+    /// owns the dispatch result and drops it here, so there is nothing for the
+    /// copy to protect.
+    ///
+    /// A binding's output slot is assigned per buffer, so two bindings cannot
+    /// name one slot. If one ever does, the second finds the slot already taken
+    /// and is refused rather than served the bytes of the value that took it.
     ///
     /// # Errors
     ///
@@ -541,10 +551,11 @@ impl InstanceCore {
         &self,
         plan: &BindingPlan,
         program: &Program,
-        produced: &[Vec<u8>],
+        produced: Vec<Vec<u8>>,
         state: &mut BTreeMap<ArtifactValueId, Vec<u8>>,
         missing: fn(usize, &str) -> BackendError,
     ) -> Result<(), BackendError> {
+        let mut produced: Vec<Option<Vec<u8>>> = produced.into_iter().map(Some).collect();
         for binding in &plan.bindings {
             let Some(output_index) = binding.output_index else {
                 continue;
@@ -552,9 +563,10 @@ impl InstanceCore {
             let buffer = &program.buffers()[binding.buffer_index];
             let value = self.value_for_buffer(buffer.name())?;
             let bytes = produced
-                .get(output_index)
+                .get_mut(output_index)
+                .and_then(Option::take)
                 .ok_or_else(|| missing(output_index, buffer.name()))?;
-            state.insert(value, bytes.clone());
+            state.insert(value, bytes);
         }
         Ok(())
     }
@@ -758,7 +770,7 @@ impl InstanceCore {
             self.absorb_outputs(
                 &plan,
                 module.program(),
-                &dispatched.outputs,
+                dispatched.outputs,
                 &mut state,
                 omitted,
             )?;
@@ -807,17 +819,18 @@ impl InstanceCore {
         &self,
         plan: &BindingPlan,
         program: &Program,
-        dispatched: &TimedDispatchResult,
+        dispatched: TimedDispatchResult,
         omitted: fn(usize, &str) -> BackendError,
         messages: &InstanceMessages,
     ) -> Result<Completion, BackendError> {
+        let device_ns = dispatched.device_ns;
         let mut state = BTreeMap::new();
-        self.absorb_outputs(plan, program, &dispatched.outputs, &mut state, omitted)?;
+        self.absorb_outputs(plan, program, dispatched.outputs, &mut state, omitted)?;
         Ok(Completion {
             artifact: self.artifact,
             outputs: self.project(&self.outputs, &state, messages.missing_output_value)?,
             retained: self.project(&self.retained, &state, messages.missing_retained_value)?,
-            device_ns: dispatched.device_ns,
+            device_ns,
         })
     }
 }

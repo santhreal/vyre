@@ -34,7 +34,7 @@ fn cpu_reference_struct_initializer_list_materialises_fields_and_list() {
 
 #[test]
 fn cpu_reference_union_designated_init_materialises_member_access() {
-    let (tok_types, tok_starts, tok_lens) = fixture_union_designated_init();
+    let (tok_types, tok_starts, tok_lens) = union_field_designator();
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
@@ -213,7 +213,7 @@ fn pg_lowering_preserves_spans_and_tree_links_for_struct_initializer() {
 
 #[test]
 fn pg_lowering_preserves_spans_and_tree_links_for_union_designated_init() {
-    let (tok_types, tok_starts, tok_lens) = fixture_union_designated_init();
+    let (tok_types, tok_starts, tok_lens) = union_field_designator();
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);
@@ -389,7 +389,7 @@ fn gpu_parity_pg_lower_struct_initializer_list() {
 
 #[test]
 fn gpu_parity_pg_lower_union_designated_init() {
-    let (tok_types, tok_starts, tok_lens) = fixture_union_designated_init();
+    let (tok_types, tok_starts, tok_lens) = union_field_designator();
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let expected = run_reference_pg_lower(&typed);

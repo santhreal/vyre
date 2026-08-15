@@ -23,7 +23,8 @@
 use std::collections::BTreeSet;
 
 use vyre_test_support::binop_parity::{
-    synthetic_u32_case, total_u32_case, SYNTHETIC_U32_BINOPS, TOTAL_U32_CASES,
+    assert_covers_every_synthetic_op, assert_covers_every_total_op, synthetic_u32_case,
+    total_u32_case, SYNTHETIC_U32_BINOPS, TOTAL_U32_CASES,
 };
 
 /// Minimum rows each table must carry, so a table emptied by a bad edit fails
@@ -96,4 +97,61 @@ fn every_total_row_pins_one_oracle_value_per_operand_pair() {
             "total_u32_case must find every row in the table"
         );
     }
+}
+
+/// The coverage gates accept a suite that names exactly the declared rows.
+///
+/// The positive arm of the two assertions the driver suites open with. It reads
+/// the op set from the tables rather than listing it, so a row added tomorrow is
+/// required of the suites tomorrow.
+#[test]
+fn the_coverage_gates_accept_the_declared_op_set() {
+    let synthetic: Vec<&str> = SYNTHETIC_U32_BINOPS.iter().map(|case| case.op).collect();
+    assert_covers_every_synthetic_op("test", &synthetic);
+    let total: Vec<&str> = TOTAL_U32_CASES.iter().map(|case| case.op).collect();
+    assert_covers_every_total_op("test", &total);
+}
+
+/// A suite missing one declared synthetic op goes RED.
+///
+/// This is the proof the gate would have caught the defect it exists for: before
+/// the gates, each backend suite carried one hand-written test per op, so a row
+/// added to the table was dispatched by neither suite and nothing failed. Drop
+/// the last row from what a suite claims and the gate must name it.
+#[test]
+#[should_panic(expected = "has no reference for")]
+fn a_synthetic_op_no_suite_covers_is_named() {
+    let mut covered: Vec<&str> = SYNTHETIC_U32_BINOPS.iter().map(|case| case.op).collect();
+    covered.pop();
+    assert_covers_every_synthetic_op("test", &covered);
+}
+
+/// A suite missing one declared total-contract op goes RED.
+#[test]
+#[should_panic(expected = "has no reference for")]
+fn a_total_op_no_suite_covers_is_named() {
+    let mut covered: Vec<&str> = TOTAL_U32_CASES.iter().map(|case| case.op).collect();
+    covered.pop();
+    assert_covers_every_total_op("test", &covered);
+}
+
+/// A suite naming an op the table does not declare goes RED.
+///
+/// The other direction: a renamed row leaves the suite asserting an op that no
+/// longer exists, which would otherwise look like coverage.
+#[test]
+#[should_panic(expected = "which SYNTHETIC_U32_BINOPS does not")]
+fn a_synthetic_op_the_table_dropped_is_named() {
+    let mut covered: Vec<&str> = SYNTHETIC_U32_BINOPS.iter().map(|case| case.op).collect();
+    covered.push("mulhi_but_renamed");
+    assert_covers_every_synthetic_op("test", &covered);
+}
+
+/// A total-contract suite naming an op the table dropped goes RED.
+#[test]
+#[should_panic(expected = "which TOTAL_U32_CASES does not")]
+fn a_total_op_the_table_dropped_is_named() {
+    let mut covered: Vec<&str> = TOTAL_U32_CASES.iter().map(|case| case.op).collect();
+    covered.push("div_but_renamed");
+    assert_covers_every_total_op("test", &covered);
 }

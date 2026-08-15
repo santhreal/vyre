@@ -12,7 +12,7 @@ use vyre_libs::operation_catalog::convergence_contract;
 use vyre_reference::value::Value;
 use vyre_reference::ReferenceError;
 
-use crate::fp_parity::{compare_operation_outputs, compare_output_buffers, BufferParity};
+use vyre_foundation::fp_parity::{compare_operation_outputs, compare_output_buffers, BufferParity};
 use crate::production::ProductionSession;
 
 /// Outcome of running one lens against one op.

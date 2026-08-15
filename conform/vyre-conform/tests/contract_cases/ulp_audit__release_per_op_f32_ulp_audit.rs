@@ -125,7 +125,7 @@ fn release_per_op_f32_ulp_audit() {
                     continue;
                 }
             };
-            let max_ulp = match max_ulp_delta(&cpu, &gpu, &program) {
+            let max_ulp = match max_output_ulp(&program, &cpu, &gpu) {
                 Some(u) => u,
                 None => {
                     failures.push(format!(
@@ -184,7 +184,7 @@ fn release_per_op_f32_ulp_audit() {
                 };
                 match production.submit(&backend_inputs_for_adversarial) {
                     Ok(gpu) => {
-                        let max_ulp = match max_ulp_delta(&cpu, &gpu, &program) {
+                        let max_ulp = match max_output_ulp(&program, &cpu, &gpu) {
                             Some(u) => u,
                             None => {
                                 failures.push(format!(

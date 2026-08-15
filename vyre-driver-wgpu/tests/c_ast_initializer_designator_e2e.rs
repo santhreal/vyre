@@ -24,11 +24,14 @@ use vyre_primitives::predicate::node_kind;
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
+#[path = "../../tests/support/c_frontend/fixtures/initializer_designator_streams.rs"]
+mod initializer_designator_streams;
 use c_ast_gpu_parity_support::run_gpu_pg_lower;
 
 use c_frontend::expression_pipeline::run_reference_pg_lower;
 use c_frontend::rows::{assert_pg_preserves_row_and_kind, row_indices};
 use c_frontend::spelling::c_rows;
+use initializer_designator_streams::union_field_designator;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -55,16 +58,6 @@ fn fixture_struct_initializer_list() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     c_rows(
         "STRUCT:6 IDENTIFIER:5 IDENTIFIER ASSIGN \
          LBRACE INTEGER:2 COMMA STRING:7 RBRACE SEMICOLON",
-    )
-}
-
-/// ```c
-/// union U u = {.i = 42};
-/// ```
-fn fixture_union_designated_init() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    c_rows(
-        "UNION:5 IDENTIFIER IDENTIFIER ASSIGN \
-         LBRACE DOT IDENTIFIER ASSIGN INTEGER:2 RBRACE SEMICOLON",
     )
 }
 

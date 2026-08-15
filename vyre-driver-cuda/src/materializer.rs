@@ -179,7 +179,7 @@ impl CudaArtifactInstance {
         self.core.resident_completion(
             &plan,
             &module.program,
-            &dispatched,
+            dispatched,
             omitted_resident_output,
             &self.core.messages,
         )

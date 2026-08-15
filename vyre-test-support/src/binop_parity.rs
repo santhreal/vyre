@@ -288,3 +288,168 @@ pub fn assert_matches_reference(
          hardware).\n  pairs:    {pairs:?}\n  expected: {expected:?}\n  got:      {dispatched:?}"
     );
 }
+
+/// The driver crates that owe a live parity arm for these tables, and why.
+///
+/// A backend lowers `mulhi` and the rotates its own way, so the table proves
+/// nothing until each backend has dispatched it. Nothing in the tables forced
+/// that: an op could be added here and remain unproven on every backend, and a
+/// backend could be added to the workspace and prove nothing at all, both in
+/// silence. The recorded reason is what makes an absent arm a decision rather
+/// than an oversight.
+pub const RECORDED_PARITY_BACKENDS: &[(&str, &str)] = &[
+    (
+        "vyre-driver-cuda",
+        "Proves the PTX lowering: native mul.hi.u32, vabsdiff, the *.sat forms, \
+         funnel-shift shf.",
+    ),
+    (
+        "vyre-driver-wgpu",
+        "Proves the naga synthesis: every op built from arithmetic plus select.",
+    ),
+    (
+        "vyre-driver-spirv",
+        "No arm. The crate has no resident path and its host dispatch is the \
+         Vulkan compute route, which emits the same SPIR-V the naga arm \
+         validates; a second arm would prove the emitter twice and the device \
+         once. Add one when the crate lowers these ops itself.",
+    ),
+    (
+        "vyre-driver-metal",
+        "No arm. The crate does not compile on a non-Apple host, so an arm here \
+         would be a test nobody in this workspace can run.",
+    ),
+    (
+        "vyre-driver-reference",
+        "No arm. It IS the reference these arms compare against; comparing it to \
+         itself proves nothing.",
+    ),
+];
+
+/// Fewest driver crates a working directory scan can find.
+///
+/// A scan that matched nothing would report a trivially covered empty roster.
+const DRIVER_CRATE_FLOOR: usize = 4;
+
+/// The `vyre-driver-*` crates the workspace declares, read from the tree.
+///
+/// # Panics
+///
+/// Panics when the workspace root cannot be listed, which is a broken scan
+/// rather than a workspace with no backends.
+#[must_use]
+pub fn declared_driver_crates() -> std::collections::BTreeSet<String> {
+    let root = crate::monorepo::vyre_workspace_root();
+    let entries = std::fs::read_dir(&root)
+        .unwrap_or_else(|err| panic!("Fix: cannot list the workspace root {root:?}: {err}"));
+    entries
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().join("Cargo.toml").is_file())
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name.starts_with("vyre-driver-"))
+        .collect()
+}
+
+/// Every driver crate in the workspace has a recorded parity position.
+///
+/// The roster comes from the tree on each run, so a fifth backend turns the
+/// suites that call this RED until somebody writes down whether it owes an arm.
+///
+/// # Panics
+///
+/// Panics naming the crates that are declared but unrecorded, and the recorded
+/// entries that name no crate.
+pub fn assert_every_driver_crate_has_a_recorded_parity_position() {
+    let declared = declared_driver_crates();
+    assert!(
+        declared.len() >= DRIVER_CRATE_FLOOR,
+        "Fix: the driver-crate scan found {declared:?}; it is reading the wrong directory rather \
+         than looking at a workspace with one backend"
+    );
+
+    let recorded: std::collections::BTreeSet<&str> = RECORDED_PARITY_BACKENDS
+        .iter()
+        .map(|(crate_name, _)| *crate_name)
+        .collect();
+
+    let unrecorded: Vec<&String> = declared
+        .iter()
+        .filter(|name| !recorded.contains(name.as_str()))
+        .collect();
+    assert!(
+        unrecorded.is_empty(),
+        "Fix: {unrecorded:?} are driver crates with no recorded parity position. Record whether \
+         each owes a live arm for the u32 binop tables and why, in \
+         RECORDED_PARITY_BACKENDS; a backend that proves nothing must say so on purpose."
+    );
+
+    let stale: Vec<&&str> = recorded
+        .iter()
+        .filter(|name| !declared.contains(**name))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "Fix: RECORDED_PARITY_BACKENDS names {stale:?}, which the workspace no longer declares."
+    );
+}
+
+/// A backend's reference arm covers every op in the shared table.
+///
+/// `covered` is the op names the calling suite dispatches. The reference closure
+/// per op stays in that suite by design, and the cost of that is exactly this:
+/// nothing connects the shared table to the arms that read it. Adding a row to
+/// [`SYNTHETIC_U32_BINOPS`] now turns every backend suite RED until it has a
+/// reference for the new op.
+///
+/// # Panics
+///
+/// Panics naming the table ops the suite does not cover, and the covered names
+/// that are not in the table.
+pub fn assert_covers_every_synthetic_op(backend: &str, covered: &[&str]) {
+    let declared: std::collections::BTreeSet<&str> =
+        SYNTHETIC_U32_BINOPS.iter().map(|case| case.op).collect();
+    let covered_set: std::collections::BTreeSet<&str> = covered.iter().copied().collect();
+
+    let uncovered: Vec<&&str> = declared.difference(&covered_set).collect();
+    assert!(
+        uncovered.is_empty(),
+        "Fix: the {backend} parity arm has no reference for {uncovered:?}. Add one per op; an op \
+         in the shared table that no backend dispatches is an op nothing proves."
+    );
+
+    let unknown: Vec<&&str> = covered_set.difference(&declared).collect();
+    assert!(
+        unknown.is_empty(),
+        "Fix: the {backend} parity arm names {unknown:?}, which SYNTHETIC_U32_BINOPS does not \
+         declare. Add the case to the table or drop the name."
+    );
+}
+
+/// A backend's reference arm covers every op in the total-contract table.
+///
+/// The same closure for [`TOTAL_U32_CASES`], whose rows carry the oracle answer
+/// as data and therefore need a per-backend reference to disagree with.
+///
+/// # Panics
+///
+/// Panics naming the table ops the suite does not cover, and the covered names
+/// that are not in the table.
+pub fn assert_covers_every_total_op(backend: &str, covered: &[&str]) {
+    let declared: std::collections::BTreeSet<&str> =
+        TOTAL_U32_CASES.iter().map(|case| case.op).collect();
+    let covered_set: std::collections::BTreeSet<&str> = covered.iter().copied().collect();
+
+    let uncovered: Vec<&&str> = declared.difference(&covered_set).collect();
+    assert!(
+        uncovered.is_empty(),
+        "Fix: the {backend} total-contract arm has no reference for {uncovered:?}. Add one per op; \
+         a total-contract row nothing dispatches proves the pin, not the hardware."
+    );
+
+    let unknown: Vec<&&str> = covered_set.difference(&declared).collect();
+    assert!(
+        unknown.is_empty(),
+        "Fix: the {backend} total-contract arm names {unknown:?}, which TOTAL_U32_CASES does not \
+         declare. Add the case to the table or drop the name."
+    );
+}

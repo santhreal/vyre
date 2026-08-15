@@ -14,7 +14,7 @@ use std::sync::Arc;
 use blake3::Hash;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, Program};
 use vyre_conform::dispatch_grid;
-use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
+use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
 use vyre_driver::backend::backend_dispatches;
 use vyre_driver::{BackendRegistration, DispatchConfig};

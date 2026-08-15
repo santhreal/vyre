@@ -251,14 +251,24 @@ pub fn compare_operation_outputs(
     )
 }
 
-fn compare_output_buffers_with_tolerance(
-    program: &Program,
+/// The declared output-buffer indices of `program`, once both result vectors are
+/// known to describe them.
+///
+/// One owner for the count checks every parity question repeats. A second copy
+/// of this walk is what let `ulp_audit` disagree with the gate about which slot
+/// carried F32: it decided per slot from `program.buffers()` while reading
+/// `output_buffer_indices` for the mapping, so a program whose outputs were not
+/// declared in slot order was audited against the wrong element type.
+///
+/// Returns the mismatch description rather than a bool, because every caller
+/// reports it and none can produce it from the counts alone.
+fn output_slot_indices<'a>(
+    program: &'a Program,
     outputs_a: &[Vec<u8>],
     outputs_b: &[Vec<u8>],
-    tolerance: u32,
-) -> BufferParity {
+) -> Result<&'a [u32], String> {
     if outputs_a.len() != outputs_b.len() {
-        return BufferParity::Mismatch(format!(
+        return Err(format!(
             "output buffer count mismatch: {} vs {}; left={} right={}",
             outputs_a.len(),
             outputs_b.len(),
@@ -266,15 +276,27 @@ fn compare_output_buffers_with_tolerance(
             summarize_buffers(outputs_b)
         ));
     }
-
     let output_indices = program.output_buffer_indices();
     if output_indices.len() != outputs_a.len() {
-        return BufferParity::Mismatch(format!(
+        return Err(format!(
             "program declares {} output buffer(s), compared {} result buffer(s)",
             output_indices.len(),
             outputs_a.len()
         ));
     }
+    Ok(output_indices)
+}
+
+fn compare_output_buffers_with_tolerance(
+    program: &Program,
+    outputs_a: &[Vec<u8>],
+    outputs_b: &[Vec<u8>],
+    tolerance: u32,
+) -> BufferParity {
+    let output_indices = match output_slot_indices(program, outputs_a, outputs_b) {
+        Ok(indices) => indices,
+        Err(message) => return BufferParity::Mismatch(message),
+    };
 
     for (slot, ((bytes_a, bytes_b), buffer_index)) in outputs_a
         .iter()
@@ -310,6 +332,86 @@ fn compare_output_buffers_with_tolerance(
     }
 
     BufferParity::Ok
+}
+
+/// Largest ULP distance over every F32 output slot of `program`.
+///
+/// This is the measurement behind a ULP report table, where
+/// [`compare_output_buffers`] is the pass/fail gate. Both read the same output
+/// slots through [`output_slot_indices`], so an audit and the gate that follows
+/// it cannot disagree about which slot is F32 or how many there are.
+///
+/// Non-F32 slots are skipped: they are the byte-identity gate's business and
+/// have no ULP.
+///
+/// Returns `None` when the two vectors do not describe the program's outputs, or
+/// when an F32 slot's length is not a whole number of f32 values: there is no
+/// distance to report and the caller must not read a saturated one as a
+/// measurement.
+///
+/// [`u32::MAX`] means incomparable rather than far apart: one side is NaN and
+/// the other is not, or the two are non-finite in different classes. This
+/// deliberately differs from [`f32_buffer_matches`], which requires bit identity
+/// for NaN. An audit compares two NaNs as equal because a backend is free to
+/// choose a NaN payload; a gate does not, because a program that must reproduce
+/// a payload has to say so byte for byte.
+#[must_use]
+pub fn max_output_ulp(
+    program: &Program,
+    outputs_a: &[Vec<u8>],
+    outputs_b: &[Vec<u8>],
+) -> Option<u32> {
+    let output_indices = output_slot_indices(program, outputs_a, outputs_b).ok()?;
+    let mut max_ulp = 0u32;
+    for ((bytes_a, bytes_b), buffer_index) in outputs_a
+        .iter()
+        .zip(outputs_b.iter())
+        .zip(output_indices.iter().copied())
+    {
+        if program.buffers()[buffer_index as usize].element() != DataType::F32 {
+            continue;
+        }
+        max_ulp = max_ulp.max(f32_buffer_max_ulp(bytes_a, bytes_b)?);
+    }
+    Some(max_ulp)
+}
+
+/// Largest ULP distance between two packed little-endian f32 buffers.
+///
+/// The measuring sibling of [`f32_buffer_matches`]. Returns `None` when the
+/// lengths differ or are not a whole number of f32 values, and [`u32::MAX`] for
+/// an incomparable pair; see [`max_output_ulp`] for why an audit treats two NaNs
+/// as equal where the gate does not.
+#[must_use]
+pub fn f32_buffer_max_ulp(bytes_a: &[u8], bytes_b: &[u8]) -> Option<u32> {
+    if bytes_a.len() != bytes_b.len() || bytes_a.len() % 4 != 0 {
+        return None;
+    }
+    let mut max_ulp = 0u32;
+    for (left, right) in bytes_a.chunks_exact(4).zip(bytes_b.chunks_exact(4)) {
+        let left = f32::from_bits(u32::from_le_bytes([left[0], left[1], left[2], left[3]]));
+        let right = f32::from_bits(u32::from_le_bytes([right[0], right[1], right[2], right[3]]));
+        if left.to_bits() == right.to_bits() || (left.is_nan() && right.is_nan()) {
+            continue;
+        }
+        // A backend may flush denormals and may saturate, so two non-finite
+        // values of the same class and sign are as close as f32 can express.
+        // Anything else across the finite boundary has no distance at all.
+        if !left.is_finite() && !right.is_finite() {
+            if left.is_infinite()
+                && right.is_infinite()
+                && left.is_sign_positive() == right.is_sign_positive()
+            {
+                continue;
+            }
+            return Some(u32::MAX);
+        }
+        match ulp_distance(left, right) {
+            Some(ulp) => max_ulp = max_ulp.max(ulp),
+            None => return Some(u32::MAX),
+        }
+    }
+    Some(max_ulp)
 }
 
 fn summarize_buffers(buffers: &[Vec<u8>]) -> String {

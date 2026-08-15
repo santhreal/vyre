@@ -28,6 +28,8 @@ use vyre_primitives::predicate::node_kind;
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
+#[path = "../../tests/support/c_frontend/fixtures/initializer_designator_streams.rs"]
+mod initializer_designator_streams;
 use c_ast_gpu_parity_support::{
     run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts as run_gpu_vast_builder,
 };
@@ -35,6 +37,7 @@ use c_ast_gpu_parity_support::{
 use c_frontend::expression_pipeline::run_reference_pg_lower;
 use c_frontend::rows::{assert_pg_preserves_row, kind_at, row_indices};
 use c_frontend::spelling::c_rows;
+use initializer_designator_streams::union_field_designator;
 
 fn assert_full_pipeline_parity(
     tok_types: &[u32],
@@ -92,16 +95,6 @@ fn fixture_range_designator_array() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
         "INT:3 IDENTIFIER:3 LBRACKET INTEGER:2 RBRACKET ASSIGN LBRACE \
          LBRACKET INTEGER ELLIPSIS:3 INTEGER RBRACKET ASSIGN INTEGER COMMA \
          LBRACKET INTEGER RBRACKET ASSIGN INTEGER RBRACE SEMICOLON",
-    )
-}
-
-/// ```c
-/// union U u = { .f = 42 };
-/// ```
-fn fixture_union_field_designator() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    c_rows(
-        "UNION:5 IDENTIFIER IDENTIFIER ASSIGN \
-         LBRACE DOT IDENTIFIER ASSIGN INTEGER:2 RBRACE SEMICOLON",
     )
 }
 
