@@ -165,18 +165,8 @@ mod tests {
     fn memory_ownership_accepts_release_boundaries() {
         let proof = validate_memory_ownership_contract(&[
             record("frontend-input", "vyrec", MemoryOwner::HostCaller, true),
-            record(
-                "resident-csr",
-                "backend",
-                MemoryOwner::DeviceResident,
-                true,
-            ),
-            record(
-                "upload-stage",
-                "backend",
-                MemoryOwner::PinnedStaging,
-                true,
-            ),
+            record("resident-csr", "backend", MemoryOwner::DeviceResident, true),
+            record("upload-stage", "backend", MemoryOwner::PinnedStaging, true),
             record(
                 "analysis-output",
                 "backend",
@@ -201,12 +191,7 @@ mod tests {
     fn memory_ownership_rejects_parity_memory_in_production() {
         assert_eq!(
             validate_memory_ownership_contract(&[
-                record(
-                    "resident-csr",
-                    "backend",
-                    MemoryOwner::DeviceResident,
-                    true
-                ),
+                record("resident-csr", "backend", MemoryOwner::DeviceResident, true),
                 record(
                     "analysis-output",
                     "backend",
