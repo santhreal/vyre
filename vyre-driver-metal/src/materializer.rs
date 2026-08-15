@@ -7,8 +7,9 @@ mod native {
 
     use vyre_driver::materialize::{self, ExecutableModule, InstanceCore, MaterializerDevice};
     use vyre_driver::{
-        ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, Completion,
-        DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
+        ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
+        Completion, DeviceIdentity, DispatchConfig, Resource, ResidentOwner, Submission,
+        VyreBackend,
     };
     use vyre_foundation::ir::Program;
     use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
@@ -20,6 +21,11 @@ mod native {
     /// Rejection for a dispatch that skipped a declared output slot.
     fn omitted_output(output_index: usize, name: &str) -> BackendError {
         materialize::omitted_output("Metal target module", output_index, name)
+    }
+
+    /// Rejection for a resident dispatch that skipped a declared output slot.
+    fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
+        materialize::omitted_output("Metal resident target module", output_index, name)
     }
 
     pub(super) struct MetalMaterializer {
@@ -96,10 +102,15 @@ mod native {
         vyre_driver::artifact_instance_identity!();
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-            self.core.submit_host_only(
+            self.core.route_submission(
                 &bindings,
-                "Metal artifact resident binding",
+                || {
+                    materialize::invalid_module(
+                        "Metal artifact submission cannot mix host and resident resources",
+                    )
+                },
                 |state, invocation_grid| self.execute(state, invocation_grid),
+                |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
             )
         }
     }
@@ -131,6 +142,64 @@ mod native {
                 },
             )
         }
+
+        /// Launch the single module over caller-owned resident resources.
+        ///
+        /// `MetalBackend` holds a resident buffer table and dispatches against
+        /// it, so refusing every resident binding here made the artifact path
+        /// the one caller that could not use it: a chained pipeline had to round
+        /// trip each stage through the host to reach the next. The resident
+        /// order is the binding plan's non-shared roles, which is the order
+        /// `dispatch_resident_timed` reads.
+        fn execute_resident(
+            &self,
+            resources: &BTreeMap<ArtifactValueId, Resource>,
+            invocation_grid: Option<[u32; 3]>,
+        ) -> Result<Completion, BackendError> {
+            let module = self.core.single_resident_module(
+                &self.modules,
+                "Metal resident submission for multi-module artifacts",
+            )?;
+            let plan = BindingPlan::build(&module.program)?;
+            let ordered = self.core.ordered_resident_resources(
+                resident_resource_bindings(&plan)
+                    .map(|binding| module.program.buffers()[binding.buffer_index].name()),
+                resources,
+                |value, name| BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: bind canonical artifact value {} for resident Program buffer `{name}`.",
+                        value.0
+                    ),
+                },
+            )?;
+            let mut config = module.config.clone();
+            if let Some(grid) = invocation_grid {
+                config.grid_override = Some(grid);
+                config.dispatch_grid = Some(grid);
+            }
+            let dispatched = VyreBackend::dispatch_resident_timed(
+                self.backend.as_ref(),
+                &module.program,
+                &ordered,
+                &config,
+            )?;
+            self.core.resident_completion(
+                &plan,
+                &module.program,
+                dispatched,
+                omitted_resident_output,
+                &self.core.messages,
+            )
+        }
+    }
+
+    /// The bindings a resident launch takes a resource for, in binding order.
+    fn resident_resource_bindings(
+        plan: &BindingPlan,
+    ) -> impl Iterator<Item = &vyre_driver::Binding> {
+        plan.bindings
+            .iter()
+            .filter(|binding| binding.role != BindingRole::Shared)
     }
 
     pub(super) fn factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
