@@ -4,10 +4,8 @@
 //! element count, and move one u32 between `src` and `dst`. The mode
 //! only decides which side is indexed indirectly.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Guarded indexed move direction.
@@ -89,14 +87,10 @@ pub(crate) fn indexed_move_program(
             BufferDecl::storage(dst, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(count)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(count)), body)],
+        )],
     )
 }
 

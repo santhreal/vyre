@@ -15,9 +15,8 @@
 //! `stride=1` convolves along rows (horizontal) and `stride=W`
 //! convolves along columns (vertical).
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id.
@@ -42,10 +41,9 @@ fn expr_min(a: Expr, b: Expr) -> Expr {
 /// Boundary handling: clamp indices to `[0, count-1]`.
 #[must_use]
 pub fn conv1d_node(input: &str, output: &str, weights: &str, params: &str) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(vec![
+    wrap_anonymous_region(
+        OP_ID,
+        vec![
             // Load params.
             Node::let_bind("count", Expr::load(params, Expr::u32(0))),
             Node::let_bind("stride", Expr::load(params, Expr::u32(1))),
@@ -130,8 +128,8 @@ pub fn conv1d_node(input: &str, output: &str, weights: &str, params: &str) -> No
                     Node::store(output, Expr::var("idx"), Expr::var("acc")),
                 ],
             ),
-        ]),
-    }
+        ],
+    )
 }
 
 /// Standalone 1D convolution Program.

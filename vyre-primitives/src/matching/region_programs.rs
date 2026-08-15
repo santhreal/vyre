@@ -1,7 +1,5 @@
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for survivor-flag generation over sorted region triples.
@@ -69,11 +67,7 @@ pub fn dedup_regions_flag_program(
                 .with_count(count),
         ],
         REGION_DEDUP_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(DEDUP_REGIONS_FLAG_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(DEDUP_REGIONS_FLAG_OP_ID, body)],
     )
 }
 
@@ -124,11 +118,7 @@ pub fn dedup_regions_cluster_program(
                 .with_count(count),
         ],
         REGION_DEDUP_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(DEDUP_REGIONS_CLUSTER_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(DEDUP_REGIONS_CLUSTER_OP_ID, body)],
     )
 }
 
@@ -338,11 +328,10 @@ pub fn region_sort_program(
                 .with_count(count),
         ],
         REGION_DEDUP_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from("vyre-primitives::matching::region::region_sort"),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            "vyre-primitives::matching::region::region_sort",
+            body,
+        )],
     )
 }
 
@@ -413,11 +402,7 @@ pub fn cap_regions_per_pattern_flag_program(
                 .with_count(count),
         ],
         REGION_DEDUP_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(CAP_REGIONS_PER_PATTERN_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(CAP_REGIONS_PER_PATTERN_OP_ID, body)],
     )
 }
 
@@ -495,10 +480,9 @@ pub fn compact_first_per_region_pattern_flag_program(
                 .with_count(count),
         ],
         REGION_DEDUP_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(COMPACT_FIRST_PER_REGION_PATTERN_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            COMPACT_FIRST_PER_REGION_PATTERN_OP_ID,
+            body,
+        )],
     )
 }

@@ -1,8 +1,7 @@
 //! Shared u32 binary elementwise map builder for math primitives.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn u32_two_input_map_program<F>(
@@ -35,11 +34,7 @@ where
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 

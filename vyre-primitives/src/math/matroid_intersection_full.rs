@@ -18,7 +18,7 @@
 
 use crate::graph::path_reconstruct::path_reconstruct;
 use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -227,11 +227,7 @@ pub fn matroid_intersection_full(
         let recon = path_reconstruct(parent, "target_node_buf", path_out, path_len, n);
         let mut on_sink = vec![
             Node::store("target_node_buf", Expr::u32(0), Expr::var("sink_node")),
-            Node::Region {
-                generator: Ident::from(OP_ID),
-                source_region: None,
-                body: Arc::new(recon.entry().to_vec()),
-            },
+            wrap_anonymous_region(OP_ID, recon.entry().to_vec()),
             Node::let_bind("p_len", Expr::load(path_len, Expr::u32(0))),
             // Cardinality bookkeeping for the static-graph termination: as we toggle the path P,
             // count nodes this toggle ADDS (0->1 = `gained`) vs REMOVES (1->0 = `lost`), so the

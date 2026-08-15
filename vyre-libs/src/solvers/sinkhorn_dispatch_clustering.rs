@@ -23,8 +23,7 @@
 //! host-side iterations. It chains the Sinkhorn update steps directly
 //! within the IR Program.
 
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::dispatch_buffers::{
@@ -347,11 +346,7 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
             BufferDecl::output("out_assignments", 6, DataType::U32).with_count(m),
         ],
         [workgroup_size, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

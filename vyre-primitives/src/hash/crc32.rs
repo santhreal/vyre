@@ -6,9 +6,9 @@
 //! textbook slicing algorithm.
 
 use std::num::NonZeroU32;
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical CRC-32 initial value.
@@ -288,11 +288,10 @@ fn gf2_matrix_square(square: &mut [u32; 32], matrix: &[u32; 32]) {
 /// the bit loop.
 #[must_use]
 pub fn crc32_program(input: &str, out: &str, n: u32) -> Program {
-    let body = vec![Node::Region {
-        generator: Ident::from(CRC32_OP_ID),
-        source_region: None,
-        body: Arc::new(crc32_body(input, out, n)),
-    }];
+    let body = vec![wrap_anonymous_region(
+        CRC32_OP_ID,
+        crc32_body(input, out, n),
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
@@ -318,11 +317,10 @@ pub fn crc32_chunk_program(input: &str, out: &str, n: u32, chunk_size: NonZeroU3
         Some(words) => words,
         None => u32::MAX,
     };
-    let body = vec![Node::Region {
-        generator: Ident::from(CRC32_CHUNK_OP_ID),
-        source_region: None,
-        body: Arc::new(crc32_chunk_body(input, out, n, chunk_size)),
-    }];
+    let body = vec![wrap_anonymous_region(
+        CRC32_CHUNK_OP_ID,
+        crc32_chunk_body(input, out, n, chunk_size),
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32)
@@ -352,11 +350,10 @@ pub fn crc32_pair_reduce_program(input: &str, out: &str, pair_count: NonZeroU32)
         Some(words) => words,
         None => u32::MAX,
     };
-    let body = vec![Node::Region {
-        generator: Ident::from(CRC32_PAIR_REDUCE_OP_ID),
-        source_region: None,
-        body: Arc::new(crc32_pair_reduce_body(input, out, pair_count)),
-    }];
+    let body = vec![wrap_anonymous_region(
+        CRC32_PAIR_REDUCE_OP_ID,
+        crc32_pair_reduce_body(input, out, pair_count),
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32)

@@ -4,9 +4,8 @@
 //! score passes: walk `dk` from `0..d`, load `q[q_base + dk]` and
 //! `k[k_base + dk]`, and accumulate the product into `accum_var`.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id for the attention dot-product child region.
@@ -86,15 +85,14 @@ pub fn dot_partial_program(q_buffer: &str, k_buffer: &str, out: &str, d: u32) ->
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![
                 Node::let_bind("accum", Expr::f32(0.0)),
                 dot_partial(q_buffer, k_buffer, "accum", Expr::u32(0), Expr::u32(0), d),
                 Node::store(out, Expr::u32(0), Expr::var("accum")),
-            ]),
-        }],
+            ],
+        )],
     )
 }
 

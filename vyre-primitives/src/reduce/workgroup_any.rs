@@ -1,8 +1,8 @@
 //! Workgroup-local OR reduction over a u32 scratch buffer.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for workgroup-local u32 any reduction.
@@ -57,15 +57,13 @@ pub fn workgroup_any_u32_child_prefixed(
     count: u32,
     iter_var: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(WORKGROUP_ANY_U32_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        WORKGROUP_ANY_U32_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(workgroup_any_u32_body_prefixed(
-            values, out_var, count, iter_var,
-        )),
-    }
+        },
+        workgroup_any_u32_body_prefixed(values, out_var, count, iter_var),
+    )
 }
 
 /// Standalone workgroup-any program for primitive-level conformance.
@@ -83,11 +81,7 @@ pub fn workgroup_any_u32(values: &str, out: &str, count: u32) -> Program {
                 .with_output_byte_range(0..4),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(WORKGROUP_ANY_U32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(WORKGROUP_ANY_U32_OP_ID, body)],
     )
 }
 

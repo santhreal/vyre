@@ -1,8 +1,8 @@
 //! One persistent-BFS workgroup step with coalesced change detection.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_child_prefixed;
@@ -119,20 +119,20 @@ pub fn persistent_bfs_step_child_prefixed(
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(PERSISTENT_BFS_STEP_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        PERSISTENT_BFS_STEP_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(persistent_bfs_step_body_prefixed(
+        },
+        persistent_bfs_step_body_prefixed(
             shape,
             frontier_out,
             changed,
             scratch,
             edge_kind_mask,
             local_prefix,
-        )),
-    }
+        ),
+    )
 }
 
 /// Wrap one persistent-BFS step and write the per-step convergence flag into
@@ -148,12 +148,12 @@ pub fn persistent_bfs_step_child_prefixed_with_active(
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(PERSISTENT_BFS_STEP_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        PERSISTENT_BFS_STEP_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(persistent_bfs_step_body_prefixed_with_active(
+        },
+        persistent_bfs_step_body_prefixed_with_active(
             shape,
             frontier_out,
             changed,
@@ -161,8 +161,8 @@ pub fn persistent_bfs_step_child_prefixed_with_active(
             active_scratch,
             edge_kind_mask,
             local_prefix,
-        )),
-    }
+        ),
+    )
 }
 
 #[must_use]
@@ -242,17 +242,10 @@ pub fn persistent_bfs_step(
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(PERSISTENT_BFS_STEP_OP_ID),
-            source_region: None,
-            body: Arc::new(persistent_bfs_step_body(
-                shape,
-                frontier_out,
-                changed,
-                "wg_scratch",
-                edge_kind_mask,
-            )),
-        }],
+        vec![wrap_anonymous_region(
+            PERSISTENT_BFS_STEP_OP_ID,
+            persistent_bfs_step_body(shape, frontier_out, changed, "wg_scratch", edge_kind_mask),
+        )],
     )
 }
 

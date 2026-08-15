@@ -19,9 +19,8 @@
 //! for deterministic diffs, swap in a `VecDeque` worklist; the
 //! correctness of the sort does not depend on the worklist policy.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -980,11 +979,10 @@ pub fn toposort_program(
                 .with_count(node_count.max(1)),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(lane0, body)]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(lane0, body)],
+        )],
     )
 }
 

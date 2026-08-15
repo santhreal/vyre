@@ -10,9 +10,8 @@
 //! correctly computed (the caller is responsible for that  -  usually
 //! via `vyre-libs::dataflow::ssa::compute_dominators`).
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::bitset::bitset_words;
@@ -569,17 +568,16 @@ pub fn try_dominator_frontier(
             .with_count(words),
         ],
         DOMINATOR_FRONTIER_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(node_count)),
                 vec![
                     Node::let_bind("candidate", t),
                     Node::loop_for("n", Expr::u32(0), Expr::u32(node_count), dominator_is_seed),
                 ],
-            )]),
-        }],
+            )],
+        )],
     ))
 }
 

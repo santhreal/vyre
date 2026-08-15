@@ -1,6 +1,5 @@
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::body::csr_forward_or_changed_body;
@@ -34,10 +33,6 @@ pub fn csr_forward_or_changed(
     Program::wrapped(
         buffers,
         CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }

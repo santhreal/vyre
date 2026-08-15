@@ -32,7 +32,7 @@
 //! barriers when the backend doesn't support cooperative groups.
 
 use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -227,11 +227,7 @@ fn try_exclusive_difference_pass(
             BufferDecl::output(output, 2, DataType::U32).with_count(n),
         ],
         [BLOCK_LANES, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID_EXCLUSIVE_SUM),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID_EXCLUSIVE_SUM, body)],
     ))
 }
 

@@ -1,8 +1,7 @@
 //! Reverse CSR frontier expansion over an in-place accumulator bitset.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -98,14 +97,13 @@ pub fn csr_backward_or_changed_parallel(
     Program::wrapped(
         buffers,
         CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(src.clone(), Expr::u32(shape.node_count)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

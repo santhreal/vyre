@@ -4,9 +4,8 @@
 //! Tier-2.5 primitive because succinct AST, graph, parser, and security
 //! structures all need the same packed-bit navigation substrate.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -106,11 +105,7 @@ pub fn select1_query(
             BufferDecl::output(out, 2, DataType::U32).with_count(query_count.max(1)),
         ],
         [64, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

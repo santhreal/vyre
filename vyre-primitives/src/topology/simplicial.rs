@@ -19,10 +19,8 @@
 //! | `vyre-libs::sci::topology_features` consumers | topological-feature ML |
 //! | `vyre-foundation::transform` conflict analysis | 3-way Region conflicts in vyre's dispatch graph become 2-simplices; same primitive scores them |
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -134,11 +132,7 @@ pub fn simplicial_triangle_message(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

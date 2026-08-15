@@ -17,9 +17,8 @@
 //! comparison + changed-flag half of the driver loop so every taint
 //! rule can reuse the same convergence semantics.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -71,14 +70,10 @@ pub fn bitset_fixpoint(current: &str, next: &str, changed: &str, words: u32) -> 
             BufferDecl::storage(changed, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(words)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
+        )],
     )
 }
 
@@ -173,14 +168,10 @@ pub fn bitset_fixpoint_warm_start(
             BufferDecl::storage(seed, 3, BufferAccess::ReadOnly, DataType::U32).with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID_WARM_START),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(words)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID_WARM_START,
+            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
+        )],
     )
 }
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
 use super::layout::{PersistentBfsBuffers, BATCH_OP_ID, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE};
 use crate::bitset::bitset_words;
@@ -7,7 +7,6 @@ use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapsh
 use crate::graph::frontier_bits::bind_bit_address;
 use crate::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active;
 use crate::graph::program_graph::ProgramGraphShape;
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// Build the IR `Program` for persistent BFS.
@@ -291,11 +290,7 @@ fn persistent_bfs_single_workgroup(
     Program::wrapped(
         buffers,
         PERSISTENT_BFS_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(entry),
-        }],
+        vec![wrap_anonymous_region(OP_ID, entry)],
     )
 }
 
@@ -459,11 +454,7 @@ fn persistent_bfs_grid_sync_parallel(
     Program::wrapped(
         buffers,
         PERSISTENT_BFS_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(entry),
-        }],
+        vec![wrap_anonymous_region(OP_ID, entry)],
     )
 }
 
@@ -781,11 +772,7 @@ fn try_persistent_bfs_batch_inner(
     Ok(Program::wrapped(
         buffers,
         PERSISTENT_BFS_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(BATCH_OP_ID),
-            source_region: None,
-            body: Arc::new(entry),
-        }],
+        vec![wrap_anonymous_region(BATCH_OP_ID, entry)],
     ))
 }
 

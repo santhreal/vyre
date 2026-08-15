@@ -1,6 +1,5 @@
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::batched_frontier_words::checked_batched_frontier_words;
@@ -206,13 +205,12 @@ pub(crate) fn csr_forward_or_changed_parallel_batch_global_indexed(
     Ok(Program::wrapped(
         buffers,
         CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(src.clone(), Expr::u32(shape.node_count)),
                 prologue,
-            )]),
-        }],
+            )],
+        )],
     ))
 }

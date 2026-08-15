@@ -1,8 +1,6 @@
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
 use super::abi::{IFDS_CSR_WORKGROUP_SIZE, OP_ID};
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a GPU Program that emits the exploded-supergraph CSR.
@@ -475,13 +473,9 @@ pub fn build_ifds_csr_program(
                 .with_count(1),
         ],
         IFDS_CSR_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::eq(Expr::gid_x(), Expr::u32(0)),
-                entry,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::eq(Expr::gid_x(), Expr::u32(0)), entry)],
+        )],
     )
 }

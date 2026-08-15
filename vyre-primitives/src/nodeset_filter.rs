@@ -5,9 +5,8 @@
 //! NodeSet. Centralizing that skeleton prevents node-kind, label-family,
 //! and future tag predicates from drifting at word boundaries.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Compile-time predicate applied to each per-node u32 value.
@@ -70,14 +69,13 @@ pub(crate) fn nodeset_filter_program(
                 .with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(node_count)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

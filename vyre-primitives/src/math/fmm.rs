@@ -37,10 +37,8 @@
 //!   = 8 to fit standard 4-byte alignment).
 //! - **Particle data: 4 u32 per particle** = `(x, y, charge, _pad)`.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// p2m op id.
@@ -162,11 +160,7 @@ pub fn p2m_step(
                 .with_count(n_cells * EXPANSION_WORDS),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(P2M_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(P2M_OP_ID, body)],
     )
 }
 
@@ -232,11 +226,7 @@ pub fn p2m_zeroth_f32_step(
                 .with_count(n_cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(P2M_ZEROTH_F32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(P2M_ZEROTH_F32_OP_ID, body)],
     )
 }
 
@@ -328,11 +318,7 @@ pub fn m2l_zeroth_f32_step(
                 .with_count(n_cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(M2L_ZEROTH_F32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(M2L_ZEROTH_F32_OP_ID, body)],
     )
 }
 
@@ -386,11 +372,7 @@ pub fn l2p_zeroth_f32_step(
                 .with_count(n_regions),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(L2P_ZEROTH_F32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(L2P_ZEROTH_F32_OP_ID, body)],
     )
 }
 

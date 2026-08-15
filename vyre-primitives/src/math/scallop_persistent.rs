@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
 use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
@@ -487,11 +486,7 @@ pub(crate) fn lineage_fixpoint_program(
                 .with_count(words),
         ],
         workgroup_size,
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 

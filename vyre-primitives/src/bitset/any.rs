@@ -4,9 +4,8 @@
 //! ORs them, writes a boolean (0 or 1) to `out[0]`. Used by source-query dialect
 //! `exists` / `any(...)` aggregate lowerings.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -60,14 +59,13 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
             BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

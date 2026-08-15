@@ -4,9 +4,8 @@
 //! and buffer contracts, but the IR shape is intentionally centralized here so
 //! new bitset binary ops do not fork the same load/op/store kernel body.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Supported per-word bitwise binary operators.
@@ -53,14 +52,10 @@ pub(crate) fn binary_word_program(
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(words)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
+        )],
     )
 }
 
@@ -117,14 +112,10 @@ where
                 .with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(words)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
+        )],
     )
 }
 

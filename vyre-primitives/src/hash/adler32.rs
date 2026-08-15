@@ -6,9 +6,8 @@
 //! `input[i]` packs one byte per u32 slot in the low 8 bits; high bits are
 //! ignored by construction.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Largest prime smaller than 2^16 used by Adler-32.
@@ -153,11 +152,10 @@ pub fn adler32_finalize_expr(a: Expr, b: Expr) -> Expr {
 /// Build a Program that writes Adler-32(input[0..n]) to `out[0]`.
 #[must_use]
 pub fn adler32_program(input: &str, out: &str, n: u32) -> Program {
-    let body = vec![Node::Region {
-        generator: Ident::from(ADLER32_OP_ID),
-        source_region: None,
-        body: Arc::new(adler32_body(input, out, n)),
-    }];
+    let body = vec![wrap_anonymous_region(
+        ADLER32_OP_ID,
+        adler32_body(input, out, n),
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),

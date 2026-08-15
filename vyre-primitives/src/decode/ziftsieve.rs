@@ -7,9 +7,8 @@
 //! accelerator backend, or a future persistent decode megakernel as long as they satisfy the same
 //! sequence-index contract.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical primitive op id.
@@ -345,11 +344,7 @@ pub fn ziftsieve_literal_copy_with_op_id(
                 .with_count(max_output.max(1)),
         ],
         WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 

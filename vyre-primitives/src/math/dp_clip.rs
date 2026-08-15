@@ -28,10 +28,8 @@
 //! | future `vyre-libs::ml::robust_optim` | gradient-norm-clipped optimizers |
 //! | `vyre-driver` DP telemetry release | bound per-Program telemetry contributions before noise injection |
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -161,11 +159,7 @@ pub fn dp_clip_per_sample(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
@@ -37,11 +37,7 @@ pub fn csr_forward_or_changed_parallel(
     Program::wrapped(
         buffers,
         CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -254,19 +250,19 @@ pub fn csr_forward_or_changed_parallel_child_prefixed(
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(csr_forward_or_changed_parallel_body_prefixed(
+        },
+        csr_forward_or_changed_parallel_body_prefixed(
             shape,
             frontier_out,
             changed,
             edge_kind_mask,
             local_prefix,
-        )),
-    }
+        ),
+    )
 }
 
 /// Wrap a snapshotting parallel expansion body as a child Region.
@@ -279,19 +275,19 @@ pub fn csr_forward_or_changed_parallel_snapshot_child_prefixed(
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(csr_forward_or_changed_parallel_snapshot_body_prefixed(
+        },
+        csr_forward_or_changed_parallel_snapshot_body_prefixed(
             shape,
             frontier_out,
             changed,
             edge_kind_mask,
             local_prefix,
-        )),
-    }
+        ),
+    )
 }
 
 /// Wrap an active-gated snapshotting parallel expansion body as a child Region.
@@ -306,21 +302,19 @@ pub fn csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active(
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(
-            csr_forward_or_changed_parallel_snapshot_body_prefixed_with_active(
-                shape,
-                frontier_out,
-                changed,
-                active_gate,
-                active_changed_index,
-                edge_kind_mask,
-                local_prefix,
-            ),
+        },
+        csr_forward_or_changed_parallel_snapshot_body_prefixed_with_active(
+            shape,
+            frontier_out,
+            changed,
+            active_gate,
+            active_changed_index,
+            edge_kind_mask,
+            local_prefix,
         ),
-    }
+    )
 }

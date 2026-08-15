@@ -1,7 +1,7 @@
 //! Reusable attention passes built from the shared `dot_partial` primitive.
 
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
@@ -62,10 +62,10 @@ pub fn attention_max_pass_bounded(
         "j",
         Expr::u32(0),
         key_limit,
-        vec![Node::Region {
-            generator: Ident::from(DOT_PARTIAL_OP_ID),
-            source_region: Some(parent),
-            body: Arc::new(vec![
+        vec![wrap_child_region(
+            DOT_PARTIAL_OP_ID,
+            parent,
+            vec![
                 Node::let_bind("dot_val", Expr::f32(0.0)),
                 dot_partial(
                     q,
@@ -95,8 +95,8 @@ pub fn attention_max_pass_bounded(
                         Expr::var("max_val"),
                     ),
                 ),
-            ]),
-        }],
+            ],
+        )],
     )]
 }
 
@@ -121,11 +121,10 @@ pub fn attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -
                 BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::F32).with_count(1),
             ],
             [1, 1, 1],
-            vec![Node::Region {
-                generator: Ident::from(ATTENTION_MAX_PASS_OP_ID),
-                source_region: None,
-                body: Arc::new(vec![Node::store(out, Expr::u32(0), max_val)]),
-            }],
+            vec![wrap_anonymous_region(
+                ATTENTION_MAX_PASS_OP_ID,
+                vec![Node::store(out, Expr::u32(0), max_val)],
+            )],
         );
     }
     Program::wrapped(
@@ -136,16 +135,15 @@ pub fn attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(ATTENTION_MAX_PASS_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![
+        vec![wrap_anonymous_region(
+            ATTENTION_MAX_PASS_OP_ID,
+            vec![
                 Node::let_bind("i", Expr::u32(0)),
                 Node::let_bind("max_val", Expr::f32(f32::MIN)),
                 Node::Block(attention_max_pass(q, k, d, s, scale_expr)),
                 Node::store(out, Expr::u32(0), Expr::var("max_val")),
-            ]),
-        }],
+            ],
+        )],
     )
 }
 
@@ -195,10 +193,10 @@ pub fn attention_sum_pass_bounded(
         "j",
         Expr::u32(0),
         key_limit,
-        vec![Node::Region {
-            generator: Ident::from(DOT_PARTIAL_OP_ID),
-            source_region: Some(parent),
-            body: Arc::new(vec![
+        vec![wrap_child_region(
+            DOT_PARTIAL_OP_ID,
+            parent,
+            vec![
                 Node::let_bind("dot_val", Expr::f32(0.0)),
                 dot_partial(
                     q,
@@ -226,8 +224,8 @@ pub fn attention_sum_pass_bounded(
                         },
                     ),
                 ),
-            ]),
-        }],
+            ],
+        )],
     )]
 }
 
@@ -265,11 +263,10 @@ pub fn attention_sum_pass_program(
                 BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32).with_count(1),
             ],
             [1, 1, 1],
-            vec![Node::Region {
-                generator: Ident::from(ATTENTION_SUM_PASS_OP_ID),
-                source_region: None,
-                body: Arc::new(vec![Node::store(out, Expr::u32(0), sum_val)]),
-            }],
+            vec![wrap_anonymous_region(
+                ATTENTION_SUM_PASS_OP_ID,
+                vec![Node::store(out, Expr::u32(0), sum_val)],
+            )],
         );
     }
     Program::wrapped(
@@ -281,17 +278,16 @@ pub fn attention_sum_pass_program(
             BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(ATTENTION_SUM_PASS_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![
+        vec![wrap_anonymous_region(
+            ATTENTION_SUM_PASS_OP_ID,
+            vec![
                 Node::let_bind("i", Expr::u32(0)),
                 Node::let_bind("max_val", Expr::load(max_in, Expr::u32(0))),
                 Node::let_bind("sum_val", Expr::f32(0.0)),
                 Node::Block(attention_sum_pass(q, k, d, s, scale_expr)),
                 Node::store(out, Expr::u32(0), Expr::var("sum_val")),
-            ]),
-        }],
+            ],
+        )],
     )
 }
 
@@ -415,10 +411,10 @@ pub fn attention_write_pass_bounded_typed(
                 "j",
                 Expr::u32(0),
                 key_limit,
-                vec![Node::Region {
-                    generator: Ident::from(DOT_PARTIAL_OP_ID),
-                    source_region: Some(parent),
-                    body: Arc::new(vec![
+                vec![wrap_child_region(
+                    DOT_PARTIAL_OP_ID,
+                    parent,
+                    vec![
                         Node::let_bind("dot_val", Expr::f32(0.0)),
                         dot_partial(
                             q,
@@ -473,8 +469,8 @@ pub fn attention_write_pass_bounded_typed(
                                 Expr::mul(Expr::var("weight"), Expr::var("value")),
                             ),
                         ),
-                    ]),
-                }],
+                    ],
+                )],
             ),
             Node::Store {
                 buffer: out.into(),
@@ -552,11 +548,7 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
                 BufferDecl::storage(out, 5, BufferAccess::ReadWrite, DataType::F32).with_count(d),
             ],
             [1, 1, 1],
-            vec![Node::Region {
-                generator: Ident::from(ATTENTION_WRITE_PASS_OP_ID),
-                source_region: None,
-                body: Arc::new(stores),
-            }],
+            vec![wrap_anonymous_region(ATTENTION_WRITE_PASS_OP_ID, stores)],
         );
     }
     Program::wrapped(
@@ -569,17 +561,16 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
             BufferDecl::storage(out, 5, BufferAccess::ReadWrite, DataType::F32).with_count(d),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(ATTENTION_WRITE_PASS_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![
+        vec![wrap_anonymous_region(
+            ATTENTION_WRITE_PASS_OP_ID,
+            vec![
                 Node::let_bind("i", Expr::u32(0)),
                 Node::let_bind("max_val", Expr::load(max_in, Expr::u32(0))),
                 Node::let_bind("sum_val", Expr::load(sum_in, Expr::u32(0))),
                 Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
                 Node::Block(attention_write_pass(q, k, v, d, s, scale_expr, out)),
-            ]),
-        }],
+            ],
+        )],
     )
 }
 

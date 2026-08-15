@@ -14,10 +14,8 @@
 //! replace this implementation behind the same function once pipeline-level
 //! scratch dispatch is available.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -104,11 +102,7 @@ pub fn radix_sort(input: &str, output: &str, count: u32, bits: u32) -> Program {
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

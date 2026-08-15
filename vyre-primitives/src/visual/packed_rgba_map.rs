@@ -4,9 +4,8 @@
 //! share the same execution shape: one invocation reads or derives one
 //! packed `u32` RGBA pixel and writes one packed `u32` pixel.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id.
@@ -15,10 +14,9 @@ pub const OP_ID: &str = "vyre-primitives::visual::packed_rgba_map";
 /// Emit a generic identity packed-RGBA map node.
 #[must_use]
 pub fn packed_rgba_map_node(input: &str, output: &str, count: u32) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(vec![
+    wrap_anonymous_region(
+        OP_ID,
+        vec![
             Node::let_bind("idx", Expr::gid_x()),
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::u32(count)),
@@ -27,8 +25,8 @@ pub fn packed_rgba_map_node(input: &str, output: &str, count: u32) -> Node {
                     Node::store(output, Expr::var("idx"), Expr::var("pixel")),
                 ],
             ),
-        ]),
-    }
+        ],
+    )
 }
 
 /// Standalone identity packed-RGBA map Program.

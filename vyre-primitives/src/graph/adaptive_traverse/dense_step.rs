@@ -1,10 +1,8 @@
 //! Dense-bitmatrix traversal step: one destination node per lane, ORing its
 //! reverse-adjacency bitrow against the frontier.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::frontier_plan::ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE;
@@ -92,14 +90,13 @@ pub fn adaptive_dense_step(
                 .with_count(adj_count_u32),
         ],
         ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(d.clone(), Expr::u32(node_count)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

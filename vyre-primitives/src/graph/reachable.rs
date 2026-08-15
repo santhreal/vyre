@@ -12,10 +12,8 @@
 //! the conform harness cpu↔gpu bytecompare oracle.
 
 use std::collections::HashSet;
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
@@ -401,11 +399,7 @@ pub fn reachable_program(
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(entry),
-        }],
+        vec![wrap_anonymous_region(OP_ID, entry)],
     )
 }
 

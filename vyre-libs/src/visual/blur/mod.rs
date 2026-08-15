@@ -11,9 +11,9 @@
 //!
 //! Category A composition  -  composes Tier 2.5 `math::conv1d`.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_child_region;
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::blur";
@@ -214,10 +214,10 @@ fn gaussian_blur_pass(
 
     // The per-pixel blur body: for each channel, run a weighted sum
     // over the kernel window, reading neighbors along the given axis.
-    let blur_pass = Node::Region {
-        generator: Ident::from(vyre_primitives::math::conv1d::OP_ID),
-        source_region: Some(parent),
-        body: Arc::new(vec![
+    let blur_pass = wrap_child_region(
+        vyre_primitives::math::conv1d::OP_ID,
+        parent,
+        vec![
             Node::let_bind("idx", Expr::gid_x()),
             Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(count)), {
                 let mut body = vec![
@@ -376,8 +376,8 @@ fn gaussian_blur_pass(
                 body.push(Node::store(output, Expr::var("oidx"), Expr::var("packed")));
                 body
             }),
-        ]),
-    };
+        ],
+    );
 
     Program::wrapped(
         vec![

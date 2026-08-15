@@ -4,11 +4,9 @@
 //! ProgramGraph CSR. If every requested motif edge exists, every
 //! endpoint participating in the motif is marked in the final witness.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
 use super::padded_u32_slice_fingerprint as motif_padded_slice_fingerprint;
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 use crate::graph::program_graph::{
@@ -461,10 +459,9 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
     Program::wrapped(
         buffers,
         MOTIF_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![
                 Node::loop_for(
                     "node",
                     Expr::u32(0),
@@ -477,8 +474,8 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
                     Expr::eq(Expr::var("matched_edges"), Expr::u32(edge_count)),
                     publish_full_match,
                 ),
-            ]),
-        }],
+            ],
+        )],
     )
 }
 

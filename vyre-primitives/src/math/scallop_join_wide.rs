@@ -9,10 +9,8 @@
 //! convergence loop; large matrices expose split-visible GridSync phases for
 //! multi-block dispatch.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -169,11 +167,10 @@ pub fn semiring_gemm_wide(
     Program::wrapped(
         buffers,
         SCALLOP_JOIN_WIDE_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(format!("anonymous::{OP_ID}::semiring_gemm_wide")),
-            source_region: None,
-            body: Arc::new(if_block),
-        }],
+        vec![wrap_anonymous_region(
+            &format!("anonymous::{OP_ID}::semiring_gemm_wide"),
+            if_block,
+        )],
     )
 }
 

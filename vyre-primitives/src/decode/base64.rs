@@ -2,9 +2,10 @@
 
 use std::error::Error as StdError;
 use std::fmt;
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for base64 decode.
@@ -389,19 +390,13 @@ pub fn base64_decode_child(
     decoded_len_buffer: &str,
     input_len: u32,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(BASE64_DECODE_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        BASE64_DECODE_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(base64_decode_body(
-            input,
-            table,
-            output,
-            decoded_len_buffer,
-            input_len,
-        )),
-    }
+        },
+        base64_decode_body(input, table, output, decoded_len_buffer, input_len),
+    )
 }
 
 /// Standalone base64 decode program for primitive-level conformance.
@@ -423,17 +418,10 @@ pub fn base64_decode(
             BufferDecl::read_write(decoded_len_buffer, 3, DataType::U32).with_count(1),
         ],
         BASE64_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(BASE64_DECODE_OP_ID),
-            source_region: None,
-            body: Arc::new(base64_decode_body(
-                input,
-                table,
-                output,
-                decoded_len_buffer,
-                input_len,
-            )),
-        }],
+        vec![wrap_anonymous_region(
+            BASE64_DECODE_OP_ID,
+            base64_decode_body(input, table, output, decoded_len_buffer, input_len),
+        )],
     )
 }
 

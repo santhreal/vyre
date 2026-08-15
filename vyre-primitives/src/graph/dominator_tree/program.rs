@@ -27,9 +27,9 @@
 //! disconnected component; callers should run `reachable` first if they need
 //! strict guarantees.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -330,22 +330,18 @@ pub fn try_dominator_tree_program(
                 .with_count(node_count.max(1)),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(region_body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, region_body)],
     ))
 }
 
 fn child_phase(generator: &'static str, body: Vec<Node>) -> Node {
-    Node::Region {
-        generator: Ident::from(generator),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        generator,
+        GeneratorRef {
             name: OP_ID.to_string(),
-        }),
-        body: Arc::new(body),
-    }
+        },
+        body,
+    )
 }
 
 fn inert_dominator_tree_program(idom_out: &str) -> Program {
@@ -364,11 +360,7 @@ fn inert_dominator_tree_program(idom_out: &str) -> Program {
                 .with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::return_()]),
-        }],
+        vec![wrap_anonymous_region(OP_ID, vec![Node::return_()])],
     )
 }
 

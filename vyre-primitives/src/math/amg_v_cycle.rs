@@ -16,7 +16,7 @@
 use crate::math::multigrid::jacobi_smooth_step_cpu_into;
 use crate::math::multigrid::jacobi_smooth_step_serial_body;
 use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -273,10 +273,9 @@ pub fn amg_v_cycle(
                 .with_count(n_coarse),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::Region {
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::Region {
                 generator: Ident::from(V_CYCLE_PHASE_OP_ID),
                 source_region: Some(GeneratorRef {
                     name: OP_ID.to_string(),
@@ -295,8 +294,8 @@ pub fn amg_v_cycle(
                     Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                     nodes,
                 )]),
-            }]),
-        }],
+            }],
+        )],
     )
 }
 
@@ -564,15 +563,11 @@ inventory::submit! {
                     BufferDecl::output("out", 1, DataType::U32).with_count(1),
                 ],
                 [1, 1, 1],
-                vec![Node::Region {
-                    generator: Ident::from(V_CYCLE_PHASE_OP_ID),
-                    source_region: None,
-                    body: Arc::new(vec![Node::store(
+                vec![wrap_anonymous_region(V_CYCLE_PHASE_OP_ID, vec![Node::store(
                         "out",
                         Expr::u32(0),
                         Expr::load("input", Expr::u32(0)),
-                    )]),
-                }],
+                    )])],
             )
         },
         Some(|| {

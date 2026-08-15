@@ -28,10 +28,9 @@
 //! in a grammar-to-NFA compiler layer that produces the same transition
 //! and epsilon tables before calling this scan kernel.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use vyre_primitives::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
 
@@ -449,17 +448,16 @@ pub fn nfa_scan_with_plan(
     Ok(Program::wrapped(
         buffers,
         [LANES_PER_SUBGROUP as u32, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::and(
                     Expr::lt(lane_u32(), Expr::u32(LANES_PER_SUBGROUP as u32)),
                     Expr::lt(start_u32(), haystack_len_expr()),
                 ),
                 body,
-            )]),
-        }],
+            )],
+        )],
     ))
 }
 

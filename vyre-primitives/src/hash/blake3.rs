@@ -5,6 +5,7 @@
 //! quartets for one permutation round.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -134,11 +135,7 @@ pub fn blake3_g_program(state: &str, message: &str, out: &str) -> Program {
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(16),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(BLAKE3_G_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(BLAKE3_G_OP_ID, body)],
     )
 }
 
@@ -162,11 +159,7 @@ pub fn blake3_round_program(state: &str, message: &str, out: &str) -> Program {
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(16),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(BLAKE3_ROUND_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(BLAKE3_ROUND_OP_ID, body)],
     )
 }
 

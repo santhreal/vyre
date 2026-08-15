@@ -1,10 +1,8 @@
 //! Packed-word frontier compaction: one lane per u32 frontier word, one atomic
 //! queue reservation per nonzero word.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::{
@@ -175,10 +173,6 @@ fn frontier_words_to_queue_parallel_program(
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }

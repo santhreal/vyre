@@ -1,8 +1,8 @@
 //! Histogram range-count primitive.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for summing a half-open histogram range.
@@ -37,13 +37,13 @@ pub fn range_counts_u32_child(
     start: u32,
     end: u32,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(RANGE_COUNTS_U32_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        RANGE_COUNTS_U32_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(range_counts_u32_body(histogram, out_var, start, end)),
-    }
+        },
+        range_counts_u32_body(histogram, out_var, start, end),
+    )
 }
 
 /// Standalone range-count program for primitive conformance.
@@ -61,11 +61,7 @@ pub fn range_counts_u32(histogram: &str, out: &str, start: u32, end: u32) -> Pro
                 .with_output_byte_range(0..4),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(RANGE_COUNTS_U32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(RANGE_COUNTS_U32_OP_ID, body)],
     )
 }
 

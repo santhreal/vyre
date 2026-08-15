@@ -1,9 +1,7 @@
 //! Queue-length initialization and node-per-lane frontier compaction.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
@@ -28,11 +26,10 @@ pub fn frontier_queue_len_init(queue_len: &str) -> Program {
             BufferDecl::storage(queue_len, 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_QUEUE_LEN_INIT_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::store(queue_len, Expr::u32(0), Expr::u32(0))]),
-        }],
+        vec![wrap_anonymous_region(
+            FRONTIER_QUEUE_LEN_INIT_OP_ID,
+            vec![Node::store(queue_len, Expr::u32(0), Expr::u32(0))],
+        )],
     )
 }
 
@@ -146,11 +143,7 @@ pub fn frontier_to_queue(
             BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [lanes, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_TO_QUEUE_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(FRONTIER_TO_QUEUE_OP_ID, body)],
     )
 }
 
@@ -212,10 +205,9 @@ pub fn frontier_to_queue_parallel(
             BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_TO_QUEUE_PARALLEL_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
+            body,
+        )],
     )
 }

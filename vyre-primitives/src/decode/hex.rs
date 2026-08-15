@@ -1,8 +1,9 @@
 //! Hex decode primitive body.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for ASCII hex decode.
@@ -101,13 +102,13 @@ pub fn hex_decode_child(
     table: &str,
     input_len: u32,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(HEX_DECODE_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        HEX_DECODE_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(hex_decode_body(input, output, table, input_len)),
-    }
+        },
+        hex_decode_body(input, output, table, input_len),
+    )
 }
 
 /// Standalone hex decode program for primitive-level conformance.
@@ -123,11 +124,10 @@ pub fn hex_decode(input: &str, output: &str, table: &str, input_len: u32) -> Pro
                 .with_count(HEX_DECODE_TABLE_WORDS),
         ],
         HEX_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(HEX_DECODE_OP_ID),
-            source_region: None,
-            body: Arc::new(hex_decode_body(input, output, table, input_len)),
-        }],
+        vec![wrap_anonymous_region(
+            HEX_DECODE_OP_ID,
+            hex_decode_body(input, output, table, input_len),
+        )],
     )
 }
 

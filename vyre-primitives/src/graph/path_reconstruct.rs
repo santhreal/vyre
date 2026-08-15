@@ -13,10 +13,8 @@
 //! and writes the path length into `path_len[0]`. Bounded by
 //! `max_depth` so a corrupt parent array cannot hang the GPU.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -271,14 +269,13 @@ pub fn path_reconstruct(
             BufferDecl::storage(path_len, 3, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 
@@ -372,11 +369,7 @@ pub fn batched_path_reconstruct(target_count: u32, max_depth: u32) -> Program {
                 .with_count(target_count),
         ],
         [BATCHED_WORKGROUP_SIZE, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(BATCHED_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(BATCHED_OP_ID, body)],
     )
 }
 

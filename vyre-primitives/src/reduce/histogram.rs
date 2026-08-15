@@ -19,10 +19,8 @@
 //!
 //! Out-of-range indices are silently dropped because no lane owns them.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -81,11 +79,7 @@ pub fn histogram(input: &str, output: &str, count: u32, num_bins: u32) -> Progra
                 .with_count(num_bins),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -127,14 +121,10 @@ pub fn histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins:
                 .with_count(num_bins),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(count)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(count)), body)],
+        )],
     )
 }
 

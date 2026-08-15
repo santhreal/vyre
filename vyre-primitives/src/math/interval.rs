@@ -4,9 +4,8 @@
 //! pairs. Backend crates decide how to lower min/max; this module only owns the
 //! substrate-neutral program shape.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for interval merge.
@@ -76,13 +75,12 @@ pub fn interval_merge_program(
                 .with_count(lane_count.max(1)),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(interval_merge_body(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            interval_merge_body(
                 mins_a, maxs_a, mins_b, maxs_b, mins_out, maxs_out, lane_count,
-            )),
-        }],
+            ),
+        )],
     )
 }
 

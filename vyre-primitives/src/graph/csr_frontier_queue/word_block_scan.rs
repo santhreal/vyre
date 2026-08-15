@@ -1,10 +1,8 @@
 //! Deterministic packed-frontier prefix scan: per-word popcounts, per-block
 //! totals, and the in-place conversion of block totals into queue offsets.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
@@ -167,11 +165,10 @@ pub fn frontier_word_counts_scan_pass_a(
             BufferDecl::workgroup(&scratch_b, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
         ],
         [FRONTIER_WORD_SCAN_BLOCK_LANES, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
+            body,
+        )],
     )
 }
 
@@ -276,11 +273,10 @@ fn frontier_word_block_offsets_single_workgroup(
             BufferDecl::workgroup(&scratch_b, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
         ],
         [FRONTIER_WORD_SCAN_BLOCK_LANES, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID,
+            body,
+        )],
     )
 }
 
@@ -320,10 +316,9 @@ fn frontier_word_block_offsets_single_lane(
                 .with_output_byte_range(0..block_total_bytes),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID,
+            body,
+        )],
     )
 }

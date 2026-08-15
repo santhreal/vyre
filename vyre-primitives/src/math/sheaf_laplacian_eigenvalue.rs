@@ -18,7 +18,7 @@
 //! fixed point on the GPU/IR path (`r`, `v`) and `f64` on the CPU reference path.
 
 use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -135,10 +135,9 @@ pub fn sheaf_laplacian_eigenvalue(
                 .with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::Region {
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::Region {
                 generator: Ident::from(POWER_ITERATION_PHASE_OP_ID),
                 source_region: Some(GeneratorRef {
                     name: OP_ID.to_string(),
@@ -154,8 +153,8 @@ pub fn sheaf_laplacian_eigenvalue(
                     Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                     nodes,
                 )]),
-            }]),
-        }],
+            }],
+        )],
     )
 }
 
@@ -289,15 +288,11 @@ inventory::submit! {
                     BufferDecl::output("out", 1, DataType::U32).with_count(1),
                 ],
                 [1, 1, 1],
-                vec![Node::Region {
-                    generator: Ident::from(POWER_ITERATION_PHASE_OP_ID),
-                    source_region: None,
-                    body: Arc::new(vec![Node::store(
+                vec![wrap_anonymous_region(POWER_ITERATION_PHASE_OP_ID, vec![Node::store(
                         "out",
                         Expr::u32(0),
                         Expr::load("input", Expr::u32(0)),
-                    )]),
-                }],
+                    )])],
             )
         },
         Some(|| {
