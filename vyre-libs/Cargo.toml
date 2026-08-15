@@ -319,6 +319,11 @@ path = "tests/quantized_via_reference_parity.rs"
 required-features = ["cpu-parity", "solvers", "test-fixtures"]
 
 [[test]]
+name = "quantized_dispatch_variant_coverage_gate"
+path = "tests/quantized_dispatch_variant_coverage_gate.rs"
+required-features = ["solvers"]
+
+[[test]]
 name = "sheaf_heterophilic_via_reference_parity"
 path = "tests/sheaf_heterophilic_via_reference_parity.rs"
 required-features = ["cpu-parity", "solvers", "test-fixtures"]

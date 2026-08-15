@@ -55,21 +55,6 @@ impl ProgramDispatcher for QuantizedDotDispatcher {
     }
 }
 
-struct MalformedDotDispatcher {
-    outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for MalformedDotDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        Ok(self.outputs.clone())
-    }
-}
-
 struct QuantizedMatvecDispatcher;
 
 impl ProgramDispatcher for QuantizedMatvecDispatcher {
@@ -204,6 +189,46 @@ impl ProgramDispatcher for QuantizedBatchedMatmulTop1Dispatcher {
         packed.extend(indices.iter().map(|&i| i as f32));
         Ok(vec![vyre_primitives::wire::pack_f32_slice(&packed)])
     }
+}
+
+/// Every quantized dispatch entry point keys its `ProgramCache` on the shape it
+/// built the Program for: two dispatches at one shape must build one Program,
+/// and a third at a different shape must build a second.
+///
+/// `dispatch` receives the caller-owned scratch and `true` when it should use
+/// the changed shape; `builds` reads that scratch's build counter.
+fn assert_program_cache_keys_on_shape<S: Default>(
+    entry_point: &str,
+    shape_field: &str,
+    builds: impl Fn(&S) -> usize,
+    mut dispatch: impl FnMut(&mut S, bool),
+) {
+    let mut scratch = S::default();
+    dispatch(&mut scratch, false);
+    dispatch(&mut scratch, false);
+    assert_eq!(
+        builds(&scratch),
+        1,
+        "Fix: repeated same-shape {entry_point} dispatch must reuse the primitive Program."
+    );
+
+    dispatch(&mut scratch, true);
+    assert_eq!(
+        builds(&scratch),
+        2,
+        "Fix: {entry_point} dispatch must rebuild the primitive Program only when {shape_field} changes."
+    );
+}
+
+/// Dispatch results must match the CPU oracle bit for bit, length included.
+/// Zipping the two and comparing the overlap passes on a result that is short,
+/// which is the failure a backend readback bug produces.
+fn assert_f32_bits_eq(actual: &[f32], expected: &[f32], label: &str) {
+    assert_eq!(
+        actual.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+        expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+        "Fix: {label} must match the CPU oracle bit for bit, over the same number of values."
+    );
 }
 
 fn pack_i4_rows(rows: &[&[i32]]) -> Vec<u32> {

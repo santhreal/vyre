@@ -1,5 +1,7 @@
 use super::super::*;
-use super::recording_dispatcher::{traversal_graph, RecordingResidentDispatcher};
+use super::recording_dispatcher::{
+    graph_of, Frontier, RecordingResidentDispatcher, SparseQueueRun,
+};
 use crate::graph::dispatch::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 
 #[test]
@@ -57,159 +59,77 @@ fn sparse_queue_step_accepts_csr_only_resident_graph() {
 
 #[test]
 fn sparse_queue_step_sizes_active_queue_from_frontier_popcount() {
-    let dispatcher = RecordingResidentDispatcher::default();
-    let node_count = 8_000u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
-    let graph = ResidentAdaptiveTraversalGraph {
-        node_count,
-        edge_count: 0,
-        max_row_degree: 0,
-        words,
-        ..traversal_graph()
-    };
-    let mut scratch = AdaptiveTraversalResidentScratch::default();
-    let mut frontier_in = vec![0u32; words];
-    frontier_in[0] = 1;
-    let mut frontier_out = Vec::new();
-
-    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
-        &dispatcher,
-        &graph,
-        &frontier_in,
-        u32::MAX,
-        &mut scratch,
-        &mut frontier_out,
-    )
-    .expect("Fix: recording dispatcher should complete sparse queue traversal");
+    let run = SparseQueueRun::over_graph(&graph_of(8_000), &Frontier::SingleSource)
+        .expect("Fix: recording dispatcher should complete sparse queue traversal");
 
     assert_eq!(
-        scratch.queue_bytes,
+        run.scratch.queue_bytes,
         std::mem::size_of::<u32>(),
         "single-source frontier must not allocate a graph-sized active queue"
     );
     assert_eq!(
-        dispatcher.resident_alloc_lengths().last().copied(),
+        run.alloc_lengths().last().copied(),
         Some(std::mem::size_of::<u32>()),
         "active queue allocation should be sized from frontier popcount"
     );
-    assert_eq!(frontier_out, vec![0; words]);
+    assert_eq!(run.frontier_out, vec![0; run.words]);
 }
 
 #[test]
 fn sparse_queue_step_reuses_larger_queue_scratch_for_smaller_frontier() {
-    let dispatcher = RecordingResidentDispatcher::default();
-    let node_count = 4096u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
     let graph = ResidentAdaptiveTraversalGraph {
-        node_count,
-        edge_count: 0,
-        max_row_degree: 0,
-        words,
         layout_hash: 11,
-        ..traversal_graph()
+        ..graph_of(4096)
     };
-    let mut scratch = AdaptiveTraversalResidentScratch::default();
-    let mut larger_frontier = vec![0u32; words];
-    for node in 0..300u32 {
-        larger_frontier[(node / 32) as usize] |= 1 << (node % 32);
-    }
-    let mut frontier_out = Vec::new();
+    let mut run = SparseQueueRun::over_graph(&graph, &Frontier::LowNodes(300))
+        .expect("Fix: recording dispatcher should complete larger sparse queue traversal");
 
-    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
-        &dispatcher,
-        &graph,
-        &larger_frontier,
-        u32::MAX,
-        &mut scratch,
-        &mut frontier_out,
-    )
-    .expect("Fix: recording dispatcher should complete larger sparse queue traversal");
+    let queue_handle = run.active_queue();
+    assert_eq!(run.scratch.queue_bytes, 512 * std::mem::size_of::<u32>());
+    let allocs_after_large = run.alloc_count();
 
-    let queue_handle = scratch
-        .queue_handle
-        .expect("Fix: sparse queue step must allocate active queue");
-    assert_eq!(scratch.queue_bytes, 512 * std::mem::size_of::<u32>());
-    let allocs_after_large = dispatcher.alloc_count.get();
-    let mut single_frontier = vec![0u32; words];
-    single_frontier[0] = 1;
+    run.step_again(&graph, &Frontier::SingleSource)
+        .expect("Fix: recording dispatcher should complete smaller sparse queue traversal");
 
-    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
-        &dispatcher,
-        &graph,
-        &single_frontier,
-        u32::MAX,
-        &mut scratch,
-        &mut frontier_out,
-    )
-    .expect("Fix: recording dispatcher should complete smaller sparse queue traversal");
-
-    assert_eq!(scratch.queue_handle, Some(queue_handle));
+    assert_eq!(run.scratch.queue_handle, Some(queue_handle));
     assert_eq!(
-        scratch.queue_bytes,
+        run.scratch.queue_bytes,
         512 * std::mem::size_of::<u32>(),
         "scratch should keep the larger reusable queue buffer instead of shrinking"
     );
     assert_eq!(
-        dispatcher.alloc_count.get(),
+        run.alloc_count(),
         allocs_after_large,
         "smaller frontiers should reuse the existing resident queue allocation"
     );
     assert!(
-        dispatcher.freed.borrow().is_empty(),
+        run.freed_handles().is_empty(),
         "smaller frontiers should not free and reallocate resident queue scratch"
     );
 }
 
 #[test]
 fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
-    let dispatcher = RecordingResidentDispatcher::default();
-    let node_count = 2048u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
     let graph = ResidentAdaptiveTraversalGraph {
-        node_count,
         edge_count: STRIDED_FORWARD_MIN_ROW_DEGREE,
         max_row_degree: STRIDED_FORWARD_MIN_ROW_DEGREE,
         high_degree_source_count: 1,
-        words,
         layout_hash: 13,
-        ..traversal_graph()
+        ..graph_of(2048)
     };
-    let mut scratch = AdaptiveTraversalResidentScratch::default();
-    let mut frontier_in = vec![0u32; words];
-    for node in 0..9u32 {
-        frontier_in[(node / 32) as usize] |= 1 << (node % 32);
-    }
-    let mut frontier_out = Vec::new();
+    let run = SparseQueueRun::over_graph(&graph, &Frontier::LowNodes(9))
+        .expect("Fix: recording dispatcher should complete high-degree sparse queue traversal");
 
-    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
-        &dispatcher,
-        &graph,
-        &frontier_in,
-        u32::MAX,
-        &mut scratch,
-        &mut frontier_out,
-    )
-    .expect("Fix: recording dispatcher should complete high-degree sparse queue traversal");
-
-    assert_eq!(scratch.queue_bytes, 16 * std::mem::size_of::<u32>());
+    assert_eq!(run.scratch.queue_bytes, 16 * std::mem::size_of::<u32>());
     assert_eq!(
-        scratch.high_queue_bytes,
+        run.scratch.high_queue_bytes,
         std::mem::size_of::<u32>(),
         "a graph with one possible hub must not launch a strided team for every active source"
     );
-    let high_queue = scratch
-        .high_queue_handle
-        .expect("Fix: mixed split traversal should allocate a high-degree queue");
-    let high_len = scratch
-        .high_len_handle
-        .expect("Fix: mixed split traversal should allocate a high-degree queue length");
-    let scratch_handles = scratch
-        .handles
-        .expect("Fix: mixed split traversal should allocate frontier scratch");
-    let active_queue = scratch
-        .queue_handle
-        .expect("Fix: mixed split traversal should allocate active queue scratch");
-    let steps = dispatcher.last_step_handles();
+    let (high_queue, high_len) = run.high_degree_queue();
+    let scratch_handles = run.frontier_scratch();
+    let active_queue = run.active_queue();
+    let steps = run.steps();
     assert_eq!(
         steps.len(),
         5,
@@ -242,7 +162,7 @@ fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
         "strided follow-up must consume the bounded high-row queue, not the whole active queue"
     );
     assert_eq!(
-        dispatcher.last_step_grids()[4],
+        run.grids()[4],
         Some(vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(1)),
         "skewed high-degree sparse queue traversal must launch row-strided teams only for the graph-wide high-row bound"
     );
@@ -299,45 +219,26 @@ fn single_superhub_csr_only_sparse_queue_sizes_split_queue_from_high_row_count()
 
 #[test]
 fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
-    let dispatcher = RecordingResidentDispatcher::default();
-    let node_count = 2048u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
     let queue_slots = 16u32;
     let graph = ResidentAdaptiveTraversalGraph {
-        node_count,
         edge_count: STRIDED_FORWARD_MIN_ROW_DEGREE * queue_slots,
         max_row_degree: STRIDED_FORWARD_MIN_ROW_DEGREE,
         high_degree_source_count: queue_slots,
-        words,
         layout_hash: 17,
-        ..traversal_graph()
+        ..graph_of(2048)
     };
-    let mut scratch = AdaptiveTraversalResidentScratch::default();
-    let mut frontier_in = vec![0u32; words];
-    for node in 0..9u32 {
-        frontier_in[(node / 32) as usize] |= 1 << (node % 32);
-    }
-    let mut frontier_out = Vec::new();
+    let run = SparseQueueRun::over_graph(&graph, &Frontier::LowNodes(9))
+        .expect("Fix: recording dispatcher should complete uniformly high-degree traversal");
 
-    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
-        &dispatcher,
-        &graph,
-        &frontier_in,
-        u32::MAX,
-        &mut scratch,
-        &mut frontier_out,
-    )
-    .expect("Fix: recording dispatcher should complete uniformly high-degree traversal");
-
-    assert!(scratch.high_queue_handle.is_none());
-    assert!(scratch.high_len_handle.is_none());
+    assert!(run.scratch.high_queue_handle.is_none());
+    assert!(run.scratch.high_len_handle.is_none());
     assert_eq!(
-        scratch.queue_bytes,
+        run.scratch.queue_bytes,
         queue_slots as usize * std::mem::size_of::<u32>()
     );
-    assert_eq!(dispatcher.last_step_handles().len(), 3);
+    assert_eq!(run.steps().len(), 3);
     assert_eq!(
-        dispatcher.last_step_grids()[2],
+        run.grids()[2],
         Some(
             vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
                 queue_slots

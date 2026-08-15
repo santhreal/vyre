@@ -1259,3 +1259,28 @@ text = "`vyre_libs::parsing::c::parse::vast::build::vast_row_fields` clamps the 
 id = "c-typedef-row-contract-gate"
 category = "Added"
 text = "`vyre-libs` gates the row contract the C typedef-annotation family agrees on, deriving its member set at run time from the `pub use` re-exports of `vyre_libs::parsing::c::parse::vast::typedef_ann` so a new builder is red on its first run until someone records what it writes. No builder may declare a zero-length buffer for an empty node table, every builder must size its row tables by the one shared stride at several row counts, and every pass must carry every VAST field it does not declare that it writes, checked by running each program on a table whose carried fields all differ per row."
+
+[[fragments]]
+id = "libs-suites-traversal-pipeline-names-its-kernels"
+category = "Changed"
+text = "`vyre_libs::graph::dispatch::traversal_dispatch_pipeline` names the `vyre_primitives::graph` program builders it composes instead of re-publishing them. Twenty-one wrappers forwarded every argument and returned the result unchanged, so each body was a restatement of the primitive's parameter list, free to drift from the list it forwards to and unprovable from either side. Nothing outside the module's own tests called any of them. This follows the same removal already applied to the sibling `structural_kernel_pipeline`."
+
+[[fragments]]
+id = "libs-suites-quantized-readback-contract-one-owner"
+category = "Fixed"
+text = "Every INT4 entry point in `vyre_libs::solvers::quantized_dispatch` rejects a backend output buffer count other than one through `shapes::expect_one_output`, which already owned that diagnostic while four of the six inlined their own copy of it. The copies were each half a contract: only `i4x8_batched_matmul_top1_f32_scaled_via` rejected two output buffers, and only it rejected a buffer shorter than the decoded shape, while the other four rejected only a longer one. `unpack_i4x8_via` checked neither. `decode_output_exact` compares byte lengths for inequality, so both directions always held for all six and no suite asserted more than one of them. Three parity assertions also compared results through `zip`, which passes on a truncated readback; they now compare the whole buffer."
+
+[[fragments]]
+id = "libs-suites-sparse-queue-materialization-table"
+category = "Fixed"
+text = "The sparse-queue step sequence of `vyre_libs::graph::dispatch::adaptive_traverse` is asserted once, over a table naming which queue materializer each graph width and frontier selects. Five near-identical cases previously each rebuilt the dispatcher, graph, scratch and packed frontier and then spelled their own step expectation, and the copies disagreed about what to check: two cases exercised the same materializer with the same expectation, only the wider one asserted that no word-partial buffers are allocated, three of five asserted the upload set, and two of five asserted the plan cache. No case sat on the block count at which frontier word prefixes stop inlining block offsets, so shifting that threshold by one left the suite green."
+
+[[fragments]]
+id = "libs-suites-duplication-pin-lowered-to-measured"
+category = "Changed"
+text = "The `vyre-libs` duplication pin records what the tree measures rather than leaving room under it, since a pin with slack hides the next copy."
+
+[[fragments]]
+id = "libs-suites-owner-closure-gates"
+category = "Added"
+text = "Two duplication classes in `vyre-libs` are gated, each deriving its member set from source at run time so a new member is red on its first run rather than missing from a hand-maintained roster. Every quantized dispatch entry point published as `_via` must carry a row asserting how it rejects a malformed backend readback, checked against the re-export list parsed from `vyre_libs::solvers::quantized_dispatch`. Every `ResidentCsrQueueMaterializer` variant must have a case pinning the step sequence it launches, checked against the variants parsed from `vyre_libs::graph::dispatch::csr_frontier_queue_scratch`. Each gate assertion names the fix rather than the failed comparison."
