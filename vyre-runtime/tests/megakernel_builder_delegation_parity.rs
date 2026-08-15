@@ -19,11 +19,13 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::resident_work_queue::{
+use vyre_foundation::transform::visit::child_bodies;
+use vyre_runtime::resident_work_queue::builder::{
     build_program_jit, build_program_jit_slots, build_program_priority,
-    build_program_priority_slots, build_program_sharded_no_io, build_program_sharded_slots,
-    build_program_sharded_with_workspace_adapter, ResidentWorkspaceAdapter,
+    build_program_priority_slots, build_program_sharded_no_io, build_program_sharded_once_slots,
+    build_program_sharded_slots, build_program_sharded_with_workspace_adapter,
 };
+use vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter;
 
 /// Structural (Debug-form) equality: `Program` is `Debug` but not `PartialEq`; its Debug
 /// rendering prints buffer names/bindings/counts and the full node tree by value (Arc<str>
@@ -143,3 +145,60 @@ fn sharded_with_workspace_adapter_splices_adapter_buffer_into_ir() {
         plain.buffers().len()
     );
 }
+
+/// Every loop induction variable anywhere in a program body, in source order.
+///
+/// Descent goes through `child_bodies`, the one owner of which `Node` variants
+/// hold other nodes. A local `match` here would classify the region wrapper this
+/// builder emits as a leaf and find no loops at all.
+fn loop_variables(nodes: &[Node]) -> Vec<String> {
+    let mut found = Vec::new();
+    for node in nodes {
+        if let Node::Loop { var, .. } = node {
+            found.push(var.to_string());
+        }
+        for body in child_bodies(node) {
+            found.extend(loop_variables(body));
+        }
+    }
+    found
+}
+
+/// WHY: the one-pass builder's whole reason to exist is that its body is NOT
+/// wrapped in `Node::forever`, so a lane drains its slot once and the dispatch
+/// returns with a completion report. A regression that wrapped it like the
+/// resident builder would hang every synchronous batch API on the device, and
+/// nothing else in the suite can see the difference: both programs declare the
+/// same buffers and the same workgroup size.
+#[test]
+fn sharded_once_drains_one_pass_while_sharded_slots_runs_forever() {
+    for &wg in &[1u32, 32, 64, 256] {
+        let once = build_program_sharded_once_slots(wg, wg.max(1), &[]);
+        let resident = build_program_sharded_slots(wg, wg.max(1), &[]);
+        assert_nontrivial_megakernel(&once);
+        assert!(
+            !loop_variables(once.entry())
+                .iter()
+                .any(|var| var == FOREVER),
+            "build_program_sharded_once_slots({wg}) must not wrap its body in Node::forever, \
+             or a synchronous batch submission never returns: {:?}",
+            loop_variables(once.entry())
+        );
+        assert!(
+            loop_variables(resident.entry())
+                .iter()
+                .any(|var| var == FOREVER),
+            "build_program_sharded_slots({wg}) must keep the resident forever loop, or this \
+             differential proves nothing about the one-pass builder"
+        );
+        assert_eq!(
+            once.buffers().len(),
+            resident.buffers().len(),
+            "the one-pass builder must declare the same buffer set as the resident one at \
+             workgroup {wg}: only the loop wrapper differs"
+        );
+    }
+}
+
+/// Induction variable `Node::forever` uses for its bounded-loop encoding.
+const FOREVER: &str = "__forever__";

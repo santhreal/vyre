@@ -107,9 +107,12 @@ mod tests {
     fn every_snapshot_on_disk_reads_back_non_empty() {
         let directory = snapshot_directory();
         let mut read = 0_usize;
-        for entry in std::fs::read_dir(&directory).expect("Fix: the snapshot directory must be readable")
+        for entry in
+            std::fs::read_dir(&directory).expect("Fix: the snapshot directory must be readable")
         {
-            let path = entry.expect("Fix: a snapshot directory entry must be readable").path();
+            let path = entry
+                .expect("Fix: a snapshot directory entry must be readable")
+                .path();
             if path.extension().is_none_or(|extension| extension != "txt") {
                 continue;
             }

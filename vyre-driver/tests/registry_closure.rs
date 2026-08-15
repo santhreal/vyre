@@ -8,12 +8,14 @@
 #![forbid(unsafe_code)]
 
 vyre_test_support::registry_closure_gate! {
-    // This crate's builders are the elementwise parity program plus the three
-    // hostile-input probes, a population small enough that any lower floor would
-    // be a floor of zero, and zero builders are what a broken scan reports. So
-    // the floor is the measured count: adding a builder never fails this, and
-    // dropping one is a decision that has to be recorded on this line.
-    floor: 4,
+    // Zero. The four builders this crate has - the elementwise parity program
+    // and the three hostile-input probes - live in `#[cfg(test)] mod` fixtures
+    // (`parity_harness`, `hostile_input_closure`), so no build outside this
+    // crate's own unit tests can reach them and they are not a published
+    // surface. A broken scan is caught here by the production-file guard rather
+    // than by this number, so the first production builder added to this crate
+    // needs a test rather than an edit to this line.
+    floor: 0,
     // Empty. The hostile-input probe builders used to be the whole population of
     // this list, and they are covered by `hostile_input_probe_shapes.rs`
     // instead: the enumerator's stale and now-covered guards make this list

@@ -163,9 +163,9 @@ pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
 pub mod monorepo;
-pub mod public_api;
 #[cfg(feature = "ir-fixtures")]
 pub mod pass_programs;
+pub mod public_api;
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -276,24 +276,47 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
     let mut test_files = Vec::new();
     collect_rust_files(&tests, &mut test_files);
 
-    let mut builders: BTreeSet<String> = BTreeSet::new();
-    let mut corpus = String::new();
+    let mut src_texts: Vec<(&Path, String)> = Vec::with_capacity(src_files.len());
     for path in &src_files {
         let text = read_source_file_bounded(path)
             .unwrap_or_else(|e| panic!("{crate_name} source file {path:?} must be readable: {e}"));
-        for name in program_builders_in(&text) {
+        src_texts.push((path.as_path(), text));
+    }
+
+    // A test module written in its own file carries no attribute of its own, so
+    // the gate is read where it is written: the `#[cfg(test)] mod name;` in the
+    // declaring file. Everything that resolves to is test text, whole.
+    let mut gated_paths: BTreeSet<PathBuf> = BTreeSet::new();
+    for (path, text) in &src_texts {
+        let module_dir = module_directory(path);
+        for name in structure_gate::cfg_test_module_declarations(text) {
+            gated_paths.insert(module_dir.join(format!("{name}.rs")));
+            gated_paths.insert(module_dir.join(&name));
+        }
+    }
+
+    let mut builders: BTreeSet<String> = BTreeSet::new();
+    let mut corpus = String::new();
+    for (path, text) in &src_texts {
+        if path.ancestors().any(|a| gated_paths.contains(a)) {
+            corpus.push_str(text);
+            corpus.push('\n');
+            continue;
+        }
+        for name in program_builders_in(text) {
             builders.insert(name);
         }
-        for block in inventory_submit_blocks(&text) {
+        for block in inventory_submit_blocks(text) {
             corpus.push_str(&block);
             corpus.push('\n');
         }
-        if let Some(pos) = ["#[cfg(test)]", "#[test]", "mod tests"]
-            .iter()
-            .filter_map(|marker| text.find(marker))
-            .min()
-        {
-            corpus.push_str(&text[pos..]);
+        // Only the test-gated items count as in-crate coverage. Taking every
+        // byte after the first `#[cfg(test)]` marker counted production code as
+        // test text, and a crate whose first marker precedes its re-export list
+        // had 174 symbols "covered" by a `pub use` block that merely names them.
+        let gated = structure_gate::cfg_test_items(text);
+        if !gated.is_empty() {
+            corpus.push_str(&gated);
             corpus.push('\n');
         }
     }
@@ -360,6 +383,16 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
         unwaived.len()
     );
 
+    let production_files = src_texts
+        .iter()
+        .filter(|(path, _)| !path.ancestors().any(|a| gated_paths.contains(a)))
+        .count();
+    assert!(
+        production_files > 0,
+        "[{crate_name}] the source walk found no production `.rs` file under {src:?}, so the \
+         enumeration proves nothing. Fix: the walk or the crate layout, not this gate. A crate \
+         whose only builders are test-gated fixtures reports zero builders and still scans files."
+    );
     assert!(
         builders.len() >= floor,
         "[{crate_name}] expected >= {floor} source `pub fn -> Program` builders (excluding `&self` \
@@ -389,6 +422,19 @@ pub fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
         } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
             out.push(path);
         }
+    }
+}
+
+/// Directory the submodules declared by one source file live in.
+///
+/// `mod.rs`, `lib.rs` and `main.rs` declare siblings; every other file declares
+/// children in a directory named for it, which is where a `mod tests;` beside
+/// `foo.rs` resolves to `foo/tests.rs`.
+fn module_directory(path: &Path) -> PathBuf {
+    let parent = path.parent().unwrap_or(Path::new(".")).to_path_buf();
+    match path.file_stem().and_then(|s| s.to_str()) {
+        Some("mod" | "lib" | "main") | None => parent,
+        Some(stem) => parent.join(stem),
     }
 }
 
@@ -678,8 +724,10 @@ mod tests {
         assert!(
             program_builders_in("pub fn run<F: Fn(u32) -> Program>(f: F) -> u32 { 0 }").is_empty()
         );
-        assert!(program_builders_in("pub fn run<F>(f: F) -> u32 where F: Fn() -> Program { 0 }")
-            .is_empty());
+        assert!(
+            program_builders_in("pub fn run<F>(f: F) -> u32 where F: Fn() -> Program { 0 }")
+                .is_empty()
+        );
     }
 
     /// The same anchoring must not lose a real builder whose signature carries a

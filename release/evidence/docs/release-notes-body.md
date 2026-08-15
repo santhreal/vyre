@@ -2473,6 +2473,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   nothing. It now derives every nonzero `process::exit` in the xtask crates at
   run time and requires an enclosing block to write the cause on either stream,
   so a silent exit added anywhere in the tooling fails it.
+- The one-implementation rule for target-payload admission recognizes the
+  descriptor form. Every concrete backend now routes through
+  `TargetDescriptor::admit_modules`, which calls the shared `admit` and decodes
+  each admitted module in the backend's own dialect, but the rule still looked
+  for a literal `materialize::admit(` call and so reported all four backends as
+  hand-rolling admission. It now accepts either spelling and additionally
+  rejects a backend that defines `admit` or `admit_modules` itself.
 - `abstraction-gate` no longer demands an operation registration for a region
   that names no operation. Two prefixes mean the same thing: `inline::`, minted
   by `reparent_entry_node` for a body the composer reparented onto its caller,
@@ -2733,6 +2740,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   declines the fusion instead of guessing at it. The test that should have
   caught this compared two inline copies of the walk against each other and
   never called the production one.
+- The registry-closure coverage corpus counts only test-gated source. It had
+  treated every byte after the first `#[cfg(test)]` marker as test text, so a
+  production re-export list covered 174 symbols by naming them, and a test
+  module written in its own file counted as production code. A crate whose only
+  builders are test fixtures now reports zero builders and is held honest by a
+  production-file guard instead of a floor.
 - Workspace crate ownership now comes from one manifest-checked registry. The
   tier gate rejects missing crates, undeclared production edges, and stale
   generated graph or ownership guides, while planned compiler boundaries stay
@@ -3495,6 +3508,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   control flow enters its choice weighted at three, which leaves each of `If`,
   `Loop` and `Block` the same one-in-eleven share it had when all eleven arms
   were written out.
+- The library composition provenance gate no longer pins a hand-measured
+  operation count. The population is the registry the build linked, which
+  changes with the enabled dialect features, so the pinned floor of 100 was red
+  under the default feature set that registers 97. It now requires that the
+  registry linked at all, that no operation reached the check without a program
+  builder, and that no exemption row names an operation which already stamps
+  its own id or an id no source registers.
 - The public-API snapshot gate reports a crate it could not read instead of
   skipping it. Two paths dropped a package out of the comparison without a
   word: a publishable package whose `src` directory was missing, and an
@@ -3690,6 +3710,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   from the canonical operation schema, backend claims come from executable
   backend evidence, and the architecture identifies Metal as Apple-active
   instead of planned.
+- The reviewed workspace roster no longer lists `vyre-frontend-rust`, which
+  left the workspace when the Rust frontend became its own product. The
+  frontend owner table keeps its rust row on purpose: the owner ships outside
+  this workspace, so no member matches it and any workspace crate that grows
+  rust frontend stages is a second frontend.
 - Every scalar rule leaf is runnable again.
   `vyre_libs::rule::condition_op::condition_program` declared its verdict slot
   as a backend-allocated output with no static element count, which fails IR

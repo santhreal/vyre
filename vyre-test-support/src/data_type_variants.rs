@@ -47,8 +47,9 @@ pub const DECLARED_VARIANT_FLOOR: usize = 25;
 #[must_use]
 pub fn declared_data_type_variants() -> BTreeSet<String> {
     let path = vyre_workspace_root().join("vyre-spec/src/data_type.rs");
-    let source = crate::read_source_file_bounded(&path)
-        .unwrap_or_else(|err| panic!("Fix: cannot read the DataType declaration at {path:?}: {err}"));
+    let source = crate::read_source_file_bounded(&path).unwrap_or_else(|err| {
+        panic!("Fix: cannot read the DataType declaration at {path:?}: {err}")
+    });
     let body = crate::braced_body(&source, "pub enum DataType {").unwrap_or_else(|| {
         panic!("Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration")
     });
@@ -221,8 +222,8 @@ pub enum DataType {
     Handle(TypeId),
 }
 ";
-        let body = crate::braced_body(source, "pub enum DataType {")
-            .expect("the declaration is present");
+        let body =
+            crate::braced_body(source, "pub enum DataType {").expect("the declaration is present");
         let names = top_level_variant_names(body);
         assert_eq!(
             names,
@@ -241,9 +242,6 @@ pub enum DataType {
             variant_name(&DataType::Handle(vyre_spec::data_type::TypeId(0))),
             "Handle"
         );
-        assert_eq!(
-            variant_name(&DataType::Array { element_size: 1 }),
-            "Array"
-        );
+        assert_eq!(variant_name(&DataType::Array { element_size: 1 }), "Array");
     }
 }
