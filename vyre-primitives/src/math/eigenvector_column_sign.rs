@@ -25,9 +25,8 @@ pub const EIGENVECTOR_SIGN_EPSILON: f32 = 1.0e-6;
 /// Emit the pass that flips every column whose first significant component is negative.
 #[must_use]
 pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
-    let cell = |row: &str, col: &str| {
-        Expr::add(Expr::mul(Expr::var(row), Expr::u32(n)), Expr::var(col))
-    };
+    let cell =
+        |row: &str, col: &str| Expr::add(Expr::mul(Expr::var(row), Expr::u32(n)), Expr::var(col));
     vec![Node::loop_for(
         "ecs_col",
         Expr::u32(0),
@@ -68,11 +67,7 @@ pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
                     ),
                     Node::assign(
                         "ecs_found",
-                        Expr::select(
-                            Expr::var("ecs_first"),
-                            Expr::u32(1),
-                            Expr::var("ecs_found"),
-                        ),
+                        Expr::select(Expr::var("ecs_first"), Expr::u32(1), Expr::var("ecs_found")),
                     ),
                 ],
             ),

@@ -18,10 +18,7 @@ pub const OP_ID: &str = "vyre-primitives::math::givens_rotate_pair";
 
 /// Address of element `step` of the line starting at `base`.
 fn line_element(base: &Expr, stride: u32, step: &str) -> Expr {
-    Expr::add(
-        base.clone(),
-        Expr::mul(Expr::var(step), Expr::u32(stride)),
-    )
+    Expr::add(base.clone(), Expr::mul(Expr::var(step), Expr::u32(stride)))
 }
 
 /// Emit the loop that rotates the element pair `(first_base, second_base)` of

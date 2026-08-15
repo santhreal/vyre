@@ -72,8 +72,7 @@ pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program 
     };
     Program::wrapped(
         vec![
-            BufferDecl::storage(matrix, 0, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(cells),
+            BufferDecl::storage(matrix, 0, BufferAccess::ReadOnly, DataType::F32).with_count(cells),
             BufferDecl::output(diagonal, 1, DataType::F32).with_count(n),
         ],
         [1, 1, 1],

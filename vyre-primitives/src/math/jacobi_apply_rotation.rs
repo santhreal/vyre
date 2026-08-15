@@ -130,13 +130,7 @@ pub fn jacobi_apply_rotation_region(
 
 /// Build a standalone Program applying one Jacobi rotation at a fixed pivot.
 #[must_use]
-pub fn jacobi_apply_rotation(
-    a: &str,
-    eigenvectors: &str,
-    n: u32,
-    p: u32,
-    q: u32,
-) -> Program {
+pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32) -> Program {
     if n == 0 || p >= n || q >= n || p == q {
         return crate::invalid_output_program(
             OP_ID,
@@ -167,13 +161,7 @@ pub fn jacobi_apply_rotation(
             source_region: None,
             body: Arc::new(vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                jacobi_apply_rotation_body(
-                    a,
-                    eigenvectors,
-                    n,
-                    &Expr::u32(p),
-                    &Expr::u32(q),
-                ),
+                jacobi_apply_rotation_body(a, eigenvectors, n, &Expr::u32(p), &Expr::u32(q)),
             )]),
         }],
     )
@@ -247,13 +235,7 @@ mod tests {
 
     #[test]
     fn the_three_rotations_are_one_owner() {
-        let body = jacobi_apply_rotation_body(
-            "a",
-            "evec",
-            4,
-            &Expr::u32(0),
-            &Expr::u32(1),
-        );
+        let body = jacobi_apply_rotation_body("a", "evec", 4, &Expr::u32(0), &Expr::u32(1));
         let regions = body
             .iter()
             .filter(|node| {
