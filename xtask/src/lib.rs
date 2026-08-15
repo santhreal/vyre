@@ -28,7 +28,6 @@ pub mod json_output;
 pub mod manifest_walk;
 pub mod output_arg;
 pub mod release;
-pub mod shrink;
 pub mod subcommands;
 pub mod text_markers;
 pub mod toml_config;
