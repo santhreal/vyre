@@ -8,6 +8,7 @@ use crate::{
     nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX},
     region::wrap_anonymous,
 };
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -34,10 +35,9 @@ pub fn rms_norm_reference(input: &str, output: &str, n: u32, eps: f32) -> Progra
 }
 
 fn invalid_rms_program(op_id: &'static str, output: &str) -> Program {
-    crate::builder::invalid_builder_trap_program(
+    trap_program(
         op_id,
-        output,
-        DataType::F32,
+        Some((output, DataType::F32)),
         EMPTY_RMS_FIX.to_string(),
     )
 }

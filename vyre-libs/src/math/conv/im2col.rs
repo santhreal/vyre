@@ -15,6 +15,7 @@
 //! profiling hooks are wired.
 
 use std::cmp::Ordering;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -145,10 +146,9 @@ inventory::submit! {
         OP_ID,
         || {
             im2col_3x3("input", "output", 4, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_builder_trap_program(
+                trap_program(
                     OP_ID,
-                    "output",
-                    DataType::F32,
+                    Some(("output", DataType::F32)),
                     error,
                 )
             })

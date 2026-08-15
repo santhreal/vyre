@@ -13,6 +13,7 @@
 //! one walk, not two.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -572,10 +573,9 @@ pub(crate) fn csr_queue_step_program(spec: &CsrQueueStepSpec<'_>) -> Program {
         match crate::graph::checked_csr_offset_count(spec.node_count, spec.builder_name) {
             Ok(edge_offset_count) => edge_offset_count,
             Err(error) => {
-                return crate::invalid_output_program(
+                return trap_program(
                     spec.op_id,
-                    spec.emit.failure_output(),
-                    DataType::U32,
+                    Some((spec.emit.failure_output(), DataType::U32)),
                     error,
                 );
             }

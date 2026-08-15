@@ -6,6 +6,7 @@
 //! spells again.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -55,18 +56,16 @@ pub fn matrix_diagonal_extract_region(
 #[must_use]
 pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            diagonal,
-            DataType::F32,
+            Some((diagonal, DataType::F32)),
             format!("Fix: matrix_diagonal_extract requires n > 0, got {n}."),
         );
     }
     let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            diagonal,
-            DataType::F32,
+            Some((diagonal, DataType::F32)),
             format!("Fix: matrix_diagonal_extract n*n overflows matrix cell count for n={n}."),
         );
     };

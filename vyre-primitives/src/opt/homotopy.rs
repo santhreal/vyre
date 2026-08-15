@@ -32,6 +32,7 @@
 //! | `vyre-runtime/src/megakernel/planner.rs` (#22 self-consumer) | **vyre's megakernel scheduler ILP** is solved by relaxing to a continuous family parameterized by `t ∈ [0, 1]` and following the homotopy path on GPU |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -60,18 +61,16 @@ pub fn homotopy_euler_predictor(
     n_dim: u32,
 ) -> Program {
     if n_paths == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            x_pred,
-            DataType::U32,
+            Some((x_pred, DataType::U32)),
             "Fix: homotopy_euler_predictor requires n_paths > 0, got 0.".to_string(),
         );
     }
     if n_dim == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            x_pred,
-            DataType::U32,
+            Some((x_pred, DataType::U32)),
             "Fix: homotopy_euler_predictor requires n_dim > 0, got 0.".to_string(),
         );
     }

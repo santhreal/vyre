@@ -18,6 +18,7 @@
 //! buffers in row-major layout; kernel is length-9 F32 in
 //! row-major layout (`kernel[ky*3 + kx]`).
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::im2col::patch_taps;
@@ -99,10 +100,9 @@ inventory::submit! {
         OP_ID,
         || {
             conv2d_3x3_direct("input", "kernel", "output", 4, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_builder_trap_program(
+                trap_program(
                     OP_ID,
-                    "output",
-                    DataType::F32,
+                    Some(("output", DataType::F32)),
                     error,
                 )
             })

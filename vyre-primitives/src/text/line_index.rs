@@ -17,6 +17,7 @@
 //! line-start representation.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use crate::reduce::multi_block_prefix_scan::{multi_block_prefix_scan_sum_u32, BLOCK_LANES};
 use vyre_foundation::ir::model::expr::Ident;
@@ -41,7 +42,7 @@ const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
 pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
     match try_line_index(source, lines, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, lines, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((lines, DataType::U32)), error),
     }
 }
 
@@ -53,7 +54,7 @@ pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
 pub fn line_index_u8(source: &str, lines: &str, n: u32) -> Program {
     match try_line_index_u8(source, lines, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, lines, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((lines, DataType::U32)), error),
     }
 }
 

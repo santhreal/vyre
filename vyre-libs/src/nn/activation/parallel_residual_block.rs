@@ -2,6 +2,7 @@
 //!
 //! Category A composition  -  residual stream addition.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;
@@ -51,7 +52,7 @@ inventory::submit! {
         OP_ID,
         || {
             parallel_residual_block("x", "attn", "mlp", "out", 4)
-                .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: parallel_residual_block fixture must build: {error}")))
+                .unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: parallel_residual_block fixture must build: {error}")))
         },
         Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;

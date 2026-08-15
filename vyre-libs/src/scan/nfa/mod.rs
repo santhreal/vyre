@@ -27,6 +27,7 @@
 //! and epsilon tables before calling this scan kernel.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
@@ -54,10 +55,9 @@ pub const OP_ID: &str = "vyre-libs::matching::nfa_scan";
 #[allow(clippy::vec_init_then_push)]
 pub fn nfa_scan(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> Program {
     try_nfa_scan(patterns, input_buf, hit_buf, input_len).unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            hit_buf,
-            DataType::U32,
+            Some((hit_buf, DataType::U32)),
             format!("Fix: {error}"),
         )
     })

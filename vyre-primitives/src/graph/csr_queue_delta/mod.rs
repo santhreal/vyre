@@ -5,6 +5,7 @@
 //! sources, updates a resident accumulator bitset, and appends first-time
 //! discoveries directly into the next active queue.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{
@@ -127,12 +128,9 @@ pub fn csr_queue_delta_enqueue_with(params: CsrQueueDeltaEnqueueParams<'_>) -> P
     let active_queue_capacity = params.active_queue_capacity;
     let next_queue_capacity = params.next_queue_capacity;
     if node_count == 0 || active_queue_capacity == 0 || next_queue_capacity == 0 {
-        return crate::invalid_output_program(CSR_QUEUE_DELTA_ENQUEUE_OP_ID,
-        params.next_len,
-        DataType::U32,
-        format!(
+        return trap_program(CSR_QUEUE_DELTA_ENQUEUE_OP_ID, Some((params.next_len, DataType::U32)), format!(
             "Fix: csr_queue_delta_enqueue requires node_count > 0 and non-zero queue capacities, got node_count={node_count} active_queue_capacity={active_queue_capacity} next_queue_capacity={next_queue_capacity}."
-        ),);
+        ));
     }
     csr_queue_step_program(&params.spec(
         CSR_QUEUE_DELTA_ENQUEUE_OP_ID,

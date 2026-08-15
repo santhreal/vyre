@@ -1,7 +1,6 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::StaticOutputs;
-use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::DispatchError;
 use vyre_primitives::graph::motif::{
     cpu_ref as reference_motif, cpu_ref_matches as reference_motif_matches,

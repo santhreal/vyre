@@ -18,6 +18,7 @@
 
 use crate::graph::path_reconstruct::path_reconstruct;
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -43,18 +44,16 @@ pub fn matroid_intersection_full(
     max_augmentations: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            set_x,
-            DataType::U32,
+            Some((set_x, DataType::U32)),
             "Fix: matroid_intersection_full requires n > 0, got 0.".to_string(),
         );
     }
     let Some(adj_count) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            set_x,
-            DataType::U32,
+            Some((set_x, DataType::U32)),
             format!("Fix: matroid_intersection_full exchange adjacency cells overflow u32: n={n}."),
         );
     };

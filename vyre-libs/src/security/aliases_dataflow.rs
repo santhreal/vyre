@@ -28,6 +28,7 @@
 //! `fixpoint_iterations` config  -  the same path single-direction
 //! flows_to uses.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::Program;
 use vyre_foundation::ir::{BufferAccess, DataType};
@@ -83,10 +84,9 @@ pub fn aliases_dataflow(
         out_buf,
     )
     .unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            out_buf,
-            DataType::U32,
+            Some((out_buf, DataType::U32)),
             format!("Fix: aliases_dataflow failed to fuse: {error}"),
         )
     })

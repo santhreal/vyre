@@ -12,6 +12,7 @@
 //!
 //! Both paths emit byte-identical IR.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -365,10 +366,9 @@ pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            output,
-            DataType::F32,
+            Some((output, DataType::F32)),
             format!("Fix: layer_norm build failed: {err}"),
         )
     })

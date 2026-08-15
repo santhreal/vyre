@@ -29,6 +29,7 @@
 //! | `vyre-driver` dispatch cost model | probabilistic circuits output intervals, not point estimates; conformal intervals on past dispatch latency feed megakernel scheduling as soft constraints |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -45,18 +46,16 @@ pub const OP_ID: &str = "vyre-primitives::math::conformal_threshold";
 #[must_use]
 pub fn conformal_threshold(scores_sorted: &str, q_hat: &str, n: u32, k: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            q_hat,
-            DataType::U32,
+            Some((q_hat, DataType::U32)),
             format!("Fix: conformal_threshold requires n > 0, got {n}."),
         );
     }
     if k == 0 || k > n {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            q_hat,
-            DataType::U32,
+            Some((q_hat, DataType::U32)),
             format!("Fix: conformal_threshold k must satisfy 1 <= k <= n, got k={k}, n={n}."),
         );
     }

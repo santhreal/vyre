@@ -3,6 +3,7 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -30,10 +31,9 @@ pub fn cross_entropy(
     vocab_size: u32,
 ) -> Program {
     try_cross_entropy(logits, targets, loss_out, n, vocab_size).unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            loss_out,
-            DataType::F32,
+            Some((loss_out, DataType::F32)),
             format!("Fix: cross_entropy build failed: {error}"),
         )
     })

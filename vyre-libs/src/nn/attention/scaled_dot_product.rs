@@ -8,6 +8,7 @@
 //! The default builder maps one invocation to one query row. The
 //! scalar row-loop reference remains available through [`attention_reference`].
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::nn::attention_passes::{
@@ -295,10 +296,9 @@ pub fn attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> Progra
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             format!("Fix: attention build failed: {err}"),
         )
     })
@@ -308,10 +308,9 @@ pub fn attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> Progra
 #[must_use]
 pub fn attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> Program {
     try_attention_reference(q, k, v, out, s, d).unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             REFERENCE_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             format!("Fix: attention_reference build failed: {error}"),
         )
     })

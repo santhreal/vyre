@@ -30,6 +30,7 @@
 //! provides `alpha[i]` already scaled, the divide is fixed-point.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -50,10 +51,9 @@ pub const OP_ID: &str = "vyre-primitives::math::gaussian_rdp_step";
 #[must_use]
 pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: gaussian_rdp_step requires count > 0, got {count}."),
         );
     }

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -253,10 +254,9 @@ pub fn region_sort_program(
     count: u32,
 ) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             "vyre-primitives::matching::region::sort_regions",
-            pids_out,
-            DataType::U32,
+            Some((pids_out, DataType::U32)),
             format!("Fix: region_sort_program requires count > 0, got {count}."),
         );
     }

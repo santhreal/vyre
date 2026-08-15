@@ -14,6 +14,7 @@
 //! `max_depth` so a corrupt parent array cannot hang the GPU.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -198,10 +199,9 @@ pub fn path_reconstruct(
     max_depth: u32,
 ) -> Program {
     if max_depth == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            path_out,
-            DataType::U32,
+            Some((path_out, DataType::U32)),
             "Fix: path_reconstruct max_depth must be >= 1.".to_string(),
         );
     }
@@ -303,7 +303,7 @@ pub fn batched_path_reconstruct(target_count: u32, max_depth: u32) -> Program {
     let layout = match validate_batched_path_reconstruct_layout(target_count as usize, max_depth) {
         Ok(layout) => layout,
         Err(error) => {
-            return crate::invalid_output_program(BATCHED_OP_ID, "paths", DataType::U32, error);
+            return trap_program(BATCHED_OP_ID, Some(("paths", DataType::U32)), error);
         }
     };
     let path_words = layout.path_words_u32;

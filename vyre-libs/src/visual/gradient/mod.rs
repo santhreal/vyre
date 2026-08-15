@@ -3,6 +3,7 @@
 //! Rasterizes a linear gradient with up to 16 color stops.
 //! Category A composition  -  pure IR expressions.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -31,10 +32,9 @@ pub fn linear_gradient(
     stops: &[ColorStop],
 ) -> Program {
     try_linear_gradient(output, width, height, angle_deg, stops).unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: {error}"),
         )
     })

@@ -43,6 +43,7 @@
 //! u32 fixed-point 16.16 throughout for outputs and weights.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -104,7 +105,7 @@ pub fn sum_product_evaluate(
         n_edges,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((out, DataType::U32)), error),
     }
 }
 
@@ -306,7 +307,7 @@ pub fn sum_product_evaluate_leveled(
         max_depth,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((out, DataType::U32)), error),
     }
 }
 

@@ -16,6 +16,7 @@
 //! because the activation is element-wise and depends only on the
 //! per-output-row accumulator value.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::fused_activation::linear_fused_activation;
@@ -55,10 +56,9 @@ inventory::submit! {
         OP_ID,
         || {
             linear_silu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_builder_trap_program(
+                trap_program(
                     OP_ID,
-                    "out",
-                    DataType::F32,
+                    Some(("out", DataType::F32)),
                     error,
                 )
             })

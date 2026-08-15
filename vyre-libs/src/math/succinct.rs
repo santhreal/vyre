@@ -6,6 +6,7 @@
 //! pointer chasing for popcount math over coalesced words.
 
 use core::fmt;
+use vyre_foundation::algebra::composition::trap_program;
 
 use crate::region::{wrap_anonymous, wrap_child};
 use vyre_foundation::ir::model::expr::GeneratorRef;
@@ -64,10 +65,9 @@ pub fn rank1_superblocks(
     block_words: u32,
 ) -> Program {
     try_rank1_superblocks(bits, superblocks, word_count, block_words).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             RANK_SUPERBLOCKS_OP_ID,
-            superblocks,
-            DataType::U32,
+            Some((superblocks, DataType::U32)),
             format!("{err}"),
         )
     })
@@ -167,10 +167,9 @@ pub fn rank1_query(
         block_words,
     )
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             RANK_QUERY_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("{err}"),
         )
     })

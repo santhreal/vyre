@@ -15,6 +15,7 @@
 //! scratch dispatch is available.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -36,18 +37,16 @@ pub const OP_ID: &str = "vyre-primitives::reduce::radix_sort";
 #[must_use]
 pub fn radix_sort(input: &str, output: &str, count: u32, bits: u32) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: radix_sort requires count > 0, got {count}."),
         );
     }
     if bits > 32 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: radix_sort bits must be <= 32, got {bits}."),
         );
     }

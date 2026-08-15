@@ -2,6 +2,7 @@
 //! from per-word partials plus either a local block prefix or precomputed offsets.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -100,12 +101,9 @@ fn frontier_word_queue_scatter_program(
     queue_capacity: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(op_id,
-        queue_len,
-        DataType::U32,
-        format!(
+        return trap_program(op_id, Some((queue_len, DataType::U32)), format!(
             "Fix: {op_id} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-        ),);
+        ));
     }
     let words = bitset_words(node_count);
     let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);

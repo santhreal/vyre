@@ -29,6 +29,7 @@
 //! | `vyre-driver` multilevel scheduling | IR-graph contraction levels match V-cycle levels; apply the same smoother as the dispatch scheduler smoother |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -63,7 +64,7 @@ pub fn jacobi_smooth_step(
 ) -> Program {
     match try_jacobi_smooth_step(a_matrix, b, x_in, omega_scaled, x_out, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, x_out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((x_out, DataType::U32)), error),
     }
 }
 

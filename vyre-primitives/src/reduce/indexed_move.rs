@@ -5,6 +5,7 @@
 //! only decides which side is indexed indirectly.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -45,10 +46,9 @@ pub(crate) fn indexed_move_program(
     kind: IndexedMoveKind,
 ) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             op_id,
-            dst,
-            DataType::U32,
+            Some((dst, DataType::U32)),
             format!("Fix: {} requires count > 0, got {count}.", kind.name()),
         );
     }

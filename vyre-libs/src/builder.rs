@@ -416,27 +416,6 @@ fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec
     )
 }
 
-/// Build an explicit trap program for an invalid infallible builder input.
-///
-/// The trap preserves the builder's `Program` contract while making the invalid
-/// input observable at execution. Fallible builders return their validation
-/// error before this boundary.
-pub(crate) fn invalid_builder_trap_program(
-    op_id: &'static str,
-    output: &str,
-    data_type: DataType,
-    message: String,
-) -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output(output, 0, data_type).with_count(1)],
-        [1, 1, 1],
-        vec![crate::region::wrap_anonymous(
-            op_id,
-            vec![Node::trap(Expr::u32(0), message)],
-        )],
-    )
-}
-
 /// Tensor-ref elementwise binary builder, used by `math::avg_floor`,
 /// `math::algebra`, and other binary-arithmetic primitives.
 #[allow(dead_code)]

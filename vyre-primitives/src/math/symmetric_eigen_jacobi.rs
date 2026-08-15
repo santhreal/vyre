@@ -15,6 +15,7 @@
 //! eigenvector bases.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -178,18 +179,16 @@ pub fn jacobi_eigen_region(
 #[must_use]
 pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            eigenvalues,
-            DataType::F32,
+            Some((eigenvalues, DataType::F32)),
             format!("Fix: symmetric_eigen_jacobi requires n > 0, got {n}."),
         );
     }
     let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            eigenvalues,
-            DataType::F32,
+            Some((eigenvalues, DataType::F32)),
             format!("Fix: symmetric_eigen_jacobi n*n overflows matrix cell count for n={n}."),
         );
     };

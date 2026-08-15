@@ -48,6 +48,7 @@
 //! (one `semiring_gemm` dispatch per step).
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -79,10 +80,9 @@ pub const POLY5_F32_OP_ID: &str = "vyre-primitives::math::newton_schulz_poly5_f3
 #[must_use]
 pub fn newton_schulz_y_step(y_curr: &str, yzy: &str, y_next: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            y_next,
-            DataType::U32,
+            Some((y_next, DataType::U32)),
             format!("Fix: newton_schulz_y_step requires n > 0, got {n}."),
         );
     }

@@ -10,6 +10,7 @@
 //! `level_wave_program` for whole-schema migration.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -40,18 +41,16 @@ pub fn functor_apply_sized(
     target_n_cols: u32,
 ) -> Program {
     if n_cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            target_row,
-            DataType::U32,
+            Some((target_row, DataType::U32)),
             "Fix: functor_apply requires n_cols > 0, got 0.".to_string(),
         );
     }
     if target_n_cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            target_row,
-            DataType::U32,
+            Some((target_row, DataType::U32)),
             "Fix: functor_apply requires target_n_cols > 0, got 0.".to_string(),
         );
     }

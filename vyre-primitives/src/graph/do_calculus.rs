@@ -27,6 +27,7 @@
 //! | `vyre-foundation::transform` change-impact analysis | `do(rule_X)` on the rule dependency graph predicts which downstream Programs invalidate. Replaces ad-hoc cache-invalidation tracking with formal causal analysis. |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -62,7 +63,7 @@ pub fn do_intervention_delete_incoming(
 ) -> Program {
     match try_do_intervention_delete_incoming(adjacency, intervention_mask, out_adjacency, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, out_adjacency, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((out_adjacency, DataType::U32)), error),
     }
 }
 
@@ -343,9 +344,7 @@ pub fn do_rule2_reverse_incoming(
 ) -> Program {
     match try_do_rule2_reverse_incoming(adjacency, treatment_mask, out_adjacency, n) {
         Ok(program) => program,
-        Err(error) => {
-            crate::invalid_output_program(RULE2_OP_ID, out_adjacency, DataType::U32, error)
-        }
+        Err(error) => trap_program(RULE2_OP_ID, Some((out_adjacency, DataType::U32)), error),
     }
 }
 
@@ -450,7 +449,7 @@ pub fn do_rule3_subgraph(
 ) -> Program {
     match try_do_rule3_subgraph(adjacency, keep_mask, reduced, kept, kept_len, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(RULE3_OP_ID, reduced, DataType::U32, error),
+        Err(error) => trap_program(RULE3_OP_ID, Some((reduced, DataType::U32)), error),
     }
 }
 

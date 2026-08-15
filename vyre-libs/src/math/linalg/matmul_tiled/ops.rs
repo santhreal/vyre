@@ -1,5 +1,6 @@
 //! Public cooperative tiled matmul builders and Cat-A wrappers.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::builder::{check_tensors, BuildOptions};
@@ -295,14 +296,7 @@ pub fn matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u
         tile,
     )
     .build()
-    .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
-            OP_ID,
-            out,
-            DataType::U32,
-            format!("Fix: {err}"),
-        )
-    })
+    .unwrap_or_else(|err| trap_program(OP_ID, Some((out, DataType::U32)), format!("Fix: {err}")))
 }
 
 /// Name-based convenience constructor routed through [`MatmulBiasTiled`].
@@ -327,10 +321,9 @@ pub fn matmul_bias_tiled(
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID_BIAS,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })

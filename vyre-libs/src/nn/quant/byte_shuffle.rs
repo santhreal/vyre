@@ -10,6 +10,7 @@
 //! Used in the Parameter Golf submission pipeline after quantization
 //! and before Brotli-11 compression.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;
@@ -62,7 +63,7 @@ inventory::submit! {
         OP_ID,
         || {
             byte_shuffle("input", "output", 3, 2)
-                .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: byte_shuffle fixture must build: {error}")))
+                .unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: byte_shuffle fixture must build: {error}")))
         },
         Some(|| vec![vec![
             // 3 elements × 2 bytes: [a0,a1, b0,b1, c0,c1]

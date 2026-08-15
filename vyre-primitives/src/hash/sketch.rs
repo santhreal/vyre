@@ -25,6 +25,7 @@
 
 use std::fmt;
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -131,26 +132,23 @@ impl std::error::Error for CountSketchError {}
 #[must_use]
 pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u32) -> Program {
     if d == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             UPDATE_OP_ID,
-            table,
-            DataType::U32,
+            Some((table, DataType::U32)),
             format!("Fix: count_sketch_update requires d > 0, got {d}."),
         );
     }
     if w == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             UPDATE_OP_ID,
-            table,
-            DataType::U32,
+            Some((table, DataType::U32)),
             format!("Fix: count_sketch_update requires w > 0, got {w}."),
         );
     }
     let Some(table_words) = d.checked_mul(w) else {
-        return crate::invalid_output_program(
+        return trap_program(
             UPDATE_OP_ID,
-            table,
-            DataType::U32,
+            Some((table, DataType::U32)),
             format!("Fix: count_sketch_update table size overflowed for d={d}, w={w}."),
         );
     };

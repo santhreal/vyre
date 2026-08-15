@@ -42,6 +42,7 @@
 //! exclusion-mask semantics remain deterministic across backends.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -64,10 +65,9 @@ pub fn argmax_of_marginals(
     n_candidates: u32,
 ) -> Program {
     if n_candidates == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            winner_idx,
-            DataType::U32,
+            Some((winner_idx, DataType::U32)),
             format!("Fix: argmax_of_marginals requires n_candidates > 0, got {n_candidates}."),
         );
     }

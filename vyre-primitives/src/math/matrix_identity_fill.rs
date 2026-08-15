@@ -4,6 +4,7 @@
 //! its own operation rather than three lines repeated inside each solver.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -54,18 +55,16 @@ pub fn matrix_identity_fill_region(parent_op_id: &str, matrix: &str, n: u32) -> 
 #[must_use]
 pub fn matrix_identity_fill(matrix: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            matrix,
-            DataType::F32,
+            Some((matrix, DataType::F32)),
             format!("Fix: matrix_identity_fill requires n > 0, got {n}."),
         );
     }
     let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            matrix,
-            DataType::F32,
+            Some((matrix, DataType::F32)),
             format!("Fix: matrix_identity_fill n*n overflows matrix cell count for n={n}."),
         );
     };

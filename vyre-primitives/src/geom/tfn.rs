@@ -17,6 +17,7 @@
 //! signatures rather than this scalar-channel ABI.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -42,18 +43,16 @@ pub fn tfn_scalar_mix(
     c_out: u32,
 ) -> Program {
     if n_nodes == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             "Fix: tfn_scalar_mix requires n_nodes > 0, got 0.".to_string(),
         );
     }
     if c_in == 0 || c_out == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!(
                 "Fix: tfn_scalar_mix requires c_in and c_out > 0, got c_in={c_in}, c_out={c_out}."
             ),

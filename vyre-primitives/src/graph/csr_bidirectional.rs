@@ -3,6 +3,7 @@
 //! (e.g. component discovery, alias unification).
 
 use super::padded_u32_slice_fingerprint as csr_bidirectional_padded_slice_fingerprint;
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::{DataType, Program};
 
@@ -47,10 +48,9 @@ pub fn csr_bidirectional(
     let fwd = csr_forward_traverse(shape, frontier_in, frontier_out, edge_kind_mask);
     let bwd = csr_backward_traverse(shape, frontier_in, frontier_out, edge_kind_mask);
     fuse_programs(&[fwd, bwd]).unwrap_or_else(|error| {
-        crate::invalid_output_program(
+        trap_program(
             OP_ID,
-            frontier_out,
-            DataType::U32,
+            Some((frontier_out, DataType::U32)),
             format!("Fix: csr_bidirectional forward+backward fusion failed: {error}"),
         )
     })

@@ -6,6 +6,7 @@
 //! compacts only high-degree sources into a second queue for row-strided
 //! traversal.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{
@@ -148,12 +149,9 @@ pub fn csr_queue_split_low_forward_traverse_with(
         || high_queue_capacity == 0
         || high_degree_threshold == 0
     {
-        return crate::invalid_output_program(CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID,
-        frontier_out,
-        DataType::U32,
-        format!(
+        return trap_program(CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID, Some((frontier_out, DataType::U32)), format!(
             "Fix: csr_queue_split_low_forward_traverse requires node_count > 0, non-zero queue capacities, and high_degree_threshold > 0; got node_count={node_count} queue_capacity={queue_capacity} high_queue_capacity={high_queue_capacity} high_degree_threshold={high_degree_threshold}."
-        ),);
+        ));
     }
     csr_queue_step_program(&CsrQueueStepSpec {
         op_id: CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID,

@@ -25,6 +25,7 @@
 //! | document layout | layout extraction grammars |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -49,18 +50,16 @@ pub const OP_ID: &str = "vyre-primitives::parsing::planar_rewrite_schedule";
 #[must_use]
 pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k: u32) -> Program {
     if h == 0 || w == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            chosen,
-            DataType::U32,
+            Some((chosen, DataType::U32)),
             format!("Fix: planar_rewrite_schedule requires h > 0 and w > 0, got h={h}, w={w}."),
         );
     }
     if k == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            chosen,
-            DataType::U32,
+            Some((chosen, DataType::U32)),
             format!("Fix: planar_rewrite_schedule requires k > 0, got {k}."),
         );
     }

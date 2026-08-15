@@ -29,6 +29,7 @@
 //! | `vyre-foundation::transform` Wasserstein dispatch analysis | matrix-function evaluation (matrix log, exp) for transport-based fusion-cost analyses |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -46,7 +47,7 @@ pub const OP_ID: &str = "vyre-primitives::math::qsvt_block_encode";
 pub fn qsvt_block_encode(a: &str, norm: &str, a_scaled: &str, n: u32) -> Program {
     match try_qsvt_block_encode(a, norm, a_scaled, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, a_scaled, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((a_scaled, DataType::U32)), error),
     }
 }
 

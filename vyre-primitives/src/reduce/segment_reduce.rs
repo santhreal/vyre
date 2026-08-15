@@ -5,6 +5,7 @@
 //! `input` belonging to segment `i`.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -23,10 +24,7 @@ pub fn segment_reduce_sum(
     num_segments: u32,
 ) -> Program {
     if num_segments == 0 || num_segments > 256 {
-        return crate::invalid_output_program(OP_ID,
-        output,
-        DataType::U32,
-        format!("Fix: segment_reduce_sum requires 0 < num_segments <= 256, got {num_segments}. For larger counts, tile the dispatch across multiple work-groups."),);
+        return trap_program(OP_ID, Some((output, DataType::U32)), format!("Fix: segment_reduce_sum requires 0 < num_segments <= 256, got {num_segments}. For larger counts, tile the dispatch across multiple work-groups."));
     }
 
     let lane = Expr::InvocationId { axis: 0 };

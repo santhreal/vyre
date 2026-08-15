@@ -41,6 +41,7 @@
 //! carry resolver.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -109,10 +110,9 @@ pub enum BigIntAddCarryError {
 #[must_use]
 pub fn bigint_add_carry(limb_count: u32) -> Program {
     if limb_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            "sum_partial",
-            DataType::U32,
+            Some(("sum_partial", DataType::U32)),
             "Fix: bigint_add_carry requires limb_count > 0, got 0.".to_string(),
         );
     }

@@ -11,6 +11,7 @@
 //! is matrix multiplication with categorical intent carried in the
 //! stable op id.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};
@@ -34,7 +35,7 @@ const MATMUL_CONTEXT: FixedMatmulContext = FixedMatmulContext {
 pub fn monoidal_compose(f: &str, g: &str, out: &str, a: u32, b: u32, c: u32) -> Program {
     match try_monoidal_compose(f, g, out, a, b, c) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((out, DataType::U32)), error),
     }
 }
 

@@ -13,6 +13,7 @@
 //! The rotation is the operation; choosing the pivot is not part of it.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -132,20 +133,14 @@ pub fn jacobi_apply_rotation_region(
 #[must_use]
 pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32) -> Program {
     if n == 0 || p >= n || q >= n || p == q {
-        return crate::invalid_output_program(
-            OP_ID,
-            a,
-            DataType::F32,
-            format!(
-                "Fix: jacobi_apply_rotation needs n > 0 and a distinct off-diagonal pivot below n, got n={n}, p={p}, q={q}."
-            ),
-        );
+        return trap_program(OP_ID, Some((a, DataType::F32)), format!(
+            "Fix: jacobi_apply_rotation needs n > 0 and a distinct off-diagonal pivot below n, got n={n}, p={p}, q={q}."
+        ));
     }
     let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            a,
-            DataType::F32,
+            Some((a, DataType::F32)),
             format!("Fix: jacobi_apply_rotation n*n overflows matrix cell count for n={n}."),
         );
     };

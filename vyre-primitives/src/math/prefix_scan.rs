@@ -30,6 +30,7 @@
 //! the workgroup to the next power of two internally.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -74,10 +75,9 @@ pub fn prefix_scan_with_op_id(
     op_id: &'static str,
 ) -> Program {
     if n == 0 || n > 1024 {
-        return crate::invalid_output_program(
+        return trap_program(
             op_id,
-            out_buf,
-            DataType::U32,
+            Some((out_buf, DataType::U32)),
             format!("Fix: prefix_scan requires n in 1..=1024, got {n}."),
         );
     }

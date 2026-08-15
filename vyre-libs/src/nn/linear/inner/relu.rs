@@ -1,5 +1,6 @@
 //! Fused `linear_relu` constructor.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::fused_activation::linear_fused_activation;
@@ -39,10 +40,9 @@ inventory::submit! {
         OP_ID,
         || {
             linear_relu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_builder_trap_program(
+                trap_program(
                     OP_ID,
-                    "out",
-                    DataType::F32,
+                    Some(("out", DataType::F32)),
                     error,
                 )
             })

@@ -15,6 +15,7 @@
 //! | `vyre-libs::security::policy_engine` | rule-conflict resolution as probabilistic logic |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -81,7 +82,7 @@ pub fn ddnnf_evaluate(
         n_vars,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((out, DataType::U32)), error),
     }
 }
 

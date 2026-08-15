@@ -22,6 +22,7 @@
 //! topology authority layer.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -51,10 +52,9 @@ pub fn vietoris_rips_edge_filter(
     n: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            edge_mask,
-            DataType::U32,
+            Some((edge_mask, DataType::U32)),
             format!("Fix: vietoris_rips_edge_filter requires n > 0, got {n}."),
         );
     }

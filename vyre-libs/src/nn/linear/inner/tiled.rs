@@ -1,5 +1,6 @@
 //! Tiled linear-layer constructors (`linear_tiled`, `linear_tiled_reference`).
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::linalg::MatmulBiasTiled;
@@ -152,7 +153,7 @@ inventory::submit! {
         "vyre-libs::nn::linear",
         || {
             linear("x", "w", "b", "out", 4, 4)
-                .unwrap_or_else(|error| crate::invalid_program("vyre-libs::nn::linear", format!("Fix: linear fixture dimensions are invalid: {error}")))
+                .unwrap_or_else(|error| trap_program("vyre-libs::nn::linear", None, format!("Fix: linear fixture dimensions are invalid: {error}")))
         },
         // V7-TEST-005: deterministic fixture for linear(4, 4).
         // Body indexes `w[k * out_dim + i]` (column-major per out_dim),
@@ -188,7 +189,7 @@ inventory::submit! {
         "vyre-libs::nn::linear_tiled",
         || {
             linear_tiled("x", "w", "b", "out", 4, 4, 2)
-                .unwrap_or_else(|error| crate::invalid_program("vyre-libs::nn::linear_tiled", format!("Fix: linear_tiled fixture dimensions are invalid: {error}")))
+                .unwrap_or_else(|error| trap_program("vyre-libs::nn::linear_tiled", None, format!("Fix: linear_tiled fixture dimensions are invalid: {error}")))
         },
         Some(|| {
 

@@ -27,6 +27,7 @@
 //! | `vyre-foundation::transform` dispatch-sheaf analysis | vyre's dispatch graph is heterophilic; sheaf diffusion predicts where fusion fails |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -76,7 +77,7 @@ pub fn sheaf_diffusion_step(
         d,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, stalks_next, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((stalks_next, DataType::U32)), error),
     }
 }
 

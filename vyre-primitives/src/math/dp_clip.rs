@@ -29,6 +29,7 @@
 //! | `vyre-driver` DP telemetry release | bound per-Program telemetry contributions before noise injection |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -63,27 +64,24 @@ pub fn dp_clip_per_sample(
     d: u32,
 ) -> Program {
     if b == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            clipped,
-            DataType::U32,
+            Some((clipped, DataType::U32)),
             format!("Fix: dp_clip_per_sample requires b > 0, got {b}."),
         );
     }
     if d == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            clipped,
-            DataType::U32,
+            Some((clipped, DataType::U32)),
             format!("Fix: dp_clip_per_sample requires d > 0, got {d}."),
         );
     }
 
     let Some(cells) = b.checked_mul(d) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            clipped,
-            DataType::U32,
+            Some((clipped, DataType::U32)),
             format!("Fix: dp_clip_per_sample b*d overflows u32: b={b}, d={d}."),
         );
     };

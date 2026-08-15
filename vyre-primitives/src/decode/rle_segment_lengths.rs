@@ -46,6 +46,7 @@
 //! warp's lifetime  -  strictly worse occupancy.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -113,10 +114,9 @@ pub enum PackError {
 #[must_use]
 pub fn rle_segment_lengths(segment_count: u32) -> Program {
     if segment_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            "segment_lengths_out",
-            DataType::U32,
+            Some(("segment_lengths_out", DataType::U32)),
             "Fix: rle_segment_lengths requires segment_count > 0, got 0.".to_string(),
         );
     }

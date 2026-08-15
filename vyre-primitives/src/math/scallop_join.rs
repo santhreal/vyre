@@ -81,6 +81,7 @@
 //! `cpu_ref` (requires the `cpu-parity` feature) performs the same fixpoint iteration on host arrays and
 //! is the parity oracle for every GPU dispatch.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -133,18 +134,16 @@ pub fn scallop_join(
     max_iterations: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            state,
-            DataType::U32,
+            Some((state, DataType::U32)),
             format!("Fix: scallop_join requires n > 0, got {n}."),
         );
     }
     if max_iterations == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            state,
-            DataType::U32,
+            Some((state, DataType::U32)),
             "Fix: scallop_join requires max_iterations > 0, got 0.".to_string(),
         );
     }

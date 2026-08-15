@@ -13,6 +13,7 @@ use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS,
 };
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
@@ -145,7 +146,7 @@ pub fn tensor_flow_forward(
         allow_mask,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, tensor_out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((tensor_out, DataType::U32)), error),
     }
 }
 

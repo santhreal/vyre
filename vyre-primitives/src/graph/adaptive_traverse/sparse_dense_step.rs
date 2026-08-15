@@ -2,6 +2,7 @@
 //! frontier popcount picks CSR row expansion or a dense reverse-row scan.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -38,32 +39,24 @@ pub fn adaptive_sparse_dense_step(
     dense_threshold_pct: u32,
 ) -> Program {
     if node_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             HYBRID_OP_ID,
-            frontier_out,
-            DataType::U32,
+            Some((frontier_out, DataType::U32)),
             "Fix: adaptive_sparse_dense_step requires node_count > 0, got 0.".to_string(),
         );
     }
 
     let words = bitset_words(node_count);
     let Some(adj_count) = u64::from(node_count).checked_mul(u64::from(words)) else {
-        return crate::invalid_output_program(HYBRID_OP_ID,
-        frontier_out,
-        DataType::U32,
-        format!("Fix: adaptive_sparse_dense_step dense buffer size overflows u64 ({node_count} nodes x {words} words)."),);
+        return trap_program(HYBRID_OP_ID, Some((frontier_out, DataType::U32)), format!("Fix: adaptive_sparse_dense_step dense buffer size overflows u64 ({node_count} nodes x {words} words)."));
     };
     if adj_count > u64::from(u32::MAX) {
-        return crate::invalid_output_program(HYBRID_OP_ID,
-        frontier_out,
-        DataType::U32,
-        format!("Fix: adaptive_sparse_dense_step dense buffer size {adj_count} exceeds u32::MAX ({node_count} nodes x {words} words). Partition the graph."),);
+        return trap_program(HYBRID_OP_ID, Some((frontier_out, DataType::U32)), format!("Fix: adaptive_sparse_dense_step dense buffer size {adj_count} exceeds u32::MAX ({node_count} nodes x {words} words). Partition the graph."));
     }
     let Some(offset_count) = node_count.checked_add(1) else {
-        return crate::invalid_output_program(
+        return trap_program(
             HYBRID_OP_ID,
-            frontier_out,
-            DataType::U32,
+            Some((frontier_out, DataType::U32)),
             "Fix: adaptive_sparse_dense_step CSR offset count overflows u32. Partition the graph."
                 .to_string(),
         );

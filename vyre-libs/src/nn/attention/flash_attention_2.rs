@@ -12,6 +12,7 @@
 //!
 //! Category-A composition.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::planner::plan_flash_attention_tiled;
@@ -50,17 +51,16 @@ pub fn flash_attention_2(
     tile_size: u32,
 ) -> Program {
     if seq_len == 0 || head_dim == 0 || tile_size == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: flash_attention_2 seq_len, head_dim, and tile_size must all be > 0".to_string(),
         );
     }
     let plan = match plan_flash_attention_tiled(seq_len, head_dim, tile_size) {
         Ok(plan) => plan,
         Err(error) => {
-            return crate::builder::invalid_builder_trap_program(OP_ID, out, DataType::F32, error);
+            return trap_program(OP_ID, Some((out, DataType::F32)), error);
         }
     };
     let scale_expr = Expr::f32(1.0f32 / (head_dim as f32).sqrt());
@@ -207,10 +207,9 @@ pub fn flash_attention_2_reference(
     head_dim: u32,
 ) -> Program {
     if seq_len == 0 || head_dim == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             REFERENCE_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: flash_attention_2_reference seq_len and head_dim must be > 0".to_string(),
         );
     }
@@ -218,10 +217,9 @@ pub fn flash_attention_2_reference(
     let elements = match seq_len.checked_mul(head_dim) {
         Some(e) => e,
         None => {
-            return crate::builder::invalid_builder_trap_program(
+            return trap_program(
                 REFERENCE_OP_ID,
-                out,
-                DataType::F32,
+                Some((out, DataType::F32)),
                 "Fix: flash_attention_2_reference seq_len*head_dim overflows u32".to_string(),
             );
         }

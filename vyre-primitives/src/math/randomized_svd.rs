@@ -32,6 +32,7 @@
 //! | `vyre-foundation::transform` dispatch compression | randomized SVD compresses huge low-rank dispatch dependency matrices for polyhedral fusion analysis at workspace scale |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -58,7 +59,7 @@ pub fn randomized_projection_step(
 ) -> Program {
     match try_randomized_projection_step(a, omega, y, m, n, l) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, y, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((y, DataType::U32)), error),
     }
 }
 

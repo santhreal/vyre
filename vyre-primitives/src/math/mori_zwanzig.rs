@@ -43,6 +43,7 @@
 //! semiring_gemm) so that region-chain audits show the M-Z projection
 //! intent at the call site.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
@@ -58,7 +59,7 @@ pub const OP_ID: &str = "vyre-primitives::math::mori_zwanzig_project_step";
 pub fn mz_project_step(p_matrix: &str, f_vec: &str, out: &str, n: u32) -> Program {
     match try_mz_project_step(p_matrix, f_vec, out, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((out, DataType::U32)), error),
     }
 }
 

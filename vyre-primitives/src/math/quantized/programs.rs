@@ -1,6 +1,7 @@
 //! IR program builders for packed INT4 quantized primitives.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use super::program_helpers::{
     i4_dot_accumulation_body, i4_matvec_scaled_body, signed_i4_nibble_expr,
@@ -20,10 +21,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 /// Build a Program that unpacks packed signed INT4 lanes into i32 lanes.
 pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Program {
     if lane_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             UNPACK_I4_OP_ID,
-            out_lanes,
-            DataType::I32,
+            Some((out_lanes, DataType::I32)),
             "Fix: unpack_i4x8 requires lane_count > 0.".to_string(),
         );
     }
@@ -85,10 +85,9 @@ pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Prog
 /// Build a Program that computes a packed signed INT4 dot product.
 pub fn i4x8_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> Program {
     if lane_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_DOT_I32_OP_ID,
-            out,
-            DataType::I32,
+            Some((out, DataType::I32)),
             "Fix: i4x8_dot_i32 requires lane_count > 0.".to_string(),
         );
     }
@@ -135,10 +134,9 @@ pub fn i4x8_dot_f32_scaled(
     lane_count: u32,
 ) -> Program {
     if lane_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_DOT_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_dot_f32_scaled requires lane_count > 0.".to_string(),
         );
     }
@@ -192,10 +190,9 @@ pub fn i4x8_matvec_f32_scaled(
     cols: u32,
 ) -> Program {
     if rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_MATVEC_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_matvec_f32_scaled requires rows > 0 and cols > 0.".to_string(),
         );
     }
@@ -250,10 +247,9 @@ pub fn i4x8_batched_matvec_f32_scaled(
     cols: u32,
 ) -> Program {
     if batch == 0 || rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_BATCHED_MATVEC_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_batched_matvec_f32_scaled requires batch > 0, rows > 0, and cols > 0."
                 .to_string(),
         );
@@ -317,10 +313,9 @@ pub fn i4x8_batched_matmul_f32_scaled(
     cols: u32,
 ) -> Program {
     if batch == 0 || rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_BATCHED_MATMUL_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_batched_matmul_f32_scaled requires batch > 0, rows > 0, and cols > 0."
                 .to_string(),
         );
@@ -465,10 +460,9 @@ pub fn i4x8_batched_matmul_top1_f32_scaled(
     cols: u32,
 ) -> Program {
     if batch == 0 || rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_batched_matmul_top1_f32_scaled requires batch > 0, rows > 0, and cols > 0."
                 .to_string(),
         );

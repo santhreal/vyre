@@ -22,6 +22,7 @@
 //! | future `vyre-libs::security::buffer_safety` | SOS proofs of bounded-buffer-access |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -53,27 +54,24 @@ pub fn sos_gram_construct(
     coeff_count: u32,
 ) -> Program {
     if m == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            gram,
-            DataType::U32,
+            Some((gram, DataType::U32)),
             format!("Fix: sos_gram_construct requires m > 0, got {m}."),
         );
     }
     if coeff_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            gram,
-            DataType::U32,
+            Some((gram, DataType::U32)),
             "Fix: sos_gram_construct requires coeff_count > 0, got 0.".to_string(),
         );
     }
 
     let Some(cells) = m.checked_mul(m) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            gram,
-            DataType::U32,
+            Some((gram, DataType::U32)),
             format!("Fix: sos_gram_construct m*m overflows u32 for m={m}."),
         );
     };

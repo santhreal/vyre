@@ -20,6 +20,7 @@
 //! | `vyre-runtime/src/megakernel/planner.rs` (#22 self-consumer) | **vyre's megakernel scheduler**  -  fusion-grouping subject to memory + sync constraints IS a matroid intersection problem (graphic matroid × partition matroid) |
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -60,7 +61,7 @@ pub fn matroid_exchange_bfs_step(
         n,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, frontier_out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((frontier_out, DataType::U32)), error),
     }
 }
 

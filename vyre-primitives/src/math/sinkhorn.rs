@@ -47,6 +47,7 @@
 //! near zero saturate to 1 to avoid divide-by-zero (callers tighten
 //! ε to control floor activation).
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Op id for the scaling-update primitive.
@@ -67,10 +68,9 @@ pub const DIVISOR_FLOOR: u32 = 1;
 #[must_use]
 pub fn sinkhorn_scale(target: &str, divisor: &str, out: &str, count: u32) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: sinkhorn_scale requires count > 0, got {count}."),
         );
     }

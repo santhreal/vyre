@@ -27,6 +27,7 @@
 //!   final stitch step that reconciles boundary continuity.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -52,10 +53,9 @@ pub fn rk4_step(
     n: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            y_next,
-            DataType::U32,
+            Some((y_next, DataType::U32)),
             format!("Fix: rk4_step requires n > 0, got {n}."),
         );
     }

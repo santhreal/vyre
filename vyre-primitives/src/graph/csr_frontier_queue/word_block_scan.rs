@@ -2,6 +2,7 @@
 //! totals, and the in-place conversion of block totals into queue offsets.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -31,10 +32,9 @@ pub fn frontier_word_counts_scan_pass_a(
     node_count: u32,
 ) -> Program {
     if node_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
-            word_partials,
-            DataType::U32,
+            Some((word_partials, DataType::U32)),
             "Fix: frontier_word_counts_scan_pass_a requires node_count > 0.".to_string(),
         );
     }
@@ -185,10 +185,9 @@ pub fn frontier_word_counts_scan_pass_a(
 #[must_use]
 pub fn frontier_word_block_offsets_in_place(block_totals: &str, node_count: u32) -> Program {
     if node_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID,
-            block_totals,
-            DataType::U32,
+            Some((block_totals, DataType::U32)),
             "Fix: frontier_word_block_offsets_in_place requires node_count > 0.".to_string(),
         );
     }

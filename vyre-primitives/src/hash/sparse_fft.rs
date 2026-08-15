@@ -31,6 +31,7 @@
 //! binning and CPU parity contracts.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -48,18 +49,16 @@ pub const OP_ID: &str = "vyre-primitives::hash::sparse_fft_bin_hash";
 #[must_use]
 pub fn sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            bins,
-            DataType::U32,
+            Some((bins, DataType::U32)),
             format!("Fix: sparse_fft_bin_hash requires n > 0, got {n}."),
         );
     }
     if b == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            bins,
-            DataType::U32,
+            Some((bins, DataType::U32)),
             format!("Fix: sparse_fft_bin_hash requires b > 0, got {b}."),
         );
     }

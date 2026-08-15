@@ -10,6 +10,7 @@
 //! multi-block dispatch.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -188,26 +189,23 @@ pub fn scallop_join_wide(
     max_iterations: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            state,
-            DataType::U32,
+            Some((state, DataType::U32)),
             "Fix: scallop_join_wide requires n > 0, got 0.".to_string(),
         );
     }
     if w == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            state,
-            DataType::U32,
+            Some((state, DataType::U32)),
             "Fix: scallop_join_wide requires w > 0, got 0.".to_string(),
         );
     }
     if max_iterations == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            state,
-            DataType::U32,
+            Some((state, DataType::U32)),
             "Fix: scallop_join_wide requires max_iterations > 0, got 0.".to_string(),
         );
     }

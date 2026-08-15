@@ -20,6 +20,7 @@
 //! Out-of-range indices are silently dropped because no lane owns them.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -33,18 +34,16 @@ pub const OP_ID: &str = "vyre-primitives::reduce::histogram";
 #[must_use]
 pub fn histogram(input: &str, output: &str, count: u32, num_bins: u32) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: histogram requires count > 0, got {count}."),
         );
     }
     if num_bins == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: histogram requires num_bins > 0, got {num_bins}."),
         );
     }
@@ -95,18 +94,16 @@ pub fn histogram(input: &str, output: &str, count: u32, num_bins: u32) -> Progra
 #[must_use]
 pub fn histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins: u32) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: histogram_atomic_scatter requires count > 0, got {count}."),
         );
     }
     if num_bins == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: histogram_atomic_scatter requires num_bins > 0, got {num_bins}."),
         );
     }

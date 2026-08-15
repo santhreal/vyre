@@ -32,6 +32,7 @@
 //! barriers when the backend doesn't support cooperative groups.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -86,9 +87,7 @@ fn total_partial_words(num_blocks: u32, context: &str) -> Result<u32, String> {
 pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Program {
     match try_multi_block_prefix_scan_sum_u32(input, output, n) {
         Ok(program) => program,
-        Err(error) => {
-            crate::invalid_output_program(OP_ID_INCLUSIVE_SUM, output, DataType::U32, error)
-        }
+        Err(error) => trap_program(OP_ID_INCLUSIVE_SUM, Some((output, DataType::U32)), error),
     }
 }
 
@@ -167,9 +166,7 @@ fn try_multi_block_prefix_scan_sum_u32(
 pub fn multi_block_prefix_scan_sum_exclusive_u32(input: &str, output: &str, n: u32) -> Program {
     match try_multi_block_prefix_scan_sum_exclusive_u32(input, output, n) {
         Ok(program) => program,
-        Err(error) => {
-            crate::invalid_output_program(OP_ID_EXCLUSIVE_SUM, output, DataType::U32, error)
-        }
+        Err(error) => trap_program(OP_ID_EXCLUSIVE_SUM, Some((output, DataType::U32)), error),
     }
 }
 
@@ -368,9 +365,7 @@ pub fn pass_a_local_scan(
 ) -> Program {
     match try_pass_a_local_scan(input, partials, block_totals, n, num_blocks) {
         Ok(program) => program,
-        Err(error) => {
-            crate::invalid_output_program(OP_ID_INCLUSIVE_SUM, partials, DataType::U32, error)
-        }
+        Err(error) => trap_program(OP_ID_INCLUSIVE_SUM, Some((partials, DataType::U32)), error),
     }
 }
 
@@ -502,9 +497,7 @@ pub fn pass_c_broadcast_offsets(
 ) -> Program {
     match try_pass_c_broadcast_offsets(partials, block_totals_scanned, output, n, num_blocks) {
         Ok(program) => program,
-        Err(error) => {
-            crate::invalid_output_program(OP_ID_INCLUSIVE_SUM, output, DataType::U32, error)
-        }
+        Err(error) => trap_program(OP_ID_INCLUSIVE_SUM, Some((output, DataType::U32)), error),
     }
 }
 

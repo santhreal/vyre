@@ -4,6 +4,7 @@
 //! workgroup scan for one-block inputs and the multi-block scan for larger
 //! buffers.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
 use vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
@@ -19,10 +20,9 @@ const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 #[must_use]
 pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             OP_ID,
-            output,
-            vyre_foundation::ir::DataType::U32,
+            Some((output, vyre_foundation::ir::DataType::U32)),
             "Fix: scan_prefix_sum requires n > 0.".to_string(),
         );
     }

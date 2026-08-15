@@ -7,6 +7,7 @@
 //! Algorithm: TT-SVD (Oseledets 2011).
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -43,58 +44,51 @@ pub fn tensor_train_decompose_step(
     r_next: u32,
 ) -> Program {
     let Some(input_rows) = r_prev.checked_mul(nk) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step r_prev * nk must fit in u32.".to_owned(),
         );
     };
     let Some(input_count) = input_rows.checked_mul(rem) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step input count must fit in u32.".to_owned(),
         );
     };
     let Some(u_count) = input_rows.checked_mul(r_next) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step core count must fit in u32.".to_owned(),
         );
     };
     let Some(rem_count) = r_next.checked_mul(rem) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step remainder count must fit in u32.".to_owned(),
         );
     };
     let Some(gram_count) = rem.checked_mul(rem) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step Gram matrix count must fit in u32.".to_owned(),
         );
     };
     if r_prev == 0 || nk == 0 || rem == 0 || r_next == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step dimensions and ranks must be non-zero.".to_owned(),
         );
     }
     if r_next > rem {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step requires r_next <= rem for emitted rank columns."
                 .to_owned(),
         );

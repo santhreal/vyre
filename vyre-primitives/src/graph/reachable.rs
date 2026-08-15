@@ -13,6 +13,7 @@
 
 use std::collections::HashSet;
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
@@ -266,36 +267,32 @@ pub fn reachable_program(
     let frontier_b = "reach_frontier_b";
     let active_flag_idx = words;
     let Some(frontier_b_storage_words) = words.checked_add(1) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            reach_out,
-            DataType::U32,
+            Some((reach_out, DataType::U32)),
             "Fix: reachable_program active-flag scratch word overflows u32.".to_string(),
         );
     };
 
     let Some(iter_nodes) = (max_iters as usize).checked_mul(8) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            reach_out,
-            DataType::U32,
+            Some((reach_out, DataType::U32)),
             "Fix: reachable_program max_iters*8 overflows usize.".to_string(),
         );
     };
     let Some(node_capacity) = iter_nodes.checked_add(4) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            reach_out,
-            DataType::U32,
+            Some((reach_out, DataType::U32)),
             "Fix: reachable_program node capacity overflows usize.".to_string(),
         );
     };
     let mut entry: Vec<Node> = Vec::new();
     if let Err(error) = entry.try_reserve(node_capacity) {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            reach_out,
-            DataType::U32,
+            Some((reach_out, DataType::U32)),
             format!("Fix: reachable_program could not reserve {node_capacity} IR nodes: {error}"),
         );
     }

@@ -38,6 +38,7 @@
 //! canonical transition-table shape and handle tiling policy.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -88,10 +89,7 @@ pub fn nfa_step(
     num_states: u32,
 ) -> Program {
     if num_states as usize > MAX_STATES_PER_SUBGROUP {
-        return crate::invalid_output_program(OP_ID,
-        out_buf,
-        DataType::U32,
-        format!("Fix: num_states {num_states} exceeds MAX_STATES_PER_SUBGROUP={MAX_STATES_PER_SUBGROUP}; caller must tile at the composition layer."),);
+        return trap_program(OP_ID, Some((out_buf, DataType::U32)), format!("Fix: num_states {num_states} exceeds MAX_STATES_PER_SUBGROUP={MAX_STATES_PER_SUBGROUP}; caller must tile at the composition layer."));
     }
 
     let lane = Expr::InvocationId { axis: 0 };

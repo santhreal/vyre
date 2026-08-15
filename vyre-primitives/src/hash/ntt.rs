@@ -50,6 +50,7 @@
 //! 64-bit arithmetic schema rather than this module's u32 buffer ABI.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -269,26 +270,23 @@ pub fn bit_reverse<T: Copy>(a: &mut [T]) {
 #[must_use]
 pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -> Program {
     if !n.is_power_of_two() {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            data,
-            DataType::U32,
+            Some((data, DataType::U32)),
             format!("Fix: ntt_butterfly_stage requires power-of-two n, got {n}."),
         );
     }
     if n > MAX_LEN {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            data,
-            DataType::U32,
+            Some((data, DataType::U32)),
             format!("Fix: ntt_butterfly_stage requires n <= MAX_LEN={MAX_LEN}, got {n}."),
         );
     }
     if stage_log >= 32 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            data,
-            DataType::U32,
+            Some((data, DataType::U32)),
             format!("Fix: ntt_butterfly_stage requires stage_log < 32, got {stage_log}."),
         );
     }
@@ -296,10 +294,9 @@ pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -
     let half = n / 2;
     let butterfly_distance = 1u32 << stage_log;
     if butterfly_distance == 0 || butterfly_distance > half {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            data,
-            DataType::U32,
+            Some((data, DataType::U32)),
             format!(
                 "Fix: ntt_butterfly_stage stage_log={stage_log} exceeds n={n} butterfly range."
             ),

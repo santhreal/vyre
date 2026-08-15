@@ -31,6 +31,7 @@
 //! so the caller can update them per step without recompilation.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -55,10 +56,9 @@ pub fn score_denoise_step(
     n: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: score_denoise_step requires n > 0, got {n}."),
         );
     }

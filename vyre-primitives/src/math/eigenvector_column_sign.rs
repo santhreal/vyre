@@ -12,6 +12,7 @@
 //! letting it decide would make the canonicalization itself non-deterministic.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -104,18 +105,16 @@ pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n:
 #[must_use]
 pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            eigenvectors,
-            DataType::F32,
+            Some((eigenvectors, DataType::F32)),
             format!("Fix: eigenvector_column_sign requires n > 0, got {n}."),
         );
     }
     let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            eigenvectors,
-            DataType::F32,
+            Some((eigenvectors, DataType::F32)),
             format!("Fix: eigenvector_column_sign n*n overflows matrix cell count for n={n}."),
         );
     };

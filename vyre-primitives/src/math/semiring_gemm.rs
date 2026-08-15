@@ -42,6 +42,7 @@
 //! dense enum-specialized semiring GEMM over the seven well-known
 //! semirings.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 pub use vyre_spec::Semiring;
 
@@ -113,51 +114,45 @@ pub fn semiring_gemm(
     semiring: Semiring,
 ) -> Program {
     if m == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            c,
-            DataType::U32,
+            Some((c, DataType::U32)),
             format!("Fix: semiring_gemm requires m > 0, got {m}."),
         );
     }
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            c,
-            DataType::U32,
+            Some((c, DataType::U32)),
             format!("Fix: semiring_gemm requires n > 0, got {n}."),
         );
     }
     if k == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            c,
-            DataType::U32,
+            Some((c, DataType::U32)),
             format!("Fix: semiring_gemm requires k > 0, got {k}."),
         );
     }
 
     let Some(cell_count) = m.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            c,
-            DataType::U32,
+            Some((c, DataType::U32)),
             format!("Fix: semiring_gemm output cells overflow u32: m={m}, n={n}."),
         );
     };
     let Some(a_count) = m.checked_mul(k) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            c,
-            DataType::U32,
+            Some((c, DataType::U32)),
             format!("Fix: semiring_gemm A buffer cells overflow u32: m={m}, k={k}."),
         );
     };
     let Some(b_count) = k.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            c,
-            DataType::U32,
+            Some((c, DataType::U32)),
             format!("Fix: semiring_gemm B buffer cells overflow u32: k={k}, n={n}."),
         );
     };

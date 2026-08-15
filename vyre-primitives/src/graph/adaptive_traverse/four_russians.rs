@@ -1,6 +1,7 @@
 //! Four-Russians dense traversal: source-byte tile shapes, the column
 //! transpose and LUT build feeding them, and the graph-level program.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::FOUR_RUSSIANS_DENSE_OP_ID;
@@ -121,10 +122,9 @@ pub fn adaptive_four_russians_dense_step(
     node_count: u32,
 ) -> Program {
     if node_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             FOUR_RUSSIANS_DENSE_OP_ID,
-            frontier_out,
-            DataType::U32,
+            Some((frontier_out, DataType::U32)),
             "Fix: adaptive_four_russians_dense_step requires node_count > 0, got 0.".to_string(),
         );
     }

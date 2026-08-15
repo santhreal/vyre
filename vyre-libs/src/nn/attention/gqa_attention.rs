@@ -2,6 +2,7 @@
 //!
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::nn::attention_passes::{
@@ -341,7 +342,7 @@ inventory::submit! {
         OP_ID,
         || {
             gqa_attention("q", "k", "v", "out", 2, 1, 2, 2)
-                .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: gqa_attention fixture must build: {error}")))
+                .unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: gqa_attention fixture must build: {error}")))
         },
         Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;

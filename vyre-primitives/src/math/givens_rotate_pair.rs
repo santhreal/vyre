@@ -9,6 +9,7 @@
 //! two address parameters rather than three copies of a five-node loop.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -121,20 +122,14 @@ pub fn givens_rotate_columns(
     second_col: u32,
 ) -> Program {
     if n == 0 || first_col >= n || second_col >= n {
-        return crate::invalid_output_program(
-            OP_ID,
-            matrix,
-            DataType::F32,
-            format!(
-                "Fix: givens_rotate_columns needs n > 0 and both columns below n, got n={n}, first_col={first_col}, second_col={second_col}."
-            ),
-        );
+        return trap_program(OP_ID, Some((matrix, DataType::F32)), format!(
+            "Fix: givens_rotate_columns needs n > 0 and both columns below n, got n={n}, first_col={first_col}, second_col={second_col}."
+        ));
     }
     let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            matrix,
-            DataType::F32,
+            Some((matrix, DataType::F32)),
             format!("Fix: givens_rotate_columns n*n overflows matrix cell count for n={n}."),
         );
     };

@@ -42,6 +42,7 @@
 //! overhead at one dispatch.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -83,7 +84,7 @@ pub fn chebyshev_filter(
 ) -> Program {
     match try_chebyshev_filter(laplacian, signal, coeffs, output, scratch, n, k_steps) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, output, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((output, DataType::U32)), error),
     }
 }
 
