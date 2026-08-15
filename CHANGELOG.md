@@ -270,15 +270,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   been answered by deleting them. Keying on the pair means a reviewed
   declaration exempts the gate it names and not the next one added to the same
   file.
-- `scripts/check_branch_accounting.py` derives the campaign's own branch and
-  worktree state from git at run time and fails when it is inconsistent: a
-  branch no owner branch holds and no worktree carries is work nobody is doing
-  and nobody is merging, and a branch an owner already holds while a worktree
-  keeps it alive is a source tree every scan walks for nothing. Owners are the
-  integration branch and the subsystem tier, and a branch never accounts for
-  itself. The derivation refuses to run against a repository with fewer than
-  two local branches or no integration branch, because a check that silently
-  derives nothing is the same defect as no check.
 
 ### Changed
 
@@ -1497,27 +1488,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `vyre-primitives` and `vyre-libs` are unaffected, since `graph` is not a
   default feature.
 
-### Fixed: a gate could report the checkout that last compiled it (`structure-gate`, `xtask`, `xtask-registry`, `xtask-evidence`, `vyre-lints`)
-
-Cargo hashes a workspace member by its path relative to the workspace root and
-decides freshness by mtime, so two checkouts sharing a target directory compute
-the same unit hash and address the same artifacts. The checkout whose files were
-older than the last build silently ran the other one's compiled logic:
-`cargo run -p structure-gate` in one checkout reported 208 violations while its
-own source produced 209, and `dup-scan` read 11811 duplicate lines for
-`vyre-libs` against a true 13406.
-
-`.cargo/config.toml` now declares `VYRE_CHECKOUT_ROOT` as a checkout-relative
-path, so its value is the absolute path of the checkout. Every crate whose
-output describes the tree reads it with `env!`, which records the value in that
-crate's dep-info; cargo rebuilds instead of reusing when it changes. The 46
-hand-rolled derivations of the workspace root from `CARGO_MANIFEST_DIR` across
-those crates are now three `checkout_root()` owners.
-
-A gate binary compiled outside the checkout, where `.cargo/config.toml` does not
-apply, now fails to compile with a `Fix:` message rather than baking a foreign
-root.
-
 ### Fixed
 
 - Driver decorators now preserve the concrete backend device profile, including
@@ -2544,6 +2514,19 @@ root.
   contract now derives the workspace member list at run time and fails when a
   member has no classified testing guide row, or when a row names a crate the
   workspace no longer has.
+- The gate crates resolve the checkout they report on from the working
+  directory at run time, through `structure_gate::workspace_root`, and no
+  checkout-identifying variable is declared in the cargo config. A
+  `VYRE_CHECKOUT_ROOT` with `relative = true`, read with `env!` so its value
+  entered each crate's dep-info, was tried as the way to stop one checkout
+  being handed a binary another compiled; cargo does not export such a variable
+  to the process it runs, so every gate fell through to its compiled-in value
+  and the shared binary reported a worktree's numbers as this tree's. The
+  declaration is rejected rather than absent, and the comment saying so is the
+  only thing that stops it coming back.
+  `structure-gate/tests/checkout_provenance.rs` rejects both spellings,
+  assembling each from parts at run time so the gate does not report itself and
+  needs no exemption.
 
 ## [0.7.1] - 2026-08-01
 
