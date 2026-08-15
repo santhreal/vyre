@@ -217,6 +217,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registered propagating pass to fold it. Reintroducing the pre-collapse
   private walk fails it at the async-copy offset, which is the position the two
   copies actually disagreed about.
+- Every published FNV-1a64 program builder, the slot-precise `arg_of_slot`
+  traversal, and both queued-row CSR traverse delegating forms now have parity
+  coverage. The FNV-1a64 and delegating-form member sets are derived from the
+  source at run time, so a new member fails the suite instead of shipping
+  unproven.
 - `scan_prefilter_width_closure` reads the `PrefilterWidth` variants out of the
   width table's own source at run time and fails when a width has no recorded
   dispatch ABI, when a recorded row names a width the source no longer

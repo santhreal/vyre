@@ -84,6 +84,8 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 | `test` | `adversarial_text_utf8_validate` | `vyre-primitives/tests/adversarial_text_utf8_validate.rs` | None | `./cargo_full test -p vyre-primitives --test adversarial_text_utf8_validate` |
 | `test` | `adversarial_text_utf8_validate` | `vyre-primitives/tests/adversarial_text_utf8_validate.rs` | `text` | `./cargo_full test -p vyre-primitives --test adversarial_text_utf8_validate` |
 | `test` | `amg_v_cycle_ir_parity` | `vyre-primitives/tests/amg_v_cycle_ir_parity.rs` | None | `./cargo_full test -p vyre-primitives --test amg_v_cycle_ir_parity` |
+| `test` | `arg_of_slot_precision` | `vyre-primitives/tests/arg_of_slot_precision.rs` | None | `./cargo_full test -p vyre-primitives --test arg_of_slot_precision` |
+| `test` | `arg_of_slot_precision` | `vyre-primitives/tests/arg_of_slot_precision.rs` | `cpu-parity`, `predicate` | `./cargo_full test -p vyre-primitives --test arg_of_slot_precision` |
 | `test` | `argmax_of_marginals_ir_parity_proptest` | `vyre-primitives/tests/argmax_of_marginals_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-primitives --test argmax_of_marginals_ir_parity_proptest` |
 | `test` | `bellman_oob_edge_parity` | `vyre-primitives/tests/bellman_oob_edge_parity.rs` | None | `./cargo_full test -p vyre-primitives --test bellman_oob_edge_parity` |
 | `test` | `bigint_add_carry_ir_parity_proptest` | `vyre-primitives/tests/bigint_add_carry_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-primitives --test bigint_add_carry_ir_parity_proptest` |
@@ -118,8 +120,8 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 | `test` | `dominator_tree_scale_gate` | `vyre-primitives/tests/dominator_tree_scale_gate.rs` | `cpu-parity`, `graph` | `./cargo_full test -p vyre-primitives --test dominator_tree_scale_gate` |
 | `test` | `dp_clip_signed_newton_parity` | `vyre-primitives/tests/dp_clip_signed_newton_parity.rs` | None | `./cargo_full test -p vyre-primitives --test dp_clip_signed_newton_parity` |
 | `test` | `fmm_program_parity` | `vyre-primitives/tests/fmm_program_parity.rs` | None | `./cargo_full test -p vyre-primitives --test fmm_program_parity` |
-| `test` | `fnv1a64_u32_lane_parity` | `vyre-primitives/tests/fnv1a64_u32_lane_parity.rs` | None | `./cargo_full test -p vyre-primitives --test fnv1a64_u32_lane_parity` |
-| `test` | `fnv1a64_u32_lane_parity` | `vyre-primitives/tests/fnv1a64_u32_lane_parity.rs` | `hash` | `./cargo_full test -p vyre-primitives --test fnv1a64_u32_lane_parity` |
+| `test` | `fnv1a64_builder_parity` | `vyre-primitives/tests/fnv1a64_builder_parity.rs` | None | `./cargo_full test -p vyre-primitives --test fnv1a64_builder_parity` |
+| `test` | `fnv1a64_builder_parity` | `vyre-primitives/tests/fnv1a64_builder_parity.rs` | `hash` | `./cargo_full test -p vyre-primitives --test fnv1a64_builder_parity` |
 | `test` | `fnv1a_dyn_parity` | `vyre-primitives/tests/fnv1a_dyn_parity.rs` | None | `./cargo_full test -p vyre-primitives --test fnv1a_dyn_parity` |
 | `test` | `four_russians_dense_matvec_generated` | `vyre-primitives/tests/four_russians_dense_matvec_generated.rs` | None | `./cargo_full test -p vyre-primitives --test four_russians_dense_matvec_generated` |
 | `test` | `four_russians_dense_matvec_generated` | `vyre-primitives/tests/four_russians_dense_matvec_generated.rs` | `bitset`, `cpu-parity` | `./cargo_full test -p vyre-primitives --test four_russians_dense_matvec_generated` |

@@ -317,6 +317,11 @@ path = "tests/sweep_predicate_node_kind_oracle_matrix.rs"
 required-features = ["cpu-parity", "predicate"]
 
 [[test]]
+name = "arg_of_slot_precision"
+path = "tests/arg_of_slot_precision.rs"
+required-features = ["cpu-parity", "predicate"]
+
+[[test]]
 name = "sweep_hash_crc_oracle_matrix"
 path = "tests/sweep_hash_crc_oracle_matrix.rs"
 required-features = ["hash"]
@@ -327,8 +332,8 @@ path = "tests/sweep_hash_fnv1a_oracle_matrix.rs"
 required-features = ["hash"]
 
 [[test]]
-name = "fnv1a64_u32_lane_parity"
-path = "tests/fnv1a64_u32_lane_parity.rs"
+name = "fnv1a64_builder_parity"
+path = "tests/fnv1a64_builder_parity.rs"
 required-features = ["hash"]
 
 [[test]]
