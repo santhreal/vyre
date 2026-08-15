@@ -1,11 +1,10 @@
-//! Induction-variable substitution for the loop passes.
+//! Loop-body guards the loop passes share.
 //!
-//! The implementation lives in [`crate::transform::subst`] so the optimizer
-//! loop passes and reverse-mode autodiff share exactly one complete `var ->
-//! expr` rewrite (no duplicated, drift-prone copy). This module is a local
-//! alias kept so existing `super::substitution::...` imports stay stable.
-
-pub(super) use crate::transform::subst::{substitute_node, substitute_nodes};
+//! Induction-variable substitution is NOT here: [`crate::transform::subst`]
+//! owns it, and the loop passes name that owner directly. This module used to
+//! re-export it under a second path, which is one concept reachable by two
+//! names and a reader's question ("which of the two is the real one") that has
+//! no answer.
 
 use crate::ir::{Expr, Ident, Node};
 use crate::transform::visit::{any_subexpr, child_bodies};
