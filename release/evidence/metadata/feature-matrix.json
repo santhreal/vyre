@@ -1,4 +1,5 @@
 {
+  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=7aa6f646821e67ad47098581c63561f3020799ac626306bb13152939a14bfe84",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -60,17 +61,6 @@
         "cli",
         "default"
       ],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
-      "name": "vyre-bench-competitors",
-      "manifest": "vyre-bench/competitors/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
@@ -297,7 +287,7 @@
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 47,
+      "feature_count": 46,
       "has_default_feature": true,
       "default_feature_members": [
         "math-linalg",
@@ -313,7 +303,6 @@
       ],
       "features": [
         "analysis",
-        "bench",
         "c-parser",
         "cat-a-builder-options",
         "cpu-parity",

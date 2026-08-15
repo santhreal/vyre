@@ -1,4 +1,5 @@
 {
+  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=6afd0dc4f90bc1f784ba75b63a465091adcda86ebc0d6817d1c115d17ed9f073",
   "schema_version": 3,
   "release_train": {
     "vyre": "0.7.2",
@@ -81,11 +82,6 @@
       "manifest": "vyre-libs/Cargo.toml"
     },
     {
-      "package": "vyre-pass-engine",
-      "version": "0.7.2",
-      "manifest": "vyre-pass-engine/Cargo.toml"
-    },
-    {
       "package": "vyre-driver",
       "version": "0.7.2",
       "manifest": "vyre-driver/Cargo.toml"
@@ -94,11 +90,6 @@
       "package": "vyre-aot",
       "version": "0.7.2",
       "manifest": "vyre-aot/Cargo.toml"
-    },
-    {
-      "package": "vyre-driver-cuda",
-      "version": "0.7.2",
-      "manifest": "vyre-driver-cuda/Cargo.toml"
     },
     {
       "package": "vyre-driver-metal",
@@ -114,6 +105,16 @@
       "package": "vyre-driver-spirv",
       "version": "0.7.2",
       "manifest": "vyre-driver-spirv/Cargo.toml"
+    },
+    {
+      "package": "vyre-pass-engine",
+      "version": "0.7.2",
+      "manifest": "vyre-pass-engine/Cargo.toml"
+    },
+    {
+      "package": "vyre-driver-cuda",
+      "version": "0.7.2",
+      "manifest": "vyre-driver-cuda/Cargo.toml"
     },
     {
       "package": "vyre-driver-wgpu",
@@ -273,19 +274,7 @@
     },
     {
       "package": "vyre-driver",
-      "dependency": "vyre-macros",
-      "dependency_version": "0.7.2",
-      "manifest": "vyre-driver/Cargo.toml"
-    },
-    {
-      "package": "vyre-driver",
       "dependency": "vyre-megakernel",
-      "dependency_version": "0.7.2",
-      "manifest": "vyre-driver/Cargo.toml"
-    },
-    {
-      "package": "vyre-driver",
-      "dependency": "vyre-pass-engine",
       "dependency_version": "0.7.2",
       "manifest": "vyre-driver/Cargo.toml"
     },
@@ -663,7 +652,7 @@
     },
     {
       "package": "vyre-runtime",
-      "dependency": "vyre-pass-engine",
+      "dependency": "vyre-primitives",
       "dependency_version": "0.7.2",
       "manifest": "vyre-runtime/Cargo.toml"
     }
@@ -685,8 +674,8 @@
       "package": "vyre-macros",
       "manifest": "vyre-macros/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 64,
-      "file_list_digest": "blake3:1466dc6e12e31a45bcfe2d84a875596568f45c4caf71a22e895ac28e74391240",
+      "file_count": 63,
+      "file_list_digest": "blake3:db89ea0945f48eb82e6a2190d57685073a0080570f87e2f8382acf7d21fdba32",
       "rust_source_count": 5,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -709,8 +698,8 @@
       "package": "vyre-spec",
       "manifest": "vyre-spec/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 115,
-      "file_list_digest": "blake3:7b0ae8c29469cfd50061c400c091623b7bedcb747d26f362f20d8f8163568d44",
+      "file_count": 116,
+      "file_list_digest": "blake3:c96fe47088e2ce04c31b36cb0d35ea317b85d27a3f14aef15d8ddaa747fdcca3",
       "rust_source_count": 56,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -721,9 +710,9 @@
       "package": "vyre-foundation",
       "manifest": "vyre-foundation/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 537,
-      "file_list_digest": "blake3:831e3a1764248dcc09209721564d370aa158cd7c739f25f91c52b0a2225679da",
-      "rust_source_count": 365,
+      "file_count": 567,
+      "file_list_digest": "blake3:c900288a0c598233a5b303e8854caa677f076727ecf3dc3156c47a8d0c365a50",
+      "rust_source_count": 387,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -745,9 +734,9 @@
       "package": "vyre-lower",
       "manifest": "vyre-lower/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 91,
-      "file_list_digest": "blake3:9ee08faefaf21ca13eea91447a6b27b17b60ae4b4edaf3e93e82219a8ecef948",
-      "rust_source_count": 73,
+      "file_count": 89,
+      "file_list_digest": "blake3:f5df800ad115096c56c550a8420f1e19f3d2d27164dc14994f97dd34a583c9f9",
+      "rust_source_count": 71,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -758,7 +747,7 @@
       "manifest": "vyre-emit-naga/Cargo.toml",
       "cargo_package_list_succeeded": true,
       "file_count": 59,
-      "file_list_digest": "blake3:781546c2409db324bdf554ee9b17a0d628286c9db63fcd18e737ac01f4939dd6",
+      "file_list_digest": "blake3:2607c2735175d780748e1f38b0a1dd485cec91074b2bae2c3a47610c50dc6fa0",
       "rust_source_count": 42,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -782,7 +771,7 @@
       "manifest": "vyre-emit-ptx/Cargo.toml",
       "cargo_package_list_succeeded": true,
       "file_count": 85,
-      "file_list_digest": "blake3:e5b2051ad5e7ca82788bf9111ddac00967ff6ef91a97fc856d536778a842c4b5",
+      "file_list_digest": "blake3:6397266c6bafeeb496f1d91d24775967f8657c898c53476349bc3a2ef59406ae",
       "rust_source_count": 58,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -817,9 +806,9 @@
       "package": "vyre-primitives",
       "manifest": "vyre-primitives/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 592,
-      "file_list_digest": "blake3:23620aedda7845b042468de09be37e250196272d612eb7afeba43b4a7fcfa7d3",
-      "rust_source_count": 331,
+      "file_count": 595,
+      "file_list_digest": "blake3:b3795188fab867ba6f7805b2fa10dd738211ebd36e92f4553c4ea4d5bc45a6e9",
+      "rust_source_count": 332,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -830,7 +819,7 @@
       "manifest": "vyre-reference/Cargo.toml",
       "cargo_package_list_succeeded": true,
       "file_count": 165,
-      "file_list_digest": "blake3:db7b1335064e5f7a75bdb52444e33ec86dd030e790dd1c914bf2e0a06198e38e",
+      "file_list_digest": "blake3:a0e40565e665d3b4f63ad71eb91be153290f13078c9dab4a95c2f4ed48ee8941",
       "rust_source_count": 80,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -841,21 +830,9 @@
       "package": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 1161,
-      "file_list_digest": "blake3:9a26e7f1d7bcb4cb6705052beff1872d93ef973b82c89cd2b5cef8da0c74fff9",
-      "rust_source_count": 781,
-      "missing_required_files": [],
-      "forbidden_files": [],
-      "command_error": null,
-      "blockers": []
-    },
-    {
-      "package": "vyre-pass-engine",
-      "manifest": "vyre-pass-engine/Cargo.toml",
-      "cargo_package_list_succeeded": true,
-      "file_count": 41,
-      "file_list_digest": "blake3:128ed4d191a42722678fef80627efd2f36cc03ca582277d5e93115b739579e55",
-      "rust_source_count": 21,
+      "file_count": 1167,
+      "file_list_digest": "blake3:7669ac69e1b7837e1cad85ec30615192f0777d8cd281af48408c53790126dcd9",
+      "rust_source_count": 784,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -865,9 +842,9 @@
       "package": "vyre-driver",
       "manifest": "vyre-driver/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 179,
-      "file_list_digest": "blake3:e8a70ec74b4fb59691557240d08f4a824b7d413fab1c3cf519e36e948e5a3b84",
-      "rust_source_count": 116,
+      "file_count": 182,
+      "file_list_digest": "blake3:c644aa280111767b851ed4703759486520ec29ad2d277489b9e6d08c21d6ae88",
+      "rust_source_count": 118,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -886,24 +863,12 @@
       "blockers": []
     },
     {
-      "package": "vyre-driver-cuda",
-      "manifest": "vyre-driver-cuda/Cargo.toml",
-      "cargo_package_list_succeeded": true,
-      "file_count": 331,
-      "file_list_digest": "blake3:7d0eddb53e747d11ab428973583a0a6c26f501fc4bb838da741a86fb55d0b651",
-      "rust_source_count": 111,
-      "missing_required_files": [],
-      "forbidden_files": [],
-      "command_error": null,
-      "blockers": []
-    },
-    {
       "package": "vyre-driver-metal",
       "manifest": "vyre-driver-metal/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 24,
-      "file_list_digest": "blake3:f36ba0f7bd73324cb0e7c3d582fa6396a023a4cdba353a136e37fa2157a25286",
-      "rust_source_count": 10,
+      "file_count": 26,
+      "file_list_digest": "blake3:7ba3ed5e70d583a199b759a3afed916c6fc68e8668572d7292d6542d0992c62f",
+      "rust_source_count": 12,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -925,9 +890,33 @@
       "package": "vyre-driver-spirv",
       "manifest": "vyre-driver-spirv/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 24,
-      "file_list_digest": "blake3:cc21fcd84974edd7bd26f06c8649d77055e6f0c3609d5b61dc786e6e30eff305",
+      "file_count": 25,
+      "file_list_digest": "blake3:a9146c30061e06ad0d6d843b8976b04798324b0900a3af15d29fecc9af00a092",
       "rust_source_count": 5,
+      "missing_required_files": [],
+      "forbidden_files": [],
+      "command_error": null,
+      "blockers": []
+    },
+    {
+      "package": "vyre-pass-engine",
+      "manifest": "vyre-pass-engine/Cargo.toml",
+      "cargo_package_list_succeeded": true,
+      "file_count": 40,
+      "file_list_digest": "blake3:de70820fbcea9bb710e3d4d7684860c672106b55cf676203bc20bd2d8625018f",
+      "rust_source_count": 21,
+      "missing_required_files": [],
+      "forbidden_files": [],
+      "command_error": null,
+      "blockers": []
+    },
+    {
+      "package": "vyre-driver-cuda",
+      "manifest": "vyre-driver-cuda/Cargo.toml",
+      "cargo_package_list_succeeded": true,
+      "file_count": 326,
+      "file_list_digest": "blake3:7d955884283ef012e2731d503c6ee74ee6e3f4d786a7822989b09f7e0f87bde9",
+      "rust_source_count": 109,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -937,9 +926,9 @@
       "package": "vyre-driver-wgpu",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 406,
-      "file_list_digest": "blake3:3b174cafcf45eef7f51ce4ff01e31e6484d31801a13fc57e83457a12e33e03a8",
-      "rust_source_count": 89,
+      "file_count": 414,
+      "file_list_digest": "blake3:64a5b36b82f695cace739714e4b3fc3ead4d3d21b2affa5a25ff0a1dce60eef9",
+      "rust_source_count": 100,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -949,9 +938,9 @@
       "package": "vyre-runtime",
       "manifest": "vyre-runtime/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 159,
-      "file_list_digest": "blake3:709b28669b0758d344eaead41fd7fb903f6938c2ca0daabf7de2a9dd1b993e03",
-      "rust_source_count": 104,
+      "file_count": 164,
+      "file_list_digest": "blake3:acad677182ed58ea603f0df39a53b3776e2b7c4ca21246fe6e515ca846c4b291",
+      "rust_source_count": 109,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -1139,21 +1128,7 @@
     },
     {
       "package": "vyre-driver",
-      "dependency": "vyre-macros",
-      "version": "0.7.2",
-      "manifest": "vyre-driver/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "vyre-driver",
       "dependency": "vyre-megakernel",
-      "version": "0.7.2",
-      "manifest": "vyre-driver/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "vyre-driver",
-      "dependency": "vyre-pass-engine",
       "version": "0.7.2",
       "manifest": "vyre-driver/Cargo.toml",
       "source": "workspace"
@@ -1345,6 +1320,13 @@
       "dependency": "vyre-spec",
       "version": "0.7.2",
       "manifest": "vyre-driver-spirv/Cargo.toml",
+      "source": "workspace"
+    },
+    {
+      "package": "vyre-driver-wgpu",
+      "dependency": "vyre-driver",
+      "version": "0.7.2",
+      "manifest": "vyre-driver-wgpu/Cargo.toml",
       "source": "workspace"
     },
     {
@@ -1685,7 +1667,7 @@
     },
     {
       "package": "vyre-runtime",
-      "dependency": "vyre-pass-engine",
+      "dependency": "vyre-primitives",
       "version": "0.7.2",
       "manifest": "vyre-runtime/Cargo.toml",
       "source": "workspace"

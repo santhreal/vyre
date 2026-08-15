@@ -1,8 +1,9 @@
 {
+  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=7aa6f646821e67ad47098581c63561f3020799ac626306bb13152939a14bfe84",
   "schema_version": 3,
   "publishable_package_count": 26,
   "vyre_package_count": 26,
-  "internal_tooling_count": 12,
+  "internal_tooling_count": 11,
   "root_patch_section_count": 0,
   "required_release_surfaces": [
     "vyre",
@@ -67,22 +68,6 @@
       "license": "MIT OR Apache-2.0",
       "readme": null,
       "repository": "https://github.com/santhreal/vyre",
-      "publish": false,
-      "release_kind": "internal-tooling",
-      "release_group": "internal-tooling",
-      "release_surface": "internal-tooling",
-      "expected_version": null,
-      "publish_policy": "publish=false allowed for release tooling that is not a crates.io artifact",
-      "blockers": []
-    },
-    {
-      "name": "vyre-bench-competitors",
-      "manifest": "vyre-bench/competitors/Cargo.toml",
-      "version": "0.1.0",
-      "description": null,
-      "license": null,
-      "readme": null,
-      "repository": null,
       "publish": false,
       "release_kind": "internal-tooling",
       "release_group": "internal-tooling",
