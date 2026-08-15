@@ -9,10 +9,10 @@ pub(super) struct GateOptions {
     pub(super) mode: GateMode,
 }
 
-pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> {
+pub(super) fn options_from_args(root: &Path, args: &[String]) -> Result<GateOptions, String> {
     let mut manifest_path = None;
     let mut mode = GateMode::default();
-    let mut index = 2;
+    let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
             "--manifest" => {
@@ -26,18 +26,6 @@ pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> 
                 mode = GateMode::LaunchComplete;
                 index += 1;
             }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo xtask vyre-release-gate [--launch-complete] [--manifest PATH]\n\n\
-                     Checks the Vyre release evidence manifest. The default \
-                     prepublication mode accepts the three approval-gated \
-                     external actions as pending and rejects every internal \
-                     blocker. --launch-complete additionally requires completed \
-                     publication, repository verification, and pushes, so it is \
-                     only meaningful after the release has shipped."
-                );
-                std::process::exit(0);
-            }
             other => {
                 return Err(format!("Fix: unknown vyre-release-gate option `{other}`."));
             }
@@ -45,12 +33,14 @@ pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> 
     }
 
     Ok(GateOptions {
-        manifest_path: manifest_path.unwrap_or_else(default_manifest_path),
+        manifest_path: manifest_path.unwrap_or_else(|| default_manifest_path(root)),
         mode,
     })
 }
-pub(super) fn default_manifest_path() -> PathBuf {
-    xtask::checkout::checkout_root().join("release/vyre-release-evidence.toml")
+
+/// The manifest the gate judges when the caller names none.
+pub(super) fn default_manifest_path(root: &Path) -> PathBuf {
+    root.join("release/vyre-release-evidence.toml")
 }
 pub(super) fn resolve_manifest_path(base_dir: &Path, path: &str) -> PathBuf {
     xtask::output_arg::resolve_path(base_dir, path)
@@ -80,15 +70,14 @@ mod tests {
     /// preserving a caller-supplied evidence manifest.
     #[test]
     fn parses_launch_complete_mode_with_manifest() {
+        let root = Path::new("/w");
         let args = vec![
-            "xtask".to_string(),
-            "vyre-release-gate".to_string(),
             "--launch-complete".to_string(),
             "--manifest".to_string(),
             "release/custom.toml".to_string(),
         ];
 
-        let options = options_from_args(&args).expect("valid launch-complete arguments");
+        let options = options_from_args(root, &args).expect("valid launch-complete arguments");
 
         assert_eq!(options.mode, GateMode::LaunchComplete);
         assert_eq!(options.manifest_path, PathBuf::from("release/custom.toml"));
@@ -100,12 +89,12 @@ mod tests {
     /// six findings no source change could clear.
     #[test]
     fn defaults_to_prepublication_mode() {
-        let args = vec!["xtask".to_string(), "vyre-release-gate".to_string()];
+        let root = Path::new("/w");
 
-        let options = options_from_args(&args).expect("valid default arguments");
+        let options = options_from_args(root, &[]).expect("valid default arguments");
 
         assert_eq!(options.mode, GateMode::Prepublish);
-        assert_eq!(options.manifest_path, default_manifest_path());
+        assert_eq!(options.manifest_path, default_manifest_path(root));
     }
 
     /// The removed spelling must be rejected rather than silently ignored: a
@@ -113,13 +102,10 @@ mod tests {
     /// accident today and a different one the day the default moves.
     #[test]
     fn rejects_the_removed_prepublish_flag() {
-        let args = vec![
-            "xtask".to_string(),
-            "vyre-release-gate".to_string(),
-            "--prepublish".to_string(),
-        ];
+        let args = vec!["--prepublish".to_string()];
 
-        let error = options_from_args(&args).expect_err("removed flag must not parse");
+        let error = options_from_args(Path::new("/w"), &args)
+            .expect_err("removed flag must not parse");
 
         assert!(error.contains("--prepublish"), "{error}");
     }
@@ -151,7 +137,7 @@ mod tests {
     /// directly rather than trusting that a future edit stays inside the tree.
     #[test]
     fn the_shipped_manifest_cites_only_repository_paths() {
-        let manifest = default_manifest_path();
+        let manifest = default_manifest_path(&xtask::checkout::checkout_root());
         let text = read_text_bounded(&manifest).expect("release evidence manifest is readable");
         let manifest: super::super::gate_inputs::EvidenceManifest =
             toml::from_str(&text).expect("release evidence manifest is valid TOML");

@@ -18,38 +18,62 @@ use checks::check_markdown_evidence_path_ready;
 use gate_inputs::{EvidenceManifest, GateMode};
 use paths::{escapes_repository, options_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
-pub(crate) fn run(args: &[String]) {
-    let options = match options_from_args(args) {
-        Ok(options) => options,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+/// Holds the release to the evidence manifest: every requirement closed and
+/// every cited artifact present, fresh, and internally consistent.
+pub struct VyreReleaseGate;
+
+impl Gate for VyreReleaseGate {
+    fn name(&self) -> &'static str {
+        "vyre-release-gate"
+    }
+
+    fn help(&self) -> &'static str {
+        "Judge the release evidence manifest. The default prepublication mode accepts the three \
+         approval-gated external actions as pending and rejects every internal blocker. \
+         --launch-complete additionally requires completed publication, repository verification \
+         and pushes, so it is only meaningful after the release has shipped. --manifest PATH \
+         judges another manifest."
+    }
+
+    fn generates(&self) -> bool {
+        false
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        inspect(&ctx.root, &ctx.args)
+    }
+}
+
+fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
+    let options = options_from_args(root, args).map_err(|message| {
+        GateError::new(
+            message,
+            "Pass only --launch-complete and --manifest PATH.".to_string(),
+        )
+    })?;
     let manifest_path = options.manifest_path;
 
-    let manifest_text = match read_text_bounded(&manifest_path) {
-        Ok(text) => text,
-        Err(error) => {
-            eprintln!(
-                "Fix: failed to read release evidence manifest `{}`: {error}",
+    let manifest_text = read_text_bounded(&manifest_path).map_err(|error| {
+        GateError::new(
+            format!(
+                "failed to read release evidence manifest `{}`: {error}",
                 manifest_path.display()
-            );
-            std::process::exit(1);
-        }
-    };
+            ),
+            "Restore the release evidence manifest or name another with --manifest.",
+        )
+    })?;
 
-    let manifest: EvidenceManifest = match toml::from_str(&manifest_text) {
-        Ok(manifest) => manifest,
-        Err(error) => {
-            eprintln!(
-                "Fix: release evidence manifest `{}` is invalid TOML: {error}",
+    let manifest: EvidenceManifest = toml::from_str(&manifest_text).map_err(|error| {
+        GateError::new(
+            format!(
+                "release evidence manifest `{}` is invalid TOML: {error}",
                 manifest_path.display()
-            );
-            std::process::exit(1);
-        }
-    };
+            ),
+            "Repair the manifest syntax so the gate can judge it.",
+        )
+    })?;
 
     let base_dir = manifest_path
         .parent()
@@ -182,24 +206,20 @@ pub(crate) fn run(args: &[String]) {
         }
     }
 
-    if failures.is_empty() {
-        let scope = match options.mode {
-            GateMode::LaunchComplete => "launch complete",
-            GateMode::Prepublish => "prepublication",
-        };
-        println!(
-            "vyre-release-gate: {} requirement(s) closed for Vyre {} ({scope})",
-            manifest.requirements.len(),
-            manifest.release.vyre
-        );
-    } else {
-        eprintln!("vyre-release-gate: {} release blocker(s):", failures.len());
-        for failure in &failures {
-            eprintln!("  - {failure}");
-        }
-        eprintln!("Fix: attach real evidence artifacts and close every manifest requirement.");
-        std::process::exit(1);
-    }
+    let scope = match options.mode {
+        GateMode::LaunchComplete => "launch complete",
+        GateMode::Prepublish => "prepublication",
+    };
+    let mut report = Report::from_messages(
+        failures,
+        "Attach real evidence artifacts and close every manifest requirement.",
+    );
+    report.note(format!(
+        "{} requirement(s) judged for Vyre {} ({scope})",
+        manifest.requirements.len(),
+        manifest.release.vyre
+    ));
+    Ok(report)
 }
 pub(super) fn is_manifest_command_evidence(evidence: &str) -> bool {
     evidence.starts_with("cargo_full ")

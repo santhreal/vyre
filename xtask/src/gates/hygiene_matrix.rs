@@ -1442,7 +1442,6 @@ const RELEASE_XTASK_COMMAND_MODULES: &[&str] = &[
     "release_benchmarks",
     "release_conformance",
     "release_evidence",
-    "release_gate",
     "version_matrix",
     "vyre_release_gate",
 ];
