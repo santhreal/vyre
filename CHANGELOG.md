@@ -1931,6 +1931,30 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
   builds its flat leaves from the same module, so the two tables cannot
   disagree about which element types exist.
+- Every registered xtask subcommand is now a gate answering one contract: it
+  returns findings and notes instead of printing, and the runner decides what
+  that means. The `Kind` enum is gone, so no check is exempt from the sweep by
+  category. The `check-cat-a` and `release-gate` composites are named subsets
+  of the registry, `xtask gates --subset cat-a` and `--subset prepublish`, and
+  the cargo invocations they drove are gates of their own: `workspace-check`,
+  `workspace-clippy`, `workspace-tests`, `workspace-docs` and `lockfile-clean`.
+  `scripts/check_op_names.sh` and `scripts/check_parity_testing_not_leaked.sh`
+  became the `op-names` and `parity-testing-isolated` gates.
+  `xtask/gate-baselines.toml` pins `findings` rather than output lines, one row
+  per registered gate, and the sweep enumerates the registry at run time so a
+  gate without a row and a row without a gate both fail. A gate that owns a
+  generated artifact checks it against the tree and rewrites it under
+  `--write`, so regeneration is never a subcommand of its own.
+- The seventeen registry-linked checks answer the gate contract. Each one
+  returns findings instead of an exit code, so the sweep counts what it found
+  and pins that count. catalog, list-ops and optimization-docs now own
+  docs/generated/catalog.toml, docs/generated/op-inventory.toml and
+  docs/generated/optimizer-passes.toml, compared on every run and regenerated
+  with --write. lego-audit runs its repo-context checks unconditionally and has
+  no report-only mode, lego-quick scans the whole tree unless --staged narrows
+  it, heuristic-audit has no advisory mode, compile and shrink run over the
+  generated release corpus, and verify-rewrite-proofs fails when no solver can
+  discharge an obligation.
 - Three optimizer hot paths stopped allocating per sample.
   `HotPathHints::record` allocated the key on every call including a repeat
   sample, and its LRU eviction cloned every key in the map to find the oldest;
@@ -2075,6 +2099,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the
   pair and its witness rather than a bool, and `yoneda_natural_iso` is
   `natural_transformation_count`, because a count is what it returns.
+- `vyre-release-gate` judges prepublication evidence by default and takes
+  `--launch-complete` for the post-ship mode. The default was launch-complete,
+  which demands `public_launch_complete`, all three approval-gated external
+  actions complete and zero blockers, so the gate every sweep runs with no
+  arguments could not pass before the version it guards had shipped. The
+  removed `--prepublish` flag is rejected rather than ignored.
 
 ### Removed
 
@@ -2178,6 +2208,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   evaluator forwarded to that type's own method. Both had no callers, and the
   foundation owner's own tests already assert every boundary the copies
   asserted.
+- Three checks that could not fail are gone. Release hygiene named an xtask
+  command module `release_gate` that has no source file, beside the
+  `vyre_release_gate` that does. `scripts/architecture_docs.py` guarded a
+  superseded-RFC contract behind `if the file exists`, and the RFC is deleted,
+  so the whole block was unreachable; its fixture also wrote three pages the
+  checker never opens, and the test that proved the stale-version rule poisoned
+  one of them. `xtask/feature-isolation.toml` recorded five `vyre-primitives`
+  feature selections - cat, dnnf, effects, types, zx - that no manifest
+  declares since those domains moved to `vyre-libs`, and
+  `scripts/docs_manifest.py` claimed provenance for a `RELEASE_CHECKLIST.md` no
+  generator writes.
 
 ### Fixed
 
@@ -3442,6 +3483,33 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   neighbours to be other spiders of matching colour. `simplified_diagram` runs
   fusion and identity removal to a joint fixpoint, which terminates because
   every firing removes exactly one spider.
+- `docs/CLI.md`, `docs/CRATE_GRAPH.md`, `docs/OWNERSHIP.md` and the 35
+  per-crate testing guides are present again. The book deletion removed them
+  without retiring the generators that own them, so `crate_ownership.py`,
+  `testing_guides.py` and `cli_docs.py` each failed `--check` against a tree
+  their own `--write` reproduces, and `docs/DOCS.toml` listed two pages out of
+  forty. `docs/optimization/OWNERSHIP.toml` also assigned two scopes that match
+  nothing: a gitignored `BACKLOG.md`, which made the architecture-docs verdict
+  depend on an untracked file, and a deleted `docs/catalog/**`.
+- Four release surfaces named documents the book deletion removed, and each
+  failed open. `release_contract_path` pointed at `docs/RELEASE.md` and now
+  names `release-train.toml`, the surviving authority for versions, tags,
+  package membership and the approval-gated actions. `hygiene-matrix` listed
+  `docs/RELEASE.md` three times and skipped every entry that is not a file, so
+  it reported clean while scanning none of the documents it names; a listed
+  document that is absent is now a finding. The version matrix resolved release
+  notes to `docs/release/v<version>.md` and repeated one path twice, so its
+  tag-command scan spent its blockers on unreadable files and double-counted
+  the one file it could read. `scripts/final-launch.sh` passed that same
+  missing page to `gh release create --notes-file`, so the last outward step of
+  a release would have failed after the crates were published;
+  `scripts/release_docs.py` now generates
+  `release/evidence/docs/release-notes-body.md` from the fragments the
+  changelog is built from and `--check` holds the two together.
+- `release/changes/unreleased.toml` parses again. Two fragments had been
+  appended without their `[[fragments]]` header, so the second `id` key
+  overwrote the first and every release-docs command failed at the TOML parser
+  before it reached a verdict.
 - The public-API snapshot gate reports a crate it could not read instead of
   skipping it. Two paths dropped a package out of the comparison without a
   word: a publishable package whose `src` directory was missing, and an
@@ -3451,6 +3519,23 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   state in which a crate most needs to be checked. Both are findings now, and
   an extraction that exits nonzero prints what `cargo public-api` said rather
   than a bare sentence naming the crate.
+- `vyre-release-gate` implements the `Gate` contract. The registry assigned it
+  to `xtask-evidence` and no implementation existed, so that crate's own table
+  check failed. Options now parse from the runner's argument offset instead of
+  argv position 2, the default manifest resolves under the context root instead
+  of through a second checkout probe, and the two exit paths become one
+  `Report` whose findings are the blockers and whose note carries the
+  requirement count and the scope. `--help` left the option parser because
+  `help()` answers it, and `GateOptions` derives `Debug`, without which the
+  crate's lib test did not compile.
+- The release gate no longer replays an aggregate's recorded freshness verdicts
+  as live findings. Thirty-seven of the thirty-eight blockers stored in
+  `cuda-release-suite.json`, `bench-release-axes.json` and
+  `cpu-only-100x-proof.json` embed a hash labelled "current workspace source"
+  that was current when the aggregate was written, so the gate printed a value
+  no reader can resolve and that disagrees with the one the same run computes.
+  Freshness is recomputed against the tree the gate is running on; every other
+  recorded verdict is replayed unchanged.
 
 ## [0.7.1] - 2026-08-01
 

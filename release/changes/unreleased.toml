@@ -1688,6 +1688,8 @@ text = "Every registered xtask subcommand is now a gate answering one contract: 
 id = "registry-gates-one-contract"
 category = "Changed"
 text = "The seventeen registry-linked checks answer the gate contract. Each one returns findings instead of an exit code, so the sweep counts what it found and pins that count. catalog, list-ops and optimization-docs now own docs/generated/catalog.toml, docs/generated/op-inventory.toml and docs/generated/optimizer-passes.toml, compared on every run and regenerated with --write. lego-audit runs its repo-context checks unconditionally and has no report-only mode, lego-quick scans the whole tree unless --staged narrows it, heuristic-audit has no advisory mode, compile and shrink run over the generated release corpus, and verify-rewrite-proofs fails when no solver can discharge an obligation."
+
+[[fragments]]
 id = "driver-error-catalog-generated"
 category = "Fixed"
 text = "The backend error-code catalog is generated from the enum that emits it. `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant missing from the catalog a compile error. The previous markdown table, and the seven-variant list that checked it against a nine-variant enum, are gone."
@@ -1866,6 +1868,23 @@ text = "Four release surfaces named documents the book deletion removed, and eac
 id = "unreleased-fragments-parse"
 category = "Fixed"
 text = "`release/changes/unreleased.toml` parses again. Two fragments had been appended without their `[[fragments]]` header, so the second `id` key overwrote the first and every release-docs command failed at the TOML parser before it reached a verdict."
+
+[[fragments]]
 id = "public-api-gate-no-silent-skip"
 category = "Fixed"
 text = "The public-API snapshot gate reports a crate it could not read instead of skipping it. Two paths dropped a package out of the comparison without a word: a publishable package whose `src` directory was missing, and an extraction that succeeded but returned nothing. No committed snapshot is empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta` from a parallel build sharing one target directory, which is exactly the state in which a crate most needs to be checked. Both are findings now, and an extraction that exits nonzero prints what `cargo public-api` said rather than a bare sentence naming the crate."
+
+[[fragments]]
+id = "release-gate-is-a-registered-gate"
+category = "Fixed"
+text = "`vyre-release-gate` implements the `Gate` contract. The registry assigned it to `xtask-evidence` and no implementation existed, so that crate's own table check failed. Options now parse from the runner's argument offset instead of argv position 2, the default manifest resolves under the context root instead of through a second checkout probe, and the two exit paths become one `Report` whose findings are the blockers and whose note carries the requirement count and the scope. `--help` left the option parser because `help()` answers it, and `GateOptions` derives `Debug`, without which the crate's lib test did not compile."
+
+[[fragments]]
+id = "release-gate-recomputes-freshness"
+category = "Fixed"
+text = "The release gate no longer replays an aggregate's recorded freshness verdicts as live findings. Thirty-seven of the thirty-eight blockers stored in `cuda-release-suite.json`, `bench-release-axes.json` and `cpu-only-100x-proof.json` embed a hash labelled \"current workspace source\" that was current when the aggregate was written, so the gate printed a value no reader can resolve and that disagrees with the one the same run computes. Freshness is recomputed against the tree the gate is running on; every other recorded verdict is replayed unchanged."
+
+[[fragments]]
+id = "contracts-with-no-subject-retired"
+category = "Removed"
+text = "Three checks that could not fail are gone. Release hygiene named an xtask command module `release_gate` that has no source file, beside the `vyre_release_gate` that does. `scripts/architecture_docs.py` guarded a superseded-RFC contract behind `if the file exists`, and the RFC is deleted, so the whole block was unreachable; its fixture also wrote three pages the checker never opens, and the test that proved the stale-version rule poisoned one of them. `xtask/feature-isolation.toml` recorded five `vyre-primitives` feature selections - cat, dnnf, effects, types, zx - that no manifest declares since those domains moved to `vyre-libs`, and `scripts/docs_manifest.py` claimed provenance for a `RELEASE_CHECKLIST.md` no generator writes."
