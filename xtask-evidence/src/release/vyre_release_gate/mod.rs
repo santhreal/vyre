@@ -18,7 +18,7 @@ use checks::check_markdown_evidence_path_ready;
 use gate_inputs::{EvidenceManifest, GateMode};
 use paths::{escapes_repository, options_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 /// Holds the release to the evidence manifest: every requirement closed and
 /// every cited artifact present, fresh, and internally consistent.
