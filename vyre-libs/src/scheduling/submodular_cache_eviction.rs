@@ -53,7 +53,7 @@
 //! evict every pipeline whose picked == 0
 //! ```
 
-use crate::device::scratch::reserve_vec_capacity_or_panic;
+use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
@@ -101,7 +101,7 @@ pub fn reference_select_retention_set_into(
     k: u32,
     picked: &mut Vec<u32>,
 ) {
-    use crate::telemetry::observability::{bump, submodular_cache_eviction_calls};
+    use crate::telemetry::{bump, submodular_cache_eviction_calls};
     bump(&submodular_cache_eviction_calls);
     assert_eq!(gains.len(), n as usize);
     assert!(k <= n, "Fix: k must not exceed n.");
@@ -168,7 +168,7 @@ pub fn select_retention_set_via_with_scratch_into(
     scratch: &mut SubmodularEvictionGpuScratch,
     picked: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, submodular_cache_eviction_calls};
+    use crate::telemetry::{bump, submodular_cache_eviction_calls};
     bump(&submodular_cache_eviction_calls);
     if n == 0 {
         return Err(DispatchError::BadInputs(

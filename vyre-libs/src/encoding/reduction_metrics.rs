@@ -74,7 +74,7 @@ pub fn reduce_metric_via_with_scratch(
     values: &[u32],
     scratch: &mut ReductionMetricsGpuScratch,
 ) -> Result<u32, DispatchError> {
-    use crate::telemetry::observability::{bump, reduction_metrics_calls};
+    use crate::telemetry::{bump, reduction_metrics_calls};
     bump(&reduction_metrics_calls);
 
     let count = checked_len(values.len(), "reduce_metric_via")?;
@@ -204,7 +204,7 @@ pub fn segment_reduce_sum_via_with_scratch_into(
     scratch: &mut ReductionMetricsGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, reduction_metrics_calls};
+    use crate::telemetry::{bump, reduction_metrics_calls};
     bump(&reduction_metrics_calls);
 
     let num_segments = validate_segment_offsets(input, segment_offsets)?;
@@ -236,7 +236,7 @@ pub fn histogram_atomic_scatter_via(
     input: &[u32],
     num_bins: u32,
 ) -> Result<Vec<u32>, DispatchError> {
-    use crate::telemetry::observability::{bump, reduction_metrics_calls};
+    use crate::telemetry::{bump, reduction_metrics_calls};
     bump(&reduction_metrics_calls);
 
     let count = checked_nonzero_len(input.len(), "histogram_atomic_scatter_via")?;

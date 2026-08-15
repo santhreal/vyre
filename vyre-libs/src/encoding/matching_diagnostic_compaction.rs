@@ -5,7 +5,7 @@
 //! compile the DFA once, match brackets on-device, sort region triples, then
 //! emit dedup survivor flags for stream compaction.
 
-use crate::device::scratch::reserve_vec_capacity;
+use crate::scratch::reserve_vec_capacity;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
@@ -158,7 +158,7 @@ pub fn bracket_pairs_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
+    use crate::telemetry::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
     let n = checked_len(kinds.len(), "bracket_pairs_via")?;
@@ -217,7 +217,7 @@ pub fn sort_regions_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<RegionTriple>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
+    use crate::telemetry::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
     let count = checked_nonzero_len(regions.len(), "sort_regions_via")?;
@@ -287,7 +287,7 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
+    use crate::telemetry::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
     if sorted_regions.is_empty() {

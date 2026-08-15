@@ -27,7 +27,7 @@ pub fn try_bfs_expand(
     inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
 ) -> Result<(Vec<u32>, u32), String> {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
+    use crate::telemetry::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_reference_persistent_bfs(inputs, frontier_in)
 }
@@ -46,7 +46,7 @@ pub fn try_bfs_expand_converged(
     inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
 ) -> Result<(Vec<u32>, PersistentBfsConvergence), String> {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
+    use crate::telemetry::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_cpu_ref_converged(inputs, frontier_in)
 }

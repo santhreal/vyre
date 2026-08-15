@@ -6,7 +6,7 @@
 
 mod shapes;
 
-use crate::device::dispatch_program_cache::ProgramCache;
+use crate::dispatch_program_cache::ProgramCache;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, decode_i32_output_exact, ensure_input_slots,
     write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,

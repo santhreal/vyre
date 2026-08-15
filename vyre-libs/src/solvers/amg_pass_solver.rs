@@ -101,7 +101,7 @@ pub fn reference_smooth_matroid_flow(
         return Vec::new();
     }
 
-    use crate::telemetry::observability::{amg_pass_solver_calls, bump};
+    use crate::telemetry::{amg_pass_solver_calls, bump};
     bump(&amg_pass_solver_calls);
     cpu_ref(a, b, x, r_mat, p_mat, a_c, DEFAULT_OMEGA, n_fine, n_coarse)
 }
@@ -143,7 +143,7 @@ pub fn reference_smooth_matroid_flow_into(
         return;
     }
 
-    use crate::telemetry::observability::{amg_pass_solver_calls, bump};
+    use crate::telemetry::{amg_pass_solver_calls, bump};
     bump(&amg_pass_solver_calls);
     cpu_ref_into(
         a,
@@ -251,7 +251,7 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
     scratch: &mut AmgPassGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{amg_pass_solver_calls, bump};
+    use crate::telemetry::{amg_pass_solver_calls, bump};
     bump(&amg_pass_solver_calls);
 
     if n_coarse >= n_fine {
@@ -382,7 +382,7 @@ pub fn solve_to_tolerance(
     tol: f64,
     max_cycles: u32,
 ) -> (Vec<f64>, u32) {
-    use crate::telemetry::observability::{amg_pass_solver_calls, bump};
+    use crate::telemetry::{amg_pass_solver_calls, bump};
     bump(&amg_pass_solver_calls);
     let mut x = Vec::new();
     let mut next = Vec::new();

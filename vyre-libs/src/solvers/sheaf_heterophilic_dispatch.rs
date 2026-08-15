@@ -55,7 +55,7 @@
 //! substrate to model dispatch graphs as the heterophilic
 //! structures they actually are. Paradigm shift, not optimization.
 
-use crate::device::scratch::reserve_vec_capacity_or_panic;
+use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
@@ -86,7 +86,7 @@ pub fn reference_diffuse_dispatch_stalks(
     restriction_diag: &[f64],
     damping: f64,
 ) -> Vec<f64> {
-    use crate::telemetry::observability::{bump, sheaf_heterophilic_dispatch_calls};
+    use crate::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
     sheaf_diffusion_step_cpu(stalks, restriction_diag, damping)
 }
@@ -101,7 +101,7 @@ pub fn reference_diffuse_dispatch_stalks_into(
     damping: f64,
     out: &mut Vec<f64>,
 ) {
-    use crate::telemetry::observability::{bump, sheaf_heterophilic_dispatch_calls};
+    use crate::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
     sheaf_diffusion_step_cpu_into(stalks, restriction_diag, damping, out);
 }
@@ -178,7 +178,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
     scratch: &mut SheafDispatchGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, sheaf_heterophilic_dispatch_calls};
+    use crate::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
 
     let cells = checked_product_count(

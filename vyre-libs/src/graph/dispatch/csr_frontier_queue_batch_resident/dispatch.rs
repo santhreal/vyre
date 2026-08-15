@@ -1,7 +1,7 @@
 use super::{ResidentCsrQueueBatchScratch, ResidentCsrQueueBatchShape};
 use vyre_primitives::graph::csr_frontier_queue::validate_frontier_queue_batch;
 
-use crate::device::scratch::reserve_vec as reserve_graph_vec;
+use crate::scratch::reserve_vec as reserve_graph_vec;
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan;
 use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueueProgramShape;

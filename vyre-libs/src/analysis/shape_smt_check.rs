@@ -13,7 +13,7 @@ use vyre_primitives::types::{evaluate_shape, ShapeFormula};
 /// shape-predicate decision.
 #[must_use]
 pub fn evaluate_shape_formula(formula: &ShapeFormula, count: u32) -> bool {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     evaluate_shape(formula, count)
 }
@@ -23,7 +23,7 @@ pub fn evaluate_shape_formula(formula: &ShapeFormula, count: u32) -> bool {
 /// re-evaluating the formula at runtime.
 #[must_use]
 pub fn formula_proves_non_empty(formula: &ShapeFormula) -> bool {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     formula.proves_non_empty()
 }

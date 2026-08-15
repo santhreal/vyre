@@ -1799,6 +1799,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   initializer-designator families index is one stream in
   `tests/support/c_frontend/fixtures/initializer_designator_streams.rs`, under
   one name in both.
+- `vyre-libs` no longer reaches across dialect boundaries in private code.
+  `telemetry` is a crate-root module rather than a one-file directory, because
+  counters instrument every dialect and belong to none; `scratch` and
+  `dispatch_program_cache` sit at the crate root beside `dispatch_buffers`,
+  because host dispatch plumbing is not a dialect either. The
+  `analysis::dataflow_fixpoint` re-export of
+  `vyre_foundation::pass_substrate::dataflow_fixpoint` is deleted, so the
+  closure family has one path instead of two, and every caller names the owner.
+  Composition that genuinely crosses dialects goes through `prelude`, which is
+  the one declared seam: `nn::linear` reaches `MatmulBiasTiled` and `reasoning`
+  reaches `reachability_closure_via_into` through it, and the prelude names
+  both.
 
 ### Removed
 

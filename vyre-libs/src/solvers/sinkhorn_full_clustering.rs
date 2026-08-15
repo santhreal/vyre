@@ -23,7 +23,7 @@ pub fn sinkhorn_full_clustering_program(
     buffers: SinkhornBuffers<'_>,
     extents: SinkhornExtents,
 ) -> Program {
-    use crate::telemetry::observability::{bump, sinkhorn_full_clustering_calls};
+    use crate::telemetry::{bump, sinkhorn_full_clustering_calls};
     bump(&sinkhorn_full_clustering_calls);
     sinkhorn_iterate(buffers, extents)
 }

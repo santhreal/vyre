@@ -12,7 +12,7 @@ mod tests;
 
 pub use dispatch::{run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into};
 
-use crate::device::scratch::reserve_vec as reserve_graph_vec;
+use crate::scratch::reserve_vec as reserve_graph_vec;
 use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueuePrograms;
 use crate::graph::dispatch::csr_frontier_queue_scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlots,
