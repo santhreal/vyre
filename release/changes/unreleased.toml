@@ -893,7 +893,7 @@ text = "Region fusion reads which buffers each side touches, and both of the wal
 [[fragments]]
 id = "foundation-duplication-pin-lowered-to-measured"
 category = "Changed"
-text = "The `vyre-foundation` duplication pin sits at what the tree measures, 5125 down to 4350 duplicated lines over 160 files, with the total line count corrected from a stale 95984 to a measured 94924. A pin with room under it hides the next copy."
+text = "The `vyre-foundation` duplication pin sits at what the tree measures, 5125 down to 3333 duplicated lines, with the total line count corrected from a stale 95984 to a measured 94304. It was lowered four times as each owner landed, because a pin with room under it hides the next copy."
 
 [[fragments]]
 id = "lower-fixture-scaffolding-has-one-owner"
@@ -1086,11 +1086,6 @@ category = "Changed"
 text = "Program capability scanning and backend capability enforcement are proved in one place, `vyre-foundation/tests/capability_contracts.rs`. An inline test module beside `vyre_foundation::program_caps` exercised the same public surface and the two had drifted in opposite directions. The suite derives its expectations from the public API snapshot at run time: every boolean `RequiredCapabilities` field must have a scan case that a program needing the feature sets and a scalar program does not, and every `supports_*` parameter of `check_backend_capabilities` must have a case where withholding it rejects a program that needs it, so a capability added later fails the suite until somebody records what proves it."
 
 [[fragments]]
-id = "foundation-validate-duplication-pin-lowered-to-measured"
-category = "Changed"
-text = "The `vyre-foundation` duplication pin records what the tree measures, 4127 to 3679 duplicated lines, with `total_lines` measured. A pin with room under it hides the next copy."
-
-[[fragments]]
 id = "xtask-evidence-declares-its-foundation-edge"
 category = "Fixed"
 text = "`docs/CRATE_OWNERSHIP.toml` declares `xtask-evidence`'s production edge on `vyre-foundation`, the `foundation-ir` seam it reads the release optimization family list across. The manifest gained the dependency without the hand-maintained ownership contract gaining the row, which fails both the ownership and the crate-README gates."
@@ -1136,11 +1131,6 @@ category = "Added"
 text = "`loop_legality_collector_closure` plants a scalar read, a buffer load, a store and a binding in every operand and body slot of every declared `Node` variant and asserts each read set reports it. The variant set comes from `NODE_VARIANT_NAMES` through the shared IR fixtures, so a new variant is red before any of the three questions is asked."
 
 [[fragments]]
-id = "foundation-duplication-pin-lowered-to-measured"
-category = "Changed"
-text = "The `vyre-foundation` duplication pin records what the tree measures after the owners above: 4028 to 3718 duplicated lines, with `total_lines` measured. A pin with room under it hides the next copy."
-
-[[fragments]]
 id = "fusion-alias-hazard-rule-has-one-owner"
 category = "Fixed"
 text = "The fusion-alias hazard rule `V116` has one owner, the whole-program pass in `vyre-foundation/src/validate/fusion_safety.rs`, which both the production single-pass validator and the legacy differential arm call. Production carried a second copy inside its frame stack that recorded only two of an async transfer's four operands, so an atomic sitting in an `AsyncLoad` or `AsyncStore` `offset` or `size` expression was not recorded as an access and did not raise a hazard against an unsynchronized read of the same buffer: the program validated clean and was fused. The hazard is a relation between two nodes rather than a property of a frame, and one rule with two implementations gave one program two answers depending on which arm read it. `V113`, the malformed-alias-frame code the deleted copy raised, is retired from the registry and the code catalog."
@@ -1169,3 +1159,8 @@ text = "One table drives the scalar storage-graph sweep and one table drives the
 id = "scalar-sweep-closure-gate"
 category = "Added"
 text = "The scalar sweep is closed against the frozen public surface: every `NodeStorage` literal variant in the `vyre-foundation` snapshot must have a matrix row, a row naming a variant the surface does not carry fails, each row must sweep the full sampled depth or carry the reason it does not, each row must keep the operation count it declares today, and every operation a row leaves undeclared must still be refused by name. The dual sweep is closed the same way against the `vyre-reference` snapshot: every marker implementing `ReferenceEvaluator` is either exercised against its u32 contract or recorded with the payload shape it takes instead, and a marker that is both, or that the frozen surface no longer carries, fails. Adding a scalar literal, adding an evaluator, or widening the interpreter's operation table turns the suite red until a row records the decision."
+
+[[fragments]]
+id = "wire-fuzz-corpus-is-tracked-and-replayed"
+category = "Fixed"
+text = "The `program_wire` fuzz corpus is checked in, and every seed in it is replayed against the fuzz target's own three invariants on an ordinary test run. The corpus directory was covered by the `cargo fuzz init` default ignore rule while a gate asserted that its regression seeds were checked in, so that gate passed on the machine that had once run the fuzzer and failed on every fresh checkout. It also proved less than it read: the entry-count floor it enforced was met by fifty-nine near-copies of one seed, and one entry was byte-identical to another, which spends fuzzer budget re-deciding an input it has already decided. The replacement decodes every entry, requires each rejection to carry a `Fix:` hint, requires each decode to survive a `to_wire` round-trip under `structural_eq`, and requires each named valid-program seed to still decode, so a wire-format change that strands an old seed is red without libFuzzer and without a nightly run."
