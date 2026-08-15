@@ -15,6 +15,8 @@
 //! digest mismatch. Binary artifacts render through [`hex_words`].
 //!
 //! This module names no target, dialect, driver, or artifact format.
+//!
+//! [`hex_words`]: crate::artifact_golden::hex_words
 
 use std::fmt::Write as _;
 use std::fs;

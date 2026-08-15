@@ -10,6 +10,8 @@
 //! [`EIGENVECTOR_SIGN_EPSILON`] is made positive. A component that should be
 //! exactly zero comes back on the order of 1e-7 with an arbitrary sign, so
 //! letting it decide would make the canonicalization itself non-deterministic.
+//!
+//! [`EIGENVECTOR_SIGN_EPSILON`]: crate::math::eigenvector_column_sign::EIGENVECTOR_SIGN_EPSILON
 
 use std::sync::Arc;
 
