@@ -159,8 +159,6 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                             let target_hash = format!("{prefix}_target_hash");
                             let target_len = format!("{prefix}_target_len");
                             let scan_len = format!("{prefix}_scan_len");
-                            let scan_next_idx = format!("{prefix}_scan_next_idx");
-                            let scan_next_base = format!("{prefix}_scan_next_base");
                             let scan_next_kind = format!("{prefix}_scan_next_kind");
                             let scan_possible_declarator =
                                 format!("{prefix}_scan_possible_declarator");
@@ -244,42 +242,19 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                                     chain::vast_len_from_base(vast_nodes, &scan_base),
                                 ),
                                 Node::let_bind(
-                                    &scan_next_idx,
-                                    Expr::select(
-                                        Expr::lt(
-                                            Expr::add(Expr::var(&scan), Expr::u32(1)),
-                                            Expr::var("annot_num_nodes"),
-                                        ),
-                                        Expr::add(Expr::var(&scan), Expr::u32(1)),
-                                        Expr::var(&scan),
-                                    ),
-                                ),
-                                Node::let_bind(
-                                    &scan_next_base,
-                                    Expr::mul(
-                                        Expr::var(&scan_next_idx),
-                                        Expr::u32(VAST_NODE_STRIDE_U32),
-                                    ),
-                                ),
-                                Node::let_bind(
                                     &scan_next_kind,
-                                    chain::vast_kind_from_base(vast_nodes, &scan_next_base),
+                                    vast_next_row_kind_expr(
+                                        vast_nodes,
+                                        Expr::var(&scan),
+                                        &Expr::var("annot_num_nodes"),
+                                        Expr::u32(SENTINEL),
+                                    ),
                                 ),
                                 Node::let_bind(
                                     &scan_possible_declarator,
-                                    any_token_eq(
-                                        Expr::var(&scan_next_kind),
-                                        &[
-                                            TOK_SEMICOLON,
-                                            TOK_COMMA,
-                                            TOK_ASSIGN,
-                                            TOK_LPAREN,
-                                            TOK_LBRACKET,
-                                            TOK_COLON,
-                                            TOK_RPAREN,
-                                            TOK_RBRACKET,
-                                        ],
-                                    ),
+                                    is_typedef_symbol_link_follower_token(Expr::var(
+                                        &scan_next_kind,
+                                    )),
                                 ),
                                 Node::if_then(
                                     Expr::and(

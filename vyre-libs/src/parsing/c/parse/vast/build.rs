@@ -39,6 +39,7 @@ pub(super) use typedef_visibility::{
     VISIBLE_NAME_FOR_ROW_PACKED_OP_ID,
 };
 pub(super) use vast_row_fields::{
-    vast_bounded_row_kind_expr, vast_prior_row_kind_expr, vast_row_base_expr, vast_row_field_expr,
-    vast_row_kind_expr, vast_row_kind_from_base_expr, vast_row_parent_from_base_expr,
+    vast_bounded_row_kind_expr, vast_next_row_kind_expr, vast_prior_row_kind_expr,
+    vast_row_base_expr, vast_row_field_expr, vast_row_kind_expr, vast_row_kind_from_base_expr,
+    vast_row_parent_from_base_expr,
 };

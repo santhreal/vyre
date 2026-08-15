@@ -17,6 +17,7 @@ mod global_fast;
 mod haystack_words;
 mod precomputed_visible_type;
 mod prehash;
+mod row_io;
 mod row_phases;
 mod scopes;
 mod symbol_bucket;
@@ -40,4 +41,5 @@ pub use scopes::{c11_precompute_vast_scopes, c11_precompute_vast_scopes_uses_glo
 pub use symbol_links::c11_link_vast_typedef_symbols;
 
 use haystack_words::*;
+use row_io::*;
 use symbol_bucket::*;

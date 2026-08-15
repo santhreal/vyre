@@ -54,27 +54,11 @@ pub fn c11_link_vast_typedef_symbols(
                     Expr::load("__vast_typedef_symbol_heads", Expr::var("link_bucket")),
                 ),
                 Node::let_bind(
-                    "link_next_idx",
-                    Expr::select(
-                        Expr::lt(
-                            Expr::add(Expr::var("link_row"), Expr::u32(1)),
-                            num_nodes.clone(),
-                        ),
-                        Expr::add(Expr::var("link_row"), Expr::u32(1)),
-                        Expr::var("link_row"),
-                    ),
-                ),
-                Node::let_bind(
                     "link_next_kind",
-                    Expr::select(
-                        Expr::lt(
-                            Expr::add(Expr::var("link_row"), Expr::u32(1)),
-                            num_nodes.clone(),
-                        ),
-                        Expr::load(
-                            vast_nodes,
-                            Expr::mul(Expr::var("link_next_idx"), Expr::u32(VAST_NODE_STRIDE_U32)),
-                        ),
+                    vast_next_row_kind_expr(
+                        vast_nodes,
+                        Expr::var("link_row"),
+                        &num_nodes,
                         Expr::u32(SENTINEL),
                     ),
                 ),
@@ -101,21 +85,12 @@ pub fn c11_link_vast_typedef_symbols(
             ],
         ),
     ];
-    for field in 0..VAST_NODE_STRIDE_U32 {
-        let value = if field == VAST_TYPEDEF_FLAGS_FIELD {
-            Expr::var("link_prev_encoded")
-        } else {
-            Expr::load(
-                vast_nodes,
-                Expr::add(Expr::var("link_row_base"), Expr::u32(field)),
-            )
-        };
-        row_body.push(Node::store(
-            out_linked_vast_nodes,
-            Expr::add(Expr::var("link_row_base"), Expr::u32(field)),
-            value,
-        ));
-    }
+    row_body.extend(store_row_with_overrides(
+        out_linked_vast_nodes,
+        vast_nodes,
+        &Expr::var("link_row_base"),
+        &[(VAST_TYPEDEF_FLAGS_FIELD, "link_prev_encoded")],
+    ));
     body.push(Node::loop_for(
         "link_row",
         Expr::u32(0),
@@ -123,18 +98,11 @@ pub fn c11_link_vast_typedef_symbols(
         row_body,
     ));
 
-    let n = node_count(&num_nodes).max(1);
+    let rows = declared_rows(&num_nodes);
     Program::wrapped(
         vec![
-            BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-            BufferDecl::storage(
-                out_linked_vast_nodes,
-                1,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
+            vast_nodes_input(vast_nodes, 0, rows),
+            vast_nodes_scratch(out_linked_vast_nodes, 1, rows),
             BufferDecl::workgroup("__vast_typedef_symbol_heads", BUCKETS, DataType::U32),
         ],
         [1, 1, 1],

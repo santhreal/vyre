@@ -165,27 +165,11 @@ pub fn c11_precompute_vast_decl_contexts(
                     )],
                 ),
                 Node::let_bind(
-                    "decl_ctx_next_idx",
-                    Expr::select(
-                        Expr::lt(
-                            Expr::add(Expr::var("decl_ctx_row"), Expr::u32(1)),
-                            num_nodes.clone(),
-                        ),
-                        Expr::add(Expr::var("decl_ctx_row"), Expr::u32(1)),
-                        Expr::var("decl_ctx_row"),
-                    ),
-                ),
-                Node::let_bind(
                     "decl_ctx_next_kind",
-                    Expr::select(
-                        Expr::lt(
-                            Expr::add(Expr::var("decl_ctx_row"), Expr::u32(1)),
-                            num_nodes.clone(),
-                        ),
-                        decl_context_row_access::load_vast_node_kind(
-                            vast_nodes,
-                            decl_context_row_access::vast_node_base(Expr::var("decl_ctx_next_idx")),
-                        ),
+                    vast_next_row_kind_expr(
+                        vast_nodes,
+                        Expr::var("decl_ctx_row"),
+                        &num_nodes,
                         Expr::u32(SENTINEL),
                     ),
                 ),
@@ -249,13 +233,11 @@ pub fn c11_precompute_vast_decl_contexts(
         row_body,
     ));
 
-    let n = node_count(&num_nodes).max(1);
+    let rows = declared_rows(&num_nodes);
     Program::wrapped(
         vec![
-            BufferDecl::storage(vast_nodes, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.saturating_mul(VAST_NODE_STRIDE_U32)),
-            BufferDecl::storage(out_decl_contexts, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(n.saturating_mul(VAST_DECL_CONTEXT_STRIDE_U32)),
+            vast_nodes_input(vast_nodes, 0, rows),
+            decl_contexts_scratch(out_decl_contexts, 1, rows),
             BufferDecl::workgroup("__vast_decl_symbol_heads", BUCKETS * 2, DataType::U32),
         ],
         [1, 1, 1],
