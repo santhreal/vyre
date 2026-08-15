@@ -25,7 +25,7 @@ use vyre_libs::parsing::c::sema::c_sema_scope;
 
 pub(crate) use crate::c_frontend::parity_matrix::{
     arm_annotated_vast, arm_pg_nodes, arm_raw_vast, arm_typed_vast, primary_output, program,
-    ParityArm,
+    ExpressionCase, ParityArm,
 };
 // Only the three C-AST family roots that iterate a `CASES` table call this.
 #[allow(unused_imports)]

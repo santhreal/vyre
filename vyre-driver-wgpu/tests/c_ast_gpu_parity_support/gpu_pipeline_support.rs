@@ -50,20 +50,16 @@ pub(crate) fn run_gpu_classifier_with_count(annotated_vast: &[u8], num_nodes: u3
 }
 
 pub(crate) fn run_gpu_expr_shape(raw_vast: &[u8], typed_vast: &[u8]) -> Vec<u8> {
-    let program = c11_build_expression_shape_nodes(
-        "raw_vast_nodes",
-        "typed_vast_nodes",
-        Expr::u32(node_count_from_vast(raw_vast)),
-        "expr_shape_nodes",
-    );
-    let outputs = dispatch_gpu_program(
-        "GPU expression-shape lower",
-        program,
-        vec![raw_vast.to_vec(), typed_vast.to_vec()],
-    );
+    crate::c_frontend::parity_matrix::arm_expr_shape(&GpuArm, raw_vast, typed_vast)
+}
 
-    assert_eq!(outputs.len(), 1);
-    outputs[0].clone()
+/// Assert the GPU reproduces the CPU oracle's expression-shape and
+/// property-graph rows for every case of an expression-operator family.
+///
+/// The run lives in `tests/support/c_frontend/parity_matrix`; only the case
+/// table differs per family.
+pub(crate) fn assert_expression_shape_parity(cases: &[ExpressionCase]) {
+    crate::c_frontend::parity_matrix::assert_expression_shape_family_parity(&GpuArm, cases);
 }
 
 pub(crate) fn run_gpu_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
