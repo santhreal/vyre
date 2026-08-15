@@ -61,6 +61,7 @@ pub static SUBSETS: &[Subset] = &[
             "catalog",
             "gate1",
             "abstraction-gate",
+            "cross-target",
             "dep-drift",
             "platform-boundary",
             "vyre-release-gate",
@@ -105,6 +106,12 @@ static DELEGATED: &[Delegated] = &[
         help: "Hold release op and backend conformance coverage to the recorded matrix; --write regenerates it",
         package: "xtask-registry",
         generates: true,
+    },
+    Delegated {
+        name: "cross-target",
+        help: "Compile the product crates for every target_os the source declares a cfg arm for",
+        package: "xtask-registry",
+        generates: false,
     },
     Delegated {
         name: "gate1",

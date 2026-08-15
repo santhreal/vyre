@@ -41,11 +41,13 @@ const EXEMPT_PATH_FRAGMENTS: &[&str] = &[
 /// records what the API used to be called, which is history rather than coupling.
 /// The exemption list, as shipped.
 ///
-/// It lives in a data file rather than in this array so that
-/// `scripts/check_platform_consumer_docs.sh` can read the same list. The two
-/// guards previously carried separate copies and disagreed: a release runbook
-/// was exempt here and scanned there, so the same line passed one gate and
-/// failed the other.
+/// It lives in a data file rather than in this array so that the shell guard
+/// reads the same list. The two guards previously carried separate copies and
+/// disagreed, so one release-coordination document was exempt in one and
+/// scanned in the other: the same line passed one gate and failed the other.
+/// Which documents are exempt is the data file's answer, never a name repeated
+/// here. A release runbook is exempt because coordinating a release is its
+/// subject; an ordinary guide is not.
 const RELEASE_COORDINATION_DOCS_FILE: &str = include_str!("../rules/release_coordination_docs.txt");
 
 /// Parses [`RELEASE_COORDINATION_DOCS_FILE`] into its path entries.
