@@ -10,8 +10,11 @@ use vyre_primitives::graph::{
         frontier_to_queue_cpu, try_csr_queue_forward_traverse_cpu, try_frontier_to_queue_cpu,
     },
     do_calculus::{
-        do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
-        try_do_intervention_delete_incoming, try_do_rule2_reverse_incoming,
+        do_intervention_delete_incoming, do_intervention_delete_incoming_cpu,
+        do_rule2_reverse_incoming, do_rule2_reverse_incoming_cpu, do_rule3_subgraph,
+        do_rule3_subgraph_cpu, try_do_intervention_delete_incoming,
+        try_do_intervention_delete_incoming_cpu, try_do_rule2_reverse_incoming,
+        try_do_rule2_reverse_incoming_cpu, try_do_rule3_subgraph_cpu,
     },
     dominator_frontier::{dominator_frontier, validate_csr_shape},
     exploded::{
@@ -29,7 +32,7 @@ use vyre_primitives::graph::{
     path_reconstruct::{batched_path_reconstruct, cpu_ref_batched},
     persistent_bfs::{persistent_bfs_batch, try_persistent_bfs_batch},
     reachable::reachable_program,
-    sheaf::sheaf_diffusion_step,
+    sheaf::{sheaf_diffusion_step, try_sheaf_diffusion_step},
     string_diagram::{monoidal_compose, monoidal_compose_cpu, try_monoidal_compose},
     sum_product_circuit::{
         sum_product_evaluate, sum_product_evaluate_cpu, try_sum_product_evaluate, KIND_LEAF,
