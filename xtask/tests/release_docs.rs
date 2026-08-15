@@ -168,7 +168,12 @@ fn incomplete_external_action_boundary_fails_closed() {
         .contains("exactly three approval-gated external actions"));
 }
 
-/// Prevents release notes from passing when the train adds a token that the published notes omit.
+/// Prevents release notes from passing when the train adds a token that the changelog omits.
+///
+/// The assertion below named `missing required token`, which the generator has
+/// never emitted: it reports `CHANGELOG.md: missing required release token`, so
+/// the test was red on arrival and said nothing about the rule it guards. The
+/// document name is part of the message and is asserted with it.
 #[test]
 fn missing_release_note_token_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
@@ -188,7 +193,7 @@ fn missing_release_note_token_fails_closed() {
     let output = run_generator(temp.path(), "--check");
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("missing required token `required-but-absent`"));
+        .contains("CHANGELOG.md: missing required release token `required-but-absent`"));
 }
 
 /// Prevents completion evidence from claiming publish or push success before those actions run.

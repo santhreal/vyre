@@ -51,7 +51,7 @@ fn current_header(title: &str, body: &str) -> String {
 }
 
 fn write_fixture(root: &Path) {
-    for directory in ["docs/generated", "docs/rfcs", "release/evidence/backends"] {
+    for directory in ["docs/generated", "release/evidence/backends"] {
         fs::create_dir_all(root.join(directory)).unwrap();
     }
     fs::write(
@@ -106,37 +106,8 @@ fn write_fixture(root: &Path) {
     )
     .unwrap();
     fs::write(
-        root.join("docs/OPTIMIZATION_ARCHITECTURE.md"),
-        current_header(
-            "Optimization architecture",
-            "Layer 1: semantic IR optimization. Layer 2: concrete lowering strategy. Current scheduling is in vyre-runtime/src/megakernel/. Artifact freeze is owned by vyre-megakernel. IR pre-dispatch fusion lives in vyre-foundation/src/optimizer/megakernel.",
-        ),
-    )
-    .unwrap();
-    fs::write(
-        root.join("docs/RUNTIME_PIPELINE.md"),
-        current_header(
-            "Runtime pipeline",
-            "Cache: vyre-runtime/src/pipeline_cache/. Runtime: vyre-runtime/src/megakernel/. Neutral artifacts come from vyre-megakernel and enter through artifact_admission. Failure does not silently rerun. Prose does not substitute for raw samples.",
-        ),
-    )
-    .unwrap();
-    fs::write(
-        root.join("docs/megakernel-wiring.md"),
-        current_header(
-            "Megakernel wiring",
-            "Execution starts from the same validated `Program` and does not consume a general VIR bytecode interpreter. Ownership: vyre-runtime/src/megakernel/. Artifact compiler vyre-megakernel emits Artifact. Wave policy lives in vyre-driver/src/megakernel_execution. IR fusion lives in vyre-foundation/src/optimizer/megakernel. Residue note: vyre-driver-wgpu/src/megakernel was removed.",
-        ),
-    )
-    .unwrap();
-    fs::write(
-        root.join("docs/rfcs/0005-persistent-megakernel.md"),
-        "# RFC\n\nLast verified: 2026-08-04\n\nStatus: **Superseded**\n\nHistorical motivation. Superseded design. Current resolution. Vyre does not support a general interpreter. `vyre-megakernel` is a current workspace member that compiles typed graphs to canonical artifacts.\n",
-    )
-    .unwrap();
-    fs::write(
         root.join("docs/DOCS.toml"),
-        "schema_version = 1\n\n[[page]]\npath = \"ARCHITECTURE.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"OPTIMIZATION_ARCHITECTURE.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"RUNTIME_PIPELINE.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"megakernel-wiring.md\"\nstatus = \"current\"\n\n[[page]]\npath = \"rfcs/0005-persistent-megakernel.md\"\nstatus = \"superseded\"\n",
+        "schema_version = 1\n\n[[page]]\npath = \"ARCHITECTURE.md\"\nstatus = \"current\"\n",
     )
     .unwrap();
     // Member manifests and one optimization lane: the checker also asserts that
@@ -183,11 +154,16 @@ fn coherent_architecture_fixture_passes() {
 }
 
 /// A retired release claim must not return to a current architecture guide.
+///
+/// This wrote `Vyre 0.6.9.` into `docs/RUNTIME_PIPELINE.md`, one of three pages
+/// the fixture created that `CURRENT_DOCS` does not name, so the checker never
+/// opened the file the test poisoned and the assertion below could only have
+/// passed by accident. The fixture now writes exactly what the contract reads.
 #[test]
 fn retired_architecture_version_fails_closed() {
     let temp = tempfile::tempdir().unwrap();
     write_fixture(temp.path());
-    let path = temp.path().join("docs/RUNTIME_PIPELINE.md");
+    let path = temp.path().join("docs/ARCHITECTURE.md");
     fs::write(
         &path,
         format!("{}\nVyre 0.6.9.\n", fs::read_to_string(&path).unwrap()),
@@ -271,25 +247,6 @@ fn missing_preferred_backend_probe_fails_closed() {
     let output = run_checker(temp.path());
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("no executable probe row"));
-}
-
-/// The bytecode-interpreter RFC must remain visibly superseded in both file and manifest.
-#[test]
-fn megakernel_rfc_cannot_return_to_current_status() {
-    let temp = tempfile::tempdir().unwrap();
-    write_fixture(temp.path());
-    let path = temp.path().join("docs/DOCS.toml");
-    fs::write(
-        &path,
-        fs::read_to_string(&path).unwrap().replace(
-            "path = \"rfcs/0005-persistent-megakernel.md\"\nstatus = \"superseded\"",
-            "path = \"rfcs/0005-persistent-megakernel.md\"\nstatus = \"current\"",
-        ),
-    )
-    .unwrap();
-    let output = run_checker(temp.path());
-    assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("classify"));
 }
 
 /// A current architecture page must remain current in the documentation manifest.

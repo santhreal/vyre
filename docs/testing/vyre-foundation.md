@@ -55,7 +55,6 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `composition_tagging_contracts` | `vyre-foundation/tests/composition_tagging_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test composition_tagging_contracts` |
 | `test` | `const_fold_shift_fusion_amount_overflow` | `vyre-foundation/tests/const_fold_shift_fusion_amount_overflow.rs` | None | `./cargo_full test -p vyre-foundation --test const_fold_shift_fusion_amount_overflow` |
 | `test` | `consumer_boundary` | `vyre-foundation/tests/consumer_boundary.rs` | None | `./cargo_full test -p vyre-foundation --test consumer_boundary` |
-| `test` | `contract_workspace` | `vyre-foundation/tests/contract_workspace.rs` | None | `./cargo_full test -p vyre-foundation --test contract_workspace` |
 | `test` | `cse_effect_in_if_cond_invalidates_loads` | `vyre-foundation/tests/cse_effect_in_if_cond_invalidates_loads.rs` | None | `./cargo_full test -p vyre-foundation --test cse_effect_in_if_cond_invalidates_loads` |
 | `test` | `dataflow_fixpoint_merge_contracts` | `vyre-foundation/tests/dataflow_fixpoint_merge_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test dataflow_fixpoint_merge_contracts` |
 | `test` | `dce_subgroup_operand_liveness` | `vyre-foundation/tests/dce_subgroup_operand_liveness.rs` | None | `./cargo_full test -p vyre-foundation --test dce_subgroup_operand_liveness` |
@@ -68,6 +67,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `expr_type_single_owner` | `vyre-foundation/tests/expr_type_single_owner.rs` | None | `./cargo_full test -p vyre-foundation --test expr_type_single_owner` |
 | `test` | `extension_adversarial` | `vyre-foundation/tests/extension_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test extension_adversarial` |
 | `test` | `fingerprint_perf_contracts` | `vyre-foundation/tests/fingerprint_perf_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test fingerprint_perf_contracts` |
+| `test` | `foundation_validate_contract` | `vyre-foundation/tests/foundation_validate_contract.rs` | None | `./cargo_full test -p vyre-foundation --test foundation_validate_contract` |
 | `test` | `fusion_atomic_aliasing` | `vyre-foundation/tests/fusion_atomic_aliasing.rs` | None | `./cargo_full test -p vyre-foundation --test fusion_atomic_aliasing` |
 | `test` | `fusion_composability_metadata` | `vyre-foundation/tests/fusion_composability_metadata.rs` | None | `./cargo_full test -p vyre-foundation --test fusion_composability_metadata` |
 | `test` | `fusion_stress` | `vyre-foundation/tests/fusion_stress.rs` | None | `./cargo_full test -p vyre-foundation --test fusion_stress` |

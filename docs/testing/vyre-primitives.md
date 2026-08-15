@@ -24,7 +24,7 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `all-lego`, `bitset`, `cat`, `cpu-parity`, `decode`, `default`, `dnnf`, `effects`, `fixpoint`, `geom`, `gpu`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `types`, `visual`, `vyre-foundation`, `zx`
+- Available manifest features: `all-lego`, `bitset`, `cpu-parity`, `decode`, `default`, `fixpoint`, `geom`, `gpu`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `visual`, `vyre-foundation`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

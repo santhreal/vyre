@@ -1653,6 +1653,8 @@ text = "`vyre-test-support` states which flat `DataType` forms exist in one unga
 id = "driver-error-catalog-generated"
 category = "Fixed"
 text = "The backend error-code catalog is generated from the enum that emits it. `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant missing from the catalog a compile error. The previous markdown table, and the seven-variant list that checked it against a nine-variant enum, are gone."
+
+[[fragments]]
 id = "workspace-contract-target-owners"
 category = "Changed"
 text = "The workspace contract suite no longer compiles into `vyre-foundation`'s test target. `tests/contract/mod.rs` was included by `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the whole workspace could not run until the compiler built, and a crate that has nothing to do with the routing rule decided whether the rule ran at all. Each contract now sits with its subject: the device-only routing rule and the node child descent rule are `structure-gate` tests, which is the crate that reads source text and depends on no vyre crate; the validator rejection contract is a `vyre-foundation` test target; the public-API snapshot check joins the other snapshot contracts in `xtask`. `structure_gate::source_scan` owns the workspace source walk, the brace matcher and the comment and literal masker, and the masker is built on the same `opaque_span` the registration parser uses, so a masker and a parser can no longer disagree about whether a raw string or a nested block comment holds code."
@@ -1681,6 +1683,8 @@ text = "The command-line contract no longer renders a book page. `scripts/cli_do
 id = "workflow-subcommand-resolution"
 category = "Added"
 text = "A CI step that passes a subcommand to `xtask`, `xtask-registry` or `xtask-evidence` is resolved against the registered subcommand table. A renamed or deleted row left the step naming a command that no longer exists, and nothing local went red: the package existed, the binary existed, and the name was one shell token in a `run:` line. `xtask gates` judges the other direction, that a registered row is wired into CI, so the pair is now closed. Names are extracted per step, including every command in a joined `run:` block, and resolved when the test runs rather than listed in it."
+
+[[fragments]]
 id = "vyre-driver-backend-contract-one-owner"
 category = "Changed"
 text = "The `VyreBackend` trait contract has two owners in `vyre-driver`'s test surface instead of three overlapping files. `tests/backend_trait_contract.rs` owns the minimal and fully overriding backend fixtures and asserts that every capability default is conservative, that every override is observably different from its default, that lifecycle hooks succeed by default and receive every call once overridden, that the blanket `Backend` impl exposes the driver identity, and that the trait surface stays object safe and `Send + Sync`. `tests/backend_registry.rs` owns what the registry reports when nothing is registered, including that preferred-dispatch acquisition fails closed and never advertises a host fallback. The previous `backend_contract.rs`, `backend_capability_negotiation.rs`, and `backend_trait_compatibility.rs` each declared their own copy of the same fixtures and asserted overlapping subsets of the same contract, so an override that silently returned its default value was invisible in all three. That case is now a single invariant rather than two mirrored capability lists."
@@ -1764,3 +1768,23 @@ text = "ZX identity removal no longer splices out a phase-zero spider whose two 
 id = "kan-extension-one-owner"
 category = "Changed"
 text = "`reasoning::finite_category` states each construction once. Left and right Kan extension were four functions differing in whether the fold summed or multiplied and whether it ran per object or over a table; they are now `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the pair and its witness rather than a bool, and `yoneda_natural_iso` is `natural_transformation_count`, because a count is what it returns."
+
+[[fragments]]
+id = "generated-docs-restored"
+category = "Fixed"
+text = "`docs/CLI.md`, `docs/CRATE_GRAPH.md`, `docs/OWNERSHIP.md` and the 35 per-crate testing guides are present again. The book deletion removed them without retiring the generators that own them, so `crate_ownership.py`, `testing_guides.py` and `cli_docs.py` each failed `--check` against a tree their own `--write` reproduces, and `docs/DOCS.toml` listed two pages out of forty. `docs/optimization/OWNERSHIP.toml` also assigned two scopes that match nothing: a gitignored `BACKLOG.md`, which made the architecture-docs verdict depend on an untracked file, and a deleted `docs/catalog/**`."
+
+[[fragments]]
+id = "release-gate-prepublication-default"
+category = "Changed"
+text = "`vyre-release-gate` judges prepublication evidence by default and takes `--launch-complete` for the post-ship mode. The default was launch-complete, which demands `public_launch_complete`, all three approval-gated external actions complete and zero blockers, so the gate every sweep runs with no arguments could not pass before the version it guards had shipped. The removed `--prepublish` flag is rejected rather than ignored."
+
+[[fragments]]
+id = "release-docs-name-documents-that-exist"
+category = "Fixed"
+text = "Four release surfaces named documents the book deletion removed, and each failed open. `release_contract_path` pointed at `docs/RELEASE.md` and now names `release-train.toml`, the surviving authority for versions, tags, package membership and the approval-gated actions. `hygiene-matrix` listed `docs/RELEASE.md` three times and skipped every entry that is not a file, so it reported clean while scanning none of the documents it names; a listed document that is absent is now a finding. The version matrix resolved release notes to `docs/release/v<version>.md` and repeated one path twice, so its tag-command scan spent its blockers on unreadable files and double-counted the one file it could read. `scripts/final-launch.sh` passed that same missing page to `gh release create --notes-file`, so the last outward step of a release would have failed after the crates were published; `scripts/release_docs.py` now generates `release/evidence/docs/release-notes-body.md` from the fragments the changelog is built from and `--check` holds the two together."
+
+[[fragments]]
+id = "unreleased-fragments-parse"
+category = "Fixed"
+text = "`release/changes/unreleased.toml` parses again. Two fragments had been appended without their `[[fragments]]` header, so the second `id` key overwrote the first and every release-docs command failed at the TOML parser before it reached a verdict."

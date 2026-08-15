@@ -153,9 +153,6 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `float_to_int_cast_parity` | `vyre-driver-wgpu/tests/float_to_int_cast_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test float_to_int_cast_parity` |
 | `test` | `fnv1a32_gpu_parity` | `vyre-driver-wgpu/tests/fnv1a32_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test fnv1a32_gpu_parity` |
 | `test` | `fnv1a64_gpu_parity` | `vyre-driver-wgpu/tests/fnv1a64_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test fnv1a64_gpu_parity` |
-| `test` | `gap_determinism_contract` | `vyre-driver-wgpu/tests/gap_determinism_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test gap_determinism_contract` |
-| `test` | `gap_device_lost_recovery` | `vyre-driver-wgpu/tests/gap_device_lost_recovery.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test gap_device_lost_recovery` |
-| `test` | `gap_dispatch_preemption` | `vyre-driver-wgpu/tests/gap_dispatch_preemption.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test gap_dispatch_preemption` |
 | `test` | `gap_transcendentals_parity` | `vyre-driver-wgpu/tests/gap_transcendentals_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test gap_transcendentals_parity` |
 | `test` | `gemini_c_ast_contracts` | `vyre-driver-wgpu/tests/gemini_c_ast_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test gemini_c_ast_contracts` |
 | `test` | `hit_buffer` | `vyre-driver-wgpu/tests/hit_buffer.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test hit_buffer` |

@@ -35,16 +35,14 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `lib` | `vyre_driver` | `vyre-driver/src/lib.rs` | None | `./cargo_full test -p vyre-driver` |
 | `test` | `actionable_errors` | `vyre-driver/tests/actionable_errors.rs` | None | `./cargo_full test -p vyre-driver --test actionable_errors` |
 | `test` | `artifact_invocation_grid` | `vyre-driver/tests/artifact_invocation_grid.rs` | None | `./cargo_full test -p vyre-driver --test artifact_invocation_grid` |
-| `test` | `async_dispatch_always_nonblocking` | `vyre-driver/tests/async_dispatch_always_nonblocking.rs` | None | `./cargo_full test -p vyre-driver --test async_dispatch_always_nonblocking` |
 | `test` | `async_dispatch_contract` | `vyre-driver/tests/async_dispatch_contract.rs` | None | `./cargo_full test -p vyre-driver --test async_dispatch_contract` |
 | `test` | `atomic_file_operation_race_policy` | `vyre-driver/tests/atomic_file_operation_race_policy.rs` | None | `./cargo_full test -p vyre-driver --test atomic_file_operation_race_policy` |
 | `test` | `backend_capability_digests` | `vyre-driver/tests/backend_capability_digests.rs` | None | `./cargo_full test -p vyre-driver --test backend_capability_digests` |
-| `test` | `backend_capability_negotiation` | `vyre-driver/tests/backend_capability_negotiation.rs` | None | `./cargo_full test -p vyre-driver --test backend_capability_negotiation` |
-| `test` | `backend_contract` | `vyre-driver/tests/backend_contract.rs` | None | `./cargo_full test -p vyre-driver --test backend_contract` |
 | `test` | `backend_handle_lifetime_provenance` | `vyre-driver/tests/backend_handle_lifetime_provenance.rs` | None | `./cargo_full test -p vyre-driver --test backend_handle_lifetime_provenance` |
 | `test` | `backend_launch_validation` | `vyre-driver/tests/backend_launch_validation.rs` | None | `./cargo_full test -p vyre-driver --test backend_launch_validation` |
+| `test` | `backend_registry` | `vyre-driver/tests/backend_registry.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry` |
 | `test` | `backend_registry_duplicate_provider` | `vyre-driver/tests/backend_registry_duplicate_provider.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry_duplicate_provider` |
-| `test` | `backend_trait_compatibility` | `vyre-driver/tests/backend_trait_compatibility.rs` | None | `./cargo_full test -p vyre-driver --test backend_trait_compatibility` |
+| `test` | `backend_trait_contract` | `vyre-driver/tests/backend_trait_contract.rs` | None | `./cargo_full test -p vyre-driver --test backend_trait_contract` |
 | `test` | `backend_validation_defaults` | `vyre-driver/tests/backend_validation_defaults.rs` | None | `./cargo_full test -p vyre-driver --test backend_validation_defaults` |
 | `test` | `backpressure_queue_quota_policy` | `vyre-driver/tests/backpressure_queue_quota_policy.rs` | None | `./cargo_full test -p vyre-driver --test backpressure_queue_quota_policy` |
 | `test` | `cache_invalidation_default` | `vyre-driver/tests/cache_invalidation_default.rs` | None | `./cargo_full test -p vyre-driver --test cache_invalidation_default` |
@@ -54,7 +52,6 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `concurrency_schedule_contracts` | `vyre-driver/tests/concurrency_schedule_contracts.rs` | None | `./cargo_full test -p vyre-driver --test concurrency_schedule_contracts` |
 | `test` | `consumer_boundary` | `vyre-driver/tests/consumer_boundary.rs` | None | `./cargo_full test -p vyre-driver --test consumer_boundary` |
 | `test` | `crypto_rng_key_lifecycle` | `vyre-driver/tests/crypto_rng_key_lifecycle.rs` | None | `./cargo_full test -p vyre-driver --test crypto_rng_key_lifecycle` |
-| `test` | `d_series_integration` | `vyre-driver/tests/d_series_integration.rs` | None | `./cargo_full test -p vyre-driver --test d_series_integration` |
 | `test` | `device_signature_path` | `vyre-driver/tests/device_signature_path.rs` | None | `./cargo_full test -p vyre-driver --test device_signature_path` |
 | `test` | `diagnostic_surface` | `vyre-driver/tests/diagnostic_surface.rs` | None | `./cargo_full test -p vyre-driver --test diagnostic_surface` |
 | `test` | `dispatch_config_surface` | `vyre-driver/tests/dispatch_config_surface.rs` | None | `./cargo_full test -p vyre-driver --test dispatch_config_surface` |
@@ -64,14 +61,16 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `error_code_frozen` | `vyre-driver/tests/error_code_frozen.rs` | None | `./cargo_full test -p vyre-driver --test error_code_frozen` |
 | `test` | `extraction_memory_verifier_cost_model` | `vyre-driver/tests/extraction_memory_verifier_cost_model.rs` | None | `./cargo_full test -p vyre-driver --test extraction_memory_verifier_cost_model` |
 | `test` | `gap_duplicate_op_id` | `vyre-driver/tests/gap_duplicate_op_id.rs` | None | `./cargo_full test -p vyre-driver --test gap_duplicate_op_id` |
-| `test` | `gap_error_code_catalog` | `vyre-driver/tests/gap_error_code_catalog.rs` | None | `./cargo_full test -p vyre-driver --test gap_error_code_catalog` |
 | `test` | `grid_sync_detection_reaches_every_body_variant` | `vyre-driver/tests/grid_sync_detection_reaches_every_body_variant.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_detection_reaches_every_body_variant` |
 | `test` | `grid_sync_nested_fence_survives_split` | `vyre-driver/tests/grid_sync_nested_fence_survives_split.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_nested_fence_survives_split` |
 | `test` | `hostile_input_probe_shapes` | `vyre-driver/tests/hostile_input_probe_shapes.rs` | None | `./cargo_full test -p vyre-driver --test hostile_input_probe_shapes` |
 | `test` | `http_proxy_redirect_policy` | `vyre-driver/tests/http_proxy_redirect_policy.rs` | None | `./cargo_full test -p vyre-driver --test http_proxy_redirect_policy` |
 | `test` | `intrinsic_registration_contract` | `vyre-driver/tests/intrinsic_registration_contract.rs` | None | `./cargo_full test -p vyre-driver --test intrinsic_registration_contract` |
 | `test` | `mixed_work_autotuning` | `vyre-driver/tests/mixed_work_autotuning.rs` | None | `./cargo_full test -p vyre-driver --test mixed_work_autotuning` |
+| `test` | `no_backend_crate_links_host_arithmetic` | `vyre-driver/tests/no_backend_crate_links_host_arithmetic.rs` | None | `./cargo_full test -p vyre-driver --test no_backend_crate_links_host_arithmetic` |
 | `test` | `output_slab_provenance` | `vyre-driver/tests/output_slab_provenance.rs` | None | `./cargo_full test -p vyre-driver --test output_slab_provenance` |
+| `test` | `reference_oracle_is_never_implicit` | `vyre-driver/tests/reference_oracle_is_never_implicit.rs` | None | `./cargo_full test -p vyre-driver --test reference_oracle_is_never_implicit` |
+| `test` | `reference_oracle_loses_to_a_device` | `vyre-driver/tests/reference_oracle_loses_to_a_device.rs` | None | `./cargo_full test -p vyre-driver --test reference_oracle_loses_to_a_device` |
 | `test` | `registry_closure` | `vyre-driver/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-driver --test registry_closure` |
 | `test` | `release_publication_boundary` | `vyre-driver/tests/release_publication_boundary.rs` | None | `./cargo_full test -p vyre-driver --test release_publication_boundary` |
 | `test` | `routing_registry_surface` | `vyre-driver/tests/routing_registry_surface.rs` | None | `./cargo_full test -p vyre-driver --test routing_registry_surface` |

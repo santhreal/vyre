@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use super::gate_inputs::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
 
+#[derive(Debug)]
 pub(super) struct GateOptions {
     pub(super) manifest_path: PathBuf,
     pub(super) mode: GateMode,
