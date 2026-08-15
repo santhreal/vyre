@@ -1,12 +1,17 @@
 use super::*;
 
+/// WHY: a registered resolver that refuses a payload must reach the caller as a
+/// structured error. The decoder runs inside `Program::from_wire`, so a refusal
+/// it does not propagate becomes either a panic through the wire reader or an
+/// accepted program built from bytes the extension rejected.
 #[test]
 fn opaque_malformed_payload_decoder_survives() {
-    let malformed = vec![0xDE, 0xAD, 0xBE, 0xEF];
+    let mut malformed = opaque_echo_extension::REFUSED_NODE_PREFIX.to_vec();
+    malformed.extend_from_slice(&[0xBE, 0xEF]);
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![Node::Opaque(Arc::new(TestNodeExt { payload: malformed }))],
+        vec![Node::Opaque(Arc::new(EchoNode { payload: malformed }))],
     );
     let wire = program.to_wire().unwrap();
     let result = std::panic::catch_unwind(|| Program::from_wire(&wire));

@@ -1528,6 +1528,22 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   artifact was read first. `release_backend_rows.rs` held half of that decision
   for both callers and is folded into the matrix module, so the count is no
   longer reachable without the judgement it feeds.
+- One test-only opaque extension pair serves every wire suite.
+  `vyre-foundation/tests/support/opaque_echo_extension.rs` owns `EchoExpr`,
+  `EchoNode`, their kinds and both `inventory` registrations; the opaque round
+  trip, the adversarial wire cases and the round-trip property included their
+  own copies. The pair is the contract under test, since an extension whose
+  `wire_payload` and registered `deserialize` disagree makes all three suites
+  pass against a resolver that does not round-trip, so one definition means one
+  place that can be wrong. The copies were not identical after all: one carried
+  a resolver that refuses a payload beginning `0xDE 0xAD`, which is the only
+  reason the adversarial suite could prove `Program::from_wire` reports a
+  refusal as a structured error rather than panicking past it. That rule is now
+  declared as `REFUSED_NODE_PREFIX` beside the pair and applies to the
+  statement half only, because the round-trip property builds one program
+  holding every expression variant with payloads it does not choose. Each
+  consumer includes the file with `#[path]`, since the resolver table is per
+  test binary.
 - Three optimizer hot paths stopped allocating per sample.
   `HotPathHints::record` allocated the key on every call including a repeat
   sample, and its LRU eviction cloned every key in the map to find the oldest;

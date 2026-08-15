@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn every_expression_variant_roundtrips_in_one_program() {
     let opaque_expr = || {
-        Expr::Opaque(Arc::new(TestOpaqueExpr {
+        Expr::Opaque(Arc::new(EchoExpr {
             payload: vec![0xde, 0xad, 0xbe, 0xef],
         }))
     };
@@ -116,7 +116,7 @@ fn every_statement_variant_roundtrips_in_one_program() {
     let expr = || Expr::BinOp {
         op: BinOp::Add,
         left: Box::new(Expr::LitU32(1)),
-        right: Box::new(Expr::Opaque(Arc::new(TestOpaqueExpr {
+        right: Box::new(Expr::Opaque(Arc::new(EchoExpr {
             payload: vec![0x00, 0xff, 0xc0, 0xaf],
         }))),
     };
@@ -224,7 +224,7 @@ fn every_statement_variant_roundtrips_in_one_program() {
                 }),
                 body: region_body,
             },
-            Node::Opaque(Arc::new(TestOpaqueNode {
+            Node::Opaque(Arc::new(EchoNode {
                 payload: vec![0x00, 0xff, 0xc0, 0xaf, 0x80],
             })),
             Node::Return,

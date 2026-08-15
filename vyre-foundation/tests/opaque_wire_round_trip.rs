@@ -5,101 +5,14 @@
 //! `OpaqueExprResolver` / `OpaqueNodeResolver`, then the program round-trips
 //! through `to_wire` → `from_wire` and is asserted byte-identical.
 
+#[path = "support/opaque_echo_extension.rs"]
+mod opaque_echo_extension;
+
+use opaque_echo_extension::{EchoExpr, EchoNode};
+
 use std::sync::Arc;
 
-use vyre_foundation::extension::{OpaqueExprResolver, OpaqueNodeResolver};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program};
-
-const EXPR_KIND: &str = "test.extension.echo_expr";
-const NODE_KIND: &str = "test.extension.echo_node";
-
-#[derive(Debug)]
-struct TestExprExtension {
-    payload: Vec<u8>,
-    identity: String,
-}
-
-impl ExprNode for TestExprExtension {
-    fn extension_kind(&self) -> &'static str {
-        EXPR_KIND
-    }
-    fn debug_identity(&self) -> &str {
-        &self.identity
-    }
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-    fn cse_safe(&self) -> bool {
-        true
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
-
-fn deserialize_test_expr_extension(bytes: &[u8]) -> Result<Arc<dyn ExprNode>, String> {
-    Ok(Arc::new(TestExprExtension {
-        payload: bytes.to_vec(),
-        identity: "test-expr".into(),
-    }))
-}
-
-inventory::submit! {
-    OpaqueExprResolver {
-        kind: EXPR_KIND,
-        deserialize: deserialize_test_expr_extension,
-    }
-}
-
-#[derive(Debug)]
-struct TestNodeExtension {
-    payload: Vec<u8>,
-    identity: String,
-}
-
-impl NodeExtension for TestNodeExtension {
-    fn extension_kind(&self) -> &'static str {
-        NODE_KIND
-    }
-    fn debug_identity(&self) -> &str {
-        &self.identity
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
-
-fn deserialize_test_node_extension(bytes: &[u8]) -> Result<Arc<dyn NodeExtension>, String> {
-    Ok(Arc::new(TestNodeExtension {
-        payload: bytes.to_vec(),
-        identity: "test-node".into(),
-    }))
-}
-
-inventory::submit! {
-    OpaqueNodeResolver {
-        kind: NODE_KIND,
-        deserialize: deserialize_test_node_extension,
-    }
-}
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, ExprNode, Node, Program};
 
 #[test]
 fn opaque_expr_round_trips_through_wire_format() {
@@ -110,9 +23,8 @@ fn opaque_expr_round_trips_through_wire_format() {
             Node::store(
                 "out",
                 Expr::u32(0),
-                Expr::Opaque(Arc::new(TestExprExtension {
+                Expr::Opaque(Arc::new(EchoExpr {
                     payload: b"hello-opaque-expr".to_vec(),
-                    identity: "test-expr".into(),
                 })),
             ),
             Node::Return,
@@ -135,9 +47,8 @@ fn registered_opaque_expr_decodes_as_byte_identical_passthrough() {
             Node::store(
                 "out",
                 Expr::u32(0),
-                Expr::Opaque(Arc::new(TestExprExtension {
+                Expr::Opaque(Arc::new(EchoExpr {
                     payload: payload.clone(),
-                    identity: "test-expr".into(),
                 })),
             ),
             Node::Return,
@@ -157,7 +68,7 @@ fn registered_opaque_expr_decodes_as_byte_identical_passthrough() {
                 Node::Return,
             ] => extension
                 .as_any()
-                .downcast_ref::<TestExprExtension>()
+                .downcast_ref::<EchoExpr>()
                 .expect("Fix: registered opaque payload must decode back into the owning extension type")
                 .payload
                 .clone(),
@@ -178,9 +89,8 @@ fn opaque_node_round_trips_through_wire_format() {
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![
-            Node::Opaque(Arc::new(TestNodeExtension {
+            Node::Opaque(Arc::new(EchoNode {
                 payload: b"hello-opaque-node".to_vec(),
-                identity: "test-node".into(),
             })),
             Node::Return,
         ],
@@ -201,9 +111,8 @@ fn opaque_expr_is_validated_through_extension_hook() {
             Node::store(
                 "out",
                 Expr::u32(0),
-                Expr::Opaque(Arc::new(TestExprExtension {
+                Expr::Opaque(Arc::new(EchoExpr {
                     payload: b"payload".to_vec(),
-                    identity: "test-expr".into(),
                 })),
             ),
             Node::Return,
@@ -221,9 +130,8 @@ fn opaque_node_survives_optimizer_rewrite() {
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![
-            Node::Opaque(Arc::new(TestNodeExtension {
+            Node::Opaque(Arc::new(EchoNode {
                 payload: b"state".to_vec(),
-                identity: "test-node".into(),
             })),
             Node::Return,
         ],

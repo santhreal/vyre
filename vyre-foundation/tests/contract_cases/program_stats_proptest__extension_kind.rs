@@ -25,9 +25,9 @@ const CAP_TRAP: u32 = 1 << 7;
 
 // ─── simple opaque test types (no wire-roundtrip needed here) ───
 #[derive(Debug)]
-struct TestOpaqueExpr;
+struct EchoExpr;
 
-impl ExprNode for TestOpaqueExpr {
+impl ExprNode for EchoExpr {
     fn extension_kind(&self) -> &'static str {
         "test.stats.expr"
     }
@@ -52,9 +52,9 @@ impl ExprNode for TestOpaqueExpr {
 }
 
 #[derive(Debug)]
-struct TestOpaqueNode;
+struct EchoNode;
 
-impl NodeExtension for TestOpaqueNode {
+impl NodeExtension for EchoNode {
     fn extension_kind(&self) -> &'static str {
         "test.stats.node"
     }
@@ -78,7 +78,7 @@ impl NodeExtension for TestOpaqueNode {
 /// moves, so its opaque expression carries no payload. Every other generator
 /// comes from `ir_arbitrary`.
 fn arb_expr() -> BoxedStrategy<Expr> {
-    arb_expr_with(Just(Expr::Opaque(Arc::new(TestOpaqueExpr))).boxed())
+    arb_expr_with(Just(Expr::Opaque(Arc::new(EchoExpr))).boxed())
 }
 
 fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
@@ -138,7 +138,7 @@ fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
             // Resume (no stats effect, completeness)
             1 => arb_tag().prop_map(|tag| Node::Resume { tag: tag.into() }),
             // Opaque node (affects opaque_count)
-            1 => Just(Node::Opaque(Arc::new(TestOpaqueNode))),
+            1 => Just(Node::Opaque(Arc::new(EchoNode))),
         ]
     })
     .boxed()
