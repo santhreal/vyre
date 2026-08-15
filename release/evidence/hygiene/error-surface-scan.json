@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=a2d59957250120e8b125917fa2f7264118ee04803608feef620168c1d17d13c7",
+  "source_fingerprint": "git:b1f19c47ec6930df539b4b719a7aa1d3efedbaf8:dirty=true:worktree=8a9764d2540fa21ea90837da3dd8da0211c6a556e715305ca74d4be7ebdfcc13",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -409,6 +409,18 @@
       "path": "vyre-test-support/src/consumer_boundary.rs",
       "line": 184,
       "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 114,
+      "pattern": "documented_panic_contract",
+      "text": "let executable = std::env::current_exe().expect(\"Fix: the test binary path must be readable\");"
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 120,
+      "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {

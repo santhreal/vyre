@@ -498,7 +498,6 @@ Exits nonzero on:
 Findings:
 
 - Nothing invokes it, so the entire Apple-GPU parity and benchmark-bundle contract runs only when an operator types it.
-- It exports CARGO_BUILD_JOBS and optionally CARGO_TARGET_DIR into the remote shell. Build configuration belongs in the remote checkout's .cargo/config.toml.
 - Roughly 60 assertions are `grep -q` over JSON, so a counter renamed inside a nested object still matches, and a field present with a null value passes. The gate parses the JSON and asserts the fields.
 - The artifact count of 7 is a literal in a grep pattern, so adding an eighth artifact fails with a message about a missing string rather than about the count.
 
@@ -1006,7 +1005,7 @@ Exits nonzero on:
 
 Findings:
 
-- Exports CARGO_BUILD_JOBS=1. A build-affecting variable set outside .cargo/config.toml, so every gate that sources this file builds with a different configuration than a bare cargo invocation. Repair belongs in .cargo/config.toml.
+- Nothing remains open.
 
 ### `scripts/lib/check_deep_bench_coverage.py`
 
@@ -1240,7 +1239,7 @@ Exits nonzero on:
 
 Findings:
 
-- It sets CARGO_BUILD_JOBS on three command lines and reads CARGO_TARGET_DIR to locate the binary. Both are build configuration that belongs in .cargo/config.toml, and the target directory is available from `cargo metadata` without the variable.
+- Nothing remains open.
 
 ### `scripts/public_api_snapshot_inventory.py`
 

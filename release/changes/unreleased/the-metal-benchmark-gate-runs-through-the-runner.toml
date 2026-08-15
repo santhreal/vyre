@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The Metal MacBook benchmark gate invokes the benchmark through the cargo runner instead of locating a binary under a target directory it named itself, and its remote setup exports no build configuration into the remote shell. The VYRE_MACBOOK_CARGO_TARGET_DIR option is gone: the remote checkout declares its own build directory."

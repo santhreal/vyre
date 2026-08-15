@@ -51,13 +51,9 @@ case "$PROFILE" in
         ;;
 esac
 
-CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" "${build_args[@]}"
+"$CARGO_RUNNER" "${build_args[@]}"
 
-if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
-    target_root="$CARGO_TARGET_DIR"
-else
-    target_root="$("$CARGO_RUNNER" metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
-fi
+target_root="$("$CARGO_RUNNER" metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
 target_root="${target_root:-$ROOT_DIR/target}"
 if [[ "$target_root" != /* ]]; then
     target_root="$ROOT_DIR/$target_root"
@@ -84,7 +80,7 @@ run_shard() {
     printf 'proving shard %s/%s backend=%s workers=%s -> %s\n' "$index" "$SHARDS" "$BACKEND" "$WORKERS" "$shard_path" >&2
     (
         cd "$ROOT_DIR"
-        VYRE_CONFORM_PROOF_WORKERS="$WORKERS" CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$RUNNER_BIN" "${prove_args[@]}"
+        VYRE_CONFORM_PROOF_WORKERS="$WORKERS" "$RUNNER_BIN" "${prove_args[@]}"
     )
 }
 
@@ -121,6 +117,6 @@ merge_args=(merge --out "$merged")
 merge_args+=("${shard_paths[@]}")
 (
     cd "$ROOT_DIR"
-    CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$RUNNER_BIN" "${merge_args[@]}"
+    "$RUNNER_BIN" "${merge_args[@]}"
 )
 printf '%s\n' "$merged"

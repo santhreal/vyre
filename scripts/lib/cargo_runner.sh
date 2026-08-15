@@ -3,11 +3,12 @@
 #
 # The workspace prefers `./cargo_full` when it is available, but release
 # scripts must still be executable in checkouts where the wrapper is absent.
-# In that case they fall back to `cargo` while forcing single-job builds to
-# preserve the OOM protection that cargo_full normally provides.
+# In that case they fall back to `cargo`. Job count and target directory are
+# declared once in `.cargo/config.toml`, so this file sets neither: a runner
+# that exported its own job count built a different build than a bare cargo
+# invocation in the same checkout, and defeated the shared compilation cache.
 
 vyre_select_cargo_runner() {
-    export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
     if [[ -n "${VYRE_CARGO_RUNNER:-}" ]]; then
         CARGO_RUNNER="$VYRE_CARGO_RUNNER"
     elif [[ -x ./cargo_full ]]; then

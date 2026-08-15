@@ -10,7 +10,6 @@ usage() {
         '  VYRE_MACBOOK_VYRE_ROOT Vyre workspace path on the Apple GPU host.' \
         '' \
         'Optional environment:' \
-        '  VYRE_MACBOOK_CARGO_TARGET_DIR Remote cargo target directory.' \
         '  VYRE_MACBOOK_BENCH_OUTPUT_DIR Remote directory for benchmark smoke JSON reports.' \
         '  VYRE_MACBOOK_CONNECT_TIMEOUT  SSH connect timeout in seconds, default 8.' \
         '  VYRE_CARGO_RUNNER             Remote cargo runner override consumed by scripts/lib/cargo_runner.sh.' \
@@ -38,12 +37,7 @@ run_remote() {
     local command="$1"
     local root
     root="$(remote_quote "${VYRE_MACBOOK_VYRE_ROOT}")"
-    local setup="set -euo pipefail; cd ${root}; source scripts/lib/cargo_runner.sh; vyre_select_cargo_runner; export CARGO_BUILD_JOBS=\"\${CARGO_BUILD_JOBS:-1}\";"
-    if [[ -n "${VYRE_MACBOOK_CARGO_TARGET_DIR:-}" ]]; then
-        local target
-        target="$(remote_quote "${VYRE_MACBOOK_CARGO_TARGET_DIR}")"
-        setup="${setup} export CARGO_TARGET_DIR=${target};"
-    fi
+    local setup="set -euo pipefail; cd ${root}; source scripts/lib/cargo_runner.sh; vyre_select_cargo_runner;"
     if [[ -n "${VYRE_MACBOOK_BENCH_OUTPUT_DIR:-}" ]]; then
         local bench_output
         bench_output="$(remote_quote "${VYRE_MACBOOK_BENCH_OUTPUT_DIR}")"
@@ -67,14 +61,13 @@ run_conformance() {
 run_benchmark() {
     echo "metal-macbook: running native Metal/WGPU/reference benchmark gate" >&2
     run_remote '
-        "$CARGO_RUNNER" build -p vyre-bench
-        bench_bin="${CARGO_TARGET_DIR:-target}/debug/vyre-bench"
-        bench_output_dir="${VYRE_MACBOOK_BENCH_OUTPUT_DIR:-${CARGO_TARGET_DIR:-target}/vyre-metal-benchmark-smoke}"
+        bench() { "$CARGO_RUNNER" run -q -p vyre-bench --bin vyre-bench -- "$@"; }
+        bench_output_dir="${VYRE_MACBOOK_BENCH_OUTPUT_DIR:-$(mktemp -d)}"
         mkdir -p "$bench_output_dir"
-        "$bench_bin" list --format json >/dev/null
+        bench list --format json >/dev/null
         for backend in cpu-ref wgpu metal; do
             output="$bench_output_dir/${backend}.json"
-            VYRE_ALLOW_FEW_SAMPLES=1 "$bench_bin" run \
+            VYRE_ALLOW_FEW_SAMPLES=1 bench run \
                 --suite smoke \
                 --format json \
                 --backend "$backend" \
@@ -85,7 +78,7 @@ run_benchmark() {
                 --determinism-runs 1 \
                 --output "$output" >/dev/null
             test -s "$output"
-            "$bench_bin" validate-report \
+            bench validate-report \
                 --path "$output" \
                 --backend "$backend" \
                 --total-cases 1 \
@@ -108,7 +101,7 @@ run_benchmark() {
         grep -q "\"metal_resident_buffer_count\"" "$bench_output_dir/metal.json"
         grep -q "\"metal_resident_bytes\"" "$bench_output_dir/metal.json"
         resident_output="$bench_output_dir/metal-resident-queue-closure.json"
-        VYRE_ALLOW_FEW_SAMPLES=1 "$bench_bin" run \
+        VYRE_ALLOW_FEW_SAMPLES=1 bench run \
             --suite smoke \
             --format json \
             --backend metal \
@@ -119,7 +112,7 @@ run_benchmark() {
             --determinism-runs 1 \
             --output "$resident_output" >/dev/null
         test -s "$resident_output"
-        "$bench_bin" validate-report \
+        bench validate-report \
             --path "$resident_output" \
             --backend metal \
             --total-cases 1 \
@@ -151,7 +144,7 @@ run_benchmark() {
             echo "baseline_backend=wgpu"
             echo "candidate_backend=metal"
             compare_status=0
-            "$bench_bin" compare \
+            bench compare \
                 --baseline "$bench_output_dir/wgpu.json" \
                 --candidate "$bench_output_dir/metal.json" \
                 --output "$comparison_json" || compare_status=$?
@@ -161,7 +154,7 @@ run_benchmark() {
             echo "baseline_backend=cpu-ref"
             echo "candidate_backend=metal"
             compare_status=0
-            "$bench_bin" compare \
+            bench compare \
                 --baseline "$bench_output_dir/cpu-ref.json" \
                 --candidate "$bench_output_dir/metal.json" \
                 --output "$ref_comparison_json" || compare_status=$?
@@ -172,12 +165,12 @@ run_benchmark() {
         test -s "$ref_comparison"
         test -s "$ref_comparison_json"
         bundle_manifest="$bench_output_dir/bundle-manifest.json"
-        "$bench_bin" validate-comparison \
+        bench validate-comparison \
             --path "$comparison_json" \
             --baseline-backend wgpu \
             --candidate-backend metal \
             --case foundation.elementwise.add.1m >/dev/null
-        "$bench_bin" validate-comparison \
+        bench validate-comparison \
             --path "$ref_comparison_json" \
             --baseline-backend cpu-ref \
             --candidate-backend metal \
@@ -198,10 +191,10 @@ run_benchmark() {
         grep -q "compare_exit_code=" "$ref_comparison"
         grep -q "foundation.elementwise.add.1m" "$comparison"
         grep -q "foundation.elementwise.add.1m" "$ref_comparison"
-        "$bench_bin" validate-benchmark-bundle \
+        bench validate-benchmark-bundle \
             --dir "$bench_output_dir" \
             --manifest-output "$bundle_manifest" >/dev/null
-        "$bench_bin" validate-benchmark-bundle \
+        bench validate-benchmark-bundle \
             --dir "$bench_output_dir" \
             --manifest-input "$bundle_manifest" >/dev/null
         test -s "$bundle_manifest"

@@ -14,8 +14,6 @@ jobs:
   evidence:
     name: Generate release evidence
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -63,8 +61,6 @@ jobs:
     name: Composite pre-publish runners
     runs-on: ubuntu-latest
     needs: [evidence, measured-evidence]
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

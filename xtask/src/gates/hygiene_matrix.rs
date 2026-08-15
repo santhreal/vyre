@@ -1571,6 +1571,13 @@ fn scan_release_tooling(
 /// The gate therefore reported clean while scanning none of the documents its
 /// name claims. A listed document that is absent is now a finding: the list is
 /// the contract, so a deletion has to be answered here rather than absorbed.
+///
+/// The list holds authored documents only. `CHANGELOG.md` and the release notes
+/// beside it are generated from `release/changes`, and a released entry states
+/// what a version did rather than telling a reader what to run, so a bare
+/// `cargo` inside one is a record and not an instruction. Scanning them also
+/// recorded a line number that every new fragment moved, which turned the
+/// evidence artifact red for a document nobody had edited.
 fn scan_release_docs(
     vyre_root: &Path,
     scanned_files: &mut usize,
@@ -1578,13 +1585,10 @@ fn scan_release_docs(
 ) {
     for doc in [
         "README.md",
-        "CHANGELOG.md",
         "CONTRIBUTING.md",
         "docs/testing/TESTING.toml",
         "conform/README.md",
         "vyre-bench/README.md",
-        "release/evidence/docs/release-notes.md",
-        "release/evidence/docs/release-notes-version-story.md",
     ] {
         let path = vyre_root.join(doc);
         if path.is_file() {
@@ -2667,6 +2671,53 @@ mod tests {
         ] {
             assert!(line_contains_read_call(line), "missed `{line}`");
         }
+    }
+
+    /// WHY: `CHANGELOG.md` is generated from `release/changes`, and a released
+    /// entry records what a version did instead of telling a reader what to
+    /// run. Scanning it recorded eleven line numbers that every added fragment
+    /// moved, so the evidence artifact went red for a document nobody edited,
+    /// and the only place the text could be edited is a fragment that no longer
+    /// exists. An authored document is still scanned.
+    #[test]
+    fn a_generated_release_history_is_recorded_not_instructed() {
+        let tree = tempfile::TempDir::new().expect("Fix: create a fixture tree.");
+        let bare = "Run `cargo test --workspace` to reproduce it.\n";
+        for name in ["README.md", "CHANGELOG.md"] {
+            fs::write(tree.path().join(name), bare).expect("Fix: write the fixture document.");
+        }
+        for (relative, body) in [
+            ("CONTRIBUTING.md", "See the README.\n"),
+            ("docs/testing/TESTING.toml", "suite = \"none\"\n"),
+            ("conform/README.md", "See the README.\n"),
+            ("vyre-bench/README.md", "See the README.\n"),
+        ] {
+            let path = tree.path().join(relative);
+            fs::create_dir_all(path.parent().expect("Fix: a fixture path has a parent."))
+                .expect("Fix: create the fixture directory.");
+            fs::write(path, body).expect("Fix: write the fixture document.");
+        }
+
+        let mut scanned = 0usize;
+        let mut findings = Vec::new();
+        scan_release_docs(tree.path(), &mut scanned, &mut findings);
+
+        let flagged = findings
+            .iter()
+            .map(|finding| finding.path.clone())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            scanned, 5,
+            "Fix: the five authored documents are the scanned set, got {scanned}."
+        );
+        assert!(
+            flagged.iter().any(|path| path.ends_with("README.md")),
+            "Fix: an authored document that spells a bare cargo command is still a finding, got {flagged:?}."
+        );
+        assert!(
+            !flagged.iter().any(|path| path.ends_with("CHANGELOG.md")),
+            "Fix: the generated release history is not scanned, got {flagged:?}."
+        );
     }
 
     /// WHY: the release-tooling scan read `.sh`, `.yml` and `.yaml` only, so a

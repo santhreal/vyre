@@ -2239,6 +2239,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   format at serial::text, and the CSE and DCE pass internals at
   optimizer::passes::fusion_cse. MemoryOrdering is published once, at
   vyre_foundation::ir::MemoryOrdering, beside the node variants that carry it.
+- The Metal MacBook benchmark gate invokes the benchmark through the cargo
+  runner instead of locating a binary under a target directory it named itself,
+  and its remote setup exports no build configuration into the remote shell.
+  The VYRE_MACBOOK_CARGO_TARGET_DIR option is gone: the remote checkout
+  declares its own build directory.
 - The runtime module that owns persistent slot residency is
   `vyre-runtime/src/resident_work_queue/`, and its lane, its test files, and
   its architecture page carry the same name. The directory was `megakernel/`, a
@@ -2683,6 +2688,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every crate to find the rows describing one, and the generated per-crate page
   is what answers the question. The section now links `docs/testing/<crate>.md`
   and names the TOML as its authority.
+- The command-hygiene scan reads authored documents only. CHANGELOG.md and the
+  release notes beside it are generated from release/changes, and a released
+  entry records what a version did rather than telling a reader what to run, so
+  twenty bare-cargo mentions in frozen history were recorded with line numbers
+  that every added fragment moved. The evidence artifact went red for documents
+  nobody had edited, and the text could not be fixed where it was reported.
 - Seven modules whose source file lived outside the directory of the module
   that declared it are moved inside it. A `path` attribute was carrying each
   one across a directory boundary: the typecheck critical-contract tests, the
@@ -2701,6 +2712,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   nothing. It now derives every nonzero `process::exit` in the xtask crates at
   run time and requires an enclosing block to write the cause on either stream,
   so a silent exit added anywhere in the tooling fails it.
+- A test that compiles a scratch crate builds it in the cargo build directory.
+  vyre_test_support::monorepo::cargo_target_directory reports where cargo is
+  writing this run's artifacts, resolved from the running test binary, so no
+  test reads or sets CARGO_TARGET_DIR. The feature-boundary fixture had
+  compiled the substrate and the foundation under the temp filesystem, which is
+  capped, and it no longer clears its own build tree between the two consumers
+  it checks.
 - The one-implementation rule for target-payload admission recognizes the
   descriptor form. Every concrete backend now routes through
   `TargetDescriptor::admit_modules`, which calls the shared `admit` and decodes
@@ -3575,6 +3593,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   deleted, architectural-invariants.yml names `neutral-crates` and `layering`,
   and the workflow no longer sets `CARGO_BUILD_JOBS`, which is build
   configuration and belongs in `.cargo/config.toml`.
+- No gate sets a build-affecting variable on a command line. The shared cargo
+  runner, the release shard prover, the Metal MacBook gate and both the
+  conformance and release-evidence workflows exported CARGO_BUILD_JOBS, and
+  three of them read or exported CARGO_TARGET_DIR, so each one built a
+  different build than a bare cargo invocation in the same checkout and none of
+  them shared a compiled artifact with it. Job count and build directory are
+  declared once, in .cargo/config.toml.
 - Adding an IR `Node` variant can no longer be handled by a catch-all arm
   nobody chose. The AST registry macro emits `NODE_VARIANT_NAMES` and
   `node_variant_name` from the declaration site,

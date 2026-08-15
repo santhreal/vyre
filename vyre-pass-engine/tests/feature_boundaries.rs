@@ -6,15 +6,23 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+/// Directory of the scratch crate this test compiles against the substrate.
+///
+/// It lives in the cargo build directory, not in `std::env::temp_dir()`: the
+/// fixture compiles the substrate and the foundation, a temp filesystem is
+/// capped, and one such fixture filling it fails every other build on the host.
 fn fixture_root() -> PathBuf {
-    std::env::temp_dir().join(format!(
-        "vyre-pass-engine-feature-boundaries-{}",
-        std::process::id()
-    ))
+    vyre_test_support::monorepo::cargo_target_directory().join("feature-boundary-fixture")
 }
 
+/// Write the fixture manifest and the consumer source, keeping earlier builds.
+///
+/// The directory is not cleared between the two consumers this test compiles.
+/// Clearing it also deleted the fixture's own build directory, so each consumer
+/// rebuilt the whole substrate graph to answer a question about one import. The
+/// manifest and the single source file are the only files written, so
+/// overwriting them leaves nothing stale behind.
 fn write_fixture(root: &Path, source: &str) {
-    let _ = fs::remove_dir_all(root);
     fs::create_dir_all(root.join("src")).expect("Fix: feature fixture source must be creatable");
     let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     let substrate = workspace.join("vyre-pass-engine");
@@ -22,7 +30,7 @@ fn write_fixture(root: &Path, source: &str) {
     fs::write(
         root.join("Cargo.toml"),
         format!(
-            "[package]\nname = \"self-substrate-feature-fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[dependencies]\nvyre-pass-engine = {{ path = {:?}, default-features = false, features = [\"optimizer\"] }}\nvyre-foundation = {{ path = {:?} }}\n",
+            "[workspace]\n\n[package]\nname = \"self-substrate-feature-fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[dependencies]\nvyre-pass-engine = {{ path = {:?}, default-features = false, features = [\"optimizer\"] }}\nvyre-foundation = {{ path = {:?} }}\n",
             substrate, foundation
         ),
     )
@@ -31,11 +39,14 @@ fn write_fixture(root: &Path, source: &str) {
         .expect("Fix: feature fixture source must be writable");
 }
 
+/// Run cargo in the fixture, under the fixture's own build configuration.
+///
+/// No build-affecting variable is set here. Job count and build directory are
+/// declared once per checkout, in cargo configuration, and a fixture that
+/// exported its own made every gate that ran it build a different build.
 fn cargo(root: &Path, arguments: &[&str]) -> Output {
     Command::new("cargo")
         .args(arguments)
-        .env("CARGO_BUILD_JOBS", "1")
-        .env("CARGO_TARGET_DIR", root.join("target"))
         .current_dir(root)
         .output()
         .expect("Fix: Cargo must execute for the feature boundary fixture")
@@ -93,5 +104,7 @@ fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
         "rejection must identify the unavailable public family:\n{stderr}"
     );
 
-    fs::remove_dir_all(&root).expect("Fix: feature fixture must be removable");
+    // The fixture stays: it is a build tree inside the build directory, and the
+    // next run of this test reuses the substrate it already compiled. `cargo
+    // clean` removes it with everything else cargo wrote.
 }

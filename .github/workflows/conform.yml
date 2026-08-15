@@ -9,8 +9,6 @@ jobs:
   operation-registry:
     name: Operation registry contract
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -25,8 +23,6 @@ jobs:
     name: Vyre conformance CPU
     needs: operation-registry
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

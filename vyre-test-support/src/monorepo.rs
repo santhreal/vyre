@@ -91,6 +91,39 @@ pub fn vyre_crate_directory(package: &str) -> PathBuf {
     structure_gate::member_directory(&vyre_workspace_root(), package)
 }
 
+/// Directory cargo is writing this run's build artifacts into.
+///
+/// A test that has to build a scratch crate of its own puts it under here
+/// rather than under [`std::env::temp_dir`]. A temp filesystem is small, shared
+/// and capped: one fixture that compiled a dependency graph into it filled the
+/// filesystem and failed unrelated builds with no space left on device. Build
+/// artifacts belong in the build directory, which every host of this workspace
+/// already points at a disk sized for them.
+///
+/// Resolved from the running test binary, which cargo placed inside the target
+/// directory, by finding the ancestor cargo tagged as a cache directory. A test
+/// therefore never reads or sets `CARGO_TARGET_DIR`: the location is declared
+/// once, in the checkout's cargo configuration, and this reports where that
+/// declaration actually put the artifacts.
+///
+/// # Panics
+///
+/// Panics when the test binary sits outside any cargo target directory.
+#[must_use]
+pub fn cargo_target_directory() -> PathBuf {
+    let executable = std::env::current_exe().expect("Fix: the test binary path must be readable");
+    executable
+        .ancestors()
+        .find(|directory| directory.join("CACHEDIR.TAG").is_file())
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| {
+            panic!(
+                "Fix: no ancestor of `{}` is a cargo target directory; run this test through cargo",
+                executable.display()
+            )
+        })
+}
+
 /// Root of the monorepo hosting vyre and its sibling products, if there is one.
 ///
 /// Returns `None` for a standalone vyre checkout. See the module docs for the
