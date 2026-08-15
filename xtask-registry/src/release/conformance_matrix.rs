@@ -182,13 +182,23 @@ impl Gate for ConformanceMatrixGate {
         }
         entries.sort_by(|left, right| left.id.cmp(&right.id));
         let registered_backends =
-            vyre_registry_link::backend::live_backend_registry_by_precedence()
-                .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
+            vyre_registry_link::backend::live_backend_registry_by_precedence().map_err(|error| {
+                GateError::new(
+                    format!("the backend registry did not start: {error}"),
+                    "repair the backend registration this error names; conformance coverage cannot be measured without the live backend list",
+                )
+            })?;
         let mut dispatch_backends = Vec::new();
         for backend in registered_backends {
-            if backend_dispatches(backend.id)
-                .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"))
-            {
+            if backend_dispatches(backend.id).map_err(|error| {
+                GateError::new(
+                    format!(
+                        "the backend registry did not start while asking whether `{}` dispatches: {error}",
+                        backend.id
+                    ),
+                    "repair the backend registration this error names",
+                )
+            })? {
                 dispatch_backends.push(backend.id.to_string());
             }
         }

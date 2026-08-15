@@ -81,8 +81,8 @@ impl Gate for WhatsSimilar {
                 "pass --op-id ID to narrow to one operation, or no selection to scan every pair",
             )
         })?;
-        let ops = collect_ops();
         let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
         match &cli.mode {
             Mode::Target(op_id) => run_target_query(
                 &mut report,

@@ -102,7 +102,7 @@ impl Gate for LegoAudit {
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
-        let ops = collect_ops();
+        let ops = collect_ops(&mut report);
         report.note(format!("{} op(s) audited", ops.len()));
         if ctx.write {
             write_composition_baseline(&ctx.root, &ops).map_err(|error| {
@@ -167,7 +167,7 @@ impl Gate for PrimitiveAdmissionGate {
 
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
-        let ops = collect_ops();
+        let ops = collect_ops(&mut report);
         report.note(format!("{} op(s) audited", ops.len()));
         check_3_primitive_coverage(&mut report, &ops);
         Ok(report)
@@ -236,11 +236,21 @@ fn tier_of(op_id: &str) -> Tier {
     }
 }
 
-pub(crate) fn collect_ops() -> Vec<OpInfo> {
-    vyre_registry_link::operation::live_operation_registry()
-        .iter()
-        .filter_map(|entry| entry.program().map(|program| build_info(entry.id, program)))
-        .collect()
+pub(crate) fn collect_ops(report: &mut Report) -> Vec<OpInfo> {
+    let mut ops = Vec::new();
+    for entry in vyre_registry_link::operation::live_operation_registry().iter() {
+        match entry.program() {
+            Some(program) => ops.push(build_info(entry.id, program)),
+            None => report.find(Finding::new(
+                format!(
+                    "registered operation `{}` provides no neutral builder, so every composition law skips it",
+                    entry.id
+                ),
+                "register a neutral builder for it, or withdraw the registration; an audit over fewer operations than the registry holds passes for the wrong reason",
+            )),
+        }
+    }
+    ops
 }
 
 fn build_info(id: &'static str, program: Program) -> OpInfo {
@@ -1638,7 +1648,7 @@ mod dedup_contract_tests {
             .map(|entry| entry.id)
             .collect();
         expected.sort_unstable();
-        let ops = collect_ops();
+        let ops = collect_ops(&mut Report::clean());
         let mut analysed: Vec<&str> = ops.iter().map(|op| op.id.as_str()).collect();
         analysed.sort_unstable();
         assert_eq!(
@@ -1699,7 +1709,7 @@ mod dedup_contract_tests {
     /// owner-reviewed family exception instead of disappearing into prose.
     #[test]
     fn primitive_coverage_requires_registered_family_exception() {
-        let ops = collect_ops();
+        let ops = collect_ops(&mut Report::clean());
         assert!(ops
             .iter()
             .any(|op| primitive_family(&op.id) == Some("math")));
@@ -1734,7 +1744,7 @@ mod dedup_contract_tests {
     /// This adversarial test ensures synthetic catalog wrappers remain hard failures even though low adoption is advisory.
     #[test]
     fn synthetic_primitive_consumers_remain_hard_failures() {
-        let mut ops = collect_ops();
+        let mut ops = collect_ops(&mut Report::clean());
         ops.push(op(
             "vyre-libs::catalog::math::new_primitive::consumer_a",
             Tier::T3,
