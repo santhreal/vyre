@@ -54,7 +54,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-foundation/examples/vyre_foundation_release_surface.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-foundation --example vyre_foundation_release_surface
+./cargo_full run -p vyre-foundation --example vyre_foundation_release_surface
 ```
 
 ### Features

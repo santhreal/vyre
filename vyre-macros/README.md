@@ -98,7 +98,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-macros/examples/vyre_macros_release_surface.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-macros --example vyre_macros_release_surface
+./cargo_full run -p vyre-macros --example vyre_macros_release_surface
 ```
 
 ### Features

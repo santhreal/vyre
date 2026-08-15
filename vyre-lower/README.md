@@ -160,7 +160,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-lower/tests/analysis_fixture_corpuses.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --test analysis_fixture_corpuses
+./cargo_full test -p vyre-lower --test analysis_fixture_corpuses
 ```
 
 ### Features

@@ -344,9 +344,9 @@ pub fn c11_annotate_global_typedef_names_fast(
             Expr::and(
                 Expr::var("possible_declarator"),
                 Expr::and(
-                    Expr::not(is_precomputed_declaration_previous_disqualifier_token(
-                        Expr::var("prev_kind"),
-                    )),
+                    Expr::not(is_declaration_previous_disqualifier_token(Expr::var(
+                        "prev_kind",
+                    ))),
                     Expr::and(
                         Expr::ne(Expr::var("next_kind"), Expr::u32(TOK_COLON)),
                         Expr::and(
@@ -361,6 +361,15 @@ pub fn c11_annotate_global_typedef_names_fast(
                         ),
                     ),
                 ),
+            ),
+        ),
+        Node::let_bind(
+            "typedef_name_context",
+            Expr::and(
+                Expr::not(is_declaration_previous_disqualifier_token(Expr::var(
+                    "prev_kind",
+                ))),
+                Expr::ne(Expr::var("next_kind"), Expr::u32(TOK_COLON)),
             ),
         ),
         Node::let_bind("has_prior_same_hash", Expr::u32(0)),

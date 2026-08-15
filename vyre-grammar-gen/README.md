@@ -171,7 +171,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-grammar-gen/examples/lex_c_source.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-grammar-gen --example lex_c_source
+./cargo_full run -p vyre-grammar-gen --example lex_c_source
 ```
 
 ### Features
