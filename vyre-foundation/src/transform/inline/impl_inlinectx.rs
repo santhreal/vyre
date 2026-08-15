@@ -3,6 +3,7 @@ use super::{
     input_arg_map, input_buffers, output_buffer, zero_value, Error, Expr, HashMap, Ident,
     InlineCtx, Node, OpResolver, Program, Result, UnresolvedCalls,
 };
+use crate::optimizer::rewrite::rewrite_expr;
 
 impl InlineCtx {
     #[inline]
@@ -142,155 +143,53 @@ impl InlineCtx {
         }
     }
 
-    #[inline]
-    #[expect(
-        clippy::too_many_lines,
-        reason = "exhaustive Expr inlining dispatch keeps prefix-emission ordering auditable"
-    )]
+    /// `expr` with every `Expr::Call` replaced by the value its callee produces,
+    /// plus the statements that value needs in front of it.
+    ///
+    /// Operand positions come from [`rewrite_expr`], the one owner. The match
+    /// this replaces enumerated them itself and put `SubgroupBallot`,
+    /// `SubgroupShuffle` and `SubgroupReduce` in its inert arm, so a call inside
+    /// a subgroup operand was handed back verbatim: under
+    /// `UnresolvedCalls::Reject` the program kept an `Expr::Call` that inlining
+    /// exists to refuse, and under `Keep` that call's own arguments were never
+    /// inlined either.
+    ///
+    /// The walk is bottom-up, so a call reaches [`Self::expand_call`] with its
+    /// arguments already inlined and no argument is walked twice.
     pub(crate) fn inline_expr(&mut self, expr: &Expr) -> Result<(Vec<Node>, Expr)> {
-        match expr {
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::BufferRef { .. }
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. }
-            | Expr::Opaque(_) => Ok((Vec::new(), expr.clone())),
-            Expr::Load { buffer, index } => {
-                let (prefix, index) = self.inline_expr(index)?;
-                Ok((
-                    prefix,
-                    Expr::Load {
-                        buffer: buffer.clone(),
-                        index: Box::new(index),
-                    },
-                ))
+        let mut prefix = Vec::new();
+        let mut failure = None;
+        let inlined = rewrite_expr(expr, &mut |candidate| {
+            if failure.is_some() {
+                return None;
             }
-            Expr::BinOp { op, left, right } => {
-                let (mut prefix, left) = self.inline_expr(left)?;
-                let (right_prefix, right) = self.inline_expr(right)?;
-                prefix.extend(right_prefix);
-                Ok((
-                    prefix,
-                    Expr::BinOp {
-                        op: *op,
-                        left: Box::new(left),
-                        right: Box::new(right),
-                    },
-                ))
+            let Expr::Call { op_id, args } = candidate else {
+                return None;
+            };
+            match self.expand_call(op_id, args) {
+                Ok((statements, value)) => {
+                    prefix.extend(statements);
+                    Some(value)
+                }
+                Err(error) => {
+                    failure = Some(error);
+                    None
+                }
             }
-            Expr::UnOp { op, operand } => {
-                let (prefix, operand) = self.inline_expr(operand)?;
-                Ok((
-                    prefix,
-                    Expr::UnOp {
-                        op: op.clone(),
-                        operand: Box::new(operand),
-                    },
-                ))
-            }
-            Expr::Fma { a, b, c } => {
-                let (mut prefix, a) = self.inline_expr(a)?;
-                let (b_prefix, b) = self.inline_expr(b)?;
-                let (c_prefix, c) = self.inline_expr(c)?;
-                prefix.extend(b_prefix);
-                prefix.extend(c_prefix);
-                Ok((
-                    prefix,
-                    Expr::Fma {
-                        a: Box::new(a),
-                        b: Box::new(b),
-                        c: Box::new(c),
-                    },
-                ))
-            }
-            Expr::Call { op_id, args } => self.inline_call(op_id, args),
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                let (mut prefix, cond) = self.inline_expr(cond)?;
-                let (true_prefix, true_val) = self.inline_expr(true_val)?;
-                let (false_prefix, false_val) = self.inline_expr(false_val)?;
-                prefix.extend(true_prefix);
-                prefix.extend(false_prefix);
-                Ok((
-                    prefix,
-                    Expr::Select {
-                        cond: Box::new(cond),
-                        true_val: Box::new(true_val),
-                        false_val: Box::new(false_val),
-                    },
-                ))
-            }
-            Expr::Cast { target, value } => {
-                let (prefix, value) = self.inline_expr(value)?;
-                Ok((
-                    prefix,
-                    Expr::Cast {
-                        target: target.clone(),
-                        value: Box::new(value),
-                    },
-                ))
-            }
-            Expr::Atomic {
-                op,
-                buffer,
-                index,
-                expected,
-                value,
-                ordering,
-            } => {
-                let (mut prefix, index) = self.inline_expr(index)?;
-                let (expected_prefix, expected) = match expected.as_deref() {
-                    Some(expected) => {
-                        let (prefix, expected) = self.inline_expr(expected)?;
-                        (prefix, Some(Box::new(expected)))
-                    }
-                    None => (Vec::new(), None),
-                };
-                let (value_prefix, value) = self.inline_expr(value)?;
-                prefix.extend(expected_prefix);
-                prefix.extend(value_prefix);
-                Ok((
-                    prefix,
-                    Expr::Atomic {
-                        op: *op,
-                        buffer: buffer.clone(),
-                        index: Box::new(index),
-                        expected,
-                        value: Box::new(value),
-                        ordering: *ordering,
-                    },
-                ))
-            }
+        });
+        match failure {
+            Some(error) => Err(error),
+            None => Ok((prefix, inlined.into_owned())),
         }
     }
 
+    /// One call site expanded, with `args` already inlined by the caller.
     #[inline]
-    pub(crate) fn inline_call(&mut self, op_id: &str, args: &[Expr]) -> Result<(Vec<Node>, Expr)> {
+    fn expand_call(&mut self, op_id: &str, args: &[Expr]) -> Result<(Vec<Node>, Expr)> {
         if self.stack.iter().any(|active| active == op_id) {
             return Err(Error::InlineCycle {
                 op_id: op_id.to_string(),
             });
-        }
-
-        let mut prefix = Vec::with_capacity(args.len());
-        let mut inlined_args = Vec::with_capacity(args.len());
-        for arg in args {
-            let (arg_prefix, arg) = self.inline_expr(arg)?;
-            prefix.extend(arg_prefix);
-            inlined_args.push(arg);
         }
 
         let callee = match (self.resolver)(op_id) {
@@ -300,10 +199,10 @@ impl InlineCtx {
             // its arguments already inlined.
             None if self.unresolved == UnresolvedCalls::Keep => {
                 return Ok((
-                    prefix,
+                    Vec::new(),
                     Expr::Call {
                         op_id: op_id.into(),
-                        args: inlined_args,
+                        args: args.to_vec(),
                     },
                 ));
             }
@@ -314,11 +213,9 @@ impl InlineCtx {
             }
         };
         self.stack.push(op_id.to_string());
-        let result = self.expand_callee(op_id, &callee, inlined_args);
+        let result = self.expand_callee(op_id, &callee, args.to_vec());
         self.stack.pop();
-        let (callee_prefix, value) = result?;
-        prefix.extend(callee_prefix);
-        Ok((prefix, value))
+        result
     }
 
     #[inline]

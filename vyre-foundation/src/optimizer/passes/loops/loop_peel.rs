@@ -27,10 +27,11 @@
 //!
 //! A28  -  loop peeling first iteration when guarded.
 
-use super::substitution::{body_writes_loop_var, substitute_nodes};
+use super::substitution::body_writes_loop_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::subst::substitute_nodes;
 
 /// Peel the first iteration of guarded loops.
 #[derive(Debug, Default)]

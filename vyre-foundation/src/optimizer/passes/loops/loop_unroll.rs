@@ -1,7 +1,8 @@
-use super::substitution::{body_writes_loop_var, substitute_node, substitute_nodes};
+use super::substitution::body_writes_loop_var;
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::rewrite::rewrite_node_slices;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::subst::{substitute_node, substitute_nodes};
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::ops::Range;

@@ -17,8 +17,6 @@
 //! "unchanged" upward, so an untouched subtree is returned as-is rather than
 //! deep-cloned.
 
-use std::borrow::Cow;
-
 use crate::ir::{Expr, Ident, Node};
 use crate::transform::rewrite_walk::{self, NodeRewrite};
 
@@ -41,13 +39,10 @@ struct Substitution<'a> {
 
 impl NodeRewrite for Substitution<'_> {
     fn operand(&mut self, expr: &Expr) -> Option<Expr> {
-        match crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| match candidate {
+        crate::optimizer::rewrite::rewrite_operand(expr, &mut |candidate| match candidate {
             Expr::Var(name) if name == self.var => Some(self.replacement.clone()),
             _ => None,
-        }) {
-            Cow::Borrowed(_) => None,
-            Cow::Owned(rewritten) => Some(rewritten),
-        }
+        })
     }
 
     /// A `Loop` whose induction variable is `var` rebinds the name, so every
