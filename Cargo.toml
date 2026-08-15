@@ -44,7 +44,6 @@ members = [
     "vyre-safetensors",
     "vyre-libs",
     "vyre-aot",
-    "vyre-frontend-rust",
     "vyre-bench",
     "vyre-lints",
     "vyre-lower",
@@ -234,7 +233,6 @@ vyre-emit-naga = { version = "0.7.2", path = "vyre-emit-naga" }
 vyre-emit-ptx = { version = "0.7.2", path = "vyre-emit-ptx" }
 vyre-emit-spirv = { version = "0.7.2", path = "vyre-emit-spirv" }
 vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
-vyre-frontend-rust = { path = "vyre-frontend-rust" }
 vyre-lints = { version = "0.7.2", path = "vyre-lints" }
 vyre-debug = { version = "0.7.2", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }

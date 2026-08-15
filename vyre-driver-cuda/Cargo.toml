@@ -63,7 +63,6 @@ vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # Integration tests and benchmarks assert against the lower-layer libraries they
 # exercise. The canonical scan product is a direct dev dependency.
 vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser", "analysis", "cpu-parity"] }
-vyre-frontend-rust = { path = "../vyre-frontend-rust" }
 tempfile.workspace = true
 # Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on
