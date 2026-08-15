@@ -5,9 +5,8 @@ use crate::bench::benchmark_evidence_semantics::{
     benchmark_source_artifact_paths, contract_backend_issues, cuda_forbidden_telemetry_issues,
     cuda_telemetry_label_issues, current_freshness_fingerprint_for_report,
     launch_plan_label_issues, report_freshness_fingerprint, source_fingerprint_freshness_issues,
-    source_fingerprint_issues, BackendConsistencyIssue, ContractBackendIssue,
-    CudaForbiddenTelemetryIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
-    SourceFingerprintFreshnessIssue, SourceFingerprintIssue,
+    BackendConsistencyIssue, ContractBackendIssue, CudaForbiddenTelemetryIssue,
+    CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintFreshnessIssue,
 };
 use crate::bench::benchmark_evidence_semantics::{
     metrics_has_any, metrics_has_positive_any, metrics_has_zero_any,
@@ -455,36 +454,12 @@ pub(crate) fn check_source_fingerprint_shape(
     source_fingerprint: &str,
     failures: &mut Vec<String>,
 ) {
-    for issue in source_fingerprint_issues(source_fingerprint) {
-        match issue {
-            SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => {
-                failures.push(format!(
-                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` has dirty=unknown; rerun with git status provenance available",
-                    requirement.id
-                ));
-            }
-            SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => {
-                failures.push(format!(
-                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest",
-                    requirement.id
-                ));
-            }
-            SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => {
-                failures.push(format!(
-                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` has an unknown worktree digest",
-                    requirement.id
-                ));
-            }
-            SourceFingerprintIssue::DirtyInvalidWorktree {
-                source_fingerprint,
-                worktree,
-            } => {
-                failures.push(format!(
-                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`; expected 64 hex chars",
-                    requirement.id
-                ));
-            }
-        }
+    for issue in xtask::source_provenance::issues(source_fingerprint) {
+        failures.push(format!(
+            "requirement `{}` benchmark `{label}` {}",
+            requirement.id,
+            issue.predicate()
+        ));
     }
 }
 

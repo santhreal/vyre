@@ -13,11 +13,11 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use super::data::{SourceFingerprintFreshnessIssue, SourceFingerprintIssue};
+use super::data::SourceFingerprintFreshnessIssue;
 use super::json_reader::non_empty_str;
 use super::source_fingerprint::{
     current_freshness_fingerprint_for_report, report_freshness_fingerprint,
-    source_fingerprint_freshness_issues, source_fingerprint_issues,
+    source_fingerprint_freshness_issues,
 };
 
 /// Name every imprecision in one cited artifact's `source_fingerprint`.
@@ -30,32 +30,11 @@ pub(crate) fn describe_source_artifact_fingerprint_issues(
     source_fingerprint: &str,
     issues: &mut Vec<String>,
 ) {
-    for issue in source_fingerprint_issues(source_fingerprint) {
-        match issue {
-            SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => {
-                issues.push(format!(
-                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has unknown dirty state"
-                ));
-            }
-            SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => {
-                issues.push(format!(
-                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
-                ));
-            }
-            SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => {
-                issues.push(format!(
-                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has unknown worktree digest"
-                ));
-            }
-            SourceFingerprintIssue::DirtyInvalidWorktree {
-                source_fingerprint,
-                worktree,
-            } => {
-                issues.push(format!(
-                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`"
-                ));
-            }
-        }
+    for issue in xtask::source_provenance::issues(source_fingerprint) {
+        issues.push(format!(
+            "source_artifact `{artifact}` {}",
+            issue.predicate()
+        ));
     }
 }
 

@@ -83,7 +83,7 @@ pub(crate) use source_artifact::{
 pub(crate) use source_artifact_integrity::inspect_source_artifact_case_integrity;
 pub(crate) use source_fingerprint::{
     current_freshness_fingerprint_for_report, report_freshness_fingerprint,
-    source_fingerprint_freshness_issues, source_fingerprint_issues,
+    source_fingerprint_freshness_issues,
 };
 pub(crate) use suite_reader::report_status_for_path;
 pub(crate) use telemetry_labels::{

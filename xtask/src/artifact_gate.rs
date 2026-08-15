@@ -198,13 +198,18 @@ pub fn settle_inspection(ctx: &GateCtx, gate: &str, inspection: Inspection) -> R
 ///
 /// `gate` names the subcommand in each `fix`, so a reader learns the exact
 /// command that settles the disagreement rather than being told one exists.
+///
+/// The tree is fingerprinted once here rather than once per artifact, because
+/// every artifact a gate owns is recorded from the same tree in the same run
+/// and four gates spent four `git status` walks proving that.
 #[must_use]
 pub fn settle(root: &Path, gate: &str, generated: &[Generated], write: bool) -> Vec<Finding> {
+    let fingerprint = crate::source_provenance::capture(root);
     generated
         .iter()
         .flat_map(|artifact| {
             if write {
-                write_artifact(root, artifact)
+                write_artifact(root, artifact, fingerprint.as_deref())
             } else {
                 compare_artifact(root, gate, artifact)
             }
@@ -212,8 +217,41 @@ pub fn settle(root: &Path, gate: &str, generated: &[Generated], write: bool) -> 
         .collect()
 }
 
+/// Whether `path` names a recorded artifact, which must name the tree it came
+/// from.
+///
+/// Everything under `release/evidence` is a record of what some tree was, read
+/// by someone who no longer has that tree. Generated documentation elsewhere in
+/// the workspace is not: it is read beside the source it describes.
+fn records_provenance(path: &Path) -> bool {
+    path.starts_with("release/evidence")
+}
+
 /// Put one artifact on disk, reporting a write failure as a finding.
-fn write_artifact(root: &Path, artifact: &Generated) -> Vec<Finding> {
+///
+/// A recorded artifact is stamped with `fingerprint` unless the committed copy
+/// already holds the same body under a sound fingerprint, in which case it is
+/// the same recording and keeps the tree it was recorded from. Regenerating
+/// therefore leaves an unchanged artifact untouched instead of re-attributing
+/// it to whatever tree happened to run the gate.
+fn write_artifact(root: &Path, artifact: &Generated, fingerprint: Result<&str, &String>) -> Vec<Finding> {
+    let content = if records_provenance(&artifact.path) {
+        let committed = read_committed(root, &artifact.path).ok();
+        let recorded = committed.as_deref().map(split_provenance);
+        if let Some((Some(recorded_fingerprint), body)) = recorded.as_ref() {
+            if *body == artifact.content
+                && crate::source_provenance::issues(recorded_fingerprint).is_empty()
+            {
+                return Vec::new();
+            }
+        }
+        match stamp_provenance(&artifact.path, &artifact.content, fingerprint) {
+            Ok(content) => content,
+            Err(finding) => return vec![finding],
+        }
+    } else {
+        artifact.content.clone()
+    };
     let absolute = root.join(&artifact.path);
     if let Some(parent) = absolute.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
@@ -224,7 +262,7 @@ fn write_artifact(root: &Path, artifact: &Generated) -> Vec<Finding> {
             )];
         }
     }
-    match fs::write(&absolute, &artifact.content) {
+    match fs::write(&absolute, &content) {
         Ok(()) => Vec::new(),
         Err(error) => vec![Finding::in_file(
             artifact.path.clone(),
@@ -234,23 +272,132 @@ fn write_artifact(root: &Path, artifact: &Generated) -> Vec<Finding> {
     }
 }
 
+/// Put `fingerprint` at the head of `body`, or refuse to record at all.
+///
+/// Refusal is the point. An artifact written without a fingerprint names no
+/// tree, and nothing downstream can recover the one it came from, so the
+/// recorder that cannot identify its tree writes nothing rather than one more
+/// generation of unattributable evidence.
+///
+/// # Errors
+///
+/// Returns the finding when the tree could not be fingerprinted, or when the
+/// rendered artifact is not a JSON object and so has no head to stamp.
+fn stamp_provenance(
+    path: &Path,
+    body: &str,
+    fingerprint: Result<&str, &String>,
+) -> Result<String, Finding> {
+    let fingerprint = fingerprint.map_err(|error| {
+        Finding::in_file(
+            path.to_path_buf(),
+            format!(
+                "`{}` was not written because the tree it would record has no source fingerprint: {error}",
+                path.display()
+            ),
+            "Record evidence from a checkout git can identify. An artifact that names no tree proves nothing about one.",
+        )
+    })?;
+    for issue in crate::source_provenance::issues(fingerprint) {
+        return Err(Finding::in_file(
+            path.to_path_buf(),
+            format!("`{}` was not written because the {}", path.display(), issue.predicate()),
+            "Record evidence from a checkout whose state git can state exactly.",
+        ));
+    }
+    let Some(rest) = body.strip_prefix("{\n") else {
+        return Err(Finding::in_file(
+            path.to_path_buf(),
+            format!(
+                "`{}` is recorded evidence and must be a JSON object so it can name the tree it came from",
+                path.display()
+            ),
+            "Render the artifact as an object with a `source_fingerprint` head, or move it out of release/evidence.",
+        ));
+    };
+    Ok(format!("{{\n  \"{PROVENANCE_KEY}\": \"{fingerprint}\",\n{rest}"))
+}
+
+/// The key a recorded artifact names its tree under, at the head of the object.
+const PROVENANCE_KEY: &str = "source_fingerprint";
+
+/// Take the recorded fingerprint off `committed` and return the body under it.
+///
+/// The stamp is one line at a known place, so lifting it back off is exact.
+/// The body is what the owning gate generates, and it is the only half a
+/// comparison against the tree may look at: the fingerprint names the tree the
+/// body was recorded from, which is a different tree from the one running the
+/// gate whenever anything has been committed since, and reporting that as a
+/// divergence would make every artifact rot one commit after it was written.
+fn split_provenance(committed: &str) -> (Option<&str>, String) {
+    let head = format!("{{\n  \"{PROVENANCE_KEY}\": \"");
+    let Some(rest) = committed.strip_prefix(head.as_str()) else {
+        return (None, committed.to_string());
+    };
+    let Some(end) = rest.find("\",\n") else {
+        return (None, committed.to_string());
+    };
+    (Some(&rest[..end]), format!("{{\n{}", &rest[end + "\",\n".len()..]))
+}
+
+/// Read the committed copy of `path`, bounded.
+fn read_committed(root: &Path, path: &Path) -> std::io::Result<String> {
+    crate::output_arg::read_text_bounded(&root.join(path), MAX_ARTIFACT_BYTES, "evidence artifact")
+}
+
 /// Name every way the committed artifact differs from what the tree generates.
 ///
 /// The read is bounded so a corrupted or accidentally enormous artifact refuses
 /// rather than being allocated whole.
 fn compare_artifact(root: &Path, gate: &str, artifact: &Generated) -> Vec<Finding> {
-    let absolute = root.join(&artifact.path);
-    match crate::output_arg::read_text_bounded(&absolute, MAX_ARTIFACT_BYTES, "evidence artifact") {
-        Ok(committed) => divergences(gate, &artifact.path, &committed, &artifact.content),
-        Err(error) => vec![Finding::in_file(
-            artifact.path.clone(),
-            format!(
-                "`{}` is the artifact this gate owns and it could not be read: {error}",
-                artifact.path.display()
-            ),
-            format!("Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact."),
-        )],
+    let committed = match read_committed(root, &artifact.path) {
+        Ok(committed) => committed,
+        Err(error) => {
+            return vec![Finding::in_file(
+                artifact.path.clone(),
+                format!(
+                    "`{}` is the artifact this gate owns and it could not be read: {error}",
+                    artifact.path.display()
+                ),
+                format!(
+                    "Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact."
+                ),
+            )];
+        }
+    };
+    if !records_provenance(&artifact.path) {
+        return divergences(gate, &artifact.path, &committed, &artifact.content);
     }
+    let (fingerprint, body) = split_provenance(&committed);
+    let mut findings = provenance_findings(gate, &artifact.path, fingerprint);
+    findings.extend(divergences(gate, &artifact.path, &body, &artifact.content));
+    findings
+}
+
+/// Judge the fingerprint the committed artifact carries, if it carries one.
+fn provenance_findings(gate: &str, path: &Path, fingerprint: Option<&str>) -> Vec<Finding> {
+    let fix =
+        format!("Run `cargo_full run --bin xtask -- {gate} --write` and commit the artifact.");
+    let Some(fingerprint) = fingerprint else {
+        return vec![Finding::in_file(
+            path.to_path_buf(),
+            format!(
+                "`{}` names no source tree, so nothing it records is attributable",
+                path.display()
+            ),
+            fix,
+        )];
+    };
+    crate::source_provenance::issues(fingerprint)
+        .into_iter()
+        .map(|issue| {
+            Finding::in_file(
+                path.to_path_buf(),
+                format!("`{}` {}", path.display(), issue.predicate()),
+                fix.clone(),
+            )
+        })
+        .collect()
 }
 
 /// One finding per line on which `committed` and `generated` disagree.
@@ -301,4 +448,214 @@ pub fn divergences(gate: &str, path: &Path, committed: &str, generated: &str) ->
         ));
     }
     findings
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+
+    const ARTIFACT: &str = "release/evidence/metadata/matrix.json";
+
+    #[test]
+    fn the_recorder_refuses_an_artifact_whose_tree_has_no_source_fingerprint() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        let artifact = Generated::text(ARTIFACT, "{\n  \"schema_version\": 1\n}\n");
+
+        let findings = settle(dir.path(), "metadata-matrix", &[artifact], true);
+
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.message.contains("has no source fingerprint")),
+            "Fix: a recorder that cannot identify its tree must refuse; findings={findings:?}"
+        );
+        assert!(
+            !dir.path().join(ARTIFACT).exists(),
+            "Fix: refusing to record must leave no unattributable artifact on disk."
+        );
+    }
+
+    #[test]
+    fn generated_documentation_outside_the_evidence_set_still_records_without_git() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        let artifact = Generated::text("docs/optimization/OP_MATRIX.toml", "rows = 0\n");
+
+        let findings = settle(dir.path(), "op-matrix", &[artifact], true);
+
+        assert_eq!(
+            findings,
+            Vec::new(),
+            "Fix: documentation is read beside its source and names no recorded tree."
+        );
+        assert!(dir.path().join("docs/optimization/OP_MATRIX.toml").is_file());
+    }
+
+    #[test]
+    fn recording_stamps_the_tree_and_regenerating_the_same_body_changes_nothing() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        init_repository(dir.path());
+        let body = "{\n  \"schema_version\": 1\n}\n";
+
+        let findings = settle(
+            dir.path(),
+            "metadata-matrix",
+            &[Generated::text(ARTIFACT, body)],
+            true,
+        );
+        assert_eq!(findings, Vec::new(), "Fix: a clean checkout can be recorded.");
+        let recorded = std::fs::read_to_string(dir.path().join(ARTIFACT))
+            .expect("Fix: the recorder wrote the artifact.");
+        assert!(
+            recorded.starts_with("{\n  \"source_fingerprint\": \"git:"),
+            "Fix: the tree must be named at the head of the artifact; recorded={recorded}"
+        );
+
+        commit_everything(dir.path(), "move the tree on");
+        assert_eq!(
+            settle(
+                dir.path(),
+                "metadata-matrix",
+                &[Generated::text(ARTIFACT, body)],
+                true,
+            ),
+            Vec::new(),
+            "Fix: re-recording an unchanged body must find nothing."
+        );
+
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(ARTIFACT)).expect("Fix: read the artifact."),
+            recorded,
+            "Fix: an unchanged body is the same recording and keeps the tree it was recorded from."
+        );
+    }
+
+    #[test]
+    fn a_changed_body_is_re_attributed_to_the_tree_that_produced_it() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        init_repository(dir.path());
+        assert_eq!(
+            settle(
+                dir.path(),
+                "metadata-matrix",
+                &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 1\n}\n")],
+                true,
+            ),
+            Vec::new(),
+            "Fix: a clean checkout can be recorded."
+        );
+        let first = std::fs::read_to_string(dir.path().join(ARTIFACT))
+            .expect("Fix: the recorder wrote the artifact.");
+        commit_everything(dir.path(), "move the tree on");
+
+        assert_eq!(
+            settle(
+                dir.path(),
+                "metadata-matrix",
+                &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 2\n}\n")],
+                true,
+            ),
+            Vec::new(),
+            "Fix: a changed body can be recorded."
+        );
+
+        let second = std::fs::read_to_string(dir.path().join(ARTIFACT))
+            .expect("Fix: the recorder rewrote the artifact.");
+        assert_ne!(
+            fingerprint_of(&first),
+            fingerprint_of(&second),
+            "Fix: a new body is a new recording and must name the tree it came from."
+        );
+    }
+
+    #[test]
+    fn comparing_reports_an_unattributed_artifact_and_still_compares_the_body() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/metadata"))
+            .expect("Fix: create the evidence directory.");
+        std::fs::write(dir.path().join(ARTIFACT), "{\n  \"schema_version\": 1\n}\n")
+            .expect("Fix: commit an artifact that names no tree.");
+
+        let findings = settle(
+            dir.path(),
+            "metadata-matrix",
+            &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 2\n}\n")],
+            false,
+        );
+
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.message.contains("names no source tree")),
+            "Fix: an artifact with no fingerprint must be reported; findings={findings:?}"
+        );
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.message.contains("\"schema_version\": 2")),
+            "Fix: the body must still be compared; findings={findings:?}"
+        );
+    }
+
+    #[test]
+    fn comparing_ignores_the_stamp_and_agrees_on_a_body_recorded_from_another_tree() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/metadata"))
+            .expect("Fix: create the evidence directory.");
+        let stamped = format!(
+            "{{\n  \"source_fingerprint\": \"git:{}:dirty=false\",\n  \"schema_version\": 1\n}}\n",
+            "a".repeat(40)
+        );
+        std::fs::write(dir.path().join(ARTIFACT), &stamped)
+            .expect("Fix: commit an artifact recorded from another tree.");
+
+        let findings = settle(
+            dir.path(),
+            "metadata-matrix",
+            &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 1\n}\n")],
+            false,
+        );
+
+        assert_eq!(
+            findings,
+            Vec::new(),
+            "Fix: the tree an artifact was recorded from is not a divergence from the tree reading it."
+        );
+    }
+
+    fn fingerprint_of(recorded: &str) -> String {
+        split_provenance(recorded)
+            .0
+            .expect("Fix: a recorded artifact names its tree.")
+            .to_string()
+    }
+
+    fn init_repository(dir: &Path) {
+        std::fs::write(dir.join("tracked.txt"), "original\n")
+            .expect("Fix: write the tracked file.");
+        for args in [
+            vec!["init", "--quiet"],
+            vec!["config", "user.email", "gate@example.invalid"],
+            vec!["config", "user.name", "gate"],
+        ] {
+            run_git(dir, &args);
+        }
+        commit_everything(dir, "seed");
+    }
+
+    fn commit_everything(dir: &Path, message: &str) {
+        run_git(dir, &["add", "--all", "--", "tracked.txt"]);
+        std::fs::write(dir.join("tracked.txt"), message).expect("Fix: change the tracked file.");
+        run_git(dir, &["add", "--all", "--", "tracked.txt"]);
+        run_git(dir, &["commit", "--quiet", "-m", message]);
+    }
+
+    fn run_git(dir: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .args(args)
+            .current_dir(dir)
+            .status()
+            .expect("Fix: run git to build the fixture checkout.");
+        assert!(status.success(), "Fix: git {args:?} failed in the fixture.");
+    }
 }

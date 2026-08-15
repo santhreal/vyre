@@ -110,7 +110,7 @@ pub(super) fn benchmark_artifact_is_reusable(
     else {
         return false;
     };
-    if !crate::bench::benchmark_evidence_semantics::source_fingerprint_issues(
+    if !xtask::source_provenance::issues(
         report_source_fingerprint,
     )
     .is_empty()
