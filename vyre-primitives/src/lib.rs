@@ -6,66 +6,65 @@
 // uninitialized-write. `deny` (not `forbid`) is required so that one annotated
 // exception can compile; every other `unsafe` in the crate still hard-errors.
 #![deny(unsafe_code)]
-//! `vyre-primitives`  -  compositional primitives for vyre.
+//! `vyre-primitives`: the operations that cannot be composed.
 //!
-//! Shape (mirrors Linux kernel `fs/` / `mm/` / `net/`  -  subsystem
-//! directories under one crate, feature-gated for consumers):
+//! An operation is admitted here only when it cannot be expressed as a
+//! composition, which means it requires its own arm in a backend emitter and
+//! its own arm in the reference interpreter. That is the whole rule. How many
+//! callers an operation has is not an admission criterion: something reused by
+//! twenty dialects and expressible as `fn(..) -> Program` over existing IR is a
+//! composition, and a composition belongs in `vyre-libs` no matter who calls
+//! it.
+//!
+//! Two kinds of item satisfy that rule.
+//!
+//! 1. **Marker types** (`markers`, always on, no dependencies). The unit
+//!    structs a backend emitter and the reference interpreter dispatch on. They
+//!    are the names those two arms agree about, so they cannot live in a crate
+//!    either side composes over.
+//!
+//! 2. **Hardware intrinsics** (`hardware`). Subgroup collectives, memory
+//!    fences, bit instructions, fused multiply-add, inverse square root: each
+//!    one is a target instruction with no IR spelling.
+//!
+//! The remaining domains are the substrate those two rest on: the wire format,
+//! the safe-IR guards, and the per-domain kernels a backend must see as one
+//! unit. Each domain is one directory and one feature, and a consumer enables
+//! only the domains it needs.
 //!
 //! ```text
 //! vyre-primitives/
 //!   src/
-//!     lib.rs                  # subsystem table (this file)
-//!     markers.rs              # unit-struct marker types, always on
-//!     hardware/               # feature = "hardware"  (Category C intrinsics)
-//!       mod.rs
-//!       catalog.rs
-//!       region.rs
-//!       fma_f32.rs
-//!       subgroup_add.rs
-//!     text/                   # feature = "text"
-//!       mod.rs
-//!       char_class.rs
-//!       utf8_validate.rs
-//!       line_index.rs
-//!     matching/               # feature = "matching"
-//!       mod.rs
-//!       bracket_match.rs
-//!     bitset/                 # feature = "bitset"
-//!     fixpoint/               # feature = "fixpoint"
-//!     graph/                  # feature = "graph"     (CSR + BFS + SCC + motif + toposort)
-//!     hash/                   # feature = "hash"
-//!     label/                  # feature = "label"
-//!     math/                   # feature = "math"
-//!     nn/                     # feature = "nn"
-//!     parsing/                # feature = "parsing"
-//!     predicate/              # feature = "predicate"
-//!     reduce/                 # feature = "reduce"
+//!     lib.rs              # this table
+//!     markers.rs          # marker types, always on
+//!     wire.rs             # host/device byte layout, always on
+//!     ir_safe.rs          # guarded IR construction
+//!     hardware/           # feature = "hardware"
+//!     text/               # feature = "text"
+//!     matching/           # feature = "matching"
+//!     decode/             # feature = "decode"
+//!     nfa/                # feature = "nfa"
+//!     hash/               # feature = "hash"
+//!     math/               # feature = "math"
+//!     parsing/            # feature = "parsing"
+//!     nn/                 # feature = "nn"
+//!     graph/              # feature = "graph"
+//!     geom/               # feature = "geom"
+//!     opt/                # feature = "opt"
+//!     topology/           # feature = "topology"
+//!     visual/             # feature = "visual"
+//!     bitset/             # feature = "bitset"
+//!     reduce/             # feature = "reduce"
+//!     label/              # feature = "label"
+//!     predicate/          # feature = "predicate"
+//!     fixpoint/           # feature = "fixpoint"
+//!     vfs/                # feature = "vyre-foundation"
 //! ```
 //!
-//! Three kinds of primitive live here:
-//!
-//! 1. **Marker types** (`markers`, always on, zero deps)  -  unit
-//!    structs the reference interpreter and backend emitters dispatch
-//!    on.
-//!
-//! 2. **Category C hardware intrinsics** (`hardware`, feature =
-//!    "hardware")  -  ops that require a dedicated backend emitter arm
-//!    AND a dedicated reference-interpreter arm. Nothing that composes
-//!    over existing IR is admitted.
-//!
-//! 3. **Tier 2.5 substrate** (per-domain feature flags)  -  shared
-//!    `fn(...) -> Program` primitives reused by ≥ 2 Tier-3 dialects.
-//!    Each domain is one folder + one feature flag. Tier 3 crates
-//!    depend on `vyre-primitives` and enable only the domains they
-//!    need.
-//!
-//! The path IS the interface. Subsystem `mod.rs` exposes sub-modules,
-//! not a flat namespace  -  callers write
-//! `vyre_primitives::text::char_class::char_class(...)` so the LEGO
-//! chain is visible at every call site.
-//!
-//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md` for
-//! the tier rule, admission criteria, and Gate 1 enforcement.
+//! The path is the interface. A domain `mod.rs` exposes its sub-modules rather
+//! than a flat namespace, so a call site reads
+//! `vyre_primitives::text::char_class::char_class(..)` and names the operation
+//! it reached.
 
 mod dispatch_grid;
 #[cfg(feature = "vyre-foundation")]
@@ -260,40 +259,6 @@ pub mod visual;
 /// memory fences, bit instructions, fused multiply-add, inverse square root.
 #[cfg(feature = "hardware")]
 pub mod hardware;
-
-/// Effects-typed pipeline primitives (P-1.0-V1.x).
-/// Pure-data substrate: `EffectRow` bitmask, `Handler` over a row,
-/// `handler_apply` discharges effects, `handler_compose` builds a
-/// joint handler. Reference for the foundation effects-typed
-/// `lower` pipeline (V1.3).
-#[cfg(feature = "effects")]
-pub mod effects;
-
-/// Type-discipline primitives (P-PRIM-14, …). Substructural
-/// (linear/affine/relevant/unrestricted) checks the foundation
-/// validate pipeline consumes per buffer.
-#[cfg(feature = "types")]
-pub mod types;
-
-/// Categorical primitives (P-PRIM-16/17/18). Yoneda embedding,
-/// adjoint-pair detection, Kan extension over finite categories.
-/// Consumed by the optimizer's functorial_pass_composition substrate.
-#[cfg(feature = "cat")]
-pub mod cat;
-
-/// ZX-calculus rewrite primitives (P-PRIM-5). Spider fusion,
-/// identity removal, color change. Pure-CPU on a `Vec<ZxSpider>` +
-/// edge multiset; no FP, no IR-builder dep.
-#[cfg(feature = "zx")]
-pub mod zx;
-
-/// d-DNNF (decomposable / deterministic NNF) compiler primitive
-/// (P-PRIM-6). Host-side CNF → d-DNNF via Shannon decomposition,
-/// linear-time model counting on the result. Used by
-/// `knowledge_compile_pass_precondition` to turn pass-precondition
-/// formulae into linear-cost evaluators.
-#[cfg(feature = "dnnf")]
-pub mod dnnf;
 
 /// Bitset primitives  -  `and`/`or`/`not`/`xor`/`popcount`/`any`/
 /// `contains` over packed u32 bitsets. The NodeSet / ValueSet

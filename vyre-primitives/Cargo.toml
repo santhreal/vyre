@@ -7,7 +7,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Compositional primitives for vyre  -  marker types (always on) + Tier 2.5 LEGO substrate (feature-gated per domain)."
+description = "The vyre operations that cannot be composed: marker types, hardware intrinsics, and the per-domain kernels a backend sees as one unit."
 readme = "README.md"
 keywords = ["gpu", "ir", "primitive", "vyre", "lego"]
 categories = ["algorithms", "api-bindings"]
@@ -64,26 +64,6 @@ fixpoint = ["vyre-foundation", "bitset"]
 geom = ["vyre-foundation", "math"]
 # Convex / combinatorial optimization primitives (#9, #14, #46).
 opt = ["vyre-foundation", "math"]
-# Effects-typed pipeline primitives (P-1.0-V1.x). Pure-data substrate
-# for handler-applied effect rows; no IR-builder deps.
-effects = []
-# Type-discipline primitives (P-PRIM-14, …). Substructural type
-# checks the foundation validate pipeline calls per buffer.
-# `types/shape_smt.rs` aliases `vyre_foundation::ir::ShapePredicate`
-# UNCONDITIONALLY so validation and primitive evaluation share one
-# grammar, so the domain does not compile standalone without the
-# foundation. Previously omitted, masked in-workspace by feature
-# unification; a consumer enabling ONLY `types` against the published
-# crate fails with E0433, same shape as the `matching` case above.
-types = ["vyre-foundation"]
-# Categorical primitives (P-PRIM-16/17/18). Yoneda / adjoint /
-# Kan extension over finite categories. Pure scalar + Vec ops.
-cat = []
-# ZX-calculus rewrite primitives (P-PRIM-5). Spider fusion +
-# identity removal + color change over discrete-phase diagrams.
-zx = []
-# d-DNNF compiler + GPU-shaped evaluator (P-PRIM-6).
-dnnf = ["vyre-foundation", "graph"]
 # Persistent homology + simplicial complex primitives (#15, #32).
 topology = ["vyre-foundation", "math", "graph"]
 visual = ["vyre-foundation"]
@@ -98,7 +78,7 @@ all-lego = [
     "text", "matching", "math", "nn", "hash", "parsing",
     "geom", "opt", "topology",
     "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "decode",
-    "nfa", "effects", "visual", "hardware",
+    "nfa", "visual", "hardware",
 ]
 
 # Enable canonical `OperationRegistration::primitive(...)` submissions so the

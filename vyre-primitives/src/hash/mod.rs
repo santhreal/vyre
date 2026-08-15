@@ -1,9 +1,8 @@
 //! Tier 2.5 hash primitives.
 //!
 //! The path IS the interface. Callers write
-//! `vyre_primitives::hash::fnv1a::fnv1a32(...)`  -  explicit paths;
-//! no wildcard re-exports. See `docs/lego-block-rule.md` and
-//! `docs/lego-block-rule.md`.
+//! Callers write `vyre_primitives::hash::fnv1a::fnv1a32(..)`. The path is the
+//! interface, so this module re-exports nothing by wildcard.
 
 /// FNV-1a 32-bit + 64-bit hash primitives.
 pub mod fnv1a;

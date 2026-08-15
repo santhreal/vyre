@@ -4,7 +4,9 @@
 //! need. Buffer layouts are defined by each `Program`’s `BufferDecl`
 //! (`with_count`, read/write); see each builder's module for harness fixtures.
 //!
-//! Frontend ownership is defined in `docs/ARCHITECTURE.md`.
+//! A stage is a named composition over the C frontend's IR. It owns no CLI, no
+//! filesystem access and no driver choice: the caller dispatches the Program
+//! this module returns.
 
 pub use crate::parsing::c::lex::diagnostics::{
     first_c11_lexer_diagnostic, C11LexerDiagnostic, C11LexerDiagnosticKind,

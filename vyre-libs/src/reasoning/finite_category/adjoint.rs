@@ -8,10 +8,8 @@
 //! equality on every (c, d) pair: `|Hom_D(F(c), d)| == |Hom_C(c, G(d))|`.
 //! The substrate primitive does that pointwise check.
 
-extern crate alloc;
-use alloc::vec::Vec;
-
 use super::yoneda::FiniteCategory;
+use crate::telemetry::{bump, dataflow_fixpoint_calls};
 
 /// Functor between finite categories: object map only. Hom-set
 /// preservation is implied by the Hom-cardinality tables on the
@@ -56,12 +54,13 @@ pub struct AdjointPair {
 /// On failure, `witness` holds the first counterexample pair.
 ///
 #[must_use]
-pub fn is_adjoint_pair(
+pub fn adjoint_pair(
     c_cat: &FiniteCategory,
     d_cat: &FiniteCategory,
     f: &FiniteFunctor,
     g: &FiniteFunctor,
 ) -> AdjointPair {
+    bump(&dataflow_fixpoint_calls);
     if f.object_map.len() as u32 != c_cat.n || g.object_map.len() as u32 != d_cat.n {
         return AdjointPair {
             is_adjoint: false,
@@ -95,7 +94,7 @@ mod tests {
     fn identity_is_self_adjoint_on_discrete() {
         let cat = FiniteCategory::discrete(3);
         let id = FiniteFunctor::identity(3);
-        let result = is_adjoint_pair(&cat, &cat, &id, &id);
+        let result = adjoint_pair(&cat, &cat, &id, &id);
         assert!(result.is_adjoint);
         assert!(result.witness.is_none());
     }
@@ -111,10 +110,10 @@ mod tests {
         //     |Hom_C(1, G(1))| = |Hom_C(1, 1)| = 1  ← mismatch
         let cat = FiniteCategory::discrete(2);
         let f = FiniteFunctor {
-            object_map: alloc::vec![0, 0],
+            object_map: vec![0, 0],
         };
         let g = FiniteFunctor::identity(2);
-        let result = is_adjoint_pair(&cat, &cat, &f, &g);
+        let result = adjoint_pair(&cat, &cat, &f, &g);
         assert!(!result.is_adjoint);
         assert!(result.witness.is_some());
     }
@@ -127,9 +126,9 @@ mod tests {
         let cat = FiniteCategory::discrete(2);
         let f = FiniteFunctor::identity(2);
         let g = FiniteFunctor {
-            object_map: alloc::vec![1, 0],
+            object_map: vec![1, 0],
         };
-        let result = is_adjoint_pair(&cat, &cat, &f, &g);
+        let result = adjoint_pair(&cat, &cat, &f, &g);
         assert!(!result.is_adjoint);
     }
 
@@ -139,7 +138,7 @@ mod tests {
         for n in [1u32, 2, 4, 8] {
             let cat = FiniteCategory::discrete(n);
             let id = FiniteFunctor::identity(n);
-            assert!(is_adjoint_pair(&cat, &cat, &id, &id).is_adjoint);
+            assert!(adjoint_pair(&cat, &cat, &id, &id).is_adjoint);
         }
     }
 }

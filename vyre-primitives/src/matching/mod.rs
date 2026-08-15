@@ -1,10 +1,8 @@
-//! Tier 2.5 byte/text scan primitives (DFA, substring, filters).
+//! Byte and text scan kernels: DFA, substring, filters.
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::matching::bracket_match::bracket_match(...)`  -
 //! explicit paths; no wildcard re-exports.
-//!
-//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md`.
 
 /// Anchor-DFA plan shared by software, SPIR-V, and accelerator experiments.
 pub mod anchor_dfa;
