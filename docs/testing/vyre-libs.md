@@ -24,7 +24,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 ## Feature sets
 
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
-- Available manifest features: `analysis`, `bench`, `c-parser`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
+- Available manifest features: `analysis`, `c-parser`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -387,7 +387,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `scallop_provenance_via_reference_parity` | `vyre-libs/tests/scallop_provenance_via_reference_parity.rs` | `cpu-parity`, `encoding`, `test-fixtures` | `./cargo_full test -p vyre-libs --test scallop_provenance_via_reference_parity` |
 | `test` | `scan_ac_transition_walk_single_owner` | `vyre-libs/tests/scan_ac_transition_walk_single_owner.rs` | None | `./cargo_full test -p vyre-libs --test scan_ac_transition_walk_single_owner` |
 | `test` | `scan_ac_transition_walk_single_owner` | `vyre-libs/tests/scan_ac_transition_walk_single_owner.rs` | `matching-regex` | `./cargo_full test -p vyre-libs --test scan_ac_transition_walk_single_owner` |
-| `test` | `scan_conformance_matrix` | `vyre-libs/tests/scan_conformance_matrix.rs` | None | `./cargo_full test -p vyre-libs --test scan_conformance_matrix` |
 | `test` | `scan_cpu_api_boundary` | `vyre-libs/tests/scan_cpu_api_boundary.rs` | None | `./cargo_full test -p vyre-libs --test scan_cpu_api_boundary` |
 | `test` | `scan_hit_buffer_layout_contracts` | `vyre-libs/tests/scan_hit_buffer_layout_contracts.rs` | None | `./cargo_full test -p vyre-libs --test scan_hit_buffer_layout_contracts` |
 | `test` | `scan_hit_buffer_layout_contracts` | `vyre-libs/tests/scan_hit_buffer_layout_contracts.rs` | `matching-substring` | `./cargo_full test -p vyre-libs --test scan_hit_buffer_layout_contracts` |

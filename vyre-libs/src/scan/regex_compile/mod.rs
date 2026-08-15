@@ -231,6 +231,25 @@ pub enum RegexConstruct {
     NestedRepeats,
 }
 
+impl RegexConstruct {
+    /// Every construct this enum names.
+    ///
+    /// The enum is `#[non_exhaustive]`, so a consumer outside this crate cannot
+    /// match it exhaustively and cannot discover a variant added later. This
+    /// slice is how a consumer enumerates the construct space, and
+    /// `all_lists_every_construct` below keeps it closed: it matches
+    /// exhaustively, which only this crate may do, so a new variant that is not
+    /// listed here fails to compile.
+    pub const ALL: &'static [Self] = &[
+        Self::Backreference,
+        Self::Lookaround,
+        Self::UnicodeClassesGpu,
+        Self::CaptureExtraction,
+        Self::HugeAlternation,
+        Self::NestedRepeats,
+    ];
+}
+
 /// The canonical `REGEX_UNSUPPORTED_DIAGNOSTICS.toml` code for a construct, the
 /// single source of truth for these strings.
 #[must_use]
@@ -328,4 +347,55 @@ pub fn build_scan_program_from_regex(
         epsilon_table: compiled.epsilon_table,
         plan: compiled.plan.for_input_len(input_len),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{regex_construct_diagnostic_code, RegexConstruct};
+    use std::collections::BTreeSet;
+
+    /// `RegexConstruct::ALL` is what a consumer outside this crate enumerates,
+    /// and `#[non_exhaustive]` means such a consumer cannot notice a variant the
+    /// slice omits. The match below is exhaustive, which only this crate may
+    /// write, so a new variant makes this file fail to compile until it is
+    /// listed. Anything weaker lets a construct be added with no diagnostic code
+    /// and no gate that sees it.
+    #[test]
+    fn all_lists_every_construct() {
+        for construct in RegexConstruct::ALL {
+            match construct {
+                RegexConstruct::Backreference
+                | RegexConstruct::Lookaround
+                | RegexConstruct::UnicodeClassesGpu
+                | RegexConstruct::CaptureExtraction
+                | RegexConstruct::HugeAlternation
+                | RegexConstruct::NestedRepeats => {}
+            }
+        }
+        assert_eq!(
+            RegexConstruct::ALL.len(),
+            6,
+            "Fix: a construct was added to RegexConstruct without listing it in ALL, \
+             so every consumer that enumerates the construct space silently skips it."
+        );
+    }
+
+    /// A code shared by two constructs makes a diagnostic ambiguous: the reader
+    /// of `VYRE_SCAN_...` cannot tell which construct refused the pattern.
+    #[test]
+    fn every_construct_has_a_distinct_diagnostic_code() {
+        let mut codes = BTreeSet::new();
+        for construct in RegexConstruct::ALL {
+            let code = regex_construct_diagnostic_code(*construct);
+            assert!(
+                code.starts_with("VYRE_SCAN_"),
+                "Fix: {construct:?} maps to `{code}`, which is outside the VYRE_SCAN_ namespace."
+            );
+            assert!(
+                codes.insert(code),
+                "Fix: `{code}` is the diagnostic code of two constructs, so the code no longer \
+                 names which construct refused the pattern."
+            );
+        }
+    }
 }

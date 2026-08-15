@@ -76,11 +76,14 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `graph_invariants` | `vyre-foundation/tests/graph_invariants.rs` | None | `./cargo_full test -p vyre-foundation --test graph_invariants` |
 | `test` | `inline_buffer_reference_arguments` | `vyre-foundation/tests/inline_buffer_reference_arguments.rs` | None | `./cargo_full test -p vyre-foundation --test inline_buffer_reference_arguments` |
 | `test` | `inline_callee_local_rename_in_trap_and_async` | `vyre-foundation/tests/inline_callee_local_rename_in_trap_and_async.rs` | None | `./cargo_full test -p vyre-foundation --test inline_callee_local_rename_in_trap_and_async` |
+| `test` | `inline_expands_a_call_in_every_operand_slot` | `vyre-foundation/tests/inline_expands_a_call_in_every_operand_slot.rs` | None | `./cargo_full test -p vyre-foundation --test inline_expands_a_call_in_every_operand_slot` |
+| `test` | `inline_nested_call_argument_rebinding` | `vyre-foundation/tests/inline_nested_call_argument_rebinding.rs` | None | `./cargo_full test -p vyre-foundation --test inline_nested_call_argument_rebinding` |
 | `test` | `inline_per_invocation_builtin_rejection` | `vyre-foundation/tests/inline_per_invocation_builtin_rejection.rs` | None | `./cargo_full test -p vyre-foundation --test inline_per_invocation_builtin_rejection` |
 | `test` | `ir_variant_shape_owner_closure` | `vyre-foundation/tests/ir_variant_shape_owner_closure.rs` | None | `./cargo_full test -p vyre-foundation --test ir_variant_shape_owner_closure` |
 | `test` | `linear_type_validation` | `vyre-foundation/tests/linear_type_validation.rs` | None | `./cargo_full test -p vyre-foundation --test linear_type_validation` |
 | `test` | `loop_fusion_atomic_expected_scalar_dependency` | `vyre-foundation/tests/loop_fusion_atomic_expected_scalar_dependency.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_atomic_expected_scalar_dependency` |
 | `test` | `loop_fusion_binding_collision` | `vyre-foundation/tests/loop_fusion_binding_collision.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_binding_collision` |
+| `test` | `loop_fusion_pair_after_a_refusal` | `vyre-foundation/tests/loop_fusion_pair_after_a_refusal.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_pair_after_a_refusal` |
 | `test` | `loop_fusion_scalar_dependency` | `vyre-foundation/tests/loop_fusion_scalar_dependency.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_scalar_dependency` |
 | `test` | `loop_induction_var_guards` | `vyre-foundation/tests/loop_induction_var_guards.rs` | None | `./cargo_full test -p vyre-foundation --test loop_induction_var_guards` |
 | `test` | `loop_legality_collector_closure` | `vyre-foundation/tests/loop_legality_collector_closure.rs` | None | `./cargo_full test -p vyre-foundation --test loop_legality_collector_closure` |
@@ -111,6 +114,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `optimizer_value_dependent_reference_parity` | `vyre-foundation/tests/optimizer_value_dependent_reference_parity.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_value_dependent_reference_parity` |
 | `test` | `output_set_roundtrip` | `vyre-foundation/tests/output_set_roundtrip.rs` | None | `./cargo_full test -p vyre-foundation --test output_set_roundtrip` |
 | `test` | `parallelism_subgroup_operand_reads` | `vyre-foundation/tests/parallelism_subgroup_operand_reads.rs` | None | `./cargo_full test -p vyre-foundation --test parallelism_subgroup_operand_reads` |
+| `test` | `pipeline_compiles_for_the_adapter_it_was_given` | `vyre-foundation/tests/pipeline_compiles_for_the_adapter_it_was_given.rs` | None | `./cargo_full test -p vyre-foundation --test pipeline_compiles_for_the_adapter_it_was_given` |
 | `test` | `program_builder_invariants` | `vyre-foundation/tests/program_builder_invariants.rs` | None | `./cargo_full test -p vyre-foundation --test program_builder_invariants` |
 | `test` | `program_canonical_commutative` | `vyre-foundation/tests/program_canonical_commutative.rs` | None | `./cargo_full test -p vyre-foundation --test program_canonical_commutative` |
 | `test` | `program_graph_analysis_contract` | `vyre-foundation/tests/program_graph_analysis_contract.rs` | None | `./cargo_full test -p vyre-foundation --test program_graph_analysis_contract` |

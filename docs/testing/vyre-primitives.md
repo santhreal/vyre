@@ -117,7 +117,6 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 | `test` | `dominator_tree_scale_gate` | `vyre-primitives/tests/dominator_tree_scale_gate.rs` | None | `./cargo_full test -p vyre-primitives --test dominator_tree_scale_gate` |
 | `test` | `dominator_tree_scale_gate` | `vyre-primitives/tests/dominator_tree_scale_gate.rs` | `cpu-parity`, `graph` | `./cargo_full test -p vyre-primitives --test dominator_tree_scale_gate` |
 | `test` | `dp_clip_signed_newton_parity` | `vyre-primitives/tests/dp_clip_signed_newton_parity.rs` | None | `./cargo_full test -p vyre-primitives --test dp_clip_signed_newton_parity` |
-| `test` | `feature_classification` | `vyre-primitives/tests/feature_classification.rs` | None | `./cargo_full test -p vyre-primitives --test feature_classification` |
 | `test` | `fmm_program_parity` | `vyre-primitives/tests/fmm_program_parity.rs` | None | `./cargo_full test -p vyre-primitives --test fmm_program_parity` |
 | `test` | `fnv1a64_u32_lane_parity` | `vyre-primitives/tests/fnv1a64_u32_lane_parity.rs` | None | `./cargo_full test -p vyre-primitives --test fnv1a64_u32_lane_parity` |
 | `test` | `fnv1a64_u32_lane_parity` | `vyre-primitives/tests/fnv1a64_u32_lane_parity.rs` | `hash` | `./cargo_full test -p vyre-primitives --test fnv1a64_u32_lane_parity` |

@@ -44,6 +44,7 @@ The crate lives at `vyre-pass-engine`. The `pass-engine` owner maintains its
 | `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | `cpu-parity` | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
 | `test` | `platform_doc_consumer_boundary` | `vyre-pass-engine/tests/platform_doc_consumer_boundary.rs` | None | `./cargo_full test -p vyre-pass-engine --test platform_doc_consumer_boundary` |
 | `test` | `release_evidence_path_contract` | `vyre-pass-engine/tests/release_evidence_path_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test release_evidence_path_contract` |
+| `test` | `scope_rewrite_owner_contract` | `vyre-pass-engine/tests/scope_rewrite_owner_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test scope_rewrite_owner_contract` |
 
 ## Test classes
 

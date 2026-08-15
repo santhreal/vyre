@@ -37,7 +37,6 @@ The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 | `test` | `artifact_admission_contract` | `vyre-runtime/tests/artifact_admission_contract.rs` | None | `./cargo_full test -p vyre-runtime --test artifact_admission_contract` |
 | `test` | `cache_eviction_proptest` | `vyre-runtime/tests/cache_eviction_proptest.rs` | None | `./cargo_full test -p vyre-runtime --test cache_eviction_proptest` |
 | `test` | `concurrency_invariants` | `vyre-runtime/tests/concurrency_invariants.rs` | None | `./cargo_full test -p vyre-runtime --test concurrency_invariants` |
-| `test` | `fingerprint_cross_host` | `vyre-runtime/tests/fingerprint_cross_host.rs` | None | `./cargo_full test -p vyre-runtime --test fingerprint_cross_host` |
 | `test` | `megakernel_adversarial_buffers` | `vyre-runtime/tests/megakernel_adversarial_buffers.rs` | None | `./cargo_full test -p vyre-runtime --test megakernel_adversarial_buffers` |
 | `test` | `megakernel_adversarial_metrics` | `vyre-runtime/tests/megakernel_adversarial_metrics.rs` | None | `./cargo_full test -p vyre-runtime --test megakernel_adversarial_metrics` |
 | `test` | `megakernel_adversarial_overflow` | `vyre-runtime/tests/megakernel_adversarial_overflow.rs` | None | `./cargo_full test -p vyre-runtime --test megakernel_adversarial_overflow` |
@@ -62,6 +61,7 @@ The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 | `test` | `multi_tenant_scheduler` | `vyre-runtime/tests/multi_tenant_scheduler.rs` | None | `./cargo_full test -p vyre-runtime --test multi_tenant_scheduler` |
 | `test` | `pipeline_fingerprint_surface` | `vyre-runtime/tests/pipeline_fingerprint_surface.rs` | None | `./cargo_full test -p vyre-runtime --test pipeline_fingerprint_surface` |
 | `test` | `registry_closure` | `vyre-runtime/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-runtime --test registry_closure` |
+| `test` | `replay_log` | `vyre-runtime/tests/replay_log.rs` | None | `./cargo_full test -p vyre-runtime --test replay_log` |
 | `test` | `resident_queue_contracts` | `vyre-runtime/tests/resident_queue_contracts.rs` | None | `./cargo_full test -p vyre-runtime --test resident_queue_contracts` |
 | `test` | `resource_residency` | `vyre-runtime/tests/resource_residency.rs` | None | `./cargo_full test -p vyre-runtime --test resource_residency` |
 | `test` | `routing_policy` | `vyre-runtime/tests/routing_policy.rs` | None | `./cargo_full test -p vyre-runtime --test routing_policy` |

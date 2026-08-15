@@ -3595,6 +3595,24 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `Shl`/`Shr` are now total, matching IEEE-754 division and the
   shift-count-modulo-width rule the backends lower to, instead of bailing on
   NaN, zero or a negative count.
+- The scan conformance matrix is judged against the regex compiler instead of
+  against itself. `vyre-libs/tests/scan_conformance_matrix.rs` held three
+  constant lists and asserted them against each other: it ran no engine, and
+  its `expected_output_hex` values decoded to labels like
+  `leftmost:pattern0:0:1` that no engine emits. Seven rows of
+  `SCAN_CONFORMANCE_MATRIX.toml` and five `scan_construct` proof gates cited it
+  as evidence, and the release gate accepted the citation because it only
+  checked that the file exists. The suite is gone, the invented output bytes
+  are gone, and the release conformance gate now reads the construct-to-code
+  mapping the regex compiler owns and refuses any row naming a code the
+  compiler never emits, which caught `VYRE_SCAN_UNSUPPORTED_CAPTURE_GROUPS`:
+  the real code is `VYRE_SCAN_CAPTURE_EXTRACTION_REQUIRES_VERIFIER`. A cited
+  path must also name the matrix, so a citation cannot point at source that
+  never reads the row. `RegexConstruct::ALL` is the enumerable construct list,
+  closed by an exhaustive match in its own crate, so a construct added later
+  reaches the gate instead of hiding behind `#[non_exhaustive]`. The engine
+  support map is now marked for what it is: a declaration, since nothing in
+  this workspace can run hyperscan, vectorscan, or a Metal device.
 - The pass scheduler judged a rewrite against facts taken from the wrong
   program. A pass that reported no change while rewriting the program had its
   effect, linearity, shape, and cost certificates recorded against the program

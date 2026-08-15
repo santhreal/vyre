@@ -42,7 +42,11 @@ vyre-spec.workspace = true
 # aggregate rather than a list kept by hand here: a hand-kept list is what let
 # `geom`, `opt`, `decode` and `visual` fall out of the primitives edge while
 # every generated document still agreed with the narrowed registry.
-vyre-libs = { workspace = true, features = ["full"] }
+# `matching-regex` is named on top of `full` because the release conformance
+# gate judges the scan matrix against the regex compiler's own construct->code
+# mapping, and `full` deliberately leaves the regex frontend and its
+# regex-syntax dependency out of what a library consumer gets.
+vyre-libs = { workspace = true, features = ["full", "matching-regex"] }
 vyre-primitives = { workspace = true, features = ["all-lego"] }
 inventory.workspace = true
 serde = { workspace = true, features = ["derive"] }

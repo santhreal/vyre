@@ -28,6 +28,7 @@ This crate declares no Cargo features.
 | `example` | `vyre_spec_release_surface` | `vyre-spec/examples/vyre_spec_release_surface.rs` | None | `./cargo_full test -p vyre-spec --example vyre_spec_release_surface` |
 | `lib` | `vyre_spec` | `vyre-spec/src/lib.rs` | None | `./cargo_full test -p vyre-spec` |
 | `test` | `algebraic_law_surface` | `vyre-spec/tests/algebraic_law_surface.rs` | None | `./cargo_full test -p vyre-spec --test algebraic_law_surface` |
+| `test` | `bin_op_result_class` | `vyre-spec/tests/bin_op_result_class.rs` | None | `./cargo_full test -p vyre-spec --test bin_op_result_class` |
 | `test` | `capability_id_property_contracts` | `vyre-spec/tests/capability_id_property_contracts.rs` | None | `./cargo_full test -p vyre-spec --test capability_id_property_contracts` |
 | `test` | `catalog_completeness` | `vyre-spec/tests/catalog_completeness.rs` | None | `./cargo_full test -p vyre-spec --test catalog_completeness` |
 | `test` | `category_property_contracts` | `vyre-spec/tests/category_property_contracts.rs` | None | `./cargo_full test -p vyre-spec --test category_property_contracts` |

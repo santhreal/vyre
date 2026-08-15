@@ -34,7 +34,6 @@ This crate declares no Cargo features.
 | `test` | `integration` | `vyre-macros/tests/integration.rs` | None | `./cargo_full test -p vyre-macros --test integration` |
 | `test` | `pass_matrix` | `vyre-macros/tests/pass_matrix.rs` | None | `./cargo_full test -p vyre-macros --test pass_matrix` |
 | `test` | `release_surface_contracts` | `vyre-macros/tests/release_surface_contracts.rs` | None | `./cargo_full test -p vyre-macros --test release_surface_contracts` |
-| `test` | `trybuild` | `vyre-macros/tests/trybuild.rs` | None | `./cargo_full test -p vyre-macros --test trybuild` |
 
 ## Test classes
 

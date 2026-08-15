@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vyre_driver::backend::backend_dispatches;
+use vyre_libs::scan::regex_compile::{regex_construct_diagnostic_code, RegexConstruct};
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use xtask::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
@@ -106,7 +107,6 @@ struct ScanConformanceRowEvidence {
     semantics: String,
     engine_support: BTreeMap<String, String>,
     evidence_path: String,
-    expected_output_hex: String,
     unsupported_diagnostic_code: String,
 }
 
@@ -120,6 +120,9 @@ struct ScanConformanceFinding {
 #[derive(Debug, Deserialize)]
 struct ScanConformanceMatrixToml {
     schema_version: u32,
+    /// The code a row carries when the semantics has no refusal path at all.
+    /// Declared once here so no row invents a spelling for "not applicable".
+    no_refusal_code: String,
     row: Vec<ScanConformanceRowEvidence>,
 }
 
@@ -550,7 +553,7 @@ fn read_scan_conformance_matrix(
                     semantics: "<matrix>".to_string(),
                     engine: None,
                     issue: format!(
-                        "could not parse `{SCAN_CONFORMANCE_MATRIX}`: {error}. Fix: use [[row]] entries with semantics, engine_support, evidence_path, expected_output_hex, and unsupported_diagnostic_code."
+                        "could not parse `{SCAN_CONFORMANCE_MATRIX}`: {error}. Fix: declare no_refusal_code once and use [[row]] entries with semantics, engine_support, evidence_path, and unsupported_diagnostic_code."
                     ),
                 }],
             );
@@ -558,13 +561,34 @@ fn read_scan_conformance_matrix(
     };
 
     let mut findings = Vec::new();
-    if matrix.schema_version != 1 {
+    if matrix.schema_version != 2 {
         findings.push(ScanConformanceFinding {
             semantics: "<matrix>".to_string(),
             engine: None,
             issue: format!(
-                "schema_version {} is unsupported; expected 1",
+                "schema_version {} is unsupported; expected 2",
                 matrix.schema_version
+            ),
+        });
+    }
+    let live_codes = live_scan_diagnostic_codes();
+    if !matrix.no_refusal_code.starts_with("VYRE_SCAN_") {
+        findings.push(ScanConformanceFinding {
+            semantics: "<matrix>".to_string(),
+            engine: None,
+            issue: format!(
+                "no_refusal_code `{}` is outside the VYRE_SCAN_ namespace. Fix: name the sentinel the way every other scan diagnostic is named.",
+                matrix.no_refusal_code
+            ),
+        });
+    }
+    if live_codes.contains(matrix.no_refusal_code.as_str()) {
+        findings.push(ScanConformanceFinding {
+            semantics: "<matrix>".to_string(),
+            engine: None,
+            issue: format!(
+                "no_refusal_code `{}` is also a code the regex compiler emits, so a row that means `no refusal path` cannot be told from a row that names a real refusal. Fix: give the sentinel a spelling the compiler does not use.",
+                matrix.no_refusal_code
             ),
         });
     }
@@ -595,34 +619,55 @@ fn read_scan_conformance_matrix(
                 semantics: semantics.clone(),
                 engine: None,
                 issue:
-                    "missing evidence_path. Fix: point at the conformance test source for this row."
+                    "missing evidence_path. Fix: point at the source that judges this row."
                         .to_string(),
             });
-        } else if !vyre_root.join(evidence_path).is_file() {
+        } else {
+            match read_text_bounded(&vyre_root.join(evidence_path)) {
+                Err(error) => findings.push(ScanConformanceFinding {
+                    semantics: semantics.clone(),
+                    engine: None,
+                    issue: format!(
+                        "evidence_path `{evidence_path}` cannot be read: {error}. Fix: point at committed source."
+                    ),
+                }),
+                Ok(evidence_text) => {
+                    if !evidence_text.contains(SCAN_CONFORMANCE_MATRIX) {
+                        findings.push(ScanConformanceFinding {
+                            semantics: semantics.clone(),
+                            engine: None,
+                            issue: format!(
+                                "evidence_path `{evidence_path}` never names `{SCAN_CONFORMANCE_MATRIX}`, so nothing in it reads this row. Fix: cite source that judges the matrix, not source that merely exists."
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+
+        let code = row.unsupported_diagnostic_code.trim();
+        if code.is_empty() {
             findings.push(ScanConformanceFinding {
                 semantics: semantics.clone(),
                 engine: None,
                 issue: format!(
-                    "evidence_path `{evidence_path}` does not exist. Fix: point at a committed conformance test."
+                    "unsupported_diagnostic_code is missing. Fix: name the code the regex compiler emits for this semantics, or `{}` when it has no refusal path.",
+                    matrix.no_refusal_code
                 ),
             });
-        }
-
-        let output_hex = row.expected_output_hex.trim();
-        if output_hex.is_empty() || !is_even_hex(output_hex) {
+        } else if code != matrix.no_refusal_code && !live_codes.contains(code) {
+            let known = live_codes
+                .iter()
+                .copied()
+                .collect::<Vec<_>>()
+                .join(", ");
             findings.push(ScanConformanceFinding {
                 semantics: semantics.clone(),
                 engine: None,
-                issue: "expected_output_hex must be non-empty even-length hex bytes. Fix: record exact expected output bytes."
-                    .to_string(),
-            });
-        }
-        if row.unsupported_diagnostic_code.trim().is_empty() {
-            findings.push(ScanConformanceFinding {
-                semantics: semantics.clone(),
-                engine: None,
-                issue: "unsupported_diagnostic_code is missing. Fix: record the exact diagnostic code or explicit not-applicable code."
-                    .to_string(),
+                issue: format!(
+                    "unsupported_diagnostic_code `{code}` is a code the regex compiler never emits. Fix: name one of {known}, or `{}` when the semantics has no refusal path.",
+                    matrix.no_refusal_code
+                ),
             });
         }
 
@@ -670,8 +715,15 @@ fn read_scan_conformance_matrix(
     (rows, findings)
 }
 
-fn is_even_hex(value: &str) -> bool {
-    !value.is_empty() && value.len() % 2 == 0 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+/// Every diagnostic code the regex compiler can emit, taken from the live
+/// construct list rather than restated here. `RegexConstruct::ALL` is closed by
+/// a test in its own crate, so a construct added tomorrow reaches this gate.
+fn live_scan_diagnostic_codes() -> BTreeSet<&'static str> {
+    RegexConstruct::ALL
+        .iter()
+        .copied()
+        .map(regex_construct_diagnostic_code)
+        .collect()
 }
 
 fn strip_toml_comment_lines(text: &str) -> String {
