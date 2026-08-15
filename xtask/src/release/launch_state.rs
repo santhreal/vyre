@@ -5,8 +5,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::artifact_gate::{self, Inspection};
-use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::artifact_gate::Inspection;
 use crate::release::launch_contract::{required_external_actions, GIT_PUSH_ACTION, PUBLISH_ACTION};
 use crate::release::release_train;
 use crate::release::repo_boundary;
@@ -58,34 +57,17 @@ struct ExternalAction {
     evidence: Option<&'static str>,
 }
 
-/// Holds the public launch state to the completion marker and the gate artifacts.
-pub struct LaunchStateGate;
-
-impl Gate for LaunchStateGate {
-    fn name(&self) -> &'static str {
-        "launch-state"
-    }
-
-    fn help(&self) -> &'static str {
-        "Regenerate release/evidence/final/public-launch-state.json from the launch completion \
-         marker and the four prepublish gate artifacts, and report each line the committed \
-         artifact disagrees on. Proves the recorded launch state matches the marker on disk, and \
-         that each prepublish gate left an artifact carrying no blockers. Proves nothing about \
-         whether the external actions were really performed: the marker is written by the launch \
-         script and this gate reads it, it does not contact crates.io or the git remote."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(&ctx.root),
-        ))
-    }
+crate::artifact_gate! {
+    /// Holds the public launch state to the completion marker and the gate artifacts.
+    LaunchStateGate,
+    name: "launch-state",
+    help: "Regenerate release/evidence/final/public-launch-state.json from the launch completion \
+       marker and the four prepublish gate artifacts, and report each line the committed \
+       artifact disagrees on. Proves the recorded launch state matches the marker on disk, and \
+       that each prepublish gate left an artifact carrying no blockers. Proves nothing about \
+       whether the external actions were really performed: the marker is written by the launch \
+       script and this gate reads it, it does not contact crates.io or the git remote.",
+    inspect: |ctx| inspect(&ctx.root),
 }
 
 /// What the marker and the gate artifacts say, and the artifact recording it.

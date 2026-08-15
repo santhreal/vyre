@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::artifact_gate::{self, Inspection};
-use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::artifact_gate::Inspection;
 use crate::manifest_walk::{
     self, workspace_package as load_workspace_package, PackageManifest, MAX_MANIFEST_BYTES,
 };
@@ -79,35 +78,18 @@ fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
     ]
 }
 
-/// Holds the metadata matrix to the package tables in the manifests.
-pub struct MetadataMatrixGate;
-
-impl Gate for MetadataMatrixGate {
-    fn name(&self) -> &'static str {
-        "metadata-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "Regenerate release/evidence/metadata/metadata-matrix.json from every workspace manifest \
-         and report each line the committed artifact disagrees on. Proves every publishable crate \
-         declares version, description, license, an https repository and a readme that exists and \
-         is not empty, that its version is the one the release train names, that no manifest \
-         carries a [patch.crates-io] section, and that the three required release surfaces are \
-         present. Proves nothing about whether a crate packages or publishes: that is \
-         package-readiness."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(&ctx.root),
-        ))
-    }
+crate::artifact_gate! {
+    /// Holds the metadata matrix to the package tables in the manifests.
+    MetadataMatrixGate,
+    name: "metadata-matrix",
+    help: "Regenerate release/evidence/metadata/metadata-matrix.json from every workspace manifest \
+       and report each line the committed artifact disagrees on. Proves every publishable crate \
+       declares version, description, license, an https repository and a readme that exists and \
+       is not empty, that its version is the one the release train names, that no manifest \
+       carries a [patch.crates-io] section, and that the three required release surfaces are \
+       present. Proves nothing about whether a crate packages or publishes: that is \
+       package-readiness.",
+    inspect: |ctx| inspect(&ctx.root),
 }
 
 /// What the manifests declare about metadata, and the artifact recording it.

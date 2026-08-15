@@ -4,8 +4,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::artifact_gate::{self, Inspection};
-use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::artifact_gate::Inspection;
 use crate::manifest_walk::{self, PackageManifest};
 
 /// The artifact this gate owns, relative to the workspace root.
@@ -34,35 +33,18 @@ struct PackageFeatures {
 
 const REQUIRED_RELEASE_PACKAGES: &[&str] = &["vyre", "vyre-driver-cuda", "vyre-driver-wgpu"];
 
-/// Holds the feature matrix to the feature tables in the manifests.
-pub struct FeatureMatrixGate;
-
-impl Gate for FeatureMatrixGate {
-    fn name(&self) -> &'static str {
-        "feature-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "Regenerate release/evidence/metadata/feature-matrix.json from every workspace manifest \
-         and report each line the committed artifact disagrees on. Proves every feature table \
-         parses, every feature member resolves to a local feature, an optional dependency or a \
-         dependency feature, every package that declares features declares a default policy, the \
-         three release packages exist with empty defaults, and that vyre, vyre-driver-cuda and \
-         vyre-driver-wgpu declare their release features. Proves nothing about whether any \
-         feature selection compiles: that is feature-isolation."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(&ctx.root),
-        ))
-    }
+crate::artifact_gate! {
+    /// Holds the feature matrix to the feature tables in the manifests.
+    FeatureMatrixGate,
+    name: "feature-matrix",
+    help: "Regenerate release/evidence/metadata/feature-matrix.json from every workspace manifest \
+           and report each line the committed artifact disagrees on. Proves every feature table \
+           parses, every feature member resolves to a local feature, an optional dependency or a \
+           dependency feature, every package that declares features declares a default policy, the \
+           three release packages exist with empty defaults, and that vyre, vyre-driver-cuda and \
+           vyre-driver-wgpu declare their release features. Proves nothing about whether any \
+           feature selection compiles: that is feature-isolation.",
+    inspect: |ctx| inspect(&ctx.root),
 }
 
 /// What the manifests declare about features, and the artifact recording it.

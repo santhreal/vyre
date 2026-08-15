@@ -71,6 +71,21 @@ pub fn wrap_child_region(generator: &str, parent: GeneratorRef, body: Vec<Node>)
     wrap_region(generator, body, Some(parent))
 }
 
+/// Guard nodes so that only invocation zero on axis zero runs them.
+#[must_use]
+pub fn single_invocation(body: Vec<Node>) -> Vec<Node> {
+    vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )]
+}
+
+/// The entry of a serial kernel: one anonymous region that runs on invocation zero.
+#[must_use]
+pub fn single_invocation_region(op_id: &str, body: Vec<Node>) -> Vec<Node> {
+    vec![wrap_anonymous_region(op_id, single_invocation(body))]
+}
+
 /// The program a builder returns when its inputs cannot produce a valid one.
 ///
 /// Every primitive and composition builder is infallible, so an invalid shape
@@ -284,5 +299,32 @@ mod tests {
 
         let without_output = trap_program("vyre.test.barrier", None, "unsupported scope");
         assert!(without_output.buffers().is_empty());
+    }
+
+    /// A serial kernel runs its body once, on invocation zero of axis zero.
+    #[test]
+    fn a_single_invocation_region_guards_the_body_it_was_given() {
+        let entry = single_invocation_region("vyre.test.scan", vec![Node::Return]);
+        let [Node::Region {
+            generator,
+            source_region,
+            body,
+        }] = entry.as_slice()
+        else {
+            panic!("a serial kernel entry is one anonymous region: {entry:?}");
+        };
+        assert_eq!(generator.as_str(), "vyre.test.scan");
+        assert_eq!(*source_region, None);
+        assert_eq!(body.as_slice(), single_invocation(vec![Node::Return]));
+
+        let [Node::If { cond, then, otherwise }] = body.as_slice() else {
+            panic!("the region body is one guarded branch: {body:?}");
+        };
+        assert_eq!(
+            *cond,
+            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0))
+        );
+        assert_eq!(then.as_slice(), [Node::Return]);
+        assert!(otherwise.is_empty(), "a serial guard has no else arm");
     }
 }

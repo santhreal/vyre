@@ -81,8 +81,8 @@ total_lines = 36302
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 2425
-total_lines = 66068
+duplicate_lines = 2346
+total_lines = 65985
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -101,8 +101,8 @@ total_lines = 1822
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 2351
-total_lines = 55943
+duplicate_lines = 2283
+total_lines = 54058
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -171,8 +171,8 @@ total_lines = 15554
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 294
-total_lines = 29041
+duplicate_lines = 237
+total_lines = 28982
 
 [[crate]]
 name = "vyre-pass-engine"

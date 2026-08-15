@@ -7,40 +7,22 @@
 //! process here and no gate spawns a compiler.
 
 use vyre_bench::release_matrix::{build_release_matrix, ReleaseWorkloadMatrix};
-use xtask::artifact_gate::{self, Inspection};
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::artifact_gate::Inspection;
 
 /// The artifact this gate owns, relative to the workspace root.
 const ARTIFACT: &str = "release/evidence/benchmarks/release-workload-matrix.json";
 
-/// Holds the workload matrix to the benchmark cases the registry declares.
-pub struct ReleaseWorkloadMatrixGate;
-
-impl Gate for ReleaseWorkloadMatrixGate {
-    fn name(&self) -> &'static str {
-        "release-workload-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "Rebuild release/evidence/benchmarks/release-workload-matrix.json from the benchmark case \
-         registry and the bench target manifest, and report each line the committed artifact \
-         disagrees on. Proves every required release workload family matches at least one \
-         registered case, that each family naming a CPU state-of-the-art baseline has one, and \
-         that the matrix carries no blockers. Proves nothing about any measurement: no benchmark \
-         runs here and no artifact any family names is read."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(),
-        ))
-    }
+xtask::artifact_gate! {
+    /// Holds the workload matrix to the benchmark cases the registry declares.
+    ReleaseWorkloadMatrixGate,
+    name: "release-workload-matrix",
+    help: "Rebuild release/evidence/benchmarks/release-workload-matrix.json from the benchmark case \
+       registry and the bench target manifest, and report each line the committed artifact \
+       disagrees on. Proves every required release workload family matches at least one \
+       registered case, that each family naming a CPU state-of-the-art baseline has one, and \
+       that the matrix carries no blockers. Proves nothing about any measurement: no benchmark \
+       runs here and no artifact any family names is read.",
+    inspect: |ctx| inspect(),
 }
 
 /// What the case registry declares, and the artifact recording it.
