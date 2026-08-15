@@ -19,9 +19,10 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process;
 
 use serde::Deserialize;
+
+use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 /// Shingle length in normalized lines.
 const SHINGLE: usize = 8;
@@ -79,8 +80,8 @@ fn crate_of(root: &Path, path: &Path) -> Option<String> {
 /// by one rule were once counted into their crates' totals here, so a pin
 /// recorded on a workstation described that workstation and CI measured a
 /// smaller tree, which is the direction that lets a gate pass by accident.
-fn source_files(root: &Path) -> Vec<PathBuf> {
-    let listing = process::Command::new("git")
+fn source_files(root: &Path) -> Result<Vec<PathBuf>, GateError> {
+    let listing = std::process::Command::new("git")
         .arg("-C")
         .arg(root)
         .args([
@@ -96,19 +97,19 @@ fn source_files(root: &Path) -> Vec<PathBuf> {
     let listing = match listing {
         Ok(listing) if listing.status.success() => listing.stdout,
         Ok(listing) => {
-            eprintln!(
-                "dup-scan cannot list the repository's source files: git ls-files exited {}. \
-                 Fix: run dup-scan inside a git checkout of this repository.",
-                listing.status
-            );
-            process::exit(1);
+            return Err(GateError::new(
+                format!(
+                    "cannot list the repository's source files: git ls-files exited {}",
+                    listing.status
+                ),
+                "run the gate inside a git checkout of this repository",
+            ));
         }
         Err(error) => {
-            eprintln!(
-                "dup-scan cannot list the repository's source files: {error}. \
-                 Fix: install git, or run dup-scan inside a git checkout of this repository."
-            );
-            process::exit(1);
+            return Err(GateError::new(
+                format!("cannot list the repository's source files: {error}"),
+                "install git, or run the gate inside a git checkout of this repository",
+            ));
         }
     };
     let mut files: Vec<PathBuf> = listing
@@ -118,13 +119,13 @@ fn source_files(root: &Path) -> Vec<PathBuf> {
         .filter(|path| path.is_file())
         .collect();
     files.sort();
-    files
+    Ok(files)
 }
 
 /// Measure duplicated lines per crate across the workspace.
 #[must_use]
-pub(crate) fn measure(root: &Path) -> BTreeMap<String, CrateCount> {
-    let files = source_files(root);
+pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateError> {
+    let files = source_files(root)?;
     let mut normalized: Vec<(usize, String, Vec<String>)> = Vec::new();
     for (index, path) in files.iter().enumerate() {
         let Ok(text) = fs::read_to_string(path) else {
@@ -222,9 +223,9 @@ pub(crate) struct FileReport {
 /// collapse, which is the only question a failing pin actually raises. The
 /// per-file totals here sum to the same crate figure `measure` reports.
 #[must_use]
-pub(crate) fn report(root: &Path, only: Option<&str>) -> Vec<FileReport> {
+pub(crate) fn report_for(root: &Path, only: Option<&str>) -> Result<Vec<FileReport>, GateError> {
     let mut normalized: Vec<(String, String, Vec<String>)> = Vec::new();
-    for path in source_files(root) {
+    for path in source_files(root)? {
         let Ok(text) = fs::read_to_string(&path) else {
             continue;
         };
@@ -393,17 +394,21 @@ fn insert_pin(text: &str, name: &str, count: &CrateCount) -> String {
     out
 }
 
-/// Read the pinned baseline, or exit naming the file that could not be read.
-fn read_baseline(path: &Path) -> (String, BaselineFile) {
-    let text = fs::read_to_string(path).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot read {}: {error}", path.display());
-        process::exit(1);
-    });
-    let baseline: BaselineFile = toml::from_str(&text).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot parse {}: {error}", path.display());
-        process::exit(1);
-    });
-    (text, baseline)
+/// Read the pinned baseline, naming the file that could not be read.
+fn read_baseline(path: &Path) -> Result<(String, BaselineFile), GateError> {
+    let text = fs::read_to_string(path).map_err(|error| {
+        GateError::new(
+            format!("cannot read {}: {error}", path.display()),
+            "restore the duplication baseline, or record one with `xtask dup-scan --write`",
+        )
+    })?;
+    let baseline: BaselineFile = toml::from_str(&text).map_err(|error| {
+        GateError::new(
+            format!("cannot parse {}: {error}", path.display()),
+            "repair the baseline syntax",
+        )
+    })?;
+    Ok((text, baseline))
 }
 
 /// Record every crate the baseline does not pin yet, and nothing else.
@@ -412,11 +417,14 @@ fn read_baseline(path: &Path) -> (String, BaselineFile) {
 /// some other checkout owns, and rewriting all 34 rows from one tree erased the
 /// intentional-red state those pins exist to hold. Lowering is `--lower-pin`,
 /// one crate at a time, in the diff that removed the duplication.
-fn write_baseline(root: &Path, counts: &BTreeMap<String, CrateCount>) {
+fn write_baseline(
+    root: &Path,
+    counts: &BTreeMap<String, CrateCount>,
+    report: &mut Report,
+) -> Result<(), GateError> {
     let path = baseline_path(root);
-    let (mut text, baseline) = read_baseline(&path);
+    let (mut text, baseline) = read_baseline(&path)?;
     let mut added = Vec::new();
-    let mut lowerable = Vec::new();
     for (name, count) in counts {
         if count.duplicate_lines == 0 {
             continue;
@@ -427,29 +435,25 @@ fn write_baseline(root: &Path, counts: &BTreeMap<String, CrateCount>) {
                 added.push(name.clone());
             }
             Some(pin) if count.duplicate_lines < pin.duplicate_lines => {
-                lowerable.push(format!(
-                    "{name}: {} measured against a pinned {}",
+                report.note(format!(
+                    "{name}: {} measured against a pinned {}; lower it with `dup-scan --lower-pin {name}`",
                     count.duplicate_lines, pin.duplicate_lines
                 ));
             }
             Some(_) => {}
         }
     }
-    fs::write(&path, &text).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot write {}: {error}", path.display());
-        process::exit(1);
-    });
-    if added.is_empty() {
-        println!("dup-scan: every measured crate is already pinned");
-    } else {
-        println!("dup-scan: pinned {} new crate(s):", added.len());
-        for name in &added {
-            println!("  - {name}");
-        }
+    fs::write(&path, &text).map_err(|error| {
+        GateError::new(
+            format!("cannot write {}: {error}", path.display()),
+            "make the duplication baseline writable",
+        )
+    })?;
+    report.note(format!("pinned {} newly measured crate(s)", added.len()));
+    for name in &added {
+        report.note(format!("pinned {name}"));
     }
-    for entry in &lowerable {
-        println!("  {entry}; record it with `dup-scan --lower-pin <crate>`");
-    }
+    Ok(())
 }
 
 /// Lower one crate's pin to what this tree measures.
@@ -457,131 +461,168 @@ fn write_baseline(root: &Path, counts: &BTreeMap<String, CrateCount>) {
 /// Refuses to raise: a measurement above the pin is a regression to collapse,
 /// and the one thing this file must never do is move a pin up to make a
 /// regression pass.
-fn lower_pin(root: &Path, name: &str, counts: &BTreeMap<String, CrateCount>) {
+fn lower_pin(
+    root: &Path,
+    name: &str,
+    counts: &BTreeMap<String, CrateCount>,
+    report: &mut Report,
+) -> Result<(), GateError> {
     let path = baseline_path(root);
-    let (text, baseline) = read_baseline(&path);
+    let (text, baseline) = read_baseline(&path)?;
     let Some(pin) = baseline.crates.iter().find(|pin| pin.name == name) else {
-        eprintln!("Fix: {} pins no crate named `{name}`", path.display());
-        process::exit(1);
+        return Err(GateError::new(
+            format!("{} pins no crate named `{name}`", path.display()),
+            "name a crate the baseline pins",
+        ));
     };
     let Some(count) = counts.get(name) else {
-        eprintln!("Fix: `{name}` is not a measured directory in this workspace");
-        process::exit(1);
+        return Err(GateError::new(
+            format!("`{name}` is not a measured directory in this workspace"),
+            "name a directory the scan measures",
+        ));
     };
     if count.duplicate_lines > pin.duplicate_lines {
-        eprintln!(
-            "Fix: `{name}` measures {} duplicated lines against a pinned {}. A pin never moves up; collapse the new copy.",
-            count.duplicate_lines, pin.duplicate_lines
-        );
-        process::exit(1);
+        report.find(Finding::new(
+            format!(
+                "`{name}` measures {} duplicated lines against a pinned {}",
+                count.duplicate_lines, pin.duplicate_lines
+            ),
+            "collapse the new copy; a pin never moves up",
+        ));
+        return Ok(());
     }
     if count.duplicate_lines == pin.duplicate_lines {
-        println!("dup-scan: `{name}` is already pinned at {}", pin.duplicate_lines);
-        return;
+        report.note(format!("`{name}` is already pinned at {}", pin.duplicate_lines));
+        return Ok(());
     }
     let Some(updated) = rewrite_pin(&text, name, count) else {
-        eprintln!("Fix: {} has no editable row for `{name}`", path.display());
-        process::exit(1);
+        return Err(GateError::new(
+            format!("{} has no editable row for `{name}`", path.display()),
+            "restore the row this baseline should carry for that crate",
+        ));
     };
-    fs::write(&path, updated).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot write {}: {error}", path.display());
-        process::exit(1);
-    });
-    println!(
-        "dup-scan: lowered `{name}` from {} to {}",
+    fs::write(&path, updated).map_err(|error| {
+        GateError::new(
+            format!("cannot write {}: {error}", path.display()),
+            "make the duplication baseline writable",
+        )
+    })?;
+    report.note(format!(
+        "lowered `{name}` from {} to {}",
         pin.duplicate_lines, count.duplicate_lines
-    );
+    ));
+    Ok(())
 }
 
-/// Run the duplicate scan.
-pub(crate) fn run(args: &[String]) {
-    let root = crate::checkout::checkout_root();
+/// Measures cross-file duplicate source blocks against the pinned per-crate baseline.
+pub struct DupScan;
 
-    if let Some(position) = args.iter().position(|argument| argument == "--report") {
-        let only = args
-            .get(position + 1)
-            .filter(|value| !value.starts_with("--"))
-            .map(String::as_str);
-        let reports = report(&root, only);
-        let scope = only.unwrap_or("the workspace");
-        let total: usize = reports.iter().map(|entry| entry.duplicate_lines).sum();
-        println!(
-            "dup-scan report: {total} duplicated lines across {} file(s) in {scope}",
-            reports.len()
-        );
-        for entry in reports.iter().take(40) {
-            println!(
-                "  {:>6} of {:>6} lines  {}",
-                entry.duplicate_lines, entry.total_lines, entry.path
-            );
-            for (partner, shared) in &entry.partners {
-                println!("           shares {shared} shingle(s) with {partner}");
+impl Gate for DupScan {
+    fn name(&self) -> &'static str {
+        "dup-scan"
+    }
+
+    fn help(&self) -> &'static str {
+        "Hold cross-file duplicate source blocks to the pinned per-crate baseline; --write pins a newly measured crate, --lower-pin CRATE lowers one row, --report [CRATE] lists the files"
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let root = &ctx.root;
+        let mut report = Report::clean();
+
+        if let Some(position) = ctx.args.iter().position(|argument| argument == "--report") {
+            let only = ctx
+                .args
+                .get(position + 1)
+                .filter(|value| !value.starts_with("--"))
+                .map(String::as_str);
+            let reports = report_for(root, only)?;
+            let scope = only.unwrap_or("the workspace");
+            let total: usize = reports.iter().map(|entry| entry.duplicate_lines).sum();
+            report.note(format!(
+                "{total} duplicated lines across {} file(s) in {scope}",
+                reports.len()
+            ));
+            for entry in reports.iter().take(40) {
+                report.note(format!(
+                    "{:>6} of {:>6} lines  {}",
+                    entry.duplicate_lines, entry.total_lines, entry.path
+                ));
+                for (partner, shared) in &entry.partners {
+                    report.note(format!("  shares {shared} shingle(s) with {partner}"));
+                }
+            }
+            return Ok(report);
+        }
+
+        let counts = measure(root)?;
+
+        if let Some(position) = ctx.args.iter().position(|argument| argument == "--lower-pin") {
+            let Some(name) = ctx
+                .args
+                .get(position + 1)
+                .filter(|value| !value.starts_with("--"))
+            else {
+                return Err(GateError::new(
+                    "`--lower-pin` was passed without a crate",
+                    "name the crate whose row it lowers",
+                ));
+            };
+            lower_pin(root, name, &counts, &mut report)?;
+            return Ok(report);
+        }
+
+        if ctx.write {
+            write_baseline(root, &counts, &mut report)?;
+            return Ok(report);
+        }
+
+        let path = baseline_path(root);
+        let (_, baseline) = read_baseline(&path)?;
+
+        for pin in &baseline.crates {
+            let Some(count) = counts.get(&pin.name) else {
+                report.find(Finding::in_file(
+                    "xtask/dup-baseline.toml",
+                    format!(
+                        "pins `{}`, which is not a directory in the workspace",
+                        pin.name
+                    ),
+                    "delete the row, or restore the directory it pins",
+                ));
+                continue;
+            };
+            if count.duplicate_lines > pin.duplicate_lines {
+                report.find(Finding::new(
+                    format!(
+                        "`{}` has {} duplicated lines against a pinned {}",
+                        pin.name, count.duplicate_lines, pin.duplicate_lines
+                    ),
+                    "collapse the new copy into the primitive it duplicates",
+                ));
+            } else if count.duplicate_lines < pin.duplicate_lines {
+                report.note(format!(
+                    "{}: {} duplicated lines, improved from {}; record it with `dup-scan --lower-pin {}`",
+                    pin.name, count.duplicate_lines, pin.duplicate_lines, pin.name
+                ));
             }
         }
-        return;
-    }
-
-    let counts = measure(&root);
-
-    if let Some(position) = args.iter().position(|argument| argument == "--lower-pin") {
-        let Some(name) = args
-            .get(position + 1)
-            .filter(|value| !value.starts_with("--"))
-        else {
-            eprintln!("Fix: `--lower-pin` needs the crate whose row it lowers");
-            process::exit(1);
-        };
-        lower_pin(&root, name, &counts);
-        return;
-    }
-
-    if args.iter().any(|argument| argument == "--write-baseline") {
-        write_baseline(&root, &counts);
-        return;
-    }
-
-    let path = baseline_path(&root);
-    let (_, baseline) = read_baseline(&path);
-
-    let mut failures = Vec::new();
-    for pin in &baseline.crates {
-        let Some(count) = counts.get(&pin.name) else {
-            failures.push(format!(
-                "xtask/dup-baseline.toml pins `{}`, which is not a directory in the workspace",
-                pin.name
-            ));
-            continue;
-        };
-        if count.duplicate_lines > pin.duplicate_lines {
-            failures.push(format!(
-                "`{}` has {} duplicated lines against a pinned {}; collapse the new copy",
-                pin.name, count.duplicate_lines, pin.duplicate_lines
-            ));
-        } else if count.duplicate_lines < pin.duplicate_lines {
-            println!(
-                "{}: {} duplicated lines, improved from {}; record it with `dup-scan --lower-pin {}`",
-                pin.name, count.duplicate_lines, pin.duplicate_lines, pin.name
-            );
+        for (name, count) in &counts {
+            if count.duplicate_lines > 0 && !baseline.crates.iter().any(|pin| &pin.name == name) {
+                report.find(Finding::new(
+                    format!("`{name}` has {} duplicated lines and no pin", count.duplicate_lines),
+                    "record it with `xtask dup-scan --write`",
+                ));
+            }
         }
+        let total: usize = counts.values().map(|count| count.duplicate_lines).sum();
+        report.note(format!("{total} duplicated lines across the workspace"));
+        Ok(report)
     }
-    for (name, count) in &counts {
-        if count.duplicate_lines > 0 && !baseline.crates.iter().any(|pin| &pin.name == name) {
-            failures.push(format!(
-                "`{name}` has {} duplicated lines and no pin; run `dup-scan --write-baseline` to record it",
-                count.duplicate_lines
-            ));
-        }
-    }
-
-    if !failures.is_empty() {
-        eprintln!("dup-scan: {} failure(s):", failures.len());
-        for failure in &failures {
-            eprintln!("  - {failure}");
-        }
-        process::exit(1);
-    }
-    let total: usize = counts.values().map(|count| count.duplicate_lines).sum();
-    println!("dup-scan: {total} duplicated lines, all within their pins");
 }
 
 #[cfg(test)]
@@ -592,7 +633,7 @@ mod tests {
     /// measures what the repository will carry rather than what the working
     /// directory happens to hold.
     fn init_repository(dir: &Path) {
-        let status = process::Command::new("git")
+        let status = std::process::Command::new("git")
             .args(["init", "--quiet"])
             .arg(dir)
             .status()
@@ -616,14 +657,14 @@ mod tests {
     /// within one, or every long file would report itself as duplicated.
     #[test]
     fn a_block_repeated_inside_one_file_is_not_cross_file_duplication() {
-        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-single-{}", process::id()));
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-single-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
         fs::write(dir.join("crate-a/src/lib.rs"), format!("{block}{block}")).expect("write");
 
-        let counts = measure(&dir);
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
         assert_eq!(
             counts["crate-a"].duplicate_lines, 0,
             "a repeat inside one file is not a cross-file clone"
@@ -635,7 +676,7 @@ mod tests {
     /// crate. It must be counted in both crates.
     #[test]
     fn the_same_block_in_two_crates_is_counted_in_both() {
-        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-pair-{}", process::id()));
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-pair-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
@@ -644,7 +685,7 @@ mod tests {
         fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &block).expect("write");
 
-        let counts = measure(&dir);
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
         assert_eq!(counts["crate-a"].duplicate_lines, SHINGLE);
         assert_eq!(counts["crate-b"].duplicate_lines, SHINGLE);
         let _ = fs::remove_dir_all(&dir);
@@ -654,7 +695,7 @@ mod tests {
     /// Counting it would drown the real findings.
     #[test]
     fn a_shared_run_shorter_than_the_shingle_is_not_duplication() {
-        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-short-{}", process::id()));
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-short-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
@@ -665,7 +706,7 @@ mod tests {
         fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &block).expect("write");
 
-        let counts = measure(&dir);
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
         assert_eq!(counts["crate-a"].duplicate_lines, 0);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -674,7 +715,7 @@ mod tests {
     /// so the partner path is the contract, not the count beside it.
     #[test]
     fn the_report_names_the_file_a_copy_was_made_from() {
-        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-report-{}", process::id()));
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-report-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
@@ -700,7 +741,7 @@ mod tests {
     /// other rather than each being checked alone.
     #[test]
     fn per_file_duplication_sums_to_the_crate_measure() {
-        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-agree-{}", process::id()));
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-agree-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
@@ -711,8 +752,9 @@ mod tests {
         fs::write(dir.join("crate-a/src/two.rs"), format!("{unique}{shared}")).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &shared).expect("write");
 
-        let measured = measure(&dir)["crate-a"].duplicate_lines;
-        let reported: usize = report(&dir, Some("crate-a"))
+        let measured = measure(&dir).expect("the fixture checkout is measurable")["crate-a"].duplicate_lines;
+        let reported: usize = report_for(&dir, Some("crate-a"))
+            .expect("the fixture checkout is measurable")
             .iter()
             .map(|entry| entry.duplicate_lines)
             .sum();
@@ -730,7 +772,7 @@ mod tests {
     /// ignored `.rs` files that were counted into their crates' totals.
     #[test]
     fn a_file_the_repository_ignores_is_not_measured() {
-        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-ignored-{}", process::id()));
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-ignored-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
@@ -740,7 +782,7 @@ mod tests {
         fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
         fs::write(dir.join("crate-b/tests/scratch.rs"), &block).expect("write");
 
-        let counts = measure(&dir);
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
         assert_eq!(
             counts["crate-a"].duplicate_lines, 0,
             "an ignored copy is not part of the repository, so it makes nothing duplicated"
