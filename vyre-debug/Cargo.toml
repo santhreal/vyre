@@ -34,7 +34,6 @@ vyre-primitives.workspace = true
 bincode = { workspace = true }
 
 [dev-dependencies]
-vyre-megakernel.workspace = true
 vyre-test-support.workspace = true
 assert_cmd = { workspace = true }
 predicates = { workspace = true }

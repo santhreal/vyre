@@ -1486,6 +1486,17 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   of those needs no edit. The default-feature public-API snapshots for
   `vyre-primitives` and `vyre-libs` are unaffected, since `graph` is not a
   default feature.
+- Forty declared dependencies that no source file references are gone, across
+  sixteen crates. `cargo deny`'s sibling gate, `cargo machete`, had never run
+  to completion in CI because it could not install under the workspace
+  toolchain pin, so the declarations accumulated unchallenged:
+  `vyre-driver-wgpu` alone declared ten it never used, including `tokio` twice,
+  `tree-sitter`, `tree-sitter-go`, `crc32fast`, `libm`, and dev-dependencies on
+  `vyre-emit-metal` and `vyre-emit-spirv`. The `self-substrate-adapters`
+  feature in `vyre-driver` and `vyre-runtime` pulled `dep:vyre-pass-engine`
+  without either crate naming it. Four flagged entries were kept because they
+  are used through workspace-root shared test files included by path, which a
+  crate-scoped search cannot see.
 
 ### Fixed
 

@@ -35,13 +35,11 @@ rustc-hash.workspace = true
 hashbrown.workspace = true
 smallvec.workspace = true
 blake3.workspace = true
-bytemuck.workspace = true
 inventory.workspace = true
 bumpalo.workspace = true
 imbl.workspace = true
 libm.workspace = true
 itoa.workspace = true
-ryu.workspace = true
 arrayvec.workspace = true
 
 [lints]

@@ -31,4 +31,3 @@ bincode = { workspace = true }
 
 [dev-dependencies]
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
-proptest.workspace = true
