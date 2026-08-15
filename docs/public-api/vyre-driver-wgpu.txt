@@ -347,8 +347,6 @@ pub struct vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor
 pub struct vyre_driver_wgpu::engine::multi_gpu::Partition
 pub struct vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator
 pub struct vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem
-pub struct vyre_driver_wgpu::pipeline::BindGroupCacheStats
-pub struct vyre_driver_wgpu::pipeline::DispatchItem<'a>
 pub struct vyre_driver_wgpu::pipeline::WgpuPipeline
 pub struct vyre_driver_wgpu::pipeline::persistent::DispatchItem<'a>
 pub struct vyre_driver_wgpu::runtime::AdapterCriteria
@@ -430,14 +428,6 @@ pub vyre_driver_wgpu::engine::multi_gpu::Partition::item_ids: alloc::vec::Vec<us
 pub vyre_driver_wgpu::engine::multi_gpu::Partition::total_cost: u64
 pub vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem::cost: u64
 pub vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem::id: usize
-pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::entries: usize
-pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::evictions: usize
-pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::hits: usize
-pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::misses: usize
-pub vyre_driver_wgpu::pipeline::DispatchItem::inputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
-pub vyre_driver_wgpu::pipeline::DispatchItem::outputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
-pub vyre_driver_wgpu::pipeline::DispatchItem::params: core::option::Option<&'a vyre_driver_wgpu::buffer::GpuBufferHandle>
-pub vyre_driver_wgpu::pipeline::DispatchItem::workgroups: [u32; 3]
 pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::inputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
 pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::outputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
 pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::params: core::option::Option<&'a vyre_driver_wgpu::buffer::GpuBufferHandle>

@@ -212,8 +212,6 @@ pub fn vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>::candidate
 pub fn vyre_lower::analyses::child_body_operands<'a>(kind: &vyre_lower::KernelOpKind, operands: &'a [u32]) -> impl core::iter::traits::iterator::Iterator<Item = u32> + 'a
 pub fn vyre_lower::analyses::dead_by_no_use(desc: &vyre_lower::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
 pub fn vyre_lower::analyses::import_descriptor_reaching_defs(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::ReachingDefFactSet
-pub fn vyre_lower::analyses::reaching_def_import::import_descriptor_reaching_defs(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::ReachingDefFactSet
-pub fn vyre_lower::analyses::reaching_def_import::resolve_copy_alias(id: u32, copy_aliases: &rustc_hash::FxHashMap<u32, u32>) -> u32
 pub fn vyre_lower::analyses::resolve_copy_alias(id: u32, copy_aliases: &rustc_hash::FxHashMap<u32, u32>) -> u32
 pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::enter_body(&mut self, body: &'a vyre_lower::KernelBody, op_index_offset: usize)
 pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::visit_op(&mut self, body: &'a vyre_lower::KernelBody, producers: &vyre_lower::analyses::ProducerMap<'a>, op_index: usize, op: &'a vyre_lower::KernelOp)
@@ -252,9 +250,7 @@ pub fn vyre_lower::verify_descriptor(desc: &vyre_lower::KernelDescriptor) -> cor
 pub mod vyre_lower
 pub mod vyre_lower::analyses
 pub mod vyre_lower::analyses::alias_facts
-pub mod vyre_lower::analyses::alias_import
 pub mod vyre_lower::analyses::candidate_plan
-pub mod vyre_lower::analyses::reaching_def_import
 pub mod vyre_lower::analyses::structured_walk
 pub mod vyre_lower::analyses::vec_pack
 pub mod vyre_lower::emit_adversarial_corpus
@@ -310,10 +306,7 @@ pub struct vyre_lower::analyses::ValueRangeReport
 pub struct vyre_lower::analyses::WorkgroupUniformReport
 pub struct vyre_lower::analyses::alias_facts::AliasFactSet
 pub struct vyre_lower::analyses::alias_facts::NoAliasFact
-pub struct vyre_lower::analyses::alias_import::AliasFactSet
-pub struct vyre_lower::analyses::alias_import::NoAliasFact
 pub struct vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>
-pub struct vyre_lower::analyses::reaching_def_import::ReachingDefFactSet
 pub struct vyre_lower::analyses::structured_walk::StructuredBranch<'a>
 pub struct vyre_lower::analyses::vec_pack::VecPackChain
 pub struct vyre_lower::analyses::vec_pack::VecPackReport
@@ -676,10 +669,6 @@ pub vyre_lower::analyses::alias_facts::NoAliasFact::left_binding: u32
 pub vyre_lower::analyses::alias_facts::NoAliasFact::left_index: u32
 pub vyre_lower::analyses::alias_facts::NoAliasFact::right_binding: u32
 pub vyre_lower::analyses::alias_facts::NoAliasFact::right_index: u32
-pub vyre_lower::analyses::alias_import::NoAliasFact::left_binding: u32
-pub vyre_lower::analyses::alias_import::NoAliasFact::left_index: u32
-pub vyre_lower::analyses::alias_import::NoAliasFact::right_binding: u32
-pub vyre_lower::analyses::alias_import::NoAliasFact::right_index: u32
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::candidates: alloc::vec::Vec<Candidate>
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::kernel_id: alloc::string::String
 pub vyre_lower::analyses::structured_walk::ArmDescent::Enter

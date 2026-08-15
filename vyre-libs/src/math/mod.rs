@@ -80,15 +80,9 @@ fn invalid_f32_reduction_program(
 }
 
 pub use atomic::{
-    atomic_add, atomic_and, atomic_exchange, atomic_lru_update_u32, atomic_max, atomic_min,
-    atomic_or, atomic_xor,
-};
-pub use atomic::{
     atomic_add_u32, atomic_and_u32, atomic_compare_exchange_u32, atomic_exchange_u32,
-    atomic_max_u32, atomic_min_u32, atomic_or_u32, atomic_xor_u32,
+    atomic_lru_update_u32, atomic_max_u32, atomic_min_u32, atomic_or_u32, atomic_xor_u32,
 };
-pub use bit_count_ops::lzcnt_u32::lzcnt_u32;
-pub use bit_count_ops::tzcnt_u32::tzcnt_u32;
 pub use bit_count_ops::{lzcnt_u32, tzcnt_u32};
 pub use clamp_u32::clamp_u32;
 pub use reduce_mean::reduce_mean;

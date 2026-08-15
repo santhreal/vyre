@@ -47,8 +47,9 @@ fn validate_program_for_backend_rejects_grid_override_past_backend_axis_limit() 
         let mut config = DispatchConfig::default();
         config.grid_override = Some(grid);
 
-        let err = vyre_driver::validate_program_for_backend(&backend, &program, &config)
-            .expect_err("Fix: grid_override above the backend per-dimension limit must fail.");
+        let err =
+            vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+                .expect_err("Fix: grid_override above the backend per-dimension limit must fail.");
         let msg = err.to_string();
         assert!(
             msg.contains("Fix:"),
@@ -107,7 +108,7 @@ fn validate_program_for_backend_accepts_grid_override_at_backend_axis_limit() {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([7, 7, 7]);
 
-    vyre_driver::validate_program_for_backend(&backend, &program, &config)
+    vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
         .expect("Fix: grid_override equal to the backend per-dimension limit must be valid.");
 }
 
@@ -118,7 +119,7 @@ fn validate_program_for_backend_rejects_zero_grid_override_dimension() {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 0, 1]);
 
-    let err = vyre_driver::validate_program_for_backend(&backend, &program, &config)
+    let err = vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
         .expect_err("Fix: zero grid_override dimensions must fail before backend dispatch.");
     let msg = err.to_string();
     assert!(

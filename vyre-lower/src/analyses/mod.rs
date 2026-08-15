@@ -7,7 +7,6 @@
 
 pub(crate) mod access_kind;
 pub mod alias_facts;
-pub mod alias_import;
 pub(crate) mod bank_conflict;
 /// Shared candidate-plan data structures.
 pub mod candidate_plan;
@@ -20,7 +19,6 @@ pub(crate) mod layout_aos_to_soa;
 pub(crate) mod load_counts;
 pub(crate) mod op_histogram;
 pub(crate) mod reaching_def_facts;
-pub mod reaching_def_import;
 pub(crate) mod shared_mem_promote;
 pub mod structured_walk;
 pub(crate) mod texture_promote;

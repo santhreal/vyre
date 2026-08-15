@@ -52,9 +52,6 @@ mod ops;
 /// [`reference_eval_oob_report`].
 pub use oob::OobReport;
 
-/// Count arithmetic IR ops the reference interpreter executes in a scope (roofline /
-/// complexity analysis) (a backend-agnostic dynamic operation count).
-pub use execution::op_count::count_ops;
 pub use execution::{expr, node, op_count, sequential};
 /// The interpreter's ABI: [`is_reference_input`] selects the buffers a caller must
 /// supply a `Value` for, [`is_reference_output`] selects the buffers `reference_eval`

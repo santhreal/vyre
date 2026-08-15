@@ -23,13 +23,11 @@ use vyre_foundation::execution_plan::{self, ExecutionPlan};
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::ValidationOptions;
 
-pub use crate::buffer::BindGroupCacheStats;
 use crate::buffer::{BindGroupCache, StagingBufferPool};
 use crate::pipeline::disk_cache::{
     compiled_pipeline_cache_key, create_compiled_pipeline_cache, early_pipeline_cache_key,
     load_or_compile_disk_wgsl, persist_compiled_pipeline_cache,
 };
-pub use crate::pipeline::persistent::DispatchItem;
 use crate::runtime;
 use crate::staging_reserve::reserve_backend_vec;
 use vyre_driver::allocation::reserve_hash_set_to_capacity;

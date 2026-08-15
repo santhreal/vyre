@@ -19,7 +19,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-driver"
-duplicate_paths = 1
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-driver-cuda"
@@ -39,7 +39,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_paths = 10
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -59,7 +59,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_paths = 6
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-grammar-gen"
@@ -67,15 +67,15 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-libs"
-duplicate_paths = 15
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-lints"
-duplicate_paths = 1
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-lower"
-duplicate_paths = 9
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-macros"
@@ -91,15 +91,15 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_paths = 28
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-reference"
-duplicate_paths = 6
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_paths = 4
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-safetensors"
@@ -107,4 +107,4 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-spec"
-duplicate_paths = 24
+duplicate_paths = 0

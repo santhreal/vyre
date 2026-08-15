@@ -12,7 +12,7 @@ macro_rules! define_bit_count_u32_op {
         doc = $doc:expr
     ) => {
         #[doc = $doc]
-        pub mod $module {
+        mod $module {
             use super::*;
 
             const OP_ID: &str = $op_id;
@@ -67,6 +67,7 @@ macro_rules! define_bit_count_u32_op {
                 }
             }
         }
+        pub use $module::$function;
     };
 }
 

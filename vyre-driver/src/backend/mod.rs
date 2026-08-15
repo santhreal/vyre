@@ -30,7 +30,6 @@ mod resource;
 mod typed_dispatch;
 mod vyre_backend;
 
-pub use crate::validation::validate_program_for_backend;
 pub use artifact_lifecycle::{
     ArtifactInstance, ArtifactMaterializer, BindingSet, BoundResource, Completion, Device,
     DeviceIdentity, Submission,

@@ -92,7 +92,7 @@ macro_rules! define_atomic_serial_module {
 }
 
 /// Cat-B atomic-add composition.
-pub mod atomic_add {
+mod atomic_add {
     define_atomic_serial_module!(
         atomic_add_u32,
         "vyre-libs::math::atomic::atomic_add_u32",
@@ -106,7 +106,7 @@ pub mod atomic_add {
 }
 
 /// Cat-B atomic-AND composition.
-pub mod atomic_and {
+mod atomic_and {
     define_atomic_serial_module!(
         atomic_and_u32,
         "vyre-libs::math::atomic::atomic_and_u32",
@@ -121,7 +121,7 @@ pub mod atomic_and {
 
 pub(crate) mod atomic_compare_exchange;
 /// Cat-B atomic-exchange composition.
-pub mod atomic_exchange {
+mod atomic_exchange {
     define_atomic_serial_module!(
         atomic_exchange_u32,
         "vyre-libs::math::atomic::atomic_exchange_u32",
@@ -136,7 +136,7 @@ pub mod atomic_exchange {
 
 pub(crate) mod atomic_lru_update;
 /// Cat-B atomic-max composition.
-pub mod atomic_max {
+mod atomic_max {
     define_atomic_serial_module!(
         atomic_max_u32,
         "vyre-libs::math::atomic::atomic_max_u32",
@@ -150,7 +150,7 @@ pub mod atomic_max {
 }
 
 /// Cat-B atomic-min composition.
-pub mod atomic_min {
+mod atomic_min {
     define_atomic_serial_module!(
         atomic_min_u32,
         "vyre-libs::math::atomic::atomic_min_u32",
@@ -164,7 +164,7 @@ pub mod atomic_min {
 }
 
 /// Cat-B atomic-OR composition.
-pub mod atomic_or {
+mod atomic_or {
     define_atomic_serial_module!(
         atomic_or_u32,
         "vyre-libs::math::atomic::atomic_or_u32",
@@ -178,7 +178,7 @@ pub mod atomic_or {
 }
 
 /// Cat-B atomic-XOR composition.
-pub mod atomic_xor {
+mod atomic_xor {
     define_atomic_serial_module!(
         atomic_xor_u32,
         "vyre-libs::math::atomic::atomic_xor_u32",

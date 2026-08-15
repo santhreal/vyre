@@ -431,7 +431,7 @@ pub fn vyre_driver::DeviceBuffer::backend_id(&self) -> &'static str
 pub fn vyre_driver::DeviceBuffer::byte_len(&self) -> usize
 pub fn vyre_driver::DeviceBuffer::debug_label(&self) -> core::option::Option<&str>
 pub fn vyre_driver::DeviceProfile::default() -> Self
-pub fn vyre_driver::DeviceProfile::from_backend(backend: &dyn vyre_driver::VyreBackend) -> Self
+pub fn vyre_driver::DeviceProfile::from_backend<B: vyre_driver::VyreBackend + ?core::marker::Sized>(backend: &B) -> Self
 pub fn vyre_driver::DeviceSignature::apply_to_profile(&self, profile: vyre_driver::DeviceProfile) -> vyre_driver::DeviceProfile
 pub fn vyre_driver::DeviceSignature::from_toml_str(source: &str) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_driver::DeviceSignature::matches_architecture_generation(&self, generation: u32) -> bool
@@ -813,7 +813,9 @@ pub fn vyre_driver::materialize::omitted_output(module_label: &str, output_index
 pub fn vyre_driver::materialize::override_grid(config: &mut vyre_driver::DispatchConfig, grid: core::option::Option<[u32; 3]>)
 pub fn vyre_driver::materialize::partition_bindings(bindings: &vyre_driver::BindingSet) -> vyre_driver::materialize::BoundState
 pub fn vyre_driver::materialize::project_resources(artifact: &vyre_megakernel::Artifact) -> vyre_driver::materialize::ResourceProjection
+pub fn vyre_driver::materialize::resident_buffer_names<'plan>(plan: &'plan vyre_driver::BindingPlan, program: &'plan vyre_foundation::ir_inner::model::program::definition::Program) -> impl core::iter::traits::iterator::Iterator<Item = &'plan str>
 pub fn vyre_driver::materialize::unbound_input(value: vyre_megakernel::ArtifactValueId, name: &str) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::unbound_resident_buffer(value: vyre_megakernel::ArtifactValueId, name: &str) -> vyre_driver::BackendError
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlan::from_groups(groups: alloc::vec::Vec<vyre_driver::megakernel_barrier::MegakernelBarrierGroup>) -> Self
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1089,7 +1091,6 @@ pub fn vyre_driver::update_dispatch_policy_cache_hash(hasher: &mut blake3::Hashe
 pub fn vyre_driver::validate_buffer_ownership<'a>(self_backend_id: &str, buffers: impl core::iter::traits::collect::IntoIterator<Item = &'a dyn vyre_driver::DeviceBuffer>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::SemanticOperation, vyre_driver::IntrinsicRegistrationError>
 pub fn vyre_driver::validate_program(program: &vyre_foundation::ir_inner::model::program::definition::Program, backend: &dyn vyre_driver::Backend) -> core::result::Result<(), vyre_foundation::validate::validation_error::ValidationError>
-pub fn vyre_driver::validate_program_for_backend(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validation::LaunchGeometryLimits::blocks_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
 pub fn vyre_driver::validation::LaunchGeometryLimits::resident_threads_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
 pub fn vyre_driver::validation::ProgramValidationCaps::from_backend(backend: &dyn vyre_driver::VyreBackend) -> Self

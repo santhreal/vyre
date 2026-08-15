@@ -61,17 +61,17 @@ pub const fn i4_packed_words(lane_count: u32) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 fn u32s(words: &[u32]) -> Vec<u8> {
-    crate::prelude::pack_u32_slice(words)
+    crate::wire::pack_u32_slice(words)
 }
 
 #[cfg(feature = "inventory-registry")]
 fn i32s(lanes: &[i32]) -> Vec<u8> {
-    crate::prelude::pack_i32_slice(lanes)
+    crate::wire::pack_i32_slice(lanes)
 }
 
 #[cfg(feature = "inventory-registry")]
 fn f32s(floats: &[f32]) -> Vec<u8> {
-    crate::prelude::pack_f32_slice(floats)
+    crate::wire::pack_f32_slice(floats)
 }
 
 #[cfg(feature = "inventory-registry")]

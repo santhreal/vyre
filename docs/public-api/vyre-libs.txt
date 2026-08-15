@@ -148,21 +148,14 @@ pub fn vyre_libs::graph::ast_walk_preorder(nodes: &str, out: &str, node_count: u
 pub fn vyre_libs::graph::pack_branching_fixture() -> alloc::vec::Vec<u8>
 pub fn vyre_libs::graph::pack_spine_fixture(node_count: u32) -> (alloc::vec::Vec<u8>, alloc::vec::Vec<u8>)
 pub fn vyre_libs::hash::blake3_compress(chaining_in: &str, message: &str, params: &str, chaining_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::atomic_add::atomic_add_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_add_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::atomic_and::atomic_and_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_and_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_compare_exchange_u32(expected: &str, desired: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::atomic_exchange::atomic_exchange_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_exchange_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_lru_update_u32(buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr, timestamp: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::atomic_max::atomic_max_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_max_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::atomic_min::atomic_min_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_min_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::atomic_or::atomic_or_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_or_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::atomic_xor::atomic_xor_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic_xor_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::avg_floor::avg_floor(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::broadcast::broadcast(src: &str, dst: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -208,7 +201,6 @@ pub fn vyre_libs::math::linalg::matmul_strassen_2x2(a: &str, b: &str, c: &str) -
 pub fn vyre_libs::math::linalg::matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::math::linalg::matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::lzcnt_u32(input: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::lzcnt_u32::lzcnt_u32(input: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::reduce_mean(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::reduce_variance(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::scan::scan_prefix_sum(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -216,7 +208,6 @@ pub fn vyre_libs::math::square(input: &str, output: &str, n: u32) -> vyre_founda
 pub fn vyre_libs::math::try_reduce_mean(input: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, &'static str>
 pub fn vyre_libs::math::try_reduce_variance(input: &str, output: &str, n: u32, bessel: bool) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, &'static str>
 pub fn vyre_libs::math::tzcnt_u32(input: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::tzcnt_u32::tzcnt_u32(input: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::weighted_sum::weighted_sum_fma_f32(weights: &str, values: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::math::welford_sum_of_squares(input: &str, sum_out: &str, sum_sq_out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::wrapping_neg::wrapping_neg(a: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -386,21 +377,12 @@ pub mod vyre_libs::dispatch_buffers
 pub mod vyre_libs::graph
 pub mod vyre_libs::hash
 pub mod vyre_libs::math
-pub mod vyre_libs::math::atomic_add
-pub mod vyre_libs::math::atomic_and
-pub mod vyre_libs::math::atomic_exchange
-pub mod vyre_libs::math::atomic_max
-pub mod vyre_libs::math::atomic_min
-pub mod vyre_libs::math::atomic_or
-pub mod vyre_libs::math::atomic_xor
 pub mod vyre_libs::math::avg_floor
 pub mod vyre_libs::math::broadcast
 pub mod vyre_libs::math::conv
 pub mod vyre_libs::math::fft
 pub mod vyre_libs::math::linalg
-pub mod vyre_libs::math::lzcnt_u32
 pub mod vyre_libs::math::scan
-pub mod vyre_libs::math::tzcnt_u32
 pub mod vyre_libs::math::weighted_sum
 pub mod vyre_libs::math::wrapping_neg
 pub mod vyre_libs::nn

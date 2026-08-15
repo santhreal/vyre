@@ -108,7 +108,6 @@ pub fn vyre_reference::atomics::atomic_max(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_min(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_or(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_xor(old: u32, value: u32) -> (u32, u32)
-pub fn vyre_reference::count_ops<R>(f: impl core::ops::function::FnOnce() -> R) -> (R, u64)
 pub fn vyre_reference::dialect_dispatch::dispatch_op(op_id: &str, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
 pub fn vyre_reference::dual::DualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual::DualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
