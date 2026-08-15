@@ -40,7 +40,6 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io;
-use std::path::PathBuf;
 
 const MAX_LEGO_AUDIT_SOURCE_BYTES: u64 = 2_097_152;
 const PRIMITIVE_ADMISSION_PATH: &str = "docs/optimization/PRIMITIVE_ADMISSION.toml";
@@ -1614,6 +1613,8 @@ fn lego_duplicate_subject(op: &OpInfo) -> DuplicateSubject {
 #[cfg(test)]
 mod dedup_contract_tests {
     use super::*;
+    use std::path::PathBuf;
+
     fn op(id: &str, tier: Tier, children: &[&str]) -> OpInfo {
         OpInfo {
             id: id.to_string(),

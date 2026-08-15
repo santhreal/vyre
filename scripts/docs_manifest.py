@@ -45,7 +45,6 @@ GENERATED_PROVENANCE = {
     "CRATE_GRAPH.md": ("CRATE_OWNERSHIP.toml", "../scripts/crate_ownership.py"),
     "INDEX.md": ("DOCS.toml", "../scripts/docs_manifest.py"),
     "OWNERSHIP.md": ("CRATE_OWNERSHIP.toml", "../scripts/crate_ownership.py"),
-    "RELEASE_CHECKLIST.md": ("../release/release-train.toml", "../scripts/release_docs.py"),
     "generated/OP_INVENTORY.md": ("generated/OP_SCHEMA.json", "../xtask-registry/src/docs/list_ops.rs"),
     "optimization/PASSES.md": (
         "../vyre-foundation/src/optimizer.rs",

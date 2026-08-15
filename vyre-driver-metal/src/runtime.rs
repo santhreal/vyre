@@ -1489,11 +1489,6 @@ impl MetalPendingCommand {
             wait_ns,
         })
     }
-
-    fn finish_without_readback(mut self) -> Result<(), BackendError> {
-        self.wait_and_validate()?;
-        Ok(())
-    }
 }
 
 impl Drop for MetalPendingCommand {
@@ -1690,74 +1685,6 @@ fn resolve_resident_resources_from_table<'a>(
         resource_index += 1;
     }
     Ok(resolved)
-}
-
-fn resident_output_resources(
-    binding_plan: &BindingPlan,
-    resources: &[Resource],
-) -> Result<Vec<Resource>, BackendError> {
-    let mut outputs = Vec::new();
-    outputs
-        .try_reserve(binding_plan.output_indices.len())
-        .map_err(|error| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: Metal compiled resident resource-output dispatch could not reserve {} output resource slot(s): {error}. Split the resident dispatch.",
-                binding_plan.output_indices.len()
-            ),
-        })?;
-    outputs.resize_with(binding_plan.output_indices.len(), || None);
-
-    let mut resource_index = 0usize;
-    for binding in &binding_plan.bindings {
-        if binding.role == BindingRole::Shared {
-            continue;
-        }
-        let resource = resources.get(resource_index).ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: Metal compiled resident resource-output dispatch missing resource slot {resource_index} for binding {} (`{}`).",
-                binding.binding, binding.name
-            ),
-        })?;
-        if let Some(output_index) = binding.output_index {
-            let Resource::Resident(id) = resource else {
-                return Err(BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: Metal compiled resident resource-output dispatch cannot return borrowed output binding {} (`{}`). Allocate a resident output buffer and pass Resource::Resident so the backend can skip host readback.",
-                        binding.binding, binding.name
-                    ),
-                });
-            };
-            let slot = outputs.get_mut(output_index).ok_or_else(|| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: Metal compiled resident resource-output dispatch output index {output_index} for binding {} (`{}`) is outside {} output slot(s). Rebuild BindingPlan before dispatch.",
-                    binding.binding,
-                    binding.name,
-                    binding_plan.output_indices.len()
-                ),
-            })?;
-            *slot = Some(Resource::Resident(*id));
-        }
-        resource_index += 1;
-    }
-    if resource_index != resources.len() {
-        return Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: Metal compiled resident resource-output dispatch received {} resource(s) but consumed {resource_index}. Pass one resource per public non-shared binding with no extras.",
-                resources.len()
-            ),
-        });
-    }
-    outputs
-        .into_iter()
-        .enumerate()
-        .map(|(output_index, resource)| {
-            resource.ok_or_else(|| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: Metal compiled resident resource-output dispatch did not resolve output slot {output_index}. Rebuild BindingPlan output indices before dispatch."
-                ),
-            })
-        })
-        .collect()
 }
 
 enum ResolvedMetalResource<'a> {

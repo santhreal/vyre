@@ -1,7 +1,6 @@
 //! Canonical generated operation schema built from live registrations.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 

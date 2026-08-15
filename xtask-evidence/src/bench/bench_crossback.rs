@@ -35,7 +35,7 @@ const BANNER: &str = "# cross-backend comparison\n\n\
 const COLUMNS: &str = "| program | wgpu | spirv | secondary_text | native_module | cpu-ref |\n\
     |---------|------|-------|----------------|---------------|---------|\n";
 
-pub struct BenchCrossbackGate;
+pub(crate) struct BenchCrossbackGate;
 
 impl Gate for BenchCrossbackGate {
     fn name(&self) -> &'static str {

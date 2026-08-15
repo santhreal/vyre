@@ -59,6 +59,24 @@ pub mod optimizer {
         Megakernel,
     }
 
+    /// Device facts a pass may compile against, mirroring the real record's
+    /// shape only as far as the macro's generated code touches it.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct AdapterCaps {
+        pub backend: &'static str,
+        pub max_workgroup_size: [u32; 3],
+    }
+
+    impl AdapterCaps {
+        #[must_use]
+        pub const fn conservative() -> Self {
+            Self {
+                backend: "conservative",
+                max_workgroup_size: [256, 1, 1],
+            }
+        }
+    }
+
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub struct PassAnalysis {
         pub should_run: bool,
@@ -91,6 +109,17 @@ pub mod optimizer {
         fn metadata(&self) -> PassMetadata;
         fn analyze(&self, program: &Program) -> PassAnalysis;
         fn transform(&self, program: Program) -> PassResult;
+
+        /// Mirrors the real trait: the default discards the adapter, so a pass
+        /// that does not override this compiles to the same program everywhere.
+        /// The stub has to carry it because the macro emits an override for a
+        /// pass declared adapter_dependent, and a stub trait without the member
+        /// makes every such expansion an E0407 that names the trait rather than
+        /// the generated code.
+        fn transform_for_adapter(&self, program: Program, caps: &AdapterCaps) -> PassResult {
+            let _ = caps;
+            self.transform(program)
+        }
         fn fingerprint(&self, program: &Program) -> u64;
     }
 

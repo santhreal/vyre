@@ -7,7 +7,7 @@
 
 use crate::*;
 
-use vyre_driver::{DispatchConfig, VyreBackend as _};
+use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]

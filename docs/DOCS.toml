@@ -18,10 +18,6 @@ id = "docs-governance"
 authority = "DOCS.toml"
 
 [[owner]]
-id = "foundation"
-authority = "../vyre-foundation/src/lib.rs"
-
-[[owner]]
 id = "historical"
 authority = "DOCS.toml"
 
@@ -46,12 +42,46 @@ id = "runtime"
 authority = "../vyre-runtime/src/lib.rs"
 
 [[owner]]
-id = "safetensors-adapter"
-authority = "../vyre-safetensors/src/lib.rs"
-
-[[owner]]
 id = "testing"
 authority = "testing/TESTING.toml"
+
+[[page]]
+path = "ARCHITECTURE.md"
+title = "Vyre architecture"
+status = "current"
+audience = "extension"
+owner = "architecture"
+kind = "ownership"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+nav = true
+
+[[page]]
+path = "CLI.md"
+title = "Command-line interfaces"
+status = "generated"
+audience = "user"
+owner = "public-facade"
+kind = "guide"
+section = "User workflows"
+authority = "CLI.toml"
+generation = "generated"
+generator = "../scripts/cli_docs.py"
+nav = true
+
+[[page]]
+path = "CRATE_GRAPH.md"
+title = "Vyre Crate Graph"
+status = "generated"
+audience = "extension"
+owner = "architecture"
+kind = "ownership"
+section = "Architecture and ownership"
+authority = "CRATE_OWNERSHIP.toml"
+generation = "generated"
+generator = "../scripts/crate_ownership.py"
+nav = true
 
 [[page]]
 path = "INDEX.md"
@@ -67,13 +97,469 @@ generator = "../scripts/docs_manifest.py"
 nav = true
 
 [[page]]
-path = "ARCHITECTURE.md"
-title = "Vyre architecture"
-status = "current"
+path = "OWNERSHIP.md"
+title = "Vyre Crate Ownership"
+status = "generated"
 audience = "extension"
 owner = "architecture"
 kind = "ownership"
 section = "Architecture and ownership"
-authority = "self"
-generation = "manual"
+authority = "CRATE_OWNERSHIP.toml"
+generation = "generated"
+generator = "../scripts/crate_ownership.py"
+nav = true
+
+[[page]]
+path = "testing/structure-gate.md"
+title = "Testing `structure-gate`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-aot.md"
+title = "Testing `vyre-aot`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-bench.md"
+title = "Testing `vyre-bench`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-conform-spec.md"
+title = "Testing `vyre-conform-spec`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-conform.md"
+title = "Testing `vyre-conform`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-debug.md"
+title = "Testing `vyre-debug`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-driver-cuda.md"
+title = "Testing `vyre-driver-cuda`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-driver-metal.md"
+title = "Testing `vyre-driver-metal`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-driver-reference.md"
+title = "Testing `vyre-driver-reference`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-driver-spirv.md"
+title = "Testing `vyre-driver-spirv`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-driver-wgpu.md"
+title = "Testing `vyre-driver-wgpu`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-driver.md"
+title = "Testing `vyre-driver`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-emit-metal.md"
+title = "Testing `vyre-emit-metal`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-emit-naga.md"
+title = "Testing `vyre-emit-naga`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-emit-ptx.md"
+title = "Testing `vyre-emit-ptx`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-emit-spirv.md"
+title = "Testing `vyre-emit-spirv`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-foundation.md"
+title = "Testing `vyre-foundation`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-grammar-gen.md"
+title = "Testing `vyre-grammar-gen`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs.md"
+title = "Testing `vyre-libs`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-lints.md"
+title = "Testing `vyre-lints`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-lower.md"
+title = "Testing `vyre-lower`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-macros.md"
+title = "Testing `vyre-macros`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-megakernel.md"
+title = "Testing `vyre-megakernel`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-pass-engine.md"
+title = "Testing `vyre-pass-engine`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-primitives.md"
+title = "Testing `vyre-primitives`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-reference.md"
+title = "Testing `vyre-reference`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-registry-link.md"
+title = "Testing `vyre-registry-link`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-runtime.md"
+title = "Testing `vyre-runtime`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-safetensors.md"
+title = "Testing `vyre-safetensors`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-spec.md"
+title = "Testing `vyre-spec`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre-test-support.md"
+title = "Testing `vyre-test-support`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/vyre.md"
+title = "Testing `vyre`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/xtask-evidence.md"
+title = "Testing `xtask-evidence`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/xtask-registry.md"
+title = "Testing `xtask-registry`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/xtask.md"
+title = "Testing `xtask`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
 nav = true

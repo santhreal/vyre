@@ -22,6 +22,7 @@ pub static GATES: &[&dyn xtask::gate::Gate] = &[
     &bench::release_benchmarks::ReleaseBenchmarksGate,
     &release::release_evidence::ReleaseEvidenceGate,
     &release::release_workload_matrix::ReleaseWorkloadMatrixGate,
+    &release::vyre_release_gate::VyreReleaseGate,
 ];
 
 #[cfg(test)]

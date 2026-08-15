@@ -324,17 +324,15 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
                         (inner_shift.as_ref(), right.as_ref())
                     {
                         let total = a.saturating_add(*b);
-                        // Fusing past the width is only sound for a shift
-                        // that discards every bit. `Shl` does, and so does
-                        // `Shr` on an unsigned operand, but `Shr` on a signed
-                        // one replicates the sign bit, so `(x >> 20) >> 20`
-                        // is -1 for every negative x, not 0. The operand type
-                        // is not knowable here (a `Var` carries none), and
-                        // folding to a `u32` literal would also retype a
-                        // signed expression, so an over-width total declines
-                        // the fusion and leaves the two shifts standing.
+                        // Both operands of a shift are `u32`: V094 rejects any
+                        // other type, so there is no signed operand here whose
+                        // sign bit could be replicated. Every bit is discarded
+                        // once the total reaches the width, and the fused shift
+                        // cannot be emitted because the target text masks the
+                        // count with `& 31`, which would turn `x << 32` back
+                        // into `x`.
                         if total > 31 {
-                            return None;
+                            return Some(Expr::u32(0));
                         }
                         return Some(Expr::BinOp {
                             op: *op,

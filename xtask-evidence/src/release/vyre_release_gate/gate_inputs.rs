@@ -5,10 +5,20 @@ use serde::Deserialize;
 
 pub(super) const MAX_RELEASE_GATE_TEXT_BYTES: u64 = 16_777_216;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Which release question the gate answers.
+///
+/// `Prepublish` is the default because it is the only mode that judges the tree
+/// in front of it: it asks whether this checkout is ready to publish, and a
+/// clean tree can answer yes. `LaunchComplete` asks whether the release has
+/// already been published, verified and pushed, which no pre-release tree can
+/// satisfy. Running it by default made the gate red by construction and kept it
+/// red forever, so it is now reached only through `--launch-complete`, from the
+/// one caller that runs after the publish.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(super) enum GateMode {
-    Final,
+    #[default]
     Prepublish,
+    LaunchComplete,
 }
 
 #[derive(Debug, Deserialize)]
