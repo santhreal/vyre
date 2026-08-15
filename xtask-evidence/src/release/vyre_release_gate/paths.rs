@@ -1,5 +1,5 @@
 use std::io;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use super::gate_inputs::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
 
@@ -68,24 +68,7 @@ pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
 /// one segment. Anything absolute, or with more `..` than it has earned, names
 /// a file no clone of this repository is guaranteed to have.
 pub(super) fn escapes_repository(evidence: &str) -> bool {
-    let candidate = Path::new(evidence);
-    if candidate.is_absolute() {
-        return true;
-    }
-    let mut depth = 1i32;
-    for component in candidate.components() {
-        match component {
-            Component::ParentDir => {
-                depth -= 1;
-                if depth < 0 {
-                    return true;
-                }
-            }
-            Component::Normal(_) => depth += 1,
-            _ => {}
-        }
-    }
-    false
+    xtask::output_arg::escapes_root(Path::new(evidence), 1)
 }
 
 #[cfg(test)]

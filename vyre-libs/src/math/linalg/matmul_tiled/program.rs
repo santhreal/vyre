@@ -235,9 +235,11 @@ mod tests {
     }
 
     #[test]
-    fn supported_ptx_mma_capabilities_emit_mma_body() {
-        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord::ptx_sm80()))
-            .expect("Fix: PTX F16 M16N8K16 tiled matmul spec must build.");
+    fn descriptor_mma_capabilities_emit_mma_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(
+            MmaCapabilityRecord::all_descriptor_mma_shapes(),
+        ))
+        .expect("Fix: an F16 M16N8K16 tiled matmul spec must build.");
         let debug = format!("{:?}", program.entry());
 
         assert!(debug.contains("mma_c0"));
@@ -245,14 +247,30 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_mma_backend_capabilities_emit_cooperative_body() {
-        for capabilities in [MmaCapabilityRecord::metal(), MmaCapabilityRecord::wgpu()] {
-            let program = build_matmul_tiled_program(f16_mma_spec(capabilities))
-                .expect("Fix: unsupported MMA backends must fall back to cooperative matmul.");
-            let debug = format!("{:?}", program.entry());
+    fn a_target_without_descriptor_mma_emits_the_cooperative_body() {
+        let program =
+            build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord::no_descriptor_mma()))
+                .expect("Fix: a target without descriptor MMA must fall back to cooperative.");
+        let debug = format!("{:?}", program.entry());
 
-            assert!(!debug.contains("mma_c0"));
-            assert_ne!(program.workgroup_size(), [32, 1, 1]);
-        }
+        assert!(!debug.contains("mma_c0"));
+        assert_ne!(program.workgroup_size(), [32, 1, 1]);
+    }
+
+    /// A target that lowers descriptor MMA but not this precision takes the
+    /// cooperative body too. The gate is per shape, not per target.
+    #[test]
+    fn descriptor_mma_without_f16_support_emits_the_cooperative_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord {
+            descriptor_mma: true,
+            f16_m16n8k16: false,
+            bf16_m16n8k16: true,
+            tf32_m16n8k4: true,
+        }))
+        .expect("Fix: a per-precision MMA gap must fall back, not fail the build.");
+        let debug = format!("{:?}", program.entry());
+
+        assert!(!debug.contains("mma_c0"));
+        assert_ne!(program.workgroup_size(), [32, 1, 1]);
     }
 }

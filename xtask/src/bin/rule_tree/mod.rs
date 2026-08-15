@@ -24,7 +24,7 @@
 //! target could compile, which is exactly what
 //! `scripts/check_every_source_file_is_reachable.sh` now rejects.
 
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 /// The four case classes every launch rule owes truth data for.
 pub(crate) const TRUTH_DIRS: [&str; 4] = ["positives", "negatives", "evasions", "cross_file"];
@@ -70,21 +70,7 @@ pub(crate) fn escapes_repository(path: &Path) -> bool {
         Err(_) if path.is_absolute() => return true,
         Err(_) => path,
     };
-    let mut depth = 0i32;
-    for component in relative.components() {
-        match component {
-            Component::ParentDir => {
-                depth -= 1;
-                if depth < 0 {
-                    return true;
-                }
-            }
-            Component::Normal(_) => depth += 1,
-            Component::RootDir | Component::Prefix(_) => return true,
-            Component::CurDir => {}
-        }
-    }
-    false
+    xtask::output_arg::escapes_root(relative, 0)
 }
 
 /// Exit rather than touch a path outside the repository.

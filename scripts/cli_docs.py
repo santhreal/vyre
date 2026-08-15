@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Generate and execute the workspace command-line documentation contract."""
+"""Execute the command-line contract of every Cargo binary and generate the CLI section of the crate READMEs."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -19,7 +18,6 @@ from cargo_runner import cargo_runner  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs/CLI.toml"
-OUTPUT_PATH = ROOT / "docs/CLI.md"
 BEGIN = "<!-- BEGIN GENERATED CLI CONTRACT -->"
 END = "<!-- END GENERATED CLI CONTRACT -->"
 MAX_HELP_BYTES = 1_048_576
@@ -88,12 +86,9 @@ def inventory_bins(metadata: dict) -> set[tuple[str, str]]:
 
 def build_bins() -> None:
     runner = cargo_runner(ROOT)
-    environment = os.environ.copy()
-    environment.setdefault("CARGO_BUILD_JOBS", "1")
     result = subprocess.run(
         [runner, "build", "--workspace", "--bins"],
         cwd=ROOT,
-        env=environment,
         check=False,
     )
     if result.returncode != 0:
@@ -166,68 +161,6 @@ def validate_xtask_dispatch(commands: list[str]) -> None:
         stale = sorted(documented - dispatch)
         fail(f"xtask help/dispatch mismatch: missing={missing}, stale={stale}")
 
-
-def markdown_code(text: str) -> str:
-    return "```text\n" + text.rstrip() + "\n```"
-
-
-def render_docs(entries: list[dict[str, str]], helps: dict, commands: dict) -> str:
-    lines = [
-        "# Command-line interfaces",
-        "",
-        "Applies to Vyre 0.7.2.",
-        "",
-        "This document is generated from `docs/CLI.toml` and the executable `--help`",
-        "output of every Cargo binary. Run `python3 scripts/cli_docs.py --check` to",
-        "rebuild every binary, execute every help route, and reject drift.",
-        "",
-        "| Package | Binary | Audience | Commands | README |",
-        "| --- | --- | --- | --- | --- |",
-    ]
-    for entry in entries:
-        key = (entry["package"], entry["name"])
-        command_text = ", ".join(f"`{value}`" for value in commands[key]) or "none"
-        lines.append(
-            f"| `{entry['package']}` | `{entry['name']}` | {entry['audience']} | "
-            f"{command_text} | [`{entry['readme']}`](../{entry['readme']}) |"
-        )
-    for entry in entries:
-        key = (entry["package"], entry["name"])
-        lines.extend(
-            [
-                "",
-                f"## `{entry['name']}`",
-                "",
-                f"Package: `{entry['package']}`. Audience: {entry['audience']}.",
-                "",
-                f"Hardware: {entry['hardware']}",
-                "",
-                f"Environment: {entry['environment']}",
-                "",
-                f"Configuration: {entry['config']}",
-                "",
-                f"Failure behavior: {entry['failure']}",
-                "",
-                f"Exit codes: {entry['exit_codes']}",
-                "",
-                "### Top-level help",
-                "",
-                markdown_code(helps[(key, ())]),
-            ]
-        )
-        for command in commands[key]:
-            subhelp = helps.get((key, (command,)))
-            if subhelp is not None:
-                lines.extend(
-                    [
-                        "",
-                        f"### `{command}` help",
-                        "",
-                        markdown_code(subhelp),
-                    ]
-                )
-    lines.append("")
-    return "\n".join(lines)
 
 
 def render_readme_block(entries: list[dict[str, str]], commands: dict) -> str:
@@ -317,21 +250,19 @@ def main() -> int:
             fail(f"CLI binary inventory mismatch: missing={sorted(actual-declared)}, stale={sorted(declared-actual)}")
         build_bins()
         target = Path(metadata["target_directory"]) / "debug"
-        helps: dict = {}
         commands: dict = {}
         for entry in entries:
             key = (entry["package"], entry["name"])
             executable = target / entry["name"]
             top = run_help(executable, ["--help"])
-            helps[(key, ())] = top
             discovered = commands_from_help(entry["name"], top)
             commands[key] = discovered
             if entry["name"] == "xtask":
                 validate_xtask_dispatch(discovered)
             if entry["audience"] == "public":
                 for command in discovered:
-                    helps[(key, (command,))] = run_help(executable, [command, "--help"])
-        outputs = {OUTPUT_PATH: render_docs(entries, helps, commands)}
+                    run_help(executable, [command, "--help"])
+        outputs: dict[Path, str] = {}
         grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
         for entry in entries:
             grouped[entry["readme"]].append(entry)

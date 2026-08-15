@@ -241,8 +241,10 @@ fn mla_scratch_bytes_scale_linearly_with_head_dim() {
 /// refuses to lower it without a positive `ulp_budget`. The refusal must
 /// stay a NAMED compile-time error that says what to set, because that is
 /// the whole difference between a documented ceiling and a silent wrong
-/// answer. If this starts passing, `Exp` gained a strict lowering and the
-/// ceiling note in docs/optimization/README.md is stale.
+/// answer. This test is the ceiling's only owner: `Exp` has no strict CUDA
+/// lowering, so MLA decode needs an explicit `ulp_budget` and there is no
+/// configuration in which the default refuses for a different reason. If this
+/// starts passing, `Exp` gained a strict lowering and the ceiling is gone.
 #[test]
 fn mla_decode_default_config_refuses_by_name_on_cuda() {
     let (program, inputs) = case(32);

@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use quote::ToTokens;
 use serde::{Deserialize, Serialize};
 use syn::visit::Visit;
-use walkdir::WalkDir;
+
+use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
 #[derive(Debug, Serialize)]
 struct HygieneMatrix {
@@ -1145,9 +1146,8 @@ fn scan_threshold_constants(vyre_root: &Path) -> Vec<ObservedThresholdConst> {
         if !root.exists() {
             continue;
         }
-        for entry in WalkDir::new(&root).into_iter().filter_entry(|entry| {
-            let name = entry.file_name().to_string_lossy();
-            !matches!(name.as_ref(), "target" | "target-codex" | "tests" | ".git")
+        for entry in tree_walk::pruned_by(&root, |name| {
+            !BUILD_OUTPUT_AND_VCS.contains(&name) && name != "tests"
         }) {
             let Ok(entry) = entry else {
                 continue;
@@ -1310,12 +1310,10 @@ fn write_json(path: &Path, value: &impl Serialize) {
 }
 
 fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        !matches!(
-            name.as_ref(),
-            "target" | "target-codex" | "target_tests" | ".git" | ".cargo-target" | "release"
-        ) && !is_xtask_tree_directory(&name)
+    for entry in tree_walk::pruned_by(root, |name| {
+        !BUILD_OUTPUT_AND_VCS.contains(&name)
+            && name != "release"
+            && !is_xtask_tree_directory(name)
     }) {
         let entry = match entry {
             Ok(entry) => entry,
@@ -1351,12 +1349,8 @@ fn scan_source_inspection_test_files(
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        !matches!(
-            name.as_ref(),
-            "target" | "target-codex" | "target_tests" | ".git" | ".cargo-target" | "release"
-        )
+    for entry in tree_walk::pruned_by(root, |name| {
+        !BUILD_OUTPUT_AND_VCS.contains(&name) && name != "release"
     }) {
         let entry = match entry {
             Ok(entry) => entry,
@@ -1500,13 +1494,7 @@ fn scan_release_tooling(
         if !tooling_root.exists() {
             continue;
         }
-        for entry in WalkDir::new(&tooling_root)
-            .into_iter()
-            .filter_entry(|entry| {
-                let name = entry.file_name().to_string_lossy();
-                !matches!(name.as_ref(), "target" | ".git")
-            })
-        {
+        for entry in tree_walk::pruned(&tooling_root, BUILD_OUTPUT_AND_VCS) {
             let entry = match entry {
                 Ok(entry) => entry,
                 Err(error) => {
@@ -1577,10 +1565,7 @@ fn scan_release_workflows(
     if !workflows.exists() {
         return;
     }
-    for entry in WalkDir::new(&workflows).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        !matches!(name.as_ref(), "target" | ".git")
-    }) {
+    for entry in tree_walk::pruned(&workflows, BUILD_OUTPUT_AND_VCS) {
         let entry = match entry {
             Ok(entry) => entry,
             Err(error) => {

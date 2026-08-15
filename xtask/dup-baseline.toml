@@ -22,14 +22,12 @@
 # and `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes` owns the
 # double-buffered workgroup scan sweep.
 #
-# Eleven of vyre-primitives' lines are deliberate and cannot be collapsed.
-# `vyre_primitives::types::linear_check::LinearDiscipline` and
-# `vyre_foundation::ir::LinearType` declare the same four substructural
-# disciplines and the same `forbids_drop` / `forbids_reuse` predicates. The
-# primitive layer builds with no IR dependency at all, since the
-# `vyre-foundation` edge is optional and absent under `--no-default-features`,
-# and a foundation-layer crate cannot import from the primitives layer, so
-# neither direction has a legal owner. The pair is pinned, not fixed.
+# The eleven vyre-primitives lines that were pinned as deliberate are gone.
+# `vyre_primitives::types::linear_check::LinearDiscipline` restated
+# `vyre_foundation::ir::LinearType`, including `forbids_drop` and
+# `forbids_reuse`, and the pair was recorded here as unownable because the
+# primitive layer builds with no IR dependency. It had no callers, so the copy
+# was deleted rather than pinned, and `vyre_foundation::ir` is the one owner.
 
 [[crate]]
 name = "conform"
@@ -53,8 +51,8 @@ total_lines = 1955
 
 [[crate]]
 name = "tests"
-duplicate_lines = 8
-total_lines = 3185
+duplicate_lines = 0
+total_lines = 5031
 
 [[crate]]
 name = "vyre"
@@ -78,18 +76,18 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 810
-total_lines = 36317
+duplicate_lines = 625
+total_lines = 36302
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 2443
-total_lines = 66070
+duplicate_lines = 2425
+total_lines = 66068
 
 [[crate]]
 name = "vyre-driver-metal"
-duplicate_lines = 162
-total_lines = 4697
+duplicate_lines = 73
+total_lines = 4545
 
 [[crate]]
 name = "vyre-driver-reference"
@@ -98,8 +96,8 @@ total_lines = 655
 
 [[crate]]
 name = "vyre-driver-spirv"
-duplicate_lines = 96
-total_lines = 1900
+duplicate_lines = 59
+total_lines = 1822
 
 [[crate]]
 name = "vyre-driver-wgpu"
@@ -128,8 +126,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2818
-total_lines = 95004
+duplicate_lines = 2814
+total_lines = 95155
 
 [[crate]]
 name = "vyre-grammar-gen"
@@ -138,8 +136,8 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 9450
-total_lines = 186303
+duplicate_lines = 9430
+total_lines = 186780
 
 [[crate]]
 name = "vyre-lints"
@@ -163,8 +161,8 @@ total_lines = 3605
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 5332
-total_lines = 102185
+duplicate_lines = 5314
+total_lines = 100403
 
 [[crate]]
 name = "vyre-reference"
@@ -193,13 +191,13 @@ total_lines = 9706
 
 [[crate]]
 name = "xtask"
-duplicate_lines = 102
-total_lines = 17349
+duplicate_lines = 42
+total_lines = 18761
 
 [[crate]]
 name = "xtask-evidence"
-duplicate_lines = 91
-total_lines = 25387
+duplicate_lines = 75
+total_lines = 25578
 
 [[crate]]
 name = "xtask-registry"
