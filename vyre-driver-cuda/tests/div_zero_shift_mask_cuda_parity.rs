@@ -17,13 +17,12 @@
 //! miscompile punished. These tests dispatch all three with oversized amounts and
 //! literal-pinned zero-divisor sentinels, byte-for-byte against the oracle.
 //!
-//! The operands, the oracle's pinned answer for them, and the coverage gate are
-//! `vyre_test_support::binop_parity`, shared with the wgpu twin. The reference
-//! arms below are NOT shared: they recompute the total contract independently for
-//! the PTX arm, and comparing them against the pin is what catches a drifting
-//! reference before the device comparison runs. What is shared is which ops
-//! exist, so an op added to the table turns this suite red until it has a
-//! reference here.
+//! The operands, the oracle's pinned answer for them, the Rust restatement of the
+//! total contract and the coverage gate are `vyre_test_support::binop_parity`,
+//! shared with the wgpu twin so both backends prove the same boundary against the
+//! same restatement. What is NOT shared is this file: the PTX lowering, the live
+//! dispatch, and the note below saying what PTX specifically gets wrong when a
+//! row fails.
 //!
 //! (Signed `i32 / 0` and `i32::MIN / -1` are rejected upstream as undefined, so
 //! they are not emittable and not tested here; only the unsigned total cases.)
@@ -35,23 +34,14 @@ use vyre_driver::parity_harness::u32_binop_parity;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_test_support::binop_parity::{
-    assert_covers_every_total_op, total_u32_case, TotalU32Case, TOTAL_U32_CASES,
+    assert_covers_every_total_op, total_u32_reference_ops, total_u32_reference_values, TotalU32Case,
+    TOTAL_U32_CASES,
 };
 
-/// This arm's independent answer for each total op in the shared table.
+/// Why a divergence here is a PTX miscompile and not a hardware liberty.
 ///
-/// Written here, never read from the row, because the row also builds the IR the
-/// dispatch runs: a reference taken from it would compare the lowering against
-/// itself. Each entry restates the total contract in Rust.
-const REFERENCES: &[(&str, fn(u32, u32) -> u32)] = &[
-    ("div", |a, b| if b == 0 { u32::MAX } else { a / b }),
-    ("rem", |a, b| if b == 0 { 0 } else { a % b }),
-    // Oracle `shift_u32`: left << (right & 31). wrapping_shl masks identically.
-    ("shl", u32::wrapping_shl),
-    ("shr", u32::wrapping_shr),
-];
-
-/// Why a divergence here is a miscompile and not a hardware liberty.
+/// Per backend because the wrong answer is per backend: an unforced PTX `div.u32`
+/// leaves `x / 0` to unspecified hardware, which is not naga's `x`.
 const WHY: &[(&str, &str)] = &[
     ("div", "`x / 0 == u32::MAX`."),
     ("rem", "`x % 0 == 0`."),
@@ -62,23 +52,11 @@ const WHY: &[(&str, &str)] = &[
     ("shr", "`>> (s & 31)`."),
 ];
 
-fn reference_for(op: &str) -> fn(u32, u32) -> u32 {
-    REFERENCES
-        .iter()
-        .find(|(name, _)| *name == op)
-        .map(|(_, reference)| *reference)
-        .unwrap_or_else(|| panic!("Fix: no CUDA reference arm for `{op}`; add one to REFERENCES"))
-}
-
 fn why(op: &str) -> &'static str {
     WHY.iter()
         .find(|(name, _)| *name == op)
         .map(|(_, text)| *text)
         .unwrap_or_else(|| panic!("Fix: no CUDA divergence note for `{op}`; add one to WHY"))
-}
-
-fn covered_ops() -> Vec<&'static str> {
-    REFERENCES.iter().map(|(op, _)| *op).collect()
 }
 
 /// `out[i] = build(a[i], b[i])` over u32 buffers, dispatched on the case operands.
@@ -100,19 +78,10 @@ fn dispatch(backend: &CudaBackend, case: &TotalU32Case) -> Vec<u32> {
 /// before the device is acquired.
 #[test]
 fn every_total_u32_op_forces_its_contract_on_cuda() {
-    assert_covers_every_total_op("cuda", &covered_ops());
+    assert_covers_every_total_op("cuda", &total_u32_reference_ops());
     let backend = live_backend();
     for case in TOTAL_U32_CASES {
-        let reference: Vec<u32> = case
-            .pairs
-            .iter()
-            .map(|&(a, b)| reference_for(case.op)(a, b))
-            .collect();
-        assert_eq!(
-            reference, case.oracle,
-            "reference u32 `{}` total contract drifted from the pinned oracle",
-            case.op
-        );
+        let reference = total_u32_reference_values(case);
         let gpu = dispatch(&backend, case);
         assert_eq!(
             gpu, reference,
@@ -123,40 +92,4 @@ fn every_total_u32_op_forces_its_contract_on_cuda() {
             case.pairs
         );
     }
-}
-
-/// The reference arms answer the boundary values they are here for.
-///
-/// A reference that drifts row-for-row with the pin makes both agree about a
-/// wrong answer. These are the load-bearing values as literals, so a mistyped
-/// reference fails here rather than passing everywhere.
-#[test]
-fn the_reference_arms_answer_their_boundary_values() {
-    let div = reference_for("div");
-    assert_eq!(div(1, 0), u32::MAX);
-    assert_eq!(div(u32::MAX, 0), u32::MAX);
-    assert_eq!(div(100, 7), 14);
-
-    let rem = reference_for("rem");
-    assert_eq!(rem(1, 0), 0);
-    assert_eq!(rem(100, 7), 2);
-
-    let shl = reference_for("shl");
-    // A shift of 32 masks to zero, so `1 << 32 == 1`, never 0.
-    assert_eq!(shl(1, 32), 1);
-    assert_eq!(shl(1, 63), 0x8000_0000);
-
-    let shr = reference_for("shr");
-    assert_eq!(shr(1, 32), 1);
-    assert_eq!(shr(0xFF, 36), 0xF);
-}
-
-/// The shared lookup refuses an op the table does not declare.
-///
-/// The adversarial case at the boundary of `total_u32_case`: a renamed op must
-/// fail at the lookup rather than silently dispatch nothing.
-#[test]
-#[should_panic(expected = "no total u32 case")]
-fn an_undeclared_op_name_is_refused_by_the_shared_lookup() {
-    let _ = total_u32_case("div_but_renamed");
 }

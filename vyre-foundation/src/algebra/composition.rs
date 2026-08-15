@@ -19,6 +19,36 @@ pub const SELF_EXCLUSIVE_REGION_SUFFIX: &str = "#self-exclusive";
 pub fn mark_self_exclusive_region(generator: &str) -> String {
     format!("{generator}{SELF_EXCLUSIVE_REGION_SUFFIX}")
 }
+
+/// Generator prefixes that state there is no operation behind a region.
+///
+/// Two producers mint them and they mean the same thing:
+///
+/// - `inline::<parent>` comes from [`reparent_entry_node`] below, for a body
+///   the composer reparented onto its caller because it had no region of its
+///   own.
+/// - `anonymous::<label>` is written by a builder that needs a named phase
+///   boundary inside one operation and has no operation to name it with.
+///
+/// The distinction matters to anything that reads a generator as an operation
+/// id. Composition itself stamps `source_region` onto EVERY entry region it
+/// reparents, anonymous ones included, so `source_region.is_some()` does not
+/// mean the author declared an edge to a registered building block. The
+/// prefix is what says the generator was never an operation id, and a
+/// consumer that knows only one of the two prefixes demands a registration
+/// for an operation that must not exist.
+pub const ANONYMOUS_GENERATOR_PREFIXES: [&str; 2] = ["inline::", "anonymous::"];
+
+/// True when `generator` names no operation, by [`ANONYMOUS_GENERATOR_PREFIXES`].
+///
+/// Prefix, not substring: `foo::not_inline::bar` is an ordinary generator.
+#[must_use]
+pub fn is_anonymous_generator(generator: &str) -> bool {
+    ANONYMOUS_GENERATOR_PREFIXES
+        .iter()
+        .any(|prefix| generator.starts_with(prefix))
+}
+
 /// Wrap nodes in a named, substrate-neutral composition region.
 #[must_use]
 pub fn wrap_region(generator: &str, body: Vec<Node>, source_region: Option<GeneratorRef>) -> Node {
@@ -105,13 +135,21 @@ pub fn tag_program(parent_op_id: &str, program: Program) -> Program {
     })
 }
 
+/// `inline::<parent>`, the generator for a body with no region of its own.
+fn inline_generator(parent: &GeneratorRef) -> Ident {
+    Ident::from(format!(
+        "{}{}",
+        ANONYMOUS_GENERATOR_PREFIXES[0], parent.name
+    ))
+}
+
 fn reparent_entry_node(node: Node, parent: &GeneratorRef) -> Node {
     match node {
         Node::Region {
             generator, body, ..
         } => Node::Region {
             generator: if generator.as_ref() == Program::ROOT_REGION_GENERATOR {
-                Ident::from(format!("inline::{}", parent.name))
+                inline_generator(parent)
             } else {
                 generator
             },
@@ -119,7 +157,7 @@ fn reparent_entry_node(node: Node, parent: &GeneratorRef) -> Node {
             body,
         },
         other => Node::Region {
-            generator: Ident::from(format!("inline::{}", parent.name)),
+            generator: inline_generator(parent),
             source_region: Some(parent.clone()),
             body: Arc::new(vec![other]),
         },

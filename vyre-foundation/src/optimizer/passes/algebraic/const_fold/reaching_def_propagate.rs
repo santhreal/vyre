@@ -55,7 +55,7 @@
 //! single Let. The substitution then crosses arbitrary
 //! control-flow boundaries safely.
 
-use crate::ir::{Expr, Node, Program};
+use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::rewrite::rewrite_program;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
@@ -109,7 +109,7 @@ impl ReachingDefPropagatePass {
             let Expr::Var(name) = candidate else {
                 return None;
             };
-            propagations.get(name.as_str()).cloned()
+            propagations.get(name).cloned()
         });
         PassResult { program, changed }
     }
@@ -120,20 +120,28 @@ impl ReachingDefPropagatePass {
 // values to keep build-time fast). Uses one preorder walk over
 // the entry to find the value at each propagatable Let's name.
 
+/// Every unique-`Let` name in `program` that binds a literal, with that
+/// literal.
+///
+/// Keyed by `Ident` rather than by `String`. Cloning an `Ident` is a refcount
+/// bump on its `Arc<str>`; the `String` keys this used to build charged a heap
+/// allocation and a memcpy per candidate binding, once into the candidate set
+/// and again into the value map. `Ident` hashes through the same `str` its
+/// `Borrow<str>` impl exposes, so the key change is invisible to lookups.
 fn collect_propagatable_lets_with_values(
     facts: &ProgramFacts,
     program: &Program,
-) -> FxHashMap<String, Expr> {
-    let mut candidates: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
+) -> FxHashMap<Ident, Expr> {
+    let mut candidates: rustc_hash::FxHashSet<Ident> = rustc_hash::FxHashSet::default();
     for (_, name) in facts.lets() {
         if !facts.is_name_rebound(name.as_str()) {
-            candidates.insert(name.as_str().to_owned());
+            candidates.insert(name.clone());
         }
     }
     if candidates.is_empty() {
         return FxHashMap::default();
     }
-    let mut out: FxHashMap<String, Expr> = FxHashMap::default();
+    let mut out: FxHashMap<Ident, Expr> = FxHashMap::default();
     scan_for_literal_lets(program.entry(), &candidates, &mut out);
     out
 }
@@ -146,13 +154,13 @@ fn collect_propagatable_lets_with_values(
 /// were never substituted.
 fn scan_for_literal_lets(
     nodes: &[Node],
-    candidates: &rustc_hash::FxHashSet<String>,
-    out: &mut FxHashMap<String, Expr>,
+    candidates: &rustc_hash::FxHashSet<Ident>,
+    out: &mut FxHashMap<Ident, Expr>,
 ) {
     for_each_node(nodes, |node| {
         if let Node::Let { name, value } = node {
-            if candidates.contains(name.as_str()) && is_literal(value) {
-                out.insert(name.as_str().to_owned(), value.clone());
+            if candidates.contains(name) && is_literal(value) {
+                out.insert(name.clone(), value.clone());
             }
         }
     });

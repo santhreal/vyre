@@ -71,11 +71,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      # Both re-run checks that `xtask gates` already covers individually, and
-      # additionally drive full workspace builds, so they belong here rather
-      # than in the per-change sweep.
-      - name: Cat-A pre-merge runner
-        run: ./cargo_full run -p xtask -- check-cat-a
+      # Both are named subsets of the gate registry rather than subcommands of
+      # their own. Each member is held to its pinned finding count here exactly
+      # as it is in the whole-registry sweep.
+      - name: Cat-A pre-merge subset
+        run: ./cargo_full run -p xtask -- gates --subset cat-a
 
-      - name: Pre-publish sanity checks
-        run: ./cargo_full run -p xtask -- release-gate
+      - name: Pre-publish subset
+        run: ./cargo_full run -p xtask -- gates --subset prepublish
