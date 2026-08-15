@@ -48,7 +48,7 @@ pub fn fusable_pairs_into<'a>(
     max_iters: u32,
     scratch: &'a mut PolyhedralFusionScratch,
 ) -> &'a [u32] {
-    use crate::telemetry::observability::{bump, polyhedral_fusion_calls};
+    use crate::telemetry::{bump, polyhedral_fusion_calls};
     bump(&polyhedral_fusion_calls);
     foundation_polyhedral::fusable_pairs_with_scratch_into(
         adj,

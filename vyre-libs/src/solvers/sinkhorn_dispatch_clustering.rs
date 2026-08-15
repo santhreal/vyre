@@ -56,7 +56,7 @@ pub struct SinkhornDispatchGpuScratch {
 #[must_use]
 #[allow(clippy::vec_init_then_push)]
 pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32) -> Program {
-    use crate::telemetry::observability::{bump, sinkhorn_dispatch_clustering_calls};
+    use crate::telemetry::{bump, sinkhorn_dispatch_clustering_calls};
     bump(&sinkhorn_dispatch_clustering_calls);
     assert!(m > 0 && n > 0 && d > 0 && iters > 0);
 

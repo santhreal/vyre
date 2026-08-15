@@ -41,7 +41,7 @@ pub fn try_compute_dominance_frontier(
     pred_targets: &[u32],
     seed: &[u32],
 ) -> Result<Vec<u32>, String> {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
+    use crate::telemetry::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_reference_dominator_frontier(
         node_count,

@@ -17,7 +17,7 @@ use vyre_primitives::zx::{ZxColor, ZxSpider};
 /// Run spider-fusion to fixpoint, bumping the substrate counter.
 #[must_use]
 pub fn fuse_diagram(diagram: ZxDiagram) -> ZxDiagram {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_spider_fusion(diagram)
 }
@@ -25,7 +25,7 @@ pub fn fuse_diagram(diagram: ZxDiagram) -> ZxDiagram {
 /// Run identity-removal to fixpoint, bumping the substrate counter.
 #[must_use]
 pub fn remove_identities(diagram: ZxDiagram) -> ZxDiagram {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_identity_removal(diagram)
 }
@@ -41,7 +41,7 @@ pub fn simplify_diagram(diagram: ZxDiagram) -> ZxDiagram {
 /// Hadamard a single spider (color change). Mutates in place; bumps
 /// the substrate counter.
 pub fn flip_spider(diagram: &mut ZxDiagram, v: u32) {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_color_change(diagram, v);
 }

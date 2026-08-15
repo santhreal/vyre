@@ -10,7 +10,7 @@
 //! This module uses `vyre-primitives::math::tensor_train::tt_contract_step`
 //! (the same Program shipped to users) to analyze Vyre's own IR.
 
-use crate::device::scratch::reserve_vec_capacity;
+use crate::scratch::reserve_vec_capacity;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
@@ -39,7 +39,7 @@ pub struct TensorTrainFusionGpuScratch {
 #[cfg(test)]
 #[must_use]
 pub fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
-    use crate::telemetry::observability::{bump, tensor_train_chain_fusion_calls};
+    use crate::telemetry::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
     if shared_buffer_ranks.is_empty() {
         return 0.0;
@@ -98,7 +98,7 @@ pub fn fusion_pressure_via_with_scratch(
     shared_buffer_ranks: &[u32],
     scratch: &mut TensorTrainFusionGpuScratch,
 ) -> Result<f64, DispatchError> {
-    use crate::telemetry::observability::{bump, tensor_train_chain_fusion_calls};
+    use crate::telemetry::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
     if shared_buffer_ranks.is_empty() {
         return Ok(0.0);

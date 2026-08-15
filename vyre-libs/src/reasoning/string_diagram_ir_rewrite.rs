@@ -108,7 +108,7 @@ pub fn reference_compose_ir_arrows_into(
     c: u32,
     out: &mut Vec<f64>,
 ) {
-    use crate::telemetry::observability::{bump, string_diagram_ir_rewrite_calls};
+    use crate::telemetry::{bump, string_diagram_ir_rewrite_calls};
     bump(&string_diagram_ir_rewrite_calls);
     monoidal_compose_cpu_into(f, g, a, b, c, out);
 }
@@ -190,7 +190,7 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     scratch: &mut StringDiagramRewriteScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, string_diagram_ir_rewrite_calls};
+    use crate::telemetry::{bump, string_diagram_ir_rewrite_calls};
     bump(&string_diagram_ir_rewrite_calls);
 
     let f_cells = checked_product_count(a, b, "a", "b", "compose_ir_arrows_fixed_via f")?;

@@ -4,7 +4,7 @@ use vyre_primitives::graph::csr_forward_or_changed::{
     CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey,
 };
 
-use crate::device::scratch::reserve_vec as reserve_graph_vec;
+use crate::scratch::reserve_vec as reserve_graph_vec;
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs,
     write_dispatch_input, CachedProgram, DispatchInput, ProgramCache,
@@ -149,7 +149,7 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
     )?;
 
     for iter in 0..max_iters {
-        use crate::telemetry::observability::{bump, graph_dispatch_calls};
+        use crate::telemetry::{bump, graph_dispatch_calls};
         bump(&graph_dispatch_calls);
 
         write_dispatch_input(&mut inputs[5], DispatchInput::u32_slice(frontier))?;

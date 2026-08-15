@@ -6,7 +6,7 @@
 //! wrapper, not a divergent rewrite).
 #![allow(missing_docs)]
 
-use vyre_libs::analysis::dataflow_fixpoint;
+use vyre_foundation::pass_substrate::dataflow_fixpoint;
 use vyre_libs::encoding::{scallop_provenance, scallop_provenance_wide};
 
 #[test]

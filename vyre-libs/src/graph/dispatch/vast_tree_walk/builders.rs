@@ -23,7 +23,7 @@ pub fn build_vast_tree_walk_plan(
     node_count: u32,
     traversal_capacity: u32,
 ) -> Result<VastTreeWalkPlan, String> {
-    use crate::telemetry::observability::{bump, vast_tree_walk_calls};
+    use crate::telemetry::{bump, vast_tree_walk_calls};
     bump(&vast_tree_walk_calls);
     bump(&vast_tree_walk_calls);
     try_ast_walk_plan(
@@ -46,7 +46,7 @@ pub fn build_checked_preorder_walk(
     node_count: u32,
     traversal_capacity: u32,
 ) -> Result<Program, String> {
-    use crate::telemetry::observability::{bump, vast_tree_walk_calls};
+    use crate::telemetry::{bump, vast_tree_walk_calls};
     bump(&vast_tree_walk_calls);
     try_ast_walk_preorder(nodes, out, node_count, traversal_capacity)
 }
@@ -63,7 +63,7 @@ pub fn build_checked_postorder_walk(
     node_count: u32,
     traversal_capacity: u32,
 ) -> Result<Program, String> {
-    use crate::telemetry::observability::{bump, vast_tree_walk_calls};
+    use crate::telemetry::{bump, vast_tree_walk_calls};
     bump(&vast_tree_walk_calls);
     try_ast_walk_postorder(nodes, out, node_count, traversal_capacity)
 }
@@ -86,7 +86,7 @@ pub fn build_trusted_preorder_walk(
     node_count: u32,
     traversal_capacity: u32,
 ) -> Program {
-    use crate::telemetry::observability::{bump, vast_tree_walk_calls};
+    use crate::telemetry::{bump, vast_tree_walk_calls};
     bump(&vast_tree_walk_calls);
     // Trusted = caller promised the shape was prevalidated. If that promise is
     // broken, fail fast naming the violated contract, never silently emit an
@@ -115,7 +115,7 @@ pub fn build_trusted_postorder_walk(
     node_count: u32,
     traversal_capacity: u32,
 ) -> Program {
-    use crate::telemetry::observability::{bump, vast_tree_walk_calls};
+    use crate::telemetry::{bump, vast_tree_walk_calls};
     bump(&vast_tree_walk_calls);
     // Trusted = caller promised the shape was prevalidated; on a broken promise
     // fail fast naming the contract instead of emitting an inert empty kernel.

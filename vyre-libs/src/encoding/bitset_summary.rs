@@ -28,7 +28,7 @@ pub struct BitsetSummaryGpuScratch {
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn per_word_popcount(input: &[u32]) -> Vec<u32> {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_popcount(input)
 }
@@ -36,7 +36,7 @@ pub fn per_word_popcount(input: &[u32]) -> Vec<u32> {
 /// Per-word popcount into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn per_word_popcount_into(input: &[u32], out: &mut Vec<u32>) {
-    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_popcount_into(input, out);
 }

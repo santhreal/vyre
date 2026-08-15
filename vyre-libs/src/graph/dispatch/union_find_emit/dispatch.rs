@@ -35,7 +35,7 @@ pub fn union_find_alias_program(
     node_count: u32,
     edge_count: u32,
 ) -> Program {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
+    use crate::telemetry::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     union_find_program(parent, edge_a, edge_b, node_count, edge_count)
 }

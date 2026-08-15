@@ -4,7 +4,7 @@
 //! OpenTelemetry, Datadog, custom dashboards). Aggregates:
 //!
 //! - Composition-call counters from
-//!   `vyre_libs::telemetry::observability`.
+//!   `vyre_libs::telemetry`.
 //! - Cache hit/miss rates (when caches expose them).
 //! - Substrate-decision telemetry (which math chose what).
 //!
@@ -15,7 +15,7 @@
 #[cfg(feature = "libs-compositions")]
 use vyre_libs::analysis::decision_telemetry as decision_obs;
 #[cfg(feature = "libs-compositions")]
-use vyre_libs::telemetry::observability as substrate_obs;
+use vyre_libs::telemetry as substrate_obs;
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};

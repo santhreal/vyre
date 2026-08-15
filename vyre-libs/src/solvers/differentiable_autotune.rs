@@ -9,7 +9,7 @@ use super::natural_gradient_autotuner::{
     precondition_autotune_gradient_fixed_via_with_scratch_into, NaturalGradientGpuScratch,
 };
 #[cfg(test)]
-use crate::device::scratch::reserve_vec_capacity_or_panic;
+use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
@@ -237,7 +237,7 @@ pub fn reference_pick_config_into(
     scaled: &mut Vec<f64>,
     out: &mut Vec<f64>,
 ) {
-    use crate::telemetry::observability::{bump, differentiable_autotune_calls};
+    use crate::telemetry::{bump, differentiable_autotune_calls};
     bump(&differentiable_autotune_calls);
     // Negate costs so higher input = better config.
     neg_costs.clear();

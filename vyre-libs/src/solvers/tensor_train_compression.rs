@@ -104,7 +104,7 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
     scratch: &mut TensorTrainCompressionGpuScratch,
     cores_out: &mut Vec<Vec<f32>>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, tensor_train_compression_calls};
+    use crate::telemetry::{bump, tensor_train_compression_calls};
     bump(&tensor_train_compression_calls);
 
     validate_tt_shape(tensor_f32, dims, target_ranks)?;
@@ -335,7 +335,7 @@ pub fn reference_compress_cost_tensor(
     dims: &[u32],
     target_ranks: &[u32],
 ) -> CompressedCostTensor {
-    use crate::telemetry::observability::{bump, tensor_train_compression_calls};
+    use crate::telemetry::{bump, tensor_train_compression_calls};
     bump(&tensor_train_compression_calls);
     let cores = vyre_primitives::math::tensor_train_decompose::cpu_ref(tensor, dims, target_ranks);
     CompressedCostTensor {

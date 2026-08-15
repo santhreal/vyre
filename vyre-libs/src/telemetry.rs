@@ -15,6 +15,9 @@
 //! instrumented modules span crate boundaries during migration and
 //! because a dashboard that wants one counter should not have to walk
 //! the whole snapshot.
+//!
+//! One crate-root module rather than a directory: the counters instrument
+//! every dialect and belong to none of them.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 

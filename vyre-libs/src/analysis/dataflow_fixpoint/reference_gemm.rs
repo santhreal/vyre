@@ -9,7 +9,7 @@
 //! test module verbatim.
 
 use super::Semiring;
-use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
+use crate::telemetry::{bump, dataflow_fixpoint_calls};
 use vyre_foundation::pass_substrate::dataflow_fixpoint as foundation_dataflow;
 
 /// Multiply matrices over the selected semiring through the reference oracle.

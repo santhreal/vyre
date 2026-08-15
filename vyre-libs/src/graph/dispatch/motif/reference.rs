@@ -40,7 +40,7 @@ pub fn try_match_motif(
     edge_kind_mask: &[u32],
     motif_edges: &[MotifEdge],
 ) -> Result<Vec<u32>, String> {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
+    use crate::telemetry::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     let mut witness = Vec::new();
     try_reference_motif_into(
@@ -128,7 +128,7 @@ pub fn try_motif_participation_count(
     edge_kind_mask: &[u32],
     motif_edges: &[MotifEdge],
 ) -> Result<u32, String> {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
+    use crate::telemetry::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_reference_motif_participation_count(
         node_count,

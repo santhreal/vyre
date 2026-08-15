@@ -48,7 +48,7 @@
 //! random  -  none capture this. QSVT-via-Chebyshev makes the
 //! Wasserstein-distance computation tractable at 1M+ Regions.
 
-use crate::device::scratch::reserve_vec_capacity_or_panic;
+use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
@@ -167,7 +167,7 @@ pub fn reference_transport_residual_into(
     t_curr: &mut Vec<f64>,
     t_next: &mut Vec<f64>,
 ) {
-    use crate::telemetry::observability::{bump, qsvt_matrix_function_fusion_calls};
+    use crate::telemetry::{bump, qsvt_matrix_function_fusion_calls};
     bump(&qsvt_matrix_function_fusion_calls);
     assert!(
         chebyshev_order > 0 && chebyshev_order <= 8,
@@ -231,7 +231,7 @@ pub fn transport_residual_fixed_via_with_scratch_into(
     scratch: &mut QsvtTransportGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::observability::{bump, qsvt_matrix_function_fusion_calls};
+    use crate::telemetry::{bump, qsvt_matrix_function_fusion_calls};
     bump(&qsvt_matrix_function_fusion_calls);
 
     if chebyshev_order == 0 || chebyshev_order > CHEBYSHEV_MAX_K {
