@@ -637,4 +637,67 @@ mod tests {
         assert!(cache.get(2).is_none());
         assert!(cache.get(3).is_some());
     }
+
+    /// A replacement is an eviction followed by an insert, so the entry it
+    /// replaced has to give its bytes back. Charging both sizes leaves the tier
+    /// believing it holds 300 bytes of a 1024-byte budget when it holds 200, and
+    /// every later eviction decision is taken against that wrong number.
+    #[test]
+    fn a_replacement_releases_the_bytes_of_the_entry_it_replaced() {
+        let mut cache = TieredCache::new(vec![CacheTier::new("L1", 1024)]);
+        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
+        cache.insert(1, 200).expect("Fix: replacing a key must insert");
+        let entry = cache.get(1).expect("Fix: a replaced key must be gettable");
+        assert_eq!(entry.size, 200);
+        assert_eq!(
+            cache.tiers[0].entries.len(),
+            1,
+            "Fix: a replacement must leave one entry under the key, not two."
+        );
+        assert_eq!(
+            cache.tiers[0].used, 200,
+            "Fix: a replacement must debit the entry it evicted; 300 means the replaced 100 bytes are still charged to the tier."
+        );
+    }
+
+    /// The hard promote path: the target tier is full, so promoting evicts that
+    /// tier's coldest key. `promote` reaches it through `move_into_tier`, which
+    /// asks `make_room` first and falls back to the source tier only when room
+    /// cannot be made, so an eviction that did not happen is a promote that
+    /// silently stayed put, and an eviction that did not release its bytes is a
+    /// tier that can never fit another entry.
+    #[test]
+    fn a_promote_into_a_full_tier_evicts_that_tiers_coldest_key() {
+        let mut cache = TieredCache::new(vec![CacheTier::new("L1", 400), CacheTier::new("L2", 100)]);
+        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
+        cache.insert(2, 100).expect("Fix: an entry that fits must insert");
+        for _ in 0..LruPolicy::DEFAULT_THRESHOLD {
+            cache.record_access(2);
+        }
+        cache.promote(2).expect("Fix: a hot key must promote");
+        assert_eq!(
+            cache.get(2).expect("Fix: a promoted key must be gettable").tier,
+            1,
+            "Fix: the second tier has to be full before the eviction path is reached."
+        );
+
+        for _ in 0..LruPolicy::DEFAULT_THRESHOLD {
+            cache.record_access(1);
+        }
+        cache.promote(1).expect("Fix: a hot key must promote");
+
+        assert_eq!(
+            cache.get(1).expect("Fix: a promoted key must be gettable").tier,
+            1,
+            "Fix: a promote into a full tier must evict and move, not leave the key where it was."
+        );
+        assert!(
+            cache.get(2).is_none(),
+            "Fix: the key a promote evicted must be unreachable through lookup, not merely uncharged."
+        );
+        assert_eq!(
+            cache.tiers[1].used, 100,
+            "Fix: the evicted entry's bytes must be released, or the tier can never fit another promote."
+        );
+    }
 }
