@@ -1276,17 +1276,6 @@ layer = "libraries"
 responsibility = "Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR."
 
 [[crate.dependency]]
-package = "vyre-reference"
-purpose = "reference interpreter behind the test-fixtures dispatcher"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = true
-default_features = true
-boundary = "private"
-seam = "reference-semantics"
-
-[[crate.dependency]]
 package = "vyre-foundation"
 purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
 features = ["serde"]

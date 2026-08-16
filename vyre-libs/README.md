@@ -122,15 +122,15 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 ### Boundaries
 
 The `product-libraries` owner maintains this `libraries` crate at `vyre-libs`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-primitives`, `vyre-reference`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-primitives`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs/examples/select1_optimizer_parity.rs`:
+Run the checked-in behavior from `vyre-libs/examples/prefix_sum_megakernel.rs`:
 
 ```console
-./cargo_full run -p vyre-libs --example select1_optimizer_parity
+./cargo_full run -p vyre-libs --example prefix_sum_megakernel --features math-scan
 ```
 
 ### Features

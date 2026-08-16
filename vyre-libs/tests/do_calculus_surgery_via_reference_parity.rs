@@ -3,10 +3,10 @@
 //! The `*_via` functions in `logic::do_calculus_change_impact` are the GPU/IR production entry
 //! points for do-calculus graph surgery: they pack inputs into LE bytes, build the primitive
 //! Program, dispatch it through an `ProgramDispatcher`, and decode the declared outputs. Until
-//! now they had NO end-to-end test, the crate's only concrete dispatcher (`oracle::
-//! CpuOracleDispatcher`) hand-writes oracles for just `persistent_bfs` / `exploded` and rejects
-//! every other generator, so the surgery `_via` plumbing (input order, grid override, multi-output
-//! decode) was never exercised against a real IR execution.
+//! now they had NO end-to-end test, and the only concrete dispatcher within reach hand-wrote
+//! oracles for just `persistent_bfs` / `exploded` and rejected every other generator, so the
+//! surgery `_via` plumbing (input order, grid override, multi-output decode) was never exercised
+//! against a real IR execution.
 //!
 //! This test wires a `ReferenceEvalDispatcher`: a faithful `ProgramDispatcher` backed by
 //! `vyre_reference::reference_eval` (the trait doc explicitly anticipates such a "reference
@@ -27,7 +27,7 @@ use vyre_primitives::graph::do_calculus::{
     do_intervention_delete_incoming_cpu, do_rule2_reverse_incoming_cpu, do_rule3_subgraph_cpu,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

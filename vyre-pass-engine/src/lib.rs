@@ -23,9 +23,9 @@
 //! It states the job, not a hardware tier. Execution goes through
 //! `vyre_foundation::program_dispatch::ProgramDispatcher`, so which device runs
 //! a pass is the dispatcher's answer and not the crate's: the parity tests here
-//! measure against `vyre_libs::graph::dispatch::cpu_oracle`, a CPU dispatcher,
-//! while a backend dispatcher runs the identical Program on device. A name with
-//! `gpu` in it would be false.
+//! measure against `vyre_driver_reference::ReferenceEvalDispatcher`, the one host
+//! execution route this workspace has, while a backend dispatcher runs the
+//! identical Program on device. A name with `gpu` in it would be false.
 //!
 //! # Layering
 //!
@@ -58,8 +58,8 @@
 //!   `canonicalize_via_encoded`, `pattern_match_via_encoded`,
 //!   `validate_via_encoded`  -  one pass each, dispatched through a
 //!   `ProgramDispatcher`.
-//! - `const_prop`, `cross_scope_cse`, `dead_branch`, `licm`  -  host-side
-//!   rewrites over the Program the dispatched passes hand back.
+//! - `cse_via_encoded` also carries the cross-scope hoist, which rewrites the
+//!   Program the dispatched CSE kernel scored.
 //! - `pipeline`, `pipeline_resident`, `pipeline_resident_decode`  -  pass
 //!   sequencing, including the resident form that keeps arena buffers on the
 //!   device across passes and applies one combined delta at the end.

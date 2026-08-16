@@ -1,5 +1,5 @@
 //! End-to-end parity for `graph::union_find_emit::union_find_alias_via`: the batched lock-free
-//! concurrent union-find (alias analysis) (through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`]).
+//! concurrent union-find (alias analysis) (through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`]).
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `union_find_program`'s IR is not run through a faithful dispatch boundary by any
@@ -24,7 +24,7 @@ use vyre_libs::graph::dispatch::union_find_emit::{
     canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

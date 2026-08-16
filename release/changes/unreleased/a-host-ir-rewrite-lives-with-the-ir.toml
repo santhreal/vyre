@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Constant propagation, dead-branch elimination and loop-invariant code motion moved from vyre_pass_engine::optimizer to vyre_foundation::transform, and the cross-scope CSE hoist moved into vyre_pass_engine::optimizer::cse_via_encoded beside the canonical ids it consumes. The pass engine keeps only the passes it dispatches as vyre Programs."

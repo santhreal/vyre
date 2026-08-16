@@ -20,9 +20,11 @@
 
 use vyre_libs::solvers::natural_gradient_autotuner::precondition_autotune_gradient_fixed_via;
 
+use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::test_support::{
-    fixed_matvec as natural_gradient_fixed, signed_fixed_19 as signed_fixed,
-    xorshift32 as xorshift, ReferenceEvalDispatcher,
+    fixed_matvec as natural_gradient_fixed,
+    signed_fixed_19 as signed_fixed,
+    xorshift32 as xorshift,
 };
 
 #[test]

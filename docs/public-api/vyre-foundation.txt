@@ -1593,6 +1593,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplic
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
+pub fn vyre_foundation::optimizer::passes::expr_is_atomic_free(expr: &vyre_foundation::ir::Expr) -> bool
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CseCtx::clear(&mut self)
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::analyze(&self, program: &vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassAnalysis
@@ -2161,6 +2162,8 @@ pub fn vyre_foundation::transform::collectives::SingleRankCollectiveError::fmt(&
 pub fn vyre_foundation::transform::collectives::collective_transport_plan(program: &vyre_foundation::ir::Program) -> vyre_foundation::transform::collectives::CollectiveTransportPlan
 pub fn vyre_foundation::transform::collectives::lower_single_rank_collectives(program: &vyre_foundation::ir::Program) -> core::result::Result<core::option::Option<vyre_foundation::ir::Program>, vyre_foundation::transform::collectives::SingleRankCollectiveError>
 pub fn vyre_foundation::transform::collectives::requires_collective_transport(program: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::transform::const_prop::apply_const_prop(program: &vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::transform::dead_branch::apply_dead_branch(program: &vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::transform::inline::default_resolver(op_id: &str) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::IrResult<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::IrResult<vyre_foundation::ir::Program>
@@ -2168,13 +2171,20 @@ pub fn vyre_foundation::transform::inline::inline_calls_with_resolver(program: &
 pub fn vyre_foundation::transform::inline::inline_composite_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::IrResult<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::output_buffer<'a>(op_id: &str, program: &'a vyre_foundation::ir::Program) -> vyre_foundation::IrResult<&'a vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::transform::inline::zero_value(ty: &vyre_spec::data_type::DataType) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::transform::licm::apply_licm(program: &vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::transform::parallelism::detect_parallelism(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::transform::parallelism::DispatchGroup>
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::body(&mut self, parent: &vyre_foundation::ir::Node, body: &[vyre_foundation::ir::Node]) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>> where Self: core::marker::Sized
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::enter(&mut self, node: &vyre_foundation::ir::Node)
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::ident(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::operand(&mut self, expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
+pub fn vyre_foundation::transform::rewrite_walk::extend_with_rewritten_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R, out: &mut alloc::vec::Vec<vyre_foundation::ir::Node>)
+pub fn vyre_foundation::transform::rewrite_walk::reachable_prefix(body: &[vyre_foundation::ir::Node]) -> &[vyre_foundation::ir::Node]
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_body<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_node<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(node: &vyre_foundation::ir::Node, rewrite: &mut R) -> core::option::Option<vyre_foundation::ir::Node>
+pub fn vyre_foundation::transform::rewrite_walk::rewrite_program_entry(program: &vyre_foundation::ir::Program, rewrite: impl core::ops::function::FnOnce(&[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::transform::rewrite_walk::rewrite_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> alloc::vec::Vec<vyre_foundation::ir::Node>
+pub fn vyre_foundation::transform::rewrite_walk::rewrite_scope_opt<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
+pub fn vyre_foundation::transform::rewrite_walk::visit_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R)
 pub fn vyre_foundation::validate::BackendValidationCapabilities::backend_capabilities(&self) -> vyre_foundation::validate::BackendCapabilities
 pub fn vyre_foundation::validate::BackendValidationCapabilities::backend_name(&self) -> &'static str
 pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_cast_target(&self, target: &vyre_spec::data_type::DataType) -> bool
@@ -2393,7 +2403,6 @@ pub mod vyre_foundation::optimizer::passes::fusion_cse::dce::const_truth
 pub mod vyre_foundation::optimizer::passes::fusion_cse::dce::eliminate_dead_lets
 pub mod vyre_foundation::optimizer::passes::fusion_cse::dce::eliminate_unreachable
 pub mod vyre_foundation::optimizer::passes::fusion_cse::dce::live_result
-pub mod vyre_foundation::optimizer::passes::fusion_cse::dce::reachable_prefix
 pub mod vyre_foundation::optimizer::passes::fusion_cse::fuse_cse
 pub mod vyre_foundation::optimizer::passes::fusion_cse::fusion
 pub mod vyre_foundation::optimizer::passes::loops
@@ -2460,7 +2469,10 @@ pub mod vyre_foundation::transform
 pub mod vyre_foundation::transform::autodiff
 pub mod vyre_foundation::transform::autodiff::rules
 pub mod vyre_foundation::transform::collectives
+pub mod vyre_foundation::transform::const_prop
+pub mod vyre_foundation::transform::dead_branch
 pub mod vyre_foundation::transform::inline
+pub mod vyre_foundation::transform::licm
 pub mod vyre_foundation::transform::parallelism
 pub mod vyre_foundation::transform::rewrite_walk
 pub mod vyre_foundation::validate

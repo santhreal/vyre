@@ -26,7 +26,9 @@
 use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
-use vyre_foundation::ir::{BufferAccess, Expr, Ident, Node, Program};
+
+use crate::ir::{BufferAccess, Expr, Ident, Node, Program};
+use crate::transform::rewrite_walk::{reachable_prefix, rewrite_program_entry};
 
 /// Apply LICM. Returns a new Program with loop-invariant Lets
 /// hoisted to sibling positions immediately before their enclosing
@@ -44,13 +46,13 @@ pub fn apply_licm(program: &Program) -> Program {
         .map(|b| Ident::new(b.name.clone()))
         .collect();
 
-    super::rewrite_program_entry(program, |body| rewrite_scope(body, &read_only))
+    rewrite_program_entry(program, |body| rewrite_scope(body, &read_only))
 }
 
 fn rewrite_scope(body: &[Node], read_only: &FxHashSet<Ident>) -> Vec<Node> {
-    let prefix_len = super::encode::reachable_prefix_len(body);
-    let mut out: Vec<Node> = Vec::with_capacity(prefix_len);
-    for node in &body[..prefix_len] {
+    let reachable = reachable_prefix(body);
+    let mut out: Vec<Node> = Vec::with_capacity(reachable.len());
+    for node in reachable {
         match node {
             Node::Loop {
                 var,

@@ -13,10 +13,10 @@
 //! on the GPU; the decoder walks the IR and rewrites every foldable
 //! Expr into a literal.
 //!
-//! No host-reference escape in production. Tests parity vs the existing
-//! `vyre-foundation` const-fold pass via `CpuOracleDispatcher`-style
-//! tests (extension follow-up  -  for V1 we run through a real
-//! backend in the driver integration test crates).
+//! No host-reference escape in production. Tests parity against the
+//! `vyre-foundation` const-fold pass through
+//! `vyre_driver_reference::ReferenceEvalDispatcher`; the driver integration
+//! test crates run the same Program through a real backend.
 
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

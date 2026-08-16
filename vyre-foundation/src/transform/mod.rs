@@ -12,6 +12,23 @@
 /// eliminating kernel-dispatch overhead for small compositional ops.
 pub mod inline;
 
+/// Constant propagation over a scope.
+///
+/// Substitutes let-bound literals into their uses and folds the resulting
+/// integer arithmetic.
+pub mod const_prop;
+
+/// Dead-branch elimination.
+///
+/// Collapses an `If` whose condition folded to a literal, and drops a branch
+/// whose body neither mutates memory nor calls an opaque extension.
+pub mod dead_branch;
+
+/// Loop-invariant code motion.
+///
+/// Hoists a let whose value does not depend on the loop index out of the loop
+/// body, including a `Load` from a buffer the loop only reads.
+pub mod licm;
 
 /// Shared-nothing parallel dispatch analysis.
 pub mod parallelism;

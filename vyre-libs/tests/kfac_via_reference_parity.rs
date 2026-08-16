@@ -18,7 +18,7 @@
 
 use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

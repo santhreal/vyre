@@ -1,4 +1,4 @@
-//! Observable contract of the one scope walk every pass-engine rewrite drives.
+//! Observable contract of the one scope walk every IR rewrite drives.
 //!
 //! WHY: four passes each carried their own loop over a scope, and each one
 //! repeated two decisions the walk owner already makes: truncate the scope where
@@ -15,8 +15,8 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::transform::const_prop::apply_const_prop;
 use vyre_foundation::visit::child_bodies;
-use vyre_pass_engine::optimizer::const_prop::apply_const_prop;
 
 /// One way of nesting a body inside a node, named for the failure message.
 struct Nesting {

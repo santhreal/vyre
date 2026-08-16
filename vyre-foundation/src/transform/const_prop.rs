@@ -19,9 +19,9 @@
 //! Var-bound let becomes unused).
 
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{BinOp, UnOp};
-use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use vyre_foundation::transform::rewrite_walk::NodeRewrite;
+
+use crate::ir::{BinOp, Expr, Ident, Node, Program, UnOp};
+use crate::transform::rewrite_walk::{self, NodeRewrite};
 
 /// The post-substitution folder splits between u32-result ops and
 /// bool-result ops. The caller picks the right folder based on the
@@ -116,8 +116,8 @@ pub fn apply_const_prop(program: &Program) -> Program {
         env: ConstEnv::default(),
         binds: None,
     };
-    super::rewrite_program_entry(program, |body| {
-        super::rewrite_walk::rewrite_scope(body, &mut walk)
+    rewrite_walk::rewrite_program_entry(program, |body| {
+        rewrite_walk::rewrite_scope(body, &mut walk)
     })
 }
 
@@ -234,7 +234,7 @@ impl NodeRewrite for ConstProp {
         if let Node::Loop { var, .. } = parent {
             self.env.bindings.remove(var);
         }
-        let rewritten = super::rewrite_walk::rewrite_scope_opt(body, self);
+        let rewritten = rewrite_walk::rewrite_scope_opt(body, self);
         self.env.restore(saved);
         rewritten
     }
