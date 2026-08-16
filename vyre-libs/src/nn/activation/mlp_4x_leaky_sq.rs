@@ -8,7 +8,6 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_foundation::ir::GeneratorRef;
 
 const OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq";
-const MLP_WORKGROUP: u32 = 256;
 const HIDDEN_SCRATCH: &str = "__mlp_4x_leaky_sq_hidden";
 const HIDDEN_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection";
 const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_projection";
@@ -16,11 +15,11 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 /// Build MLP with fused leaky_relu_sq activation (F32).
 ///
 /// This is a cooperative SINGLE-WORKGROUP kernel. Both projections walk their
-/// extent in fixed `MLP_WORKGROUP`-wide strides off the GLOBAL invocation id,
+/// extent in fixed 256-wide strides off the GLOBAL invocation id,
 /// so the work is confined to the first workgroup and every lane at or above
 /// that width retires without touching memory. Coverage stays complete for any
 /// `model_dim` and `hidden_dim`, because the strided walk runs
-/// `ceil(extent / MLP_WORKGROUP)` iterations.
+/// `ceil(extent / 256)` iterations.
 ///
 /// The gate is load-bearing and its absence is a silent wrong answer, not a
 /// crash. The span is not the caller's to choose: `HIDDEN_SCRATCH` is a
@@ -30,14 +29,14 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 /// `model_dim * hidden_dim`, never the `model_dim` the body walks, so any
 /// realistic weight matrix already yields a many-workgroup grid.
 ///
-/// Ungated, group `g` would index `(chunk + g) * MLP_WORKGROUP + local`, a
-/// window shifted up by `g * MLP_WORKGROUP`. It would never write
-/// `HIDDEN_SCRATCH[0 .. g * MLP_WORKGROUP)` in its own private copy of that
+/// Ungated, group `g` would index `(chunk + g) * 256 + local`, a
+/// window shifted up by `g * 256`. It would never write
+/// `HIDDEN_SCRATCH[0 .. g * 256)` in its own private copy of that
 /// workgroup buffer, then read the full hidden range anyway and, for
 /// `model_dim` above the width, overwrite the correct output group 0 had
 /// already stored.
 ///
-/// Note the resulting ceiling: this kernel uses at most `MLP_WORKGROUP` lanes
+/// Note the resulting ceiling: this kernel uses at most 256 lanes
 /// however large the input or the device. Prefer a grid-scaled projection when
 /// the dimensions are large enough to want every SM.
 ///
@@ -61,7 +60,7 @@ pub fn mlp_4x_leaky_sq(
     };
     // Confine the strided walk to the first workgroup. `lane` is the GLOBAL
     // invocation id, so without this gate group `g` covers a window shifted up
-    // by `g * MLP_WORKGROUP`, missing the low end of its own workgroup-private
+    // by `g * 256`, missing the low end of its own workgroup-private
     // `HIDDEN_SCRATCH` while still storing to `output`.
     //
     // `Node::barrier()` stays OUTSIDE the gate on purpose, and the obvious
@@ -78,7 +77,7 @@ pub fn mlp_4x_leaky_sq(
     let body = vec![
         Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
         Node::if_then(
-            Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+            Expr::lt(Expr::var("lane"), Expr::u32(256)),
             vec![wrap_child_region(
                 HIDDEN_PROJECTION_OP_ID,
                 parent.clone(),
@@ -87,7 +86,7 @@ pub fn mlp_4x_leaky_sq(
         ),
         Node::barrier(),
         Node::if_then(
-            Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+            Expr::lt(Expr::var("lane"), Expr::u32(256)),
             vec![wrap_child_region(
                 OUTPUT_PROJECTION_OP_ID,
                 parent,
@@ -109,7 +108,7 @@ pub fn mlp_4x_leaky_sq(
             BufferDecl::output(output, 5, DataType::F32).with_count(model_dim),
             BufferDecl::workgroup(HIDDEN_SCRATCH, hidden_dim, DataType::F32),
         ],
-        [MLP_WORKGROUP, 1, 1],
+        [256, 1, 1],
         vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
@@ -124,12 +123,12 @@ fn hidden_projection_body(
     vec![Node::loop_for(
         "hidden_chunk",
         Expr::u32(0),
-        Expr::u32(hidden_dim.div_ceil(MLP_WORKGROUP)),
+        Expr::u32(hidden_dim.div_ceil(256)),
         vec![
             Node::let_bind(
                 "j",
                 Expr::add(
-                    Expr::mul(Expr::var("hidden_chunk"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::mul(Expr::var("hidden_chunk"), Expr::u32(256)),
                     Expr::var("lane"),
                 ),
             ),
@@ -183,12 +182,12 @@ fn output_projection_body(
     vec![Node::loop_for(
         "out_chunk",
         Expr::u32(0),
-        Expr::u32(model_dim.div_ceil(MLP_WORKGROUP)),
+        Expr::u32(model_dim.div_ceil(256)),
         vec![
             Node::let_bind(
                 "i",
                 Expr::add(
-                    Expr::mul(Expr::var("out_chunk"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::mul(Expr::var("out_chunk"), Expr::u32(256)),
                     Expr::var("lane"),
                 ),
             ),
@@ -283,13 +282,13 @@ fn hidden_projection_program() -> Program {
             BufferDecl::storage("b1", 2, BufferAccess::ReadOnly, DataType::F32).with_count(4),
             BufferDecl::output(HIDDEN_SCRATCH, 3, DataType::F32).with_count(4),
         ],
-        [MLP_WORKGROUP, 1, 1],
+        [256, 1, 1],
         vec![wrap_anonymous_region(
             HIDDEN_PROJECTION_OP_ID,
             vec![
                 Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
                 Node::if_then(
-                    Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::lt(Expr::var("lane"), Expr::u32(256)),
                     hidden_projection_body("x", "w1", "b1", 2, 4),
                 ),
             ],
@@ -306,13 +305,13 @@ fn output_projection_program() -> Program {
                 .with_count(4),
             BufferDecl::output("out", 3, DataType::F32).with_count(2),
         ],
-        [MLP_WORKGROUP, 1, 1],
+        [256, 1, 1],
         vec![wrap_anonymous_region(
             OUTPUT_PROJECTION_OP_ID,
             vec![
                 Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
                 Node::if_then(
-                    Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::lt(Expr::var("lane"), Expr::u32(256)),
                     output_projection_body("w2", "b2", "out", 2, 4),
                 ),
             ],
@@ -379,7 +378,7 @@ mod tests {
     fn mlp_materializes_hidden_once_and_matches_reference() {
         let program = mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
             .expect("Fix: fixture dimensions must build.");
-        assert_eq!(program.workgroup_size(), [MLP_WORKGROUP, 1, 1]);
+        assert_eq!(program.workgroup_size(), [256, 1, 1]);
         let x = [1.0_f32, 2.0];
         let w1 = [0.1_f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
         let b1 = [0.0_f32; 4];

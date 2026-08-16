@@ -82,7 +82,7 @@ corrective_action = "Mark at most one result buffer with `BufferDecl::output(...
 [[rule]]
 code = "V023"
 phase = "expression"
-invariant = "Cast to `Bytes` is unsupported in WGSL lowering"
+invariant = "Cast to `Bytes` is unsupported in secondary text lowering"
 corrective_action = "Use buffer load/store directly for byte data."
 
 [[rule]]

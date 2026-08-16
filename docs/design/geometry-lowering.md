@@ -1,6 +1,6 @@
 # Launch geometry is a lowering decision
 
-Status: specification. Nothing here is implemented yet.
+Status: implemented.
 
 ## What is wrong
 

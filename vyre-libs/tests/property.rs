@@ -50,7 +50,7 @@ proptest! {
     fn scan_prefix_sum_is_valid_for_all_sizes(n in 1u32..1024) {
         let p = scan_prefix_sum("in", "out", n);
         prop_assert!(has_single_region(&p));
-        prop_assert_eq!(p.workgroup_size(), [n.next_power_of_two(), 1, 1]);
+        prop_assert_eq!(p.workgroup_size(), [n.next_power_of_two().min(256), 1, 1]);
     }
 
     #[test]

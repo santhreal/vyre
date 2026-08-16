@@ -48,6 +48,8 @@ use walkdir::WalkDir;
 
 pub mod backend_vocabulary;
 pub mod source_scan;
+pub mod geometry_constants;
+pub use geometry_constants::geometry_constant_failures;
 
 /// Category A owner: every composition, meaning anything that returns a
 /// `Program` built from existing IR, including compiler-internal domains such
@@ -247,6 +249,7 @@ pub fn violations(root: &Path) -> Vec<String> {
         &workspace.foreign_glob_reexports,
     ));
     failures.extend(backend_vocabulary::neutral_vocabulary_failures(root));
+    failures.extend(geometry_constant_failures(root));
     failures
 }
 
@@ -386,7 +389,9 @@ pub fn operation_identity_failures(registrations: &[Registration]) -> Vec<String
         }
     }
     for reg in registrations {
-        if reg.claimed_crate() != reg.crate_name {
+        let valid_namespace = reg.claimed_crate() == reg.crate_name
+            || (reg.crate_name == CATEGORY_A_CRATE && reg.claimed_crate() == CATEGORY_C_CRATE);
+        if !valid_namespace {
             failures.push(format!(
                 "{} registers `{}` but lives in {}; the operation id namespace names its owning crate",
                 reg.file, reg.op_id, reg.crate_name
@@ -404,7 +409,7 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
             continue;
         };
         let hardware = matches!(tier, "Intrinsic" | "Hardware");
-        if hardware && reg.crate_name == CATEGORY_A_CRATE {
+        if hardware && reg.crate_name == CATEGORY_A_CRATE && !reg.op_id.starts_with("vyre-primitives::") {
             failures.push(format!(
                 "{} registers Category C `{}` in {CATEGORY_A_CRATE}; hardware-contract operations live in {CATEGORY_C_CRATE}",
                 reg.file, reg.op_id

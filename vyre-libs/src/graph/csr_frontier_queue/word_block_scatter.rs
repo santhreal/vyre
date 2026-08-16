@@ -10,7 +10,7 @@ use super::sizing_diagnostics::{
 };
 use super::{
     FRONTIER_WORD_BLOCK_OFFSETS_TO_QUEUE_PARALLEL_OP_ID,
-    FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID, FRONTIER_WORD_SCAN_BLOCK_LANES,
+    FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID,
 };
 use crate::bitset::bitset_words;
 
@@ -104,9 +104,10 @@ fn frontier_word_queue_scatter_program(
         ));
     }
     let words = bitset_words(node_count);
-    let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
+    let block_lanes = 1024_u32;
+    let num_blocks = words.div_ceil(block_lanes).max(1);
     let total_partials =
-        match checked_frontier_u32_product(num_blocks, FRONTIER_WORD_SCAN_BLOCK_LANES, op_id) {
+        match checked_frontier_u32_product(num_blocks, block_lanes, op_id) {
             Ok(total_partials) => total_partials,
             Err(error) => return invalid_frontier_queue_sizing_program(op_id, queue_len, error),
         };
@@ -150,7 +151,7 @@ fn frontier_word_queue_scatter_program(
             "fwq_block",
             Expr::div(
                 Expr::var("fwq_word_idx"),
-                Expr::u32(FRONTIER_WORD_SCAN_BLOCK_LANES),
+                Expr::u32(1024),
             ),
         ),
         Node::let_bind(

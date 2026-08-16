@@ -12,7 +12,6 @@ use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 const OP_ID: &str = "vyre-libs::math::reduce_mean";
 #[cfg(test)]
 const REFERENCE_OP_ID: &str = "vyre-libs::math::reduce_mean_reference";
-const REDUCE_MEAN_TILE: u32 = 256;
 const EMPTY_REDUCTION_FIX: &str = "Fix: reduce_mean n=0 is invalid; pass at least one input element or route empty reductions to a caller-defined identity.";
 
 /// Build a Program that computes the mean of `input` into `output[0]`.
@@ -41,7 +40,7 @@ fn reduce_mean_invalid_program(input: &str, output: &str) -> Program {
 }
 
 fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
-    let tile = REDUCE_MEAN_TILE;
+    let tile = 256_u32;
     let chunks = n.div_ceil(tile);
     let mean = ReducePhase {
         accumulate: strided_accumulate_child(

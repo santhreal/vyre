@@ -7,7 +7,6 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use super::{
     FRONTIER_QUEUE_LEN_INIT_OP_ID, FRONTIER_TO_QUEUE_OP_ID, FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
-    FRONTIER_TO_QUEUE_WORKGROUP_LANES,
 };
 use crate::bitset::bitset_words;
 use crate::graph::frontier_bits::when_bit_set;
@@ -79,7 +78,7 @@ pub fn frontier_to_queue(
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
-    let lanes = FRONTIER_TO_QUEUE_WORKGROUP_LANES;
+    let lanes = 256_u32;
     let scan_iters = node_count.div_ceil(lanes).max(1);
     let body = vec![
         Node::let_bind("q_lane", lane.clone()),

@@ -34,6 +34,8 @@ pub struct SemanticOperation {
     pub laws: &'static [&'static str],
     /// Numerical comparison policy.
     pub tolerance: TolerancePolicy,
+    /// Optional target-neutral execution geometry requirements.
+    pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
 }
 
 impl SemanticOperation {
@@ -201,6 +203,8 @@ pub struct OperationRegistration {
     pub laws: &'static [&'static str],
     /// Numerical comparison policy.
     pub tolerance: TolerancePolicy,
+    /// Optional target-neutral execution geometry requirements.
+    pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
 }
 
 impl OperationRegistration {
@@ -224,6 +228,7 @@ impl OperationRegistration {
             expected_output,
             laws: &[],
             tolerance: TolerancePolicy::EXACT,
+            geometry_requirements: None,
         }
     }
 
@@ -300,6 +305,22 @@ impl OperationRegistration {
         self.tolerance = tolerance;
         self
     }
+    /// Attach target-neutral execution geometry requirements.
+    #[must_use]
+    pub const fn with_geometry_requirements(
+        mut self,
+        requirements: crate::geometry::GeometryRequirements,
+    ) -> Self {
+        self.geometry_requirements = Some(requirements);
+        self
+    }
+
+    /// Return the execution geometry requirements when declared.
+    #[must_use]
+    pub const fn geometry_requirements(&self) -> Option<crate::geometry::GeometryRequirements> {
+        self.geometry_requirements
+    }
+
 
     /// Build the canonical program and stamp its stable operation identity.
     #[must_use]
@@ -333,10 +354,10 @@ impl From<&'static OperationRegistration> for SemanticOperation {
             expected_output: registration.expected_output,
             laws: registration.laws,
             tolerance: registration.tolerance,
+            geometry_requirements: registration.geometry_requirements,
         }
     }
 }
-
 inventory::collect!(OperationRegistration);
 
 /// Catalog validation failure.
