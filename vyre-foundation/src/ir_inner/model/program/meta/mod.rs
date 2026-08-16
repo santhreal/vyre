@@ -353,6 +353,9 @@ impl Program {
                     Node::Region { body, .. } => {
                         stack.extend(body.iter().rev());
                     }
+                    Node::TileElementwise { body, .. } => {
+                        stack.extend(body.iter().rev());
+                    }
                     Node::Let { .. }
                     | Node::Assign { .. }
                     | Node::Store { .. }
@@ -367,6 +370,11 @@ impl Program {
                     | Node::AsyncWait { .. }
                     | Node::Trap { .. }
                     | Node::Resume { .. }
+                    | Node::TileLoad { .. }
+                    | Node::TileStore { .. }
+                    | Node::TileMatmul { .. }
+                    | Node::TileReduce { .. }
+                    | Node::TileDecl { .. }
                     | Node::Opaque(_) => {}
                 }
             }

@@ -11,7 +11,7 @@ key, constant folding is `level_wave` bottom-up evaluation.
 
 Not here: host reimplementations of passes that exist as compositions.
 
-Every entry point takes a
+Dispatched entry points, including the `*_via_encoded` passes, take a
 `vyre_foundation::program_dispatch::ProgramDispatcher`. Parity tests run
 the pass against `vyre_driver_reference::ReferenceEvalDispatcher`, which
 executes the Program on the reference interpreter. Production runs the

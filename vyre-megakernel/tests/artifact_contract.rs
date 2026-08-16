@@ -727,6 +727,7 @@ fn device_with(
         has_shared_memory: true,
         has_transcendental_polynomial_emit: true,
         max_native_int_width: 64,
+        ..Default::default()
     };
     edit(&mut capabilities);
     DeviceFacts::new(capabilities, 1024)

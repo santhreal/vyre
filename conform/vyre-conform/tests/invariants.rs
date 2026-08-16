@@ -466,3 +466,53 @@ fn certificate_strength_controls_witnessed_law_detection() {
     let b = minimal_program().to_wire().unwrap();
     assert_eq!(a, b);
 }
+
+// =======================================================================
+// I16  -  Registry linkage and feature boundary discipline
+// =======================================================================
+
+#[test]
+fn conform_manifest_disables_registry_link_default_features() {
+    let manifest_content = include_str!("../Cargo.toml");
+    let manifest: toml::Value = toml::from_str(manifest_content)
+        .expect("conform/vyre-conform/Cargo.toml must parse as valid TOML");
+    let reg_link = manifest
+        .get("dependencies")
+        .and_then(|d| d.get("vyre-registry-link"))
+        .expect("vyre-registry-link must be declared in dependencies");
+
+    assert_eq!(
+        reg_link.get("default-features").and_then(toml::Value::as_bool),
+        Some(false),
+        "vyre-registry-link dependency in vyre-conform must explicitly declare default-features = false so --no-default-features does not link unwanted GPU drivers"
+    );
+}
+
+#[test]
+fn linked_backend_sources_honor_feature_boundary() {
+    let sources = vyre_registry_link::backend::linked_backend_source_names();
+    assert!(
+        sources.contains(&"vyre-driver-reference"),
+        "reference backend is always linked"
+    );
+
+    #[cfg(not(feature = "gpu"))]
+    {
+        assert!(
+            !sources.contains(&"vyre-driver-cuda"),
+            "vyre-conform without gpu feature must not link cuda backend"
+        );
+        assert!(
+            !sources.contains(&"vyre-driver-metal"),
+            "vyre-conform without gpu feature must not link metal backend"
+        );
+        assert!(
+            !sources.contains(&"vyre-driver-spirv"),
+            "vyre-conform without gpu feature must not link spirv backend"
+        );
+        assert!(
+            !sources.contains(&"vyre-driver-wgpu"),
+            "vyre-conform without gpu feature must not link wgpu backend"
+        );
+    }
+}

@@ -36,8 +36,8 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_primitives::ir_safe::clamped_load_to;
 use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
+use vyre_primitives::ir_safe::clamped_load_to;
 
 /// Canonical op id for inclusive sum-scan.
 pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_inclusive_sum";
@@ -53,26 +53,6 @@ pub enum ScanKind {
     ExclusiveSum,
 }
 
-/// Lanes a single-workgroup scan dispatches at most.
-///
-/// A scan reaches [`MAX_SINGLE_BLOCK_SCAN`] elements by giving each lane a run
-/// of elements, not by adding lanes. Two facts set this width, and it is the
-/// smaller of them: 256 is the workgroup size the fleet schedules at full
-/// occupancy, and past it a scan spends lanes on a sweep whose active fraction
-/// halves every round; `PORTABLE_WORKGROUP_INVOCATIONS` is the extent every
-/// registered target profile admits, and an op declares its geometry with no
-/// device in hand. Writing the occupancy choice alone would leave a second
-/// copy of the portable ceiling here to drift.
-pub const SCAN_WORKGROUP_LANES: u32 = if SCAN_OCCUPANCY_LANES
-    < vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
-{
-    SCAN_OCCUPANCY_LANES
-} else {
-    vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
-};
-
-/// Workgroup width the fleet schedules at full occupancy for a sweep scan.
-const SCAN_OCCUPANCY_LANES: u32 = 256;
 /// Largest element count one workgroup scans.
 ///
 /// Above this the scan is a multi-block chain, which
@@ -83,8 +63,8 @@ pub const MAX_SINGLE_BLOCK_SCAN: u32 = 1024;
 /// Emit a single-workgroup prefix-sum Program.
 ///
 /// `n` is the number of input slots, in `1..=`[`MAX_SINGLE_BLOCK_SCAN`]. The
-/// emitted workgroup holds `min(n.next_power_of_two(), 256)`
-/// lanes and each lane walks `ceil(n / lanes)` elements.
+/// emitted workgroup is capped at the portable workgroup width and each lane
+/// walks `ceil(n / lanes)` elements.
 #[must_use]
 pub fn prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Program {
     let op_id = match kind {
@@ -114,7 +94,9 @@ pub fn prefix_scan_with_op_id(
         );
     }
 
-    let lanes = n.next_power_of_two().min(256);
+    let lanes = n
+        .next_power_of_two()
+        .min(vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS);
     let run = n.div_ceil(lanes);
     let lane = Expr::InvocationId { axis: 0 };
     let scratch_a = format!("__{out_buf}_scan_a");

@@ -205,6 +205,19 @@ impl Value {
             _ => None,
         }
     }
+    /// Try to interpret the value as an `f64`.
+    #[must_use]
+    pub fn try_as_f64(&self) -> Option<f64> {
+        match self {
+            Self::Float(value) => Some(*value),
+            Self::U32(value) => Some(f64::from(f32::from_bits(*value))),
+            Self::I32(value) => Some(f64::from(*value)),
+            Self::U64(value) => Some(f64::from_bits(*value)),
+            Self::Bool(value) => Some(if *value { 1.0 } else { 0.0 }),
+            _ => None,
+        }
+    }
+
 
     /// Return the full value payload as little-endian bytes.
     #[must_use]

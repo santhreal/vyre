@@ -24,13 +24,6 @@ const LANE_SCRATCH: &str = "__moe_gate_lane_scratch";
 const SOFTMAX_STATS_OP_ID: &str = "vyre-libs::nn::moe_gate::softmax_stats";
 const WEIGHT_WRITE_OP_ID: &str = "vyre-libs::nn::moe_gate::weight_write";
 
-/// Lanes the gate reduces over.
-///
-/// `nn::softmax` tiles the same score vector at this width and gating is that
-/// softmax with a top-k on the end, so the two arms state one geometry: a plan
-/// that fuses them keeps the workgroup shape both were built for.
-const GATE_TILE: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
-
 /// Build a Program that computes MoE gating.
 /// `input_scores`: `num_experts`, `output_indices`: `k`, `output_weights`: `k`.
 #[must_use]
@@ -41,13 +34,13 @@ pub fn moe_gate(
     num_experts: u32,
     k: u32,
 ) -> Program {
-    let expert_chunks = chunks(num_experts, GATE_TILE);
+    let expert_chunks = chunks(num_experts, PORTABLE_WORKGROUP_INVOCATIONS);
     // The top-k pass suppresses a chosen expert by overwriting its score, so it
     // reads a workgroup copy rather than the caller's read-only input.
     let mut phases = vec![ReducePhase {
         accumulate: strided_writeback_child(
             OP_ID,
-            GATE_TILE,
+            PORTABLE_WORKGROUP_INVOCATIONS,
             expert_chunks,
             num_experts,
             SCORES_SCRATCH,
@@ -90,9 +83,9 @@ pub fn moe_gate(
             BufferDecl::output(output_weights, 2, DataType::F32).with_count(k),
             BufferDecl::workgroup(SCORES_SCRATCH, num_experts, DataType::F32),
             BufferDecl::workgroup(STATS_SCRATCH, 2, DataType::F32),
-            BufferDecl::workgroup(LANE_SCRATCH, GATE_TILE, DataType::F32),
+            BufferDecl::workgroup(LANE_SCRATCH, PORTABLE_WORKGROUP_INVOCATIONS, DataType::F32),
         ],
-        workgroup: [GATE_TILE, 1, 1],
+        workgroup: [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
         phases,
         writeback: Some(weight_write_child(
             OP_ID,
@@ -114,12 +107,12 @@ fn softmax_stats_phases(
     input_scores: &str,
     num_experts: u32,
 ) -> Vec<ReducePhase> {
-    let expert_chunks = chunks(num_experts, GATE_TILE);
+    let expert_chunks = chunks(num_experts, PORTABLE_WORKGROUP_INVOCATIONS);
     vec![
         ReducePhase {
             accumulate: strided_accumulate_child(
                 parent,
-                GATE_TILE,
+                PORTABLE_WORKGROUP_INVOCATIONS,
                 expert_chunks,
                 num_experts,
                 "lane_max",
@@ -129,7 +122,7 @@ fn softmax_stats_phases(
             ),
             reductions: vec![max_f32_child(
                 parent,
-                GATE_TILE,
+                PORTABLE_WORKGROUP_INVOCATIONS,
                 LANE_SCRATCH,
                 WorkgroupReductionScope::FirstWorkgroup,
             )],
@@ -142,7 +135,7 @@ fn softmax_stats_phases(
         ReducePhase {
             accumulate: strided_accumulate_child(
                 parent,
-                GATE_TILE,
+                PORTABLE_WORKGROUP_INVOCATIONS,
                 expert_chunks,
                 num_experts,
                 "lane_sum_exp",
@@ -160,7 +153,7 @@ fn softmax_stats_phases(
             ),
             reductions: vec![sum_f32_child(
                 parent,
-                GATE_TILE,
+                PORTABLE_WORKGROUP_INVOCATIONS,
                 LANE_SCRATCH,
                 WorkgroupReductionScope::FirstWorkgroup,
             )],
@@ -183,8 +176,8 @@ fn weight_write_child(
 ) -> Node {
     strided_writeback_child(
         parent,
-        GATE_TILE,
-        chunks(k, GATE_TILE),
+        PORTABLE_WORKGROUP_INVOCATIONS,
+        chunks(k, PORTABLE_WORKGROUP_INVOCATIONS),
         k,
         output_weights,
         vec![
@@ -256,9 +249,9 @@ fn softmax_stats_program() -> Program {
             BufferDecl::storage("scores", 0, BufferAccess::ReadOnly, DataType::F32).with_count(8),
             BufferDecl::storage(STATS_SCRATCH, 1, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(2),
-            BufferDecl::workgroup(LANE_SCRATCH, GATE_TILE, DataType::F32),
+            BufferDecl::workgroup(LANE_SCRATCH, PORTABLE_WORKGROUP_INVOCATIONS, DataType::F32),
         ],
-        workgroup: [GATE_TILE, 1, 1],
+        workgroup: [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
         phases: softmax_stats_phases(SOFTMAX_STATS_OP_ID, "scores", 8),
         writeback: None,
     })
@@ -274,7 +267,7 @@ fn weight_write_program() -> Program {
                 .with_count(2),
             BufferDecl::output("weights", 3, DataType::F32).with_count(2),
         ],
-        workgroup: [GATE_TILE, 1, 1],
+        workgroup: [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
         phases: Vec::new(),
         writeback: Some(weight_write_child(
             WEIGHT_WRITE_OP_ID,
@@ -387,7 +380,7 @@ mod tests {
 
     #[test]
     fn moe_gate_covers_an_expert_count_past_one_lane_pass() {
-        // 300 experts over `GATE_TILE` lanes needs two chunks, so the last
+        // 300 experts over the portable workgroup width needs two chunks, so the last
         // chunk overshoots the space and the walk's bounds guard is what keeps
         // the reduction exact. A ceiling that dropped the tail would miss the
         // maximum at 299 and a guard that let the tail run would fold garbage

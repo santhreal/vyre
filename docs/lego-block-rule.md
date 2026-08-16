@@ -80,10 +80,10 @@ Before writing a new sub-op:
 
 Placement is decided by composability alone. A `fn(...) -> Program` built
 from existing IR variants is a Category A composition and belongs in
-`vyre-libs` from its first caller. `GOAL.md` section 5 owns that rule and
-states it directly: reuse count is not an admission criterion, and a
-composition still living in `vyre-primitives` is a live defect. Nothing
-below may be read as a reason to leave a composition outside `vyre-libs`.
+`vyre-libs` from its first caller. `docs/CRATE_OWNERSHIP.toml` declares that
+rule: reuse count is not an admission criterion, and a composition still
+living in `vyre-primitives` is a live defect. Nothing below may be read as a
+reason to leave a composition outside `vyre-libs`.
 
 What reuse decides is visibility inside `vyre-libs`: whether the function
 stays private to one op file or becomes a published, registered op. It

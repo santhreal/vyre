@@ -24,6 +24,7 @@ pub(crate) fn validate_binop_operands(
     right: &Expr,
     buffers: &FxHashMap<&str, &BufferDecl>,
     scope: &FxHashMap<crate::ir::Ident, Binding>,
+    supports_subgroup_ops: bool,
     errors: &mut Vec<ValidationError>,
 ) {
     let left_ty = expr_type(left, &mut ScopeTypes::new(buffers, scope));
@@ -39,7 +40,13 @@ pub(crate) fn validate_binop_operands(
         // one owner. Listing them here as well is how the list and the result
         // classifier in `expr_type` drifted apart on `AbsDiff`.
         _ if op.takes_numeric_operands() => {
-            if matches!(op, BinOp::Div) && expr_is_static_zero(right) {
+            if matches!(op, BinOp::Div)
+                && expr_is_static_zero(right)
+                && matches!(
+                    right_ty,
+                    Some(DataType::U32 | DataType::I32 | DataType::U64 | DataType::I64)
+                )
+            {
                 errors.push(err("V044", ValidationPhase::Type, ValidationLocation::Program, "binary operation `Div` has a statically-zero divisor"
                         .to_string(), "guard the divisor, use Select to substitute a non-zero value, or reject the input before building IR."
                         .to_string()));
@@ -124,8 +131,8 @@ pub(crate) fn validate_binop_operands(
                 }
             }
         }
-        // Bitwise: target-text `&` / `|` / `^` require integer operands of the same type.
-        BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor => {
+        // Bitwise and wrapping integer arithmetic: target-text `&` / `|` / `^` / WrappingAdd / WrappingSub require integer operands of the same type.
+        BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor | BinOp::WrappingAdd | BinOp::WrappingSub => {
             if let (Some(l), Some(r)) = (&left_ty, &right_ty) {
                 if !matches!(l, DataType::U32 | DataType::I32) {
                     errors.push(err("V091", ValidationPhase::Type, ValidationLocation::Program, format!(
@@ -144,10 +151,11 @@ pub(crate) fn validate_binop_operands(
                 }
             }
         }
-        // Shifts and rotates: target-text masks the right operand with `& 31u`,
+        // Shifts, rotates, and multiply-high: target-text masks the right operand with `& 31u`,
         // so both sides must be u32. Rotates share the same typing  -
         // left is the bit-pattern, right is the rotation count in bits.
-        BinOp::Shl | BinOp::Shr | BinOp::RotateLeft | BinOp::RotateRight => {
+        // MulHigh is the unsigned Granlund-Montgomery primitive, requiring u32 operands.
+        BinOp::Shl | BinOp::Shr | BinOp::RotateLeft | BinOp::RotateRight | BinOp::MulHigh => {
             for (side, ty) in [("left", left_ty), ("right", right_ty)] {
                 if let Some(ty) = ty {
                     if !matches!(ty, DataType::U32) {
@@ -171,7 +179,9 @@ pub(crate) fn validate_binop_operands(
             }
         }
         // Comparisons: target-text requires both operands to have the same type.
-        BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => {
+        // Equality admits any matching types (including bool), while ordered comparisons
+        // require numeric types and reject bool operands.
+        BinOp::Eq | BinOp::Ne => {
             if let (Some(l), Some(r)) = (&left_ty, &right_ty) {
                 if l != r {
                     errors.push(err("V096", ValidationPhase::Type, ValidationLocation::Program, format!(
@@ -180,12 +190,27 @@ pub(crate) fn validate_binop_operands(
                 }
             }
         }
+        BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => {
+            if let (Some(l), Some(r)) = (&left_ty, &right_ty) {
+                if l != r {
+                    errors.push(err("V096", ValidationPhase::Type, ValidationLocation::Program, format!(
+                        "binary comparison `{op:?}` operands have mismatched types: left=`{l}`, right=`{r}`. Comparisons require matching types"
+                    ), "cast both operands to the same type before comparing.".to_string()));
+                } else if matches!(l, DataType::Bool) {
+                    errors.push(err("V096", ValidationPhase::Type, ValidationLocation::Program, format!(
+                        "ordered comparison `{op:?}` received operands of type `bool`; ordered comparisons require numeric types (u32, i32, f32)"
+                    ), "cast boolean operands to U32 or use Eq/Ne for boolean comparison.".to_string()));
+                }
+            }
+        }
         BinOp::Shuffle | BinOp::Ballot | BinOp::WaveReduce | BinOp::WaveBroadcast => {
-            errors.push(err("V097", ValidationPhase::Type, ValidationLocation::Program, format!(
-                "binary operation `{op:?}` requires backend subgroup semantics (`supports_subgroup_ops() == true`) before foundation validation can guarantee safety"
-            ), format!(
-                "validate with ValidationOptions::with_backend(backend) where `backend.supports_subgroup_ops() == true`, or remove `{op:?}` before lowering."
-            )));
+            if !supports_subgroup_ops {
+                errors.push(err("V097", ValidationPhase::Type, ValidationLocation::Program, format!(
+                    "binary operation `{op:?}` requires backend subgroup semantics (`supports_subgroup_ops() == true`) before foundation validation can guarantee safety"
+                ), format!(
+                    "validate with ValidationOptions::with_backend(backend) where `backend.supports_subgroup_ops() == true`, or remove `{op:?}` before lowering."
+                )));
+            }
         }
         _ => {}
     }

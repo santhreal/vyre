@@ -151,123 +151,123 @@ fn assert_pinned(family: &str, actual: &[(String, String)], pinned: &[(&str, &st
 const CONV_PINS: &[(&str, &str)] = &[
     (
         "conv2d_3x3_direct:1x1",
-        "57ad59fc51c5fdf9231281415f254b85266422d52117d5b4f9edf74d473817c1",
+        "4c3ae41462bd7c0ede42aa23d3107f556c2f903d550a5156808135f912e79dfb",
     ),
     (
         "im2col_3x3:1x1",
-        "3bb89380f338405ab83cdaf9773d469758087309d1c022a25234217bdc19d359",
+        "09cd8133dfc56300f244c284235c03bfc9ba11427dbedc02fa44c65e8bcb96d7",
     ),
     (
         "conv2d_3x3_decision:1x1",
-        "57ad59fc51c5fdf9231281415f254b85266422d52117d5b4f9edf74d473817c1",
+        "4c3ae41462bd7c0ede42aa23d3107f556c2f903d550a5156808135f912e79dfb",
     ),
     (
         "conv2d_3x3_direct:1x5",
-        "56814bc08017d0a879faf770206b272c3c83e05c828029585d3323cfae823104",
+        "60744680c2cd595acb224de3d02f5975284ae93f3a2170a9611ac1616fca9098",
     ),
     (
         "im2col_3x3:1x5",
-        "5cf8daef58d7ec019a9624aba1ae8b7574e60045d6c1a6e2f1ac496c97aa47d8",
+        "ce5c180d5f242b74bbe0ee95fd375348411a6a69bd5348c02f58c1cd5a6b9ed6",
     ),
     (
         "conv2d_3x3_decision:1x5",
-        "56814bc08017d0a879faf770206b272c3c83e05c828029585d3323cfae823104",
+        "60744680c2cd595acb224de3d02f5975284ae93f3a2170a9611ac1616fca9098",
     ),
     (
         "conv2d_3x3_direct:5x1",
-        "613ce86590b5d7835bba2192bcca2b251f4e7468fee611db9ba06b51fa7ec196",
+        "4ed6860ac6b6a384a1edbf22f126f7b1eec6ffac0a04785d03a06bde22917dbc",
     ),
     (
         "im2col_3x3:5x1",
-        "ad86f2a385a38c90033114c2bb6f19020e9378f8902775c370a62b1ae08de437",
+        "7b0cd8b3d9cdc7b4f1aac98b93c9e4eddc019b3181eb9e5ab55b31a4a59084c4",
     ),
     (
         "conv2d_3x3_decision:5x1",
-        "613ce86590b5d7835bba2192bcca2b251f4e7468fee611db9ba06b51fa7ec196",
+        "4ed6860ac6b6a384a1edbf22f126f7b1eec6ffac0a04785d03a06bde22917dbc",
     ),
     (
         "conv2d_3x3_direct:2x3",
-        "620957948987f1f1884b05819cc567df0a3a2b796d61461eca9513f1ebca1302",
+        "d116c48341d46aece6f5b485efdb724a3f73b5d00b714bf3c867f2c908a9dec3",
     ),
     (
         "im2col_3x3:2x3",
-        "923cb887e843796c73f4cceb13f91db1104c8b1606bfbbddecc3959fa105c0a3",
+        "e55f8e6d3b3c13812a0f6113cf37a8e12fdab1e1a8a95848c8758c1f56a2a95d",
     ),
     (
         "conv2d_3x3_decision:2x3",
-        "620957948987f1f1884b05819cc567df0a3a2b796d61461eca9513f1ebca1302",
+        "d116c48341d46aece6f5b485efdb724a3f73b5d00b714bf3c867f2c908a9dec3",
     ),
     (
         "conv2d_3x3_direct:3x3",
-        "dff1981905bc92ae158ff30d6d40429e047af8b3247d8afc5f04481b03f9662a",
+        "22a4b5597652b20113c8299b607e418e043fd53a51e24c52e0c81a9a4638007b",
     ),
     (
         "im2col_3x3:3x3",
-        "b2463482d90d0cc0a44f8f49c8a85e38f08d3796be16a15c0c4e1d5ae849a5a3",
+        "4b4c35959b639b4e3f5022f43cb18808dbcaf0a664fd3e39777dcb0b930122a1",
     ),
     (
         "conv2d_3x3_decision:3x3",
-        "dff1981905bc92ae158ff30d6d40429e047af8b3247d8afc5f04481b03f9662a",
+        "22a4b5597652b20113c8299b607e418e043fd53a51e24c52e0c81a9a4638007b",
     ),
     (
         "conv2d_3x3_direct:4x4",
-        "1eb1c3b9be19790eeff8c95437daddddf30dee7c639c6e7bf4b4e88f9815f0e5",
+        "8bb5a403a6f9b80c421afdbb9157c36cb1f286e28a35b641f02c5ba94e27fde8",
     ),
     (
         "im2col_3x3:4x4",
-        "e11d70f66984287c73a68a77fed3d95737f0828ac887c6509024f0879ac46940",
+        "10f3acdebc88dd249887fd650e1807cd302048841ddc1fe65ff222c9635ad7fd",
     ),
     (
         "conv2d_3x3_decision:4x4",
-        "1eb1c3b9be19790eeff8c95437daddddf30dee7c639c6e7bf4b4e88f9815f0e5",
+        "8bb5a403a6f9b80c421afdbb9157c36cb1f286e28a35b641f02c5ba94e27fde8",
     ),
     (
         "conv2d_3x3_direct:8x8",
-        "9376b07e65bd33f647230c2a14c790d09a95abb4f5b62997fa52c1ac992c5de6",
+        "68f10294db503217f359bc7eee7b6c48e1f4b794718ed291d20d86fa2767334c",
     ),
     (
         "im2col_3x3:8x8",
-        "6523b1251278b5eb733dc54b32bfd68e0e839a233e4bfec8d3fcb5ba8faa4e3b",
+        "032bb55e239de7b29228d1963603c55d7ae5790c738fa2df7ff14fd361f6562f",
     ),
     (
         "conv2d_3x3_decision:8x8",
-        "9376b07e65bd33f647230c2a14c790d09a95abb4f5b62997fa52c1ac992c5de6",
+        "68f10294db503217f359bc7eee7b6c48e1f4b794718ed291d20d86fa2767334c",
     ),
     (
         "conv2d_3x3_direct:64x63",
-        "80a0e394c01b7f3855c1602a99e24ed548942488547e9368a06dab72d8979bbc",
+        "f63baaa5b6b7911ae7611b94c99bd885ca94c6d310f48d51ea8dca8fee453a38",
     ),
     (
         "im2col_3x3:64x63",
-        "7016be2fde917821feddb1139ace0b5189e0f548ec4746d66cf11a634400ff79",
+        "070cd727c4f472392b9ff60dcebaff22a44e45c93d06beb442ec6a78be81e05e",
     ),
     (
         "conv2d_3x3_decision:64x63",
-        "80a0e394c01b7f3855c1602a99e24ed548942488547e9368a06dab72d8979bbc",
+        "f63baaa5b6b7911ae7611b94c99bd885ca94c6d310f48d51ea8dca8fee453a38",
     ),
     (
         "conv2d_3x3_direct:64x64",
-        "94ab044b3bc64fe726b07cdb97dd1a0aafe7224f9bd08c6ebe6e65e709604a9b",
+        "fb45f42bc6664dedc8a8bbd21e9e56dfa2cdf3ecf5e5efb2d8a5398d9df2c1ea",
     ),
     (
         "im2col_3x3:64x64",
-        "22d35dde4f60e18f010117f1765e845d9397b2fd99e762fd53409446f64f335c",
+        "d062cb0a1024b50a85f515540ddef0055201adf9bc681511a4b52e60127a6b13",
     ),
     (
         "conv2d_3x3_decision:64x64",
-        "ad1d28b769e4f14abc2c57b5e069205b3bb04da92505dd1c1115ad0d2758644a",
+        "5732ebfa1597679bed723d90f846933ff8f53bdca1fb6d94c435aade601d4995",
     ),
     (
         "conv2d_3x3_direct:65x65",
-        "1df3ff08be5673910cc8c582960c24872c20bb499f7379708f7cefc4309b32e6",
+        "6d4463b09b4fc2c975d4cdcadcec95f2a64ff461511ccddc1a0763ebef027bac",
     ),
     (
         "im2col_3x3:65x65",
-        "b79b16cf7c386d7d95ba1caffcbe28c0462039ad9fe14d5aa140882d19d4a712",
+        "9b621bbe26261d0e8ce45104d6e06a631cc70370ae8c969d84d2621d65ce0e3c",
     ),
     (
         "conv2d_3x3_decision:65x65",
-        "5c31159747fd2b391426d8a65a4cc1db563f8b32b29c65b76a2bb566d056c690",
+        "b796bf011ad434b9463efb9c86d99cff575a99426ce22696e67ad05b97c8d830",
     ),
 ];
 
@@ -275,83 +275,83 @@ const CONV_PINS: &[(&str, &str)] = &[
 const WALK_PINS: &[(&str, &str)] = &[
     (
         "ast_walk_preorder:0/8",
-        "11295d9687e535d7698850881d76428fa6c3be1a7439d773503ea08cdfa62f88",
+        "1a4ddf103c94b1da51a9e5c331709f69ab929597c16c99facdffad36612eaaf0",
     ),
     (
         "ast_walk_postorder_nodes:0/8",
-        "2f8604e9b72ae78bb75d3ff13e05e06a5ba81d70f3efb87801abff9e701902e2",
+        "1b73f269f582337d7e1bf15812f59bd924b76f3327762de91b4f4a4e6f847bc4",
     ),
     (
         "ast_walk_preorder:1/8",
-        "e96b7368e16c43972a8e8fb11a28976bc0dcb095c7286ebee3f8ec71c974ffa7",
+        "3b3382780be9befa3f9e25030685e42c228ebb18eeb683d6b678f817f6ccf48b",
     ),
     (
         "ast_walk_postorder_nodes:1/8",
-        "e4295589e720717345f9c752a29d37a2d228304128dfa04b7041fc0327adbd96",
+        "3e073d7fb96f9d8395d5bca82cff49e6858b2ade8b8d1718b2bef3d0f90cf789",
     ),
     (
         "ast_walk_preorder:1/1",
-        "0ff959771f9edeb9bca907d0ffaac7ff3d6872e5e96c03886f0c74dc97ae1ee0",
+        "9d0d0b4716e4bfa53aafcd991ccb6b4f237a8dd9e1f8111990761e70e9a5119e",
     ),
     (
         "ast_walk_postorder_nodes:1/1",
-        "5fbdd20cdebf42d3c2497a8457415ee43387f83b8450a2f712d4666464587c1c",
+        "a3e56147b00fa8c215067deaf49a2955db5e71dfe6743983c985efe29c9df84f",
     ),
     (
         "ast_walk_preorder:4/8",
-        "286e652deaaf4cc0e4bb4cecde6e1a0296f81fb0e0c5a6d1ea5b7677263a465d",
+        "e68761083cd25982fcf874300f7e88b036e299c20de07eced0e70c8be7f64f9c",
     ),
     (
         "ast_walk_postorder_nodes:4/8",
-        "77316f9e432d027843fc1c928b192bd4d15be064a4998242b492523fb4115e36",
+        "369d8b80bad1964d72f7813d2550d694d5a72c5b145a13fe578216ae2043f3d5",
     ),
     (
         "ast_walk_preorder:6/8",
-        "e338c33a2088656013f475f4b4ce6536936d8683035b30244682106f5f5ef142",
+        "dd5a5ec69059562fea7d9b3d8cb173a5a0a6c8ba98e06091ad0235e97f345c5b",
     ),
     (
         "ast_walk_postorder_nodes:6/8",
-        "78d8677f9876a05706f2a2d89217e26c87c7e021dc6a6b1367fd84a4a4c04a68",
+        "2e85a3e25ecce679723b46d1c1721019ae00d59a89481f8096d51cb99c5a80f9",
     ),
     (
         "ast_walk_preorder:8/4",
-        "59d319c45744defef232636d975cfe4a9a818e9b4e766163f39eb35d19e5af01",
+        "b4045fd328bd7564bdbbde6d8e7a5dc334f4e23f5d26783362b1b10420372cb8",
     ),
     (
         "ast_walk_postorder_nodes:8/4",
-        "399d5c021ae004525e4b6468e8b62f09ae451b7d275842309ee01bf655cc177a",
+        "9940b91a745b61e96a399f2f8105fe4573ebda4b14702b2acf89209e31a174e1",
     ),
     (
         "ast_walk_preorder:8/16",
-        "b603238a54bc2ad580d757b36497a37ef6a39e6763668055ce43d65fa6c9c108",
+        "20928354ffbe04677f3f7db371f0ce3b3d6da4a990eebddf22ac3c5f7eaa57dd",
     ),
     (
         "ast_walk_postorder_nodes:8/16",
-        "a17f38b0a7a164a7558b4ba5d3f70d25762c8f67ce810dced069cc5f5911e12e",
+        "69d8539aef15f30f5a458dd55829bddd44d395df154de464675d3e79cef4a7b6",
     ),
     (
         "ast_walk_preorder:8/1",
-        "f8ddd3966f6b95d1f1bb5ebb7e8e569634f569b6df85b98774232c8f103be471",
+        "6069843dba4a35d31be7c3da1589d798ab8368f029d99365256f57d003d726e4",
     ),
     (
         "ast_walk_postorder_nodes:8/1",
-        "5746bc5d86291d0e9189d1ef3def7f125bb89d674fda3799ad0cf904ad3bb966",
+        "a0d960710cf14e44b4d862e5d4e3954c27e7d65f004373d2b5edcda29149ce0c",
     ),
     (
         "ast_walk_postorder:0",
-        "87a0886d2539e3ef5a5f41c38cbcec6427af8fdf787388815c38d7b796eab27b",
+        "5629e403cd40dd4a11b2b48f359cbab5868e24dc058f3579e3504295230464cd",
     ),
     (
         "ast_walk_postorder:1",
-        "73ad74681617284bafcebb5314e1734bedc0302fe61b6d324fc015ced7344cb3",
+        "bf077cdd00d0c30fe461001aeb96e072ff24457af62cd9675c6f434169c81d01",
     ),
     (
         "ast_walk_postorder:4",
-        "88a0bfd385f1dd59e2badfaaf0b8a51b50b087c7b3d77a4d8966f97afd01163f",
+        "8db64ba191e7705338d3a74613e4777605ed4b4967b9e13e5e86e7985f86f58e",
     ),
     (
         "ast_walk_postorder:8",
-        "50bd9700487098de330f4796cf14e12ef3a840b76ff229fd3aef4904705ef1d5",
+        "ff8acc9176f0a5ef2b8b0d440fdafa5ac20cd1b86cd504a91cfbcc12eaca782b",
     ),
 ];
 
@@ -364,7 +364,6 @@ fn conv_family_ir_is_pinned() {
 fn ast_walk_family_ir_is_pinned() {
     assert_pinned("graph::ast_walk", &walk_family_fingerprints(), WALK_PINS);
 }
-
 // ---------------------------------------------------------------------------
 // Numeric contracts: what the fingerprints stand in for.
 // ---------------------------------------------------------------------------

@@ -86,6 +86,7 @@ pub(crate) fn validate_expr(
                 right,
                 buffers,
                 scope,
+                options.requires_subgroup_ops(),
                 &mut report.errors,
             );
         }

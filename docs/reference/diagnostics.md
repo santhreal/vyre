@@ -11,7 +11,7 @@ the rule, not a style question.
 
 ## Validation codes
 
-`docs/generated/error-codes.toml` is the whole validation rule set: 100
+`docs/generated/error-codes.toml` is the whole validation rule set: 104
 rules at schema version 1, rendered from
 `vyre-foundation/src/validate/catalog.rs`. Each row carries `code`,
 `phase`, `invariant` and `corrective_action`.
@@ -22,7 +22,7 @@ The eight phases and how many rules each owns:
 |---|---|
 | type | 24 |
 | memory | 22 |
-| node | 21 |
+| node | 25 |
 | expression | 18 |
 | program | 9 |
 | limits | 3 |
