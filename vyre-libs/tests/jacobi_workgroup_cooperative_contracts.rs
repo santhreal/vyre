@@ -20,6 +20,7 @@
 #![cfg(feature = "math")]
 
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::visit::any_descendant;
 use vyre_libs::math::eigenvector_column_sign::{eigenvector_column_sign, OP_ID as SIGN_OP_ID};
 use vyre_libs::math::jacobi_apply_rotation::OP_ID as ROTATION_OP_ID;
 use vyre_libs::math::matrix_diagonal_extract::{matrix_diagonal_extract, OP_ID as DIAG_OP_ID};
@@ -32,14 +33,13 @@ use vyre_reference::value::Value;
 const LANES: u32 = 64;
 
 fn check_local_id_binding(program: &Program) -> bool {
-    program.entry().iter().any(|node| match node {
-        Node::Region { body, .. } => body.iter().any(|inner| match inner {
+    program.entry().iter().any(|node| {
+        any_descendant(node, &mut |inner| match inner {
             Node::Let { name, value } => {
                 name == "local" && matches!(value, Expr::LocalId { axis: 0 })
             }
             _ => false,
-        }),
-        _ => false,
+        })
     })
 }
 
@@ -142,14 +142,11 @@ fn jacobi_cooperative_phases_are_not_serialized() {
         body: sweep_body, ..
     } = sweep_loop
     {
-        let rotation_is_serialized = sweep_body.iter().any(|node| match node {
-            Node::If { then, .. } => then.iter().any(|inner| match inner {
-                Node::If { then: sub, .. } => {
-                    sub.iter().any(|r| matches!(r, Node::Region { generator, .. } if generator.as_str() == ROTATION_OP_ID))
-                }
-                _ => false,
-            }),
-            _ => false,
+        let rotation_is_serialized = sweep_body.iter().any(|node| {
+            matches!(node, Node::If { .. })
+                && any_descendant(node, &mut |r| {
+                    matches!(r, Node::Region { generator, .. } if generator.as_str() == ROTATION_OP_ID)
+                })
         });
         assert!(
             rotation_is_serialized,

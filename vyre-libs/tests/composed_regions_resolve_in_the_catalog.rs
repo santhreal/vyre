@@ -24,6 +24,8 @@ use std::collections::BTreeSet;
 
 use vyre_foundation::ir::{Node, Program};
 use vyre_foundation::operation::OperationRegistry;
+use vyre_foundation::composition::is_anonymous_generator;
+use vyre_foundation::visit::any_descendant;
 use vyre_libs::operation_catalog;
 
 /// Prefix marking a child region that is deliberately outside the catalog.
@@ -31,26 +33,14 @@ const ANONYMOUS_PREFIX: &str = "anonymous::";
 
 /// Every distinct region-generator identity reachable from a program's entry.
 fn region_generators(program: &Program, out: &mut BTreeSet<String>) {
-    fn walk(node: &Node, out: &mut BTreeSet<String>) {
-        match node {
-            Node::Region {
-                generator, body, ..
-            } => {
+    for node in program.entry() {
+        let _ = any_descendant(node, &mut |node| {
+            if let Node::Region { generator, .. } = node {
                 out.insert(generator.as_str().to_string());
-                body.iter().for_each(|child| walk(child, out));
             }
-            Node::Block(body) => body.iter().for_each(|child| walk(child, out)),
-            Node::Loop { body, .. } => body.iter().for_each(|child| walk(child, out)),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().for_each(|child| walk(child, out));
-                otherwise.iter().for_each(|child| walk(child, out));
-            }
-            _ => {}
-        }
+            false
+        });
     }
-    program.entry().iter().for_each(|node| walk(node, out));
 }
 
 #[test]
@@ -73,7 +63,7 @@ fn every_emitted_region_names_a_catalog_operation() {
         let mut generators = BTreeSet::new();
         region_generators(&build(), &mut generators);
         for generator in generators {
-            if generator.starts_with(ANONYMOUS_PREFIX) || catalog.contains(generator.as_str()) {
+            if is_anonymous_generator(generator.as_str()) || catalog.contains(generator.as_str()) {
                 continue;
             }
             unresolved.push(format!("{} emits region {generator}", operation.id));
