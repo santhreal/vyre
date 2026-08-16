@@ -1,8 +1,7 @@
 {
-  "schema_version": 4,
+  "source_fingerprint": "git:76672afe234e646b1d88c30bdf0977b345e3a1da:dirty=true:worktree=d0aed076585526f6c5558fb96f10ded6b0bcaa8d183f876275435e25e43db60d",
+  "schema_version": 5,
   "total_commands": 14,
-  "successful_commands": 11,
-  "command_failures": 3,
   "artifact_failures": 4,
   "command_count": 14,
   "required_command_count": 14,
@@ -18,46 +17,45 @@
         "docs/SUMMARY.md",
         "docs/INDEX.md"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "docs/DOCS.toml",
           "exists": true,
-          "bytes": 38118,
+          "bytes": 13097,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-check",
           "command_mode": "spawned",
-          "content_sha256": "5b5247ef788ecea4d7638d201a7a21ad4dee5e3840e895771787d827e3198478",
-          "source_fingerprint": "release-evidence-source:v1:3648eabf604cb2c620c15ba958b28037cc9042d9377a78b1032625e8671f2403",
-          "freshness_fingerprint": "release-evidence-freshness:v1:4067890558d7280d26965f64334158ccf867f713044f307daa4060658df72a29",
+          "content_sha256": "13996e3e02c21e8647e0038b05fe886ebbcd9d25aa09944565433dbdd0e4085e",
+          "source_fingerprint": "release-evidence-source:v1:43985c9828a151dbc4d442a0e6b5cd1d17f336b7a7feaf8421ff6dd5e6cf954b",
+          "freshness_fingerprint": "release-evidence-freshness:v1:49cc5ada0b0af13062ca7c0274eabf0ef31d31eb41b79994109bd90488a8ffb8",
           "blockers": []
         },
         {
           "path": "docs/SUMMARY.md",
           "exists": true,
-          "bytes": 5970,
+          "bytes": 2249,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-check",
           "command_mode": "spawned",
-          "content_sha256": "326185e1aa0efc1e1f9acac1d2cb483793014ed19b101a76fc5d41b7a900dd6a",
-          "source_fingerprint": "release-evidence-source:v1:d94729a71f831137efdcddb0cd91e2ff9af3c39414d7d05d01f7e5cc9fa5e7c6",
-          "freshness_fingerprint": "release-evidence-freshness:v1:ba4c4756b29887ed6d11b70f9542426ecb79b6b3df4482adf17b40d645f27741",
+          "content_sha256": "d24db00d8e2f09010132784b22e92ab01b3d8c5685f443b6a429780f3743323c",
+          "source_fingerprint": "release-evidence-source:v1:b6bd785e70318b2e6a8a6ed8916a7569ad5665ad093d8ca1b012c9e47b2a89d5",
+          "freshness_fingerprint": "release-evidence-freshness:v1:1e06ca55ea6cd1d694074a5883cf239a369f90ce8d4bea644797c3d527495be0",
           "blockers": []
         },
         {
           "path": "docs/INDEX.md",
           "exists": true,
-          "bytes": 23062,
+          "bytes": 9384,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-check",
           "command_mode": "spawned",
-          "content_sha256": "bf32657879a99755748052861158375bfc2afcde1c4693b7d045355e8b24a725",
-          "source_fingerprint": "release-evidence-source:v1:8eb8fb119bc67c6518b4a7ed5dddf67bcf73373f4bfc64c9c183e1264ee541db",
-          "freshness_fingerprint": "release-evidence-freshness:v1:fbe5a9e5f2b7b5ae93216c7e130d0f06afd0d25f55c118a8190d9c637eb56d65",
+          "content_sha256": "faee1f2f40b4e8502ace29c24e0161e9737a0803b728e138ce94e6f571d77523",
+          "source_fingerprint": "release-evidence-source:v1:ca523c2b7e6964c21b6b7e1f1aeef0cb05c4b69ffc710bdb1502373e546dc3bc",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2e8df6f6c4308b1319d71e417c7cb9d9a6bc01c34ca7c701fc98c31a65621db9",
           "blockers": []
         }
       ]
@@ -71,33 +69,32 @@
         "release/evidence/version/version-matrix.json",
         "release/evidence/version/release-tag-plan.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/version/version-matrix.json",
           "exists": true,
-          "bytes": 16692,
+          "bytes": 16495,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask version-matrix",
           "command_mode": "spawned",
-          "content_sha256": "4e60436f3c47e0191617b35f61d90409e09c9b0409c19943da03518002ba7480",
-          "source_fingerprint": "release-evidence-source:v1:f28836845190dc64bf30c0670cdf3115bb71154b4a2f96dc24900535cf2363be",
-          "freshness_fingerprint": "release-evidence-freshness:v1:743f3a48ed1fda18de7f309d842e582478b5e96589bfb52ac62cf7e6d0415910",
+          "content_sha256": "13f0530f2a6803ac4fc6a1eda3fc879e2d24b5a47c775d6a6c8520ad5f72e805",
+          "source_fingerprint": "release-evidence-source:v1:45f2b5995ab7c5b67c7caac539b30d8d62797ed95e0f8b0448e3f11dd9d665d6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:31330fbb6f17881186ace4f4ac5687ebc071264f3fe205d0fff46508178d4293",
           "blockers": []
         },
         {
           "path": "release/evidence/version/release-tag-plan.json",
           "exists": true,
-          "bytes": 675,
+          "bytes": 724,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask version-matrix",
           "command_mode": "spawned",
-          "content_sha256": "5a1a55f809998b330b6b17209e0890722a7e36598e768f6030b15b39d81498d9",
-          "source_fingerprint": "release-evidence-source:v1:0b81f397e119c62d416f92bf5cc2569b95e7998aa39d75da92c2a6ddabbad0e1",
-          "freshness_fingerprint": "release-evidence-freshness:v1:d8bb100639b44403aaf40db69599823fb29c912e502efed44c16772e78837221",
+          "content_sha256": "9f24088d864d1126f8aec0109869cc20d85c28048f635d905a7d70a894c188da",
+          "source_fingerprint": "release-evidence-source:v1:6f5ad945a7729fae1c783472d59dac5b83cad7e49ea202490413a2a5ba43c41d",
+          "freshness_fingerprint": "release-evidence-freshness:v1:64d7ed47951dd5ad8f0786cef2e4e5015ed0b234a73a10ad654dc9252ce22941",
           "blockers": []
         }
       ]
@@ -110,20 +107,19 @@
       "expected_artifacts": [
         "release/evidence/backends/backend-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/backends/backend-matrix.json",
           "exists": true,
-          "bytes": 14789,
+          "bytes": 14968,
           "read_error": null,
           "owner_lane": "driver_shared",
           "generator_command": "xtask backend-matrix",
           "command_mode": "spawned",
-          "content_sha256": "98672e5c13887da4bd35e85e1314ddc4899e6859717af25005d9eb54236e5542",
-          "source_fingerprint": "release-evidence-source:v1:375a47ad8802fc5063279e9b1b50267cca0a41b93bc9f523bb54ac3082ea8335",
-          "freshness_fingerprint": "release-evidence-freshness:v1:bf4fa113f9e970aebd4585fc57eaca9b0445d217274026e17b2d5050866785d6",
+          "content_sha256": "8a294ff021f36b2dd2fbeb9c9e8ec0e60657aba568d1b4bceab7fc12432225b5",
+          "source_fingerprint": "release-evidence-source:v1:a55967d2118f183b3ca4b17e2a358f2cd18b06856aab8adac5501fa5fd0a234d",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c7446762644f1750ccbd1d40f7112ca0020a974bfc2d00dc3af9be8d64d1b3d9",
           "blockers": []
         }
       ]
@@ -136,20 +132,19 @@
       "expected_artifacts": [
         "release/evidence/conformance/conformance-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/conformance/conformance-matrix.json",
           "exists": true,
-          "bytes": 1690272,
+          "bytes": 1713858,
           "read_error": null,
           "owner_lane": "driver_shared",
           "generator_command": "xtask conformance-matrix",
           "command_mode": "spawned",
-          "content_sha256": "afdc5323a029f92c339f13b0db4dc8da4f87506fe757009708bbbdb753f55289",
-          "source_fingerprint": "release-evidence-source:v1:b9f69b52d8f756b203d0284662a9f6f19f97f7336215b427d75daaed7da695b7",
-          "freshness_fingerprint": "release-evidence-freshness:v1:e8421c0fc9e956cc1340f90f02cea70b1a13517aac5d61d0f808870d311e36e6",
+          "content_sha256": "a5c30959d883f170394d413e8c9dab2c3e01bd197f08b7538289b36a5a7899f9",
+          "source_fingerprint": "release-evidence-source:v1:20b2744949cad59e9649dbe2b82027505ef65b28c14eba431f665e62dd7a21d8",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c206d1b791865f160caee3e256d3fb9db9f1575e2fa29e2637434bfeecb30a31",
           "blockers": []
         }
       ]
@@ -163,20 +158,19 @@
       "expected_artifacts": [
         "release/evidence/benchmarks/release-workload-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/benchmarks/release-workload-matrix.json",
           "exists": true,
-          "bytes": 26962,
+          "bytes": 27119,
           "read_error": null,
           "owner_lane": "bench_harness",
           "generator_command": "xtask release-workload-matrix --enforce",
           "command_mode": "spawned",
-          "content_sha256": "1379da9f695e6b23fec72437eaace0067d65e449cf72064b27caddbaf8889032",
-          "source_fingerprint": "release-evidence-source:v1:0c2461a091c239f8419c0a2855167eb2cb1f35c312b34346f850347965b24015",
-          "freshness_fingerprint": "release-evidence-freshness:v1:5854dfef4e065441f31467cb6a3d5d5e6a633586616c8b157e00438231cbd301",
+          "content_sha256": "d9561b291948a414967795d2ccf87d3079993577c22cd6fcd3f938ebbbe069e2",
+          "source_fingerprint": "release-evidence-source:v1:a6d453636e54cf4660bfbee5356792d2e39d95dddb57181733620d542bac248f",
+          "freshness_fingerprint": "release-evidence-freshness:v1:11ad51240cd136a871758a965563ce90aa963238fce2e4827fa489685179f51e",
           "blockers": []
         }
       ]
@@ -195,8 +189,7 @@
         "release/evidence/benchmarks/frontier-leaderboard.json",
         "release/evidence/optimization/pass-family-benchmark-manifest.json"
       ],
-      "status": "external-artifacts-only",
-      "exit_code": null,
+      "mode": "external-artifacts-only",
       "artifact_statuses": [
         {
           "path": "release/evidence/benchmarks/cuda-release-suite.json",
@@ -337,111 +330,110 @@
         "release/evidence/hygiene/error-surface-scan.json",
         "release/evidence/hygiene/cargo-wrapper-scan.json"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/hygiene/hygiene-matrix.json",
           "exists": true,
-          "bytes": 111511,
+          "bytes": 127326,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "f1b3f2f06cdec0144ff29ca0c0f56d0a19171344167ed4632c949eccf7c1abc2",
-          "source_fingerprint": "release-evidence-source:v1:61899315358da6645eb25dcf5baf795847951a3391b5e2e4c0836d0dc297a6a3",
-          "freshness_fingerprint": "release-evidence-freshness:v1:01b3fcd038609e78ceb334dfd2df3edb6d3e70fb71ae934b3bcc7a5b86c11549",
+          "content_sha256": "6c4ef9d16e649dd4ac6693848cb9d5247ba1ba2bdd75f8c53d9a065ccaa3b30f",
+          "source_fingerprint": "release-evidence-source:v1:1145df548af7c263c5ac37c5bab151a0af5385778f1c38b0d21f2ca8f1b6753a",
+          "freshness_fingerprint": "release-evidence-freshness:v1:bb1303559e9df4f3850deb38815f8498c0745ce43784e4be82f39d03ec8bec30",
           "blockers": []
         },
         {
           "path": "release/evidence/hygiene/implementation-intake.json",
           "exists": true,
-          "bytes": 8988,
+          "bytes": 9254,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "eaeb5ee3b4454fa72366348406aa4d7bf8319fd44889393725d050c6f3d2adb3",
-          "source_fingerprint": "release-evidence-source:v1:0b1098f86610cfe5f43a915e13bf9ed6b7627593c596077831d25ed8c77af9db",
-          "freshness_fingerprint": "release-evidence-freshness:v1:dd2b97a3c54f5739201904c47781ffd37d551efafbd7c9f0837270d67aa74b2b",
+          "content_sha256": "475188663e97d91ffa11468cbae4ece98f515731d027dfa0e108aa52aa4730e4",
+          "source_fingerprint": "release-evidence-source:v1:3cdeac8336e7a5e7ec7f3a8cc8c92294a5d3a780f064a70c2a4a156ce7110356",
+          "freshness_fingerprint": "release-evidence-freshness:v1:a8a1a16748a147b7f1f6aa3142ca11cff1c3fd89e3ea4c5ae439fd3f5ab08b10",
           "blockers": []
         },
         {
           "path": "release/evidence/hygiene/threshold-policy.json",
           "exists": true,
-          "bytes": 8547,
+          "bytes": 8783,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "bc775007b4be02e2af5142aa29ac11a59214d8dc781db94710f5d8e114dafb93",
-          "source_fingerprint": "release-evidence-source:v1:5bd276726fe8acf5a9a77be6de20a5e94ff6c605f34e9fbb870418ab80455067",
-          "freshness_fingerprint": "release-evidence-freshness:v1:dd4f23bcaad2ef92bdda898fb7ea4fc833a4a9937f845e3e65b1bb87b337f0e1",
+          "content_sha256": "982283db37789b1f02bc6a80d34a27004935f01b30ac0264aa92c1fe7b7bb8d3",
+          "source_fingerprint": "release-evidence-source:v1:1f8a5e2ee39ba309c8f4bbd72dec07121a9f1cc1b1c39bae1eb495eeaf9b877e",
+          "freshness_fingerprint": "release-evidence-freshness:v1:8110da9177585aa394d0a0639c59407c77ce665670d782d291fe2568b75cdb7a",
           "blockers": []
         },
         {
           "path": "release/evidence/hygiene/no-stubs-scan.json",
           "exists": true,
-          "bytes": 2580,
+          "bytes": 3362,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "8fd0695033e3eff55708516ee02f9cbe44bf638f1e2e01657bcb85be146c2fd0",
-          "source_fingerprint": "release-evidence-source:v1:5391691ae8aec73bddb7b52b153e6c527c339584f3cffd043948fda04e60f026",
-          "freshness_fingerprint": "release-evidence-freshness:v1:29bdf319ff59d10999d8942cd1141b4cba403fd462fab4da4e026d147072ca47",
+          "content_sha256": "37f5e846fb83623663e01e9bb0938b32dfcf1e8eae82814d6ecb15b00ddd16c6",
+          "source_fingerprint": "release-evidence-source:v1:1a2d98bd0b403e2af44d63a47e7c5944fa4cb6bff962bdbf612f88cd7f43e52c",
+          "freshness_fingerprint": "release-evidence-freshness:v1:aa83d227c896d22e92d655a818b2eb95d08b125f682c37a0cad6dc69f5068d47",
           "blockers": []
         },
         {
           "path": "release/evidence/hygiene/no-hidden-fallback-scan.json",
           "exists": true,
-          "bytes": 129,
+          "bytes": 286,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "951d2a6731d54c1307c4af8fcf11f2c11b370b2b901f7bb183a272f00e2e2417",
-          "source_fingerprint": "release-evidence-source:v1:45ad26a692d3290bcfa393185f226f0b3ea6d7862fdd112518b3edb533c66aff",
-          "freshness_fingerprint": "release-evidence-freshness:v1:5e5d09a9813631a7bdba8261c813081261d1afc4975af415069bbd3a8f51ab87",
+          "content_sha256": "ce80ffad2a245844bf53103b665602f76907973916e28f9c5dd7750ddedfb918",
+          "source_fingerprint": "release-evidence-source:v1:ce4193392431f6894e118dc40a53dc7698f298bd9bf7595ea37d5a6a940a82ee",
+          "freshness_fingerprint": "release-evidence-freshness:v1:0fc1455bac921d18ded93177dc64d475effe1e2e1757acd90812498d1d31ddad",
           "blockers": []
         },
         {
           "path": "release/evidence/hygiene/resource-bound-scan.json",
           "exists": true,
-          "bytes": 1632,
+          "bytes": 1376,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "e2322bd5ef775a40150fdc7e27f06db3c5e482cffd5890d026b186a534f1617d",
-          "source_fingerprint": "release-evidence-source:v1:478330afea84fa14c95893f660410cee7d508a45be3735977007f8e4645cb769",
-          "freshness_fingerprint": "release-evidence-freshness:v1:2fa8b10498a984636bcd59e554b25f4afa8e9864efb7d7f3f8c0ef83a7881686",
+          "content_sha256": "2c48618f42304fe3f791c04fec9b7d5f2517fa8149bc98e1dfdbbdd186475830",
+          "source_fingerprint": "release-evidence-source:v1:96023eb0d4bd778c9d85cf97ba71a17a244db39adc15d1531d3b8e3250ecbef9",
+          "freshness_fingerprint": "release-evidence-freshness:v1:07959d30e9f55450196ac9f0066544225a6b4c54200b2efafcd1ae4aca979ed0",
           "blockers": []
         },
         {
           "path": "release/evidence/hygiene/error-surface-scan.json",
           "exists": true,
-          "bytes": 27361,
+          "bytes": 28901,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "680b6ea741f0a43389b1b9827517a9159f8a3eb7fb08e7fba7a11ce832391445",
-          "source_fingerprint": "release-evidence-source:v1:b26b3129b4c81d6ba5e3e8da8769a3790cc918b0aa39b4ffcdf341b572b16f91",
-          "freshness_fingerprint": "release-evidence-freshness:v1:5a18cef6ba52947eaa37b7deb0e5c228e0b6ff64c20ad07cf1eb9cfcd6cdd36e",
+          "content_sha256": "3914e4e74c49dc8d8ffa5c0672d042d35bcab08b1ebe9714a4d3dc4d763d9904",
+          "source_fingerprint": "release-evidence-source:v1:3b4d87e6e4d4d82509c98dac2ed1429afa0d0e4a3d402164c93378a7506475cf",
+          "freshness_fingerprint": "release-evidence-freshness:v1:8c7e250a99ad26e9cc6a1e27c7aed46c7612590b61b5f514c31dc7902a8c7284",
           "blockers": []
         },
         {
           "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
           "exists": true,
-          "bytes": 5170,
+          "bytes": 281,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "96764f3ee76f18829a66ea4ecdcb2fc68854240fce704a8ba17002534ddcbac9",
-          "source_fingerprint": "release-evidence-source:v1:6a64d9838e511356d1041e4d08c649b25e9907b3fe34973136f4c857f83b4fc5",
-          "freshness_fingerprint": "release-evidence-freshness:v1:05f28b58f12310c73bf42954b1277182f3743703801c0b0d0242cbd1b8d32e67",
+          "content_sha256": "3d65cfa87799f08b5610694b8893dc0db36aefd7dd66419e312f496d19b915cd",
+          "source_fingerprint": "release-evidence-source:v1:31a7c7d6b3bcd82b3c20e492bdc98e73eeb20fe8a8f50371445bfb3cfb52a58e",
+          "freshness_fingerprint": "release-evidence-freshness:v1:1254f032dc268fd28e0cf7fa4f7f84ee80724c8220e10fc9f8462b48686bba09",
           "blockers": []
         }
       ]
@@ -454,20 +446,19 @@
       "expected_artifacts": [
         "release/evidence/metadata/metadata-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/metadata/metadata-matrix.json",
           "exists": true,
-          "bytes": 24393,
+          "bytes": 23381,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask metadata-matrix",
           "command_mode": "spawned",
-          "content_sha256": "682168484c95b572cbee971a3055e91c47d137201113c69b5ac8a2b17379a4d6",
-          "source_fingerprint": "release-evidence-source:v1:1ee88b4d280adcdb71948dc2562ffe772bbeef99f4a4c57976e4742782d36a30",
-          "freshness_fingerprint": "release-evidence-freshness:v1:11574968a266994f3ffe158103697e0dcb932e5f3aa9084e06aae5f4005b4866",
+          "content_sha256": "3f152d91ca855065821b6e768b82527f03fa33ec71da553298ff21e5d6e11fb8",
+          "source_fingerprint": "release-evidence-source:v1:17768e6681745d813215f07efe249212828a50614cb9ba8c638854affcb877a6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:8c76bc3b9cebe3a0bbeafa63abbede5aa71f9043d0b380aa7e91257e4450bd54",
           "blockers": []
         }
       ]
@@ -480,20 +471,19 @@
       "expected_artifacts": [
         "release/evidence/metadata/feature-matrix.json"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/metadata/feature-matrix.json",
           "exists": true,
-          "bytes": 18703,
+          "bytes": 17875,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask feature-matrix",
           "command_mode": "spawned",
-          "content_sha256": "174eb4d54788cf3ff05de5cac2ab92a9e1d8b04a6e4163ee7e974a9241c75d26",
-          "source_fingerprint": "release-evidence-source:v1:5b0a431e2b7bb5073e66db65dbc2c764acc902bb6b777f04b47f90060ae15e1a",
-          "freshness_fingerprint": "release-evidence-freshness:v1:0aee4eaa922d4283afe922d4efe12d5c3983480bb23735d3f99b02278741b8d7",
+          "content_sha256": "1c9533a28058e0b41a29935a139f77acec37e2055ba51a0f731caff7a52ac90b",
+          "source_fingerprint": "release-evidence-source:v1:ee900eba18a28d6468cb052d519ffcb17a35757cddfd814875ba596a0e95ad37",
+          "freshness_fingerprint": "release-evidence-freshness:v1:1820f1b822ba8d35a4fb0776d7ebc7288d92fcd4fcd66a4bc518f6a336800784",
           "blockers": []
         }
       ]
@@ -506,20 +496,19 @@
       "expected_artifacts": [
         "release/evidence/package/publish-readiness.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/package/publish-readiness.json",
           "exists": true,
-          "bytes": 47249,
+          "bytes": 46906,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask package-readiness",
           "command_mode": "spawned",
-          "content_sha256": "503b77e48880c1ee6b65fb2432088b85194c82322efe6bd6f9dd44221602d1b3",
-          "source_fingerprint": "release-evidence-source:v1:e82ac7cb6451bd838e5436592976b986b8ef6d9fc182bdb07231d59fe936453b",
-          "freshness_fingerprint": "release-evidence-freshness:v1:7a480edcc69f28f7c1eeeb1d2ec5ae6ac9eac37384c8086f0033d6ba0df2f34b",
+          "content_sha256": "1ece6b639b5501583b4f59d16c39dd7b1959c95b8ca021bbdd61af0166fb04b0",
+          "source_fingerprint": "release-evidence-source:v1:a5177d303ab8392bf0eda3372f7746cd67bce4247476d2d4399c7cf39273f37b",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2fb6e1019b8b1349924381356d3af7ce92de147574608f06dcce775294378d3e",
           "blockers": []
         }
       ]
@@ -536,72 +525,71 @@
         "release/evidence/optimization/optimization-case-manifest.json",
         "release/evidence/optimization/optimizer-pass-manifest.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/optimization/optimization-corpus.json",
           "exists": true,
-          "bytes": 854,
+          "bytes": 1011,
           "read_error": null,
           "owner_lane": "foundation_optimizer",
           "generator_command": "xtask optimization-corpus",
           "command_mode": "spawned",
-          "content_sha256": "937e9d13c1ec28100c44a5b67cf1079306f1d19c6808e72cf4e8589a0c0afa72",
-          "source_fingerprint": "release-evidence-source:v1:126a0ac34f17086cfebad7246c00cc72ebc1be7c7b9c751205b345ee4f3f5d31",
-          "freshness_fingerprint": "release-evidence-freshness:v1:a8141078618e84ef1b273ecae1efa407d0d3a8843eefbf3c3722cf29bf262031",
+          "content_sha256": "58430ae0f6be013c8f41970dfb398a938547adedc3fc3b9873b82b1789b4c53c",
+          "source_fingerprint": "release-evidence-source:v1:2f9a451e0e0afb5aba0e6d880264170c365f91f08cb97e53f4271648a097b876",
+          "freshness_fingerprint": "release-evidence-freshness:v1:5427ad07d7829d5405048fdbae3a3a5075c1ec16d874430ad0753328a073be8e",
           "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimization-corpus-contracts.json",
           "exists": true,
-          "bytes": 310,
+          "bytes": 467,
           "read_error": null,
           "owner_lane": "foundation_optimizer",
           "generator_command": "xtask optimization-corpus",
           "command_mode": "spawned",
-          "content_sha256": "2d09ae22dc0d4095d3a85139a694767cba8d6351cdad555d7d27ad2a32f5c210",
-          "source_fingerprint": "release-evidence-source:v1:b5eeade6af7cf0c305a5c9b4da0c09c294f1c4e8c6af418d6d4d63da09ec2da9",
-          "freshness_fingerprint": "release-evidence-freshness:v1:154f2bbf6eee59c09a5f751f0e9dbc1711083053b71e4dcf8a7067ce02f4890c",
+          "content_sha256": "c569039e73bd80e8aa16980d5cee3ab9676e748ff9e7bf9cd5ab700fa0828047",
+          "source_fingerprint": "release-evidence-source:v1:48aa153f522c1d890deba169f952c874ab26b0c20c08f58c6acfec20e35866f6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2e4022f1c9a64a2b0bdd7203ef1d864a0e3ee86c799a0668877d35b96ef996d8",
           "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimization-family-manifest.json",
           "exists": true,
-          "bytes": 854,
+          "bytes": 1011,
           "read_error": null,
           "owner_lane": "foundation_optimizer",
           "generator_command": "xtask optimization-corpus",
           "command_mode": "spawned",
-          "content_sha256": "6ffe824661221927ec62095bedc3f3aaef1e769eb917099a6220d5405f9343cb",
-          "source_fingerprint": "release-evidence-source:v1:8ce769873ee4b136ca710eef43727e3578c12b04efa148c13e97955f21a6813d",
-          "freshness_fingerprint": "release-evidence-freshness:v1:cdab182be171685a153defbf1bd804828a58a0cefa9d477119e9ecab2d7ef7d0",
+          "content_sha256": "84cc4294ddd621095989b43fbc659994dfc01c89d7320ca32e1ec6773d7e5502",
+          "source_fingerprint": "release-evidence-source:v1:ab22b498a6ee8661770dbbcad8252b27da767b5b9c87b46bc45be5072c920581",
+          "freshness_fingerprint": "release-evidence-freshness:v1:90071f20d73e3d36d76edf296c80796e80ee38830af1ec643074727502f009d4",
           "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimization-case-manifest.json",
           "exists": true,
-          "bytes": 1270447,
+          "bytes": 1270604,
           "read_error": null,
           "owner_lane": "foundation_optimizer",
           "generator_command": "xtask optimization-corpus",
           "command_mode": "spawned",
-          "content_sha256": "e0e6235392a6e7cf76f3f36a0aefe5aed0085638a8320ee268e4b67c6e908bfc",
-          "source_fingerprint": "release-evidence-source:v1:7404acf4e356ef40ed5d61dbb9a193d928dabf9aee209c4174945a6f4a95b8a5",
-          "freshness_fingerprint": "release-evidence-freshness:v1:6cdcb8d51ae4918b18b339f16a97b8433522570d683d7d8be892a8ecee85640a",
+          "content_sha256": "1c0dd020cc4b631d9946f52662be66056eaf2031cf9770d0e67f1af2ad3e5c60",
+          "source_fingerprint": "release-evidence-source:v1:24afae7279035bb0d88b1f6be299c7bb208858647d2caba791bc7bc504239ee5",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2765429fd3c9ed412a1c0e57f9aa28746fbb8d1fdb954fb598ddbe00849b0e26",
           "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimizer-pass-manifest.json",
           "exists": true,
-          "bytes": 102641,
+          "bytes": 102798,
           "read_error": null,
           "owner_lane": "foundation_optimizer",
           "generator_command": "xtask optimization-corpus",
           "command_mode": "spawned",
-          "content_sha256": "dece29ccc0b9298707290ed453ada1cc69996a291e4494a69756075a1c490841",
-          "source_fingerprint": "release-evidence-source:v1:e301e98d9cb5521b39d8d07203997b65613afecc1f04ca2a70028e69530e83b8",
-          "freshness_fingerprint": "release-evidence-freshness:v1:f3b7468dab5af8a96893dbbab839516833e2b12aee67cc002a2344cd043beb41",
+          "content_sha256": "2c16081b3506fc568cab35f9aa5e4dbd7e76f7f1151eebf2112333a5d3b2dbfd",
+          "source_fingerprint": "release-evidence-source:v1:379a3b4b007a37e57075cf0206273a54a0b5e13fdc414532d7d9279ca3d22448",
+          "freshness_fingerprint": "release-evidence-freshness:v1:7421b6e8acf57fc5771d21f695b87341ab7c4e6741624d490a896bef3da24bf7",
           "blockers": []
         }
       ]
@@ -614,20 +602,19 @@
       "expected_artifacts": [
         "release/evidence/optimization/optimization-integration-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/optimization/optimization-integration-matrix.json",
           "exists": true,
-          "bytes": 121435,
+          "bytes": 121592,
           "read_error": null,
           "owner_lane": "foundation_optimizer",
           "generator_command": "xtask optimization-matrix",
           "command_mode": "spawned",
-          "content_sha256": "e1a17aa63165dfad8938edd2b382cf098ab67d1043d0e5a6ff21fe5cd8f50894",
-          "source_fingerprint": "release-evidence-source:v1:d5e9f6866def36e4bf412a44d2b895097b76edf9253c8f4f2ef803a84c523b7f",
-          "freshness_fingerprint": "release-evidence-freshness:v1:dc835696c039db9a31a8a6879c2e3fc8de7304480986390281e9fb3c53e8d408",
+          "content_sha256": "f53b052e0d616c1cb62bb55fbb406c5de06a2c0c238188811cb59c41027dcb16",
+          "source_fingerprint": "release-evidence-source:v1:c511b9940892530701dd533e1f3abf7907104db15d216493ec6ca8d59c90acc2",
+          "freshness_fingerprint": "release-evidence-freshness:v1:252771bfa1123383b5b9e66e11c6d3695289aa95109ccbe44745616f26e3d18f",
           "blockers": []
         }
       ]
@@ -643,8 +630,7 @@
       "expected_artifacts": [
         "release/evidence/dedup/registered-op-duplicates.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/dedup/registered-op-duplicates.json",
@@ -672,8 +658,7 @@
       "expected_artifacts": [
         "release/evidence/dedup/lego-audit-duplicates.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "mode": "spawned",
       "artifact_statuses": [
         {
           "path": "release/evidence/dedup/lego-audit-duplicates.json",
@@ -715,10 +700,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask docs-check",
         "command_mode": "spawned",
-        "bytes": 38118,
-        "content_sha256": "5b5247ef788ecea4d7638d201a7a21ad4dee5e3840e895771787d827e3198478",
-        "source_fingerprint": "release-evidence-source:v1:3648eabf604cb2c620c15ba958b28037cc9042d9377a78b1032625e8671f2403",
-        "freshness_fingerprint": "release-evidence-freshness:v1:4067890558d7280d26965f64334158ccf867f713044f307daa4060658df72a29",
+        "bytes": 13097,
+        "content_sha256": "13996e3e02c21e8647e0038b05fe886ebbcd9d25aa09944565433dbdd0e4085e",
+        "source_fingerprint": "release-evidence-source:v1:43985c9828a151dbc4d442a0e6b5cd1d17f336b7a7feaf8421ff6dd5e6cf954b",
+        "freshness_fingerprint": "release-evidence-freshness:v1:49cc5ada0b0af13062ca7c0274eabf0ef31d31eb41b79994109bd90488a8ffb8",
         "blockers": []
       },
       {
@@ -726,10 +711,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask docs-check",
         "command_mode": "spawned",
-        "bytes": 23062,
-        "content_sha256": "bf32657879a99755748052861158375bfc2afcde1c4693b7d045355e8b24a725",
-        "source_fingerprint": "release-evidence-source:v1:8eb8fb119bc67c6518b4a7ed5dddf67bcf73373f4bfc64c9c183e1264ee541db",
-        "freshness_fingerprint": "release-evidence-freshness:v1:fbe5a9e5f2b7b5ae93216c7e130d0f06afd0d25f55c118a8190d9c637eb56d65",
+        "bytes": 9384,
+        "content_sha256": "faee1f2f40b4e8502ace29c24e0161e9737a0803b728e138ce94e6f571d77523",
+        "source_fingerprint": "release-evidence-source:v1:ca523c2b7e6964c21b6b7e1f1aeef0cb05c4b69ffc710bdb1502373e546dc3bc",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2e8df6f6c4308b1319d71e417c7cb9d9a6bc01c34ca7c701fc98c31a65621db9",
         "blockers": []
       },
       {
@@ -737,10 +722,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask docs-check",
         "command_mode": "spawned",
-        "bytes": 5970,
-        "content_sha256": "326185e1aa0efc1e1f9acac1d2cb483793014ed19b101a76fc5d41b7a900dd6a",
-        "source_fingerprint": "release-evidence-source:v1:d94729a71f831137efdcddb0cd91e2ff9af3c39414d7d05d01f7e5cc9fa5e7c6",
-        "freshness_fingerprint": "release-evidence-freshness:v1:ba4c4756b29887ed6d11b70f9542426ecb79b6b3df4482adf17b40d645f27741",
+        "bytes": 2249,
+        "content_sha256": "d24db00d8e2f09010132784b22e92ab01b3d8c5685f443b6a429780f3743323c",
+        "source_fingerprint": "release-evidence-source:v1:b6bd785e70318b2e6a8a6ed8916a7569ad5665ad093d8ca1b012c9e47b2a89d5",
+        "freshness_fingerprint": "release-evidence-freshness:v1:1e06ca55ea6cd1d694074a5883cf239a369f90ce8d4bea644797c3d527495be0",
         "blockers": []
       },
       {
@@ -748,10 +733,10 @@
         "owner_lane": "driver_shared",
         "generator_command": "xtask backend-matrix",
         "command_mode": "spawned",
-        "bytes": 14789,
-        "content_sha256": "98672e5c13887da4bd35e85e1314ddc4899e6859717af25005d9eb54236e5542",
-        "source_fingerprint": "release-evidence-source:v1:375a47ad8802fc5063279e9b1b50267cca0a41b93bc9f523bb54ac3082ea8335",
-        "freshness_fingerprint": "release-evidence-freshness:v1:bf4fa113f9e970aebd4585fc57eaca9b0445d217274026e17b2d5050866785d6",
+        "bytes": 14968,
+        "content_sha256": "8a294ff021f36b2dd2fbeb9c9e8ec0e60657aba568d1b4bceab7fc12432225b5",
+        "source_fingerprint": "release-evidence-source:v1:a55967d2118f183b3ca4b17e2a358f2cd18b06856aab8adac5501fa5fd0a234d",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c7446762644f1750ccbd1d40f7112ca0020a974bfc2d00dc3af9be8d64d1b3d9",
         "blockers": []
       },
       {
@@ -860,10 +845,10 @@
         "owner_lane": "bench_harness",
         "generator_command": "xtask release-workload-matrix --enforce",
         "command_mode": "spawned",
-        "bytes": 26962,
-        "content_sha256": "1379da9f695e6b23fec72437eaace0067d65e449cf72064b27caddbaf8889032",
-        "source_fingerprint": "release-evidence-source:v1:0c2461a091c239f8419c0a2855167eb2cb1f35c312b34346f850347965b24015",
-        "freshness_fingerprint": "release-evidence-freshness:v1:5854dfef4e065441f31467cb6a3d5d5e6a633586616c8b157e00438231cbd301",
+        "bytes": 27119,
+        "content_sha256": "d9561b291948a414967795d2ccf87d3079993577c22cd6fcd3f938ebbbe069e2",
+        "source_fingerprint": "release-evidence-source:v1:a6d453636e54cf4660bfbee5356792d2e39d95dddb57181733620d542bac248f",
+        "freshness_fingerprint": "release-evidence-freshness:v1:11ad51240cd136a871758a965563ce90aa963238fce2e4827fa489685179f51e",
         "blockers": []
       },
       {
@@ -871,10 +856,10 @@
         "owner_lane": "driver_shared",
         "generator_command": "xtask conformance-matrix",
         "command_mode": "spawned",
-        "bytes": 1690272,
-        "content_sha256": "afdc5323a029f92c339f13b0db4dc8da4f87506fe757009708bbbdb753f55289",
-        "source_fingerprint": "release-evidence-source:v1:b9f69b52d8f756b203d0284662a9f6f19f97f7336215b427d75daaed7da695b7",
-        "freshness_fingerprint": "release-evidence-freshness:v1:e8421c0fc9e956cc1340f90f02cea70b1a13517aac5d61d0f808870d311e36e6",
+        "bytes": 1713858,
+        "content_sha256": "a5c30959d883f170394d413e8c9dab2c3e01bd197f08b7538289b36a5a7899f9",
+        "source_fingerprint": "release-evidence-source:v1:20b2744949cad59e9649dbe2b82027505ef65b28c14eba431f665e62dd7a21d8",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c206d1b791865f160caee3e256d3fb9db9f1575e2fa29e2637434bfeecb30a31",
         "blockers": []
       },
       {
@@ -915,10 +900,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 5170,
-        "content_sha256": "96764f3ee76f18829a66ea4ecdcb2fc68854240fce704a8ba17002534ddcbac9",
-        "source_fingerprint": "release-evidence-source:v1:6a64d9838e511356d1041e4d08c649b25e9907b3fe34973136f4c857f83b4fc5",
-        "freshness_fingerprint": "release-evidence-freshness:v1:05f28b58f12310c73bf42954b1277182f3743703801c0b0d0242cbd1b8d32e67",
+        "bytes": 281,
+        "content_sha256": "3d65cfa87799f08b5610694b8893dc0db36aefd7dd66419e312f496d19b915cd",
+        "source_fingerprint": "release-evidence-source:v1:31a7c7d6b3bcd82b3c20e492bdc98e73eeb20fe8a8f50371445bfb3cfb52a58e",
+        "freshness_fingerprint": "release-evidence-freshness:v1:1254f032dc268fd28e0cf7fa4f7f84ee80724c8220e10fc9f8462b48686bba09",
         "blockers": []
       },
       {
@@ -926,10 +911,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 27361,
-        "content_sha256": "680b6ea741f0a43389b1b9827517a9159f8a3eb7fb08e7fba7a11ce832391445",
-        "source_fingerprint": "release-evidence-source:v1:b26b3129b4c81d6ba5e3e8da8769a3790cc918b0aa39b4ffcdf341b572b16f91",
-        "freshness_fingerprint": "release-evidence-freshness:v1:5a18cef6ba52947eaa37b7deb0e5c228e0b6ff64c20ad07cf1eb9cfcd6cdd36e",
+        "bytes": 28901,
+        "content_sha256": "3914e4e74c49dc8d8ffa5c0672d042d35bcab08b1ebe9714a4d3dc4d763d9904",
+        "source_fingerprint": "release-evidence-source:v1:3b4d87e6e4d4d82509c98dac2ed1429afa0d0e4a3d402164c93378a7506475cf",
+        "freshness_fingerprint": "release-evidence-freshness:v1:8c7e250a99ad26e9cc6a1e27c7aed46c7612590b61b5f514c31dc7902a8c7284",
         "blockers": []
       },
       {
@@ -937,10 +922,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 111511,
-        "content_sha256": "f1b3f2f06cdec0144ff29ca0c0f56d0a19171344167ed4632c949eccf7c1abc2",
-        "source_fingerprint": "release-evidence-source:v1:61899315358da6645eb25dcf5baf795847951a3391b5e2e4c0836d0dc297a6a3",
-        "freshness_fingerprint": "release-evidence-freshness:v1:01b3fcd038609e78ceb334dfd2df3edb6d3e70fb71ae934b3bcc7a5b86c11549",
+        "bytes": 127326,
+        "content_sha256": "6c4ef9d16e649dd4ac6693848cb9d5247ba1ba2bdd75f8c53d9a065ccaa3b30f",
+        "source_fingerprint": "release-evidence-source:v1:1145df548af7c263c5ac37c5bab151a0af5385778f1c38b0d21f2ca8f1b6753a",
+        "freshness_fingerprint": "release-evidence-freshness:v1:bb1303559e9df4f3850deb38815f8498c0745ce43784e4be82f39d03ec8bec30",
         "blockers": []
       },
       {
@@ -948,10 +933,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 8988,
-        "content_sha256": "eaeb5ee3b4454fa72366348406aa4d7bf8319fd44889393725d050c6f3d2adb3",
-        "source_fingerprint": "release-evidence-source:v1:0b1098f86610cfe5f43a915e13bf9ed6b7627593c596077831d25ed8c77af9db",
-        "freshness_fingerprint": "release-evidence-freshness:v1:dd2b97a3c54f5739201904c47781ffd37d551efafbd7c9f0837270d67aa74b2b",
+        "bytes": 9254,
+        "content_sha256": "475188663e97d91ffa11468cbae4ece98f515731d027dfa0e108aa52aa4730e4",
+        "source_fingerprint": "release-evidence-source:v1:3cdeac8336e7a5e7ec7f3a8cc8c92294a5d3a780f064a70c2a4a156ce7110356",
+        "freshness_fingerprint": "release-evidence-freshness:v1:a8a1a16748a147b7f1f6aa3142ca11cff1c3fd89e3ea4c5ae439fd3f5ab08b10",
         "blockers": []
       },
       {
@@ -959,10 +944,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 129,
-        "content_sha256": "951d2a6731d54c1307c4af8fcf11f2c11b370b2b901f7bb183a272f00e2e2417",
-        "source_fingerprint": "release-evidence-source:v1:45ad26a692d3290bcfa393185f226f0b3ea6d7862fdd112518b3edb533c66aff",
-        "freshness_fingerprint": "release-evidence-freshness:v1:5e5d09a9813631a7bdba8261c813081261d1afc4975af415069bbd3a8f51ab87",
+        "bytes": 286,
+        "content_sha256": "ce80ffad2a245844bf53103b665602f76907973916e28f9c5dd7750ddedfb918",
+        "source_fingerprint": "release-evidence-source:v1:ce4193392431f6894e118dc40a53dc7698f298bd9bf7595ea37d5a6a940a82ee",
+        "freshness_fingerprint": "release-evidence-freshness:v1:0fc1455bac921d18ded93177dc64d475effe1e2e1757acd90812498d1d31ddad",
         "blockers": []
       },
       {
@@ -970,10 +955,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 2580,
-        "content_sha256": "8fd0695033e3eff55708516ee02f9cbe44bf638f1e2e01657bcb85be146c2fd0",
-        "source_fingerprint": "release-evidence-source:v1:5391691ae8aec73bddb7b52b153e6c527c339584f3cffd043948fda04e60f026",
-        "freshness_fingerprint": "release-evidence-freshness:v1:29bdf319ff59d10999d8942cd1141b4cba403fd462fab4da4e026d147072ca47",
+        "bytes": 3362,
+        "content_sha256": "37f5e846fb83623663e01e9bb0938b32dfcf1e8eae82814d6ecb15b00ddd16c6",
+        "source_fingerprint": "release-evidence-source:v1:1a2d98bd0b403e2af44d63a47e7c5944fa4cb6bff962bdbf612f88cd7f43e52c",
+        "freshness_fingerprint": "release-evidence-freshness:v1:aa83d227c896d22e92d655a818b2eb95d08b125f682c37a0cad6dc69f5068d47",
         "blockers": []
       },
       {
@@ -981,10 +966,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 1632,
-        "content_sha256": "e2322bd5ef775a40150fdc7e27f06db3c5e482cffd5890d026b186a534f1617d",
-        "source_fingerprint": "release-evidence-source:v1:478330afea84fa14c95893f660410cee7d508a45be3735977007f8e4645cb769",
-        "freshness_fingerprint": "release-evidence-freshness:v1:2fa8b10498a984636bcd59e554b25f4afa8e9864efb7d7f3f8c0ef83a7881686",
+        "bytes": 1376,
+        "content_sha256": "2c48618f42304fe3f791c04fec9b7d5f2517fa8149bc98e1dfdbbdd186475830",
+        "source_fingerprint": "release-evidence-source:v1:96023eb0d4bd778c9d85cf97ba71a17a244db39adc15d1531d3b8e3250ecbef9",
+        "freshness_fingerprint": "release-evidence-freshness:v1:07959d30e9f55450196ac9f0066544225a6b4c54200b2efafcd1ae4aca979ed0",
         "blockers": []
       },
       {
@@ -992,10 +977,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
-        "bytes": 8547,
-        "content_sha256": "bc775007b4be02e2af5142aa29ac11a59214d8dc781db94710f5d8e114dafb93",
-        "source_fingerprint": "release-evidence-source:v1:5bd276726fe8acf5a9a77be6de20a5e94ff6c605f34e9fbb870418ab80455067",
-        "freshness_fingerprint": "release-evidence-freshness:v1:dd4f23bcaad2ef92bdda898fb7ea4fc833a4a9937f845e3e65b1bb87b337f0e1",
+        "bytes": 8783,
+        "content_sha256": "982283db37789b1f02bc6a80d34a27004935f01b30ac0264aa92c1fe7b7bb8d3",
+        "source_fingerprint": "release-evidence-source:v1:1f8a5e2ee39ba309c8f4bbd72dec07121a9f1cc1b1c39bae1eb495eeaf9b877e",
+        "freshness_fingerprint": "release-evidence-freshness:v1:8110da9177585aa394d0a0639c59407c77ce665670d782d291fe2568b75cdb7a",
         "blockers": []
       },
       {
@@ -1003,10 +988,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask feature-matrix",
         "command_mode": "spawned",
-        "bytes": 18703,
-        "content_sha256": "174eb4d54788cf3ff05de5cac2ab92a9e1d8b04a6e4163ee7e974a9241c75d26",
-        "source_fingerprint": "release-evidence-source:v1:5b0a431e2b7bb5073e66db65dbc2c764acc902bb6b777f04b47f90060ae15e1a",
-        "freshness_fingerprint": "release-evidence-freshness:v1:0aee4eaa922d4283afe922d4efe12d5c3983480bb23735d3f99b02278741b8d7",
+        "bytes": 17875,
+        "content_sha256": "1c9533a28058e0b41a29935a139f77acec37e2055ba51a0f731caff7a52ac90b",
+        "source_fingerprint": "release-evidence-source:v1:ee900eba18a28d6468cb052d519ffcb17a35757cddfd814875ba596a0e95ad37",
+        "freshness_fingerprint": "release-evidence-freshness:v1:1820f1b822ba8d35a4fb0776d7ebc7288d92fcd4fcd66a4bc518f6a336800784",
         "blockers": []
       },
       {
@@ -1014,10 +999,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask metadata-matrix",
         "command_mode": "spawned",
-        "bytes": 24393,
-        "content_sha256": "682168484c95b572cbee971a3055e91c47d137201113c69b5ac8a2b17379a4d6",
-        "source_fingerprint": "release-evidence-source:v1:1ee88b4d280adcdb71948dc2562ffe772bbeef99f4a4c57976e4742782d36a30",
-        "freshness_fingerprint": "release-evidence-freshness:v1:11574968a266994f3ffe158103697e0dcb932e5f3aa9084e06aae5f4005b4866",
+        "bytes": 23381,
+        "content_sha256": "3f152d91ca855065821b6e768b82527f03fa33ec71da553298ff21e5d6e11fb8",
+        "source_fingerprint": "release-evidence-source:v1:17768e6681745d813215f07efe249212828a50614cb9ba8c638854affcb877a6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:8c76bc3b9cebe3a0bbeafa63abbede5aa71f9043d0b380aa7e91257e4450bd54",
         "blockers": []
       },
       {
@@ -1025,10 +1010,10 @@
         "owner_lane": "foundation_optimizer",
         "generator_command": "xtask optimization-corpus",
         "command_mode": "spawned",
-        "bytes": 1270447,
-        "content_sha256": "e0e6235392a6e7cf76f3f36a0aefe5aed0085638a8320ee268e4b67c6e908bfc",
-        "source_fingerprint": "release-evidence-source:v1:7404acf4e356ef40ed5d61dbb9a193d928dabf9aee209c4174945a6f4a95b8a5",
-        "freshness_fingerprint": "release-evidence-freshness:v1:6cdcb8d51ae4918b18b339f16a97b8433522570d683d7d8be892a8ecee85640a",
+        "bytes": 1270604,
+        "content_sha256": "1c0dd020cc4b631d9946f52662be66056eaf2031cf9770d0e67f1af2ad3e5c60",
+        "source_fingerprint": "release-evidence-source:v1:24afae7279035bb0d88b1f6be299c7bb208858647d2caba791bc7bc504239ee5",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2765429fd3c9ed412a1c0e57f9aa28746fbb8d1fdb954fb598ddbe00849b0e26",
         "blockers": []
       },
       {
@@ -1036,10 +1021,10 @@
         "owner_lane": "foundation_optimizer",
         "generator_command": "xtask optimization-corpus",
         "command_mode": "spawned",
-        "bytes": 310,
-        "content_sha256": "2d09ae22dc0d4095d3a85139a694767cba8d6351cdad555d7d27ad2a32f5c210",
-        "source_fingerprint": "release-evidence-source:v1:b5eeade6af7cf0c305a5c9b4da0c09c294f1c4e8c6af418d6d4d63da09ec2da9",
-        "freshness_fingerprint": "release-evidence-freshness:v1:154f2bbf6eee59c09a5f751f0e9dbc1711083053b71e4dcf8a7067ce02f4890c",
+        "bytes": 467,
+        "content_sha256": "c569039e73bd80e8aa16980d5cee3ab9676e748ff9e7bf9cd5ab700fa0828047",
+        "source_fingerprint": "release-evidence-source:v1:48aa153f522c1d890deba169f952c874ab26b0c20c08f58c6acfec20e35866f6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2e4022f1c9a64a2b0bdd7203ef1d864a0e3ee86c799a0668877d35b96ef996d8",
         "blockers": []
       },
       {
@@ -1047,10 +1032,10 @@
         "owner_lane": "foundation_optimizer",
         "generator_command": "xtask optimization-corpus",
         "command_mode": "spawned",
-        "bytes": 854,
-        "content_sha256": "937e9d13c1ec28100c44a5b67cf1079306f1d19c6808e72cf4e8589a0c0afa72",
-        "source_fingerprint": "release-evidence-source:v1:126a0ac34f17086cfebad7246c00cc72ebc1be7c7b9c751205b345ee4f3f5d31",
-        "freshness_fingerprint": "release-evidence-freshness:v1:a8141078618e84ef1b273ecae1efa407d0d3a8843eefbf3c3722cf29bf262031",
+        "bytes": 1011,
+        "content_sha256": "58430ae0f6be013c8f41970dfb398a938547adedc3fc3b9873b82b1789b4c53c",
+        "source_fingerprint": "release-evidence-source:v1:2f9a451e0e0afb5aba0e6d880264170c365f91f08cb97e53f4271648a097b876",
+        "freshness_fingerprint": "release-evidence-freshness:v1:5427ad07d7829d5405048fdbae3a3a5075c1ec16d874430ad0753328a073be8e",
         "blockers": []
       },
       {
@@ -1058,10 +1043,10 @@
         "owner_lane": "foundation_optimizer",
         "generator_command": "xtask optimization-corpus",
         "command_mode": "spawned",
-        "bytes": 854,
-        "content_sha256": "6ffe824661221927ec62095bedc3f3aaef1e769eb917099a6220d5405f9343cb",
-        "source_fingerprint": "release-evidence-source:v1:8ce769873ee4b136ca710eef43727e3578c12b04efa148c13e97955f21a6813d",
-        "freshness_fingerprint": "release-evidence-freshness:v1:cdab182be171685a153defbf1bd804828a58a0cefa9d477119e9ecab2d7ef7d0",
+        "bytes": 1011,
+        "content_sha256": "84cc4294ddd621095989b43fbc659994dfc01c89d7320ca32e1ec6773d7e5502",
+        "source_fingerprint": "release-evidence-source:v1:ab22b498a6ee8661770dbbcad8252b27da767b5b9c87b46bc45be5072c920581",
+        "freshness_fingerprint": "release-evidence-freshness:v1:90071f20d73e3d36d76edf296c80796e80ee38830af1ec643074727502f009d4",
         "blockers": []
       },
       {
@@ -1069,10 +1054,10 @@
         "owner_lane": "foundation_optimizer",
         "generator_command": "xtask optimization-matrix",
         "command_mode": "spawned",
-        "bytes": 121435,
-        "content_sha256": "e1a17aa63165dfad8938edd2b382cf098ab67d1043d0e5a6ff21fe5cd8f50894",
-        "source_fingerprint": "release-evidence-source:v1:d5e9f6866def36e4bf412a44d2b895097b76edf9253c8f4f2ef803a84c523b7f",
-        "freshness_fingerprint": "release-evidence-freshness:v1:dc835696c039db9a31a8a6879c2e3fc8de7304480986390281e9fb3c53e8d408",
+        "bytes": 121592,
+        "content_sha256": "f53b052e0d616c1cb62bb55fbb406c5de06a2c0c238188811cb59c41027dcb16",
+        "source_fingerprint": "release-evidence-source:v1:c511b9940892530701dd533e1f3abf7907104db15d216493ec6ca8d59c90acc2",
+        "freshness_fingerprint": "release-evidence-freshness:v1:252771bfa1123383b5b9e66e11c6d3695289aa95109ccbe44745616f26e3d18f",
         "blockers": []
       },
       {
@@ -1080,10 +1065,10 @@
         "owner_lane": "foundation_optimizer",
         "generator_command": "xtask optimization-corpus",
         "command_mode": "spawned",
-        "bytes": 102641,
-        "content_sha256": "dece29ccc0b9298707290ed453ada1cc69996a291e4494a69756075a1c490841",
-        "source_fingerprint": "release-evidence-source:v1:e301e98d9cb5521b39d8d07203997b65613afecc1f04ca2a70028e69530e83b8",
-        "freshness_fingerprint": "release-evidence-freshness:v1:f3b7468dab5af8a96893dbbab839516833e2b12aee67cc002a2344cd043beb41",
+        "bytes": 102798,
+        "content_sha256": "2c16081b3506fc568cab35f9aa5e4dbd7e76f7f1151eebf2112333a5d3b2dbfd",
+        "source_fingerprint": "release-evidence-source:v1:379a3b4b007a37e57075cf0206273a54a0b5e13fdc414532d7d9279ca3d22448",
+        "freshness_fingerprint": "release-evidence-freshness:v1:7421b6e8acf57fc5771d21f695b87341ab7c4e6741624d490a896bef3da24bf7",
         "blockers": []
       },
       {
@@ -1102,10 +1087,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask package-readiness",
         "command_mode": "spawned",
-        "bytes": 47249,
-        "content_sha256": "503b77e48880c1ee6b65fb2432088b85194c82322efe6bd6f9dd44221602d1b3",
-        "source_fingerprint": "release-evidence-source:v1:e82ac7cb6451bd838e5436592976b986b8ef6d9fc182bdb07231d59fe936453b",
-        "freshness_fingerprint": "release-evidence-freshness:v1:7a480edcc69f28f7c1eeeb1d2ec5ae6ac9eac37384c8086f0033d6ba0df2f34b",
+        "bytes": 46906,
+        "content_sha256": "1ece6b639b5501583b4f59d16c39dd7b1959c95b8ca021bbdd61af0166fb04b0",
+        "source_fingerprint": "release-evidence-source:v1:a5177d303ab8392bf0eda3372f7746cd67bce4247476d2d4399c7cf39273f37b",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2fb6e1019b8b1349924381356d3af7ce92de147574608f06dcce775294378d3e",
         "blockers": []
       },
       {
@@ -1113,10 +1098,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask version-matrix",
         "command_mode": "spawned",
-        "bytes": 675,
-        "content_sha256": "5a1a55f809998b330b6b17209e0890722a7e36598e768f6030b15b39d81498d9",
-        "source_fingerprint": "release-evidence-source:v1:0b81f397e119c62d416f92bf5cc2569b95e7998aa39d75da92c2a6ddabbad0e1",
-        "freshness_fingerprint": "release-evidence-freshness:v1:d8bb100639b44403aaf40db69599823fb29c912e502efed44c16772e78837221",
+        "bytes": 724,
+        "content_sha256": "9f24088d864d1126f8aec0109869cc20d85c28048f635d905a7d70a894c188da",
+        "source_fingerprint": "release-evidence-source:v1:6f5ad945a7729fae1c783472d59dac5b83cad7e49ea202490413a2a5ba43c41d",
+        "freshness_fingerprint": "release-evidence-freshness:v1:64d7ed47951dd5ad8f0786cef2e4e5015ed0b234a73a10ad654dc9252ce22941",
         "blockers": []
       },
       {
@@ -1124,10 +1109,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask version-matrix",
         "command_mode": "spawned",
-        "bytes": 16692,
-        "content_sha256": "4e60436f3c47e0191617b35f61d90409e09c9b0409c19943da03518002ba7480",
-        "source_fingerprint": "release-evidence-source:v1:f28836845190dc64bf30c0670cdf3115bb71154b4a2f96dc24900535cf2363be",
-        "freshness_fingerprint": "release-evidence-freshness:v1:743f3a48ed1fda18de7f309d842e582478b5e96589bfb52ac62cf7e6d0415910",
+        "bytes": 16495,
+        "content_sha256": "13f0530f2a6803ac4fc6a1eda3fc879e2d24b5a47c775d6a6c8520ad5f72e805",
+        "source_fingerprint": "release-evidence-source:v1:45f2b5995ab7c5b67c7caac539b30d8d62797ed95e0f8b0448e3f11dd9d665d6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:31330fbb6f17881186ace4f4ac5687ebc071264f3fe205d0fff46508178d4293",
         "blockers": []
       }
     ],
@@ -1374,15 +1359,10 @@
     ]
   },
   "blockers": [
-    "`xtask docs-check` failed with exit status: 1",
     "`xtask release-benchmarks --backend cuda` expected `release/evidence/benchmarks/cuda-release-suite.json` but it was missing, empty, unreadable, or missing provenance: `release/evidence/benchmarks/cuda-release-suite.json` blocker[0]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-01-condition-eval.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[1]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[2]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[3]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[4]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[5]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[6]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-08-ifds-witness.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[7]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[8]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[9]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json`: source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[10]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[11]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-13-callgraph-reachability.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[12]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-14-compound-fused-filter.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` blocker[13]: backend `cuda` release suite artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[0] `release/evidence/benchmarks/workload-01-condition-eval.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[2] `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[3] `release/evidence/benchmarks/workload-04-metadata-conditions.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[4] `release/evidence/benchmarks/workload-05-entropy-window.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[5] `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[6] `release/evidence/benchmarks/workload-07-alias-reaching-def.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[7] `release/evidence/benchmarks/workload-08-ifds-witness.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[8] `release/evidence/benchmarks/workload-09-c-ast-traversal.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[9] `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[10] `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json` blocker[0]: source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[11] `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[12] `release/evidence/benchmarks/workload-13-callgraph-reachability.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[13] `release/evidence/benchmarks/workload-14-compound-fused-filter.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[14] `release/evidence/benchmarks/workload-15-adaptive-routing.json` blocker[0]: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
     "`xtask release-benchmarks --backend cuda` expected `release/evidence/benchmarks/bench-release-axes.json` but it was missing, empty, unreadable, or missing provenance: `release/evidence/benchmarks/bench-release-axes.json` blocker[0]: source_artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[1]: source_artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[2]: source_artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[3]: source_artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[4]: source_artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[5]: source_artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[6]: source_artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[7]: source_artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[8]: source_artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[9]: source_artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json` source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[10]: source_artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[11]: source_artifact `release/evidence/benchmarks/workload-13-callgraph-reachability.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[12]: source_artifact `release/evidence/benchmarks/workload-14-compound-fused-filter.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/bench-release-axes.json` blocker[13]: source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
     "`xtask release-benchmarks --backend cuda` expected `release/evidence/benchmarks/cpu-only-100x-proof.json` but it was missing, empty, unreadable, or missing provenance: `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[0]: 100x source artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[1]: 100x source artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_tree_fingerprint `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee` does not match aggregate source tree `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[2]: 100x source artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[3]: 100x source artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[4]: 100x source artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[5]: 100x source artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[6]: 100x source artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[7]: 100x source artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[8]: 100x source artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`; `release/evidence/benchmarks/cpu-only-100x-proof.json` blocker[9]: 100x source artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
-    "`xtask release-benchmarks --backend cuda` expected `release/evidence/benchmarks/frontier-leaderboard.json` but it was missing, empty, unreadable, or missing provenance: frontier leaderboard artifact contains 6 blocker(s)",
-    "`xtask hygiene-matrix` failed with exit status: 1",
-    "`xtask feature-matrix` failed with exit status: 1"
+    "`xtask release-benchmarks --backend cuda` expected `release/evidence/benchmarks/frontier-leaderboard.json` but it was missing, empty, unreadable, or missing provenance: frontier leaderboard artifact contains 6 blocker(s)"
   ],
-  "reports": [
-    "`xtask release-benchmarks --backend cuda` was not run by release-evidence; existing explicit artifacts were inspected"
-  ]
+  "reports": []
 }
