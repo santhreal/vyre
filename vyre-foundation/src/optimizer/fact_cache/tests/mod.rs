@@ -156,6 +156,27 @@ fn derive_type_facts_records_loads_and_expression_types() {
 }
 
 #[test]
+fn derive_type_facts_descends_into_tile_elementwise_bodies() {
+    let program = Program::wrapped(
+        Vec::new(),
+        [1, 1, 1],
+        vec![Node::tile_elementwise(
+            "tile",
+            Vec::new(),
+            vec![Node::let_bind("inside_tile", Expr::u32(1))],
+        )],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().expect("type facts are derived");
+    assert_eq!(
+        types.var_types.get(&Ident::from("inside_tile")),
+        Some(&DataType::U32),
+        "TileElementwise is a child-body scope and must participate in type inference"
+    );
+}
+
+#[test]
 fn derive_type_facts_loop_induction_binding_and_restoration() {
     // Tests:
     // 1. Induction variable is typed as U32 inside loop body.

@@ -55,16 +55,14 @@ impl TypeFactCtx {
                         self.facts.var_types.insert(name.clone(), ty);
                     }
                 }
-                Node::Assign { name, value } => {
-                    match expr_type(value, self) {
-                        Some(ty) => {
-                            self.facts.var_types.insert(name.clone(), ty);
-                        }
-                        None => {
-                            self.facts.var_types.remove(name);
-                        }
+                Node::Assign { name, value } => match expr_type(value, self) {
+                    Some(ty) => {
+                        self.facts.var_types.insert(name.clone(), ty);
                     }
-                }
+                    None => {
+                        self.facts.var_types.remove(name);
+                    }
+                },
                 Node::Store { index, value, .. } => {
                     self.record_expr_type(index);
                     self.record_expr_type(value);
@@ -104,7 +102,7 @@ impl TypeFactCtx {
                     self.infer_nodes_types(body);
                 }
                 Node::TileElementwise { body, .. } => {
-                    stack.extend(body.iter().rev());
+                    self.infer_nodes_types(body);
                 }
                 Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
                     self.record_expr_type(offset);
