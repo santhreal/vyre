@@ -87,6 +87,10 @@ name = "conformance-matrix"
 findings = 0
 
 [[gate]]
+name = "crate-pages"
+findings = 0
+
+[[gate]]
 name = "cross-target"
 findings = 0
 

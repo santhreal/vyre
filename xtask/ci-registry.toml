@@ -108,6 +108,11 @@ subsets = ["repo-rules"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "crate-pages"
+subsets = ["docs"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "cross-target"
 subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
