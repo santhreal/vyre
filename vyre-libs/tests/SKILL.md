@@ -104,17 +104,5 @@ options avoid.
 | `dedup_regions_inplace`         | You already own the `&mut Vec` and want zero-alloc compaction.          |
 | `RegionTriple::new(pid,s,e)`    | Constructing the canonical span tuple from raw u32s.                    |
 
-### Test fixtures (behind `feature = "test-fixtures"`)
-
-| Fixture                            | Use when                                              |
-|------------------------------------|-------------------------------------------------------|
-| `AKIA_LITERAL` / `GHP_PREFIX`      | Need the canonical literal pair every test reuses.    |
-| `MIXED_HAYSTACK`                   | Mixed-credential haystack at predictable offsets.     |
-| `long_repeating_haystack()`        | 32× repetition of the mixed pattern; ~830 bytes.      |
-| `canonical_literal_pair()`         | Pre-bundled `(patterns, haystack)` tuple.             |
-| `overlapping_literal_pair()`       | NFA-vs-DFA overlap-policy stress fixture.             |
-| `canonical_regex_set()`            | Regex frontend smoke fixture.                         |
-| `realistic_detector_pattern_corpus()` | 200 production-shaped pattern bytestrings (no dups). |
-
 Public exports are pinned by `tests/surface_contracts.rs`, which names
 each migrated item and fails at compile time if one disappears.
