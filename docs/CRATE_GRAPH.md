@@ -168,6 +168,7 @@ graph TD
   C27 --> C24
   C30 --> C0
   C30 --> C17
+  C30 --> C25
   C30 --> C29
   C31 --> C0
   C32 --> C3
@@ -315,6 +316,7 @@ graph TD
 | `vyre-runtime` | `vyre-primitives` | buffer and extent records the planner's forwarded builders take | None | `always` | `normal` | `true` | `false` | `public` | `primitive-library` |
 | `vyre-test-support` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `vyre-test-support` | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
+| `vyre-test-support` | `vyre-reference` | reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `reference-semantics` |
 | `vyre-test-support` | `vyre-spec` | DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `xtask` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `xtask-evidence` | `vyre-bench` | benchmark workloads and evidence | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |

@@ -484,12 +484,13 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 - Path: `vyre-test-support`
 - Owner: `test-support`
 - Layer: `test-tooling`
-- Internal production dependencies: `structure-gate`, `vyre-foundation`, `vyre-spec`
+- Internal production dependencies: `structure-gate`, `vyre-foundation`, `vyre-reference`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | `private` | `release-tooling` |
 | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | `private` | `foundation-ir` |
+| `vyre-reference` | reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature | `private` | `reference-semantics` |
 | `vyre-spec` | DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures | `private` | `specification` |
 
 ### `xtask`

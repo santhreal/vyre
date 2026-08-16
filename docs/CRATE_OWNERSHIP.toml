@@ -794,6 +794,17 @@ default_features = true
 boundary = "private"
 seam = "foundation-ir"
 
+
+[[crate.dependency]]
+package = "vyre-reference"
+purpose = "reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "reference-semantics"
 [[crate.dependency]]
 package = "vyre-spec"
 purpose = "DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures"
