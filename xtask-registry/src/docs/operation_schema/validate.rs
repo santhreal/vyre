@@ -6,13 +6,16 @@ use vyre_foundation::operation::OperationTier;
 
 use super::schema::{OperationSchema, SCHEMA_VERSION};
 
-/// Registrations the defining crate links whatever features are selected.
+/// Most registrations the defining crate may link whatever features are
+/// selected.
 ///
-/// Measured over the 327 registrations in the checkout: the `vyre-libs`
-/// modules that carry them are declared with no `cfg`, so nothing selects
-/// them out. The count falls when a registration gains a gate or leaves the
-/// tree, and a rise is a new registration nobody can compile away.
-const UNCONDITIONAL_REGISTRATIONS: usize = 9;
+/// Measured at 9 over the 327 registrations in the checkout: the `vyre-libs`
+/// modules that carry them are declared with no `cfg`, so nothing selects them
+/// out. A registration above this cap is one nobody can compile away. The name
+/// ends in `_CAP` so the ratchet gate reads it as a limit: it may be lowered
+/// when a registration gains a gate or leaves the tree, and raising it needs a
+/// measurement recorded here.
+const UNCONDITIONAL_REGISTRATION_CAP: usize = 9;
 
 pub(crate) fn validate_schema(
     schema: &OperationSchema,
@@ -161,9 +164,9 @@ pub(crate) fn validate_schema(
         .filter(|op| op.features.is_empty())
         .map(|op| op.id.as_str())
         .collect();
-    if unconditional.len() != UNCONDITIONAL_REGISTRATIONS {
+    if unconditional.len() > UNCONDITIONAL_REGISTRATION_CAP {
         errors.push(format!(
-            "{} operation(s) record no enabling feature where {UNCONDITIONAL_REGISTRATIONS} do; a registration that always links cannot be selected out: {}",
+            "{} operation(s) record no enabling feature where at most {UNCONDITIONAL_REGISTRATION_CAP} may; a registration that always links cannot be selected out: {}",
             unconditional.len(),
             unconditional.join(", ")
         ));

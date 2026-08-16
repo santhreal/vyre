@@ -407,12 +407,36 @@ fn constants_in(file: &str, text: &str) -> Vec<Constant> {
     found
 }
 
+/// One declaration with its visibility removed.
+///
+/// `pub`, `pub(crate)`, `pub(super)` and `pub(in path)` all read as the
+/// declaration that follows them.
+fn strip_visibility(code: &str) -> &str {
+    let Some(rest) = code.strip_prefix("pub") else {
+        return code;
+    };
+    let rest = match rest.strip_prefix('(') {
+        Some(scoped) => match scoped.split_once(')') {
+            Some((_, after)) => after,
+            None => return code,
+        },
+        None => rest,
+    };
+    match rest.strip_prefix(' ') {
+        Some(declaration) => declaration.trim_start(),
+        None => code,
+    }
+}
+
 /// The name and value of an integer `const` declaration on one line.
+///
+/// Visibility is stripped rather than listed. A ratchet declared
+/// `pub(crate) const` or `pub(super) const` is the same bound as one declared
+/// `pub const`, and reading only the two shortest spellings left every
+/// module-visible bound free to move with nothing recorded.
 fn integer_constant(line: &str) -> Option<(String, u128)> {
     let code = line.trim();
-    let rest = code
-        .strip_prefix("pub const ")
-        .or_else(|| code.strip_prefix("const "))?;
+    let rest = strip_visibility(code).strip_prefix("const ")?;
     let (name, rest) = rest.split_once(':')?;
     let name = name.trim();
     if name.is_empty() || !name.bytes().all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit()) {
@@ -711,6 +735,28 @@ mod tests {
         );
         assert_eq!(integer_constant("const FIX: &str = \"x\";"), None);
         assert_eq!(integer_constant("let MAX_LINES: usize = 3;"), None);
+    }
+
+    /// WHY: a bound is a bound at every visibility. Reading only `const` and
+    /// `pub const` left `pub(crate)` and `pub(super)` ratchets free to move
+    /// with no measurement recorded, which is the one thing this gate exists to
+    /// prevent, and the gate reported nothing because it never saw them.
+    #[test]
+    fn reads_a_bound_at_every_visibility() {
+        for declaration in [
+            "pub(crate) const MAX_LINES: usize = 400;",
+            "pub(super) const MAX_LINES: usize = 400;",
+            "pub(in crate::gates) const MAX_LINES: usize = 400;",
+            "pub const MAX_LINES: usize = 400;",
+            "const MAX_LINES: usize = 400;",
+        ] {
+            assert_eq!(
+                integer_constant(declaration),
+                Some(("MAX_LINES".to_string(), 400)),
+                "{declaration}"
+            );
+        }
+        assert_eq!(integer_constant("published const MAX_LINES: usize = 4;"), None);
     }
 
     /// WHY: the doc comment is the record of what was measured, so it is the

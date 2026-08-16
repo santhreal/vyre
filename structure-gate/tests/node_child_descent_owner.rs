@@ -68,7 +68,7 @@ use std::fs;
 use std::path::Path;
 
 use structure_gate::source_scan::{
-    is_word_byte, mask_comments_and_strings, matching_brace, rust_sources_with_text,
+    is_word_byte, mask_comments_and_strings, matching_brace, rust_sources_with_text, SourceText,
 };
 use structure_gate::workspace_root;
 
@@ -676,10 +676,20 @@ fn rebuild(node: &Node) -> Node {
 }
 
 /// Every reported block in the tree, ordered.
+///
+/// A source the walk cannot read is a failure rather than a gap: a file nothing
+/// judged is a file this ratchet does not cover, and the count would fall for a
+/// reason nobody recorded.
 fn scan(root: &Path) -> Vec<Site> {
     let slots = declared_child_slots(root);
     let mut sites = Vec::new();
-    for (relative, text) in rust_sources_with_text(root) {
+    for source in rust_sources_with_text(root) {
+        let (relative, text) = match source {
+            SourceText::Read { path, text } => (path, text),
+            SourceText::Unread { path, reason } => {
+                panic!("Fix: {path} {reason}, so the descent scan never read it")
+            }
+        };
         for line in blocks_in(&text, &slots) {
             sites.push(Site {
                 path: relative.clone(),

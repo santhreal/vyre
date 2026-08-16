@@ -402,3 +402,32 @@ fn a_crate_document_naming_an_absent_module_is_reported() {
         "{text}"
     );
 }
+
+/// A crate document naming a workspace path that no longer exists is reported
+/// at the path it wrote. Reading a crate document against the member's `src/`
+/// found modules named by module path, and it also turned every deleted
+/// workspace path in a crate document into a finding at a path no document
+/// carries, which sends the reader looking for a file nobody ever wrote.
+#[test]
+fn a_crate_document_naming_an_absent_root_path_is_reported_where_it_wrote_it() {
+    let root = fixture();
+    fs::create_dir_all(root.path().join("vyre-thing/src")).unwrap();
+    fs::write(
+        root.path().join("vyre-thing/Cargo.toml"),
+        "[package]\nname = \"vyre-thing\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    fs::write(
+        root.path().join("vyre-thing/ARCHITECTURE.md"),
+        "The table lives in `docs/absent-table.json`.\n",
+    )
+    .unwrap();
+
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(
+        text.contains("resolves to `docs/absent-table.json`"),
+        "{text}"
+    );
+}

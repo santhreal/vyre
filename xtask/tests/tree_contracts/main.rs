@@ -29,6 +29,7 @@ mod docs_manifest_completeness;
 mod exit_states_a_cause;
 mod feature_isolation;
 mod manifest_dependency_tables;
+mod msrv_toolchain;
 mod nested_byte_rows;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;

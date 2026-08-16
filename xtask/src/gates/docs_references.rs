@@ -760,6 +760,26 @@ fn owning_member(tree: &Tree, document: &Path) -> Option<PathBuf> {
     }
 }
 
+/// Where one reading of a token came from.
+///
+/// Every reading is searched. When none of them resolves, the one reported is
+/// the most anchored: a directory the tree carries beats a directory the
+/// resolver inserted, which beats the document's own directory. A crate
+/// document naming a deleted workspace path is then reported at the path it
+/// wrote, and a module heading naming an absent module is still reported under
+/// the crate's `src/`, which is the layout that heading is written against.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum Origin {
+    /// The token read against a directory the tree carries: a root prefix that
+    /// exists, or a crate-relative prefix under the owning member.
+    Anchored,
+    /// A directory the resolver inserted, which no document carries.
+    Inserted,
+    /// The token read against the document's own directory, which is the last
+    /// reading tried and the one that always exists.
+    Beside,
+}
+
 /// The repository-relative path a token resolves to, or `None` when the token is
 /// not a path claim at all.
 ///
@@ -769,8 +789,11 @@ fn owning_member(tree: &Tree, document: &Path) -> Option<PathBuf> {
 /// `examples/demo/Cargo.toml` in `examples/demo/README.md` is the manifest
 /// beside it under either reading. A reading that resolves is the one the writer
 /// meant, so the readings are tried in order of specificity and the first
-/// published one wins; when none resolves the most specific is reported, because
-/// that is the path the writer's own directory makes of it.
+/// published one wins.
+///
+/// When none resolves, the reported reading is the most anchored one, so a
+/// finding names a path a reader can find in a document or in the layout that
+/// document is written against.
 fn resolve(tree: &Tree, document: &Path, raw: &str, source: Source) -> Option<String> {
     let token = path_token(raw);
     if !is_path_candidate(tree, &token, source) {
@@ -784,43 +807,53 @@ fn resolve(tree: &Tree, document: &Path, raw: &str, source: Source) -> Option<St
             Err(_) => None,
         };
     }
-    let mut candidates: Vec<PathBuf> = Vec::new();
+    let mut candidates: Vec<(PathBuf, Origin)> = Vec::new();
     if let Some(member) = owning_member(tree, document) {
         if CRATE_RELATIVE_PREFIXES
             .iter()
             .any(|prefix| token.starts_with(prefix))
         {
-            candidates.push(tree.absolute(&member).join(&token));
+            candidates.push((tree.absolute(&member).join(&token), Origin::Anchored));
         }
         if !token.starts_with("src/") {
-            candidates.push(tree.absolute(&member).join("src").join(&token));
+            candidates.push((
+                tree.absolute(&member).join("src").join(&token),
+                Origin::Inserted,
+            ));
         }
     }
     if ROOT_PREFIXES.iter().any(|prefix| token.starts_with(prefix))
         || has_existing_root_prefix(tree, &token)
     {
-        candidates.push(tree.absolute(&token));
+        candidates.push((tree.absolute(&token), Origin::Anchored));
     }
     if source == Source::Command && token.starts_with("./") {
-        candidates.push(tree.absolute(&token[2..]));
+        candidates.push((tree.absolute(&token[2..]), Origin::Anchored));
     }
-    candidates.push(tree.absolute(document_parent).join(&token));
+    candidates.push((
+        tree.absolute(document_parent).join(&token),
+        Origin::Beside,
+    ));
 
-    let mut readings: Vec<String> = Vec::new();
-    for candidate in candidates {
+    let mut readings: Vec<(String, Origin)> = Vec::new();
+    for (candidate, origin) in candidates {
         let normalized = normalize(&candidate);
         let reading = match normalized.strip_prefix(normalize(tree.root())) {
             Ok(relative) => relative.to_string_lossy().replace('\\', "/"),
             Err(_) => OUTSIDE.to_string(),
         };
-        if !readings.contains(&reading) {
-            readings.push(reading);
+        match readings.iter_mut().find(|(seen, _)| *seen == reading) {
+            Some(entry) => entry.1 = entry.1.min(origin),
+            None => readings.push((reading, origin)),
         }
     }
-    let published = readings.iter().find(|reading| resolves(tree, reading));
-    published
-        .cloned()
-        .or_else(|| readings.into_iter().next())
+    if let Some((reading, _)) = readings.iter().find(|(reading, _)| resolves(tree, reading)) {
+        return Some(reading.clone());
+    }
+    readings
+        .iter()
+        .min_by_key(|(_, origin)| *origin)
+        .map(|(reading, _)| reading.clone())
 }
 
 /// Whether one reading of a token names something the checkout publishes.

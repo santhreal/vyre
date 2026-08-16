@@ -9,8 +9,9 @@
 //! here sets either.
 
 use std::ffi::OsString;
+use std::io::{BufRead, BufReader, Result as IoResult};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, ExitStatus, Stdio};
 
 /// Environment variable the workspace wrapper exports, naming itself.
 const RUNNER_VARIABLE: &str = "VYRE_CARGO_RUNNER";
@@ -62,6 +63,32 @@ pub fn command(root: &Path) -> Command {
     let mut command = Command::new(binary(root));
     command.current_dir(root);
     command
+}
+
+/// Run a long command, streaming its output and keeping its diagnostics.
+///
+/// A sweep or a workspace build is watched while it runs, so its output goes to
+/// the terminal as it arrives. Reading the exit status alone throws the text
+/// away, and a gate with no text cannot tell a compile that found a defect from
+/// one whose build directory was deleted under it. Standard output is inherited
+/// so the child writes straight to the terminal with no relay, and standard
+/// error is read line by line and echoed as it arrives, which keeps the two in
+/// the order the child produced them and cannot deadlock: nothing waits on a
+/// pipe the child is not writing.
+pub fn run_streaming(command: &mut Command) -> IoResult<(ExitStatus, String)> {
+    command.stderr(Stdio::piped());
+    let mut child = command.spawn()?;
+    let mut diagnostics = String::new();
+    if let Some(stream) = child.stderr.take() {
+        for line in BufReader::new(stream).lines() {
+            let line = line?;
+            eprintln!("{line}");
+            diagnostics.push_str(&line);
+            diagnostics.push('\n');
+        }
+    }
+    let status = child.wait()?;
+    Ok((status, diagnostics))
 }
 
 /// Directory segments cargo writes inside a profile directory.

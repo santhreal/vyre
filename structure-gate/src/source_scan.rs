@@ -27,16 +27,52 @@ use crate::opaque_span;
 /// Lazy on purpose. The workspace holds thousands of sources and a scanner
 /// looks at one at a time, so collecting every file's text first would hold the
 /// whole tree in memory to answer a question about one file.
-pub fn rust_sources_with_text(root: &Path) -> impl Iterator<Item = (String, String)> + '_ {
-    rust_sources(root).into_iter().filter_map(move |file| {
-        let text = read_source(&file)?;
-        let relative = file
+pub fn rust_sources_with_text(root: &Path) -> impl Iterator<Item = SourceText> + '_ {
+    rust_sources(root).into_iter().map(move |file| {
+        let path = file
             .strip_prefix(root)
             .unwrap_or(&file)
             .to_string_lossy()
             .replace('\\', "/");
-        Some((relative, text))
+        match read_source(&file) {
+            Ok(text) => SourceText::Read { path, text },
+            Err(reason) => SourceText::Unread { path, reason },
+        }
     })
+}
+
+/// One tracked source, read or refused.
+///
+/// A refusal is carried to the caller rather than dropped. A scanner that skips
+/// a file it could not read reports the tree as clean for a file nothing
+/// judged, and the file most likely to be refused is the generated or oversized
+/// one that a rule most wants to see.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SourceText {
+    /// The file, read in full.
+    Read {
+        /// Path relative to the scanned root, with forward slashes.
+        path: String,
+        /// The whole file.
+        text: String,
+    },
+    /// The file was not read, and why.
+    Unread {
+        /// Path relative to the scanned root, with forward slashes.
+        path: String,
+        /// What stopped the read.
+        reason: String,
+    },
+}
+
+impl SourceText {
+    /// The path, whichever way the read went.
+    #[must_use]
+    pub fn path(&self) -> &str {
+        match self {
+            Self::Read { path, .. } | Self::Unread { path, .. } => path,
+        }
+    }
 }
 
 /// The most bytes one source may hold before a scanner refuses to judge it.
@@ -50,20 +86,24 @@ const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
 /// The text of one source, read under [`MAX_SOURCE_BYTES`].
 ///
 /// A file that cannot be opened, is not UTF-8, or holds more than the cap
-/// yields nothing. Truncating it would let a scanner judge a source it read
-/// only part of and report the tree as clean past the cut. Aborting is the
-/// other wrong answer: one generated file dropped into a source tree took down
-/// every rule over the whole tree, where a reader that has to have the file can
-/// name it and a reader that only needs the shape of the module tree carries
-/// on.
-fn read_source(path: &Path) -> Option<String> {
+/// yields the reason instead of the text. Truncating it would let a scanner
+/// judge a source it read only part of and report the tree as clean past the
+/// cut. Aborting is the other wrong answer: one generated file dropped into a
+/// source tree took down every rule over the whole tree. The reason travels
+/// with the path so a reader that has to have the file can name it, and a
+/// reader that only needs the shape of the module tree can carry on.
+fn read_source(path: &Path) -> Result<String, String> {
     let mut text = String::new();
-    fs::File::open(path)
-        .ok()?
-        .take(MAX_SOURCE_BYTES + 1)
+    let file = fs::File::open(path).map_err(|error| format!("cannot be opened: {error}"))?;
+    file.take(MAX_SOURCE_BYTES + 1)
         .read_to_string(&mut text)
-        .ok()?;
-    (text.len() as u64 <= MAX_SOURCE_BYTES).then_some(text)
+        .map_err(|error| format!("cannot be read as UTF-8: {error}"))?;
+    if text.len() as u64 > MAX_SOURCE_BYTES {
+        return Err(format!(
+            "holds more than {MAX_SOURCE_BYTES} bytes, which is generated output or a binary rather than a source"
+        ));
+    }
+    Ok(text)
 }
 
 /// Every `.rs` file under `root`, sorted.
@@ -307,7 +347,7 @@ pub fn module_routes(crate_src: &Path) -> Vec<ModuleRoute> {
         // A module the walk cannot read is still on this route. Only the
         // descent stops, because an unread file declares no children, and the
         // reader that has to read the file is the one that can name why.
-        if let Some(text) = read_source(&module.path) {
+        if let Ok(text) = read_source(&module.path) {
             let directory = module_directory(&module.path);
             for (name, attributes) in module_declarations(&text) {
                 let Some(gates) = reachable_features(&attributes) else {

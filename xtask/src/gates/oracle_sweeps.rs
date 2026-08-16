@@ -46,8 +46,10 @@ const VOLUME: &str = "volume";
 /// One tracked sweep target and the features its crate reserves for it.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SweepTarget {
-    /// Package the target belongs to, as `cargo -p` takes it.
+    /// Member directory the target lives in, relative to the checkout root.
     pub crate_dir: String,
+    /// Package name, as `cargo -p` takes it.
+    pub package: String,
     /// Test target name, as `cargo --test` takes it.
     pub target: String,
     /// Features the crate's `[[test]]` entry requires for the target.
@@ -193,9 +195,11 @@ fn derive(
                 ));
             }
         }
+        let package = package_name(&manifest, &manifest_path)?;
         for target in targets {
             roster.push(SweepTarget {
                 crate_dir: crate_dir.clone(),
+                package: package.clone(),
                 target: target.clone(),
                 features: declared.get(target).cloned().unwrap_or_default(),
             });
@@ -204,11 +208,37 @@ fn derive(
     Ok(roster)
 }
 
-/// The crate and target a tracked path names, when it is a sweep source.
+/// The package name a member manifest declares.
+///
+/// A directory name is not a package name, and `cargo -p` takes the package.
+/// Reading the directory worked for every member whose two names agree and
+/// would silently address another crate for one whose names differ, so the
+/// manifest answers and a manifest that declares no name fails closed.
+fn package_name(manifest: &toml::Table, manifest_path: &str) -> Result<String, GateError> {
+    manifest
+        .get("package")
+        .and_then(|package| package.get("name"))
+        .and_then(toml::Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| {
+            GateError::new(
+                format!("{manifest_path} declares no [package] name"),
+                "name the package; a sweep is run by package name and a directory name is not one",
+            )
+        })
+}
+
+/// The member directory and target a tracked path names, when it is a sweep
+/// source.
+///
+/// The directory is everything above `tests/`, not the first path segment, so a
+/// member declared at a nested path such as `conform/vyre-conform` contributes
+/// its sweeps. Splitting at the first separator read that member as `conform`,
+/// which is no member at all, so every sweep it carries was invisible.
 fn sweep_source(path: &Path) -> Option<(String, String)> {
     let text = path.to_str()?;
-    let (crate_dir, rest) = text.split_once('/')?;
-    let target = rest.strip_prefix("tests/")?.strip_suffix(".rs")?;
+    let (crate_dir, rest) = text.rsplit_once("/tests/")?;
+    let target = rest.strip_suffix(".rs")?;
     if !target.starts_with(SWEEP_PREFIX) || target.contains('/') {
         return None;
     }
@@ -288,16 +318,16 @@ fn run_partition(
         ));
     }
 
-    let mut by_crate: BTreeMap<&str, (Vec<&str>, BTreeSet<&str>)> = BTreeMap::new();
+    let mut by_crate: BTreeMap<&str, (&str, Vec<&str>, BTreeSet<&str>)> = BTreeMap::new();
     for (index, target) in selected.iter().enumerate() {
         if index % shards != shard {
             continue;
         }
         let entry = by_crate
             .entry(target.crate_dir.as_str())
-            .or_insert_with(|| (Vec::new(), BTreeSet::new()));
-        entry.0.push(target.target.as_str());
-        entry.1.extend(target.features.iter().map(String::as_str));
+            .or_insert_with(|| (target.package.as_str(), Vec::new(), BTreeSet::new()));
+        entry.1.push(target.target.as_str());
+        entry.2.extend(target.features.iter().map(String::as_str));
     }
     if by_crate.is_empty() {
         return Err(GateError::new(
@@ -310,9 +340,9 @@ fn run_partition(
     }
 
     let mut executed = 0usize;
-    for (crate_dir, (targets, features)) in &by_crate {
+    for (crate_dir, (package, targets, features)) in &by_crate {
         let mut command = crate::cargo_runner::command(&ctx.root);
-        command.args(["test", "-p", crate_dir]);
+        command.args(["test", "-p", package]);
         if !features.is_empty() {
             command.arg("--features");
             command.arg(features.iter().copied().collect::<Vec<_>>().join(","));
@@ -320,14 +350,24 @@ fn run_partition(
         for target in targets {
             command.args(["--test", target]);
         }
-        let status = command.status().map_err(|error| {
-            GateError::new(
-                format!("cannot run cargo test for `{crate_dir}`: {error}"),
-                "install a cargo the runner can start, or set CARGO to one",
-            )
-        })?;
+        let (status, diagnostics) =
+            crate::cargo_runner::run_streaming(&mut command).map_err(|error| {
+                GateError::new(
+                    format!("cannot run cargo test for `{crate_dir}`: {error}"),
+                    "install a cargo the runner can start, or set CARGO to one",
+                )
+            })?;
         executed += targets.len();
         if !status.success() {
+            if let Some(missing) = crate::cargo_runner::unmeasured(&diagnostics) {
+                report.find(Finding::new(
+                    format!(
+                        "`{crate_dir}` measured nothing: the build named `{missing}`, which the build directory does not carry"
+                    ),
+                    "run the sweep again against an intact build directory; a compile whose own inputs were deleted under it reports the state of the disk, and the sweep it was pointed at never ran",
+                ));
+                continue;
+            }
             report.find(Finding::new(
                 format!(
                     "`{crate_dir}` failed {} {partition} sweep target(s): {}",
@@ -369,11 +409,13 @@ mod tests {
     fn every_target_is_claimed_by_exactly_one_partition() {
         let matrix = SweepTarget {
             crate_dir: "vyre-libs".to_string(),
+            package: "vyre-libs".to_string(),
             target: "sweep_matching_oracle".to_string(),
             features: Vec::new(),
         };
         let wave = SweepTarget {
             crate_dir: "vyre-libs".to_string(),
+            package: "vyre-libs".to_string(),
             target: "sweep_matching_volume_wave".to_string(),
             features: Vec::new(),
         };
@@ -383,14 +425,24 @@ mod tests {
 
     /// WHY: a nested support module under `tests/` is not a target, and a
     /// non-sweep test is another runner's business. Reading either as a sweep
-    /// makes the runner pass cargo a `--test` it will refuse.
+    /// makes the runner pass cargo a `--test` it will refuse. A member declared
+    /// at a nested path carries sweeps like any other, and splitting the path
+    /// at its first separator read that member as its parent directory, which
+    /// is no member, so its sweeps were invisible.
     #[test]
-    fn only_a_top_level_sweep_source_is_a_target() {
+    fn a_sweep_source_names_the_member_directory_that_holds_it() {
         assert_eq!(
             sweep_source(Path::new("vyre-libs/tests/sweep_matching_oracle.rs")),
             Some((
                 "vyre-libs".to_string(),
                 "sweep_matching_oracle".to_string()
+            ))
+        );
+        assert_eq!(
+            sweep_source(Path::new("conform/vyre-conform/tests/sweep_backend_oracle.rs")),
+            Some((
+                "conform/vyre-conform".to_string(),
+                "sweep_backend_oracle".to_string()
             ))
         );
         assert_eq!(
@@ -401,6 +453,29 @@ mod tests {
         assert_eq!(
             sweep_source(Path::new("vyre-libs/src/sweep_matching.rs")),
             None
+        );
+    }
+
+    /// WHY: `cargo -p` takes a package name and the roster walks directories.
+    /// A member whose directory and package names differ was addressed by its
+    /// directory, which selects another crate or no crate at all, and a
+    /// manifest that names no package must not resolve to a guess.
+    #[test]
+    fn a_package_is_named_by_its_manifest_and_never_by_its_directory() {
+        let manifest: toml::Table =
+            toml::from_str("[package]\nname = \"vyre-conform\"\nversion = \"0.1.0\"\n")
+                .expect("table");
+        assert_eq!(
+            package_name(&manifest, "conform/vyre-conform/Cargo.toml").expect("a named package"),
+            "vyre-conform"
+        );
+        let anonymous: toml::Table = toml::from_str("[workspace]\n").expect("table");
+        let error = package_name(&anonymous, "conform/vyre-conform/Cargo.toml")
+            .expect_err("a manifest with no package name fails closed");
+        assert!(
+            error.message.contains("conform/vyre-conform/Cargo.toml"),
+            "{}",
+            error.message
         );
     }
 
