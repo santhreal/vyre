@@ -79,6 +79,7 @@ operations = [
   "vyre-libs::graph::dominator_tree_depth",
   "vyre-libs::graph::dominator_tree_intersect_step",
   "vyre-libs::graph::functor_apply",
+  "vyre-libs::graph::level_wave",
   "vyre-libs::graph::monoidal_compose",
   "vyre-libs::graph::motif",
   "vyre-libs::graph::path_reconstruct",

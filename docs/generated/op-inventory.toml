@@ -591,6 +591,18 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::graph::level_wave"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::graph::monoidal_compose"
 tier = "libs"
 category = "graph"
@@ -3751,7 +3763,7 @@ id = "vyre-libs::text::line_index"
 tier = "libs"
 category = "text"
 kind = "program_buffers"
-buffers = 1
+buffers = 5
 bytes_extraction = false
 features = ["text"]
 target_facets = ["cuda", "spirv", "wgpu"]
