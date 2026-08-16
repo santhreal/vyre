@@ -25,6 +25,9 @@ pub struct DeviceFacts {
     shared_scratch_bytes_per_workgroup: u32,
     per_launch_overhead_ns: u64,
     persistent_setup_overhead_ns: u64,
+    peak_bandwidth_bytes_per_ns: u64,
+    calibrated_materialization_throughput_bytes_per_ns: u64,
+    subgroup_size: u32,
 }
 
 impl DeviceFacts {
@@ -71,6 +74,7 @@ impl DeviceFacts {
         capabilities: BackendCapabilities,
         max_invocations_per_workgroup: u32,
     ) -> Self {
+        let subgroup_size = capabilities.subgroup_size;
         Self {
             capabilities,
             supports_cooperative_launch: false,
@@ -80,6 +84,9 @@ impl DeviceFacts {
             shared_scratch_bytes_per_workgroup: 0,
             per_launch_overhead_ns: 0,
             persistent_setup_overhead_ns: 0,
+            peak_bandwidth_bytes_per_ns: 0,
+            calibrated_materialization_throughput_bytes_per_ns: 0,
+            subgroup_size,
         }
     }
 
@@ -120,6 +127,44 @@ impl DeviceFacts {
         self.per_launch_overhead_ns = per_launch_overhead_ns;
         self.persistent_setup_overhead_ns = persistent_setup_overhead_ns;
         self
+    }
+
+    /// Record measured peak memory bandwidth and calibrated materialization throughput.
+    #[must_use]
+    pub const fn with_bandwidth_facts(
+        mut self,
+        peak_bandwidth_bytes_per_ns: u64,
+        calibrated_materialization_throughput_bytes_per_ns: u64,
+    ) -> Self {
+        self.peak_bandwidth_bytes_per_ns = peak_bandwidth_bytes_per_ns;
+        self.calibrated_materialization_throughput_bytes_per_ns =
+            calibrated_materialization_throughput_bytes_per_ns;
+        self
+    }
+
+    /// Record explicit subgroup size.
+    #[must_use]
+    pub const fn with_subgroup_size(mut self, subgroup_size: u32) -> Self {
+        self.subgroup_size = subgroup_size;
+        self
+    }
+
+    /// Peak memory bandwidth in bytes per nanosecond, or zero when unknown.
+    #[must_use]
+    pub const fn peak_bandwidth_bytes_per_ns(&self) -> u64 {
+        self.peak_bandwidth_bytes_per_ns
+    }
+
+    /// Calibrated materialization throughput in bytes per nanosecond, or zero when unmeasured.
+    #[must_use]
+    pub const fn calibrated_materialization_throughput_bytes_per_ns(&self) -> u64 {
+        self.calibrated_materialization_throughput_bytes_per_ns
+    }
+
+    /// Hardware subgroup size in lanes, or zero when unmeasured.
+    #[must_use]
+    pub const fn subgroup_size(&self) -> u32 {
+        self.subgroup_size
     }
 
     /// Live IR capability snapshot advertised by the device.

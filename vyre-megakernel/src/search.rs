@@ -94,6 +94,9 @@ pub(crate) fn explore(
 
     let mut candidates = Vec::with_capacity(groupings.len());
     for grouping in groupings {
+        if candidates.len() >= budget.max_candidates as usize {
+            break;
+        }
         for width in WORKGROUP_SEARCH_WIDTHS {
             if candidates.len().saturating_add(1) >= budget.max_candidates as usize
                 || !can_spend(cpu_work, budget)
@@ -109,9 +112,10 @@ pub(crate) fn explore(
             cpu_work = cpu_work.saturating_add(1);
             candidates.push(grouping.with_workgroup_width(Some(*width)));
         }
-        candidates.push(grouping);
+        if candidates.len() < budget.max_candidates as usize {
+            candidates.push(grouping);
+        }
     }
-
     SearchResult {
         work: SearchWork {
             candidates_explored: u32::try_from(candidates.len()).unwrap_or(u32::MAX),

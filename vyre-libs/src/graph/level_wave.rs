@@ -235,7 +235,10 @@ inventory::submit! {
         }),
         Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![to_bytes(&[1, 1, 1, 1])]]
+            vec![
+                vec![to_bytes(&[1, 1, 1, 1])],
+                vec![to_bytes(&[1, 1, 1, 1])],
+            ]
         }),
     )
 }
@@ -367,5 +370,49 @@ mod tests {
                 .count(),
             3
         );
+    }
+    #[test]
+    fn registration_witness_cases_and_abi_alignment() {
+        use vyre_foundation::operation::OperationRegistration;
+        let entry = inventory::iter::<OperationRegistration>
+            .into_iter()
+            .find(|op| op.id == OP_ID)
+            .expect("level_wave must be registered in inventory");
+
+        let test_inputs = (entry.test_inputs.expect("test_inputs must be declared"))();
+        let expected_output = (entry.expected_output.expect("expected_output must be declared"))();
+
+        assert_eq!(
+            test_inputs.len(),
+            2,
+            "level_wave registration must supply exactly 2 witness input cases"
+        );
+        assert_eq!(
+            expected_output.len(),
+            2,
+            "level_wave registration must supply matching 2 expected output cases (no case-count divergence)"
+        );
+
+        let program = (entry.build.expect("build must be declared"))();
+        assert_eq!(program.buffers().len(), 2);
+        assert_eq!(program.buffers()[0].name(), "depths");
+        assert_eq!(program.buffers()[1].name(), "out");
+        for (case_idx, (inputs, expected)) in test_inputs.iter().zip(expected_output.iter()).enumerate() {
+            let mut val_inputs: Vec<vyre_reference::value::Value> =
+                inputs.iter().cloned().map(vyre_reference::value::Value::from).collect();
+            // out buffer is 4 * u32 (16 bytes) ReadWrite buffer
+            if val_inputs.len() < program.buffers().len() {
+                val_inputs.push(vyre_reference::value::Value::from(vec![0u8; 16]));
+            }
+            let outputs: Vec<Vec<u8>> = vyre_reference::reference_eval(&program, &val_inputs)
+                .expect("reference eval must succeed for level_wave witness")
+                .into_iter()
+                .map(|val| val.to_bytes())
+                .collect();
+            assert_eq!(
+                outputs, *expected,
+                "reference eval must match expected output for case {case_idx}"
+            );
+        }
     }
 }

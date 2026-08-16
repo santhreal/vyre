@@ -73,7 +73,7 @@ pub(super) fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
                     AtomicOp::CompareExchange | AtomicOp::CompareExchangeWeak
                 )
         }
-        Expr::Opaque(_) => true,
+        Expr::Call { .. } | Expr::Opaque(_) => true,
         _ => false,
     })
 }

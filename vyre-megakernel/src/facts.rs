@@ -73,16 +73,37 @@ pub(crate) fn derive(
             .saturating_mul(u64::from(declared[2]));
         // A launch width is safe to replace only when nothing in the program
         // observes it. A workgroup-scoped buffer is sized for the declared
-        // width, a barrier orders invocations inside the declared group, and a
-        // subgroup operation reads the group's lane layout, so each one pins the
-        // declared shape. A 2D or 3D declaration pins it too: the search only
-        // proposes 1D widths.
+        // width, a barrier orders invocations inside the declared group, a
+        // subgroup operation reads the group's lane layout, and any launch-geometry
+        // expression (InvocationId, LocalId, WorkgroupId, SubgroupLocalId, SubgroupSize)
+        // reads the group dimensions/indices, so each one pins the declared shape.
+        // A 2D or 3D declaration pins it too: the search only proposes 1D widths.
+        let observes_launch_geometry = program.entry().iter().any(|node| {
+            vyre_foundation::visit::any_descendant(node, &mut |n| {
+                vyre_foundation::visit::node_operands(n)
+                    .into_iter()
+                    .flatten()
+                    .any(|expr| {
+                        vyre_foundation::visit::any_subexpr(expr, &mut |sub| {
+                            matches!(
+                                sub,
+                                vyre_foundation::ir::Expr::InvocationId { .. }
+                                    | vyre_foundation::ir::Expr::WorkgroupId { .. }
+                                    | vyre_foundation::ir::Expr::LocalId { .. }
+                                    | vyre_foundation::ir::Expr::SubgroupLocalId
+                                    | vyre_foundation::ir::Expr::SubgroupSize
+                            )
+                        })
+                    })
+            })
+        });
         let accepts_width = declared[1] == 1
             && declared[2] == 1
             && scratch.is_empty()
             && !stats.has_node_barrier()
             && !stats.subgroup_ops()
-            && !program.non_composable_with_self;
+            && !program.non_composable_with_self
+            && !observes_launch_geometry;
         node_workgroup_scratch.push(scratch);
         node_declared_invocations.push(invocations.max(1));
         node_declared_workgroup.push(declared);

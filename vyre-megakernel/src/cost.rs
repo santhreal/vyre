@@ -184,8 +184,26 @@ pub(crate) fn evaluate(
     }
 
     let launch_ns = launches.saturating_mul(launch_cost_ns(device));
-    let materialization_ns = materialized_bytes / TRAFFIC_BYTES_PER_NS;
-    let occupancy_ns = occupancy_bytes / TRAFFIC_BYTES_PER_NS;
+    let throughput = match device.calibrated_materialization_throughput_bytes_per_ns() {
+        0 => device.peak_bandwidth_bytes_per_ns(),
+        calibrated => calibrated,
+    };
+    let (materialization_ns, occupancy_ns) = if throughput == 0 {
+        (0, 0)
+    } else {
+        (
+            if materialized_bytes == 0 {
+                0
+            } else {
+                materialized_bytes.div_ceil(throughput)
+            },
+            if occupancy_bytes == 0 {
+                0
+            } else {
+                occupancy_bytes.div_ceil(throughput)
+            },
+        )
+    };
     let total = launch_ns
         .saturating_add(materialization_ns)
         .saturating_add(occupancy_ns);
@@ -254,12 +272,14 @@ mod tests {
     fn device(registers_per_invocation: u32) -> DeviceFacts {
         DeviceFacts::new(BackendCapabilities::default(), 256)
             .with_occupancy(registers_per_invocation, 0)
+            .with_bandwidth_facts(TRAFFIC_BYTES_PER_NS, TRAFFIC_BYTES_PER_NS)
     }
 
     /// A device with no register budget and the given workgroup scratch budget.
     fn scratch_device(shared_scratch_bytes_per_workgroup: u32) -> DeviceFacts {
         DeviceFacts::new(BackendCapabilities::default(), 256)
             .with_occupancy(0, shared_scratch_bytes_per_workgroup)
+            .with_bandwidth_facts(TRAFFIC_BYTES_PER_NS, TRAFFIC_BYTES_PER_NS)
     }
 
     /// Two nodes, one value of `value_bytes` between them, each holding
@@ -578,5 +598,64 @@ mod tests {
             rate.saturating_add(500).div_euclid(1_000),
             "the traffic rate must be the rate that case recorded, to the nearest byte"
         );
+    }
+
+    #[test]
+    fn unknown_device_evidence_omits_traffic_cost_terms() {
+        let facts = two_node_facts(64, 4 * 1024 * 1024);
+        let dependencies = dependencies();
+        let unmeasured_device = DeviceFacts::new(BackendCapabilities::default(), 256)
+            .with_occupancy(128, 0);
+        assert_eq!(unmeasured_device.calibrated_materialization_throughput_bytes_per_ns(), 0);
+        let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, unmeasured_device);
+        assert_eq!(unfused.materialization_ns, 0, "unmeasured bandwidth omits materialization term");
+        assert_eq!(unfused.occupancy_ns, 0);
+    }
+
+    #[test]
+    fn sub_rate_nonzero_bytes_round_up_to_one_nanosecond() {
+        let facts = two_node_facts(64, 50);
+        let dependencies = dependencies();
+        let fast_bandwidth_device = DeviceFacts::new(BackendCapabilities::default(), 256)
+            .with_occupancy(128, 0)
+            .with_bandwidth_facts(1000, 1000);
+        let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, fast_bandwidth_device);
+        assert_eq!(
+            unfused.materialization_ns, 1,
+            "50 bytes with 1000 B/ns throughput must round up to 1 ns via ceiling division"
+        );
+    }
+
+    #[test]
+    fn launch_and_bandwidth_ratios_favor_different_candidates_across_devices() {
+        // Two nodes with 16MB dataflow.
+        let facts = two_node_facts(64, 16 * 1024 * 1024);
+        let dependencies = dependencies();
+        let fused_plan = CandidatePlan::from_edges(2, &facts.dataflow);
+        let unfused_plan = CandidatePlan::baseline(2);
+
+        // Device A: High launch cost (50,000 ns), high bandwidth (10,000 B/ns).
+        // Unfused pays 1 extra launch (50,000 ns) + 16MB traffic (1,678 ns) = total 101,678 ns.
+        // Fused pays 1 launch (50,000 ns) + 0 traffic = total 50,000 ns. Fused wins!
+        let device_a = DeviceFacts::new(BackendCapabilities::default(), 256)
+            .with_launch_costs(50_000, 0)
+            .with_bandwidth_facts(10_000, 10_000)
+            .with_occupancy(128, 0);
+        let fused_a = evaluate(&fused_plan, &facts, &dependencies, device_a);
+        let unfused_a = evaluate(&unfused_plan, &facts, &dependencies, device_a);
+        assert!(fused_a.total < unfused_a.total, "fused must win on device with high launch cost");
+
+        // Device B: Low launch cost (100 ns), very low bandwidth (10 B/ns).
+        // If fused group incurs extra occupancy pass on 128 live values:
+        let occupancy_facts = two_node_facts(96, 16 * 1024 * 1024);
+        let fused_occ = CandidatePlan::from_edges(2, &occupancy_facts.dataflow);
+        let unfused_occ = CandidatePlan::baseline(2);
+        let device_b = DeviceFacts::new(BackendCapabilities::default(), 256)
+            .with_launch_costs(100, 0)
+            .with_bandwidth_facts(100, 100)
+            .with_occupancy(128, 0);
+        let fused_b = evaluate(&fused_occ, &occupancy_facts, &dependencies, device_b);
+        let unfused_b = evaluate(&unfused_occ, &occupancy_facts, &dependencies, device_b);
+        assert!(unfused_b.total < fused_b.total, "unfused must win when occupancy cliff on slow memory exceeds low launch cost");
     }
 }

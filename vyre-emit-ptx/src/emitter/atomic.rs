@@ -80,9 +80,13 @@ impl BodyCtx<'_> {
         let type_suffix = atomic_type_suffix(atomic_op, elem_ty)?;
         let result_reg = self.alloc(elem_ty);
         if let Some(in_bounds) = in_bounds {
+            let zero_lit = match elem_ty {
+                PtxType::F32 => "0f00000000",
+                _ => "0",
+            };
             let _ = writeln!(
                 self.text,
-                "    mov.{}    {result_reg}, 0;",
+                "    mov.{}    {result_reg}, {zero_lit};",
                 elem_ty.ptx_type_str()
             );
             let _ = writeln!(
@@ -259,9 +263,13 @@ impl BodyCtx<'_> {
         } = self.emit_atomic_address(binding_slot, index_reg, &element_type, memory_class)?;
         let result_reg = self.alloc(elem_ty);
         if let Some(in_bounds) = in_bounds {
+            let zero_lit = match elem_ty {
+                PtxType::F32 => "0f00000000",
+                _ => "0",
+            };
             let _ = writeln!(
                 self.text,
-                "    mov.{}    {result_reg}, 0;",
+                "    mov.{}    {result_reg}, {zero_lit};",
                 elem_ty.ptx_type_str()
             );
             let _ = writeln!(
@@ -285,10 +293,19 @@ fn atomic_type_suffix(atomic_op: AtomicOp, elem_ty: PtxType) -> Result<&'static 
     ) {
         return match elem_ty {
             PtxType::U32 | PtxType::I32 => Ok("b32"),
+            PtxType::U64 => Ok("b64"),
             other => Err(EmitError::UnsupportedDataType(format!(
-                "atom.global bitwise/exchange requires a 32-bit integer element type; got {other:?}"
+                "atom.global bitwise/exchange requires a 32-bit or 64-bit integer element type; got {other:?}"
             ))),
         };
     }
-    Ok(elem_ty.ptx_type_str())
+    match elem_ty {
+        PtxType::U32 => Ok("u32"),
+        PtxType::I32 => Ok("s32"),
+        PtxType::U64 => Ok("u64"),
+        PtxType::F32 => Ok("f32"),
+        other => Err(EmitError::UnsupportedDataType(format!(
+            "atom.{atomic_op:?} requires a supported numeric element type; got {other:?}"
+        ))),
+    }
 }
