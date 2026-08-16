@@ -12,8 +12,6 @@
 /// eliminating kernel-dispatch overhead for small compositional ops.
 pub mod inline;
 
-/// Compiler-oriented IR primitives.
-pub mod compiler;
 
 /// Shared-nothing parallel dispatch analysis.
 pub mod parallelism;
