@@ -326,7 +326,7 @@ pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -
     // For the first stage, butterfly_distance == 1 and the only valid
     // stage-local twiddle is w^0 == 1. Specialize that case to `v = hi`
     // instead of emitting the full Montgomery product. This removes a huge
-    // expression tree from catalog-scale proof fixtures and avoids WGPU
+    // expression tree from catalog-scale proof fixtures and avoids a backend
     // spending release-gate time compiling arithmetic that is provably dead
     // for the stage-0 butterfly.
     let v_expr = if butterfly_distance == 1 {

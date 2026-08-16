@@ -469,6 +469,10 @@ pub fn base64_decode(input: &str, output: &str, input_len: u32) -> Program {
     )
 }
 
+/// Base64 decode fused with an Aho-Corasick scan of the decoded bytes.
+///
+/// One program, so the decoded payload never leaves device memory between the
+/// two stages. `matches` receives one flag per decoded byte position.
 #[must_use]
 pub fn base64_decode_then_aho_corasick(
     input: &str,
