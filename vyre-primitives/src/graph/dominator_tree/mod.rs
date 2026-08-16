@@ -27,6 +27,8 @@
 //! disconnected component; callers should run `reachable` first if they need
 //! strict guarantees.
 
+mod depth;
+mod intersect_step;
 mod program;
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -47,6 +49,14 @@ mod registry;
 #[cfg(test)]
 mod tests;
 
+pub use depth::{
+    dominator_tree_depth, dominator_tree_depth_body, dominator_tree_depth_child,
+    OP_ID as DOMINATOR_TREE_DEPTH_OP_ID,
+};
+pub use intersect_step::{
+    dominator_tree_intersect_step, dominator_tree_intersect_step_body,
+    dominator_tree_intersect_step_child, OP_ID as DOMINATOR_TREE_INTERSECT_STEP_OP_ID,
+};
 pub use program::{
     dominator_tree_program, try_dominator_tree_program, validate_dominator_tree_inputs,
     DominatorTreeError, DominatorTreeLayout, IDOM_NONE, OP_ID,

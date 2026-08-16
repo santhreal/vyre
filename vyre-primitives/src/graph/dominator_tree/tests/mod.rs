@@ -9,6 +9,14 @@ fn program_builds_without_panic() {
     assert!(names.contains(&"dt_depth"));
 }
 
+/// The fixpoint exposes its three phases as child regions, and the two that
+/// answer a question of their own name the operations that answer it.
+///
+/// The generator strings come from the phase modules, not from literals here,
+/// so inlining a phase back into the fixpoint fails this test rather than
+/// silently shrinking what a composition reader can see. That a composed phase
+/// is also a live registration is `tests/dominator_tree_composition.rs`, which
+/// needs the registry feature this unit test does not.
 #[test]
 fn program_exposes_chk_phases_as_child_regions() {
     use vyre_foundation::composition::is_anonymous_generator;
@@ -45,17 +53,24 @@ fn program_exposes_chk_phases_as_child_regions() {
     collect(p.entry(), &mut generators);
 
     for phase in [
-        "anonymous::dominator_tree_init_state",
-        "anonymous::dominator_tree_recompute_depth",
-        "anonymous::dominator_tree_intersect_predecessors",
+        super::depth::OP_ID,
+        super::intersect_step::OP_ID,
+        super::program::INIT_PHASE_GENERATOR,
     ] {
         assert!(
             generators.iter().any(|g| g == phase),
             "Fix: dominator_tree must expose CHK initialization, depth recompute, and predecessor intersection as child regions so composition printing can see real phase boundaries. Missing `{phase}` in {generators:?}"
         );
+    }
+    assert!(
+        is_anonymous_generator(super::program::INIT_PHASE_GENERATOR),
+        "Fix: clearing the forest answers no question a second caller could ask, so `{}` must carry an anonymous-generator prefix",
+        super::program::INIT_PHASE_GENERATOR
+    );
+    for phase in [super::depth::OP_ID, super::intersect_step::OP_ID] {
         assert!(
-            is_anonymous_generator(phase),
-            "Fix: a phase boundary is not an operation, so `{phase}` must carry an anonymous-generator prefix"
+            !is_anonymous_generator(phase),
+            "Fix: `{phase}` is an operation of its own, so it must not carry an anonymous-generator prefix"
         );
     }
 }

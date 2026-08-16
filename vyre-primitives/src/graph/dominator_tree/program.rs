@@ -32,14 +32,16 @@ use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use super::depth::dominator_tree_depth_child;
+use super::intersect_step::dominator_tree_intersect_step_child;
+
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::dominator_tree";
-// Phase boundaries inside the one operation, not operations of their own. The
+// The one phase boundary that is not an operation of its own: clearing the
+// forest reads nothing and answers no question a second caller could ask. The
 // `anonymous::` prefix is what says so: see
 // `vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES`.
-const INIT_PHASE_GENERATOR: &str = "anonymous::dominator_tree_init_state";
-const DEPTH_PHASE_GENERATOR: &str = "anonymous::dominator_tree_recompute_depth";
-const INTERSECT_PHASE_GENERATOR: &str = "anonymous::dominator_tree_intersect_predecessors";
+pub(super) const INIT_PHASE_GENERATOR: &str = "anonymous::dominator_tree_init_state";
 
 /// Sentinel stored in `idom_out` for unreachable nodes.
 pub const IDOM_NONE: u32 = u32::MAX;
@@ -166,148 +168,15 @@ pub fn try_dominator_tree_program(
         ],
     );
 
-    // Outer fixpoint: at most node_count iterations.
-    // Each step: recompute depths, then for each v != entry intersect preds via LCA.
-    let recompute_depth = child_phase(
-        DEPTH_PHASE_GENERATOR,
-        vec![Node::loop_for(
-            "v",
-            Expr::u32(0),
-            Expr::u32(node_count),
-            vec![
-                Node::let_bind("d", Expr::u32(0)),
-                Node::let_bind("cur", Expr::var("v")),
-                Node::loop_for(
-                    "depth_step",
-                    Expr::u32(0),
-                    Expr::u32(node_count),
-                    vec![Node::if_then(
-                        Expr::ne(Expr::var("cur"), Expr::u32(0)),
-                        vec![
-                            Node::let_bind("parent", Expr::load(idom_out, Expr::var("cur"))),
-                            Node::if_then(
-                                Expr::and(
-                                    Expr::ne(Expr::var("parent"), Expr::var("cur")),
-                                    Expr::ne(Expr::var("parent"), Expr::u32(IDOM_NONE)),
-                                ),
-                                vec![
-                                    Node::assign("d", Expr::add(Expr::var("d"), Expr::u32(1))),
-                                    Node::assign("cur", Expr::var("parent")),
-                                ],
-                            ),
-                        ],
-                    )],
-                ),
-                Node::store(depth_buf, Expr::var("v"), Expr::var("d")),
-            ],
-        )],
-    );
+    // Outer fixpoint: at most node_count iterations. Each step recomputes the
+    // depths the previous step's forest implies, then relaxes every node but
+    // the entry against its predecessors. Both are registered operations, so
+    // the fixpoint owns the repetition and nothing else.
 
     let body = vec![
-        // changed = 0
         Node::let_bind("changed", Expr::u32(0)),
-        // recompute all depths from current idom tree
-        recompute_depth.clone(),
-        // for v in 0..node_count
-        child_phase(
-            INTERSECT_PHASE_GENERATOR,
-            vec![Node::loop_for(
-                "v",
-                Expr::u32(0),
-                Expr::u32(node_count),
-                vec![Node::if_then(
-                    Expr::ne(Expr::var("v"), Expr::u32(0)),
-                    vec![
-                        // new_idom = NONE
-                        Node::let_bind("new_idom", Expr::u32(IDOM_NONE)),
-                        // walk predecessors
-                        Node::let_bind("p_start", Expr::load("pred_offsets", Expr::var("v"))),
-                        Node::let_bind(
-                            "p_end",
-                            Expr::load("pred_offsets", Expr::add(Expr::var("v"), Expr::u32(1))),
-                        ),
-                        Node::loop_for(
-                            "p_idx",
-                            Expr::var("p_start"),
-                            Expr::var("p_end"),
-                            vec![
-                                Node::let_bind("p", Expr::load("pred_targets", Expr::var("p_idx"))),
-                                // if idom[p] != NONE
-                                Node::if_then(
-                                    Expr::ne(
-                                        Expr::load(idom_out, Expr::var("p")),
-                                        Expr::u32(IDOM_NONE),
-                                    ),
-                                    vec![Node::if_then_else(
-                                        Expr::eq(Expr::var("new_idom"), Expr::u32(IDOM_NONE)),
-                                        // first reachable predecessor
-                                        vec![Node::assign("new_idom", Expr::var("p"))],
-                                        // else LCA(new_idom, p)
-                                        vec![
-                                            Node::let_bind("a", Expr::var("new_idom")),
-                                            Node::let_bind("b", Expr::var("p")),
-                                            Node::loop_for(
-                                                "lca_step",
-                                                Expr::u32(0),
-                                                Expr::u32(node_count),
-                                                vec![Node::if_then(
-                                                    Expr::ne(Expr::var("a"), Expr::var("b")),
-                                                    vec![
-                                                        Node::let_bind(
-                                                            "da",
-                                                            Expr::load(depth_buf, Expr::var("a")),
-                                                        ),
-                                                        Node::let_bind(
-                                                            "db",
-                                                            Expr::load(depth_buf, Expr::var("b")),
-                                                        ),
-                                                        Node::if_then_else(
-                                                            Expr::gt(
-                                                                Expr::var("da"),
-                                                                Expr::var("db"),
-                                                            ),
-                                                            vec![Node::assign(
-                                                                "a",
-                                                                Expr::load(
-                                                                    idom_out,
-                                                                    Expr::var("a"),
-                                                                ),
-                                                            )],
-                                                            vec![Node::assign(
-                                                                "b",
-                                                                Expr::load(
-                                                                    idom_out,
-                                                                    Expr::var("b"),
-                                                                ),
-                                                            )],
-                                                        ),
-                                                    ],
-                                                )],
-                                            ),
-                                            Node::assign("new_idom", Expr::var("a")),
-                                        ],
-                                    )],
-                                ),
-                            ],
-                        ),
-                        // if new_idom changed, write it and set changed flag
-                        Node::if_then(
-                            Expr::and(
-                                Expr::ne(Expr::var("new_idom"), Expr::u32(IDOM_NONE)),
-                                Expr::ne(
-                                    Expr::var("new_idom"),
-                                    Expr::load(idom_out, Expr::var("v")),
-                                ),
-                            ),
-                            vec![
-                                Node::store(idom_out, Expr::var("v"), Expr::var("new_idom")),
-                                Node::assign("changed", Expr::u32(1)),
-                            ],
-                        ),
-                    ],
-                )],
-            )],
-        ),
+        dominator_tree_depth_child(OP_ID, node_count, idom_out, depth_buf),
+        dominator_tree_intersect_step_child(OP_ID, node_count, idom_out, depth_buf, "changed"),
     ];
 
     let outer_loop = Node::loop_for("step", Expr::u32(0), Expr::u32(node_count), body);
