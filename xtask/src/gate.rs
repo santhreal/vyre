@@ -231,6 +231,14 @@ pub trait Gate: Sync {
     fn generates(&self) -> bool {
         false
     }
+    /// The option lines this gate answers `--help` with.
+    ///
+    /// A gate that reads options beyond `--write` names them here, one line per
+    /// option. Empty means the gate reads none, and the answer is built from
+    /// its name and its help line.
+    fn usage(&self) -> &'static [&'static str] {
+        &[]
+    }
     /// Judge the tree and report what is wrong with it.
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError>;
     /// Package whose binary runs this gate, or `None` when `xtask` runs it in

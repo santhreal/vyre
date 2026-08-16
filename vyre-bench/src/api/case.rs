@@ -188,9 +188,14 @@ impl CpuReference {
 
 #[derive(Default)]
 pub(crate) struct CachedArtifactSessions {
-    sessions: BTreeMap<[u8; 32], Arc<vyre_runtime::artifact_admission::ArtifactSession>>,
+    sessions: BTreeMap<ArtifactSessionKey, Arc<vyre_runtime::artifact_admission::ArtifactSession>>,
     last_fingerprint: Option<[u8; 32]>,
 }
+
+/// A compiled benchmark artifact belongs to one program on one device profile.
+/// Keying on the program alone would serve a session compiled for other device
+/// facts once a caller repoints the context at another backend.
+type ArtifactSessionKey = ([u8; 32], String);
 
 pub struct BenchContext {
     pub preferred_backend: Arc<dyn VyreBackend>,
@@ -237,13 +242,19 @@ impl BenchContext {
     ) -> Result<Arc<vyre_runtime::artifact_admission::ArtifactSession>, vyre_driver::BackendError>
     {
         let fingerprint = prog.fingerprint();
+        let key = (
+            fingerprint,
+            crate::report::json::benchmark_device_signature(
+                self.preferred_backend.device_profile(),
+            ),
+        );
         let mut cached = self.artifact_sessions.lock().map_err(|error| {
             vyre_driver::BackendError::new(format!(
                 "benchmark artifact session cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned compilation state."
             ))
         })?;
         cached.last_fingerprint = Some(fingerprint);
-        if let Some(session) = cached.sessions.get(&fingerprint) {
+        if let Some(session) = cached.sessions.get(&key) {
             return Ok(Arc::clone(session));
         }
 
@@ -256,7 +267,7 @@ impl BenchContext {
             )
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?,
         );
-        cached.sessions.insert(fingerprint, Arc::clone(&session));
+        cached.sessions.insert(key, Arc::clone(&session));
         Ok(session)
     }
     pub(crate) fn take_artifact_session(

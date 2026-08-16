@@ -884,7 +884,13 @@ impl Gate for FeatureIsolation {
     }
 
     fn usage(&self) -> &'static [&'static str] {
-        &["--list", "--sweep", "--msrv", "--only-unrecorded", "--member NAME"]
+        &[
+            "--sweep compiles each recorded selection instead of reading the recorded outcome",
+            "--msrv compiles the sweep on the minimum supported Rust version the manifest advertises",
+            "--member NAME narrows the sweep to one workspace member",
+            "--only-unrecorded sweeps the selections that carry no recorded outcome",
+            "--list prints the feature axis instead of judging it",
+        ]
     }
 
     fn generates(&self) -> bool {
