@@ -303,7 +303,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "partial_rope",
-        "80ab8860b8375cccde486cd3fcec0ab9529715fd4661551145ea9182ef4b9eb3",
+        "4b3ee7bdf1a83bfcca4f9d9bfad4590bfba89d75443ff97b52c8602d3ae925fa",
     ),
     (
         "qk_gain",

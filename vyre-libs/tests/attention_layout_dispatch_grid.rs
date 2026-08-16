@@ -27,7 +27,8 @@ use vyre_libs::llm::paged_kv::{
 };
 use vyre_libs::nn::attention::{
     attention_head_to_token, attention_layout_dispatch_grid, attention_token_to_head,
-    kv_cache_append, AttentionPermuteSpec, KvCacheAppendSpec, ATTENTION_LAYOUT_WORKGROUP_SIZE,
+    kv_cache_append, partial_rope, AttentionPermuteSpec, KvCacheAppendSpec,
+    ATTENTION_LAYOUT_WORKGROUP_SIZE,
 };
 
 /// A cache far larger than the chunk a decode step appends: sixty-four blocks
@@ -92,21 +93,26 @@ fn moves() -> Vec<(&'static str, Program, u32)> {
     let permute_elements = 2 * 4 * 8 * 16;
     vec![
         (
-            "Gather",
+            "Element",
             attention_head_to_token(permute("head_major", "token_major"))
                 .expect("Fix: the head-major permute must build"),
             permute_elements,
         ),
         (
-            "Gather",
+            "Element",
             attention_token_to_head(permute("token_major", "head_major"))
                 .expect("Fix: the token-major permute must build"),
             permute_elements,
         ),
         (
-            "Gather",
+            "Element",
             paged_kv_gather(&spec, "window", 4).expect("Fix: the paged gather must build"),
             2 * 4 * 4 * 16,
+        ),
+        (
+            "Element",
+            partial_rope("input", "cos", "sin", "output", 4, 8, 16, 8),
+            4 * 8 * 16,
         ),
         (
             "Patch",

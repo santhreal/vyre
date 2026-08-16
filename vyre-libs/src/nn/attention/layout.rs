@@ -125,12 +125,15 @@ pub(crate) fn checked_elements(dims: &[u32]) -> Option<u32> {
 
 /// Where the value of one output element comes from.
 pub(crate) enum IndexMap {
-    /// `write[index] = read[source]`.
-    Gather {
-        /// Buffer the value is read from.
-        read: String,
-        /// Flat index into `read`, derived from the `index` binding.
-        source: Expr,
+    /// `write[index] = value`.
+    ///
+    /// The general element map: one invocation produces one output element from
+    /// an expression of the guarded index. A permutation loads that element
+    /// from one address, a rotation reads a neighbour and two tables to compute
+    /// it, and both move exactly one element per invocation.
+    Element {
+        /// Stored value, derived from the `index` binding.
+        value: Expr,
     },
     /// `write[index] = if in_patch { patch[patch_index] } else { base[index] }`.
     ///
@@ -149,7 +152,7 @@ pub(crate) enum IndexMap {
     },
     /// `write[destination] = read[index]`.
     ///
-    /// The inverse direction of [`IndexMap::Gather`], and the only map whose
+    /// The inverse direction of [`IndexMap::Element`], and the only map whose
     /// guard bounds the INPUT. A paged cache write touches one block slot out
     /// of a cache that is deliberately much larger, so bounding the output
     /// would dispatch the whole cache to move one token, which is the cost
@@ -196,7 +199,7 @@ pub(crate) fn layout_move_program(spec: LayoutMove<'_>) -> Program {
         value,
     };
     let moved = match spec.map {
-        IndexMap::Gather { read, source } => vec![store(Expr::load(&read, source))],
+        IndexMap::Element { value } => vec![store(value)],
         IndexMap::Patch {
             base,
             patch,
@@ -292,9 +295,8 @@ impl AttentionPermuteSpec<'_> {
             ],
             write: self.output,
             count,
-            map: IndexMap::Gather {
-                read: self.input.into(),
-                source,
+            map: IndexMap::Element {
+                value: Expr::load(self.input, source),
             },
         })
     }

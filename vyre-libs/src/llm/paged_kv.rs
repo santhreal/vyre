@@ -203,9 +203,8 @@ pub fn paged_kv_gather(
         ],
         write: window,
         count: window_count,
-        map: IndexMap::Gather {
-            read: spec.cache.into(),
-            source,
+        map: IndexMap::Element {
+            value: Expr::load(spec.cache, source),
         },
     }))
 }
