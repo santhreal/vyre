@@ -900,12 +900,11 @@ mod tests {
             for graph_replay_enabled in [false, true] {
                 for cooperative in [false, true] {
                     for declares_trap in [false, true] {
-                        let expected =
-                            if graph_replay_enabled && !cooperative && !declares_trap {
-                                CudaPipelineExecutionStrategy::GraphReplay
-                            } else {
-                                CudaPipelineExecutionStrategy::DirectDispatch
-                            };
+                        let expected = if graph_replay_enabled && !cooperative && !declares_trap {
+                            CudaPipelineExecutionStrategy::GraphReplay
+                        } else {
+                            CudaPipelineExecutionStrategy::DirectDispatch
+                        };
                         assert_eq!(
                             select_cuda_pipeline_execution_strategy(
                                 graph_replay_enabled,
@@ -934,14 +933,19 @@ mod tests {
             ));
             assert!(prog_trap.stats().trap());
 
-            let ptx_plain = ".version 7.0\n.target sm_70\n.address_size 64\n.visible .entry main() { ret; }\n";
-            assert!(!crate::backend::module_cache::declares_trap_sidecar(ptx_plain));
+            let ptx_plain =
+                ".version 7.0\n.target sm_70\n.address_size 64\n.visible .entry main() { ret; }\n";
+            assert!(!crate::backend::module_cache::declares_trap_sidecar(
+                ptx_plain
+            ));
 
             let ptx_trap = format!(
                 ".version 7.0\n.target sm_70\n.address_size 64\n.global .align 4 .u32 {}[4];\n.visible .entry main() {{ ret; }}\n",
                 vyre_emit_ptx::TRAP_SIDECAR_SYMBOL
             );
-            assert!(crate::backend::module_cache::declares_trap_sidecar(&ptx_trap));
+            assert!(crate::backend::module_cache::declares_trap_sidecar(
+                &ptx_trap
+            ));
         }
     }
 }
