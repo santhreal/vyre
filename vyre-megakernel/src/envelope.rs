@@ -585,7 +585,12 @@ fn validate_entries(
             "associate at least one payload entry with a canonical neutral node",
         ));
     }
-    let mut names = BTreeSet::new();
+    // Entry identity is the canonical node. The symbol name is scoped to the
+    // module image that defines it, and every fusion group emits its own image
+    // with its own entry symbol, so two groups both naming their entry `main` is
+    // correct. Requiring the names to be unique across the payload rejected every
+    // artifact with more than one fusion group.
+    let mut nodes = BTreeSet::new();
     for (entry_index, entry) in entries.iter().enumerate() {
         let path = format!("target_payload.entries[{entry_index}]");
         if entry.name.is_empty() {
@@ -596,12 +601,12 @@ fn validate_entries(
                 "supply the emitted entry symbol name",
             ));
         }
-        if !names.insert(entry.name.as_str()) {
+        if !nodes.insert(entry.node) {
             return Err(failure(
                 CompilerFailureKind::MalformedTargetPayload,
-                format!("{path}.name"),
-                format!("duplicate target entry name {}", entry.name),
-                "supply each target entry name exactly once",
+                format!("{path}.node"),
+                format!("duplicate target entry for node {}", entry.node.0),
+                "associate each canonical neutral node with exactly one payload entry",
             ));
         }
         if !neutral.nodes().iter().any(|node| node.id == entry.node) {

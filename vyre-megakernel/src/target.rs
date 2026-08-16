@@ -5,7 +5,8 @@ use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program
 use vyre_lower::{KernelDescriptor, MemoryClass};
 
 use crate::{
-    Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, CompileError, FusionGroupId,
+    Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileError,
+    FusionGroupId,
     FusionRecord, ResourceLifetime, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
     TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
@@ -44,6 +45,29 @@ pub struct SelectedLowering {
     /// Authoritative logical invocation span before target grid projection.
     pub logical_element_count: u32,
     program: Program,
+}
+
+impl SelectedLowering {
+    /// The f32 parity window this lowering is compared against, in ULP.
+    ///
+    /// A dialect emitter that lowers a transcendental to an approximate native
+    /// instruction needs to know how far the result may sit from the reference,
+    /// and the answer is a property of the selected program, not of the dialect:
+    /// [`vyre_foundation::fp_parity::f32_ulp_tolerance`] is the same function
+    /// the reference comparison uses to judge the output. Reading it here makes
+    /// the emitter's approximation right and the comparator's acceptance window
+    /// the same number by construction. CUDA's PTX dialect passed `None`
+    /// instead, so every artifact whose math reaches `Exp`, `Log`, `Sin`, `Cos`
+    /// or `Tanh` failed target emission with a refusal that named a budget no
+    /// caller on this path could set.
+    ///
+    /// Never zero: contraction is a documented backend right, stated in
+    /// `vyre-foundation/src/fp_parity.rs`, so the window has a positive floor
+    /// for every program.
+    #[must_use]
+    pub fn f32_ulp_budget(&self) -> u32 {
+        vyre_foundation::fp_parity::f32_ulp_tolerance(&self.program)
+    }
 }
 
 /// Canonical target-module bundle schema carried inside one target payload.
@@ -327,25 +351,22 @@ fn selected_resource_bindings(
     module: &SelectedModule,
     descriptor: &KernelDescriptor,
 ) -> Result<Vec<TargetResourceBinding>, TargetCompileError> {
-    let canonical_by_name = module
-        .nodes
-        .iter()
-        .filter_map(|node| {
-            artifact
-                .abi()
-                .entries
-                .iter()
-                .find(|entry| entry.node == *node)
-        })
-        .flat_map(|entry| entry.inputs.iter().chain(entry.outputs.iter()).copied())
-        .filter_map(|value| {
-            artifact
-                .resources()
-                .iter()
-                .find(|resource| resource.value == value)
-                .map(|resource| (resource.name.as_str(), value))
-        })
-        .collect::<HashMap<_, _>>();
+    // The artifact resource set is the owner of value identity, so the lookup is
+    // built from it rather than from the entry ABI. The entry ABI lists what the
+    // host binds, which excludes a value produced by one fusion group and consumed
+    // by another: every fused op that passes an intermediate between groups had a
+    // descriptor binding no lookup could resolve.
+    let mut canonical_by_name = HashMap::<&str, ArtifactValueId>::new();
+    for resource in artifact.resources() {
+        if let Some(previous) = canonical_by_name.insert(resource.name.as_str(), resource.value) {
+            if previous != resource.value {
+                return Err(TargetCompileError::InvalidArtifact(format!(
+                    "artifact resource name `{}` names both value {} and value {}. Fix: resource names carry descriptor binding identity, so one artifact must not reuse a name for two values.",
+                    resource.name, previous.0, resource.value.0
+                )));
+            }
+        }
+    }
     let constant_values = artifact
         .resources()
         .iter()

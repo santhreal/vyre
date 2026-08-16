@@ -613,15 +613,17 @@ fn validate_instance(
 
 /// Artifact ABI resources the caller supplies host bytes for, in slot order.
 ///
-/// Write-only values and outputs are produced by the device, so only read-visible
-/// values need bytes. Measurement and caller submission select the same set: a
-/// measured launch that bound a different set would not be timing the launch the
-/// caller performs.
+/// Write-only values and values an entry produces are written by the device, so
+/// only read-visible caller buffers need bytes. Measurement and caller submission
+/// select the same set: a measured launch that bound a different set would not be
+/// timing the launch the caller performs.
 fn host_input_resources(artifact: &Artifact) -> Vec<&ResourceAbiRecord> {
+    let produced = entry_produced_values(artifact);
     let mut resources = artifact
         .abi()
         .resources
         .iter()
+        .filter(|resource| !produced.contains(&resource.value))
         .filter(|resource| match resource.access {
             AbiAccess::ReadOnly | AbiAccess::Uniform => true,
             AbiAccess::ReadWrite => artifact
@@ -634,6 +636,28 @@ fn host_input_resources(artifact: &Artifact) -> Vec<&ResourceAbiRecord> {
         .collect::<Vec<_>>();
     resources.sort_unstable_by_key(|resource| resource.slot);
     resources
+}
+
+/// Values an artifact entry produces without reading them first.
+///
+/// A value one fusion group writes and another consumes is device state, not a
+/// caller buffer, however many entries read it. Taking the host input set as the
+/// union of every entry's inputs asked the caller for one buffer per inter-group
+/// intermediate. A value an entry both reads and writes stays a caller buffer,
+/// because its initial contents are an input to that launch.
+fn entry_produced_values(artifact: &Artifact) -> BTreeSet<ArtifactValueId> {
+    artifact
+        .abi()
+        .entries
+        .iter()
+        .flat_map(|entry| {
+            entry
+                .outputs
+                .iter()
+                .copied()
+                .filter(|value| !entry.inputs.contains(value))
+        })
+        .collect()
 }
 
 /// Compiler finalist evaluation on the acquired device.
