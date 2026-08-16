@@ -581,18 +581,20 @@ fn component_matches(pattern: &str, component: &str) -> bool {
         return false;
     }
     let mut at = first.len();
-    let parts: Vec<&str> = parts.collect();
-    if parts.is_empty() {
-        return at == component.len();
-    }
-    let (last, middle) = parts.split_last().expect("Fix: parts is not empty.");
-    for part in middle {
-        match component[at..].find(part) {
-            Some(offset) => at += offset + part.len(),
+    let mut pending: Option<&str> = None;
+    for part in parts {
+        let Some(previous) = pending.replace(part) else {
+            continue;
+        };
+        match component[at..].find(previous) {
+            Some(offset) => at += offset + previous.len(),
             None => return false,
         }
     }
-    component.len() >= at + last.len() && component[at..].ends_with(last)
+    match pending {
+        None => at == component.len(),
+        Some(last) => component.len() >= at + last.len() && component[at..].ends_with(last),
+    }
 }
 
 /// Read one document under the checkout root, under the read bound.
@@ -625,6 +627,24 @@ mod tests {
         ));
         assert!(glob_matches("Cargo.toml", "Cargo.toml"));
         assert!(!glob_matches("Cargo.toml", "vyre/Cargo.toml"));
+    }
+
+    /// WHY: a `covers` component may carry several stars, and the last run of
+    /// literal text anchors the end of the component while the earlier runs are
+    /// consumed in order. Matching a later run before an earlier one, or
+    /// consuming the anchor as an interior run, both accept a component the
+    /// pattern excludes, and neither is visible from a single-star case.
+    #[test]
+    fn several_stars_in_one_component_match_in_order_and_anchor_the_tail() {
+        assert!(glob_matches("docs/*-*.md", "docs/wire-format.md"));
+        assert!(!glob_matches("docs/*-*.md", "docs/values.md"));
+        assert!(glob_matches("a*b*c", "axbyc"));
+        assert!(glob_matches("a*b*c", "abc"));
+        assert!(!glob_matches("a*b*c", "acb"));
+        assert!(!glob_matches("a*a", "a"));
+        assert!(glob_matches("lex*", "lexer.rs"));
+        assert!(glob_matches("*.rs", "lib.rs"));
+        assert!(!glob_matches("*.rs", "lib.rs.bak"));
     }
 
     /// WHY: rule 3 reads tokens out of code, so what counts as a path decides
