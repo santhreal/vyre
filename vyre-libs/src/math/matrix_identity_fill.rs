@@ -7,7 +7,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_chi
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-use crate::operand_shape::square_matrix_cells;
+use crate::plumbing::operand::shape::square_matrix_cells;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::matrix_identity_fill";

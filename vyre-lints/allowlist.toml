@@ -24,7 +24,7 @@ measured_roots = [
 ]
 
 exempt_files = [
-  "vyre-libs/src/builder_catalog.rs",
+  "vyre-libs/src/builder/registrations.rs",
   "vyre-libs/src/decode/base64.rs",
   "vyre-libs/src/decode/hex.rs",
   "vyre-libs/src/decode/inflate.rs",
@@ -109,7 +109,7 @@ exempt_files = [
   "vyre-libs/src/parsing/python/parse/decorators.rs",
   "vyre-libs/src/parsing/python/parse/mod.rs",
   "vyre-libs/src/parsing/python/parse/structure.rs",
-  "vyre-libs/src/range_ordering.rs",
+  "vyre-libs/src/builder/range_ordering.rs",
   "vyre-libs/src/representation/unpack.rs",
   "vyre-libs/src/rule/builder.rs",
   "vyre-libs/src/rule/condition_op.rs",

@@ -75,7 +75,7 @@ pub fn try_jacobi_smooth_step(
     x_out: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let matrix_cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
+    let matrix_cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
 
     let t = Expr::InvocationId { axis: 0 };
 
@@ -315,7 +315,7 @@ pub fn try_jacobi_smooth_step_cpu_into(
         )
     })?;
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "AMG Jacobi CPU oracle",

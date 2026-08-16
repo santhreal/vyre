@@ -682,7 +682,7 @@ pub fn try_cpu_ref_into(
         seed,
     )?;
     let words = layout.words;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         frontier,
         words,
         "dominator frontier CPU oracle",

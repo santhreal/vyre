@@ -41,7 +41,7 @@ pub fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Result<(), 
     })?;
     let word_count = i4_packed_words(lane_count) as usize;
     if word_count > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             word_count - out.len(),
             "quantized INT4 CPU oracle",
@@ -87,7 +87,7 @@ pub fn try_unpack_i4x8_cpu_into(
 ) -> Result<(), String> {
     let lanes = lane_count as usize;
     if lanes > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             lanes - out.len(),
             "quantized INT4 CPU oracle",

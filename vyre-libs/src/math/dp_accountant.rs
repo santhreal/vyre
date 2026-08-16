@@ -122,7 +122,7 @@ pub fn try_gaussian_rdp_step_cpu_into(
 ) -> Result<(), String> {
     let n = alpha.len().min(sigma_squared.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "DP accountant CPU oracle",

@@ -125,7 +125,7 @@ pub fn try_csr_queue_forward_traverse_cpu_into(
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
     let layout = validate_csr_queue_graph(node_count, edge_offsets, edge_targets, edge_kind_mask)?;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         out,
         layout.words,
         "CSR frontier queue CPU oracle",

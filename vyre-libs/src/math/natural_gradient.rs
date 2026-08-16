@@ -127,7 +127,7 @@ pub fn try_natural_gradient_block_apply_cpu_into(
         )
     })?;
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "natural-gradient CPU oracle",
