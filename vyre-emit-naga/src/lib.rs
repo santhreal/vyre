@@ -131,5 +131,3 @@ fn emit_many_with(
         .collect()
 }
 
-#[cfg(test)]
-mod tests;

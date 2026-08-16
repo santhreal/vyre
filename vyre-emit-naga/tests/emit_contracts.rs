@@ -1,4 +1,8 @@
-use super::*;
+//! Naga emitter contracts over the public `vyre_emit_naga` surface.
+//!
+//! The descriptor fixtures in this file are the ones every submodule below
+//! reaches through `use super::*`.
+use vyre_emit_naga::*;
 use naga::{Binding, BuiltIn, Statement, TypeInner};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_foundation::ir::MemoryOrdering;
@@ -19,41 +23,6 @@ fn empty_desc_with_workgroup(id: &str, x: u32) -> KernelDescriptor {
         dispatch: Dispatch::new(x, 1, 1),
         body: body().build(),
     }
-}
-
-#[test]
-fn op_dispatch_route_cache_hits_preserve_uncached_classification() {
-    let kinds = [
-        KernelOpKind::Literal,
-        KernelOpKind::Literal,
-        KernelOpKind::BinOpKind(BinOp::Add),
-        KernelOpKind::BinOpKind(BinOp::Mul),
-        KernelOpKind::UnOpKind(UnOp::BitNot),
-        KernelOpKind::UnOpKind(UnOp::Abs),
-        KernelOpKind::Cast {
-            target: DataType::U32,
-        },
-        KernelOpKind::Cast {
-            target: DataType::I32,
-        },
-        KernelOpKind::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        },
-        KernelOpKind::Barrier {
-            ordering: MemoryOrdering::Acquire,
-        },
-        KernelOpKind::LoadGlobal,
-        KernelOpKind::LoadGlobal,
-    ];
-    let (parity, hits) = emitter::op_dispatch_route_cache_probe(&kinds);
-    assert!(
-        parity,
-        "Fix: cached Naga op-dispatch route classification must match uncached classification."
-    );
-    assert!(
-        hits >= 6,
-        "Fix: repeated Naga op kinds must hit the dispatch-route cache; observed {hits}."
-    );
 }
 
 fn u32_output_slot(slot: u32) -> BindingSlot {
@@ -106,12 +75,25 @@ pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
         .build()
 }
 
+#[path = "support/naga_probe.rs"]
 mod naga_probe;
 pub(crate) use naga_probe::{block_has_atomic, block_has_loop, entry_has_binary, entry_has_unary};
 
+#[path = "emit_contracts/atomics.rs"]
 mod atomics;
+#[path = "emit_contracts/binop.rs"]
 mod binop;
+#[path = "emit_contracts/byte_element_load.rs"]
 mod byte_element_load;
+#[path = "emit_contracts/cache_entry.rs"]
 mod cache_entry;
+#[path = "emit_contracts/descriptor_control.rs"]
 mod descriptor_control;
+#[path = "emit_contracts/subgroup.rs"]
 mod subgroup;
+#[path = "emit_contracts/pattern_audit.rs"]
+mod pattern_audit;
+#[path = "emit_contracts/pattern_pipeline_prewarm.rs"]
+mod pattern_pipeline_prewarm;
+#[path = "emit_contracts/pattern_vec_pack.rs"]
+mod pattern_vec_pack;

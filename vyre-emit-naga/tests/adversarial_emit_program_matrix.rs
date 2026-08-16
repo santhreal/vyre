@@ -11,7 +11,7 @@ use vyre_lower::emit_adversarial_corpus::{
     self, EmitAdversarialBackend, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
 };
 
-#[path = "../src/tests/naga_probe.rs"]
+#[path = "support/naga_probe.rs"]
 mod naga_probe;
 use naga_probe::{block_has_atomic, block_has_barrier, block_has_loop, block_if_count, entry_body};
 

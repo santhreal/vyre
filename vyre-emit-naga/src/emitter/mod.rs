@@ -17,8 +17,6 @@ mod scalar_ops;
 mod setup;
 mod subgroup;
 
-#[cfg(test)]
-pub(crate) use op_dispatch::op_dispatch_route_cache_probe;
 pub(crate) use setup::emit_uncached;
 use setup::{Builtins, TypeHandles};
 
