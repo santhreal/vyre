@@ -169,6 +169,10 @@ vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 # integration tests/benches assert against these crates' public APIs
 vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
+# The live-device parity modules in `bitset::any` and `label::resolve_family`
+# dispatch through the CUDA backend. Dev-dep only, so the composition library
+# names no concrete backend in a production table.
+vyre-driver-cuda = { path = "../vyre-driver-cuda" }
 vyre-lower = { path = "../vyre-lower" }
 vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 vyre-driver = { path = "../vyre-driver" }

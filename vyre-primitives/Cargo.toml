@@ -58,7 +58,6 @@ bytemuck.workspace = true
 # `^0.6.1` resolves against the already-published baseline; path keeps local builds
 # on the workspace crates. Matches the pattern used by vyre-spec/vyre-driver-wgpu.
 vyre-driver = { path = "../vyre-driver" }
-vyre-driver-cuda = { path = "../vyre-driver-cuda" }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
