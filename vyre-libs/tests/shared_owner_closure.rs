@@ -1,5 +1,5 @@
-//! Closure gates for the three duplication classes this crate has repeatedly
-//! reintroduced, each derived from the tree at run time.
+//! Closure gates for the three duplication classes the composition domains have
+//! repeatedly reintroduced, each derived from the tree at run time.
 //!
 //! A dedup pass fixes the copies that exist. It cannot fix the copy somebody adds
 //! next month, and every class below has already come back at least once after
@@ -16,13 +16,24 @@
 //! as having no gate.
 //!
 //! What these gates do NOT catch: a copy written in a spelling none of the three
-//! signatures below match, and a copy in a crate other than this one. They are
-//! structural signatures over source text, not a semantic equivalence check.
+//! signatures below match, and a copy in a crate other than the one named by
+//! `SUBJECT_CRATE`. They are structural signatures over source text, not a
+//! semantic equivalence check.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_root};
+
+/// The crate whose sources every gate below reads.
+///
+/// The three classes are properties of the composition domains, which live here.
+/// The `lane_grid` owner they must reach is a hardware intrinsic and stays in
+/// `vyre-primitives`, so the owner axis names that crate on its own.
+const SUBJECT_CRATE: &str = "vyre-libs";
+
+/// The crate that owns the one ceiling division from a lane count to a grid.
+const OWNER_CRATE: &str = "vyre-primitives";
 
 /// Every `.rs` file under this crate's `src/`, as (crate-relative path, text).
 ///
@@ -30,7 +41,7 @@ use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_root};
 /// checkout here shares one target directory, so a binary baked with one tree's
 /// path reads another tree's files.
 fn source_files() -> Vec<(String, String)> {
-    let root = vyre_crate_directory("vyre-primitives");
+    let root = vyre_crate_directory(SUBJECT_CRATE);
     let src = root.join("src");
     let mut out = Vec::new();
     collect_rs(&src, &root, &mut out);
@@ -209,7 +220,7 @@ fn function_body<'a>(lines: &[&'a str], start: usize) -> Vec<&'a str> {
 // Class 1: one ceiling division from a lane count to a dispatch grid.
 // ---------------------------------------------------------------------------
 
-/// The owner module path, excluded from its own gate.
+/// The owner module path, inside `OWNER_CRATE` rather than the walked tree.
 const DISPATCH_GRID_OWNER: &str = "src/dispatch_grid.rs";
 
 /// Free functions that compute a dispatch grid, as (path, function name, body).
@@ -220,9 +231,6 @@ const DISPATCH_GRID_OWNER: &str = "src/dispatch_grid.rs";
 fn dispatch_grid_functions(files: &[(String, String)]) -> Vec<(String, String, String)> {
     let mut found = Vec::new();
     for (path, text) in files {
-        if path == DISPATCH_GRID_OWNER {
-            continue;
-        }
         let lines: Vec<&str> = text.lines().collect();
         for (index, line) in lines.iter().enumerate() {
             let trimmed = line.trim_start();
@@ -300,136 +308,112 @@ fn no_dispatch_grid_function_hand_rolls_the_ceiling_division() {
 
 /// Every dispatch-grid function must be able to reach the owner.
 ///
-/// An owner inside a domain module is invisible to a domain that does not enable
-/// it, and the primitive that could not reach it hand-rolled the arithmetic
-/// instead: that is exactly how the `decode` copy survived a cleanup that removed
-/// four others. Reachability is a property of the feature graph, so it is computed
-/// from `Cargo.toml` and `lib.rs` at run time rather than asserted by hand.
+/// An owner a caller cannot name is an owner the caller hand-rolls around: that
+/// is exactly how the `decode` copy survived a cleanup that removed four others.
+/// The owner now sits in another crate, so reachability is two properties of the
+/// declarations rather than one property of a feature closure. Both are read from
+/// source at run time, so a `cfg` added to either end turns this red.
 #[test]
 fn every_domain_with_a_dispatch_grid_can_reach_the_owner() {
-    let root = vyre_crate_directory("vyre-primitives");
-    let features = feature_closures(&root);
-    let module_features = module_features(&root);
-    let files = source_files();
-
+    let owner_root = vyre_crate_directory(OWNER_CRATE);
+    let lib = std::fs::read_to_string(owner_root.join("src/lib.rs"))
+        .unwrap_or_else(|e| panic!("Fix: cannot read {OWNER_CRATE}/src/lib.rs: {e}"));
     let owner_module = DISPATCH_GRID_OWNER
         .trim_start_matches("src/")
         .trim_end_matches(".rs");
+
+    let declaration = format!("mod {owner_module};");
+    let gate = gate_above(&lib, &declaration).unwrap_or_else(|| {
+        panic!(
+            "Fix: {OWNER_CRATE}/src/lib.rs declares no `{declaration}`; the dispatch-grid owner moved and every gate here reads the wrong file."
+        )
+    });
     assert!(
-        !module_features.contains_key(owner_module),
-        "Fix: `{owner_module}` is now gated on feature `{}`. The dispatch-grid owner must stay ungated, or a domain that does not enable that feature cannot reach it and will hand-roll the arithmetic again.",
-        module_features[owner_module]
+        gate.is_none(),
+        "Fix: `{owner_module}` is now behind `{}`. The dispatch-grid owner must stay unconditional, or a caller that does not enable that feature cannot reach it and will hand-roll the arithmetic again.",
+        gate.unwrap_or_default()
     );
 
-    let mut unreachable = Vec::new();
-    for (path, name, _) in dispatch_grid_functions(&files) {
-        let Some(module) = path
-            .trim_start_matches("src/")
-            .split('/')
-            .next()
-            .map(|m| m.trim_end_matches(".rs"))
-        else {
-            continue;
-        };
-        let Some(feature) = module_features.get(module) else {
-            continue;
-        };
-        let closure = features.get(feature).unwrap_or_else(|| {
-            panic!("Fix: `lib.rs` gates module `{module}` on feature `{feature}`, which `Cargo.toml` does not declare.")
-        });
-        if !closure.contains(owner_module) && !closure.contains(feature.as_str()) {
-            unreachable.push(format!("{path}::{name} (feature `{feature}`)"));
-        }
-    }
+    let export = format!("pub use {owner_module}::lane_grid;");
+    let export_gate = gate_above(&lib, &export).unwrap_or_else(|| {
+        panic!(
+            "Fix: {OWNER_CRATE}/src/lib.rs no longer publishes `{export}`; the module is private, so no other crate can reach the owner at all."
+        )
+    });
     assert!(
-        unreachable.is_empty(),
-        "Fix: {unreachable:?} name a feature `Cargo.toml` does not declare."
+        export_gate.is_none(),
+        "Fix: the `lane_grid` re-export is now behind `{}`. A caller that does not enable that feature cannot name the owner.",
+        export_gate.unwrap_or_default()
+    );
+
+    assert!(
+        unconditional_dependency(&vyre_crate_directory(SUBJECT_CRATE), OWNER_CRATE),
+        "Fix: {SUBJECT_CRATE} no longer takes {OWNER_CRATE} as an unconditional `[dependencies]` entry, so a build that switches it off leaves every dispatch-grid function here without the owner."
+    );
+
+    // The gate is only worth its name while there are members to hold to it.
+    assert!(
+        !dispatch_grid_functions(&source_files()).is_empty(),
+        "Fix: no dispatch-grid function was derived, so this gate proves nothing about reachability."
     );
 }
 
-/// `feature -> transitive feature closure`, from `Cargo.toml`'s `[features]`.
-fn feature_closures(root: &Path) -> BTreeMap<String, BTreeSet<String>> {
+/// The `cfg` predicate guarding `declaration`, or `None` when it is unconditional.
+///
+/// Returns `None` for a declaration this file does not hold at all, which the
+/// caller reports separately: an absent owner and an unconditional owner are
+/// opposite answers and must not collapse into one.
+fn gate_above(source: &str, declaration: &str) -> Option<Option<String>> {
+    let lines: Vec<&str> = source.lines().collect();
+    let at = lines.iter().position(|line| {
+        let trimmed = line.trim();
+        trimmed == declaration || trimmed == format!("pub {declaration}")
+    })?;
+    let mut above = at;
+    while above > 0 {
+        above -= 1;
+        let trimmed = lines[above].trim();
+        if trimmed.is_empty() || trimmed.starts_with("///") || trimmed.starts_with("//!") {
+            continue;
+        }
+        if let Some(predicate) = trimmed
+            .strip_prefix("#[cfg(")
+            .and_then(|rest| rest.strip_suffix(")]"))
+        {
+            return Some(Some(predicate.to_string()));
+        }
+        if trimmed.starts_with("#[") {
+            continue;
+        }
+        break;
+    }
+    Some(None)
+}
+
+/// Whether `root`'s manifest takes `package` as a non-optional `[dependencies]`
+/// entry. A dev-dependency does not count: it is absent from the shipped build.
+fn unconditional_dependency(root: &Path, package: &str) -> bool {
     let manifest = std::fs::read_to_string(root.join("Cargo.toml"))
-        .expect("Fix: cannot read vyre-primitives/Cargo.toml.");
-    let mut direct: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    let mut in_features = false;
+        .unwrap_or_else(|e| panic!("Fix: cannot read {}: {e}", root.join("Cargo.toml").display()));
+    let mut section = String::new();
     for line in manifest.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with('[') {
-            in_features = trimmed == "[features]";
+            section = trimmed.to_string();
             continue;
         }
-        if !in_features || trimmed.starts_with('#') {
+        if section != "[dependencies]" {
             continue;
         }
-        let Some((name, list)) = trimmed.split_once(" = [") else {
+        let Some((name, value)) = trimmed.split_once('=') else {
             continue;
         };
-        let deps = list
-            .trim_end_matches(']')
-            .split(',')
-            .filter_map(|part| {
-                let dep = part.trim().trim_matches('"');
-                (!dep.is_empty() && !dep.starts_with("dep:")).then(|| dep.to_string())
-            })
-            .collect();
-        direct.insert(name.trim().to_string(), deps);
+        if name.trim().trim_matches('"') != package {
+            continue;
+        }
+        return !value.contains("optional = true");
     }
-    assert!(
-        direct.contains_key("graph") && direct.contains_key("decode"),
-        "Fix: the `[features]` parse found {} features but not the expected ones; the manifest layout changed.",
-        direct.len()
-    );
-
-    direct
-        .keys()
-        .map(|start| {
-            let mut seen = BTreeSet::new();
-            let mut stack = vec![start.clone()];
-            while let Some(feature) = stack.pop() {
-                if !seen.insert(feature.clone()) {
-                    continue;
-                }
-                stack.extend(direct.get(&feature).into_iter().flatten().cloned());
-            }
-            (start.clone(), seen)
-        })
-        .collect()
-}
-
-/// `module -> gating feature`, from the `#[cfg(feature = "...")] pub mod x;` pairs
-/// in `lib.rs`. A module declared without a `cfg` is absent from the map.
-fn module_features(root: &Path) -> BTreeMap<String, String> {
-    let lib = std::fs::read_to_string(root.join("src/lib.rs"))
-        .expect("Fix: cannot read vyre-primitives/src/lib.rs.");
-    let lines: Vec<&str> = lib.lines().collect();
-    let mut map = BTreeMap::new();
-    for (index, line) in lines.iter().enumerate() {
-        let Some(module) = line
-            .trim()
-            .strip_prefix("pub mod ")
-            .or_else(|| line.trim().strip_prefix("mod "))
-            .and_then(|rest| rest.strip_suffix(';'))
-        else {
-            continue;
-        };
-        if index == 0 {
-            continue;
-        }
-        let Some(feature) = lines[index - 1]
-            .trim()
-            .strip_prefix("#[cfg(feature = \"")
-            .and_then(|rest| rest.strip_suffix("\")]"))
-        else {
-            continue;
-        };
-        map.insert(module.to_string(), feature.to_string());
-    }
-    assert!(
-        map.get("graph").is_some_and(|f| f == "graph"),
-        "Fix: the `lib.rs` module-to-feature parse did not find `graph`; the declaration layout changed and the gate would exempt every module."
-    );
-    map
+    false
 }
 
 // ---------------------------------------------------------------------------
@@ -693,41 +677,29 @@ fn no_op_re_asserts_the_routing_obligations_privately() {
     );
 }
 
-/// Guards the walk itself: a gate that finds no files passes vacuously.
+/// Keeps the crate directory resolution honest for both axes: a stale path
+/// resolves to another checkout, and every gate above would then read the wrong
+/// tree.
+///
+/// The walk itself is guarded on every call by
+/// [`assert_walk_is_closed_under_the_module_tree`], which needs no list of
+/// required files to maintain.
 #[test]
-fn the_source_walk_reaches_the_modules_every_gate_above_depends_on() {
-    let files = source_files();
-    let paths: BTreeSet<&str> = files.iter().map(|(p, _)| p.as_str()).collect();
-    for required in [
-        DISPATCH_GRID_OWNER,
-        ROUTING_OWNERS[0],
-        ROUTING_OWNERS[1],
-        "src/math/bellman_shortest_path.rs",
-        "src/math/sinkhorn_iterate/tests/mod.rs",
-        "src/decode/rle_segment_lengths.rs",
-    ] {
+fn both_crate_directories_are_the_ones_this_workspace_holds() {
+    for crate_name in [SUBJECT_CRATE, OWNER_CRATE] {
+        let root = vyre_crate_directory(crate_name);
+        let manifest = std::fs::read_to_string(root.join("Cargo.toml"))
+            .expect("Fix: the resolved crate directory holds no Cargo.toml.");
         assert!(
-            paths.contains(required),
-            "Fix: the source walk did not reach `{required}`, so any gate that depends on it passes vacuously."
+            manifest.contains(&format!("name = \"{crate_name}\"")),
+            "Fix: {} is not the {crate_name} crate directory.",
+            root.display()
         );
     }
-}
-
-/// Keeps the crate directory resolution honest: a stale path resolves to another
-/// checkout, and every gate above would then read the wrong tree.
-#[test]
-fn the_crate_directory_is_the_one_holding_this_test() {
-    let root = vyre_crate_directory("vyre-primitives");
-    let manifest = std::fs::read_to_string(root.join("Cargo.toml"))
-        .expect("Fix: the resolved crate directory holds no Cargo.toml.");
+    let subject = PathBuf::from(vyre_crate_directory(SUBJECT_CRATE));
     assert!(
-        manifest.contains("name = \"vyre-primitives\""),
-        "Fix: {} is not the vyre-primitives crate directory.",
-        root.display()
-    );
-    assert!(
-        root.join("tests/shared_owner_closure.rs").is_file(),
+        subject.join("tests/shared_owner_closure.rs").is_file(),
         "Fix: {} does not hold this test file, so the walk is reading a different checkout.",
-        PathBuf::from(&root).display()
+        subject.display()
     );
 }

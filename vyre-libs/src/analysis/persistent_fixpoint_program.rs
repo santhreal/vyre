@@ -69,19 +69,10 @@ mod tests {
     use super::persistent_fixpoint_program;
     use vyre_foundation::ir::{Expr, Node, Program};
     use crate::fixpoint::persistent_fixpoint::{
-        count_grid_sync, declared_words, required_workgroups,
-    };
-    use crate::fixpoint::persistent_fixpoint::{
-        persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+        declared_words, persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
     };
 
-    /// Workgroups a host must launch to cover `program`.
-    ///
-    /// The wrapped primitive emits the convergence flag's `atomic_or`, and for an
-    /// atomic-carrying program `vyre-driver`'s `dispatch_element_count_for_program`
-    /// spans the LARGEST declared buffer, so the launch width is `words` rounded up
-    /// to whole workgroups.
-    /// Declared word count of the convergence-flag buffer.
+    /// The wrapper declares the three buffers the caller named and no others.
     #[test]
     fn builds_program_with_caller_buffers() {
         let program = persistent_fixpoint_program(Vec::new(), "current", "next", "changed", 4, 8);
@@ -95,34 +86,6 @@ mod tests {
         assert!(names.contains(&"next"));
         assert!(names.contains(&"changed"));
     }
-
-    /// Locks out the multi-workgroup convergence-flag race.
-    ///
-    /// The single-word primitive keeps ONE `changed[0]` word, clears it from global
-    /// lane 0 with a plain store, and orders that clear against every other lane's
-    /// `atomic_or` with a workgroup-scoped `SeqCst` barrier only. Once the launch
-    /// spans more than one workgroup nothing orders the clear against the sets:
-    /// workgroup 0's next clear can erase workgroup 1's set, so workgroup 1 reads 0
-    /// and `Return`s with unconverged state, and the post-dispatch flag read reports
-    /// a convergence verdict no group agreed to. A multi-workgroup build must
-    /// therefore never be handed one shared cleared word.
-    #[test]
-    fn multi_workgroup_wrapper_never_shares_one_cleared_convergence_word() {
-        let program = persistent_fixpoint_program(Vec::new(), "current", "next", "changed", 257, 8);
-
-        assert_eq!(
-            required_workgroups(&program),
-            2,
-            "Fix: 257 words over a 256-wide workgroup must need two workgroups."
-        );
-        assert_eq!(
-            declared_words(&program, "changed"),
-            8,
-            "Fix: a multi-workgroup fixpoint dispatch must use the per-iteration convergence-word protocol, not one shared cleared word."
-        );
-    }
-
-    /// Grid-wide fences in `nodes`, counted through every nesting construct.
 
     /// A transfer body in which lane 0 publishes the value of the LAST element and
     /// nothing else writes: `if t == 0 { next[last] = 9 }`.
@@ -179,89 +142,51 @@ mod tests {
         (decode(&results[0]), decode(&results[2]))
     }
 
-    /// Pins the routing threshold to the declared workgroup width.
+    /// This wrapper's routing obligations, asserted once by the owner.
     ///
-    /// The threshold is `> PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0]`, read from the
-    /// same constant the emitted program declares as its workgroup size, so the two
-    /// can never drift apart. At exactly that width the launch is one workgroup and
-    /// the compact single-word protocol is sound, so it stays in use; one word past
-    /// it the launch is two workgroups and must switch. An off-by-one here puts a
-    /// multi-workgroup dispatch back on the racing flag.
+    /// They are obligations of the ROUTING, not of this wrapper: the threshold is
+    /// the dispatch span, the flag is one word at one workgroup and one word per
+    /// iteration past it, and the grid form fences twice per wave. Asserting them
+    /// here was a second copy that could be weakened for this op alone, which is
+    /// how the copies that motivated the contract drifted.
     #[test]
-    fn routing_threshold_is_the_declared_workgroup_width() {
+    fn the_wrapper_obeys_the_persistent_fixpoint_routing_contract() {
         let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-
-        let at_width =
-            persistent_fixpoint_program(Vec::new(), "current", "next", "changed", width, 8);
-        assert_eq!(
-            at_width.workgroup_size(),
-            PERSISTENT_FIXPOINT_WORKGROUP_SIZE
+        crate::fixpoint::routing_contract::assert_routes_on_dispatch_span(
+            &crate::fixpoint::routing_contract::RoutedFixpointOp {
+                name: "persistent_fixpoint_program",
+                changed: "changed",
+                at_one_workgroup: &|max_iterations| {
+                    persistent_fixpoint_program(
+                        Vec::new(),
+                        "current",
+                        "next",
+                        "changed",
+                        width,
+                        max_iterations,
+                    )
+                },
+                past_one_workgroup: &|max_iterations| {
+                    persistent_fixpoint_program(
+                        Vec::new(),
+                        "current",
+                        "next",
+                        "changed",
+                        width + 1,
+                        max_iterations,
+                    )
+                },
+                grid_harness: &|max_iterations| {
+                    crate::fixpoint::routing_contract::bare_grid_harness(
+                        "current",
+                        "next",
+                        "changed",
+                        width + 1,
+                        max_iterations,
+                    )
+                },
+            },
         );
-        assert_eq!(required_workgroups(&at_width), 1);
-        assert_eq!(
-            declared_words(&at_width, "changed"),
-            1,
-            "Fix: a single-workgroup launch must keep the compact one-word convergence flag."
-        );
-
-        let past_width =
-            persistent_fixpoint_program(Vec::new(), "current", "next", "changed", width + 1, 8);
-        assert_eq!(required_workgroups(&past_width), 2);
-        assert_eq!(
-            declared_words(&past_width, "changed"),
-            8,
-            "Fix: one word past the workgroup width already needs the per-iteration convergence words."
-        );
-    }
-
-    /// The two routes must not silently converge to the same emission.
-    ///
-    /// The grid form's soundness IS its `MemoryOrdering::GridSync` fences: they
-    /// order the per-iteration flag write against every group's read. The
-    /// single-workgroup form must carry none of them, because emitting one there
-    /// would impose a cooperative launch on a dispatch that does not need it.
-    #[test]
-    fn grid_route_fences_the_grid_and_single_workgroup_route_does_not() {
-        let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-
-        let single =
-            persistent_fixpoint_program(Vec::new(), "current", "next", "changed", width, 4);
-        assert_eq!(
-            count_grid_sync(single.entry()),
-            0,
-            "Fix: a single-workgroup fixpoint program must not force a cooperative grid launch."
-        );
-
-        let grid =
-            persistent_fixpoint_program(Vec::new(), "current", "next", "changed", width + 1, 4);
-        assert_eq!(
-            count_grid_sync(grid.entry()),
-            8,
-            "Fix: the grid form must fence each of its 4 waves twice, once after the transfer step and once after the compare."
-        );
-    }
-
-    /// The grid form indexes `changed[iteration]`, so a one-word buffer there would
-    /// be an out-of-bounds atomic write on iteration 1. The caller supplies that
-    /// buffer, so the declared count is the contract it has to satisfy.
-    #[test]
-    fn grid_route_sizes_changed_to_one_word_per_iteration() {
-        let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-        for max_iterations in [1_u32, 2, 8, 64] {
-            let program = persistent_fixpoint_program(
-                Vec::new(),
-                "current",
-                "next",
-                "changed",
-                width + 1,
-                max_iterations,
-            );
-            assert_eq!(
-                declared_words(&program, "changed"),
-                max_iterations,
-                "Fix: the grid route needs one convergence word per iteration; {max_iterations} iterations need {max_iterations} words."
-            );
-        }
     }
 
     /// OBSERVED divergence: the pre-routing single-word harness returns WRONG state

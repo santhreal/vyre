@@ -205,6 +205,13 @@ rustdoc-args = ["--cfg", "docsrs"]
 [lints]
 workspace = true
 
+# Reads source text only, so it needs no domain feature: gating it on one would
+# narrow the walk to the modules that feature happens to enable, and a class is
+# not closed over a subset of the tree.
+[[test]]
+name = "shared_owner_closure"
+path = "tests/shared_owner_closure.rs"
+
 [[test]]
 name = "fusion_scores_via_reference_parity"
 path = "tests/fusion_scores_via_reference_parity.rs"
