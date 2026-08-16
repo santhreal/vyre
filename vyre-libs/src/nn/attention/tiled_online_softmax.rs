@@ -16,7 +16,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GeneratorRef, Node, Program, UnOp,
+    BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp,
 };
 
 use super::planner::FlashAttentionWorkPlan;
@@ -413,9 +413,7 @@ pub(super) fn compose_online_softmax_attention(
             op_id,
             vec![wrap_child_region(
                 OP_ID,
-                GeneratorRef {
-                    name: op_id.to_string(),
-                },
+                Ident::from(op_id),
                 attention_body(q, k, v, out, plan),
             )],
         )],

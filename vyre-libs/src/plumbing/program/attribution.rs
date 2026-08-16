@@ -14,7 +14,7 @@
 #[cfg(feature = "llm")]
 use vyre_foundation::composition::single_invocation;
 use vyre_foundation::composition::wrap_child_region;
-use vyre_foundation::ir::{GeneratorRef, Node, Program};
+use vyre_foundation::ir::{Ident, Node, Program};
 
 /// `program`'s body, re-emitted as one child region of `parent_op_id` named
 /// `child_op_id`.
@@ -79,11 +79,5 @@ fn entry_body(program: &Program) -> Vec<Node> {
 }
 
 fn attributed_region(parent_op_id: &str, child_op_id: &str, body: Vec<Node>) -> Node {
-    wrap_child_region(
-        child_op_id,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
-        body,
-    )
+    wrap_child_region(child_op_id, Ident::from(parent_op_id), body)
 }
