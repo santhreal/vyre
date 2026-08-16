@@ -44,6 +44,11 @@ fn validate_with_options_legacy(
     );
     validate_fusion_alias_hazards(program.entry(), &mut report.errors);
     validate_self_composition(program.entry(), &mut report.errors);
+    report
+        .errors
+        .extend(crate::validate::async_pipeline::check_async_pipeline(
+            program,
+        ));
 
     report
         .errors

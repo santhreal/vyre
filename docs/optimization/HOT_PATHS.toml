@@ -24,12 +24,34 @@ max_sleep_findings = 0
 max_panic_findings = 0
 
 # ProgramFacts SoA  -  built once per Program but every pass queries it.
+# The single program_soa.rs split into three code modules; program_soa/mod.rs
+# declares them and re-exports, and holds no executable line to scan.
 [[hot_path]]
-file = "vyre-foundation/src/optimizer/program_soa.rs"
-reason = "SoA fact view; queried per-Node by every alias/range/escape pass."
-max_findings = 1
+file = "vyre-foundation/src/optimizer/program_soa/build.rs"
+reason = "SoA fact walk; visits every Node and Expr once per Program."
+max_findings = 0
 max_allocation_findings = 0
-max_clone_findings = 1
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/program_soa/facts.rs"
+reason = "SoA fact view; queried per-Node by every alias/range/escape pass."
+max_findings = 0
+max_allocation_findings = 0
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/program_soa/kind.rs"
+reason = "Node kind tags and the kind bitset every fact query masks against."
+max_findings = 0
+max_allocation_findings = 0
+max_clone_findings = 0
 max_lock_findings = 0
 max_sleep_findings = 0
 max_panic_findings = 0
@@ -81,8 +103,10 @@ max_panic_findings = 0
 [[hot_path]]
 file = "vyre-lower/src/verified_lowering.rs"
 reason = "Program-to-KernelDescriptor production boundary; every concrete backend emission enters through this path."
-max_findings = 2
-max_allocation_findings = 2
+# 2 to 0: the two format! calls this covered left the tree when
+# format_verify_failure moved to String::with_capacity and write!.
+max_findings = 0
+max_allocation_findings = 0
 max_clone_findings = 0
 max_lock_findings = 0
 max_sleep_findings = 0
