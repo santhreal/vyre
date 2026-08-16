@@ -153,8 +153,12 @@ impl Gate for BackendExtension {
     }
 }
 
+/// One thing a backend crate's own sources must contain: the sentence a missing
+/// one reads as, and the line predicate that finds it.
+type SourceRequirement = (&'static str, fn(&str) -> bool);
+
 /// What every backend crate's own sources must contain.
-fn backend_source_requirements() -> Vec<(&'static str, fn(&str) -> bool)> {
+fn backend_source_requirements() -> Vec<SourceRequirement> {
     vec![
         (
             "does not implement the backend trait in its own crate",

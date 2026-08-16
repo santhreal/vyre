@@ -381,6 +381,61 @@ impl Member {
     }
 }
 
+/// Whether one published path matches a glob, with `*` and `?` confined to one
+/// path segment and `**` spanning any number of them.
+///
+/// Two gates need this: a document may name a set of pages rather than one page,
+/// and an optimization lane names the paths it may write as globs. Matching
+/// against the listed tree rather than the filesystem is what makes both answers
+/// the same in a development tree and in CI.
+#[must_use]
+pub fn glob_match(pattern: &str, path: &str) -> bool {
+    let pattern: Vec<&str> = pattern.split('/').collect();
+    let path: Vec<&str> = path.split('/').collect();
+    segments_match(&pattern, &path)
+}
+
+fn segments_match(pattern: &[&str], path: &[&str]) -> bool {
+    match pattern.split_first() {
+        None => path.is_empty(),
+        Some((head, rest)) if *head == "**" => {
+            (0..=path.len()).any(|skip| segments_match(rest, &path[skip..]))
+        }
+        Some((head, rest)) => match path.split_first() {
+            Some((first, tail)) if segment_match(head, first) => segments_match(rest, tail),
+            _ => false,
+        },
+    }
+}
+
+/// Match one glob segment against one path segment.
+///
+/// A reachability table over the segment rather than backtracking, so a pattern
+/// with several stars costs the product of the two lengths instead of exploding.
+fn segment_match(pattern: &str, name: &str) -> bool {
+    let name: Vec<char> = name.chars().collect();
+    let mut reachable = vec![false; name.len() + 1];
+    reachable[0] = true;
+    for glyph in pattern.chars() {
+        if glyph == '*' {
+            let mut seen = false;
+            for cell in &mut reachable {
+                seen |= *cell;
+                *cell = seen;
+            }
+            continue;
+        }
+        let mut next = vec![false; name.len() + 1];
+        for (index, in_name) in name.iter().enumerate() {
+            if reachable[index] && (glyph == '?' || glyph == *in_name) {
+                next[index + 1] = true;
+            }
+        }
+        reachable = next;
+    }
+    reachable[name.len()]
+}
+
 /// One scanning rule: a scope, a line predicate, and a reviewed allowance.
 ///
 /// Every shell ratchet had this shape and reimplemented it, which is how three
@@ -892,6 +947,21 @@ pub fn error_construction_lines(lines: &[&str]) -> Vec<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// WHY: a glob whose `*` crossed a path separator would let one document
+    /// reference or one lane write-glob claim a whole subtree, which is the
+    /// scope-that-does-not-exist defect both readers of this exist to catch.
+    #[test]
+    fn a_glob_star_stays_inside_one_path_segment_and_a_double_star_does_not() {
+        assert!(glob_match("docs/*.md", "docs/a.md"));
+        assert!(!glob_match("docs/*.md", "docs/nested/a.md"));
+        assert!(glob_match("docs/**/*.md", "docs/nested/deeper/a.md"));
+        assert!(glob_match("docs/**", "docs/a.md"));
+        assert!(glob_match("a?c.rs", "abc.rs"));
+        assert!(!glob_match("a?c.rs", "ac.rs"));
+        assert!(glob_match("vyre-*/src/**/*.rs", "vyre-libs/src/graph/mod.rs"));
+        assert!(!glob_match("vyre-*/src/**/*.rs", "vyre-libs/tests/a.rs"));
+    }
 
     /// WHY: a substring search for a word is the defect that let the CI matrix
     /// gate pass with a missing axis, because `stable` matches `unstable`.

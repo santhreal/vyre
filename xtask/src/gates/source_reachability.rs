@@ -13,7 +13,7 @@
 //! outside every target is exactly what a green build produces.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
@@ -45,17 +45,17 @@ impl Gate for SourceReachability {
             .paths()
             .iter()
             .filter(|path| extension_is(path, "rs"))
-            .map(as_key)
+            .map(|path| as_key(path))
             .collect();
         // A `#[path]` may name Rust that is not called `.rs`: vyre-aot compiles a
         // shipped template directly, so module resolution runs against every
         // tracked file rather than only the Rust-suffixed ones.
-        let everything: BTreeSet<String> = tree.paths().iter().map(as_key).collect();
+        let everything: BTreeSet<String> = tree.paths().iter().map(|path| as_key(path)).collect();
         let manifests: Vec<String> = tree
             .paths()
             .iter()
             .filter(|path| file_name(path) == Some("Cargo.toml"))
-            .map(as_key)
+            .map(|path| as_key(path))
             .collect();
         let templates: Vec<String> = tree
             .paths()
@@ -65,7 +65,7 @@ impl Gate for SourceReachability {
                     name.starts_with("Cargo.toml.") && name.len() > "Cargo.toml.".len()
                 })
             })
-            .map(as_key)
+            .map(|path| as_key(path))
             .collect();
         if sources.is_empty() {
             return Err(GateError::new(
@@ -298,7 +298,7 @@ impl Gate for SourceParses {
             .paths()
             .iter()
             .filter(|path| extension_is(path, "rs"))
-            .map(as_key)
+            .map(|path| as_key(path))
             .collect();
         if sources.is_empty() {
             return Err(GateError::new(
@@ -320,7 +320,7 @@ impl Gate for SourceParses {
                     name.starts_with("Cargo.toml.") && name.len() > "Cargo.toml.".len()
                 })
             })
-            .map(|path| parent_of(&as_key(&path.clone())))
+            .map(|path| parent_of(&as_key(path)))
             .collect();
         for template_root in &template_roots {
             let owned: Vec<&String> = sources
@@ -844,7 +844,7 @@ fn collect_roots(
                 );
                 continue;
             }
-            let guesses = vec![
+            let guesses = [
                 normalize(&join(&directory, &format!("{folder}/{spec_name}.rs"))),
                 normalize(&join(&directory, &format!("{folder}/{spec_name}/main.rs"))),
             ];
@@ -929,7 +929,7 @@ fn file_name(path: &Path) -> Option<&str> {
 }
 
 /// A repository-relative path as a slash-separated key.
-fn as_key(path: &PathBuf) -> String {
+fn as_key(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 

@@ -265,9 +265,7 @@ mod tests {
     #[test]
     fn a_reserve_block_is_bounded() {
         let mut lines = vec!["buffer.try_reserve("];
-        for _ in 0..40 {
-            lines.push("    more");
-        }
+        lines.resize(41, "    more");
         lines.push("    x.capacity()");
         let (uses, end) = block_uses_capacity(&lines, 0);
         assert!(!uses);

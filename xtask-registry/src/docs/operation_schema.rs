@@ -17,11 +17,11 @@ const MAX_SCHEMA_BYTES: u64 = 16_777_216;
 
 /// Wire version of `docs/generated/OP_SCHEMA.json`.
 ///
-/// `scripts/architecture_docs.py` reads the same file and pins the same
-/// number. It cannot import this constant, so
-/// `the_python_contract_pins_the_same_operation_schema_version` fails when the
-/// two drift; that drift shipped once already, with the generator on 3 and the
-/// script still demanding 2.
+/// `xtask::gates::architecture_contract` reads the same file and pins the same
+/// number, so `the_architecture_contract_pins_the_same_operation_schema_version`
+/// fails when the two drift. That drift shipped once already, with the generator
+/// on 3 and the checker still demanding 2, back when the checker was a Python
+/// script whose number could only be compared as text.
 pub(crate) const SCHEMA_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -756,27 +756,20 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 mod tests {
     use super::SCHEMA_VERSION;
 
-    /// The op-schema wire version is spelled in two languages: this crate
-    /// generates the file, and `scripts/architecture_docs.py` re-checks it.
-    /// They drifted once, generator on 3 against a script still demanding 2,
-    /// and nothing went red. This fails the moment they disagree again.
+    /// The op-schema wire version is pinned twice: this crate generates the
+    /// file, and `xtask::gates::architecture_contract` re-checks the artifact
+    /// against its own expectation. They drifted once, generator on 3 against a
+    /// checker still demanding 2, and nothing went red because the checker was
+    /// a Python script whose number could only be compared as text. Both are
+    /// now constants in the same build, so this fails to compile or fails here
+    /// the moment they disagree.
     #[test]
-    fn the_python_contract_pins_the_same_operation_schema_version() {
-        let script = std::fs::read_to_string(
-            xtask::checkout::checkout_root().join("scripts/architecture_docs.py"),
-        )
-        .expect("Fix: scripts/architecture_docs.py must be readable");
-
-        let expected = format!("OPERATION_SCHEMA_VERSION = {SCHEMA_VERSION}");
-        assert!(
-            script.contains(&expected),
-            "scripts/architecture_docs.py must declare `{expected}`; \
-             bump it in the same change as SCHEMA_VERSION"
-        );
-        assert!(
-            script.contains("!= OPERATION_SCHEMA_VERSION"),
-            "scripts/architecture_docs.py must compare against \
-             OPERATION_SCHEMA_VERSION, not a second literal"
+    fn the_architecture_contract_pins_the_same_operation_schema_version() {
+        assert_eq!(
+            i64::from(SCHEMA_VERSION),
+            xtask::gates::architecture_contract::OPERATION_SCHEMA_VERSION,
+            "Fix: bump xtask::gates::architecture_contract::OPERATION_SCHEMA_VERSION \
+             in the same change as SCHEMA_VERSION"
         );
     }
 }

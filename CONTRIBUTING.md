@@ -137,7 +137,7 @@ locally; `0 1` runs all of them, which is what CI does.
 
 These are run by hand. No workflow invokes them, and none is a merge gate.
 
-- `bash scripts/bench_smoke.sh` runs the canonical vyre-bench smoke suite and prints JSON.
+- `./cargo_full run -p vyre-bench -- run --suite smoke --format json` runs the canonical vyre-bench smoke suite and prints JSON.
 - `bash scripts/install_wire_precommit_hook.sh` installs `scripts/wire_ci_local.sh` as the pre-push hook, which blocks a push when the wire-surface fmt, clippy, check, or test steps fail.
 
 ## LEGO Block Rules

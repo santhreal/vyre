@@ -31,4 +31,4 @@ jobs:
           ./cargo_full bench -p vyre-driver-wgpu --no-run
 
       - name: Enforce smoke benchmark runtime budget
-        run: scripts/check_bench_smoke_runtime.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- bench-smoke-runtime

@@ -21,7 +21,7 @@ jobs:
       - id: packages
         name: Read the publishable package list from the workspace manifests
         run: |
-          packages="$(python3 scripts/public_api_snapshot_inventory.py "$PWD" | cut -d: -f2 | paste -sd,)"
+          packages="$(./cargo_full run -q -p xtask --bin publishable_packages | cut -d: -f2 | paste -sd,)"
           test -n "$packages" || { echo "Fix: no publishable workspace members found." >&2; exit 2; }
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
       - uses: obi1kenobi/cargo-semver-checks-action@v2

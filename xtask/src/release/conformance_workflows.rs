@@ -58,7 +58,7 @@ pub fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> 
             ".github/workflows/architectural-invariants.yml",
             "Architecture release gate",
             "cargo_full run -p xtask -- op-matrix --check",
-            "scripts/architecture_docs.py . --check",
+            "-- architecture-contract",
         ),
         inspect_ci_gate(
             vyre_root,

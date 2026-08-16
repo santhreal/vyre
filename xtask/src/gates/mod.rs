@@ -8,13 +8,16 @@
 //! `gates::sweep` is the runner and the wiring meta-check that keeps every
 //! registered gate connected to a pinned baseline and a workflow.
 
+pub mod architecture_contract;
 pub mod audit_status;
+pub mod bench;
 pub mod check_tier_deps;
 pub mod ci_contract;
 pub mod dedup_report;
 pub mod dep_drift;
 pub mod dispatch_surface;
 pub mod doc_contract;
+pub mod docs_references;
 pub mod dup_scan;
 pub mod evidence_paths;
 pub mod feature_isolation;
@@ -39,6 +42,7 @@ pub mod parity_testing;
 pub mod platform_boundary;
 pub mod platform_docs;
 pub mod proptest_coverage;
+pub mod public_api;
 pub mod public_api_paths;
 pub mod repo_hygiene;
 pub mod scan;
@@ -57,7 +61,11 @@ use crate::gate::Gate;
 /// gate is adding it here and nowhere else. The sweep enumerates what this
 /// yields, which is why a gate cannot be registered and left unswept.
 pub static GATES: &[&dyn Gate] = &[
+    &architecture_contract::ArchitectureContract,
     &audit_status::AuditStatus,
+    &bench::BenchBaselines,
+    &bench::BenchCoverage,
+    &bench::BenchSmokeRuntime,
     &check_tier_deps::CheckTierDeps,
     &ci_contract::CiMatrix,
     &ci_contract::CiRequired,
@@ -66,6 +74,7 @@ pub static GATES: &[&dyn Gate] = &[
     &dispatch_surface::OwnedDispatch,
     &doc_contract::ContractInSource,
     &doc_contract::DocClaims,
+    &docs_references::DocsReferences,
     &dup_scan::DupScan,
     &evidence_paths::EvidencePaths,
     &evidence_paths::InvariantPaths,
@@ -99,6 +108,7 @@ pub static GATES: &[&dyn Gate] = &[
     &platform_boundary::PlatformBoundary,
     &platform_docs::PlatformConsumerDocs,
     &proptest_coverage::ProptestCoverage,
+    &public_api::PublicApiSnapshot,
     &public_api_paths::PublicApiPaths,
     &repo_hygiene::RepoHygiene,
     &repo_hygiene::SingleBacklog,

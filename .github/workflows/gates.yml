@@ -59,7 +59,7 @@ jobs:
       # reference in a tracked file against the live registry, so a renamed case
       # fails here instead of at the next release benchmark.
       - name: Benchmark registry covers every claimed dimension
-        run: bash scripts/check_deep_bench_coverage.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- bench-coverage
 
   tree-rules:
     name: Rules the sweep owns, named by domain
