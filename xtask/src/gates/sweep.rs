@@ -80,7 +80,7 @@ fn baseline_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<String>
     for name in gate_names {
         if !baselines.iter().any(|pin| pin.name == *name) {
             failures.push(format!(
-                "gate `{name}` has no row in xtask/gate-baselines.toml; add one with its present finding count"
+                "gate `{name}` has no row in xtask/gate-baselines.toml, so it does not run; add one with its present finding count"
             ));
         }
     }
@@ -272,10 +272,8 @@ pub fn run(args: &[String]) {
         let name = gate.name();
         let Some(pin) = baselines.iter().find(|pin| pin.name == name) else {
             // Running a gate with no pin would report a number nothing holds it
-            // to, which reads as a result and is not one.
-            failures.push(format!(
-                "gate `{name}` has no row in xtask/gate-baselines.toml, so it did not run; add one with its present finding count"
-            ));
+            // to, which reads as a result and is not one. The gap is already a
+            // failure, reported once by the registry comparison above.
             continue;
         };
         match execute(*gate, &root) {

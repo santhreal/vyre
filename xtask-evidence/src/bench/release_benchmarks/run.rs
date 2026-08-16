@@ -158,11 +158,11 @@ fn read_matrix(workspace_root: &Path, report: &mut Report) -> Option<ReleaseWork
 fn measure(root: &Path, config: &Config, report: &mut Report) {
     let workspace_root = root.to_path_buf();
     let matrix_findings = crate::release::release_workload_matrix::regenerate(&workspace_root);
-    let matrix_written = matrix_findings.is_empty();
+    let matrix_clean = matrix_findings.is_empty();
     for finding in matrix_findings {
         report.find(finding);
     }
-    if !matrix_written {
+    if !matrix_clean {
         return;
     }
     let Some(matrix) = read_matrix(&workspace_root, report) else {
