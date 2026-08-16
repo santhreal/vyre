@@ -167,7 +167,11 @@ fn audit(workspace_root: &Path, config: &Config) -> Inspection {
             continue;
         };
         let recorded = match read_text_bounded(&workspace_root.join(artifact)) {
-            Ok(text) => text,
+            Ok(text) => {
+                let (_, body) = artifact_gate::split_provenance(&text);
+                inspection.generates_text(artifact, body);
+                text
+            }
             Err(error) => {
                 inspection.blocked(
                     artifact,
@@ -231,7 +235,11 @@ fn audit(workspace_root: &Path, config: &Config) -> Inspection {
 /// Blockers the release log recorded, and whether it is there to read at all.
 fn audit_release_log(workspace_root: &Path, inspection: &mut Inspection) {
     let text = match read_text_bounded(&workspace_root.join(RELEASE_LOG)) {
-        Ok(text) => text,
+        Ok(text) => {
+            let (_, body) = artifact_gate::split_provenance(&text);
+            inspection.generates_text(RELEASE_LOG, body);
+            text
+        }
         Err(error) => {
             inspection.blocked(
                 RELEASE_LOG,
@@ -1239,6 +1247,24 @@ mod tests {
         assert!(
             reason.contains("not readable as a conformance artifact"),
             "got: {reason}"
+        );
+    }
+
+    #[test]
+    fn authoritative_descriptor_declares_exact_release_conformance_artifacts() {
+        let descriptor = crate::gate_metadata::descriptor_by_name("release-conformance");
+        let mut expected: Vec<&str> = vec![
+            artifact_of("cuda").expect("cuda artifact"),
+            artifact_of("cpu-ref").expect("cpu-ref artifact"),
+            artifact_of("wgpu").expect("wgpu artifact"),
+            RELEASE_LOG,
+        ];
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "release-conformance gate descriptor must declare exactly the canonical conformance evidence artifacts"
         );
     }
 }

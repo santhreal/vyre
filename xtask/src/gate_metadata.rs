@@ -1087,11 +1087,21 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "release-conformance",
-        help: "Enforce the release conformance suite across CUDA, WGPU, and CPU reference baselines. \\        Proves all 48 required release conformance operations exist, compile, and execute with \\        exact output bit-identity across all backends. Proves zero runtime crashes, zero ULP \\        drift on floating-point operations, and that all test inputs match the frozen spec. \\        Runs the compiled test suite on this host; hardware acceleration required for CUDA \\        and WGPU targets. Run with --write to refresh release/evidence/conformance/conformance-diff.json.",
+        help: "Enforce the release conformance suite across CUDA, WGPU, and CPU reference baselines. \
+        Proves all 48 required release conformance operations exist, compile, and execute with \
+        exact output bit-identity across all backends. Proves zero runtime crashes, zero ULP \
+        drift on floating-point operations, and that all test inputs match the frozen spec. \
+        Runs the compiled test suite on this host; hardware acceleration required for CUDA \
+        and WGPU targets. Run with --write to refresh release conformance evidence artifacts.",
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/conformance/conformance-diff.json"],
+        artifacts: &[
+            "release/evidence/conformance/cuda-conformance.json",
+            "release/evidence/conformance/reference-conformance.json",
+            "release/evidence/conformance/release-gate-log.json",
+            "release/evidence/conformance/wgpu-conformance.json",
+        ],
         prerequisites: &[],
         proof: "crate::release::release_conformance::tests::diff_summary_validation_rejects_missing_and_wrong_backend_fields",
     },
