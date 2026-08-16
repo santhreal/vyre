@@ -4915,7 +4915,7 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::vyre-libs::math::prefix_scan_inclusive_sum",
+          "operation": "anonymous::vyre-primitives::math::prefix_scan_inclusive_sum",
           "registered": false
         }
       ]

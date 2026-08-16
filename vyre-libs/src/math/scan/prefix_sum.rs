@@ -13,16 +13,12 @@ use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 
-/// The two scan bodies this composition selects between, as phase boundaries
-/// inside one operation.
+/// The single-block scan body, as a phase boundary inside one operation.
 ///
-/// Both carry the `anonymous::` prefix because neither scan primitive
-/// registers a canonical operation of its own: the selection is a real edge in
-/// the IR, and naming it after an unregistered id would claim a building block
-/// that does not exist.
-const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-libs::math::prefix_scan_inclusive_sum";
-const MULTI_BLOCK_CHILD: &str =
-    "anonymous::vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum";
+/// It carries the `anonymous::` prefix over the builder's own id because that
+/// id registers no canonical operation, and a child region naming an
+/// unregistered id claims a building block that does not exist.
+const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-primitives::math::prefix_scan_inclusive_sum";
 
 /// Build a Program that computes the inclusive prefix sum of `input`
 /// into `output`, both sized `n`.
@@ -46,7 +42,7 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
         )
     } else {
         compose_scan_primitive(
-            MULTI_BLOCK_CHILD,
+            crate::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM,
             multi_block_prefix_scan_sum_u32(input, output, n),
         )
     }
@@ -59,7 +55,7 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
 /// selection is an edge to a registered building block rather than a relabel
 /// of the body. Only the entry changes, so only the entry is rebuilt:
 /// `Program::wrapped` would deep-clone the buffer table and reset the metadata
-/// flags. A trap program has no region to reparent and passes through.
+/// flags.
 fn compose_scan_primitive(child_id: &'static str, program: Program) -> Program {
     let body = match program.entry() {
         [Node::Region { body, .. }] => body.as_ref().clone(),
