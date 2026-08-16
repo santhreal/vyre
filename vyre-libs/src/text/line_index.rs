@@ -27,7 +27,7 @@ use vyre_foundation::ir::{
 
 /// Stable op id for the registered Tier 3 wrapper.
 pub const LINE_INDEX_OP_ID: &str = "vyre-primitives::text::line_index";
-const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
+const FLAG_OP_ID: &str = "anonymous::vyre-primitives::text::line_index::line_start_flags";
 
 /// Return the execution geometry requirements for line indexing.
 #[must_use]
