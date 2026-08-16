@@ -66,8 +66,10 @@ reservation, the shape-keyed Program cache and the composition call counters.
 Frozen wire-form types that downstream frontends rely on (PackedAst,
 PgBuffers carrier, etc.).
 
-### `builder/range_ordering.rs`
-Sorted-range helpers used by the matching + dataflow stacks.
+### `builder/`
+The shapes a composition is written in: elementwise maps, tiled reductions,
+sorted-range helpers for the matching and dataflow stacks, and the catalog
+registrations that publish them.
 
 ## Public types
 

@@ -22,6 +22,13 @@ pub(crate) mod tiled_reduce;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
+/// The two shared child regions registered as operations in their own right.
+///
+/// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and
+/// `STRIDED_ACCUMULATE_OP_ID` are catalog entries, and a catalog entry is
+/// enabled by a feature. The skeletons themselves stay ungated: a dialect
+/// composes them without asking for their registrations.
+#[cfg(feature = "builder-ops")]
 mod registrations;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};

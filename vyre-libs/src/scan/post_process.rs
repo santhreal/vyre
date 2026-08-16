@@ -5,8 +5,13 @@
 //! contract: sorted non-overlapping `(pattern_id, start, end)` spans plus
 //! deterministic entropy and confidence signals.
 
-use vyre_foundation::match_result::ByteRange;
+// Every item that names these is a host oracle, gated the same way, so the
+// imports carry the gate too rather than making a default build of this module
+// reach a CPU reference.
+#[cfg(any(test, feature = "cpu-parity"))]
 use crate::matching::{dedup_regions_inplace, RegionTriple};
+#[cfg(any(test, feature = "cpu-parity"))]
+use vyre_foundation::match_result::ByteRange;
 
 /// Post-processing contract violation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

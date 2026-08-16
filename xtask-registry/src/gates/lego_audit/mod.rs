@@ -48,7 +48,7 @@ mod composition_chain;
 mod cross_dialect;
 mod depth_of_composition;
 mod duplicates;
-mod exemptions;
+pub(crate) mod exemptions;
 mod fingerprint;
 mod god_files;
 mod name_stem;

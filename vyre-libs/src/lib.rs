@@ -111,6 +111,11 @@ pub mod logical;
 ))]
 pub mod nn;
 
+/// Language-model decode layer  -  paged key-value cache addressing and token
+/// sampling, composed from the neural-net and math dialects.
+#[cfg(feature = "llm")]
+pub mod llm;
+
 /// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
 /// program builders plus immutable compilation artifacts.
 #[cfg(any(
@@ -136,17 +141,29 @@ pub mod hash;
 
 /// Text-processing compositions for the GPU C parser pipeline
 /// (Phase L1+): byte classification, UTF-8 validation, line index.
+#[cfg(feature = "text")]
 pub mod text;
 
 /// Representation sub-dialect: bit-packing and unpacking.
+#[cfg(feature = "representation")]
 pub mod representation;
 
 /// GPU parser infrastructure (Phase L3+): bracket matching, DFA
 /// lexer driver, LR(1) table walker. Grammar tables are generated
 /// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
+// `parsing-kernels` and `go-parser` are the two roots. `parsing` names both
+// language pipelines and `python-parser` names `parsing-kernels`, so a build
+// that asks for either of those already sets one of the two.
+#[cfg(any(
+    feature = "parsing",
+    feature = "parsing-kernels",
+    feature = "go-parser",
+    feature = "python-parser"
+))]
 pub mod parsing;
 
 /// Packed AST walks (`ast_walk_*` catalog ops).
+#[cfg(feature = "graph")]
 pub mod graph;
 
 /// Security / taint compositions for static program analysis.

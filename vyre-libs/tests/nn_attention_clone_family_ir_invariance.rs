@@ -235,7 +235,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "flash_attention_2",
-        "21af2e2b23a3bfb853a9cc950cd70194fa2c958f26af159acd0ef25a91123ff2",
+        "549c8109d89141943699474ad8cb1b798bab38db4e957cb062d070d45cfa192c",
     ),
     (
         "softmax",
@@ -247,7 +247,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "flash_attention",
-        "9f9805b63602d6b136c12756108f18c6df06074f51acc4807ec88c1b451e0d6a",
+        "7f5c7c32e1fe8cd18d932bfa1d59a4922397453096e9a02730dbabbb8d1b8678",
     ),
     (
         "flash_attention/direct",
@@ -303,7 +303,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "partial_rope",
-        "80ab8860b8375cccde486cd3fcec0ab9529715fd4661551145ea9182ef4b9eb3",
+        "4b3ee7bdf1a83bfcca4f9d9bfad4590bfba89d75443ff97b52c8602d3ae925fa",
     ),
     (
         "qk_gain",
@@ -324,11 +324,19 @@ fn clone_family_entry_points_emit_the_pinned_ir() {
     assert_pinned_ir_fingerprints(&entry_points(), &EXPECTED);
 }
 
-/// Body of the single region every one of these builders wraps its entry in.
+/// Body of the innermost region an entry point wraps its kernel in.
+///
+/// An entry point that composes a registered core wraps twice: its own region
+/// around a child region naming the core. Descending to the innermost one
+/// compares the kernels rather than the attribution around them.
 fn region_body(program: &Program) -> Vec<Node> {
-    match program.entry().first() {
-        Some(Node::Region { body, .. }) => body.as_ref().clone(),
-        other => panic!("expected one wrapping region, got {other:?}"),
+    let mut nodes = program.entry().to_vec();
+    loop {
+        match nodes.as_slice() {
+            [Node::Region { body, .. }] => nodes = body.as_ref().clone(),
+            [] => panic!("expected a wrapping region, got an empty entry"),
+            _ => return nodes,
+        }
     }
 }
 
@@ -449,7 +457,13 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
         &["vyre-libs::nn::chunked_gated_delta"],
     ),
     ("mla_decode", &["vyre-libs::nn::mla_decode"]),
-    ("flash_attention_2", &["vyre-libs::nn::flash_attention_2"]),
+    (
+        "flash_attention_2",
+        &[
+            "vyre-libs::nn::attention::online_softmax",
+            "vyre-libs::nn::flash_attention_2",
+        ],
+    ),
     (
         "softmax",
         &[
@@ -468,7 +482,13 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
             "vyre-primitives::reduce::workgroup_sum_f32",
         ],
     ),
-    ("flash_attention", &["vyre-libs::nn::flash_attention"]),
+    (
+        "flash_attention",
+        &[
+            "vyre-libs::nn::attention::online_softmax",
+            "vyre-libs::nn::flash_attention",
+        ],
+    ),
     (
         "flash_attention/direct",
         &["vyre-libs::nn::flash_attention"],

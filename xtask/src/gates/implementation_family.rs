@@ -345,6 +345,18 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::builder::tiled_reduce",
     ),
     ("vyre-libs::nn::softmax", "vyre-libs::builder::tiled_reduce"),
+    (
+        "vyre-libs::nn::partial_rope",
+        "vyre-libs::nn::attention::layout_move",
+    ),
+    (
+        "vyre-libs::llm::paged_kv_gather",
+        "vyre-libs::nn::attention::layout_move",
+    ),
+    (
+        "vyre-libs::llm::paged_kv_append",
+        "vyre-libs::nn::attention::layout_move",
+    ),
 ];
 
 /// Family pairs that emit the same shape from deliberately separate builders.

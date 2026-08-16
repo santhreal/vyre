@@ -21,8 +21,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use crate::text::byte_histogram_256_child;
-use crate::text::{classify_from_histogram, encoding_classify_child};
-#[cfg(test)]
+use crate::text::encoding_classify_child;
 use crate::text::{ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
 
 #[cfg(test)]
@@ -83,30 +82,72 @@ pub fn encodex_gpu(input: &str, output: &str, count: u32) -> Program {
 /// Computes the same 256-bin histogram and applies the identical
 /// classification rules so the host oracle and `encodex_gpu` agree on
 /// every fixture input.
+///
+/// Gated like every other host oracle under `decode/`. It executes the
+/// classification on the CPU, so a release consumer of this crate must not
+/// compile it, and nothing outside a parity check may call it.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn encodex_reference(input: &[u8]) -> u32 {
     let histogram = crate::text::reference_byte_histogram(input);
-    classify_from_histogram(&histogram, input.len() as u32)
+    crate::text::classify_from_histogram(&histogram, input.len() as u32)
 }
 
 // ---------------------------------------------------------------------------
 // Fixtures & harness
 // ---------------------------------------------------------------------------
 
-fn fixture_cases() -> Vec<Vec<u8>> {
-    vec![
-        b"Hello".to_vec(),
-        vec![0xC3, 0xA9, 0xC3, 0xA9, b'!'],
-        vec![0x00, 0x00, 0x00, 0x41, 0x42],
-        vec![0xE9, 0xE8, 0xEA, 0xEB, 0xEC],
-    ]
+/// One registered case: the input bytes, the histogram bins it fills, and the
+/// encoding id the classifier answers.
+///
+/// The expected side is recorded, not recomputed. Deriving it by calling the
+/// host oracle made every build of this crate compile the oracle, and an
+/// expectation produced by a twin of the code under test agrees with that code
+/// by construction rather than by being right.
+struct FixtureCase {
+    input: &'static [u8],
+    bins: &'static [(u8, u32)],
+    encoding: u32,
+}
+
+const FIXTURE_CASES: &[FixtureCase] = &[
+    FixtureCase {
+        input: b"Hello",
+        bins: &[(b'H', 1), (b'e', 1), (b'l', 2), (b'o', 1)],
+        encoding: ENC_ASCII,
+    },
+    FixtureCase {
+        input: &[0xC3, 0xA9, 0xC3, 0xA9, b'!'],
+        bins: &[(b'!', 1), (0xA9, 2), (0xC3, 2)],
+        encoding: ENC_UTF8,
+    },
+    FixtureCase {
+        input: &[0x00, 0x00, 0x00, 0x41, 0x42],
+        bins: &[(0x00, 3), (0x41, 1), (0x42, 1)],
+        encoding: ENC_UTF16LE,
+    },
+    FixtureCase {
+        input: &[0xE9, 0xE8, 0xEA, 0xEB, 0xEC],
+        bins: &[(0xE8, 1), (0xE9, 1), (0xEA, 1), (0xEB, 1), (0xEC, 1)],
+        encoding: ENC_ISO8859_1,
+    },
+];
+
+/// Expand a sparse bin list into the packed 256-bin histogram buffer.
+fn packed_histogram(bins: &[(u8, u32)]) -> Vec<u8> {
+    let mut packed = vec![0u8; 256 * 4];
+    for &(byte, count) in bins {
+        let slot = usize::from(byte) * 4;
+        packed[slot..slot + 4].copy_from_slice(&count.to_le_bytes());
+    }
+    packed
 }
 
 fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
-    fixture_cases()
-        .into_iter()
-        .map(|input| {
+    FIXTURE_CASES
+        .iter()
+        .map(|case| {
             vec![
-                pack_words(&input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+                pack_words(&case.input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
                 vec![0u8; 256 * 4],
             ]
         })
@@ -114,14 +155,12 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
-    fixture_cases()
-        .into_iter()
-        .map(|input| {
-            let histogram = crate::text::reference_byte_histogram(&input);
-            let enc_id = classify_from_histogram(&histogram, input.len() as u32);
+    FIXTURE_CASES
+        .iter()
+        .map(|case| {
             vec![
-                vyre_primitives::wire::pack_u32_slice(&histogram),
-                enc_id.to_le_bytes().to_vec(),
+                packed_histogram(case.bins),
+                case.encoding.to_le_bytes().to_vec(),
             ]
         })
         .collect()

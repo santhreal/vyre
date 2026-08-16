@@ -16,7 +16,7 @@
 //! shape code parser dialects need for downstream tokenization.
 
 mod program;
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
+#[cfg(any(test, feature = "cpu-parity"))]
 mod reference;
 mod sequence_rules;
 
@@ -24,7 +24,7 @@ mod sequence_rules;
 mod tests;
 
 pub use program::{utf8_validate, utf8_validate_u8};
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
+#[cfg(any(test, feature = "cpu-parity"))]
 pub use reference::reference_utf8_validate;
 
 /// Stable op id for the registered Tier 3 wrapper.

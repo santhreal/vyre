@@ -178,8 +178,8 @@ fn line_start_flags_program(
 }
 
 /// Reference oracle: same line-counting semantics as the GPU kernel.
+#[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
     let mut out = Vec::with_capacity(source.len());
     let mut line: u32 = 0;
