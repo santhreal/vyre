@@ -182,9 +182,9 @@ dropping_copy_types = "allow"
 # declare deletes the code under it with nothing red. Moving the composition
 # domains into `vyre-libs` carried 161 `#[cfg(feature = "inventory-registry")]`
 # gates and seven whole-file `#![cfg(feature = "all-lego")]` gates into a crate
-# that declares neither feature: 80 operations stopped registering and seven
-# test files compiled to nothing, and the build said `warning` 168 times among
-# its other warnings.
+# that declares neither feature. The composition audit went from 327 operations
+# to 174 and seven test files compiled to nothing, and the only signal was
+# `warning` text in a build that emitted many.
 unexpected_cfgs = { level = "deny", check-cfg = [
   'cfg(feature, values("external_ifds_engine"))',
 ] }
