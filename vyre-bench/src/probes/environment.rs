@@ -20,6 +20,9 @@ pub struct EnvironmentData {
     #[serde(default)]
     pub nvidia_cuda_version: Option<String>,
     pub features: Vec<String>,
+    /// `release` or `debug`, naming the build that took the measurements.
+    #[serde(default)]
+    pub build_profile: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +34,22 @@ pub struct GpuDeviceInfo {
     pub compute_capability_major: Option<u32>,
     #[serde(default)]
     pub compute_capability_minor: Option<u32>,
+}
+
+/// The build profile this harness was compiled with.
+///
+/// A debug build measures the CPU baseline of a release case tens of times
+/// slower than a release build while device time barely moves, so a report that
+/// does not name its profile cannot be told apart from evidence. Measured
+/// 2026-08-15 for `release.condition_eval.1m` on one CUDA host: 215874264 ns of
+/// CPU baseline under debug against 4422427 ns under release.
+#[must_use]
+pub fn build_profile() -> &'static str {
+    if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    }
 }
 
 pub fn capture_environment() -> std::io::Result<EnvironmentData> {
@@ -122,6 +141,7 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
         nvidia_cuda_version: nvidia_versions.cuda_version,
         gpu_devices,
         features,
+        build_profile: build_profile().to_string(),
     })
 }
 

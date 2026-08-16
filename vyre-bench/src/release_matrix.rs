@@ -6,8 +6,6 @@
 //! requirements auditable from the benchmark registry.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::Path;
 
 use serde::Serialize;
 
@@ -475,25 +473,15 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
     }
 }
 
-pub fn emit_release_matrix(
+/// Render the matrix as a table or as JSON.
+///
+/// There is no write path here. The committed matrix artifact is written by the
+/// `release-workload-matrix` gate, which stamps the provenance head that this
+/// serialization omits.
+pub fn render_release_matrix(
     matrix: &ReleaseWorkloadMatrix,
     format: &str,
-    output: Option<&str>,
-) -> anyhow::Result<()> {
-    let rendered = render_release_matrix(matrix, format)?;
-    if let Some(output) = output {
-        let output = Path::new(output);
-        if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(output, rendered)?;
-        return Ok(());
-    }
-    print!("{rendered}");
-    Ok(())
-}
-
-fn render_release_matrix(matrix: &ReleaseWorkloadMatrix, format: &str) -> anyhow::Result<String> {
+) -> anyhow::Result<String> {
     if format == "json" {
         return Ok(format!("{}\n", serde_json::to_string_pretty(matrix)?));
     }
@@ -628,7 +616,7 @@ fn build_family_report(
     );
     let benchmark_command = benchmark_case.map(|case_id| {
         format!(
-            "cargo_full run -p vyre-bench -- run --suite release --case {case_id} --backend cuda --enforce-budgets --output {evidence_artifact}"
+            "cargo_full run -p vyre-bench --release -- run --suite release --case {case_id} --backend cuda --enforce-budgets --output {evidence_artifact}"
         )
     });
     cpu_sota_contracts.sort();
@@ -645,6 +633,7 @@ fn build_family_report(
     };
     let reproducible_cuda_command = benchmark_command.as_ref().is_some_and(|command| {
         command.contains("cargo_full")
+            && command.contains("--release")
             && command.contains("--backend cuda")
             && command.contains("--enforce-budgets")
             && command.contains(&evidence_artifact)

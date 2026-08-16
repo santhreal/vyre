@@ -16,7 +16,7 @@ pub(super) fn run_named_benchmark(
     output: &str,
     measured_samples: Option<usize>,
     sample_timeout_secs: u64,
-) {
+) -> Result<(), String> {
     let owned_args = benchmark_command_args(
         case_id,
         backend,
@@ -25,9 +25,20 @@ pub(super) fn run_named_benchmark(
         sample_timeout_secs,
     );
     let borrowed = owned_args.iter().map(String::as_str).collect::<Vec<_>>();
-    run_command(workspace_root, &borrowed);
+    run_command_status(workspace_root, &borrowed)
 }
 
+/// The command that measures one release case in a child process.
+///
+/// `--release` is part of the measurement, not a convenience. A debug build of
+/// the harness runs the CPU baseline scan tens of times slower than the release
+/// build while device time barely moves, so a suite measured without it reports
+/// a speedup that is mostly the missing optimizer. Measured 2026-08-15 on one
+/// CUDA host for `release.condition_eval.1m`: the debug child reported a CPU p50
+/// of 215874264 ns against a GPU p50 of 110240 ns, a claimed 1958.2x, where the
+/// release build of the same case on the same device reported 4422427 ns against
+/// 26688 ns, which is 165.7x. Every workflow step that measures a case directly
+/// already passes it.
 pub(super) fn benchmark_command_args(
     case_id: &str,
     backend: &str,
@@ -39,6 +50,7 @@ pub(super) fn benchmark_command_args(
         "run".to_string(),
         "-p".to_string(),
         "vyre-bench".to_string(),
+        "--release".to_string(),
         "--quiet".to_string(),
         "--".to_string(),
         "run".to_string(),
@@ -71,11 +83,11 @@ pub(super) fn run_named_benchmark_if_needed(
     measured_samples: Option<usize>,
     sample_timeout_secs: u64,
     reuse_existing: bool,
-) {
+) -> Result<(), String> {
     if reuse_existing
         && benchmark_artifact_is_reusable(workspace_root, backend, case_id, case_id, output, None)
     {
-        return;
+        return Ok(());
     }
     run_named_benchmark(
         workspace_root,
@@ -84,7 +96,7 @@ pub(super) fn run_named_benchmark_if_needed(
         output,
         measured_samples,
         sample_timeout_secs,
-    );
+    )
 }
 
 pub(super) fn benchmark_artifact_is_reusable(
@@ -259,63 +271,112 @@ fn case_has_reusable_timing_metrics(case: &Value) -> bool {
     true
 }
 
-pub(super) fn copy_artifact(workspace_root: &Path, source: &str, target: &str) {
+pub(super) fn copy_artifact(
+    workspace_root: &Path,
+    source: &str,
+    target: &str,
+) -> Result<(), String> {
     let source = workspace_root.join(source);
     let target = workspace_root.join(target);
     if let Some(parent) = target.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create `{}`: {error}", parent.display()))?;
     }
-    if let Err(error) = fs::copy(&source, &target) {
-        eprintln!(
-            "Fix: failed to copy `{}` to `{}`: {error}",
+    fs::copy(&source, &target).map(|_| ()).map_err(|error| {
+        format!(
+            "failed to copy `{}` to `{}`: {error}",
             source.display(),
             target.display()
-        );
-        std::process::exit(1);
-    }
+        )
+    })
 }
 
-pub(super) fn run_command(workspace_root: &Path, args: &[&str]) {
-    if let Err(message) = run_command_status(workspace_root, args) {
-        eprintln!("{message}");
-        std::process::exit(1);
-    }
-}
+/// Bytes of a failed child's output carried into the error.
+const MAX_CHILD_OUTPUT_BYTES: usize = 4096;
 
+/// Run one child command, keeping its output out of this process's stdout.
+///
+/// A delegated gate's stdout is the report the parent parses, so a child that
+/// inherits it writes into the middle of that protocol: the harness prints a
+/// formatted result table, the parent reads the first line of the table as JSON,
+/// and the gate is reported as having returned no report at all. The output is
+/// captured and only a failure carries its tail, which is the only case a reader
+/// needs it for.
 pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result<(), String> {
     let runner = xtask::output_arg::cargo_runner(workspace_root);
-    let status = Command::new(&runner)
+    let output = Command::new(&runner)
         .args(args)
         .current_dir(workspace_root)
-        .status();
+        .output();
     let display = format!("{} {}", runner.display(), args.join(" "));
-    match status {
-        Ok(status) if status.success() => Ok(()),
-        Ok(status) => Err(format!("Fix: `{display}` failed with {status}")),
+    match output {
+        Ok(output) if output.status.success() => Ok(()),
+        Ok(output) => Err(format!(
+            "Fix: `{display}` failed with {}: {}",
+            output.status,
+            child_output_tail(&output.stdout, &output.stderr)
+        )),
         Err(error) => Err(format!(
             "Fix: failed to run `{display}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
         )),
     }
 }
 
-pub(super) struct Config {
-    backend: String,
-    only: Option<String>,
-    measured_samples: Option<usize>,
-    sample_timeout_secs: u64,
-    include_wgpu_comparison: bool,
-    reuse_existing: bool,
+/// The last `MAX_CHILD_OUTPUT_BYTES` of what a failed child said, stderr first.
+fn child_output_tail(stdout: &[u8], stderr: &[u8]) -> String {
+    let mut text = String::new();
+    for stream in [stderr, stdout] {
+        let said = String::from_utf8_lossy(stream);
+        let said = said.trim();
+        if said.is_empty() {
+            continue;
+        }
+        if !text.is_empty() {
+            text.push(' ');
+        }
+        let start = said.len().saturating_sub(MAX_CHILD_OUTPUT_BYTES);
+        text.push_str(said.get(start..).unwrap_or(said));
+    }
+    if text.is_empty() {
+        "the child said nothing".to_string()
+    } else {
+        text
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::report_fixture::hidden_invalid_case;
-
     use tempfile::TempDir;
+
+    /// Release evidence is measured by an optimized harness.
+    ///
+    /// The command used to omit `--release`, so every artifact under
+    /// `release/evidence/benchmarks` was measured by a debug build: the recorded
+    /// CPU baseline was dominated by missing optimization and the reported
+    /// speedup was an artifact of the build, not of the device. The workflow
+    /// steps that measure a case directly always passed the flag, so the two
+    /// paths disagreed by a factor of twelve on the same case and host.
+    #[test]
+    fn release_benchmark_commands_measure_an_optimized_build() {
+        let args = benchmark_command_args(
+            "release.condition_eval.1m",
+            "cuda",
+            "release/evidence/benchmarks/workload.json",
+            Some(30),
+            30,
+        );
+        let separator = args
+            .iter()
+            .position(|arg| arg == "--")
+            .expect("Fix: the command must separate cargo flags from harness flags.");
+
+        assert!(
+            args[..separator].iter().any(|arg| arg == "--release"),
+            "Fix: measure release evidence with an optimized build, got `{args:?}`."
+        );
+    }
 
     #[test]
     fn release_benchmark_commands_precondition_accelerator_clocks() {

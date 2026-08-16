@@ -10,15 +10,18 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use serde_json::{json, Value};
+use xtask::json_document;
 
 use super::artifact_metrics::{first_metric_p50, read_text_bounded, WallClockMinima};
-use super::metrics::write_json;
 use super::release_thresholds::{
     MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CPU_SOTA_100X_RELEASE_CASES, REQUIRED_CPU_SOTA_100X_CASES,
 };
 use super::suite_inspect::nonblank_str;
 
-pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) {
+pub(super) fn write_cpu_100x_proof(
+    workspace_root: &Path,
+    artifacts: &[String],
+) -> Result<(), String> {
     let mut cases = Vec::new();
     let mut blockers = Vec::new();
     let mut contract_case_count = 0usize;
@@ -275,10 +278,10 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         .as_object_mut()
         .expect("Fix: the 100x proof evidence is a JSON object.")
         .extend(minima.into_object());
-    write_json(
+    json_document::write(
         &workspace_root.join("release/evidence/benchmarks/cpu-only-100x-proof.json"),
         &evidence,
-    );
+    )
 }
 
 fn cpu_sota_component_proof_case(
@@ -448,7 +451,8 @@ mod tests {
         )
         .expect("Fix: write hidden-invalid CUDA benchmark artifact JSON.");
 
-        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -523,7 +527,8 @@ mod tests {
         )
         .expect("Fix: write missing-status CUDA benchmark artifact JSON.");
 
-        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -619,7 +624,8 @@ mod tests {
         )
         .expect("Fix: write required CPU-SOTA benchmark artifact JSON.");
 
-        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -679,7 +685,8 @@ mod tests {
         )
         .expect("Fix: write claimed-speedup CUDA benchmark artifact JSON.");
 
-        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -751,7 +758,8 @@ mod tests {
         )
         .expect("Fix: write CPU-SOTA integrity benchmark artifact JSON.");
 
-        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -841,7 +849,8 @@ mod tests {
                 .iter()
                 .map(|(artifact, _)| artifact.to_string())
                 .collect::<Vec<_>>(),
-        );
+        )
+        .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -911,7 +920,8 @@ mod tests {
         )
         .expect("Fix: write blank provenance CUDA benchmark artifact JSON.");
 
-        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -993,7 +1003,8 @@ mod tests {
         )
         .expect("Fix: write stale source-tree CUDA benchmark artifact JSON.");
 
-        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -1073,7 +1084,8 @@ mod tests {
                 .iter()
                 .map(|(artifact, _, _)| artifact.to_string())
                 .collect::<Vec<_>>(),
-        );
+        )
+        .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -1144,7 +1156,8 @@ mod tests {
         write_cpu_100x_proof(
             dir.path(),
             &[artifact_rel.to_string(), artifact_rel.to_string()],
-        );
+        )
+        .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()
@@ -1187,7 +1200,8 @@ mod tests {
         let external_artifact = dir.path().join("external-cuda-source.json");
         fs::write(&external_artifact, "{}").expect("Fix: write external CUDA benchmark artifact.");
 
-        write_cpu_100x_proof(dir.path(), &[external_artifact.display().to_string()]);
+        write_cpu_100x_proof(dir.path(), &[external_artifact.display().to_string()])
+            .expect("Fix: write the CPU 100x proof artifact.");
 
         let proof_path = dir
             .path()

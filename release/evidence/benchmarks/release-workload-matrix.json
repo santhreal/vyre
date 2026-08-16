@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:1fc55bcd8907d6bcd49cd65ee44c86032b62f7c5:dirty=true:worktree=4970123c19e575aa58bbce3dedcbe697ba603a39aa4e45f28fefb2226025de00",
+  "source_fingerprint": "git:1ea2d8a1750f3c84630c26fe559e74afc50f8672:dirty=true:worktree=c41a612ba9d6932606df2e73cc15f037ecb5cfe873417d2bbfd476c122494159",
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -80,7 +80,7 @@
         "runtime.megakernel.condition.64k"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-01-condition-eval.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.condition_eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-01-condition-eval.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.condition_eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-01-condition-eval.json",
       "bench_target_ids": [
         "release.workload.condition_eval"
       ],
@@ -134,7 +134,7 @@
         "release.string_bitmap_scatter.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.string_bitmap_scatter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.string_bitmap_scatter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
       "bench_target_ids": [
         "release.workload.string_bitmap_scatter"
       ],
@@ -170,7 +170,7 @@
         "release.offset_count_aggregation.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.offset_count_aggregation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.offset_count_aggregation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
       "bench_target_ids": [
         "release.workload.offset_count_aggregation"
       ],
@@ -206,7 +206,7 @@
         "metadata.condition.filesize_header.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-04-metadata-conditions.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case metadata.condition.filesize_header.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-04-metadata-conditions.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case metadata.condition.filesize_header.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-04-metadata-conditions.json",
       "bench_target_ids": [
         "release.workload.pe_metadata"
       ],
@@ -240,7 +240,7 @@
         "release.entropy_window.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-05-entropy-window.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.entropy_window.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-05-entropy-window.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.entropy_window.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-05-entropy-window.json",
       "bench_target_ids": [
         "release.workload.entropy_window"
       ],
@@ -276,7 +276,7 @@
         "release.quantified_condition_loops.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.quantified_condition_loops.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.quantified_condition_loops.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
       "bench_target_ids": [
         "release.workload.for_any_all_n"
       ],
@@ -312,7 +312,7 @@
         "release.alias_reaching_def.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.alias_reaching_def.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-07-alias-reaching-def.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.alias_reaching_def.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-07-alias-reaching-def.json",
       "bench_target_ids": [
         "release.workload.alias_reaching_def"
       ],
@@ -352,7 +352,7 @@
         "release.ifds_witness.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-08-ifds-witness.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.ifds_witness.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.ifds_witness.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
       "bench_target_ids": [
         "release.workload.ifds_witness"
       ],
@@ -388,7 +388,7 @@
         "release.ast_motif_traversal.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.ast_motif_traversal.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.ast_motif_traversal.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
       "bench_target_ids": [
         "release.workload.ast_motif_traversal"
       ],
@@ -426,7 +426,7 @@
         "runtime.megakernel.truth.1024"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.megakernel_queue.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.megakernel_queue.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
       "bench_target_ids": [
         "release.workload.megakernel_stream"
       ],
@@ -465,7 +465,7 @@
         "foundation.optimizer.impact"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case foundation.optimizer.impact --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case foundation.optimizer.impact --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
       "bench_target_ids": [
         "release.optimization.foundation_optimizer_impact"
       ],
@@ -493,7 +493,7 @@
         "sparse.compaction.count.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case sparse.compaction.count.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case sparse.compaction.count.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
       "bench_target_ids": [
         "release.workload.conformance_sparse_readback"
       ],
@@ -531,7 +531,7 @@
         "primitives.graph.csr_skewed_queue_closure.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case callgraph.reachability.step.262k --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-13-callgraph-reachability.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case callgraph.reachability.step.262k --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-13-callgraph-reachability.json",
       "bench_target_ids": [
         "release.workload.callgraph_reachability"
       ],
@@ -568,7 +568,7 @@
         "dataflow.ifds.skewed.queue_step.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case compound.pipeline.fused_filter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-14-compound-fused-filter.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case compound.pipeline.fused_filter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-14-compound-fused-filter.json",
       "bench_target_ids": [
         "release.workload.compound_fused_filter"
       ],
@@ -603,7 +603,7 @@
         "runtime.adaptive_routing.gpu_resident.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-15-adaptive-routing.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case runtime.adaptive_routing.gpu_resident.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-15-adaptive-routing.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case runtime.adaptive_routing.gpu_resident.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-15-adaptive-routing.json",
       "bench_target_ids": [
         "release.workload.adaptive_routing"
       ],
@@ -639,7 +639,7 @@
         "nn.linear_4bit_affine_grouped.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-16-quantized-linear.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case nn.linear_4bit_affine_grouped.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-16-quantized-linear.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case nn.linear_4bit_affine_grouped.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-16-quantized-linear.json",
       "bench_target_ids": [
         "release.workload.quantized_linear"
       ],
@@ -675,7 +675,7 @@
         "release.egraph_saturation.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-17-egraph-saturation.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.egraph_saturation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-17-egraph-saturation.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.egraph_saturation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-17-egraph-saturation.json",
       "bench_target_ids": [
         "release.workload.egraph_saturation"
       ],

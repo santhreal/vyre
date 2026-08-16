@@ -13,7 +13,6 @@ use xtask::hash::sha256_hex;
 use crate::bench::benchmark_evidence_semantics::SCAN_THROUGHPUT_METRICS;
 
 use super::artifact_metrics::{first_metric_p50, read_text_bounded};
-use super::metrics::write_json;
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 use super::suite_inspect::backend_suite_output_path;
 
@@ -244,7 +243,7 @@ fn validate_frontier_baseline_catalog(
     }
 }
 
-pub(super) fn write_frontier_leaderboard(workspace_root: &Path) {
+pub(super) fn write_frontier_leaderboard(workspace_root: &Path) -> Result<(), String> {
     let baseline_catalog = baseline_catalog();
     let source_suite = backend_suite_output_path("cuda");
     let suite_path = workspace_root.join(&source_suite);
@@ -368,10 +367,10 @@ pub(super) fn write_frontier_leaderboard(workspace_root: &Path) {
         rows,
         blockers,
     };
-    write_json(
+    xtask::json_document::write(
         &workspace_root.join(FRONTIER_LEADERBOARD_ARTIFACT),
         &evidence,
-    );
+    )
 }
 
 pub(crate) fn frontier_leaderboard_required_artifact_fields() -> Vec<&'static str> {

@@ -1,3 +1,5 @@
+use vyre_bench::probes::environment::build_profile;
+
 use crate::api::suite::SuiteKind;
 use crate::report::json::ReportSchema;
 use crate::runner::{execute_suite, RunConfig};
@@ -7,6 +9,7 @@ pub(super) fn execute_run_matrix(
     suite: &SuiteKind,
     config: &RunConfig,
 ) -> anyhow::Result<Vec<ReportSchema>> {
+    refuse_unoptimized_release_measurement(suite)?;
     match suite {
         SuiteKind::CrossBackend if config.backend_id.is_none() => {
             let mut reports = Vec::new();
@@ -28,6 +31,24 @@ pub(super) fn execute_run_matrix(
         }
         _ => Ok(vec![execute_suite(registry, suite, config)]),
     }
+}
+
+/// Refuse to measure the release suite with a build that carries debug checks.
+///
+/// The release suite is the one whose numbers are published, and an unoptimized
+/// harness inflates every speedup it reports: the CPU baseline runs the scan
+/// without optimization while device time is set by the device. A run that cannot
+/// be published must not produce a document that looks publishable, so it fails
+/// here rather than writing one.
+fn refuse_unoptimized_release_measurement(suite: &SuiteKind) -> anyhow::Result<()> {
+    if matches!(suite, SuiteKind::Release) && build_profile() != "release" {
+        anyhow::bail!(
+            "the release suite measures published numbers and this harness is a {} build. Fix: \
+             rerun with `--release`.",
+            build_profile()
+        );
+    }
+    Ok(())
 }
 
 fn dispatch_backend_ids() -> anyhow::Result<Vec<&'static str>> {
@@ -84,4 +105,47 @@ fn sanitize_path_component(value: &str) -> String {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The release suite is refused unless the harness is optimized, and every
+    /// other suite is unaffected.
+    ///
+    /// The generator that writes `release/evidence/benchmarks` spawned this
+    /// harness without `--release`, so it published a CPU baseline that was
+    /// mostly missing optimization. One assertion per branch: the refusal fires
+    /// exactly when the profile is not `release`, and never for another suite.
+    #[test]
+    fn only_an_optimized_build_may_measure_the_release_suite() {
+        let release = refuse_unoptimized_release_measurement(&SuiteKind::Release);
+        if build_profile() == "release" {
+            assert!(
+                release.is_ok(),
+                "Fix: an optimized build must be allowed to measure the release suite."
+            );
+        } else {
+            let error = release.expect_err(
+                "Fix: a debug build must be refused before it writes release evidence.",
+            );
+            assert!(
+                error.to_string().contains("--release"),
+                "Fix: the refusal must name the flag that repairs it, got `{error}`."
+            );
+        }
+        for suite in [
+            SuiteKind::Smoke,
+            SuiteKind::Deep,
+            SuiteKind::Gpu,
+            SuiteKind::Sweep,
+        ] {
+            assert!(
+                refuse_unoptimized_release_measurement(&suite).is_ok(),
+                "Fix: only the release suite publishes numbers; `{suite:?}` must run under any \
+                 profile."
+            );
+        }
+    }
 }

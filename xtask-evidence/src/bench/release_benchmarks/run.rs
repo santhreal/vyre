@@ -1,10 +1,11 @@
+#[cfg(test)]
 use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
-use super::args::{parse_args, Config};
+use super::args::{parse_args, Config, Parsed, USAGE};
 use super::cpu_sota_proof::write_cpu_100x_proof;
 use super::evidence_schema::{
     BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
@@ -14,7 +15,8 @@ use super::artifact_metrics::read_text_bounded;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
 use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES};
 use super::runner::{
-    benchmark_artifact_is_reusable, copy_artifact, run_command, run_named_benchmark_if_needed,
+    benchmark_artifact_is_reusable, copy_artifact, run_command_status,
+    run_named_benchmark_if_needed,
 };
 use super::suite_inspect::{
     backend_suite_output_path, prefixed_benchmark_artifact, run_workload_benchmark,
@@ -42,7 +44,13 @@ impl Gate for ReleaseBenchmarksGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let config = match parse_args(&ctx.args) {
-            Ok(config) => config,
+            Ok(Parsed::Run(config)) => config,
+            Ok(Parsed::Usage) => {
+                for line in USAGE {
+                    report.note(*line);
+                }
+                return Ok(report);
+            }
             Err(message) => {
                 report.find(Finding::new(message, "Correct the flags and rerun."));
                 return Ok(report);
@@ -149,32 +157,14 @@ fn read_matrix(workspace_root: &Path, report: &mut Report) -> Option<ReleaseWork
 /// child truncates the report the parent reads off stdout. They are findings.
 fn measure(root: &Path, config: &Config, report: &mut Report) {
     let workspace_root = root.to_path_buf();
-    let matrix_path = workspace_root.join(MATRIX_ARTIFACT);
-    if let Some(parent) = matrix_path.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            report.find(Finding::new(
-                format!("failed to create `{}`: {error}", parent.display()),
-                "Check the permissions on the evidence directory.",
-            ));
-            return;
-        }
+    let matrix_findings = crate::release::release_workload_matrix::regenerate(&workspace_root);
+    let matrix_written = matrix_findings.is_empty();
+    for finding in matrix_findings {
+        report.find(finding);
     }
-    run_command(
-        &workspace_root,
-        &[
-            "run",
-            "-p",
-            "vyre-bench",
-            "--quiet",
-            "--",
-            "release-matrix",
-            "--format",
-            "json",
-            "--output",
-            MATRIX_ARTIFACT,
-            "--enforce",
-        ],
-    );
+    if !matrix_written {
+        return;
+    }
     let Some(matrix) = read_matrix(&workspace_root, report) else {
         return;
     };
@@ -236,16 +226,17 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
             && config.backend == "cuda"
             && family.id == "megakernel-queued-batches"
         {
-            copy_artifact(
-                &workspace_root,
-                &evidence_artifact,
+            for target in [
                 "release/evidence/benchmarks/megakernel-condition-cuda.json",
-            );
-            copy_artifact(
-                &workspace_root,
-                &evidence_artifact,
                 "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
-            );
+                "release/evidence/benchmarks/megakernel-latency-cuda.json",
+            ] {
+                recorded(
+                    report,
+                    &format!("copying `{evidence_artifact}` to `{target}`"),
+                    copy_artifact(&workspace_root, &evidence_artifact, target),
+                );
+            }
         }
         if cpu_100x_family {
             cpu_100x_artifacts.push(evidence_artifact.clone());
@@ -253,23 +244,16 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
         if !config.refresh_suites_only
             && workload_ok
             && config.backend == "cuda"
-            && family.id == "megakernel-queued-batches"
-        {
-            copy_artifact(
-                &workspace_root,
-                &evidence_artifact,
-                "release/evidence/benchmarks/megakernel-latency-cuda.json",
-            );
-        }
-        if !config.refresh_suites_only
-            && workload_ok
-            && config.backend == "cuda"
             && family.id == "alias-reaching-def"
         {
-            copy_artifact(
-                &workspace_root,
-                &evidence_artifact,
-                "release/evidence/benchmarks/dataflow-analysis-release.json",
+            recorded(
+                report,
+                &format!("copying `{evidence_artifact}` to the dataflow release artifact"),
+                copy_artifact(
+                    &workspace_root,
+                    &evidence_artifact,
+                    "release/evidence/benchmarks/dataflow-analysis-release.json",
+                ),
             );
         }
         suite_artifacts.push(BackendSuiteArtifactInput {
@@ -332,49 +316,68 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
                 cpu_sota_100x_required: false,
             });
         }
-        write_backend_suite_with_extra_blockers(
-            &workspace_root,
-            "wgpu",
-            wgpu_artifacts,
-            wgpu_suite_failures,
+        recorded(
+            report,
+            "writing the wgpu comparison suite evidence",
+            write_backend_suite_with_extra_blockers(
+                &workspace_root,
+                "wgpu",
+                wgpu_artifacts,
+                wgpu_suite_failures,
+            ),
         );
     }
     let wrote_optimization_manifest =
         should_write_optimization_manifest(config, workload_failures.is_empty());
     if wrote_optimization_manifest {
         if !config.refresh_suites_only {
-            run_named_benchmark_if_needed(
-                &workspace_root,
-                "foundation.optimizer.impact",
-                &config.backend,
-                "release/evidence/optimization/optimizer-impact-cuda.json",
-                config.measured_samples,
-                config.sample_timeout_secs,
-                config.reuse_existing,
-            );
-            run_named_benchmark_if_needed(
-                &workspace_root,
-                "cuda.ptx.patterns.release.corpus",
-                &config.backend,
-                "release/evidence/benchmarks/cuda-ptx-patterns.json",
-                config.measured_samples,
-                config.sample_timeout_secs,
-                config.reuse_existing,
-            );
+            for (case_id, artifact) in [
+                (
+                    "foundation.optimizer.impact",
+                    "release/evidence/optimization/optimizer-impact-cuda.json",
+                ),
+                (
+                    "cuda.ptx.patterns.release.corpus",
+                    "release/evidence/benchmarks/cuda-ptx-patterns.json",
+                ),
+            ] {
+                recorded(
+                    report,
+                    &format!("measuring `{case_id}` into `{artifact}`"),
+                    run_named_benchmark_if_needed(
+                        &workspace_root,
+                        case_id,
+                        &config.backend,
+                        artifact,
+                        config.measured_samples,
+                        config.sample_timeout_secs,
+                        config.reuse_existing,
+                    ),
+                );
+            }
         }
-        run_command(
-            &workspace_root,
-            &[
-                "run",
-                "--bin",
-                "xtask",
-                "--quiet",
-                "--",
-                "optimization-matrix",
-                "--write",
-            ],
+        recorded(
+            report,
+            "writing the optimization matrix",
+            run_command_status(
+                &workspace_root,
+                &[
+                    "run",
+                    "--release",
+                    "--bin",
+                    "xtask",
+                    "--quiet",
+                    "--",
+                    "optimization-matrix",
+                    "--write",
+                ],
+            ),
         );
-        write_optimization_benchmark_manifest(&workspace_root, &config.backend);
+        recorded(
+            report,
+            "writing the optimization benchmark manifest",
+            write_optimization_benchmark_manifest(&workspace_root, &config.backend),
+        );
     }
     if ran == 0 {
         report.find(Finding::new(
@@ -383,17 +386,33 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
         ));
     }
     if config.backend == "cuda" {
-        write_cpu_100x_proof(&workspace_root, &cpu_100x_artifacts);
+        recorded(
+            report,
+            "writing the CPU 100x proof",
+            write_cpu_100x_proof(&workspace_root, &cpu_100x_artifacts),
+        );
     }
-    write_backend_suite_with_extra_blockers(
-        &workspace_root,
-        &config.backend,
-        suite_artifacts,
-        primary_suite_failures,
+    recorded(
+        report,
+        &format!("writing the `{}` suite evidence", config.backend),
+        write_backend_suite_with_extra_blockers(
+            &workspace_root,
+            &config.backend,
+            suite_artifacts,
+            primary_suite_failures,
+        ),
     );
     if config.backend == "cuda" {
-        write_frontier_leaderboard(&workspace_root);
-        write_release_axes(&workspace_root);
+        recorded(
+            report,
+            "writing the frontier leaderboard",
+            write_frontier_leaderboard(&workspace_root),
+        );
+        recorded(
+            report,
+            "writing the release axes evidence",
+            write_release_axes(&workspace_root),
+        );
     }
     let generated_evidence_paths = generated_release_benchmark_evidence_paths(
         &config.backend,
@@ -422,6 +441,26 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
     } else {
         format!("wrote {ran} benchmark artifact(s)")
     });
+}
+
+/// Record one generator step's failure as a finding, and say whether it ran.
+///
+/// The steps below write evidence in a child process or on disk, and each of
+/// them used to end the process on failure. A gate that exits has printed no
+/// report, so the parent of a delegated gate sees an empty stdout and reports a
+/// protocol error instead of the write that failed.
+fn recorded(report: &mut Report, step: &str, outcome: Result<(), String>) -> bool {
+    match outcome {
+        Ok(()) => true,
+        Err(error) => {
+            report.find(Finding::new(
+                format!("{step} failed: {error}"),
+                "Fix what the step reported and rerun `release-benchmarks --write` on a release \
+                 host.",
+            ));
+            false
+        }
+    }
 }
 
 fn should_write_optimization_manifest(config: &Config, workload_failures_empty: bool) -> bool {
