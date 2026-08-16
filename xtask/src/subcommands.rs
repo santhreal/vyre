@@ -199,7 +199,7 @@ static DELEGATED: &[Delegated] = &[
     },
     Delegated {
         name: "bench-crossback",
-        help: "Measure the registered cross-backend workloads and hold the recorded table to them; --write records it, --program NAME narrows to one workload",
+        help: "Derive the cross-backend comparison from the committed release benchmark evidence and hold the recorded table to it; --write records it",
         package: "xtask-evidence",
         generates: true,
     },

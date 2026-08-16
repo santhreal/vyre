@@ -1,39 +1,68 @@
-//! Hold the cross-backend comparison tables to their pinned shape.
+//! Project the committed release benchmark evidence into one cross-backend table.
 //!
-//! The table records CPU-reference oracle timing only. GPU release performance
-//! evidence comes from the dedicated CUDA and WGPU benchmark suites, never from
-//! fabricated cross-backend numbers.
+//! The comparison is derived, never measured here. Every millisecond in the
+//! table is a wall-clock reading a release benchmark suite already recorded
+//! under `release/evidence/benchmarks/`, carried with the commit, source-tree
+//! fingerprint and device signature it was taken under. So the gate regenerates
+//! the table from that evidence and compares it byte for byte: two runs over the
+//! same committed artifacts render the same table, and a divergence is a stale
+//! table rather than the clock.
 //!
-//! Timing is measured, so the committed number is not regenerated and compared:
-//! two runs of the same tree disagree in the third decimal and every run would
-//! report a divergence that is only the clock. What is regenerated and compared
-//! is everything the tree determines. The banner, the column header, the row
-//! set and the program names must match byte for byte, and each row must carry
-//! a parseable positive millisecond value. `--write` re-measures and records
-//! the table.
+//! This replaces a harness that timed an XOR loop inside this crate, recorded
+//! `n/a` in every backend column, and wrote the file under `docs/perf/`, which
+//! `.gitignore` excluded. A fresh checkout was red, one local `--write` turned
+//! it green, and no reviewer could read the number. A table that carries no
+//! measured backend row, and a measurement that arrives without provenance, are
+//! findings now, and the table is committed evidence like every other artifact
+//! a reviewer is expected to read.
 
-use std::path::PathBuf;
-use std::time::Instant;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
 
+use serde_json::Value;
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use xtask::output_arg::read_text_bounded;
 
-/// Every program the harness knows, with the byte count it runs over.
-const PROGRAMS: &[(&str, usize)] = &[("xor-1k", 1024), ("xor-1m", 1024 * 1024)];
+/// The committed release benchmark evidence, and the table derived from it.
+const EVIDENCE_DIR: &str = "release/evidence/benchmarks";
+const TABLE: &str = "release/evidence/benchmarks/cross-backend-comparison.md";
 
-/// A table is small. Anything larger than this is not one of ours.
+/// Only the per-case result artifacts carry a backend measurement. The suite
+/// aggregates and the multi-device artifacts in the same directory carry other
+/// schemas, and are read by their own gates.
+const RESULT_SCHEMA: &str = "vyre-bench.result.v1";
+
+/// A result artifact is a few hundred kilobytes of percentile tables.
+const MAX_ARTIFACT_BYTES: u64 = 8_388_608;
+
+/// The rendered table is small. Anything larger than this is not one of ours.
 const MAX_TABLE_BYTES: u64 = 262_144;
 
-/// Iterations each timing is amortised over, to reduce clock jitter.
-const TIMING_ITERATIONS: usize = 100;
+/// Fingerprints are printed to a fixed width so the table stays legible. The
+/// full value stays in the artifact the row cites.
+const FINGERPRINT_WIDTH: usize = 12;
 
 const BANNER: &str = "# cross-backend comparison\n\n\
-    Produced by `./cargo_full run --bin xtask -- bench-crossback`. ms values are CPU-reference\n\
-    oracle wall-clock per call. GPU release evidence comes from the dedicated\n\
-    CUDA and WGPU benchmark suites.\n\n";
+    Produced by `./cargo_full run --bin xtask -- bench-crossback --write`. Every row is a\n\
+    wall-clock reading a release benchmark suite recorded under\n\
+    `release/evidence/benchmarks/`, with the commit, source-tree fingerprint and\n\
+    device signature it was taken under. `ratio` is the case wall time over the\n\
+    fastest backend measured for that case.\n\n";
 
-const COLUMNS: &str = "| program | wgpu | spirv | secondary_text | native_module | cpu-ref |\n\
-    |---------|------|-------|----------------|---------------|---------|\n";
+const MEASURED_COLUMNS: &str =
+    "| case | backend | ms | ratio | commit | source tree | device | artifact |\n\
+    |------|---------|----|-------|--------|-------------|--------|----------|\n";
+
+const GAP_HEADING: &str = "\n## declared without a measurement\n\n";
+
+const GAP_COLUMNS: &str = "| case | backend | declared by |\n\
+    |------|---------|-------------|\n";
+
+const NO_GAPS: &str = "Every backend a case contract declares carries a measurement.\n";
+
+const REGENERATE: &str = "Run `./cargo_full run --bin xtask -- bench-crossback --write` and commit \
+                          the table. It is derived from the committed evidence, so the two agree \
+                          or one of them is stale.";
 
 pub(crate) struct BenchCrossbackGate;
 
@@ -43,8 +72,8 @@ impl Gate for BenchCrossbackGate {
     }
 
     fn help(&self) -> &'static str {
-        "Check every committed cross-backend comparison table against the program list, and \
-         re-measure it under --write. `--program NAME` narrows to one program."
+        "Derive the cross-backend comparison table from the committed release benchmark evidence \
+         and hold the recorded table to it; --write records it"
     }
 
     fn generates(&self) -> bool {
@@ -53,329 +82,545 @@ impl Gate for BenchCrossbackGate {
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
-        let selected = match select_programs(ctx) {
-            Ok(selected) => selected,
-            Err(finding) => {
-                report.find(finding);
-                return Ok(report);
-            }
-        };
-        if std::env::var("VYRE_BENCH_GPU").ok().as_deref() == Some("1") {
-            report.find(Finding::new(
-                "VYRE_BENCH_GPU=1 is set, and this gate has no measured GPU path to answer it \
-                 with",
-                "Unset VYRE_BENCH_GPU and run the release CUDA or WGPU benchmark suite for GPU \
-                 evidence. This table records CPU-reference timing only.",
+        let cases = collect(&ctx.root, &mut report)?;
+        let measured: usize = cases.values().map(|case| case.measured.len()).sum();
+        if measured == 0 {
+            report.find(Finding::in_file(
+                PathBuf::from(EVIDENCE_DIR),
+                format!(
+                    "the committed benchmark evidence carries no measured backend row, so there \
+                     is no cross-backend comparison to record ({} artifact(s) read as \
+                     `{RESULT_SCHEMA}`)",
+                    cases.len()
+                ),
+                "Run a release benchmark suite on hardware and commit its result artifact. A \
+                 comparison table with no measurement in it records nothing.",
             ));
+            return Ok(report);
         }
-        for (name, size) in selected {
-            let relative = table_path(name);
-            let absolute = ctx.root.join(&relative);
-            if ctx.write {
-                let table = render_table(&[measure(name, *size)]);
-                xtask::output_arg::create_parent_dir(&absolute);
-                std::fs::write(&absolute, &table).map_err(|error| {
-                    GateError::new(
-                        format!("failed to write `{}`: {error}", absolute.display()),
-                        "Check that the docs/perf directory is writable.",
-                    )
-                })?;
-                report.note(format!("wrote {relative}"));
-                continue;
-            }
-            audit_table(&relative, &absolute, name, &mut report);
+
+        let rendered = render(&cases);
+        let absolute = ctx.root.join(TABLE);
+        if ctx.write {
+            xtask::output_arg::create_parent_dir(&absolute);
+            std::fs::write(&absolute, &rendered).map_err(|error| {
+                GateError::new(
+                    format!("failed to write `{}`: {error}", absolute.display()),
+                    "Check that the release/evidence/benchmarks directory is writable.",
+                )
+            })?;
+            report.note(format!("wrote {TABLE}"));
+        } else {
+            audit_table(&absolute, &rendered, &mut report);
+        }
+
+        let backends: BTreeSet<&str> = cases
+            .values()
+            .flat_map(|case| case.measured.keys().map(String::as_str))
+            .collect();
+        report.note(format!(
+            "{measured} measurement(s) across {} case(s) and {} backend(s)",
+            cases.len(),
+            backends.len()
+        ));
+        let gaps = gaps(&cases);
+        if !gaps.is_empty() {
+            report.note(format!(
+                "{} case-backend pair(s) declared without a measurement, recorded in the table",
+                gaps.len()
+            ));
         }
         Ok(report)
     }
 }
 
-/// The programs this invocation covers, or the finding that names the mistake.
+/// One backend's reading of one case, with the provenance it was taken under.
+struct Measurement {
+    wall_ns: f64,
+    commit: String,
+    source_tree: String,
+    device: String,
+    artifact: String,
+}
+
+/// One case, the backends its own contract declares, and what was measured.
+#[derive(Default)]
+struct Case {
+    declared: BTreeMap<String, String>,
+    measured: BTreeMap<String, Measurement>,
+}
+
+/// Read every result artifact in the committed evidence directory.
 ///
-/// An unknown `--program` used to exit 1 with a message on stderr. It is a
-/// finding now, so the sweep counts it like every other one.
-fn select_programs(ctx: &GateCtx) -> Result<Vec<&'static (&'static str, usize)>, Finding> {
-    let Some(requested) = ctx.flag("--program") else {
-        return Ok(PROGRAMS.iter().collect());
-    };
-    let matched: Vec<_> = PROGRAMS
-        .iter()
-        .filter(|(name, _)| *name == requested)
+/// A measurement missing its wall-clock reading, its commit, its source-tree
+/// fingerprint or its device signature is a finding against the artifact that
+/// carries it. An unprovenanced number is not evidence, and the table must not
+/// launder one into a comparison.
+fn collect(root: &Path, report: &mut Report) -> Result<BTreeMap<String, Case>, GateError> {
+    let directory = root.join(EVIDENCE_DIR);
+    let mut artifacts: Vec<PathBuf> = std::fs::read_dir(&directory)
+        .map_err(|error| {
+            GateError::new(
+                format!("failed to read `{EVIDENCE_DIR}`: {error}"),
+                "The committed release benchmark evidence is the input to this gate. Run it from \
+                 the workspace root.",
+            )
+        })?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|extension| extension == "json"))
         .collect();
-    if matched.is_empty() {
-        let known: Vec<&str> = PROGRAMS.iter().map(|(name, _)| *name).collect();
-        return Err(Finding::new(
-            format!("`--program {requested}` names no known program"),
-            format!(
-                "Pass one of: {}. Omit --program to cover every one.",
-                known.join(", ")
-            ),
-        ));
+    artifacts.sort();
+
+    let mut cases: BTreeMap<String, Case> = BTreeMap::new();
+    for path in artifacts {
+        let relative = format!(
+            "{EVIDENCE_DIR}/{}",
+            path.file_name().unwrap_or_default().to_string_lossy()
+        );
+        let text = read_text_bounded(&path, MAX_ARTIFACT_BYTES, "benchmark result artifact")
+            .map_err(|error| {
+                GateError::new(
+                    format!("failed to read `{relative}`: {error}"),
+                    "The committed evidence has to be readable to be compared against.",
+                )
+            })?;
+        let document: Value = match serde_json::from_str(&text) {
+            Ok(document) => document,
+            Err(error) => {
+                report.find(Finding::in_file(
+                    PathBuf::from(&relative),
+                    format!("benchmark evidence artifact is not valid JSON: {error}"),
+                    "Regenerate the artifact from the suite that owns it.",
+                ));
+                continue;
+            }
+        };
+        if document.get("schema").and_then(Value::as_str) != Some(RESULT_SCHEMA) {
+            continue;
+        }
+        read_artifact(&relative, &document, &mut cases, report);
     }
-    Ok(matched)
+    Ok(cases)
 }
 
-fn table_path(program: &str) -> String {
-    format!("docs/perf/cross-backend-{program}.md")
+fn read_artifact(
+    relative: &str,
+    document: &Value,
+    cases: &mut BTreeMap<String, Case>,
+    report: &mut Report,
+) {
+    let commit = string_at(document, &["git", "commit"]);
+    let source_tree = string_at(document, &["source_tree_fingerprint"]);
+    let selected = string_at(document, &["selected_backend"]);
+    let Some(entries) = document.get("cases").and_then(Value::as_array) else {
+        report.find(Finding::in_file(
+            PathBuf::from(relative),
+            format!("artifact declares schema `{RESULT_SCHEMA}` and carries no cases array"),
+            "Regenerate the artifact from the suite that owns it.",
+        ));
+        return;
+    };
+    for entry in entries {
+        let Some(id) = entry.get("id").and_then(Value::as_str) else {
+            report.find(Finding::in_file(
+                PathBuf::from(relative),
+                "a recorded case carries no id, so no row can name it".to_string(),
+                "Regenerate the artifact from the suite that owns it.",
+            ));
+            continue;
+        };
+        let case = cases.entry(id.to_string()).or_default();
+        for backend in declared_backends(entry) {
+            case.declared.insert(backend, relative.to_string());
+        }
+        let backend = string_at(entry, &["backend_id"])
+            .or_else(|| selected.clone())
+            .unwrap_or_default();
+        let device = string_at(entry, &["device_signature"]);
+        let wall_ns = entry.get("wall_ns").and_then(Value::as_f64);
+        let missing = missing_provenance(&backend, wall_ns, &commit, &source_tree, &device);
+        if !missing.is_empty() {
+            report.find(Finding::in_file(
+                PathBuf::from(relative),
+                format!(
+                    "case `{id}` records a measurement without {}",
+                    missing.join(", ")
+                ),
+                "Regenerate the artifact from the suite that owns it. A number without the \
+                 commit, tree and device it was taken on cannot be compared against another \
+                 backend.",
+            ));
+            continue;
+        }
+        case.measured.insert(
+            backend,
+            Measurement {
+                wall_ns: wall_ns.unwrap_or_default(),
+                commit: commit.clone().unwrap_or_default(),
+                source_tree: source_tree.clone().unwrap_or_default(),
+                device: device.unwrap_or_default(),
+                artifact: relative.to_string(),
+            },
+        );
+    }
 }
 
-/// Read the committed table and hold every tree-determined part of it to shape.
-fn audit_table(relative: &str, absolute: &PathBuf, program: &str, report: &mut Report) {
+/// Which required parts of a measurement the artifact left out.
+fn missing_provenance(
+    backend: &str,
+    wall_ns: Option<f64>,
+    commit: &Option<String>,
+    source_tree: &Option<String>,
+    device: &Option<String>,
+) -> Vec<&'static str> {
+    let mut missing = Vec::new();
+    if backend.is_empty() {
+        missing.push("a backend");
+    }
+    match wall_ns {
+        Some(value) if value > 0.0 && value.is_finite() => {}
+        _ => missing.push("a positive wall-clock reading"),
+    }
+    if commit.is_none() {
+        missing.push("a commit");
+    }
+    if source_tree.is_none() {
+        missing.push("a source-tree fingerprint");
+    }
+    if device.is_none() {
+        missing.push("a device signature");
+    }
+    missing
+}
+
+/// The backends a case asserts its performance contract against.
+///
+/// The set is read from the case, so a workload added for a third backend is
+/// covered without anyone editing this gate.
+fn declared_backends(entry: &Value) -> Vec<String> {
+    entry
+        .get("contract")
+        .and_then(|contract| contract.get("baselines"))
+        .and_then(Value::as_array)
+        .map(|baselines| {
+            baselines
+                .iter()
+                .filter_map(|baseline| baseline.get("backend_ids"))
+                .filter_map(Value::as_array)
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// A non-empty string at a path of object keys.
+fn string_at(value: &Value, path: &[&str]) -> Option<String> {
+    let mut cursor = value;
+    for key in path {
+        cursor = cursor.get(key)?;
+    }
+    let text = cursor.as_str()?.trim();
+    (!text.is_empty()).then(|| text.to_string())
+}
+
+/// Every case-backend pair a contract declares and no artifact measured.
+fn gaps(cases: &BTreeMap<String, Case>) -> Vec<(&str, &str, &str)> {
+    let mut gaps = Vec::new();
+    for (id, case) in cases {
+        for (backend, artifact) in &case.declared {
+            if !case.measured.contains_key(backend) {
+                gaps.push((id.as_str(), backend.as_str(), artifact.as_str()));
+            }
+        }
+    }
+    gaps
+}
+
+fn short(fingerprint: &str) -> String {
+    match fingerprint.rsplit_once(':') {
+        Some((prefix, hex)) => {
+            let width = hex.len().min(FINGERPRINT_WIDTH);
+            format!("{prefix}:{}", &hex[..width])
+        }
+        None => fingerprint
+            .chars()
+            .take(FINGERPRINT_WIDTH)
+            .collect::<String>(),
+    }
+}
+
+fn render(cases: &BTreeMap<String, Case>) -> String {
+    let mut out = String::with_capacity(BANNER.len() + MEASURED_COLUMNS.len() + cases.len() * 256);
+    out.push_str(BANNER);
+    out.push_str(MEASURED_COLUMNS);
+    for (id, case) in cases {
+        let fastest = case
+            .measured
+            .values()
+            .map(|measurement| measurement.wall_ns)
+            .fold(f64::INFINITY, f64::min);
+        for (backend, measurement) in &case.measured {
+            out.push_str(&format!(
+                "| `{id}` | {backend} | {:.3} | {:.3} | {} | {} | {} | `{}` |\n",
+                measurement.wall_ns / 1_000_000.0,
+                measurement.wall_ns / fastest,
+                short(&measurement.commit),
+                short(&measurement.source_tree),
+                short(&measurement.device),
+                measurement.artifact,
+            ));
+        }
+    }
+    out.push_str(GAP_HEADING);
+    let gaps = gaps(cases);
+    if gaps.is_empty() {
+        out.push_str(NO_GAPS);
+    } else {
+        out.push_str(GAP_COLUMNS);
+        for (id, backend, artifact) in gaps {
+            out.push_str(&format!("| `{id}` | {backend} | `{artifact}` |\n"));
+        }
+    }
+    out
+}
+
+/// Compare the committed table against the one the evidence renders.
+fn audit_table(absolute: &Path, rendered: &str, report: &mut Report) {
     let text = match read_text_bounded(absolute, MAX_TABLE_BYTES, "cross-backend table") {
         Ok(text) => text,
         Err(error) => {
             report.find(Finding::in_file(
-                PathBuf::from(relative),
-                format!("cross-backend table for `{program}` is missing or unreadable: {error}"),
-                "Run `cargo xtask bench-crossback --write` on a host you are willing to quote \
-                 timing from, and commit the table.",
+                PathBuf::from(TABLE),
+                format!("cross-backend comparison table is missing or unreadable: {error}"),
+                REGENERATE,
             ));
             return;
         }
     };
     let text = text.replace("\r\n", "\n");
-    let expected_prefix = format!("{BANNER}{COLUMNS}");
-    if !text.starts_with(&expected_prefix) {
-        report.find(Finding::in_file(
-            PathBuf::from(relative),
-            "cross-backend table does not open with the pinned banner and column header"
-                .to_string(),
-            "Run `cargo xtask bench-crossback --write` to rewrite it. The header is pinned so a \
-             diff between two runs shows a measurement change and nothing else.",
-        ));
+    if text == rendered {
         return;
     }
-    let rows: Vec<&str> = text[expected_prefix.len()..]
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .collect();
-    if rows.len() != 1 {
-        report.find(Finding::in_file(
-            PathBuf::from(relative),
-            format!(
-                "cross-backend table for `{program}` holds {} rows, and one program records one \
-                 row",
-                rows.len()
-            ),
-            "Run `cargo xtask bench-crossback --write` to rewrite it.",
-        ));
-        return;
-    }
-    audit_row(relative, program, rows[0], report);
+    let line = first_divergence(&text, rendered);
+    report.find(Finding::at(
+        PathBuf::from(TABLE),
+        line,
+        format!(
+            "cross-backend comparison table diverges from the committed evidence at line {line}"
+        ),
+        REGENERATE,
+    ));
 }
 
-/// One row: the program it names, the four unmeasured cells and the timing.
-fn audit_row(relative: &str, program: &str, row: &str, report: &mut Report) {
-    let cells: Vec<&str> = row.split('|').map(str::trim).collect();
-    // A pipe-delimited row splits into an empty leading and trailing cell.
-    if cells.len() != 8 {
-        report.find(Finding::at(
-            PathBuf::from(relative),
-            row_line(),
-            format!(
-                "cross-backend row holds {} cells, and the pinned table has six",
-                cells.len().saturating_sub(2)
-            ),
-            "Run `cargo xtask bench-crossback --write` to rewrite it.",
-        ));
-        return;
-    }
-    let named = cells[1].trim_matches('`');
-    if named != program {
-        report.find(Finding::at(
-            PathBuf::from(relative),
-            row_line(),
-            format!("cross-backend table for `{program}` records a row for `{named}`"),
-            "Run `cargo xtask bench-crossback --write` to rewrite it. The file name and the row \
-             name the same program.",
-        ));
-    }
-    for (column, cell) in ["wgpu", "spirv", "secondary_text", "native_module"]
-        .iter()
-        .zip(&cells[2..6])
-    {
-        if *cell != "n/a" {
-            report.find(Finding::at(
-                PathBuf::from(relative),
-                row_line(),
-                format!(
-                    "cross-backend row records `{cell}` for column `{column}`, and this harness \
-                     measures no backend timing"
-                ),
-                "Delete the value. GPU timing comes from the release CUDA or WGPU benchmark \
-                 suite, and a number recorded here is a number nobody measured.",
-            ));
+/// The one-based line the recorded and rendered tables first disagree on.
+fn first_divergence(recorded: &str, rendered: &str) -> u32 {
+    let mut recorded = recorded.lines();
+    let mut rendered = rendered.lines();
+    let mut line = 1u32;
+    loop {
+        match (recorded.next(), rendered.next()) {
+            (None, None) => return line.saturating_sub(1).max(1),
+            (Some(left), Some(right)) if left == right => line += 1,
+            _ => return line,
         }
     }
-    match cells[6].parse::<f64>() {
-        Ok(value) if value > 0.0 && value.is_finite() => {
-            report.note(format!("{program} cpu-ref {value:.3} ms per call (recorded)"));
-        }
-        Ok(value) => report.find(Finding::at(
-            PathBuf::from(relative),
-            row_line(),
-            format!("cross-backend row records a cpu-ref of `{value}` ms"),
-            "Re-measure with `cargo xtask bench-crossback --write`. A run takes longer than zero \
-             and finishes.",
-        )),
-        Err(error) => report.find(Finding::at(
-            PathBuf::from(relative),
-            row_line(),
-            format!("cross-backend cpu-ref cell `{}` is not a number: {error}", cells[6]),
-            "Re-measure with `cargo xtask bench-crossback --write`.",
-        )),
-    }
-}
-
-/// The pinned table puts the single data row directly under the two header
-/// rows, which sit under the four-line banner and its blank separators.
-const fn row_line() -> u32 {
-    9
-}
-
-struct Row {
-    program: &'static str,
-    cpu_ref_ms: f64,
-}
-
-fn measure(program: &'static str, size: usize) -> Row {
-    Row {
-        program,
-        cpu_ref_ms: time_cpu_ref_xor(size),
-    }
-}
-
-fn render_table(rows: &[Row]) -> String {
-    let mut out = String::with_capacity(BANNER.len() + COLUMNS.len() + rows.len() * 64);
-    out.push_str(BANNER);
-    out.push_str(COLUMNS);
-    for row in rows {
-        out.push_str(&format!(
-            "| `{}` | n/a | n/a | n/a | n/a | {:.3} |\n",
-            row.program, row.cpu_ref_ms
-        ));
-    }
-    out
-}
-
-/// Reference XOR over bytes, in milliseconds per call.
-fn time_cpu_ref_xor(size: usize) -> f64 {
-    let input = vec![0u8; size];
-    let mut output = vec![0u8; size];
-    let start = Instant::now();
-    for _ in 0..TIMING_ITERATIONS {
-        for (target, source) in output.iter_mut().zip(&input) {
-            *target = source ^ 0xA5;
-        }
-    }
-    let elapsed = start.elapsed();
-    (elapsed.as_secs_f64() * 1000.0) / (TIMING_ITERATIONS as f64)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
-    fn ctx(args: &[&str]) -> GateCtx {
-        GateCtx::new(
-            std::path::PathBuf::from("."),
-            args.iter().map(|arg| (*arg).to_string()).collect(),
-        )
+    fn artifact(backend: &str, id: &str, wall_ns: f64, declared: &[&str]) -> Value {
+        json!({
+            "schema": RESULT_SCHEMA,
+            "selected_backend": backend,
+            "git": { "commit": format!("{backend}commit0000deadbeef") },
+            "source_tree_fingerprint": "source-tree-v1:aaaabbbbccccdddd",
+            "cases": [{
+                "id": id,
+                "backend_id": backend,
+                "device_signature": format!("device-profile-v1:{backend}0000111122"),
+                "wall_ns": wall_ns,
+                "contract": { "baselines": [{ "backend_ids": declared }] },
+            }],
+        })
     }
 
-    /// WHY: `--program` narrowing is the only caller input this gate takes, and
-    /// a typo used to exit 1 from inside a child process whose stdout is the
-    /// report protocol. It has to arrive as a finding.
-    #[test]
-    fn an_unknown_program_is_a_finding_and_names_the_known_ones() {
-        let error = select_programs(&ctx(&["--program", "xor-9k"])).unwrap_err();
-        assert!(error.message.contains("xor-9k"), "{}", error.message);
-        assert!(error.fix.contains("xor-1k"), "{}", error.fix);
-        assert!(error.fix.contains("xor-1m"), "{}", error.fix);
-    }
-
-    #[test]
-    fn no_program_flag_covers_every_program() {
-        let selected = select_programs(&ctx(&[])).unwrap();
-        assert_eq!(selected.len(), PROGRAMS.len());
-    }
-
-    #[test]
-    fn a_program_flag_narrows_to_one() {
-        let selected = select_programs(&ctx(&["--program", "xor-1m"])).unwrap();
-        assert_eq!(selected.len(), 1);
-        assert_eq!(selected[0].0, "xor-1m");
-    }
-
-    /// WHY: the gate compares the committed table against this renderer, so a
-    /// table this renderer produces must audit clean. Anything else means the
-    /// two halves disagree and every run reports a divergence that is nobody's
-    /// defect.
-    #[test]
-    fn a_freshly_rendered_table_audits_clean() {
-        let table = render_table(&[Row {
-            program: "xor-1k",
-            cpu_ref_ms: 0.125,
-        }]);
+    fn read(artifacts: &[(&str, Value)]) -> (BTreeMap<String, Case>, Report) {
+        let mut cases = BTreeMap::new();
         let mut report = Report::clean();
-        let prefix = format!("{BANNER}{COLUMNS}");
-        assert!(table.starts_with(&prefix), "{table}");
-        audit_row(
-            "docs/perf/cross-backend-xor-1k.md",
-            "xor-1k",
-            table[prefix.len()..].trim_end(),
-            &mut report,
-        );
-        assert_eq!(report.findings, Vec::new());
-    }
-
-    /// WHY: this is the assertion the old harness carried in prose and never
-    /// checked. A fabricated GPU number in a table that says it measures none
-    /// is the exact defect the module warns about.
-    #[test]
-    fn a_fabricated_backend_timing_is_a_finding() {
-        let mut report = Report::clean();
-        audit_row(
-            "docs/perf/cross-backend-xor-1k.md",
-            "xor-1k",
-            "| `xor-1k` | 0.400 | n/a | n/a | n/a | 0.125 |",
-            &mut report,
-        );
-        assert_eq!(report.findings.len(), 1);
-        assert!(
-            report.findings[0].message.contains("wgpu"),
-            "{}",
-            report.findings[0].message
-        );
-    }
-
-    #[test]
-    fn a_row_naming_another_program_is_a_finding() {
-        let mut report = Report::clean();
-        audit_row(
-            "docs/perf/cross-backend-xor-1k.md",
-            "xor-1k",
-            "| `xor-1m` | n/a | n/a | n/a | n/a | 0.125 |",
-            &mut report,
-        );
-        assert_eq!(report.findings.len(), 1);
-        assert!(
-            report.findings[0].message.contains("xor-1m"),
-            "{}",
-            report.findings[0].message
-        );
-    }
-
-    #[test]
-    fn an_unparseable_or_zero_timing_is_a_finding() {
-        for cell in ["", "0", "-1", "fast"] {
-            let mut report = Report::clean();
-            audit_row(
-                "docs/perf/cross-backend-xor-1k.md",
-                "xor-1k",
-                &format!("| `xor-1k` | n/a | n/a | n/a | n/a | {cell} |"),
-                &mut report,
-            );
-            assert_eq!(report.findings.len(), 1, "cell `{cell}` reported nothing");
+        for (name, document) in artifacts {
+            read_artifact(name, document, &mut cases, &mut report);
         }
+        (cases, report)
+    }
+
+    /// WHY: the whole point of the table is comparing two backends on one case.
+    /// The rows have to land under one case id whichever artifact carried them,
+    /// and the ratio column is the comparison, so it is 1 for the fastest.
+    #[test]
+    fn two_backends_measuring_one_case_render_one_comparison() {
+        let (cases, report) = read(&[
+            ("a.json", artifact("cuda", "case.one", 200_000.0, &["cuda", "wgpu"])),
+            ("b.json", artifact("wgpu", "case.one", 800_000.0, &["cuda", "wgpu"])),
+        ]);
+        assert_eq!(report.findings, Vec::new());
+        assert_eq!(cases.len(), 1);
+        let table = render(&cases);
+        assert!(table.contains("| `case.one` | cuda | 0.200 | 1.000 |"), "{table}");
+        assert!(table.contains("| `case.one` | wgpu | 0.800 | 4.000 |"), "{table}");
+        assert!(table.contains(NO_GAPS), "{table}");
+    }
+
+    /// WHY: this is the defect the gate shipped with. An empty evidence set, or
+    /// one that carries no measurement, rendered a table of placeholders and
+    /// reported nothing, so a fresh checkout went green on a file recording no
+    /// measurement at all.
+    #[test]
+    fn evidence_with_no_measurement_cannot_render_a_clean_table() {
+        let (cases, _) = read(&[]);
+        assert_eq!(cases.values().map(|case| case.measured.len()).sum::<usize>(), 0);
+        let mut named = artifact("cuda", "case.one", 200_000.0, &["cuda"]);
+        named["cases"][0]["wall_ns"] = json!(null);
+        let (cases, report) = read(&[("a.json", named)]);
+        assert_eq!(cases.values().map(|case| case.measured.len()).sum::<usize>(), 0);
+        assert_eq!(report.findings.len(), 1);
+    }
+
+    /// WHY: a number without the commit, tree and device it was taken on is not
+    /// evidence, and laundering one into a comparison table is how an
+    /// unreproducible measurement acquires authority. Every required part is
+    /// covered, not one representative, because the missing one is always the
+    /// one nobody tested.
+    #[test]
+    fn a_measurement_missing_any_provenance_field_is_a_finding() {
+        let removals: &[(&[&str], &str)] = &[
+            (&["git"], "commit"),
+            (&["source_tree_fingerprint"], "source-tree fingerprint"),
+        ];
+        for (path, expected) in removals {
+            let mut document = artifact("cuda", "case.one", 200_000.0, &["cuda"]);
+            document
+                .as_object_mut()
+                .expect("artifact is an object")
+                .remove(path[0]);
+            let (cases, report) = read(&[("a.json", document)]);
+            assert_eq!(report.findings.len(), 1, "removing {path:?} reported nothing");
+            assert!(
+                report.findings[0].message.contains(expected),
+                "{}",
+                report.findings[0].message
+            );
+            assert_eq!(cases["case.one"].measured.len(), 0);
+        }
+        for (field, expected) in [
+            ("device_signature", "device signature"),
+            ("wall_ns", "positive wall-clock reading"),
+            ("backend_id", "a backend"),
+        ] {
+            let mut document = artifact("cuda", "case.one", 200_000.0, &["cuda"]);
+            document["cases"][0]
+                .as_object_mut()
+                .expect("case is an object")
+                .remove(field);
+            if field == "backend_id" {
+                document
+                    .as_object_mut()
+                    .expect("artifact is an object")
+                    .remove("selected_backend");
+            }
+            let (_, report) = read(&[("a.json", document)]);
+            assert_eq!(report.findings.len(), 1, "removing {field} reported nothing");
+            assert!(
+                report.findings[0].message.contains(expected),
+                "{}",
+                report.findings[0].message
+            );
+        }
+    }
+
+    /// WHY: a zero or negative wall time is the shape a harness writes when it
+    /// measured nothing, and it used to pass as a number.
+    #[test]
+    fn a_non_positive_or_infinite_reading_is_not_a_measurement() {
+        for wall_ns in [0.0, -1.0, f64::INFINITY, f64::NAN] {
+            let (_, report) = read(&[("a.json", artifact("cuda", "case.one", wall_ns, &["cuda"]))]);
+            assert_eq!(report.findings.len(), 1, "wall_ns {wall_ns} reported nothing");
+        }
+    }
+
+    /// WHY: a backend a case contract declares and no suite measured is the
+    /// parity gap the release gate owns, and it has to be visible in the table
+    /// rather than dropping out of it. The declared set is read from the case,
+    /// so a case declaring a third backend fails the recorded table until
+    /// someone regenerates it.
+    #[test]
+    fn a_declared_backend_with_no_measurement_is_recorded_as_a_gap() {
+        let (cases, report) = read(&[(
+            "a.json",
+            artifact("cuda", "case.one", 200_000.0, &["cuda", "wgpu", "metal"]),
+        )]);
+        assert_eq!(report.findings, Vec::new());
+        assert_eq!(
+            gaps(&cases),
+            vec![("case.one", "metal", "a.json"), ("case.one", "wgpu", "a.json")]
+        );
+        let table = render(&cases);
+        assert!(table.contains("| `case.one` | metal | `a.json` |"), "{table}");
+        assert!(!table.contains(NO_GAPS), "{table}");
+    }
+
+    /// WHY: the gate compares a committed file against this renderer, so the
+    /// renderer's own output must audit clean or every run reports a divergence
+    /// that is nobody's defect. A single edited cell must report, and it must
+    /// name the line, because a table this wide is unreadable without one.
+    #[test]
+    fn a_rendered_table_audits_clean_and_one_edited_cell_does_not() {
+        let (cases, _) = read(&[
+            ("a.json", artifact("cuda", "case.one", 200_000.0, &["cuda", "wgpu"])),
+            ("b.json", artifact("wgpu", "case.one", 800_000.0, &["cuda", "wgpu"])),
+        ]);
+        let rendered = render(&cases);
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("cross-backend-comparison.md");
+        std::fs::write(&path, &rendered).expect("write table");
+        let mut report = Report::clean();
+        audit_table(&path, &rendered, &mut report);
+        assert_eq!(report.findings, Vec::new());
+
+        let tampered = rendered.replace("0.800", "0.001");
+        std::fs::write(&path, &tampered).expect("write tampered table");
+        let mut report = Report::clean();
+        audit_table(&path, &rendered, &mut report);
+        assert_eq!(report.findings.len(), 1);
+        assert_eq!(report.findings[0].line, Some(first_divergence(&tampered, &rendered)));
+    }
+
+    /// WHY: the previous table lived in a gitignored directory, so the absent
+    /// case was the normal case and the gate was red on every fresh checkout
+    /// until someone ran it locally. Absence has to report, and the fix text has
+    /// to name the command that ends it.
+    #[test]
+    fn an_absent_table_is_a_finding_that_names_the_regeneration_command() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let mut report = Report::clean();
+        audit_table(&directory.path().join("absent.md"), "table", &mut report);
+        assert_eq!(report.findings.len(), 1);
+        assert!(report.findings[0].fix.contains("bench-crossback --write"));
+    }
+
+    /// WHY: a fingerprint column exists to be compared by eye across rows, and
+    /// the prefix is what says which fingerprint it is. Truncating past the
+    /// prefix, or panicking on a short one, both defeat that.
+    #[test]
+    fn a_shortened_fingerprint_keeps_its_prefix_and_survives_a_short_value() {
+        assert_eq!(short("source-tree-v1:0123456789abcdef"), "source-tree-v1:0123456789ab");
+        assert_eq!(short("source-tree-v1:abc"), "source-tree-v1:abc");
+        assert_eq!(short("0123456789abcdef"), "0123456789ab");
+        assert_eq!(short(""), "");
     }
 }
