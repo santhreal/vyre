@@ -1,3 +1,4 @@
+use super::parity_matrix_entries::{FixtureCases, SyntheticOpaqueExpr, UnifiedEntry};
 use super::*;
 
 /// Op id of the callee the expr-variant bundle calls.

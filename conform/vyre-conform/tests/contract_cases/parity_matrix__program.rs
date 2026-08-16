@@ -1,9 +1,18 @@
 // Cross-backend parity matrix: registered backends, wire shapes, and buffer comparison.
 // `#![forbid(unsafe_code)]` lives on the parent `parity_matrix.rs` crate root.
 
+#[path = "parity_matrix__divergence.rs"]
+mod parity_matrix_divergence;
+#[path = "parity_matrix__entries.rs"]
+mod parity_matrix_entries;
+#[path = "parity_matrix__runner.rs"]
+mod parity_matrix_runner;
 #[path = "parity_matrix__synthetic_entries.rs"]
 mod parity_matrix_synthetic_entries;
 
+use parity_matrix_divergence::{Divergence, Summary};
+use parity_matrix_entries::unified_entries;
+use parity_matrix_runner::{backend_runners, BackendKind, BackendRunner};
 use parity_matrix_synthetic_entries::*;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -12,178 +21,13 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::Arc;
 
 use blake3::Hash;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform::dispatch_grid;
+use vyre_conform::witness_plan::WitnessInputPlan;
+use vyre_driver::DispatchConfig;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
-use vyre_conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
-use vyre_driver::backend_dispatches;
-use vyre_driver::{BackendRegistration, DispatchConfig};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
-use vyre_reference::value::Value;
 use vyre_spec::expr_variants;
-
-type FixtureCases = Vec<Vec<Vec<u8>>>;
-type FixtureFn = fn() -> FixtureCases;
-
-#[derive(Clone, Copy)]
-struct UnifiedEntry {
-    id: &'static str,
-    build: Option<fn() -> Program>,
-    test_inputs: Option<FixtureFn>,
-    expected_output: Option<FixtureFn>,
-}
-
-impl UnifiedEntry {
-    fn program(&self) -> Option<Program> {
-        self.build.map(|build| build().with_entry_op_id(self.id))
-    }
-}
-
-#[derive(Debug)]
-struct SyntheticOpaqueExpr;
-
-impl ExprNode for SyntheticOpaqueExpr {
-    fn extension_kind(&self) -> &'static str {
-        "vyre.conform.synthetic.opaque"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "synthetic-opaque-expr"
-    }
-
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-
-    fn cse_safe(&self) -> bool {
-        true
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0x5a; 32]
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn wire_payload(&self) -> Vec<u8> {
-        vec![0x5a]
-    }
-}
-
-#[derive(Debug)]
-struct Divergence {
-    op_id: &'static str,
-    backend_a: &'static str,
-    backend_b: &'static str,
-    input_hash: Hash,
-    output_a_hash: Hash,
-    output_b_hash: Hash,
-    detail: String,
-}
-
-#[derive(Default, Debug)]
-struct Summary {
-    ops_total: usize,
-    ops_covered: usize,
-    backends_linked: usize,
-    backends_runnable: usize,
-    divergences: Vec<Divergence>,
-}
-
-#[cfg_attr(not(feature = "gpu"), allow(dead_code))]
-enum BackendKind {
-    ReferenceBackend,
-    Registered(&'static BackendRegistration),
-}
-
-struct BackendRunner {
-    id: &'static str,
-    kind: BackendKind,
-}
-
-impl BackendRunner {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        values: &mut Vec<Value>,
-    ) -> Result<Vec<Vec<u8>>, String> {
-        match &self.kind {
-            BackendKind::ReferenceBackend => {
-                values.clear();
-                for bytes in inputs {
-                    values.push(Value::from(bytes.as_slice()));
-                }
-                vyre_reference::reference_eval(program, values)
-                    .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
-                    .map_err(|error| format!("reference dispatch failed: {error}"))
-            }
-            BackendKind::Registered(_) => {
-                let mut backend_inputs = Vec::new();
-                let config = dispatch_grid::config_for_program(program)?;
-                self.dispatch_with_plan(program, inputs, values, None, &mut backend_inputs, &config)
-            }
-        }
-    }
-
-    fn dispatch_with_plan<'a>(
-        &self,
-        program: &Program,
-        inputs: &'a [Vec<u8>],
-        values: &mut Vec<Value>,
-        plan: Option<&'a WitnessInputPlan>,
-        backend_inputs: &mut Vec<&'a [u8]>,
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, String> {
-        match &self.kind {
-            BackendKind::ReferenceBackend => {
-                values.clear();
-                if let Some(plan) = plan {
-                    plan_witness_inputs_into(inputs, plan, backend_inputs)?;
-                    for bytes in backend_inputs.iter() {
-                        values.push(Value::from(*bytes));
-                    }
-                } else {
-                    for bytes in inputs {
-                        values.push(Value::from(bytes.as_slice()));
-                    }
-                }
-                vyre_reference::reference_eval(program, values)
-                    .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
-                    .map_err(|error| format!("reference dispatch failed: {error}"))
-            }
-            BackendKind::Registered(registration) => {
-                let production =
-                    vyre_conform::production::ProductionSession::compile(program, registration)
-                        .map_err(|error| error.to_string())?;
-                let run_submission = |inputs: &[&[u8]]| {
-                    if let Some(grid) = config.grid_override {
-                        production.submit_with_invocation_grid(inputs, grid)
-                    } else {
-                        production.submit(inputs)
-                    }
-                    .map_err(|error| error.to_string())
-                };
-
-                if let Some(plan) = plan {
-                    plan_witness_inputs_into(inputs, plan, backend_inputs)?;
-                    run_submission(backend_inputs)
-                } else {
-                    let plan_storage = WitnessInputPlan::for_program(program)?;
-                    let mut local_inputs = Vec::new();
-                    plan_witness_inputs_into(inputs, &plan_storage, &mut local_inputs)?;
-                    run_submission(&local_inputs)
-                }
-            }
-        }
-    }
-}
 
 #[test]
 fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
@@ -455,60 +299,4 @@ fn parity_matrix_across_all_registered_ops() {
         "{}",
         format_divergences(&summary.divergences)
     );
-}
-
-fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
-    let selected = env::var("VYRE_BACKEND")
-        .ok()
-        .filter(|value| !value.trim().is_empty());
-    let mut registrations: Vec<&'static BackendRegistration> =
-        vyre_registry_link::backend::live_backend_registry()
-            .expect("valid backend registry")
-            .iter()
-            .collect();
-    registrations.retain(|registration| {
-        // Runner one already is the reference, so keeping the reference oracle
-        // here would compare it against itself for every op.
-        !registration.reference_oracle
-            && selected
-                .as_deref()
-                .is_none_or(|backend| registration.id == backend)
-    });
-    registrations.sort_by(|left, right| left.id.cmp(right.id));
-    summary.backends_linked = registrations.len() + 1;
-
-    let mut runners = vec![BackendRunner {
-        id: "reference",
-        kind: BackendKind::ReferenceBackend,
-    }];
-
-    for registration in registrations {
-        if let Some(runner) = build_backend_runner(registration) {
-            runners.push(runner);
-        }
-    }
-
-    summary.backends_runnable = runners.len();
-    runners
-}
-
-fn build_backend_runner(registration: &'static BackendRegistration) -> Option<BackendRunner> {
-    backend_dispatches(registration.id)
-        .expect("valid backend registry")
-        .then_some(BackendRunner {
-            id: registration.id,
-            kind: BackendKind::Registered(registration),
-        })
-}
-
-fn unified_entries() -> Vec<UnifiedEntry> {
-    let canonical = vyre_registry_link::operation::live_operation_registry()
-        .iter()
-        .map(|entry| UnifiedEntry {
-            id: entry.id,
-            build: entry.build,
-            test_inputs: entry.test_inputs,
-            expected_output: entry.expected_output,
-        });
-    canonical.chain(synthetic_entries()).collect()
 }
