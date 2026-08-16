@@ -32,6 +32,7 @@ This crate declares no Cargo features.
 | `test` | `device_only_routing` | `structure-gate/tests/device_only_routing.rs` | None | `./cargo_full test -p structure-gate --test device_only_routing` |
 | `test` | `materializer_admission` | `structure-gate/tests/materializer_admission.rs` | None | `./cargo_full test -p structure-gate --test materializer_admission` |
 | `test` | `node_child_descent_owner` | `structure-gate/tests/node_child_descent_owner.rs` | None | `./cargo_full test -p structure-gate --test node_child_descent_owner` |
+| `test` | `source_directory_placement` | `structure-gate/tests/source_directory_placement.rs` | None | `./cargo_full test -p structure-gate --test source_directory_placement` |
 
 ## Test classes
 

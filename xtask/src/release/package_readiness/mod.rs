@@ -406,7 +406,7 @@ fn audit_package_contents(
     step: &PublishStep,
     publish_order: &[PublishStep],
 ) -> PackageContentCheck {
-    let cargo = crate::cargo_runner::binary();
+    let cargo = crate::cargo_runner::binary(root);
     let patch_args = match cargo_package_patch_args(root, step, publish_order) {
         Ok(args) => args,
         Err(error) => {

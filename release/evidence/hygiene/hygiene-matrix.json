@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=true:worktree=587be6a3b515782d4f5c2d438cfd280a4b2bfe2e4de21819ef31730913109ab1",
+  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 3961,
+  "scanned_files": 3964,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -45,7 +45,7 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 95
+      "count": 97
     },
     {
       "pattern": "expect_call",
@@ -65,7 +65,7 @@
     },
     {
       "pattern": "source_inspection_test",
-      "count": 18
+      "count": 23
     },
     {
       "pattern": "std_thread_sleep",
@@ -78,6 +78,10 @@
     {
       "pattern": "tokio_sleep",
       "count": 2
+    },
+    {
+      "pattern": "unbounded_read",
+      "count": 1
     },
     {
       "pattern": "unwrap_call",
@@ -123,7 +127,7 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "release_blocker": false,
-      "count": 24
+      "count": 27
     },
     {
       "owner_lane": "driver_cuda",
@@ -283,7 +287,7 @@
       "risk": "release_blocker",
       "hot_path": false,
       "release_blocker": true,
-      "count": 3
+      "count": 8
     },
     {
       "owner_lane": "testing_evidence",
@@ -337,7 +341,7 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 3
+      "count": 1
     },
     {
       "owner_lane": "coordination",
@@ -364,7 +368,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 19
+      "count": 21
     },
     {
       "owner_lane": "coordination",
@@ -381,6 +385,15 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unbounded_read",
       "release_blocker": false,
       "count": 1
     },
@@ -662,6 +675,15 @@
       "pattern": "raw_workspace_cargo",
       "release_blocker": true,
       "count": 3
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": true,
+      "count": 5
     },
     {
       "owner_lane": "testing_evidence",
@@ -971,15 +993,7 @@
         "reason": "Asserts that no build-task source except the dispatcher resolves the running\nbinary for itself. The wrong answer is only wrong in a binary that is not the\ndispatcher, where the subcommand it would run does not exist, so a passing run\nof the dispatcher witnesses nothing. The subject is a call another crate did not\nmake, which no execution observes."
       }
     ],
-    "blockers": [
-      "docs/testing/STRUCTURAL_GATES.toml: `no_dispatch_grid_function_hand_rolls_the_ceiling_division` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `every_domain_with_a_dispatch_grid_can_reach_the_owner` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `no_binding_record_spells_its_full_name_set_twice` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `every_buffer_binding_record_publishes_canonical_names` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `every_routed_convergence_op_registers_with_the_routing_contract` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `no_op_re_asserts_the_routing_obligations_privately` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `the_source_walk_reaches_the_modules_every_gate_above_depends_on` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one."
-    ]
+    "blockers": []
   },
   "panic_budget": {
     "schema_version": 1,
@@ -1021,19 +1035,14 @@
         "measured": 8
       }
     ],
-    "unrecorded": [
-      "structure-gate"
-    ],
+    "unrecorded": [],
     "notes": [],
-    "blockers": [
-      "structure-gate carries 2 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-      "docs/testing/PANIC_BUDGET.toml records a ceiling of 1 for vyre-primitives, which now carries none: lower the row to 0, because the ceiling is what stands between the crate and the next panic added to it"
-    ]
+    "blockers": []
   },
   "finding_classes": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 268,
+      "line": 273,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1043,7 +1052,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 270,
+      "line": 275,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1053,7 +1062,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 952,
+      "line": 980,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1063,7 +1072,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 998,
+      "line": 1026,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1073,7 +1082,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1000,
+      "line": 1028,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1186,6 +1195,16 @@
       "line": 222,
       "pattern": "panic_macro",
       "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/plumbing/host/scratch.rs",
+      "line": 179,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -1512,16 +1531,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-libs/src/scratch.rs",
-      "line": 179,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
       "line": 90,
       "pattern": "documented_panic_contract",
@@ -1833,7 +1842,17 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 144,
+      "line": 126,
+      "pattern": "unbounded_read",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 135,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -1843,7 +1862,27 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 150,
+      "line": 139,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 200,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 206,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2672,16 +2711,6 @@
       "release_blocker": false
     },
     {
-      "path": "xtask/src/gates/feature_isolation.rs",
-      "line": 615,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
       "path": "xtask/src/gates/hot_path_scan.rs",
       "line": 16,
       "pattern": "std_thread_sleep",
@@ -2713,7 +2742,7 @@
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 225,
+      "line": 226,
       "pattern": "std_thread_sleep",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -2723,7 +2752,7 @@
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 225,
+      "line": 226,
       "pattern": "thread_sleep",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -2733,7 +2762,7 @@
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 230,
+      "line": 231,
       "pattern": "tokio_sleep",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -2743,7 +2772,17 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 245,
+      "line": 210,
+      "pattern": "panic_macro",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask/src/gates/check_tier_deps.rs",
+      "line": 335,
       "pattern": "panic_macro",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -2762,17 +2801,46 @@
       "release_blocker": false
     },
     {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 376,
-      "pattern": "panic_macro",
+      "path": "xtask/src/gates/wire_determinism.rs",
+      "line": 159,
+      "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "informational",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask/src/gates/backend_parity.rs",
+      "line": 269,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask/src/gates/crate_readmes.rs",
+      "line": 346,
+      "pattern": "placeholder_text",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false
     },
     {
-
+      "path": "xtask/src/gates/oracle_sweeps.rs",
+      "line": 325,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
       "path": "xtask/src/bin/audit_rule_contracts.rs",
       "line": 34,
       "pattern": "unwrap_call",
@@ -2911,37 +2979,87 @@
       "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 479,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 512,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 541,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 574,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 607,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
     }
   ],
-  "release_blocker_count": 9,
+  "release_blocker_count": 8,
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 268,
+      "line": 273,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 270,
+      "line": 275,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 952,
+      "line": 980,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 998,
+      "line": 1026,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1000,
+      "line": 1028,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -3010,6 +3128,12 @@
       "line": 222,
       "pattern": "panic_macro",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-libs/src/plumbing/host/scratch.rs",
+      "line": 179,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
       "path": "vyre-libs/src/scheduling/megakernel_schedule.rs",
@@ -3204,12 +3328,6 @@
       "text": "self.inner.lock().expect("
     },
     {
-      "path": "vyre-libs/src/scratch.rs",
-      "line": 179,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
-    },
-    {
       "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
       "line": 90,
       "pattern": "documented_panic_contract",
@@ -3397,13 +3515,31 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 144,
+      "line": 126,
+      "pattern": "unbounded_read",
+      "text": "std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {"
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 135,
+      "pattern": "documented_panic_contract",
+      "text": "[] => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 139,
+      "pattern": "documented_panic_contract",
+      "text": "several => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 200,
       "pattern": "documented_panic_contract",
       "text": "let executable = std::env::current_exe().expect(\"Fix: the test binary path must be readable\");"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 150,
+      "line": 206,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -3918,12 +4054,6 @@
       "text": "unknown.push(placeholder.to_string());"
     },
     {
-      "path": "xtask/src/gates/feature_isolation.rs",
-      "line": 615,
-      "pattern": "raw_workspace_cargo",
-      "text": "format!(\"cannot run cargo check for `{}`: {error}\", pair.label()),"
-    },
-    {
       "path": "xtask/src/gates/hot_path_scan.rs",
       "line": 16,
       "pattern": "std_thread_sleep",
@@ -3943,39 +4073,45 @@
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 225,
+      "line": 226,
       "pattern": "std_thread_sleep",
       "text": "text: \"std::thread::sleep(\","
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 225,
+      "line": 226,
       "pattern": "thread_sleep",
       "text": "text: \"std::thread::sleep(\","
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 230,
+      "line": 231,
       "pattern": "tokio_sleep",
       "text": "text: \"tokio::time::sleep(\","
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 245,
+      "line": 210,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 370,
+      "line": 335,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 376,
+      "line": 341,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
+    },
+    {
+      "path": "xtask/src/gates/wire_determinism.rs",
+      "line": 159,
+      "pattern": "raw_workspace_cargo",
+      "text": "format!(\"`cargo test --test {suite}` could not be started: {error}\"),"
     },
     {
       "path": "xtask/src/gates/backend_parity.rs",
@@ -3985,7 +4121,7 @@
     },
     {
       "path": "xtask/src/gates/crate_readmes.rs",
-      "line": 301,
+      "line": 346,
       "pattern": "placeholder_text",
       "text": "/// Every version the release train declares, keyed as a template placeholder."
     },
@@ -4078,18 +4214,44 @@
       "line": 250,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 479,
+      "pattern": "source_inspection_test",
+      "text": "test `a_registration_places_the_operation_in_its_crate_behind_its_module_features` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_registration_places_the_operation_in_its_crate_behind_its_module_features"
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 512,
+      "pattern": "source_inspection_test",
+      "text": "test `a_crate_that_only_names_the_id_is_not_the_defining_crate` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_crate_that_only_names_the_id_is_not_the_defining_crate"
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 541,
+      "pattern": "source_inspection_test",
+      "text": "test `an_id_passed_to_a_registering_macro_places_in_the_invoking_module` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "an_id_passed_to_a_registering_macro_places_in_the_invoking_module"
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 574,
+      "pattern": "source_inspection_test",
+      "text": "test `a_test_only_module_is_not_a_definition_site` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_test_only_module_is_not_a_definition_site"
+    },
+    {
+      "path": "xtask-registry/src/docs/operation_schema/placement.rs",
+      "line": 607,
+      "pattern": "source_inspection_test",
+      "text": "test `a_directory_no_declaration_names_carries_no_module` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_directory_no_declaration_names_carries_no_module"
     }
   ],
   "blockers": [
-    "9 release-blocking source hygiene finding(s) remain; 188 total finding(s) preserved in classification output",
-    "docs/testing/STRUCTURAL_GATES.toml: `no_dispatch_grid_function_hand_rolls_the_ceiling_division` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `every_domain_with_a_dispatch_grid_can_reach_the_owner` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `no_binding_record_spells_its_full_name_set_twice` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `every_buffer_binding_record_publishes_canonical_names` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `every_routed_convergence_op_registers_with_the_routing_contract` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `no_op_re_asserts_the_routing_obligations_privately` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `the_source_walk_reaches_the_modules_every_gate_above_depends_on` names `vyre-primitives/tests/shared_owner_closure.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "structure-gate carries 2 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-    "docs/testing/PANIC_BUDGET.toml records a ceiling of 1 for vyre-primitives, which now carries none: lower the row to 0, because the ceiling is what stands between the crate and the next panic added to it"
+    "8 release-blocking source hygiene finding(s) remain; 199 total finding(s) preserved in classification output"
   ]
 }

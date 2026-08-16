@@ -63,6 +63,7 @@ The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
 | `test` | `nvme_gpu_ingest_telemetry` | `vyre-bench/tests/nvme_gpu_ingest_telemetry.rs` | None | `./cargo_full test -p vyre-bench --test nvme_gpu_ingest_telemetry` |
 | `test` | `parser_structural_index_prepass` | `vyre-bench/tests/parser_structural_index_prepass.rs` | None | `./cargo_full test -p vyre-bench --test parser_structural_index_prepass` |
 | `test` | `perf_analyses_snapshot` | `vyre-bench/tests/perf_analyses_snapshot.rs` | None | `./cargo_full test -p vyre-bench --test perf_analyses_snapshot` |
+| `test` | `performance_contract_baseline_truth` | `vyre-bench/tests/performance_contract_baseline_truth.rs` | None | `./cargo_full test -p vyre-bench --test performance_contract_baseline_truth` |
 | `test` | `prototype_kernel_comparator` | `vyre-bench/tests/prototype_kernel_comparator.rs` | None | `./cargo_full test -p vyre-bench --test prototype_kernel_comparator` |
 | `test` | `regex_cpu_gpu_partition_registry` | `vyre-bench/tests/regex_cpu_gpu_partition_registry.rs` | None | `./cargo_full test -p vyre-bench --test regex_cpu_gpu_partition_registry` |
 | `test` | `regex_engine_comparator_registry` | `vyre-bench/tests/regex_engine_comparator_registry.rs` | None | `./cargo_full test -p vyre-bench --test regex_engine_comparator_registry` |

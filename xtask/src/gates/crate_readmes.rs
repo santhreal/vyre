@@ -60,6 +60,18 @@ impl Gate for CrateReadmes {
         let guides = load_guides(&tree, &records, &mut report)?;
         let versions = release_versions(&tree, &mut report)?;
 
+        // An authority that does not describe this workspace cannot render a
+        // README about it, and writing one from a broken registry publishes the
+        // break. The rendered set is judged only once every input holds, which is
+        // the rule the ownership pair is already rendered under.
+        if !report.findings.is_empty() {
+            report.note(format!(
+                "{} registry row(s), none rendered: an input authority does not hold",
+                records.len()
+            ));
+            return Ok(report);
+        }
+
         let mut written = 0usize;
         for record in &records {
             let Some(behavior) = guides.error_behavior(record) else {
@@ -69,7 +81,7 @@ impl Gate for CrateReadmes {
                         "no error profile for layer `{}`, which `{}` occupies",
                         record.layer, record.package
                     ),
-                    "add a [profile.<layer>] table, or a [package.<name>] override",
+                    "add a [profile.<layer>] table for the layer",
                 ));
                 continue;
             };
@@ -93,13 +105,25 @@ impl Gate for CrateReadmes {
             else {
                 continue;
             };
+            // A retired claim inside the generated region means an authority is
+            // stale, and rendering it would publish the break. One in the crate's
+            // own text is a finding about that text, and the generated region is
+            // still written so `--write` converges instead of leaving the
+            // contract stale behind a claim it does not own.
+            if let Some(claim) = retired_claim(&contract) {
+                report.find(Finding::in_file(
+                    &relative,
+                    format!("the generated contract claims retired release `{claim}`"),
+                    "state the version the release train declares",
+                ));
+                continue;
+            }
             if let Some(claim) = retired_claim(&expected) {
                 report.find(Finding::in_file(
                     &relative,
                     format!("the README claims retired release `{claim}`"),
                     "state the version the release train declares",
                 ));
-                continue;
             }
             if ctx.write {
                 fs::write(ctx.root.join(&relative), &expected).map_err(|error| {
@@ -136,13 +160,20 @@ struct Guides {
 
 impl Guides {
     /// The error behavior for one crate: its own override, else its layer.
+    ///
+    /// The layer profile is required even when a package overrides it. The
+    /// override is prose for one crate and the profile is what every other crate
+    /// in that layer renders, so accepting an override for a layer that declares
+    /// no profile leaves the next crate in that layer with nothing to render.
     fn error_behavior(&self, record: &CrateRecord) -> Option<String> {
-        self.overrides
-            .get(&record.package)
-            .and_then(|table| table.get("error_behavior"))
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .or_else(|| self.profiles.get(&record.layer).cloned())
+        let profile = self.profiles.get(&record.layer)?;
+        Some(
+            self.overrides
+                .get(&record.package)
+                .and_then(|table| table.get("error_behavior"))
+                .and_then(Value::as_str)
+                .map_or_else(|| profile.clone(), |text| text.trim().to_string()),
+        )
     }
 
     /// The release claim for one crate: its own override with the release
@@ -258,6 +289,20 @@ fn load_guides(
         for (package, value) in table {
             match value.as_table() {
                 Some(table) => {
+                    // An override is read the way a profile is. Prose that
+                    // renders a heading with nothing under it is a finding here
+                    // rather than an empty section in a published README.
+                    let empty = match table.get("error_behavior") {
+                        None => false,
+                        Some(value) => value.as_str().unwrap_or_default().trim().is_empty(),
+                    };
+                    if empty {
+                        report.find(Finding::in_file(
+                            METADATA,
+                            format!("the override for `{package}` declares an empty `error_behavior`"),
+                            "state what the crate does with an unsupported input, or drop the key",
+                        ));
+                    }
                     overrides.insert(package.clone(), table.clone());
                 }
                 None => report.find(Finding::in_file(
@@ -352,6 +397,12 @@ fn default_status(package: &str, version: &str, publishable: bool) -> String {
 ///
 /// `0.4.x` is the train the workspace left. A README that still names it is
 /// telling a consumer to depend on a version the registry will not resolve.
+///
+/// A claim is a dotted number that starts with `0.4.`, so `10.4.2` is not one
+/// and neither is `1.0.4.2`: both carry the retired digits inside a version of
+/// another train. A trailing dotted group is part of the claim rather than a
+/// boundary, because `0.4.2.1` still names the train it starts with. A trailing
+/// letter or digit means the run is an identifier or a hash and not a version.
 fn retired_claim(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     let mut at = 0;
@@ -360,14 +411,18 @@ fn retired_claim(text: &str) -> Option<String> {
         let before_is_word = start
             .checked_sub(1)
             .is_some_and(|index| bytes[index].is_ascii_digit() || bytes[index] == b'.');
-        let digits = text[start + 4..]
-            .bytes()
-            .take_while(u8::is_ascii_digit)
-            .count();
-        let after = text[start + 4 + digits..].bytes().next();
-        let after_is_word = after.is_some_and(|byte| byte == b'.' || byte.is_ascii_alphanumeric());
+        let mut end = start + 4;
+        let digits = bytes[end..].iter().take_while(|byte| byte.is_ascii_digit()).count();
+        end += digits;
+        while bytes.get(end) == Some(&b'.')
+            && bytes.get(end + 1).is_some_and(u8::is_ascii_digit)
+        {
+            end += 1;
+            end += bytes[end..].iter().take_while(|byte| byte.is_ascii_digit()).count();
+        }
+        let after_is_word = bytes.get(end).is_some_and(u8::is_ascii_alphanumeric);
         if digits > 0 && !before_is_word && !after_is_word {
-            return Some(text[start..start + 4 + digits].to_string());
+            return Some(text[start..end].to_string());
         }
         at = start + 4;
     }
@@ -656,12 +711,16 @@ mod tests {
 
     /// WHY: the retired-train rule is the reason this gate exists, and a
     /// substring match on `0.4.` would fire on `10.4.2` and on a hash. The
-    /// boundary is what makes the rule usable, so it is what gets asserted.
+    /// boundary is what makes the rule usable, so it is what gets asserted. A
+    /// four-component version is a claim because it starts with the retired
+    /// train; the same digits inside another train's version are not.
     #[test]
     fn a_retired_release_claim_is_recognized_only_at_a_boundary() {
         assert_eq!(retired_claim("vyre 0.4.12 ships"), Some("0.4.12".to_string()));
         assert_eq!(retired_claim("version 10.4.2"), None);
-        assert_eq!(retired_claim("0.4.2.1"), None);
+        assert_eq!(retired_claim("build 1.0.4.2"), None);
+        assert_eq!(retired_claim("0.4.2.1"), Some("0.4.2.1".to_string()));
+        assert_eq!(retired_claim("commit 0.4.2f3a"), None);
         assert_eq!(retired_claim("0.4.x"), None);
         assert_eq!(retired_claim("0.5.0"), None);
     }

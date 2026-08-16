@@ -82,8 +82,14 @@ impl Gate for TestingGuides {
         let metadata = load_metadata(&tree, &records, &mut report)?;
 
         let mut expected: BTreeMap<String, String> = BTreeMap::new();
+        // A row that never reached `expected` is a member whose guide would read
+        // as orphaned. Only an incomplete render set suppresses the orphan scan;
+        // a finding recorded while rendering a guide still leaves its row in the
+        // set, so it no longer hides every leftover in the directory.
+        let mut skipped = !report.findings.is_empty();
         for record in &records {
             let Some(fields) = metadata.resolve(record, &mut report) else {
+                skipped = true;
                 continue;
             };
             let manifest = tree.read_toml(format!("{}/Cargo.toml", record.path))?;
@@ -101,6 +107,7 @@ impl Gate for TestingGuides {
                     ),
                     "name the same package in the manifest and the ownership registry",
                 ));
+                skipped = true;
                 continue;
             }
             let targets = cargo_targets(&tree, record, &manifest, &mut report);
@@ -119,9 +126,8 @@ impl Gate for TestingGuides {
         }
 
         // The directory is the whole surface, so a guide nothing renders is a
-        // finding in the same pass. Only a clean render set can judge that: a
-        // record skipped above would make a live guide look orphaned.
-        if report.findings.is_empty() {
+        // finding in the same pass.
+        if !skipped {
             for path in tree.paths() {
                 let Some(name) = path.to_str() else { continue };
                 if name.starts_with(&format!("{DIRECTORY}/"))

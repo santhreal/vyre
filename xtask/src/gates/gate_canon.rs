@@ -201,7 +201,7 @@ impl Gate for GateCanon {
         }
 
         let sources = gate_sources(&ctx.root, &registry)?;
-        let current = constants(&ctx.root, &sources)?;
+        let current = constants(&ctx.root, &sources, &mut report);
         report.note(format!(
             "{} pinned row(s), {} gate source file(s), {} ratchet constant(s)",
             baselines.len(),
@@ -355,18 +355,25 @@ fn gate_sources(root: &Path, registry: &[&'static dyn Gate]) -> Result<Vec<Strin
 }
 
 /// Every ratchet constant declared by the working tree copy of each source.
-fn constants(root: &Path, files: &[String]) -> Result<Vec<Constant>, GateError> {
+///
+/// A tracked file the working tree does not carry is a routine state during a
+/// migration, and aborting on it made this gate unrunnable exactly when the
+/// registry was moving. It is a finding instead: a constant in a file this run
+/// cannot read is a constant no direction was judged for, so silence about it
+/// would let a pin move behind a deletion.
+fn constants(root: &Path, files: &[String], report: &mut Report) -> Vec<Constant> {
     let mut found = Vec::new();
     for file in files {
-        let text = fs::read_to_string(root.join(file)).map_err(|error| {
-            GateError::new(
-                format!("cannot read `{file}`: {error}"),
-                "restore the gate source as valid UTF-8 text",
-            )
-        })?;
-        found.extend(constants_in(file, &text));
+        match fs::read_to_string(root.join(file)) {
+            Ok(text) => found.extend(constants_in(file, &text)),
+            Err(error) => report.find(Finding::in_file(
+                file,
+                format!("git tracks this gate source and this run cannot read it: {error}"),
+                "restore the file as UTF-8 text, or commit its deletion so the registry and the pins move with it",
+            )),
+        }
     }
-    Ok(found)
+    found
 }
 
 /// Integer types a ratchet constant may be declared with.
@@ -655,10 +662,7 @@ mod tests {
     /// instead of judging the tree.
     #[test]
     fn resolves_a_local_revision_before_reaching_for_the_remote() {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("Fix: the xtask manifest sits one level below the workspace root")
-            .to_path_buf();
+        let root = structure_gate::workspace_root();
         assert_eq!(
             resolvable_base(&root, "HEAD"),
             Some("HEAD".to_string()),

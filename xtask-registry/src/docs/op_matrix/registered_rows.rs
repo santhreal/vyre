@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use structure_gate::source_scan::carries_rust_source;
+use structure_gate::source_scan::{carries_rust_source, source_directory_named};
 use vyre_foundation::operation::OperationTier as OpTier;
 
 use super::record::OpRecord;
@@ -70,7 +70,7 @@ fn record_for_registered_id(
     let record = OpRecord {
         family: id.to_string(),
         tier,
-        owners: owner_paths(id, tier),
+        owners: owner_paths(id, tier)?,
         ops: vec![id.to_string()],
         duplicate_ok: sources.len() > 1,
         registry_sources: sources.into_iter().collect(),
@@ -93,12 +93,24 @@ fn record_for_registered_id(
 /// names the crate that minted it, so a domain alias keyed on the id namespace
 /// answered `vyre-libs/src/unknown` for every composition that kept a
 /// `vyre-primitives::` id.
-fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
+///
+/// An external extension is defined by a crate outside this checkout, so no
+/// directory here owns it, and a foundation op is defined by the IR rather than
+/// by a domain directory.
+///
+/// # Errors
+///
+/// `OperationTier` is `non_exhaustive`, so a tier this rule does not name is
+/// reported as the id that carries it rather than taking the empty owner list a
+/// foundation op gets. An empty list reads as "defined by the IR", which is the
+/// one answer that would let a new tier ship with no owner and no finding.
+fn owner_paths(id: &str, tier: OpTier) -> Result<Vec<String>, String> {
     match tier {
-        OpTier::Intrinsic | OpTier::Library => vec![namespace_source_dir(id)],
-        OpTier::External => vec!["docs/optimization/README.md".to_string()],
-        OpTier::Foundation | OpTier::Unknown => Vec::new(),
-        _ => Vec::new(),
+        OpTier::Intrinsic | OpTier::Library => Ok(vec![namespace_source_dir(id)]),
+        OpTier::Foundation | OpTier::External | OpTier::Unknown => Ok(Vec::new()),
+        tier => Err(format!(
+            "Fix: op id `{id}` declares tier `{tier:?}`, which reaches no owner rule. Record where a registration of that tier keeps its definition, in `owner_paths` of the op matrix rows."
+        )),
     }
 }
 
@@ -118,6 +130,10 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
 /// git tracks files and not directories, and the move left one such shell at
 /// `vyre-primitives/src/matching`. An existence test would have named it the
 /// owner of eleven operations whose code is in `vyre-libs`.
+///
+/// A domain is not always a top-level module. The optimizer and quantization
+/// ops moved under `nn`, so the search runs over the whole crate source tree
+/// through [`source_directory_named`] once the top-level answer holds no code.
 fn namespace_source_dir(id: &str) -> String {
     let Some((crate_name, rest)) = id.split_once("::") else {
         return String::new();
@@ -130,6 +146,11 @@ fn namespace_source_dir(id: &str) -> String {
     let moved = format!("vyre-libs/src/{domain}");
     if carries_rust_source(Path::new(&moved)) {
         return moved;
+    }
+    for root in [format!("{crate_name}/src"), "vyre-libs/src".to_string()] {
+        if let Some(found) = source_directory_named(Path::new(&root), domain) {
+            return found.to_string_lossy().replace('\\', "/");
+        }
     }
     minted
 }

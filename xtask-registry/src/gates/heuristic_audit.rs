@@ -252,12 +252,20 @@ mod tests {
     use super::*;
     use std::fs;
 
+    /// A checkout is a directory carrying Rust source, so a fixture that only
+    /// creates `vyre-foundation/src` proves nothing: an empty directory left
+    /// behind by a move is what the resolver has to look past.
+    fn write_foundation(root: &Path) {
+        let src = root.join("vyre-foundation").join("src");
+        fs::create_dir_all(&src).expect("Vyre source root");
+        fs::write(src.join("lib.rs"), "pub fn build() {}\n").expect("Vyre crate root");
+    }
+
     /// The audit must scan a standalone Vyre workspace instead of appending its monorepo path twice.
     #[test]
     fn resolves_standalone_vyre_workspace_root() {
         let root = tempfile::tempdir().expect("temporary workspace");
-        fs::create_dir_all(root.path().join("vyre-foundation/src"))
-            .expect("standalone Vyre source root");
+        write_foundation(root.path());
 
         assert_eq!(resolve_vyre_dir(root.path()), root.path());
     }
@@ -267,19 +275,26 @@ mod tests {
     fn resolves_vyre_root_inside_monorepo() {
         let root = tempfile::tempdir().expect("temporary workspace");
         let expected = root.path().join(VYRE_ROOT);
-        fs::create_dir_all(expected.join("vyre-foundation/src")).expect("nested Vyre source root");
+        write_foundation(&expected);
 
         assert_eq!(resolve_vyre_dir(root.path()), expected);
+    }
+
+    /// An empty source directory is not a checkout.
+    #[test]
+    fn a_source_directory_holding_nothing_is_not_the_workspace() {
+        let root = tempfile::tempdir().expect("temporary workspace");
+        fs::create_dir_all(root.path().join("vyre-foundation/src")).expect("emptied source root");
+
+        assert_eq!(resolve_vyre_dir(root.path()), root.path().join(VYRE_ROOT));
     }
 
     /// A standalone workspace must win when an unrelated nested path also resembles Vyre.
     #[test]
     fn standalone_workspace_takes_precedence_over_nested_candidate() {
         let root = tempfile::tempdir().expect("temporary workspace");
-        fs::create_dir_all(root.path().join("vyre-foundation/src"))
-            .expect("standalone Vyre source root");
-        fs::create_dir_all(root.path().join(VYRE_ROOT).join("vyre-foundation/src"))
-            .expect("nested Vyre source root");
+        write_foundation(root.path());
+        write_foundation(&root.path().join(VYRE_ROOT));
 
         assert_eq!(resolve_vyre_dir(root.path()), root.path());
     }

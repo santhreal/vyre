@@ -286,7 +286,7 @@ pub(super) fn run_command(workspace_root: &Path, args: &[&str]) {
 }
 
 pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result<(), String> {
-    let runner = xtask::output_arg::cargo_runner(workspace_root);
+    let runner = xtask::cargo_runner::binary(workspace_root);
     let status = Command::new(&runner)
         .args(args)
         .current_dir(workspace_root)

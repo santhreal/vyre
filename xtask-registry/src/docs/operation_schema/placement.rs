@@ -21,6 +21,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use structure_gate::source_scan::{gating_features, module_routes, string_literals};
 use structure_gate::{parse_registrations, strip_cfg_test_items};
 
 /// Largest source file this reader will open.
@@ -28,22 +29,22 @@ const MAX_SOURCE_BYTES: u64 = 4_194_304;
 
 /// Where one operation is defined and what enables it.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct Placement {
+pub struct Placement {
     /// Workspace member that holds the definition.
-    pub(super) crate_name: String,
+    pub crate_name: String,
     /// Features that reach the registration. Empty means the defining crate
     /// links it unconditionally.
-    pub(super) features: Vec<String>,
+    pub features: Vec<String>,
 }
 
 /// Every operation placement read from one checkout.
-pub(super) struct Placements {
+pub struct Placements {
     by_id: BTreeMap<String, Placement>,
 }
 
 impl Placements {
     /// Placement of one operation, or `None` when no source file defines it.
-    pub(super) fn get(&self, id: &str) -> Option<&Placement> {
+    pub fn get(&self, id: &str) -> Option<&Placement> {
         self.by_id.get(id)
     }
 }
@@ -52,11 +53,17 @@ impl Placements {
 ///
 /// An id no source file defines is an error naming the id. Silently routing it
 /// to a default crate is how a moved operation kept reporting the crate it left.
-pub(super) fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Placements {
+pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Placements {
     let mut registered: BTreeMap<&str, Vec<Site>> = BTreeMap::new();
     let mut mentioned: BTreeMap<&str, Vec<Site>> = BTreeMap::new();
-    for member in source_members(root) {
-        for module in compiled_modules(&root.join(&member).join("src")) {
+    // An operation is defined where it is registered, so a crate that registers
+    // none defines none. Every registration counts, not only one whose id was
+    // asked about: a macro takes the id at its invocation, so the file that
+    // spells it names no registration of its own, and reading the set from the
+    // matched ids alone left that crate registering nothing.
+    let mut registering: BTreeSet<String> = BTreeSet::new();
+    for member in source_members(root, errors) {
+        for module in module_routes(&root.join(&member).join("src")) {
             let Ok(raw) = read_capped(&module.path) else {
                 continue;
             };
@@ -85,7 +92,10 @@ pub(super) fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) 
             } else {
                 BTreeSet::new()
             };
-            for literal in quoted_literals(&text) {
+            if !declared.is_empty() {
+                registering.insert(member.clone());
+            }
+            for literal in string_literals(&text).into_iter().collect::<BTreeSet<&str>>() {
                 let Some(id) = ids.get(literal) else {
                     continue;
                 };
@@ -97,15 +107,6 @@ pub(super) fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) 
             }
         }
     }
-
-    // An operation is defined where it is registered, so a crate that registers
-    // none defines none. Deriving that set from the registrations rather than
-    // naming the two crates keeps the answer right through the next move.
-    let registering: BTreeSet<&str> = registered
-        .values()
-        .flatten()
-        .map(|site| site.crate_name.as_str())
-        .collect();
 
     let mut by_id = BTreeMap::new();
     for id in ids {
@@ -177,218 +178,60 @@ struct Module {
 /// Read from the root manifest, not from a directory listing: a member deleted
 /// upstream leaves its directory behind in every checkout that pulled the
 /// deletion rather than cloning fresh.
-fn source_members(root: &Path) -> Vec<String> {
-    let Ok(text) = fs::read_to_string(root.join("Cargo.toml")) else {
-        return Vec::new();
+///
+/// Every failure here is an error rather than an empty roster. An empty roster
+/// answered `no definition site` for all 327 registered operations, which reads
+/// as a broken registry instead of one unreadable file, and it was reached by a
+/// parse that could not succeed: `toml::Value` parses a single TOML value, so a
+/// document opening with `[workspace]` was read as an array and rejected as
+/// trailing content.
+fn source_members(root: &Path, errors: &mut Vec<String>) -> Vec<String> {
+    let manifest_path = root.join("Cargo.toml");
+    let text = match fs::read_to_string(&manifest_path) {
+        Ok(text) => text,
+        Err(error) => {
+            errors.push(format!(
+                "cannot read `{}`: {error}. Fix: run this from a checkout that carries the workspace manifest",
+                manifest_path.display()
+            ));
+            return Vec::new();
+        }
     };
-    let Ok(manifest) = text.parse::<toml::Value>() else {
-        return Vec::new();
+    let manifest = match toml::from_str::<toml::Table>(&text) {
+        Ok(manifest) => manifest,
+        Err(error) => {
+            errors.push(format!(
+                "cannot parse `{}`: {error}. Fix: repair the workspace manifest so it parses",
+                manifest_path.display()
+            ));
+            return Vec::new();
+        }
     };
-    manifest
+    let members = manifest
         .get("workspace")
         .and_then(|workspace| workspace.get("members"))
-        .and_then(toml::Value::as_array)
-        .map(|members| {
-            members
-                .iter()
-                .filter_map(toml::Value::as_str)
-                .filter(|member| root.join(member).join("src/lib.rs").is_file())
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-/// Every module file `src/lib.rs` reaches, with the features on the way.
-///
-/// Walks the `mod` declarations rather than the directory listing, so a
-/// directory whose declaration is gone is not a module and a file no
-/// declaration names is not compiled. Modules reachable only under `cfg(test)`
-/// are left out: a fixture registration is not a definition.
-fn compiled_modules(source: &Path) -> Vec<Module> {
-    let mut found = Vec::new();
-    let mut pending = vec![Module {
-        path: source.join("lib.rs"),
-        features: Vec::new(),
-    }];
-    while let Some(module) = pending.pop() {
-        let Ok(text) = read_capped(&module.path) else {
-            continue;
-        };
-        let directory = module_directory(&module.path);
-        for (name, attributes) in module_declarations(&text) {
-            let Some(gates) = reachable_features(&attributes) else {
-                continue;
-            };
-            let mut features = module.features.clone();
-            for gate in gates {
-                if !features.contains(&gate) {
-                    features.push(gate);
-                }
-            }
-            let file = directory.join(format!("{name}.rs"));
-            let path = if file.is_file() {
-                file
-            } else {
-                directory.join(&name).join("mod.rs")
-            };
-            if path.is_file() {
-                pending.push(Module { path, features });
-            }
-        }
-        found.push(module);
-    }
-    found
-}
-
-/// Directory the modules a file declares live in.
-fn module_directory(file: &Path) -> PathBuf {
-    let parent = file.parent().unwrap_or(Path::new("")).to_path_buf();
-    match file.file_name().and_then(|name| name.to_str()) {
-        Some("lib.rs" | "mod.rs") | None => parent,
-        Some(name) => parent.join(name.trim_end_matches(".rs")),
-    }
-}
-
-/// `(module name, attributes above it)` for every out-of-line `mod` in a file.
-fn module_declarations(text: &str) -> Vec<(String, Vec<String>)> {
-    let lines: Vec<&str> = text.lines().collect();
-    let attributes = attribute_blocks(&lines);
-    let mut declarations = Vec::new();
-    for (index, line) in lines.iter().enumerate() {
-        let Some(name) = module_name(line) else {
-            continue;
-        };
-        declarations.push((name, gating_attributes(&lines, &attributes, index)));
-    }
-    declarations
-}
-
-/// Module name declared by an out-of-line `mod` statement on one line.
-fn module_name(line: &str) -> Option<String> {
-    let rest = line.trim();
-    let rest = rest.strip_prefix("pub ").unwrap_or(rest).trim_start();
-    let rest = match rest.strip_prefix("pub(") {
-        Some(tail) => tail.split_once(')')?.1.trim_start(),
-        None => rest,
+        .and_then(toml::Value::as_array);
+    let Some(members) = members else {
+        errors.push(format!(
+            "`{}` declares no `[workspace] members` array. Fix: declare the workspace members that carry operation registrations",
+            manifest_path.display()
+        ));
+        return Vec::new();
     };
-    let name = rest.strip_prefix("mod ")?.strip_suffix(';')?.trim();
-    (!name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_'))
-        .then(|| name.to_string())
-}
-
-/// `(last line, (first line, joined text))` for every attribute in a file.
-///
-/// An attribute is joined across lines because the tree writes
-/// `#[cfg(any(\n    feature = "a",\n    feature = "b"\n))]`, and reading only
-/// the last line of that spelling records no feature at all.
-fn attribute_blocks(lines: &[&str]) -> BTreeMap<usize, (usize, String)> {
-    let mut blocks = BTreeMap::new();
-    let mut index = 0;
-    while index < lines.len() {
-        let trimmed = lines[index].trim();
-        if !trimmed.starts_with("#[") {
-            index += 1;
-            continue;
-        }
-        let mut joined = trimmed.to_string();
-        let mut last = index;
-        while joined.matches('(').count() > joined.matches(')').count() && last + 1 < lines.len() {
-            last += 1;
-            joined.push(' ');
-            joined.push_str(lines[last].trim());
-        }
-        blocks.insert(last, (index, joined));
-        index = last + 1;
+    let carrying: Vec<String> = members
+        .iter()
+        .filter_map(toml::Value::as_str)
+        .filter(|member| root.join(member).join("src/lib.rs").is_file())
+        .map(str::to_string)
+        .collect();
+    if carrying.is_empty() {
+        errors.push(format!(
+            "`{}` names {} member(s) and none carries a `src/lib.rs`. Fix: declare the members that hold the crate roots",
+            manifest_path.display(),
+            members.len()
+        ));
     }
-    blocks
-}
-
-/// Attribute texts that gate the item on line `at`.
-fn gating_attributes(
-    lines: &[&str],
-    blocks: &BTreeMap<usize, (usize, String)>,
-    at: usize,
-) -> Vec<String> {
-    let mut found = Vec::new();
-    let mut index = at;
-    while index > 0 {
-        index -= 1;
-        let trimmed = lines[index].trim();
-        if trimmed.is_empty() || trimmed.starts_with("//") {
-            continue;
-        }
-        let Some((first, text)) = blocks.get(&index) else {
-            break;
-        };
-        if text.starts_with("#[cfg") {
-            found.push(text.clone());
-        }
-        index = *first;
-    }
-    found
-}
-
-/// Features that reach an item, or `None` when only a test build reaches it.
-///
-/// A `cfg` naming `test` beside a feature, such as
-/// `any(test, feature = "cpu-parity")`, still compiles in a feature build, so
-/// only a `cfg` that names `test` and no feature at all is test-only.
-fn reachable_features(attributes: &[String]) -> Option<Vec<String>> {
-    let mut features = Vec::new();
-    for attribute in attributes {
-        let named = cfg_features(attribute);
-        if named.is_empty() && names_test(attribute) {
-            return None;
-        }
-        for feature in named {
-            if !features.contains(&feature) {
-                features.push(feature);
-            }
-        }
-    }
-    Some(features)
-}
-
-/// Every feature named by one `cfg` attribute.
-fn cfg_features(attribute: &str) -> Vec<String> {
-    let mut found = Vec::new();
-    let mut rest = attribute;
-    while let Some(start) = rest.find("feature = \"") {
-        rest = &rest[start + "feature = \"".len()..];
-        let Some(end) = rest.find('"') else {
-            break;
-        };
-        let feature = rest[..end].to_string();
-        if !feature.is_empty() && !found.contains(&feature) {
-            found.push(feature);
-        }
-        rest = &rest[end + 1..];
-    }
-    found
-}
-
-/// Whether one `cfg` attribute names the `test` predicate.
-fn names_test(attribute: &str) -> bool {
-    let bytes = attribute.as_bytes();
-    let mut at = 0;
-    while let Some(found) = attribute[at..].find("test") {
-        let start = at + found;
-        let end = start + "test".len();
-        let before = start
-            .checked_sub(1)
-            .is_none_or(|index| !is_word_byte(bytes[index]));
-        let after = end >= bytes.len() || !is_word_byte(bytes[end]);
-        if before && after {
-            return true;
-        }
-        at = end;
-    }
-    false
-}
-
-fn is_word_byte(byte: u8) -> bool {
-    byte.is_ascii_alphanumeric() || byte == b'_'
+    carrying
 }
 
 /// Features gating an `inventory::submit!` block in one file.
@@ -396,18 +239,14 @@ fn is_word_byte(byte: u8) -> bool {
 /// `vyre-primitives` gates its submissions on `inventory-registry` rather than
 /// on the module, so the file is the only place that route is written.
 fn submission_features(text: &str) -> Vec<String> {
-    let lines: Vec<&str> = text.lines().collect();
-    let blocks = attribute_blocks(&lines);
     let mut features = Vec::new();
-    for (index, line) in lines.iter().enumerate() {
+    for (index, line) in text.lines().enumerate() {
         if !line.trim_start().starts_with("inventory::submit!") {
             continue;
         }
-        for attribute in gating_attributes(&lines, &blocks, index) {
-            for feature in cfg_features(&attribute) {
-                if !features.contains(&feature) {
-                    features.push(feature);
-                }
+        for feature in gating_features(text, index).unwrap_or_default() {
+            if !features.contains(&feature) {
+                features.push(feature);
             }
         }
     }
@@ -424,207 +263,13 @@ fn read_capped(path: &Path) -> Result<String, ()> {
     fs::read_to_string(path).map_err(|_| ())
 }
 
-/// Contents of every double-quoted literal in one file.
-///
-/// One pass over the text, rather than one substring search per candidate id:
-/// the checkout carries 327 ids and some 2000 compiled modules.
-fn quoted_literals(text: &str) -> BTreeSet<&str> {
-    let mut found = BTreeSet::new();
-    let bytes = text.as_bytes();
-    let mut at = 0;
-    while let Some(open) = text[at..].find('"') {
-        let start = at + open + 1;
-        let mut end = start;
-        while end < bytes.len() && bytes[end] != b'"' {
-            end += if bytes[end] == b'\\' { 2 } else { 1 };
-        }
-        if end >= bytes.len() {
-            break;
-        }
-        if let Some(literal) = text.get(start..end) {
-            found.insert(literal);
-        }
-        at = end + 1;
-    }
-    found
-}
-
-/// These readers are crate-private: `read` is called by `assemble`, and no
-/// integration test can reach `compiled_modules`, `module_name`,
-/// `reachable_features` or `quoted_literals` to pin the cases that produced
-/// wrong placements.
+/// These readers are crate-private, and no integration test can reach
+/// `submission_features` to pin the case that produced wrong placements. What
+/// `read` answers over a fixture checkout is asserted in
+/// `tests/registry_contracts/operation_schema_placement.rs`.
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn write(path: &Path, text: &str) {
-        fs::create_dir_all(path.parent().expect("Fix: fixture path must have a parent"))
-            .expect("Fix: fixture directory must be creatable");
-        fs::write(path, text).expect("Fix: fixture must be writable");
-    }
-
-    fn workspace(root: &Path, members: &[&str]) {
-        let named = members
-            .iter()
-            .map(|member| format!("\"{member}\""))
-            .collect::<Vec<_>>()
-            .join(", ");
-        write(
-            &root.join("Cargo.toml"),
-            &format!("[workspace]\nmembers = [{named}]\n"),
-        );
-    }
-
-    #[test]
-    fn a_registration_places_the_operation_in_its_crate_behind_its_module_features() {
-        let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
-        let root = dir.path();
-        workspace(root, &["libs"]);
-        write(
-            &root.join("libs/src/lib.rs"),
-            "#[cfg(any(\n    feature = \"math-dialect\",\n    feature = \"math-kernels\"\n))]\npub mod math;\n",
-        );
-        write(&root.join("libs/src/math/mod.rs"), "pub mod square;\n");
-        write(
-            &root.join("libs/src/math/square.rs"),
-            "const OP_ID: &str = \"libs::math::square\";\ninventory::submit! {\n    OperationRegistration::library(OP_ID, builder)\n}\n",
-        );
-
-        let ids = BTreeSet::from(["libs::math::square"]);
-        let mut errors = Vec::new();
-        let placements = read(root, &ids, &mut errors);
-
-        assert_eq!(errors, Vec::<String>::new());
-        assert_eq!(
-            placements.get("libs::math::square"),
-            Some(&Placement {
-                crate_name: "libs".to_string(),
-                features: vec!["math-dialect".to_string(), "math-kernels".to_string()],
-            })
-        );
-    }
-
-    /// A gate that lists ids is not a definition site.
-    ///
-    /// Reading every spelling as a definition reported 132 operations as
-    /// defined in two crates at once and failed the whole schema document.
-    #[test]
-    fn a_crate_that_only_names_the_id_is_not_the_defining_crate() {
-        let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
-        let root = dir.path();
-        workspace(root, &["libs", "tooling"]);
-        write(&root.join("libs/src/lib.rs"), "pub mod square;\n");
-        write(
-            &root.join("libs/src/square.rs"),
-            "inventory::submit! {\n    OperationRegistration::library(\"libs::square\", builder)\n}\n",
-        );
-        write(&root.join("tooling/src/lib.rs"), "pub mod audit;\n");
-        write(
-            &root.join("tooling/src/audit.rs"),
-            "const WAIVED: [&str; 1] = [\"libs::square\"];\n",
-        );
-
-        let ids = BTreeSet::from(["libs::square"]);
-        let mut errors = Vec::new();
-        let placements = read(root, &ids, &mut errors);
-
-        assert_eq!(errors, Vec::<String>::new());
-        assert_eq!(
-            placements.get("libs::square").map(|found| &found.crate_name),
-            Some(&"libs".to_string())
-        );
-    }
-
-    /// A macro that registers takes the id at the invocation, so the file that
-    /// spells it is the definition even though it names no registration.
-    #[test]
-    fn an_id_passed_to_a_registering_macro_places_in_the_invoking_module() {
-        let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
-        let root = dir.path();
-        workspace(root, &["libs"]);
-        write(
-            &root.join("libs/src/lib.rs"),
-            "#[cfg(feature = \"bitset\")]\npub mod bitset;\n",
-        );
-        write(
-            &root.join("libs/src/bitset/mod.rs"),
-            "pub mod word;\n\ndefine_op! {\n    op_id: \"libs::bitset::or_into\",\n}\n",
-        );
-        write(
-            &root.join("libs/src/bitset/word.rs"),
-            "inventory::submit! {\n    OperationRegistration::library(\"libs::bitset::and\", builder)\n}\n",
-        );
-
-        let ids = BTreeSet::from(["libs::bitset::or_into"]);
-        let mut errors = Vec::new();
-        let placements = read(root, &ids, &mut errors);
-
-        assert_eq!(errors, Vec::<String>::new());
-        assert_eq!(
-            placements.get("libs::bitset::or_into"),
-            Some(&Placement {
-                crate_name: "libs".to_string(),
-                features: vec!["bitset".to_string()],
-            })
-        );
-    }
-
-    /// A registration reachable only under `cfg(test)` is a fixture.
-    #[test]
-    fn a_test_only_module_is_not_a_definition_site() {
-        let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
-        let root = dir.path();
-        workspace(root, &["libs"]);
-        write(
-            &root.join("libs/src/lib.rs"),
-            "pub mod real;\n#[cfg(test)]\nmod fixtures;\n",
-        );
-        write(
-            &root.join("libs/src/real.rs"),
-            "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",
-        );
-        write(
-            &root.join("libs/src/fixtures.rs"),
-            "inventory::submit! {\n    OperationRegistration::library(\"libs::ghost\", builder)\n}\n",
-        );
-
-        let ids = BTreeSet::from(["libs::real", "libs::ghost"]);
-        let mut errors = Vec::new();
-        let placements = read(root, &ids, &mut errors);
-
-        assert!(placements.get("libs::real").is_some());
-        assert_eq!(placements.get("libs::ghost"), None);
-        assert_eq!(errors.len(), 1, "{errors:?}");
-        assert!(
-            errors[0].contains("operation `libs::ghost` has no definition site"),
-            "{errors:?}"
-        );
-    }
-
-    /// A domain that moved leaves its directory behind in every checkout that
-    /// pulled the deletion, so only the declaration answers.
-    #[test]
-    fn a_directory_no_declaration_names_carries_no_module() {
-        let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
-        let root = dir.path();
-        workspace(root, &["libs"]);
-        write(
-            &root.join("libs/src/lib.rs"),
-            "#[cfg(feature = \"reduce\")]\npub mod reduce;\n",
-        );
-        write(&root.join("libs/src/reduce.rs"), "pub fn sum() {}\n");
-        write(
-            &root.join("libs/src/matching/mod.rs"),
-            "inventory::submit! {\n    OperationRegistration::library(\"libs::matching::dfa\", builder)\n}\n",
-        );
-
-        let ids = BTreeSet::from(["libs::matching::dfa"]);
-        let mut errors = Vec::new();
-        let placements = read(root, &ids, &mut errors);
-
-        assert_eq!(placements.get("libs::matching::dfa"), None);
-        assert_eq!(errors.len(), 1, "{errors:?}");
-    }
 
     #[test]
     fn a_submission_attribute_adds_its_feature_to_the_module_route() {
@@ -638,38 +283,5 @@ mod tests {
             submission_features("inventory::submit! {\n}\n"),
             Vec::<String>::new()
         );
-    }
-
-    #[test]
-    fn a_test_predicate_beside_a_feature_still_compiles() {
-        assert_eq!(
-            reachable_features(&["#[cfg(any(test, feature = \"cpu-parity\"))]".to_string()]),
-            Some(vec!["cpu-parity".to_string()])
-        );
-        assert_eq!(
-            reachable_features(&["#[cfg(test)]".to_string()]),
-            None::<Vec<String>>
-        );
-        assert_eq!(
-            reachable_features(&["#[cfg(feature = \"latest\")]".to_string()]),
-            Some(vec!["latest".to_string()]),
-            "a feature whose name contains `test` is not the test predicate"
-        );
-    }
-
-    #[test]
-    fn a_module_declaration_is_read_through_its_visibility() {
-        assert_eq!(module_name("pub(crate) mod builder;"), Some("builder".to_string()));
-        assert_eq!(module_name("    mod inner;"), Some("inner".to_string()));
-        assert_eq!(module_name("pub mod math;"), Some("math".to_string()));
-        assert_eq!(module_name("mod tests {"), None);
-        assert_eq!(module_name("// mod commented;"), None);
-    }
-
-    #[test]
-    fn quoted_literals_read_whole_strings() {
-        let found = quoted_literals("const A: &str = \"libs::math::matmul\";\nlet b = \"x\\\"y\";\n");
-        assert!(found.contains("libs::math::matmul"));
-        assert!(!found.contains("libs::math::matmul_bias"));
     }
 }

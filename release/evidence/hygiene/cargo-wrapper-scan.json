@@ -1,13 +1,13 @@
 {
-  "source_fingerprint": "git:aa05ecde5b38160f55fd4ea8484ce2ab240a0fd4:dirty=true:worktree=4c3a03aa8bc22bfd454f3e7b89b8a2cf3f7d79ea1e2f03f4f0ccfea3e253391c",
+  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
   "schema_version": 1,
   "scan": "cargo-wrapper",
   "findings": [
     {
-      "path": "xtask/src/gates/feature_isolation.rs",
-      "line": 615,
+      "path": "xtask/src/gates/wire_determinism.rs",
+      "line": 159,
       "pattern": "raw_workspace_cargo",
-      "text": "format!(\"cannot run cargo check for `{}`: {error}\", pair.label()),"
+      "text": "format!(\"`cargo test --test {suite}` could not be started: {error}\"),"
     },
     {
       "path": "xtask/src/gates/backend_parity.rs",
@@ -24,8 +24,8 @@
   ],
   "release_blocking_findings": [
     {
-      "path": "xtask/src/gates/feature_isolation.rs",
-      "line": 615,
+      "path": "xtask/src/gates/wire_determinism.rs",
+      "line": 159,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",

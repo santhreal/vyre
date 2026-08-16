@@ -510,9 +510,20 @@ pub fn workspace_state(tree: &Tree) -> Result<WorkspaceState, GateError> {
         .cloned()
         .unwrap_or_default();
 
+    // A duplicate is fatal rather than a finding: the state every contract is
+    // judged against maps one package name to one manifest, so a second member
+    // under the same name overwrites the first and the surviving row decides
+    // what the whole gate reports.
     let mut paths = BTreeMap::new();
     let mut manifests = BTreeMap::new();
+    let mut listed: BTreeSet<&str> = BTreeSet::new();
     for member in &members {
+        if !listed.insert(member.as_str()) {
+            return Err(GateError::new(
+                format!("the root Cargo.toml lists workspace member `{member}` twice"),
+                "list every workspace member once",
+            ));
+        }
         let manifest = tree.read_toml(format!("{member}/Cargo.toml"))?;
         let name = manifest
             .get("package")
@@ -525,7 +536,12 @@ pub fn workspace_state(tree: &Tree) -> Result<WorkspaceState, GateError> {
                 )
             })?
             .to_string();
-        paths.insert(name.clone(), member.clone());
+        if let Some(first) = paths.insert(name.clone(), member.clone()) {
+            return Err(GateError::new(
+                format!("`{first}` and `{member}` both declare package `{name}`"),
+                "give each workspace member a distinct package.name",
+            ));
+        }
         manifests.insert(name, manifest);
     }
 

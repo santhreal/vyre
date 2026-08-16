@@ -629,7 +629,7 @@ pub fn foreign_glob_reexport_failures(reexports: &[(String, String, u32, String)
 #[must_use]
 pub fn scan_foreign_glob_reexports(
     root: &Path,
-    crate_roots: &[crate::CrateRoot],
+    crate_roots: &[crate::naming::CrateRoot],
 ) -> Vec<(String, String, u32, String)> {
     let idents: BTreeSet<&str> = crate_roots.iter().map(|root| root.ident.as_str()).collect();
     let mut found = Vec::new();

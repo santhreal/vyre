@@ -314,7 +314,7 @@ fn workspace_isolation_findings(root: &Path, manifest: &str) -> Vec<Finding> {
 
 /// Run one cargo invocation over an example and report what it says.
 fn cargo_findings(root: &Path, subject: &str, arguments: &[&str]) -> Vec<Finding> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::binary(root);
     let invocation = format!("cargo {}", arguments.join(" "));
     let output = Command::new(&cargo)
         .args(arguments)

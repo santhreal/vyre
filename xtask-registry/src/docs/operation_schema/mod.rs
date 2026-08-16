@@ -21,7 +21,7 @@ use self::validate::validate_schema;
 
 pub mod assemble;
 mod composition;
-mod placement;
+pub mod placement;
 mod routing;
 pub mod schema;
 mod signature;
@@ -47,7 +47,40 @@ impl Gate for OperationSchemaGate {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let schema = match build() {
+        let live = build();
+        if let Some(path) = ctx.flag("--validate") {
+            let candidate = read_schema(Path::new(path)).map_err(|error| {
+                GateError::new(error, "pass a readable schema document after --validate")
+            })?;
+            // The document is judged on its own terms first. Reporting the live
+            // registry's errors instead left every mutation of the document
+            // unread, so a schema that disagreed with itself passed whenever
+            // some unrelated registration was broken.
+            let mut messages = match validate_schema(&candidate, live.as_ref().ok()) {
+                Ok(()) => Vec::new(),
+                Err(errors) => errors,
+            };
+            if let Err(errors) = &live {
+                messages.push(format!(
+                    "the live registry does not assemble, so the document was judged on its own and not compared against it: {}",
+                    errors.join("; ")
+                ));
+            }
+            let mut report = if messages.is_empty() {
+                Report::clean()
+            } else {
+                Report::from_messages(
+                    messages,
+                    "repair the document, or regenerate it from the registry with --write",
+                )
+            };
+            report.note(format!(
+                "{} live operation contract(s) in the validated document",
+                candidate.operation_count
+            ));
+            return Ok(report);
+        }
+        let schema = match live {
             Ok(schema) => schema,
             Err(errors) => {
                 return Ok(Report::from_messages(
@@ -56,23 +89,6 @@ impl Gate for OperationSchemaGate {
                 ));
             }
         };
-        if let Some(path) = ctx.flag("--validate") {
-            let candidate = read_schema(Path::new(path)).map_err(|error| {
-                GateError::new(error, "pass a readable schema document after --validate")
-            })?;
-            let mut report = match validate_schema(&candidate, Some(&schema)) {
-                Ok(()) => Report::clean(),
-                Err(errors) => Report::from_messages(
-                    errors,
-                    "repair the document, or regenerate it from the registry with --write",
-                ),
-            };
-            report.note(format!(
-                "{} live operation contract(s) in the validated document",
-                candidate.operation_count
-            ));
-            return Ok(report);
-        }
         let mut inspection = xtask::artifact_gate::Inspection::new();
         inspection.generates(DEFAULT_OUTPUT, &schema);
         let mut report = xtask::artifact_gate::settle_inspection(ctx, self.name(), inspection);

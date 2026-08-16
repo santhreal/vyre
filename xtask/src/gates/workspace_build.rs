@@ -14,6 +14,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gates::scan::Tree;
 
 /// One compiler diagnostic, reduced to what a finding carries.
 struct Diagnostic {
@@ -34,7 +35,7 @@ struct Diagnostic {
 /// as long as it stood. Nothing here sets a build-affecting flag or variable,
 /// because build configuration is declared once in `.cargo/config.toml`.
 fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Vec<Diagnostic>, GateError> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::binary(root);
     let (cargo_arguments, driver_arguments) = split_at_driver(arguments);
     let output = Command::new(&cargo)
         .args(cargo_arguments)
@@ -200,12 +201,47 @@ impl Gate for WorkspaceDocs {
     }
 }
 
-/// The crates whose tests the Cat-A surface owes on every change.
+/// The layers whose test suites the Cat-A surface owes on every change.
 ///
-/// These are the three the composite ran, and the reason each is here is the
-/// contract it covers: `vyre-libs` the op surface, `vyre-foundation` the IR and
-/// wire encoding, `vyre-reference` the assignment and lifetime rules.
-const TESTED_PACKAGES: &[&str] = &["vyre-libs", "vyre-foundation", "vyre-reference"];
+/// The layer is the policy; which crates sit in one is read from the ownership
+/// registry at run time. A hard-coded roster of three packages named the crates
+/// that a retired composite happened to run, so a crate added to a contract
+/// layer was untested and nothing said so. `foundation` owns the IR and the wire
+/// encoding, `libraries` the op surface, `semantics` the assignment and lifetime
+/// rules.
+const TESTED_LAYERS: &[&str] = &["foundation", "libraries", "semantics"];
+
+/// Packages the ownership registry places in a tested layer.
+///
+/// A layer that names no crate is a finding rather than an empty roster: a
+/// renamed layer would otherwise reduce this gate to running no tests and
+/// reporting that nothing failed.
+fn tested_packages(ctx: &GateCtx, report: &mut Report) -> Result<Vec<String>, GateError> {
+    let tree = Tree::open(&ctx.root)?;
+    let records = crate::gates::crate_registry::load_registry(&tree, report)?;
+    let mut packages = Vec::new();
+    for layer in TESTED_LAYERS {
+        let mut in_layer: Vec<String> = records
+            .iter()
+            .filter(|record| record.layer == *layer)
+            .map(|record| record.package.clone())
+            .collect();
+        if in_layer.is_empty() {
+            report.find(Finding::in_file(
+                crate::gates::crate_registry::REGISTRY,
+                format!("no crate declares layer `{layer}`, so this gate would test nothing"),
+                format!(
+                    "declare the layer on the crate that owns the contract, or name the layer it \
+                     was renamed to in `TESTED_LAYERS`"
+                ),
+            ));
+        }
+        packages.append(&mut in_layer);
+    }
+    packages.sort();
+    packages.dedup();
+    Ok(packages)
+}
 
 /// Every test of the contract-owning crates passes.
 pub struct WorkspaceTests;
@@ -220,11 +256,17 @@ impl Gate for WorkspaceTests {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let cargo = crate::output_arg::cargo_runner(&ctx.root);
         let mut report = Report::clean();
+        let packages = tested_packages(ctx, &mut report)?;
+        if !report.findings.is_empty() {
+            // The roster decides what runs, so a broken registry is not a tree
+            // whose tests have been judged.
+            return Ok(report);
+        }
+        let cargo = crate::cargo_runner::binary(&ctx.root);
         let mut command = Command::new(&cargo);
         command.arg("test");
-        for package in TESTED_PACKAGES {
+        for package in &packages {
             command.args(["-p", package]);
         }
         // `--no-fail-fast` is what makes the count a count. Stopping at the
@@ -263,7 +305,7 @@ impl Gate for WorkspaceTests {
                 "run the same cargo command by hand and fix what it reports",
             ));
         }
-        report.note(format!("tested {}", TESTED_PACKAGES.join(", ")));
+        report.note(format!("tested {}", packages.join(", ")));
         Ok(report)
     }
 }

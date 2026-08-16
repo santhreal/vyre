@@ -428,6 +428,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `scallop_join_grid_contract` | `vyre-libs/tests/scallop_join_grid_contract.rs` | None | `./cargo_full test -p vyre-libs --test scallop_join_grid_contract` |
 | `test` | `scallop_join_grid_contract` | `vyre-libs/tests/scallop_join_grid_contract.rs` | `cpu-parity`, `fixpoint`, `math-kernels` | `./cargo_full test -p vyre-libs --test scallop_join_grid_contract` |
 | `test` | `scallop_join_ir_parity` | `vyre-libs/tests/scallop_join_ir_parity.rs` | None | `./cargo_full test -p vyre-libs --test scallop_join_ir_parity` |
+| `test` | `scallop_join_ir_parity` | `vyre-libs/tests/scallop_join_ir_parity.rs` | `cpu-parity`, `fixpoint`, `math-kernels` | `./cargo_full test -p vyre-libs --test scallop_join_ir_parity` |
 | `test` | `scallop_provenance_via_reference_parity` | `vyre-libs/tests/scallop_provenance_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test scallop_provenance_via_reference_parity` |
 | `test` | `scallop_provenance_via_reference_parity` | `vyre-libs/tests/scallop_provenance_via_reference_parity.rs` | `cpu-parity`, `encoding`, `test-fixtures` | `./cargo_full test -p vyre-libs --test scallop_provenance_via_reference_parity` |
 | `test` | `scan_ac_transition_walk_single_owner` | `vyre-libs/tests/scan_ac_transition_walk_single_owner.rs` | None | `./cargo_full test -p vyre-libs --test scan_ac_transition_walk_single_owner` |

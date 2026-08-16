@@ -7,6 +7,7 @@
 //! author had open, and two scanners could disagree about which files the
 //! workspace contains.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -111,6 +112,35 @@ pub fn carries_rust_source(directory: &Path) -> bool {
         })
 }
 
+/// The directory named `name` under `root` that carries the code, shallowest
+/// match first.
+///
+/// A composition move nests a domain under another one: the optimizer ops live
+/// in `vyre-libs/src/nn/optim` and `vyre-libs/src/optim` never existed. A name
+/// derived from an operation id therefore answers with a directory that holds
+/// no code, and a table of moved names is a snapshot that goes stale on the
+/// next move, so the tree is asked instead. The shallowest match wins because a
+/// domain re-declared deeper is a submodule of the one above it, and ties break
+/// on path order so two checkouts of one commit answer the same.
+#[must_use]
+pub fn source_directory_named(root: &Path, name: &str) -> Option<PathBuf> {
+    let mut matches: Vec<PathBuf> = WalkDir::new(root)
+        .into_iter()
+        .filter_entry(|entry| !is_pruned(entry))
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_dir() && entry.file_name() == name)
+        .map(DirEntry::into_path)
+        .filter(|path| carries_rust_source(path))
+        .collect();
+    matches.sort_by(|left, right| {
+        left.components()
+            .count()
+            .cmp(&right.components().count())
+            .then_with(|| left.cmp(right))
+    });
+    matches.into_iter().next()
+}
+
 /// Whether the walk should refuse to descend into `entry`.
 ///
 /// The root itself is never pruned: the checkout may sit in a hidden directory
@@ -192,4 +222,275 @@ pub fn mask_comments_and_strings(text: &str) -> String {
         at += ch.len_utf8();
     }
     masked
+}
+
+/// Interior text of every string literal in `text`, in source order.
+///
+/// A reader that tracks only the double quote desynchronises on a char literal
+/// that holds one: `b'"'` opens a string that never closes, and every literal
+/// after it is read as the gap between two later quotes. A lexer is full of
+/// them, which is how the registration id in
+/// `vyre-libs/src/parsing/python/lex.rs` went unread and the operation it
+/// defines was reported as having no definition site.
+///
+/// Which spans are not code is [`opaque_span`](crate::opaque_span)'s answer,
+/// the same one the masker and the registration parser read, so a raw string,
+/// a byte string and a nested block comment are all one decision.
+#[must_use]
+pub fn string_literals(text: &str) -> Vec<&str> {
+    let mut found = Vec::new();
+    let mut at = 0usize;
+    while at < text.len() {
+        let Some(span) = opaque_span(text, at) else {
+            at += text[at..].chars().next().map_or(1, char::len_utf8);
+            continue;
+        };
+        let mut end = (at + span.max(1)).min(text.len());
+        while end < text.len() && !text.is_char_boundary(end) {
+            end += 1;
+        }
+        if let Some(interior) = string_interior(&text[at..end]) {
+            found.push(interior);
+        }
+        at = end;
+    }
+    found
+}
+
+/// Text between the delimiters of one string literal, or `None` when the span
+/// is a comment, a char literal, or a literal nobody closed.
+fn string_interior(literal: &str) -> Option<&str> {
+    let bytes = literal.as_bytes();
+    let mut open = 0usize;
+    while matches!(bytes.get(open), Some(b'r' | b'b' | b'c' | b'#')) {
+        open += 1;
+    }
+    if bytes.get(open) != Some(&b'"') {
+        return None;
+    }
+    let hashes = literal[..open].bytes().filter(|byte| *byte == b'#').count();
+    let close = literal.len().checked_sub(1 + hashes)?;
+    if bytes.get(close) != Some(&b'"') {
+        return None;
+    }
+    literal.get(open + 1..close)
+}
+
+/// One module file a crate root reaches, and the features on the way to it.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModuleRoute {
+    /// Module file, as an absolute path.
+    pub path: PathBuf,
+    /// Features a build must enable to compile the file, in declaration order.
+    /// Empty means the crate compiles it unconditionally.
+    pub features: Vec<String>,
+}
+
+/// Every module file `<crate_src>/lib.rs` reaches, with the features on the way.
+///
+/// The `mod` declarations are the route, not the directory listing: a file no
+/// declaration names is not compiled, and a directory whose declaration is gone
+/// is not a module in a checkout that pulled the deletion. Modules reachable
+/// only in a test build are left out, so a fixture is never read as production.
+///
+/// Two readers asked this question and answered it differently. One took a
+/// dialect's features from the crate root alone, which reported 13 imports in a
+/// file that `encoding/mod.rs` declares behind the neural-network gates as
+/// unreachable coupling, and read a `#[cfg(test)]` module file as production
+/// source for 6 more. The other walked the declarations. The walk is here now,
+/// once.
+#[must_use]
+pub fn module_routes(crate_src: &Path) -> Vec<ModuleRoute> {
+    let mut found = Vec::new();
+    let mut pending = vec![ModuleRoute {
+        path: crate_src.join("lib.rs"),
+        features: Vec::new(),
+    }];
+    while let Some(module) = pending.pop() {
+        let Some(text) = read_source(&module.path) else {
+            continue;
+        };
+        let directory = module_directory(&module.path);
+        for (name, attributes) in module_declarations(&text) {
+            let Some(gates) = reachable_features(&attributes) else {
+                continue;
+            };
+            let mut features = module.features.clone();
+            for gate in gates {
+                if !features.contains(&gate) {
+                    features.push(gate);
+                }
+            }
+            let file = directory.join(format!("{name}.rs"));
+            let path = if file.is_file() {
+                file
+            } else {
+                directory.join(&name).join("mod.rs")
+            };
+            if path.is_file() {
+                pending.push(ModuleRoute { path, features });
+            }
+        }
+        found.push(module);
+    }
+    found
+}
+
+/// Features gating the item declared on line `at`, or `None` when only a test
+/// build reaches it.
+#[must_use]
+pub fn gating_features(text: &str, at: usize) -> Option<Vec<String>> {
+    let lines: Vec<&str> = text.lines().collect();
+    let blocks = attribute_blocks(&lines);
+    reachable_features(&gating_attributes(&lines, &blocks, at))
+}
+
+/// Directory the modules a file declares live in.
+fn module_directory(file: &Path) -> PathBuf {
+    let parent = file.parent().unwrap_or(Path::new("")).to_path_buf();
+    match file.file_name().and_then(|name| name.to_str()) {
+        Some("lib.rs" | "mod.rs") | None => parent,
+        Some(name) => parent.join(name.trim_end_matches(".rs")),
+    }
+}
+
+/// `(module name, attributes above it)` for every out-of-line `mod` in a file.
+fn module_declarations(text: &str) -> Vec<(String, Vec<String>)> {
+    let lines: Vec<&str> = text.lines().collect();
+    let attributes = attribute_blocks(&lines);
+    let mut declarations = Vec::new();
+    for (index, line) in lines.iter().enumerate() {
+        let Some(name) = module_name(line) else {
+            continue;
+        };
+        declarations.push((name, gating_attributes(&lines, &attributes, index)));
+    }
+    declarations
+}
+
+/// Module name declared by an out-of-line `mod` statement on one line.
+fn module_name(line: &str) -> Option<String> {
+    let rest = line.trim();
+    let rest = rest.strip_prefix("pub ").unwrap_or(rest).trim_start();
+    let rest = match rest.strip_prefix("pub(") {
+        Some(tail) => tail.split_once(')')?.1.trim_start(),
+        None => rest,
+    };
+    let name = rest.strip_prefix("mod ")?.strip_suffix(';')?.trim();
+    (!name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_'))
+        .then(|| name.to_string())
+}
+
+/// `(last line, (first line, joined text))` for every attribute in a file.
+///
+/// An attribute is joined across lines because the tree writes
+/// `#[cfg(any(\n    feature = "a",\n    feature = "b"\n))]`, and reading only
+/// the last line of that spelling records no feature at all.
+fn attribute_blocks(lines: &[&str]) -> BTreeMap<usize, (usize, String)> {
+    let mut blocks = BTreeMap::new();
+    let mut index = 0;
+    while index < lines.len() {
+        let trimmed = lines[index].trim();
+        if !trimmed.starts_with("#[") {
+            index += 1;
+            continue;
+        }
+        let mut joined = trimmed.to_string();
+        let mut last = index;
+        while joined.matches('(').count() > joined.matches(')').count() && last + 1 < lines.len() {
+            last += 1;
+            joined.push(' ');
+            joined.push_str(lines[last].trim());
+        }
+        blocks.insert(last, (index, joined));
+        index = last + 1;
+    }
+    blocks
+}
+
+/// Attribute texts that gate the item on line `at`.
+fn gating_attributes(
+    lines: &[&str],
+    blocks: &BTreeMap<usize, (usize, String)>,
+    at: usize,
+) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut index = at;
+    while index > 0 {
+        index -= 1;
+        let trimmed = lines[index].trim();
+        if trimmed.is_empty() || trimmed.starts_with("//") {
+            continue;
+        }
+        let Some((first, text)) = blocks.get(&index) else {
+            break;
+        };
+        if text.starts_with("#[cfg") {
+            found.push(text.clone());
+        }
+        index = *first;
+    }
+    found
+}
+
+/// Features that reach an item, or `None` when only a test build reaches it.
+///
+/// A `cfg` naming `test` beside a feature, such as
+/// `any(test, feature = "cpu-parity")`, still compiles in a feature build, so
+/// only a `cfg` that names `test` and no feature at all is test-only.
+fn reachable_features(attributes: &[String]) -> Option<Vec<String>> {
+    let mut features = Vec::new();
+    for attribute in attributes {
+        let named = cfg_feature_names(attribute);
+        if named.is_empty() && names_test(attribute) {
+            return None;
+        }
+        for feature in named {
+            if !features.contains(&feature) {
+                features.push(feature);
+            }
+        }
+    }
+    Some(features)
+}
+
+/// Every feature named by one `cfg` attribute.
+///
+/// `any`, `all` and `not` flatten to the names they mention: the question is
+/// which features can reach the item, not the predicate that admits it.
+#[must_use]
+pub fn cfg_feature_names(attribute: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut rest = attribute;
+    while let Some(start) = rest.find("feature = \"") {
+        rest = &rest[start + "feature = \"".len()..];
+        let Some(end) = rest.find('"') else {
+            break;
+        };
+        let feature = rest[..end].to_string();
+        if !feature.is_empty() && !found.contains(&feature) {
+            found.push(feature);
+        }
+        rest = &rest[end + 1..];
+    }
+    found
+}
+
+/// Whether one `cfg` attribute names the `test` predicate.
+fn names_test(attribute: &str) -> bool {
+    let bytes = attribute.as_bytes();
+    let mut at = 0;
+    while let Some(found) = attribute[at..].find("test") {
+        let start = at + found;
+        let end = start + "test".len();
+        let before = start
+            .checked_sub(1)
+            .is_none_or(|index| !is_word_byte(bytes[index]));
+        let after = end >= bytes.len() || !is_word_byte(bytes[end]);
+        if before && after {
+            return true;
+        }
+        at = end;
+    }
+    false
 }

@@ -87,7 +87,7 @@ Run the checked-in behavior from `vyre-primitives/examples/vyre_primitives_relea
 
 ### Features
 
-- Manifest features: `all-lego`, `cpu-parity`, `default`, `gpu`, `hardware`, `inventory-registry`, `vyre-foundation`
+- Manifest features: `cpu-parity`, `default`, `gpu`, `hardware`, `inventory-registry`, `vyre-foundation`
 - Default feature members: None
 
 ### Errors and unsupported behavior

@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=false",
+  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -143,7 +143,7 @@
     },
     {
       "path": "xtask/src/gates/crate_readmes.rs",
-      "line": 301,
+      "line": 346,
       "pattern": "placeholder_text",
       "text": "/// Every version the release train declares, keyed as a template placeholder."
     },

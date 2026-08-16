@@ -45,6 +45,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use serde::Deserialize;
 
@@ -604,23 +605,16 @@ pub fn first_error(stdout: &str) -> Option<String> {
 }
 
 /// Compile one pair once.
-///
-/// No `--all-targets`. The axis is what a consumer's `cargo check -p <member>
-/// --features <one>` resolves, and `--all-targets` resolves something wider: it
-/// pulls in the dev-dependency graph, cargo unifies features across one
-/// resolution, and a dev edge that asks the member for its other features hands
-/// the selection exactly the union this gate exists to see past. It also lets a
-/// break in the crate's own test code decide a feature's outcome, which
-/// `required-features` on the target owns instead.
-fn check_once(root: &Path, pair: &Pair) -> Result<Observation, GateError> {
-    let mut command = crate::cargo_runner::command(root);
+fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, GateError> {
+    let mut command = Command::new(cargo);
     command
+        .current_dir(root)
         .args(["check", "--locked", "-p", &pair.member])
         .args(pair.cargo_flags())
-        .args(["--message-format=json"]);
+        .args(["--all-targets", "--message-format=json"]);
     let output = command.output().map_err(|error| {
         GateError::new(
-            format!("cannot run cargo check for `{}`: {error}", pair.label()),
+            format!("cannot run `{cargo} check` for `{}`: {error}", pair.label()),
             "install a cargo the sweep can run, or set CARGO to one",
         )
     })?;
@@ -644,12 +638,12 @@ fn check_once(root: &Path, pair: &Pair) -> Result<Observation, GateError> {
 /// blocked pairs, and a gate that publishes false reds gets ignored, which is
 /// the outcome this whole axis exists to prevent. Only a failure is retried, so
 /// a green sweep pays nothing.
-fn compile(root: &Path, pair: &Pair) -> Result<Observation, GateError> {
-    let first = check_once(root, pair)?;
+fn compile(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, GateError> {
+    let first = check_once(root, cargo, pair)?;
     if first.compiles {
         return Ok(first);
     }
-    check_once(root, pair)
+    check_once(root, cargo, pair)
 }
 
 /// Render the data file for the whole axis, from observations where this run has
@@ -739,6 +733,10 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
     text
 }
 
+fn cargo_binary() -> String {
+    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string())
+}
+
 /// Turn one half's disagreements into findings under the fix that closes them.
 fn record(report: &mut Report, failures: Vec<String>, fix: &str) {
     report
@@ -755,9 +753,10 @@ fn observe(
     pairs: &[Pair],
     report: &mut Report,
 ) -> Result<Vec<(Pair, Observation)>, GateError> {
+    let cargo = cargo_binary();
     let mut observed = Vec::with_capacity(pairs.len());
     for (index, pair) in pairs.iter().enumerate() {
-        let observation = compile(root, pair)?;
+        let observation = compile(root, &cargo, pair)?;
         report.note(format!(
             "[{}/{}] {}: {}",
             index + 1,

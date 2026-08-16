@@ -16,11 +16,14 @@
 
 #![forbid(unsafe_code)]
 
+use structure_gate::naming::{
+    directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
+    sibling_module_failures,
+};
 use structure_gate::{
-    category_home_failures, directory_stutter_failures, frontend_owner_failures,
-    generic_module_name_failures, numbered_sibling_failures, operation_identity_failures,
+    Workspace, category_home_failures, frontend_owner_failures, operation_identity_failures,
     registration_owner_failures, registry_link_failures, roster_failures, scan,
-    sibling_module_failures, substrate_home_failures, workspace_root, Workspace,
+    substrate_home_failures, workspace_root,
 };
 
 fn workspace() -> Workspace {

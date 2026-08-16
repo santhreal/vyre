@@ -283,7 +283,7 @@ fn unowned_snapshots(root: &Path, owned: &BTreeSet<&str>) -> Result<Vec<PathBuf>
 /// caller's `sort` is what makes the snapshot a function of the tree: byte order
 /// does not move with a locale.
 fn extract(root: &Path, package: &str) -> Result<String, GateError> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::binary(root);
     let output = Command::new(&cargo)
         .args([
             "public-api",
@@ -508,7 +508,13 @@ mod tests {
             .run(&GateCtx::new(root, Vec::new()))
             .unwrap();
         assert_eq!(report.count(), 1, "{:?}", report.findings);
-        assert!(report.findings[0].message.contains("no source root"));
+        assert!(
+            report.findings[0]
+                .message
+                .contains("publishable package `gone` has no Rust source under `gone/src`"),
+            "{:?}",
+            report.findings[0].message
+        );
     }
 
     /// WHY: `--crate` is the guard against an unscoped refresh, so a name that

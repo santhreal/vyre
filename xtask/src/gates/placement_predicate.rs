@@ -125,38 +125,48 @@ fn findings_in(path: &Path, text: &str) -> Vec<Finding> {
 ///
 /// `root.join(member).is_dir()` asks whether a name has a directory, which is
 /// the question this rule rejects. `entry.path().is_dir()` asks about a path an
-/// enumeration already returned, which is a fact about that walk. A path bound
-/// to a local one line earlier is the same question spelled over two lines, so
-/// the binding is followed.
+/// enumeration already returned, which is a fact about that walk.
+///
+/// A name reaches a path two ways: `join` on a root, and a formatted string. The
+/// formatted one is the shape that shipped, `format!("{crate}/src/{domain}")`
+/// tested one line later, so the binding is followed through every local the
+/// tested expression names rather than only through the trailing identifier.
+/// `Path::new(&path).is_dir()` ends in `)`, so a rule reading only that
+/// identifier saw no receiver at all and reported nothing.
 fn name_derived(statement: &str, body: &[(u32, String)]) -> bool {
-    if statement.contains(".join(") {
+    if statement.contains(".join(") || statement.contains("format!(") {
         return true;
     }
-    let Some(receiver) = receiver_of(statement) else {
+    let Some(before) = statement.split(EXISTENCE_CALL).next() else {
         return false;
     };
-    body.iter().any(|(_, line)| binds_join(line, &receiver))
+    identifiers(before)
+        .iter()
+        .any(|name| body.iter().any(|(_, line)| binds_named_path(line, name)))
 }
 
-/// The trailing identifier the existence call is made on, when there is one.
-fn receiver_of(statement: &str) -> Option<String> {
-    let before = statement.split(EXISTENCE_CALL).next()?;
-    let name: String = before
-        .chars()
-        .rev()
-        .take_while(|character| character.is_alphanumeric() || *character == '_')
-        .collect();
-    (!name.is_empty()).then(|| name.chars().rev().collect())
+/// Every identifier one expression names, in source order.
+///
+/// A run of identifier characters that starts with a digit is a literal, not a
+/// local, so it cannot be the binding being followed.
+fn identifiers(text: &str) -> Vec<String> {
+    text.split(|character: char| !(character.is_alphanumeric() || character == '_'))
+        .filter(|word| {
+            !word.is_empty() && !word.starts_with(|character: char| character.is_ascii_digit())
+        })
+        .map(str::to_string)
+        .collect()
 }
 
-/// Whether one line binds `name` to a path built with `join`.
-fn binds_join(line: &str, name: &str) -> bool {
-    if !line.contains(".join(") {
+/// Whether one line binds `name` to a path built from a name.
+fn binds_named_path(line: &str, name: &str) -> bool {
+    if !(line.contains(".join(") || line.contains("format!(")) {
         return false;
     }
     let Some(after) = line.trim_start().strip_prefix("let ") else {
         return false;
     };
+    let after = after.strip_prefix("mut ").unwrap_or(after);
     let Some(tail) = after.strip_prefix(name) else {
         return false;
     };
@@ -262,6 +272,34 @@ mod tests {
         );
         let read = "fn member_lives(root: &Path, member: &str) -> bool {\n    carries_rust_source(&root.join(member))\n}\n";
         assert!(findings_in(Path::new("structure-gate/src/example.rs"), read).is_empty());
+    }
+
+    /// WHY: the formatted path is the shape that shipped, and it reaches the
+    /// existence call inside `Path::new(&...)`, so the tested expression ends in
+    /// `)` and names the local only in the middle. Reading the trailing
+    /// identifier alone reported nothing for exactly the case the rule exists
+    /// for. Both spellings are the same question.
+    #[test]
+    fn a_formatted_path_is_name_derived_whether_it_is_bound_or_inline() {
+        let bound = "fn owner(domain: &str) -> bool {\n    let path = format!(\"vyre-libs/src/{domain}\");\n    Path::new(&path).is_dir()\n}\n";
+        assert_eq!(
+            findings_in(Path::new("xtask-registry/src/example.rs"), bound).len(),
+            1
+        );
+        let inline = "fn owner(domain: &str) -> bool {\n    Path::new(&format!(\"vyre-libs/src/{domain}\")).is_dir()\n}\n";
+        assert_eq!(
+            findings_in(Path::new("xtask-registry/src/example.rs"), inline).len(),
+            1
+        );
+    }
+
+    /// WHY: a path an enumeration returned is a fact about that walk, and the
+    /// widened binding search must not turn every `entry.path().is_dir()` in a
+    /// walker into a finding. That is how a rule gets switched off.
+    #[test]
+    fn a_path_an_enumeration_returned_is_not_name_derived() {
+        let source = "fn dirs(root: &Path) -> usize {\n    let mut count = 0;\n    for entry in read_dir(root).unwrap().flatten() {\n        if entry.path().is_dir() {\n            count += 1;\n        }\n    }\n    count\n}\n";
+        assert!(findings_in(Path::new("structure-gate/src/example.rs"), source).is_empty());
     }
 
     #[test]
