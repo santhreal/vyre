@@ -26,6 +26,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gates::scan;
 
 /// Directory holding every subject.
 const EXAMPLES: &str = "examples";
@@ -116,29 +117,19 @@ impl Gate for ExampleCapability {
     }
 }
 
-/// Tracked paths under `examples/`, grouped by the directory that owns them.
+/// Listed paths under `examples/`, grouped by the directory that owns them.
+///
+/// [`scan::Tree`] is the one reader of what git would commit, so this gate and
+/// every other one see the same file set. Two gates each spawning `git
+/// ls-files` is how a gate ends up measuring a different tree from the one it
+/// reports against.
 fn tracked_example_paths(root: &Path) -> Result<BTreeMap<String, Vec<String>>, GateError> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["ls-files", "-z", "--", EXAMPLES])
-        .output()
-        .map_err(|error| {
-            GateError::new(
-                format!("could not run `git ls-files`: {error}"),
-                "run this gate inside a git work tree; the tracked set is the oracle",
-            )
-        })?;
-    if !output.status.success() {
-        return Err(GateError::new(
-            format!("`git ls-files -- {EXAMPLES}` failed"),
-            "run this gate inside a git work tree; the tracked set is the oracle",
-        ));
-    }
-    let text = String::from_utf8_lossy(&output.stdout);
+    let tree = scan::Tree::open(root)?;
+    let prefix = format!("{EXAMPLES}/");
     let mut grouped: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for path in text.split('\0').filter(|entry| !entry.is_empty()) {
-        let Some(rest) = path.strip_prefix(&format!("{EXAMPLES}/")) else {
+    for path in tree.paths() {
+        let path = path.to_string_lossy();
+        let Some(rest) = path.strip_prefix(&prefix) else {
             continue;
         };
         let Some((name, _)) = rest.split_once('/') else {
@@ -147,7 +138,7 @@ fn tracked_example_paths(root: &Path) -> Result<BTreeMap<String, Vec<String>>, G
         grouped
             .entry(name.to_string())
             .or_default()
-            .push(path.to_string());
+            .push(path.into_owned());
     }
     Ok(grouped)
 }
@@ -250,6 +241,17 @@ fn template_findings(
         ));
         return Ok(findings);
     };
+    let patch = match checkout_patch_section(root, &rendered_manifest_text) {
+        Ok(section) => section,
+        Err(error) => {
+            findings.push(Finding::in_file(
+                &manifest,
+                format!("`{directory}` renders a Cargo.toml that is not valid TOML: {error}"),
+                "fix the template so the rendered manifest parses; a manifest cargo cannot read cannot be patched at the checkout either",
+            ));
+            return Ok(findings);
+        }
+    };
     for (relative, text) in &rendered {
         let path = target.join(relative);
         if let Some(parent) = path.parent() {
@@ -268,10 +270,7 @@ fn template_findings(
         })?;
     }
     let rendered_manifest = target.join("Cargo.toml");
-    let patched = format!(
-        "{rendered_manifest_text}{}",
-        checkout_patch_section(root, &rendered_manifest_text)
-    );
+    let patched = format!("{rendered_manifest_text}{patch}");
     std::fs::write(&rendered_manifest, patched).map_err(|error| {
         GateError::new(
             format!("could not write `{}`: {error}", rendered_manifest.display()),
@@ -395,9 +394,16 @@ fn unknown_placeholders(text: &str) -> Vec<String> {
 /// A `[patch.crates-io]` table pointing every dependency this checkout provides
 /// at the checkout, so a rendered template is built against the tree that ships
 /// it rather than against the registry.
-fn checkout_patch_section(root: &Path, manifest: &str) -> String {
+///
+/// The rendered manifest is parsed, not scanned. A line scanner reads
+/// `[target.'cfg(unix)'.dependencies]` as prose and a dotted `dependencies.foo`
+/// key as nothing, and the two disagreements are invisible: the patch table
+/// comes out short and cargo resolves that dependency from the registry, which
+/// is the one thing this gate exists to prevent.
+fn checkout_patch_section(root: &Path, manifest: &str) -> Result<String, String> {
+    let parsed: toml::Table = toml::from_str(manifest).map_err(|error| error.to_string())?;
     let mut section = String::from("\n[patch.crates-io]\n");
-    for name in dependency_names(manifest) {
+    for name in crate::manifest_walk::dependency_names(&parsed) {
         if !root.join(&name).join("Cargo.toml").is_file() {
             continue;
         }
@@ -406,34 +412,7 @@ fn checkout_patch_section(root: &Path, manifest: &str) -> String {
             root.join(&name).display()
         ));
     }
-    section
-}
-
-/// Dependency names a manifest declares, in declaration order.
-fn dependency_names(manifest: &str) -> Vec<String> {
-    let mut names = Vec::new();
-    let mut in_dependencies = false;
-    for line in manifest.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with('[') {
-            in_dependencies = matches!(
-                trimmed,
-                "[dependencies]" | "[dev-dependencies]" | "[build-dependencies]"
-            );
-            continue;
-        }
-        if !in_dependencies {
-            continue;
-        }
-        let Some((name, _)) = trimmed.split_once('=') else {
-            continue;
-        };
-        let name = name.trim().to_string();
-        if !name.is_empty() && !names.contains(&name) {
-            names.push(name);
-        }
-    }
-    names
+    Ok(section)
 }
 
 #[cfg(test)]
@@ -496,21 +475,39 @@ mod tests {
     /// WHY: the patch table is derived from the dependencies the rendered
     /// manifest declares, because a hardcoded crate list stops patching the day
     /// a template adds a dependency, and the build then silently resolves that
-    /// one crate from the registry instead of from this checkout.
+    /// one crate from the registry instead of from this checkout. A crate the
+    /// checkout does not provide is left to the registry rather than patched at
+    /// a path that does not exist.
     #[test]
-    fn dependency_names_come_from_every_dependency_table() {
-        let names = dependency_names(
-            "[package]\nname = \"probe\"\n\n[dependencies]\nvyre = \"0.7.2\"\nvyre-libs = { version = \"0.7.2\" }\n\n[dev-dependencies]\nvyre-reference = \"0.7.2\"\n\n[lints.rust]\nunsafe_code = \"forbid\"\n",
-        );
+    fn the_patch_table_names_every_declared_dependency_this_checkout_provides() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("xtask sits in the workspace root")
+            .to_path_buf();
 
-        assert_eq!(
-            names,
-            vec![
-                "vyre".to_string(),
-                "vyre-libs".to_string(),
-                "vyre-reference".to_string()
-            ]
-        );
+        let section = checkout_patch_section(
+            &root,
+            "[package]\nname = \"probe\"\n\n[dependencies]\nvyre = \"0.7.2\"\nserde = \"1\"\n\n[dev-dependencies]\nvyre-reference = \"0.7.2\"\n\n[target.'cfg(unix)'.dependencies]\nvyre-libs = \"0.7.2\"\n\n[lints.rust]\nunsafe_code = \"forbid\"\n",
+        )
+        .expect("Fix: a valid manifest must yield a patch table.");
+
+        let patched: Vec<&str> = section
+            .lines()
+            .filter_map(|line| line.split_once(" = ").map(|(name, _)| name))
+            .collect();
+        assert_eq!(patched, vec!["vyre", "vyre-libs", "vyre-reference"]);
+        assert!(section.contains(&format!("path = \"{}\"", root.join("vyre").display())));
+    }
+
+    /// WHY: a template that renders to something cargo cannot parse used to
+    /// produce an empty patch table and a build against the registry, which
+    /// reads as a passing example built from the wrong sources.
+    #[test]
+    fn an_unparseable_rendered_manifest_is_reported_rather_than_patched() {
+        let error = checkout_patch_section(std::path::Path::new("."), "name = {{crate_name}}\n")
+            .expect_err("Fix: an unrendered placeholder must not parse as TOML.");
+
+        assert!(!error.is_empty());
     }
 
     /// WHY: a manifest that inherits the repository workspace resolves against

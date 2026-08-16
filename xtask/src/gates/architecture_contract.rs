@@ -568,93 +568,115 @@ fn judge_lanes(
                 ));
             }
         }
-        for key in ["write", "avoid"] {
-            let entries = body
-                .get(key)
-                .and_then(toml::Value::as_array)
-                .map(Vec::as_slice)
-                .unwrap_or_default();
-            for entry in entries {
-                let Some(pattern) = entry.as_str().filter(|value| !value.trim().is_empty()) else {
-                    findings.push(Finding::in_file(
-                        LANES,
-                        format!("lane `{lane}` has an empty {key} entry"),
-                        LANE_FIX,
-                    ));
-                    continue;
-                };
-                if pattern.starts_with('/') || pattern.split('/').any(|segment| segment == "..") {
-                    findings.push(Finding::in_file(
-                        LANES,
-                        format!(
-                            "lane `{lane}` {key} entry `{pattern}` is not a repository-relative path"
-                        ),
-                        LANE_FIX,
-                    ));
-                    continue;
-                }
-                // A lane entry names a path scope, so `vyre-driver-*` covers the
-                // files under every directory it matches as well as a file of
-                // that name. Requiring the glob to match a whole path would
-                // report every entry written as a directory, which is most of
-                // them, and reporting a coherent registry is how a rule gets
-                // switched off.
-                let subtree = format!("{}/**", pattern.trim_end_matches('/'));
-                let matched = tree.paths().iter().any(|path| {
-                    let path = path.to_string_lossy();
-                    glob_match(pattern, path.as_ref()) || glob_match(&subtree, path.as_ref())
-                }) || tree.exists(pattern);
-                if !matched {
-                    findings.push(Finding::in_file(
-                        LANES,
-                        format!(
-                            "lane `{lane}` {key} entry `{pattern}` matches nothing in the tree"
-                        ),
-                        LANE_FIX,
-                    ));
-                }
-            }
-        }
-        let commands = body
-            .get("required_commands")
+        judge_lane_scopes(tree, lane, body, findings);
+        judge_lane_commands(&packages, lane, body, findings);
+    }
+    Ok(())
+}
+
+/// Every `write` and `avoid` entry of one lane names a repository-relative
+/// scope that matches something in the tree.
+fn judge_lane_scopes(tree: &Tree, lane: &str, body: &toml::Table, findings: &mut Vec<Finding>) {
+    for key in ["write", "avoid"] {
+        let entries = body
+            .get(key)
             .and_then(toml::Value::as_array)
             .map(Vec::as_slice)
             .unwrap_or_default();
-        for command in commands {
-            let Some(command) = command.as_str().filter(|value| !value.trim().is_empty()) else {
+        for entry in entries {
+            let Some(pattern) = entry.as_str().filter(|value| !value.trim().is_empty()) else {
                 findings.push(Finding::in_file(
                     LANES,
-                    format!("lane `{lane}` has an empty required command"),
+                    format!("lane `{lane}` has an empty {key} entry"),
                     LANE_FIX,
                 ));
                 continue;
             };
-            let tokens: Vec<&str> = command.split_whitespace().collect();
-            for (index, token) in tokens.iter().enumerate() {
-                if *token != "-p" {
-                    continue;
-                }
-                match tokens.get(index + 1) {
-                    None => findings.push(Finding::in_file(
-                        LANES,
-                        format!("lane `{lane}` command `{command}` ends with a bare -p"),
-                        LANE_FIX,
-                    )),
-                    Some(package) if !packages.contains(package) => {
-                        findings.push(Finding::in_file(
-                            LANES,
-                            format!(
-                                "lane `{lane}` command `{command}` names package `{package}`, which no workspace manifest declares"
-                            ),
-                            LANE_FIX,
-                        ));
-                    }
-                    Some(_) => {}
-                }
+            if pattern.starts_with('/') || pattern.split('/').any(|segment| segment == "..") {
+                findings.push(Finding::in_file(
+                    LANES,
+                    format!(
+                        "lane `{lane}` {key} entry `{pattern}` is not a repository-relative path"
+                    ),
+                    LANE_FIX,
+                ));
+                continue;
+            }
+            // A lane entry names a path scope, so `vyre-driver-*` covers the
+            // files under every directory it matches as well as a file of
+            // that name. Requiring the glob to match a whole path would
+            // report every entry written as a directory, which is most of
+            // them, and reporting a coherent registry is how a rule gets
+            // switched off.
+            let subtree = format!("{}/**", pattern.trim_end_matches('/'));
+            let matched = tree.paths().iter().any(|path| {
+                let path = path.to_string_lossy();
+                glob_match(pattern, path.as_ref()) || glob_match(&subtree, path.as_ref())
+            }) || tree.exists(pattern);
+            if !matched {
+                findings.push(Finding::in_file(
+                    LANES,
+                    format!("lane `{lane}` {key} entry `{pattern}` matches nothing in the tree"),
+                    LANE_FIX,
+                ));
             }
         }
     }
-    Ok(())
+}
+
+/// Every `-p` package one lane's required commands name is a workspace member.
+fn judge_lane_commands(
+    packages: &BTreeSet<&str>,
+    lane: &str,
+    body: &toml::Table,
+    findings: &mut Vec<Finding>,
+) {
+    let commands = body
+        .get("required_commands")
+        .and_then(toml::Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    for command in commands {
+        let Some(command) = command.as_str().filter(|value| !value.trim().is_empty()) else {
+            findings.push(Finding::in_file(
+                LANES,
+                format!("lane `{lane}` has an empty required command"),
+                LANE_FIX,
+            ));
+            continue;
+        };
+        findings.extend(undeclared_command_packages(packages, lane, command));
+    }
+}
+
+/// Findings for each `-p` package one command names that no workspace manifest
+/// declares, and for a `-p` with nothing after it.
+fn undeclared_command_packages(
+    packages: &BTreeSet<&str>,
+    lane: &str,
+    command: &str,
+) -> Vec<Finding> {
+    let tokens: Vec<&str> = command.split_whitespace().collect();
+    tokens
+        .iter()
+        .enumerate()
+        .filter(|(_, token)| **token == "-p")
+        .filter_map(|(index, _)| match tokens.get(index + 1) {
+            None => Some(Finding::in_file(
+                LANES,
+                format!("lane `{lane}` command `{command}` ends with a bare -p"),
+                LANE_FIX,
+            )),
+            Some(package) if !packages.contains(package) => Some(Finding::in_file(
+                LANES,
+                format!(
+                    "lane `{lane}` command `{command}` names package `{package}`, which no workspace manifest declares"
+                ),
+                LANE_FIX,
+            )),
+            Some(_) => None,
+        })
+        .collect()
 }
 
 #[cfg(test)]

@@ -91,6 +91,36 @@ pub fn vyre_crate_directory(package: &str) -> PathBuf {
     structure_gate::member_directory(&vyre_workspace_root(), package)
 }
 
+/// Workspace member paths and excluded paths from the root manifest, in this
+/// checkout.
+///
+/// Delegates to [`structure_gate`], which owns the root-manifest parse. A
+/// contract that reads `Cargo.toml` itself to answer "is this directory in the
+/// workspace" grows a second roster, and the two disagree the first time a
+/// path is written in a shape only one of them recognizes.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed.
+#[must_use]
+pub fn vyre_workspace_rosters() -> WorkspaceRosters {
+    let root = vyre_workspace_root();
+    WorkspaceRosters {
+        members: structure_gate::workspace_members(&root).into_iter().collect(),
+        excluded: structure_gate::workspace_excludes(&root)
+            .into_iter()
+            .collect(),
+    }
+}
+
+/// What the root manifest says the workspace holds and keeps out.
+pub struct WorkspaceRosters {
+    /// Paths declared as workspace members.
+    pub members: std::collections::BTreeSet<String>,
+    /// Paths declared in `workspace.exclude`.
+    pub excluded: std::collections::BTreeSet<String>,
+}
+
 /// Directory cargo is writing this run's build artifacts into.
 ///
 /// A test that has to build a scratch crate of its own puts it under here
