@@ -16,7 +16,7 @@ use vyre_driver::tuner::Mode;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::BackendLayoutFingerprint;
 pub(crate) use vyre_driver::{element_size_bytes, OutputBindingLayout};
-use vyre_driver::{find_indirect_dispatch, infer_dispatch_grid_for_count};
+use vyre_driver::{admit_dispatch_grid, find_indirect_dispatch, infer_dispatch_grid_for_count};
 pub use vyre_driver::{output_layout_from_program, IndirectDispatch, OutputLayout};
 use vyre_driver::{BackendError, DispatchConfig, OutputBuffers};
 use vyre_foundation::execution_plan::{self, ExecutionPlan};
@@ -595,10 +595,29 @@ impl WgpuPipeline {
             })
     }
 
+    /// The launch grid for this dispatch, judged against the device's ceiling.
+    ///
+    /// Every wgpu dispatch path resolves its grid here, which is why the per-axis
+    /// admission belongs here too: a grid past the device ceiling is rejected by
+    /// the API from inside a recorded command buffer, where the rejection is a
+    /// validation abort rather than an error this call can return.
     pub(crate) fn workgroups_for_dispatch(
         &self,
         config: &DispatchConfig,
     ) -> Result<[u32; 3], BackendError> {
+        let grid = self.requested_workgroups(config)?;
+        admit_dispatch_grid(grid, self.max_workgroups_per_axis(), crate::WGPU_BACKEND_ID)
+    }
+
+    /// The per-axis workgroup ceiling this device reported.
+    pub(crate) fn max_workgroups_per_axis(&self) -> u32 {
+        self.device_queue
+            .0
+            .limits()
+            .max_compute_workgroups_per_dimension
+    }
+
+    fn requested_workgroups(&self, config: &DispatchConfig) -> Result<[u32; 3], BackendError> {
         if let Some(grid) = config.grid_override {
             return Ok(grid);
         }

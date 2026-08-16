@@ -11,8 +11,8 @@ pub use dispatch_params::{
     try_dispatch_param_words, try_dispatch_param_words_into,
 };
 pub use grid::{
-    auto_grid, coerce_to_pow2_with_tail_mask, infer_dispatch_grid, infer_dispatch_grid_for_count,
-    try_coerce_to_pow2_with_tail_mask, TailMaskPolicy,
+    admit_dispatch_grid, auto_grid, coerce_to_pow2_with_tail_mask, infer_dispatch_grid,
+    infer_dispatch_grid_for_count, try_coerce_to_pow2_with_tail_mask, TailMaskPolicy,
 };
 pub use indirect::{find_indirect_dispatch, IndirectDispatch};
 pub(crate) use launch_geometry::program_uses_launch_geometry_ids;
