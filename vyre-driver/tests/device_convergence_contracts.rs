@@ -42,8 +42,8 @@ fn convergence_plan_rejects_wrong_changed_flag_width() {
 
 #[test]
 fn convergence_plan_rejects_host_polled_iterations() {
-    let err = plan_device_convergence(8, 4, 8)
-        .expect_err("host polling every iteration is forbidden");
+    let err =
+        plan_device_convergence(8, 4, 8).expect_err("host polling every iteration is forbidden");
 
     assert_eq!(
         err,

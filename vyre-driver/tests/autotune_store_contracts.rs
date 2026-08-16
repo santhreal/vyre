@@ -3,10 +3,9 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_driver::autotune_store::{AutotuneKey, AutotuneRecord, AutotuneStore};
-use vyre_driver::specialization::SpecCacheKey;
-
 use tempfile::TempDir;
+use vyre_driver::autotune_store::{AutotuneKey, AutotuneRecord, AutotuneStore};
+use vyre_driver::SpecCacheKey;
 
 fn sample_spec(spec_hash: u64) -> SpecCacheKey {
     SpecCacheKey {

@@ -7,10 +7,6 @@ use vyre_driver_cuda::synthetic_device_caps::{
     synthetic_sm120_envelope, synthetic_sm120_envelope_default,
 };
 
-use vyre_driver_cuda::synthetic_device_caps::{
-    synthetic_sm120_envelope, synthetic_sm120_envelope_default,
-};
-
 #[test]
 fn synthetic_envelope_preserves_architecture_fields() {
     let caps = synthetic_sm120_envelope_default();

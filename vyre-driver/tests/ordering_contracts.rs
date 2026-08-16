@@ -3,13 +3,7 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_driver::ordering::{
-    classify_dense_permutation, iter_is_monotonic_by_key, sort_by_key_if_needed,
-    sort_unstable_by_key_if_needed, sort_unstable_if_needed, DensePermutationDefect,
-};
-
 use std::cell::Cell;
-
 use vyre_driver::ordering::{
     classify_dense_permutation, iter_is_monotonic_by_key, sort_by_key_if_needed,
     sort_unstable_by_key_if_needed, sort_unstable_if_needed, DensePermutationDefect,

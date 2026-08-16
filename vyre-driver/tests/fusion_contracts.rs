@@ -4,13 +4,9 @@
 //! a consumer does.
 
 use vyre_driver::fusion::{DispatchShape, FusionCaps, FusionDecision, FusionPass};
-use vyre_driver::specialization::SpecMap;
+use vyre_driver::SpecMap;
 
-fn dispatch(
-    id: &'static str,
-    inputs: &[&'static str],
-    outputs: &[&'static str],
-) -> DispatchShape {
+fn dispatch(id: &'static str, inputs: &[&'static str], outputs: &[&'static str]) -> DispatchShape {
     DispatchShape {
         id,
         workgroup_size: [64, 1, 1],

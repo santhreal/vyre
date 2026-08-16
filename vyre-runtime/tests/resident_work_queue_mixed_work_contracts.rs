@@ -9,12 +9,6 @@ use vyre_runtime::resident_work_queue::mixed_work::{
     ResidentArtifactId, MIXED_WORK_PROTOCOL_SCHEMA_VERSION,
 };
 
-use vyre_runtime::resident_work_queue::mixed_work::{
-    mixed_work_protocol_evidence, validate_mixed_work_protocol, MixedWorkProtocolError,
-    MixedWorkProtocolPlan, MixedWorkQueueClass, MixedWorkUnit, MixedWorkUnitType, OutputSlabId,
-    ResidentArtifactId, MIXED_WORK_PROTOCOL_SCHEMA_VERSION,
-};
-
 fn unit(
     sequence: u64,
     queue_class: MixedWorkQueueClass,

@@ -3,7 +3,7 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use vyre_driver::accounting::{
     pinning_atomic_add_usize_with_order, repair_atomic_sub_usize_fetch_with_order,
 };

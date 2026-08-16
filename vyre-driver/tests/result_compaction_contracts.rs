@@ -10,9 +10,8 @@ use vyre_driver::result_compaction::{
 
 #[test]
 fn result_compaction_packs_small_outputs_and_skips_empty_slots() {
-    let plan =
-        plan_result_compaction(&[slot(2, 0, 128), slot(1, 12, 128), slot(3, 24, 256)], 32)
-            .expect("Fix: small outputs should compact");
+    let plan = plan_result_compaction(&[slot(2, 0, 128), slot(1, 12, 128), slot(3, 24, 256)], 32)
+        .expect("Fix: small outputs should compact");
 
     assert_eq!(
         plan.compact_records,
@@ -132,9 +131,8 @@ fn generated_result_compaction_profiles_preserve_exact_telemetry_for_4096_shapes
                 })
                 .collect::<Vec<_>>();
 
-            let plan =
-                plan_result_compaction_with_scratch(&slots, compact_threshold, &mut scratch)
-                    .expect("Fix: generated result compaction profile should plan");
+            let plan = plan_result_compaction_with_scratch(&slots, compact_threshold, &mut scratch)
+                .expect("Fix: generated result compaction profile should plan");
 
             let expected_full = slots.iter().map(|slot| slot.capacity_bytes).sum::<u64>();
             let expected_selected = slots.iter().map(|slot| slot.meaningful_bytes).sum::<u64>();

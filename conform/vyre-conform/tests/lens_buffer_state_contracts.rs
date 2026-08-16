@@ -4,10 +4,8 @@
 //! a consumer does.
 
 use vyre_conform::lens::buffer_state::project_output_buffers;
-use vyre_foundation::ir::{BufferAccess, Program};
-
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
-use vyre_foundation::ir::{BufferDecl, DataType};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 /// Mirrors the real `vyre-libs::security::flows_to` layout: many
 /// read-only graph/input buffers plus a single read-write frontier.
@@ -22,17 +20,13 @@ use vyre_foundation::ir::{BufferDecl, DataType};
 fn flows_to_shaped_program() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage("pg_nodes", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
-            BufferDecl::storage("pg_edges", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
+            BufferDecl::storage("pg_nodes", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+            BufferDecl::storage("pg_edges", 1, BufferAccess::ReadOnly, DataType::U32).with_count(4),
             BufferDecl::storage("edge_offsets", 2, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(4),
-            BufferDecl::storage("sources", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
+            BufferDecl::storage("sources", 3, BufferAccess::ReadOnly, DataType::U32).with_count(4),
             BufferDecl::storage("dims", 4, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("reach_in", 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
+            BufferDecl::storage("reach_in", 5, BufferAccess::ReadOnly, DataType::U32).with_count(4),
             BufferDecl::storage("reach_out", 6, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(4),
         ],

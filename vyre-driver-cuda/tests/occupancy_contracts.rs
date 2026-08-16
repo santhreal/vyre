@@ -9,7 +9,6 @@ use vyre_driver_cuda::occupancy::{
     pick_workgroup_size_for_occupancy, ConcurrentLaunchBlocker, ConcurrentLaunchDecision,
     KernelResourceUsage, OccupancyEstimate,
 };
-
 use vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope_default;
 
 #[test]

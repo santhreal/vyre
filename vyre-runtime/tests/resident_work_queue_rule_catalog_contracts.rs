@@ -2,6 +2,7 @@
 //!
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
+#![cfg(feature = "megakernel-batch")]
 
 use vyre_runtime::resident_work_queue::rule_catalog::{
     accepted_rule_fingerprints_into, pack_rule_catalog, try_pack_u16_transitions_into,
@@ -11,17 +12,11 @@ use vyre_runtime::resident_work_queue::rule_catalog::{
 /// Resolve the next state the COMPRESSED packed catalog yields for
 /// `(rule, state, byte)`: mirrors the GPU kernel's index math exactly so
 /// the parity tests can prove byte-for-byte equivalence to the dense table.
-fn packed_next_state(
-    packed: &PackedRuleCatalog,
-    meta_index: usize,
-    state: u32,
-    byte: u8,
-) -> u32 {
+fn packed_next_state(packed: &PackedRuleCatalog, meta_index: usize, state: u32, byte: u8) -> u32 {
     let meta = packed.rule_meta[meta_index];
     let class = packed.class_maps[meta.class_map_base as usize + byte as usize];
-    let idx = meta.transition_base as usize
-        + state as usize * meta.num_classes as usize
-        + class as usize;
+    let idx =
+        meta.transition_base as usize + state as usize * meta.num_classes as usize + class as usize;
     packed.transitions[idx]
 }
 
@@ -261,12 +256,8 @@ fn accepted_rule_fingerprints_into_returns_rejections_and_reuses_caller_storage(
     let occupied_ptr = occupied.as_ptr();
     let addressed_ptr = addressed.as_ptr();
 
-    let rejections = accepted_rule_fingerprints_into(
-        &rules,
-        &mut fingerprints,
-        &mut occupied,
-        &mut addressed,
-    );
+    let rejections =
+        accepted_rule_fingerprints_into(&rules, &mut fingerprints, &mut occupied, &mut addressed);
 
     assert!(rejections.is_empty());
     assert_eq!(fingerprints.len(), rules.len());
@@ -320,8 +311,7 @@ fn invalid_rules_are_isolated_to_inert_catalog_entries() {
     }
     // Accept entry for the inert slot at state 0 must be zero (no match).
     assert_eq!(
-        packed.accept[packed.rule_meta[1].accept_base as usize],
-        0,
+        packed.accept[packed.rule_meta[1].accept_base as usize], 0,
         "Fix: inert slot accept entry at state 0 must be 0, the inert DFA must never produce a match"
     );
 }

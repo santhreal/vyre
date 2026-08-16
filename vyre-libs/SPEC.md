@@ -5,17 +5,25 @@ Layer `libraries`. Owner `product-libraries`.
 ## Owns
 
 Own every composition in the workspace: consumer dialects and compiler-internal
-solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No
-backend, no emitter, no host rewrite of IR.
+solvers, encoding, analysis, scheduling, and reasoning. Returns Programs as pure
+mathematical and semantic IR. No backend, no emitter, no host rewrite of IR,
+and no execution-level schedule decisions.
 
 The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-libs).
 
 ## Must never contain
 
-Anything that names a concrete backend, links an emitter crate, or reimplements
-in host Rust what IR expresses. The first two invert the dependency, because a
-composition states what it needs and the driver decides who provides it. The
-third is the failure the crate exists to prevent.
+1. Anything that names a concrete backend or links an emitter crate.
+2. Host-side reimplementations of what IR expresses (including CPU reference
+   oracles, which belong exclusively in `vyre-reference`).
+3. Execution-level schedule decisions inside operation builders: hardcoded thread
+   indices (`InvocationId`, `LocalId`), explicit workgroup geometry, and serial
+   vs. parallel execution predicates (`if InvocationId == 0`). Execution
+   schedules, tiling, and vectorization are synthesized by `vyre-megakernel` and
+   optimized by `vyre-foundation` loop passes from abstract iteration domains.
+4. Host dispatch orchestration, scratch-buffer allocation loops, and runtime
+   state caching (`ProgramCache`), which belong exclusively in `vyre-driver` and
+   `vyre-runtime`.
 
 ## What crosses its edges
 

@@ -10,13 +10,6 @@ use vyre_driver::megakernel_execution::{
     MegakernelMemoryBudget, MegakernelMemoryError,
 };
 
-use vyre_driver::megakernel_execution::{
-    plan_megakernel_execution, plan_megakernel_memory_budget, select_megakernel_topology,
-    select_megakernel_topology_stable, MegakernelByteLayout, MegakernelDeviceCapabilities,
-    MegakernelExecutionSample, MegakernelExecutionTopology, MegakernelGraphShape,
-    MegakernelMemoryBudget, MegakernelMemoryError,
-};
-
 #[test]
 fn topology_selector_uses_sparse_dense_hybrid_and_fused_bands() {
     let graph = MegakernelGraphShape {

@@ -268,8 +268,8 @@ fn generated_device_work_queue_profiles_preserve_budget_and_sync_contracts() {
             host_sync: WorkQueueHostSync::FinalOnly,
         };
 
-        let plan = plan_device_work_queue(profile)
-            .expect("Fix: generated valid queue profile must plan");
+        let plan =
+            plan_device_work_queue(profile).expect("Fix: generated valid queue profile must plan");
         assert_eq!(plan.queue_bytes, queue_bytes, "case {case_index}");
         assert_eq!(plan.control_bytes, control_bytes, "case {case_index}");
         assert_eq!(plan.resident_bytes, resident_bytes, "case {case_index}");
@@ -290,16 +290,15 @@ fn generated_device_work_queue_profiles_preserve_budget_and_sync_contracts() {
 
         let expansion_items = next_u64(&mut state) % queue_capacity;
         let expansion_budget = resident_bytes + (expansion_items * entry_bytes);
-        let expansion =
-            plan_device_work_queue_with_expansion(DeviceWorkQueueExpansionProfile {
-                initial_items,
-                expansion_items,
-                entry_bytes,
-                control_bytes,
-                budget_bytes: expansion_budget,
-                host_sync: WorkQueueHostSync::FinalOnly,
-            })
-            .expect("Fix: generated valid expansion queue profile must plan");
+        let expansion = plan_device_work_queue_with_expansion(DeviceWorkQueueExpansionProfile {
+            initial_items,
+            expansion_items,
+            entry_bytes,
+            control_bytes,
+            budget_bytes: expansion_budget,
+            host_sync: WorkQueueHostSync::FinalOnly,
+        })
+        .expect("Fix: generated valid expansion queue profile must plan");
         assert!(
             expansion.resident_bytes <= expansion_budget,
             "case {case_index}"

@@ -3,10 +3,9 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem, QueueFull};
-
 use std::sync::Arc;
 use std::thread;
+use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem, QueueFull};
 
 fn item(i: u32) -> PersistentWorkItem {
     PersistentWorkItem {

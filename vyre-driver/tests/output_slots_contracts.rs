@@ -7,10 +7,6 @@ use vyre_driver::output_slots::{
     clear_vec_slots, ensure_vec_slots_at_least, resize_vec_slots, resize_vec_with,
 };
 
-use vyre_driver::output_slots::{
-    clear_vec_slots, ensure_vec_slots_at_least, resize_vec_slots, resize_vec_with,
-};
-
 #[test]
 fn resize_vec_with_preserves_prefix_and_initializes_new_slots() {
     for case in 0..4096 {

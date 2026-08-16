@@ -3,7 +3,7 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_driver_wgpu::runtime::indirect::{IndirectArgs, INDIRECT_ARGS_BYTES};
+use vyre_driver_wgpu::runtime::indirect::INDIRECT_ARGS_BYTES;
 
 #[test]
 fn args_bytes_is_twelve() {

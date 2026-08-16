@@ -3,9 +3,7 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_driver::arm_independence::{
-    can_dispatch_concurrently, ArmBindingSummary, ArmIndependenceVerdict,
-};
+use vyre_driver::arm_independence::ArmBindingSummary;
 use vyre_driver::pipeline_fusion::{
     decide_cross_pipeline_fusion, CrossPipelineConflict, CrossPipelineFusionDecision,
 };

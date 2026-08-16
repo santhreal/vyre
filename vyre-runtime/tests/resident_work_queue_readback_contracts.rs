@@ -3,20 +3,14 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_runtime::resident_work_queue::io;
-use vyre_runtime::resident_work_queue::protocol;
 use vyre_runtime::resident_work_queue::readback::ResidentQueueReadback;
-use vyre_runtime::resident_work_queue::ResidentWorkQueue;
+use vyre_runtime::resident_work_queue::{io, protocol, ResidentWorkQueue};
 
 fn valid_outputs(slot_count: u32) -> Vec<Vec<u8>> {
     vec![
         ResidentWorkQueue::try_encode_control(false, 1, 4).unwrap(),
-        ResidentWorkQueue::try_encode_empty_ring(slot_count)
-            .unwrap(),
-        ResidentWorkQueue::try_encode_empty_debug_log(
-            protocol::debug::RECORD_CAPACITY,
-        )
-        .unwrap(),
+        ResidentWorkQueue::try_encode_empty_ring(slot_count).unwrap(),
+        ResidentWorkQueue::try_encode_empty_debug_log(protocol::debug::RECORD_CAPACITY).unwrap(),
         io::try_encode_empty_io_queue(io::IO_SLOT_COUNT).unwrap(),
     ]
 }

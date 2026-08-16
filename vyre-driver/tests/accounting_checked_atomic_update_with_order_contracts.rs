@@ -3,7 +3,10 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use vyre_driver::accounting::{
+    checked_atomic_update_u32_with_order, checked_atomic_update_u64_with_order,
+};
 
 #[test]
 fn checked_atomic_update_u64_publishes_checked_next_and_returns_observed() {

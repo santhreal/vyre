@@ -1174,6 +1174,8 @@ fn recorded_rows(root: &Path) -> Result<Vec<Row>, GateError> {
         return Ok(Vec::new());
     }
     load_rows(root).map_err(|error| GateError::new(error, STALE_FIX))
+}
+
 /// The version `[workspace.package].rust-version` advertises.
 ///
 /// The manifest is the single owner of the MSRV. A second copy in a workflow,

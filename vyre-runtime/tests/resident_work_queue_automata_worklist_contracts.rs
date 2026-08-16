@@ -8,7 +8,7 @@ use vyre_runtime::resident_work_queue::automata_worklist::{
     AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION,
 };
 use vyre_runtime::resident_work_queue::task::{
-    TaskPriority, TaskState, TaskWorkItem, TASK_FLAG_REQUEUE_REQUESTED,
+    TaskPriority, TaskState, TASK_FLAG_REQUEUE_REQUESTED,
 };
 
 #[test]

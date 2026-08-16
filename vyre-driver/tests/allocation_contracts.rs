@@ -3,17 +3,8 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use smallvec::{Array, SmallVec};
-use std::collections::{HashMap, HashSet, TryReserveError};
-use vyre_driver::allocation::{
-    reserve_hash_map_to_capacity, reserve_hash_set_to_capacity, reserve_smallvec_additional,
-    reserve_smallvec_to_capacity, reserve_vec_additional, reserve_vec_to_capacity,
-};
-
-use std::collections::{HashMap, HashSet};
-
 use smallvec::SmallVec;
-
+use std::collections::{HashMap, HashSet};
 use vyre_driver::allocation::{
     reserve_hash_map_to_capacity, reserve_hash_set_to_capacity, reserve_smallvec_additional,
     reserve_smallvec_to_capacity, reserve_vec_additional, reserve_vec_to_capacity,

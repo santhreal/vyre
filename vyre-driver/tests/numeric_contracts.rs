@@ -4,11 +4,12 @@
 //! a consumer does.
 
 use vyre_driver::numeric::{
-    checked_ceil_div_u64, checked_compose_basis_points_u64, checked_dim_product_u32,
-    checked_dim_product_u64, compose_basis_points_u32, finite_f64_ratio_basis_points_round,
-    finite_f64_ratio_basis_points_trunc, finite_f64_to_u32_round, finite_f64_to_u32_trunc,
-    finite_f64_unit_basis_points_trunc, ratio_basis_points_u64, ratio_basis_points_u64_wide,
-    ratio_parts_per_million_u64, rounded_f64_to_u64, scale_u64_by_basis_points_floor_min,
+    align_up_u64, align_up_usize, checked_ceil_div_u64, checked_compose_basis_points_u64,
+    checked_dim_product_u32, checked_dim_product_u64, compose_basis_points_u32,
+    finite_f64_ratio_basis_points_round, finite_f64_ratio_basis_points_trunc,
+    finite_f64_to_u32_round, finite_f64_to_u32_trunc, finite_f64_unit_basis_points_trunc,
+    ratio_basis_points_u64, ratio_basis_points_u64_wide, ratio_parts_per_million_u64,
+    rounded_f64_to_u64, scale_u64_by_basis_points_floor_min,
     scale_u64_by_basis_points_round_clamped, u128_to_u64, usize_to_u64,
     weighted_u64_by_basis_points_u128, BackendNumericPolicy,
 };

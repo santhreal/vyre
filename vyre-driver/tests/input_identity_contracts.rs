@@ -5,8 +5,6 @@
 
 use vyre_driver::input_identity::{domain_separated_exact_input_key, exact_input_key};
 
-use vyre_driver::input_identity::{domain_separated_exact_input_key, exact_input_key};
-
 #[test]
 fn exact_input_key_separates_tuple_boundaries_for_4096_generated_cases() {
     for seed in 0_u32..4096 {

@@ -4,9 +4,7 @@
 //! a consumer does.
 
 use vyre_conform::lens::fixpoint::infer_fixpoint_buffers;
-use vyre_foundation::ir::{BufferAccess, Program};
-
-use vyre_foundation::ir::{BufferDecl, DataType};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 #[test]
 fn infer_fixpoint_buffers_rejects_no_rw() {
@@ -23,11 +21,9 @@ fn infer_fixpoint_buffers_matches_in_out_pair() {
     // Simulate the buffer layout of flows_to / sanitized_by.
     let program = Program::wrapped(
         vec![
-            BufferDecl::storage("pg_nodes", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
+            BufferDecl::storage("pg_nodes", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
             BufferDecl::storage("fin", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("fout", 2, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage("fout", 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![],

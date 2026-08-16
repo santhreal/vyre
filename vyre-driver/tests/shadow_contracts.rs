@@ -3,16 +3,12 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use std::sync::Arc;
-use vyre_driver::backend::{BackendError, CompiledPipeline, DispatchConfig};
+use std::sync::{Arc, Mutex};
 use vyre_driver::shadow::{
     assert_exhaustive_byte_identity, ConformanceCase, ConformanceError, ConformanceMatrix,
     ReferenceExecutor,
 };
-use vyre_foundation::ir::Program;
-
-use std::sync::Mutex;
-
+use vyre_driver::{BackendError, CompiledPipeline, DispatchConfig};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 type FakeRun = dyn Fn(&[&[u8]]) -> Result<Vec<Vec<u8>>, BackendError> + Send + Sync;
@@ -22,7 +18,7 @@ struct FakePipeline {
     run: Arc<FakeRun>,
 }
 
-impl vyre_driver::backend::sealed::Sealed for FakePipeline {}
+impl vyre_driver::sealed::Sealed for FakePipeline {}
 
 impl CompiledPipeline for FakePipeline {
     fn id(&self) -> &str {
@@ -41,10 +37,8 @@ impl CompiledPipeline for FakePipeline {
 fn sample_program() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![Node::store(

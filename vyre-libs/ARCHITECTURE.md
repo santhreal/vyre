@@ -1,8 +1,9 @@
 # vyre-libs  -  architecture
 
 Tier-3 compositions: every `fn(...) -> Program` that lowers via
-existing IR ops + intrinsics. No hardware-specific arms.
-
+existing IR ops + intrinsics as pure mathematical and semantic transformations.
+No hardware-specific arms, no hardcoded thread-indexing/execution schedules,
+no host dispatch orchestration, and no CPU reference oracles.
 ## Modules (one folder per domain)
 
 ### `decode/`

@@ -3,16 +3,14 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_foundation::execution_plan::{ExecutionPlan, PolicyRoute, SchedulingPolicy};
-use vyre_runtime::routing::standard_policy::StandardPolicy;
-use vyre_runtime::routing::{RoutingDecision, RoutingExplanation, RoutingPolicy};
-
 use vyre_foundation::execution_plan::{
     AccuracyPlan, AccuracyStrategy, AutotunePlan, AutotuneStrategy, DispatchStrategy,
     ExecutionPlan, FusionPlan, FusionStrategy, LayoutStrategy, MemoryPlan, ProvenancePlan,
     ProvenanceStrategy, ReadbackStrategy, StrategyPlan,
 };
 use vyre_foundation::program_caps::RequiredCapabilities;
+use vyre_runtime::routing::standard_policy::StandardPolicy;
+use vyre_runtime::routing::{RoutingDecision, RoutingPolicy};
 
 fn plan(node_count: usize, static_bytes: u64) -> ExecutionPlan {
     ExecutionPlan {

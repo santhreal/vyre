@@ -3,19 +3,9 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use smallvec::{Array, SmallVec};
-use std::collections::{HashMap, HashSet};
-use vyre_driver::reservation_policy::{
-    reserve_typed_hash_map_to_capacity, reserve_typed_hash_set_and_vec_to_capacity,
-    reserve_typed_hash_set_to_capacity, reserve_typed_vec_to_capacity, reserved_typed_vec,
-    ReservationPolicy, ReusableIndexScratch,
-};
-
+use smallvec::SmallVec;
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
-
-use smallvec::SmallVec;
-
 use vyre_driver::reservation_policy::{
     reserve_typed_hash_map_to_capacity, reserve_typed_hash_set_and_vec_to_capacity,
     reserve_typed_hash_set_to_capacity, reserve_typed_vec_to_capacity, reserved_typed_vec,
@@ -141,9 +131,8 @@ fn typed_policy_reservations_share_vec_set_and_map_growth() {
         typed_reserve_error,
     )
     .expect("Fix: paired typed reservations should share one adapter");
-    let reserved =
-        reserved_typed_vec::<u16, _>(TEST_POLICY, 16, "typed word", typed_reserve_error)
-            .expect("Fix: typed Vec allocation should reserve");
+    let reserved = reserved_typed_vec::<u16, _>(TEST_POLICY, 16, "typed word", typed_reserve_error)
+        .expect("Fix: typed Vec allocation should reserve");
 
     assert!(vec.capacity() >= 64);
     assert!(set.capacity() >= 64);

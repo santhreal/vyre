@@ -2,6 +2,7 @@
 //!
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
+#![cfg(feature = "megakernel-batch")]
 
 use vyre_foundation::ir::{Expr, Node};
 use vyre_runtime::resident_work_queue::advanced::zero_copy_io::pull_file_async_direct;

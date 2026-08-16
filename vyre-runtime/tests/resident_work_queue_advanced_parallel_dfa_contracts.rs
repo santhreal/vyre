@@ -2,11 +2,10 @@
 //!
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
+#![cfg(feature = "megakernel-batch")]
 
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::ir::{MemoryOrdering, Node};
 use vyre_runtime::resident_work_queue::advanced::parallel_dfa::dfa_byte_scanner_parallel_composition;
-
-use vyre_foundation::ir::MemoryOrdering;
 
 #[test]
 fn parallel_dfa_fragment_has_prefix_barriers_and_output() {

@@ -51,9 +51,8 @@ fn diagnostic_aggregation_compacts_sparse_device_diagnostics() {
 
 #[test]
 fn diagnostic_aggregation_caps_overflow_without_host_filtering() {
-    let plan =
-        plan_device_diagnostic_aggregation(&[shard(7, 1_000, 10, 32, 16, 8, 0b111)], 3, 128)
-            .expect("Fix: overflow should be represented by device-side flags");
+    let plan = plan_device_diagnostic_aggregation(&[shard(7, 1_000, 10, 32, 16, 8, 0b111)], 3, 128)
+        .expect("Fix: overflow should be represented by device-side flags");
 
     assert_eq!(plan.compact_ranges[0].records, 3);
     assert_eq!(plan.overflow_records, 7);
@@ -139,9 +138,8 @@ fn diagnostic_aggregation_reuses_caller_owned_shard_planning_scratch() {
         .rev()
         .map(|index| shard(index, 1_024, 1, 32, 16, 8, 1))
         .collect::<Vec<_>>();
-    let first =
-        plan_device_diagnostic_aggregation_with_scratch(&wide, 4, 1 << 20, &mut scratch)
-            .expect("Fix: wide diagnostic aggregation should plan with reusable scratch");
+    let first = plan_device_diagnostic_aggregation_with_scratch(&wide, 4, 1 << 20, &mut scratch)
+        .expect("Fix: wide diagnostic aggregation should plan with reusable scratch");
     let id_capacity = scratch.id_capacity();
     let ordered_index_capacity = scratch.ordered_index_capacity();
 

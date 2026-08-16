@@ -50,8 +50,7 @@ fn launch_fusion_splits_on_layout_host_boundary_and_budget() {
 #[test]
 fn launch_fusion_rejects_invalid_inputs() {
     assert_eq!(
-        plan_launch_fusion(&[stage(1, 7, 1, 1, 1, false)], 0)
-            .expect_err("zero budget should fail"),
+        plan_launch_fusion(&[stage(1, 7, 1, 1, 1, false)], 0).expect_err("zero budget should fail"),
         LaunchFusionError::ZeroBudget
     );
     assert_eq!(
@@ -88,9 +87,7 @@ fn generated_launch_fusion_preserves_budget_and_order_contract() {
                 }),
                 other => Err(other),
             })
-            .expect(
-                "Fix: generated launch fusion should only reject singleton over-budget stages",
-            );
+            .expect("Fix: generated launch fusion should only reject singleton over-budget stages");
         if plan.groups.is_empty() {
             continue;
         }

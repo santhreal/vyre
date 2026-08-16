@@ -3,14 +3,7 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_driver::accounting::{
-    checked_add_u64_usize_offset_lazy, checked_mul_u32_value, checked_mul_u64_lazy,
-    checked_sub_u64_lazy, checked_sub_usize_lazy, checked_usize_byte_range_end_lazy,
-    checked_usize_to_u64_lazy,
-};
-
 use std::cell::Cell;
-
 use vyre_driver::accounting::{
     checked_add_u64_usize_offset_lazy, checked_mul_u32_value, checked_mul_u64_lazy,
     checked_sub_u64_lazy, checked_sub_usize_lazy, checked_usize_byte_range_end_lazy,

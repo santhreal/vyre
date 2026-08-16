@@ -5,8 +5,6 @@
 
 use vyre_driver::transfer_accounting::TransferAccountingPolicy;
 
-use vyre_driver::transfer_accounting::TransferAccountingPolicy;
-
 const CUDA_RESIDENT: TransferAccountingPolicy =
     TransferAccountingPolicy::new("CUDA resident", "split the transfer into bounded chunks");
 

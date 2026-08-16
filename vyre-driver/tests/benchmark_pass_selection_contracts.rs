@@ -150,8 +150,7 @@ fn benchmark_pass_selection_ranks_huge_values_without_saturation_ties() {
     .expect("Fix: huge benchmark evidence should rank without saturating value ties");
 
     assert_eq!(
-        plan.selected_pass_ids[0],
-        "device.z-lexicographic-high-value",
+        plan.selected_pass_ids[0], "device.z-lexicographic-high-value",
         "Fix: pass ranking must use widened arithmetic; saturating u64 scoring would tie these candidates and incorrectly choose lexicographic order."
     );
 }

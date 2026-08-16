@@ -3,10 +3,9 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
+use vyre_driver::backend_precedence;
 use vyre_driver_wgpu::runtime::router::{BackendRouter, Override, Reason};
 use vyre_foundation::ir::Program;
-
-use vyre_driver::backend_precedence;
 
 fn noop_program() -> Program {
     // Programs built without any buffers / nodes are valid for
