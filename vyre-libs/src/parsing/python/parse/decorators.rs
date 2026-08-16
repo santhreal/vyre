@@ -3,11 +3,11 @@ use super::{
     find_matching_delimiter, load_u32, search_next_token, search_next_token_into, store_words,
     write_words,
 };
-use crate::parsing::python::lex::{
-    TOK_ASYNC, TOK_AT, TOK_CLASS, TOK_DEF, TOK_IDENTIFIER, TOK_LPAREN, TOK_RPAREN,
-};
 use crate::parsing::python::{DECORATOR_RECORD_WORDS, INVALID_POS};
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_spec::python_token::{
+    TOK_ASYNC, TOK_AT, TOK_CLASS, TOK_DEF, TOK_IDENTIFIER, TOK_LPAREN, TOK_RPAREN,
+};
 
 const OP_ID: &str = "vyre-libs::parsing::python312_extract_decorators";
 

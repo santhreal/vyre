@@ -1,5 +1,5 @@
-use super::c11_expr::TOK_EOF;
 use super::{Action, LrTables};
+use vyre_spec::c11_expr_token::TOK_EOF;
 
 /// Errors emitted by the CPU reference LR parser.
 #[derive(Debug, Clone, PartialEq, Eq)]
