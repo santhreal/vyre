@@ -2,8 +2,8 @@
 
 Last verified: 2026-08-15
 
-The workspace [`README.md`](../README.md) is the charter. This page is the
-token-checked summary the architecture gate reads. Vyre 0.7.2 is a GPU
+This page is the token-checked summary the architecture gate reads, and the
+entry point for the architecture chapters below. Vyre 0.7.2 is a GPU
 compiler. You build a `Program` from registered operations, compile the
 whole graph into one immutable `Artifact`, emit a target payload, and run
 it on the device. There is no host execution path and no bytecode
@@ -65,6 +65,18 @@ persistent routes consume the same artifact class and must produce the same
 bytes. Hardware enters compile as a fact vector, never as a backend name.
 Unmeasured selections are recorded as unmeasured and are never called
 autoroute.
+
+## Chapters
+
+- [Crate boundaries](architecture/crates.md): what each crate owns.
+- [The artifact is the output type](architecture/artifact.md): identity,
+  persistence, payload admission.
+- [Whole-program compile search](architecture/compile-search.md): legality,
+  budget, cost model.
+- [Parsing](architecture/parsing.md): the language-neutral substrate and
+  its frontends.
+- [The placement rule](lego-block-rule.md): which crate a new operation
+  belongs in.
 
 Machine-readable contracts live next to this file:
 `CRATE_OWNERSHIP.toml`, `optimization/OWNERSHIP.toml`,

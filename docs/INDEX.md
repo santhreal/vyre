@@ -24,7 +24,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 
 ## Lifecycle counts
 
-- current: 2.
+- current: 17.
 - generated: 38.
 - superseded: 0.
 - archived: 33.
@@ -37,6 +37,10 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
 | `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../xtask/src/docs/docs_check.rs](../xtask/src/docs/docs_check.rs) |
 | `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
+| `current` | `contributor` | `architecture` | `architecture` | `architecture/artifact.md` | self | manual |
+| `current` | `contributor` | `architecture` | `architecture` | `architecture/compile-search.md` | self | manual |
+| `current` | `contributor` | `architecture` | `architecture` | `architecture/crates.md` | self | manual |
+| `current` | `contributor` | `architecture` | `architecture` | `architecture/parsing.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/ARCHITECTURE.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/CONVENTIONS.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/CPU_GPU_CONVERGENCE.md` | self | manual |
@@ -70,7 +74,18 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/santh-standard.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/stability.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/wire-format-0.6-reservations.md` | self | manual |
+| `current` | `contributor` | `testing` | `testing` | `conformance/program.md` | self | manual |
+| `current` | `extension` | `architecture` | `lifecycle` | `extending/backend.md` | self | manual |
+| `current` | `extension` | `operation-registry` | `lifecycle` | `extending/operation.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `guide/backends.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `guide/first-program.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `guide/install.md` | self | manual |
 | `current` | `extension` | `architecture` | `ownership` | `lego-block-rule.md` | self | manual |
+| `current` | `user` | `public-facade` | `reference` | `reference/diagnostics.md` | self | manual |
+| `current` | `user` | `operation-registry` | `reference` | `reference/operations.md` | self | manual |
+| `current` | `user` | `public-facade` | `reference` | `reference/values.md` | self | manual |
+| `current` | `user` | `public-facade` | `reference` | `reference/wire-format.md` | self | manual |
+| `current` | `release` | `release-tooling` | `release` | `release/process.md` | self | manual |
 | `generated` | `contributor` | `testing` | `testing` | `testing/structure-gate.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-aot.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-bench.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |

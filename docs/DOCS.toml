@@ -55,6 +55,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
+covers = ["docs/CRATE_OWNERSHIP.toml"]
 nav = true
 
 [[page]]
@@ -94,6 +95,58 @@ section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
 generator = "../scripts/crate_ownership.py"
+nav = true
+
+[[page]]
+path = "architecture/artifact.md"
+title = "The artifact is the output type"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["vyre-megakernel/src/envelope.rs", "vyre-megakernel/src/artifact.rs"]
+nav = true
+
+[[page]]
+path = "architecture/compile-search.md"
+title = "Whole-program compile search"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["vyre-megakernel/src/search.rs", "vyre-megakernel/src/cost.rs", "vyre-megakernel/src/select.rs", "vyre-megakernel/src/legality.rs", "vyre-megakernel/src/candidate.rs"]
+nav = true
+
+[[page]]
+path = "architecture/crates.md"
+title = "Crate boundaries"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["Cargo.toml"]
+nav = true
+
+[[page]]
+path = "architecture/parsing.md"
+title = "Parsing"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["vyre-libs/src/parsing/**"]
 nav = true
 
 [[page]]
@@ -491,6 +544,85 @@ section = "Historical record"
 authority = "self"
 generation = "manual"
 nav = false
+
+[[page]]
+path = "conformance/program.md"
+title = "Conformance"
+status = "current"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "self"
+generation = "manual"
+covers = ["conform/README.md", "conform/vyre-conform/src/**"]
+nav = true
+
+[[page]]
+path = "extending/backend.md"
+title = "Add a backend"
+status = "current"
+audience = "extension"
+owner = "architecture"
+kind = "lifecycle"
+section = "Lifecycle and extension contracts"
+authority = "self"
+generation = "manual"
+covers = ["vyre-driver/BACKEND_CONTRACT.md"]
+nav = true
+
+[[page]]
+path = "extending/operation.md"
+title = "Add an operation from outside the workspace"
+status = "current"
+audience = "extension"
+owner = "operation-registry"
+kind = "lifecycle"
+section = "Lifecycle and extension contracts"
+authority = "self"
+generation = "manual"
+covers = ["examples/external_ir_extension/**"]
+nav = true
+
+[[page]]
+path = "guide/backends.md"
+title = "Run an artifact on a device"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "guide"
+section = "User workflows"
+authority = "self"
+generation = "manual"
+covers = ["vyre-driver/src/backend/registry/**"]
+nav = true
+
+[[page]]
+path = "guide/first-program.md"
+title = "Compile a graph to an artifact"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "guide"
+section = "User workflows"
+authority = "self"
+generation = "manual"
+covers = ["vyre/tests/artifact_workflow.rs", "vyre-megakernel/src/lib.rs"]
+nav = true
+
+[[page]]
+path = "guide/install.md"
+title = "Install"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "guide"
+section = "User workflows"
+authority = "self"
+generation = "manual"
+covers = ["vyre/Cargo.toml", "rust-toolchain.toml", "vyre-registry-link/src/**"]
+nav = true
+
 [[page]]
 path = "lego-block-rule.md"
 title = "LEGO-block rule"
@@ -501,6 +633,72 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
+covers = ["xtask-registry/src/gates/composition_budget.rs", "vyre-foundation/src/composition.rs"]
+nav = true
+
+[[page]]
+path = "reference/diagnostics.md"
+title = "Diagnostics"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "reference"
+section = "API and operation reference"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/validate/catalog.rs", "vyre-driver/src/backend/error_catalog.rs"]
+nav = true
+
+[[page]]
+path = "reference/operations.md"
+title = "The operation registry"
+status = "current"
+audience = "user"
+owner = "operation-registry"
+kind = "reference"
+section = "API and operation reference"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/operation.rs"]
+nav = true
+
+[[page]]
+path = "reference/values.md"
+title = "Value contracts"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "reference"
+section = "API and operation reference"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/ir_inner/model/program_graph.rs", "vyre-spec/src/buffer_access.rs", "vyre-spec/src/data_type/**"]
+nav = true
+
+[[page]]
+path = "reference/wire-format.md"
+title = "Program wire format"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "reference"
+section = "API and operation reference"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/serial/wire/**"]
+nav = true
+
+[[page]]
+path = "release/process.md"
+title = "Release"
+status = "current"
+audience = "release"
+owner = "release-tooling"
+kind = "release"
+section = "Performance and release"
+authority = "self"
+generation = "manual"
+covers = ["release/release-train.toml", "xtask/src/release/**"]
 nav = true
 
 [[page]]

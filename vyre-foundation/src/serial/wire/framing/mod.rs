@@ -5,7 +5,7 @@
 pub(crate) use super::tags::{FLAG_COMPRESSED, FLAG_OPAQUE_ENDIAN_FIXED, FLAG_SEALED};
 /// Wire-format magic bytes and schema version constant.
 ///
-/// `MAGIC` is the four-byte envelope tag `VIR0`; `WIRE_FORMAT_VERSION`
+/// `MAGIC` is the four-byte envelope tag `VYRE`; `WIRE_FORMAT_VERSION`
 /// is the little-endian `u16` that immediately follows it. Both are
 /// written by `Program::to_wire` and validated by `Program::from_wire`
 /// before any payload is decoded. A mismatch surfaces an actionable
@@ -60,7 +60,7 @@ pub(crate) mod impl_reader;
 
 /// Wire-format magic and version constants.
 ///
-/// Defines the `VIR0` magic tag and the current schema version.
+/// Defines the `VYRE` magic tag and the current schema version.
 /// Audit L.1.47: version mismatch is detected immediately after magic
 /// validation so callers receive an actionable error rather than
 /// arbitrary downstream parse failures.
