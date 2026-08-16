@@ -22,9 +22,9 @@ use crate::target_compiler::{
 use crate::{WgpuBackend, WGPU_BACKEND_ID};
 use vyre_lower::TRAP_SIDECAR_NAME;
 
-/// Resident-path rejection text. This backend names an unproduced or
-/// unpreserved resident value without its lifetime class, where the host path
-/// names the class; every other rejection is the neutral wording.
+/// Resident-path rejection text. Both value-shaped rejections still say which
+/// event failed, produce or preserve, and omit the lifetime word the host path
+/// spells out; every other rejection is the neutral wording.
 const RESIDENT_MESSAGES: InstanceMessages = InstanceMessages {
     missing_output_value: |value| {
         materialize::invalid_module(&format!(
@@ -337,5 +337,64 @@ mod tests {
             error,
             BackendError::DeviceLost { generation: 11, .. }
         ));
+    }
+
+    /// WHY: `RESIDENT_MESSAGES` is a crate-private const, so no integration test
+    /// can name it, and the distinctness that `vyre-driver` pins for the neutral
+    /// record has to be asserted beside every record that overrides one. A record
+    /// whose two value-shaped rejections read alike turns an unproduced output and
+    /// an unpreserved retained value into one sentence, which is the defect CUDA
+    /// shipped until its override was deleted. The record is destructured, so a
+    /// sixth rejection stops this file compiling until it is compared too.
+    ///
+    /// Does not catch: a wording that is distinct from its siblings and still
+    /// wrong about which event happened. The produce and preserve assertions are
+    /// what cover that, and only for these two rejections.
+    #[test]
+    fn the_resident_record_keeps_five_distinct_rejections() {
+        let InstanceMessages {
+            foreign_artifact,
+            unmapped_buffer,
+            missing_output_value,
+            missing_retained_value,
+            completion_consumed,
+        } = RESIDENT_MESSAGES;
+        let value = ArtifactValueId(9);
+        let texts = [
+            ("foreign_artifact", foreign_artifact().to_string()),
+            ("unmapped_buffer", unmapped_buffer("scratch").to_string()),
+            (
+                "missing_output_value",
+                missing_output_value(value).to_string(),
+            ),
+            (
+                "missing_retained_value",
+                missing_retained_value(value).to_string(),
+            ),
+            ("completion_consumed", completion_consumed().to_string()),
+        ];
+
+        for (index, (left, left_text)) in texts.iter().enumerate() {
+            for (right, right_text) in texts.iter().skip(index + 1) {
+                assert_ne!(
+                    left_text, right_text,
+                    "Fix: resident rejections `{left}` and `{right}` render the same sentence, so a reader cannot tell which contract broke."
+                );
+            }
+        }
+        for (field, event) in [
+            ("missing_output_value", "produce"),
+            ("missing_retained_value", "preserve"),
+        ] {
+            let text = texts
+                .iter()
+                .find(|(name, _)| *name == field)
+                .map(|(_, text)| text.as_str())
+                .expect("every rejection this assertion names is rendered above");
+            assert!(
+                text.contains(event) && text.contains("9"),
+                "Fix: resident `{field}` reads `{text}`, which must name the `{event}` event and value 9."
+            );
+        }
     }
 }
