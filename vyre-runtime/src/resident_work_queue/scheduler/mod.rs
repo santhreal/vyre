@@ -56,6 +56,12 @@ pub const TENANT_FAIRNESS_THRESHOLD: u32 = 64;
 /// `control[PRIORITY_OFFSETS_BASE + PRIORITY_LEVELS]` = total slot count (sentinel).
 pub const PRIORITY_OFFSETS_BASE: u32 = control::PRIORITY_OFFSETS_BASE;
 
+// The priority offsets sit above every fixed control word. At or below
+// `control::EPOCH` they would overwrite the batch-fence epoch word, and a const
+// assertion fails the build for that rather than a test run, so a reordered
+// layout cannot ship.
+const _: () = assert!(PRIORITY_OFFSETS_BASE > control::EPOCH);
+
 /// Control word storing consecutive high-priority claims.
 pub const PRIORITY_STARVATION_COUNTER: u32 = control::PRIORITY_STARVATION_COUNTER;
 
@@ -459,15 +465,6 @@ mod tests {
         let offsets = default_priority_offsets_array(5);
         // 5 / 5 = 1 per partition
         assert_eq!(offsets, [0, 1, 2, 3, 4, 5]);
-    }
-
-    #[test]
-    #[allow(clippy::assertions_on_constants)]
-    fn priority_offsets_do_not_overlap_epoch() {
-        assert!(
-            PRIORITY_OFFSETS_BASE > control::EPOCH,
-            "priority offsets must not overwrite the batch-fence epoch word"
-        );
     }
 
     #[test]

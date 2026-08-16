@@ -49,9 +49,7 @@ mod tests {
     use super::host_uploads::stage_resident_fill_payload;
     use super::sequence_slots::prepare_resident_sequence_fills;
 
-    #[cfg(test)]
-    #[allow(clippy::module_inception)]
-    mod tests {
+    mod resident_preflight_planning {
         use super::super::async_dispatch::resident_output_clear_for_readback;
         use super::super::borrowed::order_resident_fallback_inputs_by_logical_index;
         use super::{
