@@ -617,18 +617,24 @@ impl InstanceCore {
             }
         }
 
-        let mut retained_predecessors: BTreeMap<ArtifactValueId, Vec<ArtifactValueId>> = BTreeMap::new();
+        let mut retained_predecessors: BTreeMap<ArtifactValueId, Vec<ArtifactValueId>> =
+            BTreeMap::new();
         for &succ in direct_predecessors.keys() {
             let mut priors = Vec::new();
             let mut curr = succ;
+            let mut visited = BTreeSet::new();
             while let Some(&prev) = direct_predecessors.get(&curr) {
-                if priors.contains(&prev) {
+                if !visited.insert(prev) {
                     break;
                 }
-                priors.push(prev);
+                if resources.retained.contains(&prev) {
+                    priors.push(prev);
+                }
                 curr = prev;
             }
-            retained_predecessors.insert(succ, priors);
+            if !priors.is_empty() {
+                retained_predecessors.insert(succ, priors);
+            }
         }
 
         let mut module_inputs = Vec::with_capacity(payload.entries().len());
@@ -1617,23 +1623,19 @@ mod tests {
 
     #[test]
     fn transitive_retained_predecessor_lineage_preservation() {
+        // Retained values: root 0, final 8.
+        // Non-retained intermediate value: 4 (invocation-lifetime).
+        // Direct predecessors: 4 -> 0, 8 -> 4.
+        // Transitive traversal from 8: reaches 4 (skipped, not retained) and 0 (retained).
+        // Filtered retained_predecessors: 4 -> [0], 8 -> [0].
         let mut predecessors = BTreeMap::new();
         predecessors.insert(ArtifactValueId(4), vec![ArtifactValueId(0)]);
-        predecessors.insert(
-            ArtifactValueId(8),
-            vec![ArtifactValueId(4), ArtifactValueId(0)],
-        );
+        predecessors.insert(ArtifactValueId(8), vec![ArtifactValueId(0)]);
 
         let core = make_test_core(
             BTreeMap::new(),
             [ArtifactValueId(100)].into_iter().collect(),
-            [
-                ArtifactValueId(0),
-                ArtifactValueId(4),
-                ArtifactValueId(8),
-            ]
-            .into_iter()
-            .collect(),
+            [ArtifactValueId(0), ArtifactValueId(8)].into_iter().collect(),
             vec![vec![ArtifactValueId(0)], vec![ArtifactValueId(4)]],
             vec![
                 vec![ArtifactValueId(4)],
@@ -1669,8 +1671,12 @@ mod tests {
         )
         .unwrap();
 
+        // After segment 0: 4 was the direct output, and retained predecessor 0 received 42
         assert_eq!(state.get(&ArtifactValueId(4)).unwrap(), &[42, 0, 0, 0]);
         assert_eq!(state.get(&ArtifactValueId(0)).unwrap(), &[42, 0, 0, 0]);
+
+        // Remove intermediate temporary value 4 before segment 1 to simulate intermediate cleanup
+        state.remove(&ArtifactValueId(4));
 
         let seg1_prog = Program::wrapped(
             vec![
@@ -1694,19 +1700,19 @@ mod tests {
         )
         .unwrap();
 
+        // After segment 1:
+        // - 8 received the new output bytes [99]
+        // - Retained ancestor 0 received [99]
+        // - Non-retained ancestor 4 was NOT copied or inserted into state
         assert_eq!(state.get(&ArtifactValueId(8)).unwrap(), &[99, 0, 0, 0]);
-        assert_eq!(state.get(&ArtifactValueId(4)).unwrap(), &[99, 0, 0, 0]);
         assert_eq!(state.get(&ArtifactValueId(0)).unwrap(), &[99, 0, 0, 0]);
+        assert_eq!(state.get(&ArtifactValueId(4)), None);
         assert_eq!(state.get(&ArtifactValueId(100)).unwrap(), &[1, 2, 3, 4]);
 
         let completion = core.completion(&state, Some(1000)).unwrap();
-        assert_eq!(completion.retained.len(), 3);
+        assert_eq!(completion.retained.len(), 2);
         assert_eq!(
             completion.retained.get(&ArtifactValueId(0)).unwrap(),
-            &[99, 0, 0, 0]
-        );
-        assert_eq!(
-            completion.retained.get(&ArtifactValueId(4)).unwrap(),
             &[99, 0, 0, 0]
         );
         assert_eq!(
