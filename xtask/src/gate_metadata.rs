@@ -927,11 +927,11 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "optimization-docs",
-        help: "Hold docs/generated/optimization-passes.md and the supplemental catalog docs/OPTIMIZATION_SUPPLEMENTAL_RULES.md to the live pass registry and docs/OPTIMIZATION_RULES.md; --write regenerates the generated document",
+        help: "Hold docs/generated/optimizer-passes.toml to the live pass registry and supplemental catalog; --write regenerates it",
         package: "xtask-registry",
         areas: &["prepublish"],
         subject: "registered optimizer passes",
-        artifacts: &["docs/generated/optimization-passes.md"],
+        artifacts: &["docs/generated/optimizer-passes.toml"],
         prerequisites: &[],
         proof: "xtask_registry::docs::optimization_docs::tests::a_dropped_supplemental_rule_row_is_reported_missing",
     },
