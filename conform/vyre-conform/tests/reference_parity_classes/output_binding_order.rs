@@ -22,7 +22,7 @@
 //! where the order is decided; `prove` judges the bytes, and the seven pairs above
 //! are its record of this class going red.
 
-use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_registry_link::operation::live_operation_registry;
 
 /// Writable buffer names in Program declaration order.
@@ -98,27 +98,45 @@ fn every_registered_op_has_one_canonical_value_per_declared_writable_buffer() {
     );
 }
 
+/// The transposition this class is about, built rather than looked for.
+///
+/// A Program that declares an output buffer before a retained read-write one is
+/// read in the opposite order at the graph boundary, because `from_program` mints
+/// an external value for every retained buffer before the node that produces the
+/// declared outputs exists. That is not a defect to fix at the boundary: an
+/// output value cannot exist before its producer. It is why a projection keyed on
+/// slot order returns a caller's buffers transposed, and why
+/// `ArtifactSession::program_outputs` exists.
+///
+/// Built here instead of found in the registry: an assertion that some registered
+/// op exhibits the case goes red when the op roster changes, which says nothing
+/// about the projection. This Program is the case, so the contract holds whatever
+/// `vyre-libs` and `vyre-primitives` carry.
 #[test]
-fn a_declaration_order_the_graph_boundary_reorders_is_still_represented() {
-    let mut reordered = Vec::new();
-    for operation in live_operation_registry().iter() {
-        let Some(program) = operation.program() else {
-            continue;
-        };
-        let Ok(graph) = ProgramGraph::from_program("main", program.clone()) else {
-            continue;
-        };
-        if declared_writable_names(&program) != canonical_writable_names(&graph) {
-            reordered.push(operation.id);
-        }
-    }
-    // Not a defect to fix: the graph boundary cannot express declaration order,
-    // because an output value does not exist before the node that produces it.
-    // This records the ops whose two orders differ, so that a projection keyed on
-    // slot order instead of declaration order is a change with a named blast
-    // radius rather than a silent transposition.
-    assert!(
-        !reordered.is_empty(),
-        "Fix: no registered op declares a retained read-write buffer after a declared output buffer, so `ArtifactSession::program_outputs` no longer has a case to reorder and this contract judges nothing. Either an op regressed out of the registry or the projection is now unnecessary; do not delete the projection on the strength of this assertion alone, because `prove` is what reads the bytes."
+fn the_graph_boundary_transposes_an_output_declared_before_a_retained_buffer() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("src", 0, DataType::U32).with_count(4),
+            BufferDecl::output("out", 1, DataType::U32).with_count(4),
+            BufferDecl::read_write("state", 2, DataType::U32).with_count(4),
+        ],
+        [4, 1, 1],
+        vec![
+            Node::store("out", Expr::u32(0), Expr::load("src", Expr::u32(0))),
+            Node::store("state", Expr::u32(0), Expr::load("src", Expr::u32(0))),
+        ],
+    );
+    let graph = ProgramGraph::from_program("main", program.clone())
+        .expect("Fix: a Program with one read, one output and one retained buffer must lift.");
+
+    assert_eq!(
+        declared_writable_names(&program),
+        vec!["out", "state"],
+        "Fix: declaration order is the order `Program::output_buffer_indices` reports, which is buffer slot order."
+    );
+    assert_eq!(
+        canonical_writable_names(&graph),
+        vec!["state", "out"],
+        "Fix: a retained buffer becomes an external value before the node that produces the declared outputs, so canonical slot order is retained-then-output. If this stops being true the projection keyed on declaration order can be reconsidered, and `prove` is what reads the bytes."
     );
 }

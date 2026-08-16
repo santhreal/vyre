@@ -156,10 +156,11 @@ fn try_multi_block_prefix_scan_sum_u32(
 /// Build an **exclusive** parallel prefix-sum Program over arbitrary `n`:
 /// `output[i] = sum(input[0..i])`, `output[0] = 0`.
 ///
-/// This is the offset buffer `math::stream_compact` requires, the single-block
-/// `math::prefix_scan(ScanKind::ExclusiveSum)` already serves `n ≤ 1024`, but a
-/// compaction batch with more than 1024 live candidates had no on-device
-/// exclusive scan and had to convert an inclusive scan to exclusive on host.
+/// This is the offset buffer `math::stream_compact` requires. The single-block
+/// `math::prefix_scan(ScanKind::ExclusiveSum)` serves up to
+/// `math::prefix_scan::MAX_SINGLE_BLOCK_SCAN` elements, but a compaction batch
+/// with more live candidates than that had no on-device exclusive scan and had
+/// to convert an inclusive scan to exclusive on host.
 ///
 /// Built as `exclusive[i] = inclusive[i] - input[i]`: the tested inclusive
 /// multi-block chain writes an intermediate, then a fused element-difference
@@ -976,9 +977,9 @@ mod tests {
     }
 
     #[test]
-    fn recursion_handles_million_elements() {
-        // n = 1_048_576 → num_blocks = 1024 → Pass B falls through to single
-        // workgroup `prefix_scan` (1024 ≤ BLOCK_LANES). Verify build.
+    fn recursion_bottoms_out_at_one_workgroup_for_the_soft_maximum() {
+        // n = SOFT_MAX_N = BLOCK_LANES^2, so Pass A emits BLOCK_LANES blocks and
+        // Pass B falls through to the single-workgroup `prefix_scan`. Verify build.
         let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", SOFT_MAX_N);
         let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
         assert!(names.contains(&"in_buf"));
