@@ -169,34 +169,6 @@ be run.
 """
 
 [[gate]]
-file = "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs"
-test = "every_token_kind_agrees_in_the_declarator_follower_position"
-reason = """
-Derives the C token vocabulary from the source that declares it and compares
-the two declaration annotators across every kind. The member set is the token
-enum itself, which no parse of any input can enumerate: a kind no fixture uses
-is exactly the kind the two annotators are free to disagree about.
-"""
-
-[[gate]]
-file = "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs"
-test = "every_token_kind_agrees_in_the_declarator_previous_position"
-reason = """
-The same derived vocabulary in the preceding-token position. Declared
-separately from the follower position because one reviewed row must not exempt
-a gate added later to the same file.
-"""
-
-[[gate]]
-file = "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs"
-test = "every_token_kind_agrees_in_the_declaration_prefix_position"
-reason = """
-The same derived vocabulary in the declaration-prefix position, where the two
-annotators disagreed on TOK_RBRACKET and TOK_RPAREN before the prefix walk was
-given one owner.
-"""
-
-[[gate]]
 file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
 test = "no_production_crate_outside_the_oracle_ships_a_host_dispatcher"
 reason = """
