@@ -7,7 +7,7 @@
 use std::sync::OnceLock;
 
 use super::facts::{ProgramFacts, RegionMeta};
-use super::kind::{BufferRefKind, NodeIndex, NodeKind};
+use super::kind::{kind_mask, BufferRefKind, NodeIndex, NodeKind};
 use crate::ir::{Expr, Ident, Node, Program};
 
 thread_local! {

@@ -11,6 +11,7 @@
 //! column limit, is proved beside its own function.
 
 use std::hash::Hash;
+use rustc_hash::FxHashMap;
 
 use vyre_foundation::optimizer::eqsat::{EChildren, EClassId, EGraph, ENodeLang};
 use vyre_foundation::optimizer::eqsat_gpu::{

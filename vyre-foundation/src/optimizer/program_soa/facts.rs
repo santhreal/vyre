@@ -7,7 +7,7 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::OnceLock;
 
-use super::kind::{BufferRefKind, NodeIndex, NodeKind};
+use super::kind::{kind_mask, BufferRefKind, NodeIndex, NodeKind};
 use crate::ir::Ident;
 
 /// One row per `Node::Region` observed during the build walk  -

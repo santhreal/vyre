@@ -18,7 +18,7 @@ pub struct GpuEGraphSnapshotError {
 }
 
 impl GpuEGraphSnapshotError {
-    fn new(context: &'static str, value: usize) -> Self {
+    pub(super) fn new(context: &'static str, value: usize) -> Self {
         Self { context, value }
     }
 
@@ -56,7 +56,7 @@ pub struct GpuEGraphSnapshotIntegrityError {
 }
 
 impl GpuEGraphSnapshotIntegrityError {
-    fn new(context: &'static str, row: usize, value: u32) -> Self {
+    pub(super) fn new(context: &'static str, row: usize, value: u32) -> Self {
         Self {
             context,
             row,
