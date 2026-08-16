@@ -1088,6 +1088,7 @@ pub const vyre_libs::text::UTF8_SHAPE_COUNTS_OP_ID: &str
 pub const vyre_libs::text::UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_libs::topology::simplicial::OP_ID: &str
 pub const vyre_libs::topology::vietoris_rips::OP_ID: &str
+pub const vyre_libs::vfs::resolve::VFS_RESOLVE_OP_ID: &str
 pub const vyre_libs::visual::packed_rgba_map::OP_ID: &str
 pub enum vyre_libs::analysis::diagnostic_aggregation::DiagnosticAggregationError
 pub enum vyre_libs::analysis::incremental_invalidation::IncrementalInvalidationError
@@ -3432,6 +3433,7 @@ pub fn vyre_libs::topology::vietoris_rips::try_extract_edges_cpu_into(edge_mask:
 pub fn vyre_libs::topology::vietoris_rips::try_vietoris_rips_edge_filter_cpu_into(dist_matrix: &[f64], epsilon: f64, n: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_libs::topology::vietoris_rips::vietoris_rips_edge_filter(dist_matrix: &str, epsilon: &str, edge_mask: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::topology::vietoris_rips::vietoris_rips_edge_filter_cpu(dist_matrix: &[f64], epsilon: f64, n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_libs::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, num_requests: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::GaussianBlurStages::programs(&self) -> [&vyre_foundation::ir_inner::model::program::definition::Program; 2]
 pub fn vyre_libs::visual::GaussianKernel::from_weights(radius: u32, weights: alloc::vec::Vec<u32>) -> core::result::Result<Self, vyre_libs::visual::GaussianKernelError>
 pub fn vyre_libs::visual::GaussianKernel::new(radius: u32, sigma: f32) -> Self
@@ -3816,6 +3818,8 @@ pub mod vyre_libs::topology
 pub mod vyre_libs::topology::betti_persistence
 pub mod vyre_libs::topology::simplicial
 pub mod vyre_libs::topology::vietoris_rips
+pub mod vyre_libs::vfs
+pub mod vyre_libs::vfs::resolve
 pub mod vyre_libs::visual
 pub mod vyre_libs::visual::packed_rgba_map
 pub static vyre_libs::analysis::decision_telemetry::AUTOTUNE_DELTA_LARGE: core::sync::atomic::AtomicU64

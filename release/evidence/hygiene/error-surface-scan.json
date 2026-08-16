@@ -1,35 +1,35 @@
 {
-  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
+  "source_fingerprint": "git:6f3d6a963ac241593362782370a2b48231e6c94c:dirty=true:worktree=401f1757506ae433c3460fcc3394460371561b86f1be9f61e3244508dbe63a1f",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 273,
+      "line": 277,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 275,
+      "line": 279,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 980,
+      "line": 660,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1026,
+      "line": 706,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1028,
+      "line": 708,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },

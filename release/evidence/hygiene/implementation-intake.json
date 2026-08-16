@@ -1,7 +1,7 @@
 {
-  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
+  "source_fingerprint": "git:6f3d6a963ac241593362782370a2b48231e6c94c:dirty=true:worktree=cb57bef57092b22c55320809b4e96b362f08e2a427acd08410730b862c0a004a",
   "schema_version": 1,
-  "release_blocker_count": 8,
+  "release_blocker_count": 0,
   "intake_summary": [
     {
       "owner_lane": "bench_harness",
@@ -366,24 +366,6 @@
     {
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": true,
-      "count": 3
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 5
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
@@ -400,7 +382,5 @@
       "count": 5
     }
   ],
-  "blockers": [
-    "8 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
-  ]
+  "blockers": []
 }

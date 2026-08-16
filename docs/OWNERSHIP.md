@@ -529,10 +529,11 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 - Path: `xtask-registry`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-spec`, `xtask`
+- Internal production dependencies: `structure-gate`, `vyre`, `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
+| `structure-gate` | read whether a directory carries Rust source, and which directory owns a domain | `private` | `release-tooling` |
 | `vyre` | public lifecycle facade | `private` | `public-facade` |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
