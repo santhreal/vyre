@@ -73,8 +73,8 @@ fn codes(entry: Vec<Node>) -> Vec<String> {
         .collect()
 }
 
-/// The codes this pass owns, derived from the rule catalog rather than listed,
-/// so a fourth async rule joins the clean assertions without an edit here.
+/// Every async code the catalog carries, read from the catalog rather than
+/// listed, so a rule added tomorrow is in this set the day it lands.
 fn async_codes() -> Vec<&'static str> {
     vyre_foundation::validate::rules()
         .iter()
@@ -311,6 +311,29 @@ fn a_copy_started_every_iteration_and_never_waited_is_rejected() {
     );
 }
 
+/// WHY: V128 is what makes a tag an identity at all, and it had no case in the
+/// crate. An empty tag reaches the pipeline analysis as a name, where every
+/// untagged start and every untagged wait pair with each other, so the rules
+/// below read a pipeline that does not exist.
+#[test]
+fn a_transfer_with_no_tag_is_rejected() {
+    assert_reports(
+        vec![load(""), wait("")],
+        "V128",
+        "a transfer with no tag has nothing to pair against",
+    );
+    assert_reports(
+        vec![store(""), wait("")],
+        "V128",
+        "a store carries the same tag requirement as a load",
+    );
+    assert_absent(
+        vec![load("stage0"), wait("stage0")],
+        "V128",
+        "a named tag is what the rule asks for",
+    );
+}
+
 #[test]
 fn every_async_node_variant_is_accounted_for() {
     let async_variants: Vec<&str> = NODE_VARIANT_NAMES
@@ -327,13 +350,40 @@ fn every_async_node_variant_is_accounted_for() {
     );
 }
 
+/// WHY: this assertion used to compare the catalog against a list written in
+/// this file, which claimed every async rule had its case here. V134's case is
+/// in async_destination_writability.rs, so the list went stale the day the rule
+/// landed and the suite failed for a reason that had nothing to do with the
+/// rule. The covered set is read from the suite sources instead, with comment
+/// lines dropped so a code named in prose does not read as a case, and the only
+/// thing that fails is an async rule with no case anywhere.
 #[test]
-fn every_async_rule_in_the_catalog_has_a_case_here() {
-    let owned = async_codes();
-    assert_eq!(
-        owned,
-        ["V128", "V131", "V132", "V133"],
-        "an async rule joined the catalog without a case in this suite. \
-         Fix: add the case, then record the code here."
+fn every_async_rule_in_the_catalog_has_a_case() {
+    let suite = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let sources: Vec<String> = std::fs::read_dir(&suite)
+        .expect("Fix: the crate's tests directory must be readable")
+        .map(|entry| entry.expect("Fix: every tests directory entry must be readable"))
+        .filter(|entry| entry.path().extension().is_some_and(|value| value == "rs"))
+        .map(|entry| std::fs::read_to_string(entry.path()).expect("Fix: a test source must read"))
+        .map(|text| {
+            text.lines()
+                .map(str::trim)
+                .filter(|line| !line.starts_with("//"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+        .collect();
+    let uncovered: Vec<&str> = async_codes()
+        .into_iter()
+        .filter(|code| {
+            let quoted = format!("\"{code}\"");
+            !sources.iter().any(|source| source.contains(&quoted))
+        })
+        .collect();
+
+    assert!(
+        uncovered.is_empty(),
+        "async rules {uncovered:?} joined the catalog with no case in \
+         vyre-foundation/tests. Fix: add a case that names the code."
     );
 }
