@@ -17,9 +17,10 @@
 #![forbid(unsafe_code)]
 
 use structure_gate::{
-    category_home_failures, frontend_owner_failures, operation_identity_failures,
-    registration_owner_failures, registry_link_failures, roster_failures, scan,
-    substrate_home_failures, workspace_root, Workspace,
+    category_home_failures, frontend_owner_failures, generic_module_name_failures,
+    operation_identity_failures, registration_owner_failures, registry_link_failures,
+    roster_failures, scan, sibling_module_failures, substrate_home_failures, workspace_root,
+    Workspace,
 };
 
 fn workspace() -> Workspace {
@@ -173,4 +174,75 @@ fn the_registry_submitter_scan_is_not_vacuous() {
              discarding import naming it would be accepted. Found: {submitters:?}"
         );
     }
+}
+
+/// No `src/` module file sits beside a directory of its own name.
+///
+/// WHY: `foo.rs` next to `foo/` is one module written in two places, so a
+/// reader who opens either half sees a module that appears to be missing its
+/// other half, and a new child gets added to whichever half the author found.
+/// The workspace carried 110 such pairs at once. `tests/` is deliberately out
+/// of scope: an integration test binary is named by its own file, so a fixture
+/// directory beside it is not a second half of anything.
+#[test]
+fn no_module_file_sits_beside_its_own_directory() {
+    let failures = sibling_module_failures(&workspace().module_files);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("sibling-module", &failures)
+    );
+}
+
+/// Every module name states what the module holds.
+///
+/// WHY: `helpers`, `common`, `core`, `types`, `misc`, `utils` and any `_ext`
+/// suffix answer no question a reader has, so the module becomes wherever an
+/// item went when nobody decided where it belonged, and it grows without
+/// limit. A module the committed public-API snapshot publishes is exempt while
+/// it stays published, because renaming it renames a path consumers import.
+#[test]
+fn no_module_name_states_no_contract() {
+    let workspace = workspace();
+    let failures =
+        generic_module_name_failures(&workspace.module_files, &workspace.published_modules);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("generic-module-name", &failures)
+    );
+}
+
+/// The module-file scan and the published-module scan both find their input.
+///
+/// Guards the two rules above: an empty file list accepts every pair in the
+/// tree, and an empty published list would instead report every published
+/// module that carries a banned name, so both directions are checked.
+#[test]
+fn the_module_layout_scan_is_not_vacuous() {
+    let workspace = workspace();
+
+    assert!(
+        workspace.module_files.len() > 1_000,
+        "expected the workspace to hold far more than {} src/ module files; the layout rules \
+         above are passing vacuously",
+        workspace.module_files.len()
+    );
+    assert!(
+        workspace.module_files.iter().any(|file| file
+            == "structure-gate/src/lib.rs"),
+        "the module-file scan skipped structure-gate's own sources, so this crate's layout is \
+         unjudged"
+    );
+    assert!(
+        workspace
+            .published_modules
+            .iter()
+            .any(|module| module == "vyre_libs::parsing"),
+        "expected docs/public-api to publish vyre_libs::parsing; the snapshot scan read nothing, \
+         so every published module would be reported as a banned name. Found {} module(s)",
+        workspace.published_modules.len()
+    );
 }

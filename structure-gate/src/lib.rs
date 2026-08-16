@@ -1,5 +1,5 @@
 //! Workspace structural gate: crate roster, one operation identity per
-//! semantic operation, and one home per concept.
+//! semantic operation, one home per concept, and one place per module.
 //!
 //! Run it with `./cargo_full run -p structure-gate`. It reads source text and depends
 //! on no vyre crate, so it still judges the workspace while the workspace does
@@ -39,7 +39,7 @@
 #![forbid(unsafe_code)]
 
 use std::borrow::Cow;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -167,6 +167,10 @@ pub struct Workspace {
     pub registry_submitters: Vec<String>,
     /// Every `use <crate> as _;` found in member sources.
     pub discarding_imports: Vec<DiscardingImport>,
+    /// Every `src/` module file of every member, checkout-relative.
+    pub module_files: Vec<String>,
+    /// Module paths the committed public-API snapshots publish.
+    pub published_modules: Vec<String>,
 }
 
 /// Read the workspace rooted at `root` into the structural model.
@@ -179,6 +183,8 @@ pub fn scan(root: &Path) -> Workspace {
     let materializers = scan_materializers(root, &members);
     let registry_submitters = scan_registry_submitters(root, &members);
     let discarding_imports = scan_discarding_imports(root, &members);
+    let module_files = scan_module_files(root, &members);
+    let published_modules = scan_published_modules(root);
     Workspace {
         members,
         registrations,
@@ -187,6 +193,8 @@ pub fn scan(root: &Path) -> Workspace {
         materializers,
         registry_submitters,
         discarding_imports,
+        module_files,
+        published_modules,
     }
 }
 
@@ -208,6 +216,11 @@ pub fn violations(root: &Path) -> Vec<String> {
     failures.extend(registry_link_failures(
         &workspace.registry_submitters,
         &workspace.discarding_imports,
+    ));
+    failures.extend(sibling_module_failures(&workspace.module_files));
+    failures.extend(generic_module_name_failures(
+        &workspace.module_files,
+        &workspace.published_modules,
     ));
     failures
 }
@@ -259,7 +272,8 @@ pub fn run(args: &[String]) {
              Fails when a crate outside vyre-foundation (Category A) or vyre-libs \
              (Category C) registers an operation, when one semantic operation is \
              registered under two identities, when a concept has more than one home, \
-             or when the workspace roster drifts."
+             when a src/ module file sits beside a directory of its own name, when a \
+             module name states no contract, or when the workspace roster drifts."
         );
         return;
     }
@@ -268,7 +282,9 @@ pub fn run(args: &[String]) {
     let failures = violations(&root);
 
     if failures.is_empty() {
-        println!("crate-structure: roster, operation identity, and concept homes agree");
+        println!(
+            "crate-structure: roster, operation identity, concept homes, and module layout agree"
+        );
         return;
     }
 
@@ -278,7 +294,9 @@ pub fn run(args: &[String]) {
     }
     eprintln!(
         "Fix: move the operation to its category owner ({CATEGORY_A_CRATE} for Category A, \
-         {CATEGORY_C_CRATE} for Category C), delete the duplicate registration, and update \
+         {CATEGORY_C_CRATE} for Category C), delete the duplicate registration, move a \
+         module file that sits beside its own directory to that directory's mod.rs, rename \
+         a module that states no contract for what it holds, and update \
          docs/ARCHITECTURE.md plus docs/CRATE_OWNERSHIP.toml in the same change."
     );
     process::exit(1);
@@ -429,6 +447,149 @@ fn crate_declares_frontend(crate_name: &str, language: &str) -> bool {
         names_language |= token.eq_ignore_ascii_case(language);
     }
     names_frontend && names_language
+}
+
+/// Module names that state no contract.
+///
+/// A module called `helpers`, `types` or `utils` says nothing about what is
+/// inside it, so finding the thing it holds means opening it, and deciding
+/// where a new item goes means giving up and adding it there. Every name here
+/// has that property; a name that states its contents does not.
+const BANNED_MODULE_NAMES: &[&str] = &["common", "core", "helpers", "misc", "types", "utils"];
+
+/// Suffix that turns any module name into the same grab bag.
+///
+/// `foo_ext` is whatever `foo` had no room for, which is a dumping ground with
+/// a qualifier bolted on.
+const BANNED_MODULE_SUFFIX: &str = "_ext";
+
+/// Committed snapshot of the API each publishable crate reaches out with.
+const PUBLIC_API_SNAPSHOT_DIR: &str = "docs/public-api";
+
+/// Reject a module file that sits beside a directory of the same name.
+///
+/// `foo.rs` next to `foo/` splits one module across two places in a listing:
+/// the file declaring the module's own items sorts away from the directory
+/// holding its children, so a reader looking for `foo` opens whichever the
+/// editor shows first and finds half of it. `foo/mod.rs` is the same module
+/// with the file and its children in one place.
+///
+/// The rule reads `src/` only. An integration test binary is named by its own
+/// file, so `tests/foo.rs` beside `tests/foo/` is a binary next to its
+/// fixtures rather than one module in two places.
+#[must_use]
+pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
+    let mut directories: BTreeSet<&str> = BTreeSet::new();
+    for file in module_files {
+        let mut rest = file.as_str();
+        while let Some((parent, _)) = rest.rsplit_once('/') {
+            if !directories.insert(parent) {
+                break;
+            }
+            rest = parent;
+        }
+    }
+    let mut failures: Vec<String> = module_files
+        .iter()
+        .filter_map(|file| {
+            let stem = file.strip_suffix(".rs")?;
+            directories.contains(stem).then(|| {
+                format!(
+                    "`{file}` sits beside its own directory `{stem}/`; one module is one place, so it belongs at `{stem}/mod.rs`"
+                )
+            })
+        })
+        .collect();
+    failures.sort();
+    failures.dedup();
+    failures
+}
+
+/// Reject a module whose name states no contract.
+///
+/// A module is exempt only while the committed public-API snapshot publishes
+/// it: renaming a published module renames a path a consumer already imports,
+/// and this gate is not what decides to break one. The exemption is read from
+/// the snapshot at run time, so it lapses by itself once the module stops
+/// being published, and a crate with no snapshot cannot claim it at all.
+///
+/// What this does not catch: a specific name that is still wrong for its
+/// contents, and a published module that carries a banned name. The second one
+/// shows up as a snapshot diff in the change that publishes it.
+#[must_use]
+pub fn generic_module_name_failures(
+    module_files: &[String],
+    published_modules: &[String],
+) -> Vec<String> {
+    let published: BTreeSet<&str> = published_modules.iter().map(String::as_str).collect();
+    let mut failures = Vec::new();
+    for file in module_files {
+        let Some(name) = module_name_of(file) else {
+            continue;
+        };
+        if !is_banned_module_name(name) {
+            continue;
+        }
+        let Some(path) = module_path_of(file) else {
+            continue;
+        };
+        if published.contains(path.as_str()) {
+            continue;
+        }
+        failures.push(format!(
+            "`{file}` declares module `{name}`, which states no contract; name it for what it holds ({path} is published at no public path, so renaming it breaks nothing)"
+        ));
+    }
+    failures.sort();
+    failures.dedup();
+    failures
+}
+
+/// True when a module name is a dumping ground by name alone.
+fn is_banned_module_name(name: &str) -> bool {
+    BANNED_MODULE_NAMES.contains(&name) || name.ends_with(BANNED_MODULE_SUFFIX)
+}
+
+/// The module name a `src/` file declares, or `None` for a crate or binary root.
+///
+/// A `mod.rs` is named by its directory, which is the whole point of the
+/// layout: reading the file name alone would judge every module in the
+/// workspace as being called `mod`.
+fn module_name_of(file: &str) -> Option<&str> {
+    let (_, inside) = file.split_once("/src/")?;
+    match inside.rsplit('/').next()? {
+        "lib.rs" | "main.rs" => None,
+        "mod.rs" => inside.rsplit('/').nth(1),
+        other => other.strip_suffix(".rs"),
+    }
+}
+
+/// The module path a `src/` file declares, as a consumer writes it.
+///
+/// `vyre-libs/src/parsing/core/mod.rs` is `vyre_libs::parsing::core`. The
+/// member directory is read from the `/src/` boundary rather than from the
+/// roster, because a member's directory is not always its package name and
+/// that boundary is what every member shares.
+fn module_path_of(file: &str) -> Option<String> {
+    let (member, inside) = file.split_once("/src/")?;
+    let mut path = crate_ident(member.rsplit('/').next()?);
+    let name = inside.rsplit('/').next()?;
+    let parents = inside.rsplit_once('/').map_or("", |(head, _)| head);
+    let tail = if name == "mod.rs" {
+        Cow::Borrowed(parents)
+    } else {
+        let stem = name.strip_suffix(".rs")?;
+        if parents.is_empty() {
+            Cow::Borrowed(stem)
+        } else {
+            Cow::Owned(format!("{parents}/{stem}"))
+        }
+    };
+    for segment in tail.split('/').filter(|segment| !segment.is_empty()) {
+        path.push_str("::");
+        path.push_str(segment);
+    }
+    Some(path)
 }
 
 /// Names `vyre-driver` owns for every backend, that a backend must not define.
@@ -623,6 +784,15 @@ fn source_files(root: &Path, member: &str) -> Vec<PathBuf> {
     if member == SELF_CRATE {
         return Vec::new();
     }
+    member_source_files(root, member)
+}
+
+/// Every `.rs` file under a member's `src/`, this crate included.
+///
+/// [`source_files`] exempts this crate because its fixtures name other crates'
+/// operations. A rule over file names has no such fixtures, so it judges this
+/// crate's own layout like any other member's.
+fn member_source_files(root: &Path, member: &str) -> Vec<PathBuf> {
     WalkDir::new(root.join(member).join("src"))
         .into_iter()
         .filter_map(Result::ok)
@@ -1228,6 +1398,48 @@ fn scan_frontend_paths(root: &Path, members: &[String]) -> Vec<(String, String)>
     paths.sort();
     paths.dedup();
     paths
+}
+
+/// Every `src/` module file in the workspace, checkout-relative.
+fn scan_module_files(root: &Path, members: &[String]) -> Vec<String> {
+    let mut files = Vec::new();
+    for member in members {
+        for path in member_source_files(root, member) {
+            files.push(relative(root, &path));
+        }
+    }
+    files.sort();
+    files.dedup();
+    files
+}
+
+/// Every module path the committed public-API snapshots publish.
+///
+/// An unreadable snapshot directory yields no exemptions rather than a blanket
+/// one: losing the record of what is published makes the layout rules louder,
+/// not quieter.
+fn scan_published_modules(root: &Path) -> Vec<String> {
+    let mut modules = Vec::new();
+    let Ok(entries) = fs::read_dir(root.join(PUBLIC_API_SNAPSHOT_DIR)) else {
+        return modules;
+    };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if !path.extension().is_some_and(|ext| ext == "txt") {
+            continue;
+        }
+        let Ok(text) = read_source_bounded(&path) else {
+            continue;
+        };
+        for line in text.lines() {
+            if let Some(module) = line.strip_prefix("pub mod ") {
+                modules.push(module.trim().to_string());
+            }
+        }
+    }
+    modules.sort();
+    modules.dedup();
+    modules
 }
 
 /// Read every concrete backend materializer source.
@@ -2242,5 +2454,123 @@ inventory::submit! {
         assert!(submits_registrations(
             "inventory::submit! {\n    ExampleRegistration { id: \"example\" }\n}\n"
         ));
+    }
+
+    fn paths(files: &[&str]) -> Vec<String> {
+        files.iter().map(|file| (*file).to_string()).collect()
+    }
+
+    #[test]
+    fn a_module_file_beside_its_own_directory_is_rejected() {
+        let failures = sibling_module_failures(&paths(&[
+            "vyre-libs/src/rule.rs",
+            "vyre-libs/src/rule/admission.rs",
+        ]));
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].contains("vyre-libs/src/rule/mod.rs"), "{failures:?}");
+    }
+
+    #[test]
+    fn a_module_file_is_judged_against_a_directory_holding_no_direct_source() {
+        let failures = sibling_module_failures(&paths(&[
+            "vyre-libs/src/rule.rs",
+            "vyre-libs/src/rule/admission/window.rs",
+        ]));
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+    }
+
+    #[test]
+    fn a_module_inside_its_own_directory_is_accepted() {
+        let failures = sibling_module_failures(&paths(&[
+            "vyre-libs/src/rule/mod.rs",
+            "vyre-libs/src/rule/admission.rs",
+            "vyre-libs/src/lib.rs",
+        ]));
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    #[test]
+    fn a_same_named_file_in_another_directory_is_not_a_pair() {
+        let failures = sibling_module_failures(&paths(&[
+            "vyre-libs/src/rule.rs",
+            "vyre-driver/src/rule/admission.rs",
+        ]));
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    #[test]
+    fn every_banned_module_name_is_rejected_as_a_file_and_as_a_directory() {
+        for name in BANNED_MODULE_NAMES {
+            let flat = format!("vyre-libs/src/scan/{name}.rs");
+            let nested = format!("vyre-libs/src/scan/{name}/mod.rs");
+            let failures = generic_module_name_failures(&[flat, nested], &[]);
+
+            assert_eq!(failures.len(), 2, "{name}: {failures:?}");
+            assert!(
+                failures.iter().all(|failure| failure
+                    .contains(&format!("vyre_libs::scan::{name}"))),
+                "{name}: {failures:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_qualifier_suffix_module_is_rejected() {
+        let failures =
+            generic_module_name_failures(&paths(&["vyre-libs/src/scan/window_ext.rs"]), &[]);
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+    }
+
+    #[test]
+    fn a_published_module_keeps_its_name() {
+        let files = paths(&["vyre-libs/src/parsing/core/mod.rs"]);
+
+        assert!(
+            generic_module_name_failures(&files, &["vyre_libs::parsing::core".to_string()])
+                .is_empty()
+        );
+        assert_eq!(
+            generic_module_name_failures(&files, &["vyre_libs::parsing".to_string()]).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn a_crate_root_carries_no_module_name() {
+        assert_eq!(module_name_of("vyre-libs/src/lib.rs"), None);
+        assert_eq!(module_name_of("conform/vyre-conform/src/main.rs"), None);
+        assert_eq!(module_name_of("vyre-libs/src/scan/mod.rs"), Some("scan"));
+        assert_eq!(module_name_of("vyre-libs/src/scan/window.rs"), Some("window"));
+    }
+
+    #[test]
+    fn a_module_path_is_read_through_the_src_boundary() {
+        assert_eq!(
+            module_path_of("conform/vyre-conform/src/report/common/mod.rs").as_deref(),
+            Some("vyre_conform::report::common")
+        );
+        assert_eq!(
+            module_path_of("vyre-libs/src/types.rs").as_deref(),
+            Some("vyre_libs::types")
+        );
+    }
+
+    #[test]
+    fn a_descriptive_module_name_is_accepted() {
+        let failures = generic_module_name_failures(
+            &paths(&[
+                "vyre-libs/src/scan/regex_dfa.rs",
+                "vyre-libs/src/graph/dispatch/mod.rs",
+                "vyre-libs/src/lib.rs",
+            ]),
+            &[],
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
     }
 }
