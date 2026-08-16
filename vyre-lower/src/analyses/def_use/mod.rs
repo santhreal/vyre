@@ -122,6 +122,7 @@ fn walk(body: &KernelBody, path: &mut Vec<usize>, report: &mut DefUseReport) {
     }
 }
 
+// Inline: covers the crate-private `analyze`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

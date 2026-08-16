@@ -129,6 +129,7 @@ fn visit(producers: &ProducerMap<'_>, operand_id: u32, visited: &mut FxHashSet<u
     info
 }
 
+// Inline: covers the crate-private `analyze`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -208,6 +208,7 @@ Target-owned collective support is {collective_status} in this launcher.
     )
 }
 
+// Inline: covers the private `emit_launcher_cargo_toml`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -238,6 +238,7 @@ pub fn branch_at<'a>(body: &'a KernelBody, op: &KernelOp) -> Option<StructuredBr
     })
 }
 
+// Inline: covers the crate-private `visit_op`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

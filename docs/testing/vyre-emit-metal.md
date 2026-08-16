@@ -28,6 +28,7 @@ This crate declares no Cargo features.
 | `example` | `vyre_emit_metal_release_surface` | `vyre-emit-metal/examples/vyre_emit_metal_release_surface.rs` | None | `./cargo_full test -p vyre-emit-metal --example vyre_emit_metal_release_surface` |
 | `lib` | `vyre_emit_metal` | `vyre-emit-metal/src/lib.rs` | None | `./cargo_full test -p vyre-emit-metal` |
 | `test` | `adversarial_emit_program_matrix` | `vyre-emit-metal/tests/adversarial_emit_program_matrix.rs` | None | `./cargo_full test -p vyre-emit-metal --test adversarial_emit_program_matrix` |
+| `test` | `emit_contracts` | `vyre-emit-metal/tests/emit_contracts.rs` | None | `./cargo_full test -p vyre-emit-metal --test emit_contracts` |
 
 ## Test classes
 

@@ -19,17 +19,3 @@ impl<Candidate> CandidatePlan<Candidate> {
         self.candidates.len()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn empty_plan_has_zero_candidates() {
-        let plan: CandidatePlan<u32> = CandidatePlan {
-            kernel_id: "k".into(),
-            candidates: vec![],
-        };
-        assert_eq!(plan.candidate_count(), 0);
-    }
-}

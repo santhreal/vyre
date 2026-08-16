@@ -233,6 +233,7 @@ impl LowerCtx {
     }
 }
 
+// Inline: covers items in the crate-private `descriptor` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::super::lower;

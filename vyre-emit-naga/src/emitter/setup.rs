@@ -590,6 +590,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
 // Re-export the cache wrapper from this module so the `crate::emit`
 // boundary stays unchanged.
 
+// Inline: covers the private `emitter::setup` type and builtin tables, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

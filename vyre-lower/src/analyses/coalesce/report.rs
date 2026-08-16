@@ -179,6 +179,7 @@ fn warning_for_site(site: &AccessSite) -> Option<CoalescenceWarning> {
     }
 }
 
+// Inline: covers the crate-private `is_problematic` and `problematic_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

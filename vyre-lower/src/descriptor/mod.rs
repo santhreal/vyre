@@ -39,6 +39,7 @@ mod binding_layout;
 mod intent;
 mod kernel;
 mod kernel_op;
+// Inline: supplies descriptor fixtures to the crate-private `descriptor` tests that stay inline.
 #[cfg(test)]
 pub(crate) mod test_descriptors;
 

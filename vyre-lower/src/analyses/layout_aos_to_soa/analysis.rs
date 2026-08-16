@@ -63,6 +63,7 @@ fn compound_lane_count(dtype: &DataType) -> Option<u32> {
     }
 }
 
+// Inline: covers the crate-private `analyze` and `compound_lane_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -91,6 +91,7 @@ fn round_shift_right(value: u32, shift: u32) -> u32 {
     quotient + u32::from(remainder > halfway || (remainder == halfway && quotient & 1 == 1))
 }
 
+// Inline: covers the crate-private `bf16_to_f32` and `f16_to_f32`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

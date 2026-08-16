@@ -136,6 +136,7 @@ fn walk_find_dead(
     }
 }
 
+// Inline: covers the crate-private `analyze` and `dead_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

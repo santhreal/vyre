@@ -159,6 +159,7 @@ fn is_predicatable(kind: &KernelOpKind) -> bool {
     matches!(kind, KernelOpKind::StoreGlobal | KernelOpKind::StoreShared)
 }
 
+// Inline: covers the private `has_global_store` and `has_unsafe_predicated_effect`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

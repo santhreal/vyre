@@ -198,6 +198,7 @@ pub(crate) fn checked_index(index: u32, len: usize, id: &str) -> Result<usize, E
     }
 }
 
+// Inline: covers the crate-private `binary_u32_predicate` and `binary_u32_scalar`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

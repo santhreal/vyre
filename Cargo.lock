@@ -3783,6 +3783,7 @@ dependencies = [
  "thiserror 2.0.19",
  "toml",
  "vyre-foundation",
+ "vyre-lower",
  "vyre-test-support",
 ]
 

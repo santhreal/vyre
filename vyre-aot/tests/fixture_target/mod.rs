@@ -5,7 +5,7 @@ use vyre_aot::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
-use vyre_foundation::ir::{BufferAccess, DataType, Program, ValueLifetime};
+use vyre_foundation::ir::{BufferAccess, DataType, Program, ProgramGraph, ValueLifetime};
 use vyre_megakernel::{
     compile_selected_modules, EmittedTargetModule, TargetModuleBundle, TargetModuleImage,
 };
@@ -183,6 +183,56 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelo
             ],
         }],
         module_bytes,
+    )
+    .unwrap();
+    let mut envelope = ArtifactEnvelope::new(neutral);
+    envelope.attach_target_payload(payload).unwrap();
+    envelope
+}
+
+/// An artifact envelope over `program` carrying a synthetic target payload.
+///
+/// The neutral half comes from `compile_graph`, the one owner of fixture artifact
+/// compilation, so this function only builds the target payload on top of it.
+pub(crate) fn artifact_over(
+    program: &Program,
+    payload_format: &str,
+    target_bytes: Vec<u8>,
+) -> ArtifactEnvelope {
+    let graph = ProgramGraph::from_program("main", program.clone())
+        .expect("fixture Program must enter the canonical graph");
+    let neutral = compile_graph(graph, 0);
+    let entry = TargetEntryPoint {
+        name: "main".to_string(),
+        node: neutral.nodes()[0].id,
+        workgroup_size: program.workgroup_size,
+        grid_size: [1, 1, 1],
+        dynamic_shared_bytes: 0,
+        resource_bindings: neutral
+            .abi()
+            .resources
+            .iter()
+            .map(|resource| TargetResourceBinding {
+                resource: resource.value,
+                group: 0,
+                slot: resource.slot,
+                memory: TargetResourceMemory::Global,
+                access: match resource.access {
+                    vyre_megakernel::AbiAccess::ReadOnly | vyre_megakernel::AbiAccess::Uniform => {
+                        TargetResourceAccess::ReadOnly
+                    }
+                    vyre_megakernel::AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
+                    vyre_megakernel::AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
+                },
+            })
+            .collect(),
+    };
+    let payload = TargetPayload::new(
+        &neutral,
+        TargetPayloadFormat::new(payload_format, 1).unwrap(),
+        TargetProfile::new(payload_format, 1, [1_024, 1_024, 64], 1_024, 65_536, 0).unwrap(),
+        vec![entry],
+        target_bytes,
     )
     .unwrap();
     let mut envelope = ArtifactEnvelope::new(neutral);

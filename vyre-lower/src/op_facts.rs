@@ -102,6 +102,7 @@ pub(crate) fn kernel_op_kind_is_dce_pure(kind: &KernelOpKind) -> bool {
     !facts_for(kind).retained_effect
 }
 
+// Inline: covers the crate-private `kernel_op_kind_is_dce_pure`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

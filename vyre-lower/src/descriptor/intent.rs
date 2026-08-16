@@ -401,6 +401,7 @@ fn stable_descriptor_intent_digest(descriptor_id: &str, intents: &[DescriptorInt
     }
 }
 
+// Inline: covers the crate-private `covers_full_scan_pipeline` and `evidence`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

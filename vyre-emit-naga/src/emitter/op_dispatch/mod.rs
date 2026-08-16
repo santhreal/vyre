@@ -90,18 +90,6 @@ impl OpDispatchRouteCache {
     }
 }
 
-#[cfg(test)]
-pub(crate) fn op_dispatch_route_cache_probe(kinds: &[KernelOpKind]) -> (bool, usize) {
-    let mut cache = OpDispatchRouteCache::default();
-    let mut parity = true;
-    for kind in kinds {
-        let uncached = classify_op_dispatch_route(kind);
-        let cached = cache.route(kind);
-        parity &= uncached == cached;
-    }
-    (parity, cache.hits)
-}
-
 pub(super) fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute {
     match kind {
         KernelOpKind::Literal => OpDispatchRoute::Literal,
@@ -148,5 +136,53 @@ pub(super) fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute
         KernelOpKind::LoopCarrierInit { .. } => OpDispatchRoute::LoopCarrierInit,
         KernelOpKind::LoopCarrier { .. } => OpDispatchRoute::LoopCarrier,
         KernelOpKind::LoopCarrierEnd { .. } => OpDispatchRoute::LoopCarrierEnd,
+    }
+}
+
+// Inline: covers the private `OpDispatchRouteCache` hit counter, which no
+// integration test can reach.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_foundation::ir::{BinOp, DataType, MemoryOrdering, UnOp};
+
+    #[test]
+    fn op_dispatch_route_cache_hits_preserve_uncached_classification() {
+        let kinds = [
+            KernelOpKind::Literal,
+            KernelOpKind::Literal,
+            KernelOpKind::BinOpKind(BinOp::Add),
+            KernelOpKind::BinOpKind(BinOp::Mul),
+            KernelOpKind::UnOpKind(UnOp::BitNot),
+            KernelOpKind::UnOpKind(UnOp::Abs),
+            KernelOpKind::Cast {
+                target: DataType::U32,
+            },
+            KernelOpKind::Cast {
+                target: DataType::I32,
+            },
+            KernelOpKind::Barrier {
+                ordering: MemoryOrdering::SeqCst,
+            },
+            KernelOpKind::Barrier {
+                ordering: MemoryOrdering::Acquire,
+            },
+            KernelOpKind::LoadGlobal,
+            KernelOpKind::LoadGlobal,
+        ];
+        let mut cache = OpDispatchRouteCache::default();
+        let mut parity = true;
+        for kind in &kinds {
+            parity &= classify_op_dispatch_route(kind) == cache.route(kind);
+        }
+        let hits = cache.hits;
+        assert!(
+            parity,
+            "Fix: cached Naga op-dispatch route classification must match uncached classification."
+        );
+        assert!(
+            hits >= 6,
+            "Fix: repeated Naga op kinds must hit the dispatch-route cache; observed {hits}."
+        );
     }
 }

@@ -14,7 +14,7 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
         ops.push(lit(id, id));
     }
     ops.push(KernelOp {
-        kind: f16_mma_kind(),
+        kind: mma_f16_m16n8k16(),
         operands: (0..10).collect(),
         result: Some(10),
     });

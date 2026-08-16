@@ -48,6 +48,7 @@ pub fn analyze(desc: &KernelDescriptor) -> TexturePromotionPlan {
     }
 }
 
+// Inline: covers the crate-private `analyze`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -771,6 +771,7 @@ fn eval_atomic(
 /// reading Pass-A's not-yet-written per-block totals). These pin the private splitting
 /// helpers IN the crate that owns them, the end-to-end value parity lives downstream in
 /// `vyre-primitives`'s multi_block/line_index tests, but the split MECHANICS belong here.
+// Inline: covers the crate-private `contains_grid_sync` and `flatten_grid_sync_scopes`, which no integration test can reach.
 #[cfg(test)]
 mod grid_sync_segmentation {
     use super::*;

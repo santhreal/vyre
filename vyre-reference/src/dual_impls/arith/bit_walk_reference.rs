@@ -43,6 +43,7 @@ fn zero_word() -> Vec<u8> {
     vec![0; 4]
 }
 
+// Inline: covers the crate-private `wrapping_add_bits_reference` and `wrapping_mul_shift_add_reference`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

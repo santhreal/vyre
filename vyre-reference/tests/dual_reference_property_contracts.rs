@@ -3,12 +3,10 @@
 use proptest::prelude::*;
 use vyre_reference::resolve_dual;
 
-fn binary_input(left: u32, right: u32) -> Vec<u8> {
-    let mut input = Vec::with_capacity(8);
-    input.extend_from_slice(&left.to_le_bytes());
-    input.extend_from_slice(&right.to_le_bytes());
-    input
-}
+#[path = "support/dual_operands.rs"]
+mod dual_operands;
+
+use dual_operands::binary_input;
 
 proptest! {
     #[test]

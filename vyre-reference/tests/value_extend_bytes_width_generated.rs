@@ -9,6 +9,11 @@ use std::sync::Arc;
 
 use vyre_reference::value::Value;
 
+#[path = "support/scalar_corpus.rs"]
+mod scalar_corpus;
+
+use scalar_corpus::mix32;
+
 #[test]
 fn generated_extend_bytes_width_preserves_existing_prefix_for_8192_cases() {
     let mut assertions = 0usize;
@@ -139,10 +144,3 @@ fn generated_bytes(seed: u32) -> Vec<u8> {
         .collect()
 }
 
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}

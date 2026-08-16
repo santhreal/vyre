@@ -413,6 +413,7 @@ fn apply_async_transfer(
     Ok(())
 }
 
+// Inline: covers the crate-private `apply_async_transfer` and `read_bytes`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::super::super::memory::HashmapMemory;

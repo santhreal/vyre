@@ -1,14 +1,16 @@
-use super::*;
-use crate::reg::{PtxType, Reg};
+//! PTX emitter contracts over the public `vyre_emit_ptx` surface.
+//!
+//! Every descriptor fixture in this file is shared by the submodules below,
+//! which reach it through `use super::*`.
+use vyre_emit_ptx::*;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_ro, global_wo, lit, op, SlotCount,
+    body, descriptor, effect, global_ro, global_wo, lit, mma_f16_m16n8k16, op, SlotCount,
 };
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
-    MemoryClass,
+    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
 };
 
 fn one_store_kernel() -> KernelDescriptor {
@@ -46,20 +48,6 @@ fn two_slot_u32_kernel(
 
 fn empty_child_body() -> KernelBody {
     body().build()
-}
-
-/// The one MMA shape every test uses: `m16n8k16`, row-major A, column-major B,
-/// f16 inputs accumulating in f32. Six coupled fields that only mean anything
-/// together, so one copy states them.
-pub(crate) fn f16_mma_kind() -> KernelOpKind {
-    KernelOpKind::MatrixMma {
-        shape: MatrixMmaShape::M16N8K16,
-        a_layout: MatrixMmaLayout::RowMajor,
-        b_layout: MatrixMmaLayout::ColMajor,
-        a_type: MatrixMmaElement::F16,
-        b_type: MatrixMmaElement::F16,
-        accum_type: MatrixMmaElement::F32,
-    }
 }
 
 /// The op chain a four-way vector load fuses from: literal 0 is the base index
@@ -113,13 +101,23 @@ fn atomic_kernel(
         .build()
 }
 
+#[path = "emit_contracts/async_ops.rs"]
 mod async_ops;
+#[path = "emit_contracts/atomics.rs"]
 mod atomics;
+#[path = "emit_contracts/barrier.rs"]
 mod barrier;
+#[path = "emit_contracts/control_flow.rs"]
 mod control_flow;
+#[path = "emit_contracts/data_tensor/mod.rs"]
 mod data_tensor;
+#[path = "emit_contracts/memory_vector/mod.rs"]
 mod memory_vector;
+#[path = "emit_contracts/preamble.rs"]
 mod preamble;
+#[path = "emit_contracts/scalar_ops.rs"]
 mod scalar_ops;
+#[path = "emit_contracts/subgroup.rs"]
 mod subgroup;
+#[path = "emit_contracts/types_registers.rs"]
 mod types_registers;

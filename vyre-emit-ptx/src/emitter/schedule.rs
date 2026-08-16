@@ -67,10 +67,11 @@ pub(super) fn op_reads_operand(op: &KernelOp, operand: u32) -> bool {
         .any(|candidate| *candidate == operand && !operand_is_immediate(op, *candidate))
 }
 
+// Inline: covers the private `is_schedulable_pure_op`, `op_reads_operand` and `operand_is_immediate`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::f16_mma_kind;
+    use vyre_lower::descriptor_builder::mma_f16_m16n8k16;
 
     fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
         KernelOp {
@@ -88,7 +89,7 @@ mod tests {
             Some(4)
         )));
         assert!(is_schedulable_pure_op(&op(
-            f16_mma_kind(),
+            mma_f16_m16n8k16(),
             vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             Some(11)
         )));

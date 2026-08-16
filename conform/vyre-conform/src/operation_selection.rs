@@ -200,6 +200,7 @@ fn prepare_reference_cases(
     Ok(reference_cases)
 }
 
+// Inline: covers the private `select_entries`, `prepare_reference_cases` and `UnifiedEntry`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
