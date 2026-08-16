@@ -3,9 +3,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::operation::{
-    classify_operation_id as classify_op_id, OperationTier as OpTier,
-};
+use vyre_foundation::operation::OperationTier as OpTier;
 
 use super::registry::registered_ops;
 
@@ -28,11 +26,11 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
     }
 
     for entry in vyre_libs::operation_catalog::all_entries() {
-        let tier = classify_op_id(entry.id);
         assert!(
-            matches!(tier, OpTier::Library | OpTier::External),
-            "Fix: shared harness entry `{}` must be a Tier 3 library id or an external consumer id, not {tier:?}.",
-            entry.id
+            matches!(entry.tier, OpTier::Library | OpTier::External),
+            "Fix: shared harness entry `{}` must be a composition or an external consumer op, not {:?}.",
+            entry.id,
+            entry.tier
         );
     }
 }

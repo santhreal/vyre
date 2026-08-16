@@ -402,7 +402,7 @@ fn fixture_u32(values: &[u32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         SUM_F32_OP_ID,
         || workgroup_sum_f32("values", "out", 4, 4),
         Some(|| vec![vec![
@@ -414,7 +414,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         SUM_U32_OP_ID,
         || workgroup_sum_u32("values", "out", 4, 4),
         Some(|| vec![vec![
@@ -426,7 +426,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         MAX_F32_OP_ID,
         || workgroup_max_f32("values", "out", 4, 4),
         Some(|| vec![vec![

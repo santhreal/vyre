@@ -814,7 +814,7 @@ fn dominates(dom_offsets: &[u32], dom_targets: &[u32], dominator: u32, node: u32
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || dominator_frontier(4, 4, 4, "idom", "df"),
         Some(|| {

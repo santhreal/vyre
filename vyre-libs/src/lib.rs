@@ -212,6 +212,13 @@ pub mod bitset;
 #[cfg(feature = "reduce")]
 pub mod reduce;
 
+/// Virtual filesystem DMA compositions: the `#include` hash resolver that
+/// turns asset identifiers into asynchronous block loads. Built from
+/// `Node::AsyncLoad` and `Node::AsyncWait`, so it composes existing IR and
+/// carries no hardware contract of its own.
+#[cfg(feature = "vfs")]
+pub mod vfs;
+
 /// Label to NodeSet resolver: turn a TagFamily bitmask into a NodeSet bitset.
 #[cfg(feature = "label")]
 pub mod label;

@@ -53,6 +53,7 @@ full = [
     "text",
     "bitset", "reduce", "label", "predicate", "fixpoint", "graph",
     "geom", "opt", "topology",
+    "vfs",
 ]
 cpu-parity = ["vyre-primitives/cpu-parity"]
 
@@ -62,6 +63,7 @@ cpu-parity = ["vyre-primitives/cpu-parity"]
 # sibling it does not call.
 bitset = []
 reduce = []
+vfs = []
 fixpoint = ["bitset"]
 label = ["bitset"]
 # `graph` names `math-kernels` because seven graph kernels reach

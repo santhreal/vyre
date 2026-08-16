@@ -276,7 +276,7 @@ fn reserve_qsvt_cpu_vec<T>(out: &mut Vec<T>, len: usize, context: &str) -> Resul
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || qsvt_block_encode("a", "norm", "a_scaled", 4),
         Some(|| {

@@ -145,7 +145,7 @@ pub fn cpu_ref_slot_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || arg_of(ProgramGraphShape::new(4, 2), "fin", "fout"),
         Some(|| {

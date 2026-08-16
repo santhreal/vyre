@@ -5,7 +5,8 @@
 //! - `schema` the wire types and the version they are pinned to
 //! - `signature` one operation signature from a Program or a declaration
 //! - `composition` the nested-operation chain a Program spells out
-//! - `routing` category, feature route and the manifests that must declare it
+//! - `placement` where each operation is defined, read from the checkout
+//! - `routing` category and the manifests that must declare a feature
 //! - `assemble` the live registry join that produces the document
 //! - `validate` the judgment every document has to pass
 
@@ -20,6 +21,7 @@ use self::validate::validate_schema;
 
 pub mod assemble;
 mod composition;
+mod placement;
 mod routing;
 pub mod schema;
 mod signature;

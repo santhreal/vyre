@@ -343,7 +343,7 @@ pub fn try_jacobi_smooth_step_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || jacobi_smooth_step("a", "b", "x", "omega", "out", 1),
         Some(|| {

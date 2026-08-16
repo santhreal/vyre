@@ -176,7 +176,7 @@ macro_rules! define_bool_reduce_op {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::primitive(
+            vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("values", "out", 4),
                 Some(|| {
@@ -255,7 +255,7 @@ macro_rules! define_u32_reduce_op {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::primitive(
+            vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("values", "out", 4),
                 Some(|| {

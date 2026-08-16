@@ -5,12 +5,13 @@ use std::path::PathBuf;
 
 use vyre::ir::Program;
 use vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration;
-use vyre_foundation::operation::classify_operation_id as classify_op_id;
+use vyre_foundation::operation::OperationTier;
 
 use xtask::release::conformance_op_matrix::read_conformance_required_op_matrix;
 
 use super::composition::{collect_composition, validate_composition};
-use super::routing::{category_from_id, feature_route, read_manifest_features};
+use super::placement;
+use super::routing::{category_from_id, read_manifest_features};
 use super::schema::{
     BackendSupport, OperationRecord, OperationSchema, OracleContract, SCHEMA_VERSION,
 };
@@ -18,6 +19,7 @@ use super::signature::{signature_from_declaration, signature_from_program};
 use super::validate::validate_schema;
 
 struct LiveEntry {
+    tier: OperationTier,
     id: &'static str,
     signature: Option<&'static vyre_foundation::dialect_lookup::Signature>,
     build: Option<fn() -> Program>,
@@ -39,7 +41,6 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
     let root = workspace_root();
     let catalog = read_conformance_required_op_matrix(&root);
     let mut errors = catalog.errors;
-    let manifest_features = read_manifest_features(&root, &mut errors);
     let mut backend_rows: BTreeMap<String, BTreeMap<String, BackendSupport>> = BTreeMap::new();
     for row in catalog.release_backend_specs {
         backend_rows.entry(row.op_id).or_default().insert(
@@ -77,6 +78,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
     let live = vyre_registry_link::operation::live_operation_registry()
         .iter()
         .map(|entry| LiveEntry {
+            tier: entry.tier,
             id: entry.id,
             signature: entry.signature,
             build: entry.build,
@@ -97,6 +99,13 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             }
         }
     }
+
+    let placements = placement::read(&root, &all_ids, &mut errors);
+    let placement_crates: BTreeSet<String> = all_ids
+        .iter()
+        .filter_map(|id| placements.get(id).map(|found| found.crate_name.clone()))
+        .collect();
+    let manifest_features = read_manifest_features(&root, &placement_crates, &mut errors);
 
     for entry in live {
         let category = entry
@@ -126,18 +135,26 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         laws.extend(entry.laws.iter().map(|law| (*law).to_string()));
         let laws = laws.into_iter().collect();
 
-        let tier = classify_op_id(entry.id).matrix_value().to_string();
+        let tier = entry.tier.matrix_value().to_string();
         if tier == "unknown" {
             errors.push(format!("operation `{}` has an unknown tier", entry.id));
         }
-        let (crate_name, features) = feature_route(entry.id, &category);
-        if features.is_empty() {
+        let (crate_name, features) = match placements.get(entry.id) {
+            Some(found) => (found.crate_name.clone(), found.features.clone()),
+            None => (String::new(), Vec::new()),
+        };
+        if crate_name.is_empty() {
             errors.push(format!(
-                "operation `{}` has no enabling feature route",
+                "operation `{}` has no defining crate in the checkout",
+                entry.id
+            ));
+        } else if features.is_empty() {
+            errors.push(format!(
+                "operation `{}` is defined in `{crate_name}` behind no feature; a registration that always links cannot be selected out",
                 entry.id
             ));
         }
-        match manifest_features.get(crate_name) {
+        match manifest_features.get(&crate_name) {
             Some(available) => {
                 for feature in &features {
                     if !available.contains(feature) {

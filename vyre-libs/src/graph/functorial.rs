@@ -134,7 +134,7 @@ pub fn try_functor_apply_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || functor_apply("source_row", "mapping", "target_row", 4),
         Some(|| {

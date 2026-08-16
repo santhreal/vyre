@@ -3,7 +3,7 @@ use super::program::persistent_bfs;
 use crate::graph::program_graph::ProgramGraphShape;
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || persistent_bfs(ProgramGraphShape::new(4, 4), "fin", "fout", 0xFFFF_FFFF, 4),
         Some(|| {

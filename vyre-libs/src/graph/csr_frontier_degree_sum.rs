@@ -157,7 +157,7 @@ pub fn try_csr_frontier_degree_sum_cpu(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || csr_frontier_degree_sum(ProgramGraphShape::new(4, 4)),
         Some(|| {

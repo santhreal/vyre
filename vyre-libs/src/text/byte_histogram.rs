@@ -159,7 +159,7 @@ pub fn reference_byte_histogram(bytes: &[u8]) -> [u32; 256] {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         BYTE_HISTOGRAM_256_OP_ID,
         || byte_histogram_256("bytes", "histogram", 5),
         Some(|| {

@@ -195,7 +195,7 @@ crate::scratch::define_reserve_capacity!(
 );
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             sinkhorn_scale("a", "b", "out", 4)

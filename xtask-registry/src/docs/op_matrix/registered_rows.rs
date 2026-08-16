@@ -2,9 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_foundation::operation::{
-    classify_operation_id as classify_op_id, OperationTier as OpTier,
-};
+use vyre_foundation::operation::OperationTier as OpTier;
 
 use super::record::OpRecord;
 
@@ -14,22 +12,25 @@ use super::record::OpRecord;
 /// one id and is reported, so the remaining rows are still checked.
 pub(super) fn registered_records(problems: &mut Vec<String>) -> Vec<OpRecord> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut tiers = BTreeMap::<String, OpTier>::new();
 
     let registry = vyre_registry_link::operation::live_operation_registry();
     for entry in registry.iter() {
         push_registered(&mut ids, entry.id, "vyre-foundation::operation", problems);
+        tiers.insert(entry.id.to_string(), entry.tier);
     }
 
     ids.into_iter()
-        .filter_map(
-            |(id, sources)| match record_for_registered_id(&id, sources) {
+        .filter_map(|(id, sources)| {
+            let tier = tiers.get(&id).copied().unwrap_or(OpTier::Unknown);
+            match record_for_registered_id(&id, tier, sources) {
                 Ok(record) => Some(record),
                 Err(problem) => {
                     problems.push(problem);
                     None
                 }
-            },
-        )
+            }
+        })
         .collect()
 }
 
@@ -48,11 +49,14 @@ fn push_registered(
     }
 }
 
-fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRecord, String> {
-    let tier = classify_op_id(id);
+fn record_for_registered_id(
+    id: &str,
+    tier: OpTier,
+    sources: BTreeSet<String>,
+) -> Result<OpRecord, String> {
     if tier == OpTier::Unknown {
         return Err(format!(
-            "Fix: op id `{id}` from `{sources:?}` has no canonical tier namespace."
+            "Fix: op id `{id}` from `{sources:?}` declares no tier."
         ));
     }
     if sources.len() > 1 {
@@ -81,20 +85,15 @@ fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRec
     Ok(record)
 }
 
+/// Directory that carries the definition, for every tier that has one.
+///
+/// Both tiers read the checkout through [`namespace_source_dir`]. A frozen id
+/// names the crate that minted it, so a domain alias keyed on the id namespace
+/// answered `vyre-libs/src/unknown` for every composition that kept a
+/// `vyre-primitives::` id.
 fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
     match tier {
-        OpTier::Intrinsic => vec![namespace_source_dir(id)],
-        OpTier::Library => {
-            let domain = namespace_domain(id, "vyre-libs::");
-            let owner = match domain {
-                "matching" => "vyre-libs/src/scan".to_string(),
-                "optim" => "vyre-libs/src/nn/optim".to_string(),
-                "quant" => "vyre-libs/src/nn/quant".to_string(),
-                "builder" => "vyre-libs/src/builder_catalog.rs".to_string(),
-                _ => format!("vyre-libs/src/{domain}"),
-            };
-            vec![owner]
-        }
+        OpTier::Intrinsic | OpTier::Library => vec![namespace_source_dir(id)],
         OpTier::External => vec!["docs/optimization/README.md".to_string()],
         OpTier::Foundation | OpTier::Unknown => Vec::new(),
         _ => Vec::new(),

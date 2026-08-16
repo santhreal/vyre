@@ -315,7 +315,7 @@ pub fn validate_union_find_inputs(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || union_find_program("parent", "edge_a", "edge_b", 4, 2),
         Some(|| {

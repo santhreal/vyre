@@ -97,7 +97,7 @@ pub struct SinkhornExtents {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             sinkhorn_iterate(

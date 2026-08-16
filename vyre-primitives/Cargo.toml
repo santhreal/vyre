@@ -26,8 +26,8 @@ gpu = []
 # available without host execution paths.
 cpu-parity = []
 
-# Pulls vyre-foundation in as an optional dep. `hardware` and `vfs` need it;
-# nothing else in this crate builds IR.
+# Pulls vyre-foundation in as an optional dep. `hardware` needs it; nothing
+# else in this crate builds IR.
 vyre-foundation = ["dep:vyre-foundation"]
 
 # Category C hardware intrinsics: the one domain feature this crate declares.

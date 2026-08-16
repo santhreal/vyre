@@ -123,7 +123,7 @@ pub fn try_monoidal_compose_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || monoidal_compose("f", "g", "out", 2, 2, 2),
         Some(|| {

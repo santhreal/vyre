@@ -4,6 +4,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 /// Canonical op-id under which this VFS resolver registers itself in the
 /// inventory.
+///
+/// The namespace is the crate that minted the identity. It is frozen, so it
+/// still reads `vyre-primitives` after the resolver moved here.
 pub const VFS_RESOLVE_OP_ID: &str = "vyre-primitives::vfs::resolve";
 
 /// GPU-Native Virtual File System (VFS) Asynchronous DMA Resolver
@@ -60,9 +63,8 @@ pub fn vfs_resolve_dma(
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         VFS_RESOLVE_OP_ID,
         || vfs_resolve_dma("include_hashes", "out_file_buffers", Expr::u32(1)),
         Some(|| {

@@ -216,7 +216,7 @@ pub fn try_amari_alpha_step_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             bhattacharyya_per_element("a", "b", "out", 4)

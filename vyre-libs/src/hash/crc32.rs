@@ -671,7 +671,7 @@ fn crc32_byte_shift_matrix() -> [u32; 32] {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         CRC32_OP_ID,
         || crc32_program("input", "out", 3),
         Some(|| {

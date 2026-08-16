@@ -175,7 +175,7 @@ pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32
 // fixture is exact and no tolerance is needed. The two off-diagonal cells are
 // the forced zeros.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || jacobi_apply_rotation("a", "evec", 2, 0, 1),
         Some(|| {

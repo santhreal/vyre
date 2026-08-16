@@ -137,7 +137,7 @@ pub fn try_greedy_contract_order_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || tn_pair_contract("a", "b", "c", 2, 2, 2),
         Some(|| {

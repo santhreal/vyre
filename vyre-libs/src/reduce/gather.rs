@@ -61,7 +61,7 @@ pub fn try_cpu_ref_into(src: &[u32], indices: &[u32], out: &mut Vec<u32>) -> Res
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || gather("src", "indices", "dst", 4),
         Some(|| {

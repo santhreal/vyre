@@ -22,7 +22,7 @@ pub fn cpu_ref(bitset: &[u32]) -> u32 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || reduce_count("bitset", "out", 2),
         Some(|| {

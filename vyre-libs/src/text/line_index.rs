@@ -203,7 +203,7 @@ pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         LINE_INDEX_OP_ID,
         || line_index("source", "lines", 5),
         Some(|| {

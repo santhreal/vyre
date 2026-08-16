@@ -299,7 +299,7 @@ pub fn bracket_match_cpu_ref_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         BRACKET_MATCH_OP_ID,
         || bracket_match("kinds", "stack", "match_pairs", 4, 4),
         Some(|| vec![vec![

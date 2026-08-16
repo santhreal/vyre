@@ -268,7 +268,7 @@ pub fn try_modified_gram_schmidt_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || randomized_projection_step("a", "omega", "y", 1, 2, 2),
         Some(|| {

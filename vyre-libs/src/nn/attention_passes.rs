@@ -576,7 +576,7 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         ATTENTION_MAX_PASS_OP_ID,
         || attention_max_pass_program("q", "k", "out", 2, 2),
         Some(|| {
@@ -595,7 +595,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         ATTENTION_SUM_PASS_OP_ID,
         || attention_sum_pass_program("q", "k", "max", "out", 2, 2),
         Some(|| {
@@ -615,7 +615,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         ATTENTION_WRITE_PASS_OP_ID,
         || {
             attention_write_pass_program(AttentionWritePassProgramSpec {

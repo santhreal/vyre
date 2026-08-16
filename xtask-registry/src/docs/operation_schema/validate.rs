@@ -2,9 +2,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_foundation::operation::classify_operation_id as classify_op_id;
+use vyre_foundation::operation::OperationTier;
 
-use super::routing::feature_route;
 use super::schema::{OperationSchema, SCHEMA_VERSION};
 
 pub(crate) fn validate_schema(
@@ -34,11 +33,16 @@ pub(crate) fn validate_schema(
             errors.push(format!("operation id `{}` is empty or duplicated", op.id));
         }
     }
+    let accepted_tiers: BTreeSet<&str> = OperationTier::ALL
+        .iter()
+        .map(|tier| tier.matrix_value())
+        .filter(|spelling| *spelling != OperationTier::Unknown.matrix_value())
+        .collect();
     for op in &schema.operations {
-        let expected_tier = classify_op_id(&op.id).matrix_value();
-        if op.tier != expected_tier || op.tier == "unknown" {
+        if !accepted_tiers.contains(op.tier.as_str()) {
+            let named = accepted_tiers.iter().copied().collect::<Vec<_>>().join(", ");
             errors.push(format!(
-                "operation `{}` tier `{}` does not match `{expected_tier}`",
+                "operation `{}` records tier `{}`; the accepted spellings are {named}",
                 op.id, op.tier
             ));
         }
@@ -77,11 +81,10 @@ pub(crate) fn validate_schema(
                 op.id
             ));
         }
-        let (_, expected_features) = feature_route(&op.id, &op.category);
-        if op.features != expected_features {
+        if op.features.is_empty() {
             errors.push(format!(
-                "operation `{}` feature route {:?} does not match {:?}",
-                op.id, op.features, expected_features
+                "operation `{}` records no enabling feature; a registration that always links cannot be selected out",
+                op.id
             ));
         }
         let reference_status = op

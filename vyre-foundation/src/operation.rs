@@ -86,6 +86,21 @@ pub enum OperationTier {
 }
 
 impl OperationTier {
+    /// Every tier, in declaration order.
+    ///
+    /// A consumer that has to enumerate the taxonomy reads this instead of
+    /// restating the variants, so adding one reaches every reader. The enum is
+    /// `non_exhaustive`, so only this crate can match it exhaustively:
+    /// `the_roster_carries_every_tier` below does, and a new variant stops
+    /// compiling there until it is listed here.
+    pub const ALL: &'static [Self] = &[
+        Self::Foundation,
+        Self::Intrinsic,
+        Self::Library,
+        Self::External,
+        Self::Unknown,
+    ];
+
     /// Stable operation-matrix spelling.
     #[must_use]
     pub const fn matrix_value(self) -> &'static str {
@@ -99,26 +114,39 @@ impl OperationTier {
     }
 }
 
-/// Classify one operation identity by its canonical namespace.
+/// Which crate minted one operation identity.
 ///
-/// The namespace names the crate that owns the registration, so an id whose
-/// prefix names no operation-owning crate classifies as [`OperationTier::Unknown`]
-/// and [`OperationRegistry`] refuses it. Host-side runtime capabilities are
-/// reached through the driver and runtime capability surfaces, not through an
-/// operation id, so `core.`, `io.` and `mem.` are not accepted namespaces.
+/// The namespace is frozen when the identity is published. It records the crate
+/// that minted the id, not the crate the definition lives in today: eighteen
+/// composition domains moved to `vyre-libs` keeping their `vyre-primitives::`
+/// ids, so 130 identities name a crate that no longer holds their code. Nothing
+/// derives a tier or a placement fact from this prefix. Tier is declared by the
+/// registration and cross-checked against the tree by `crate-structure` and by
+/// the operation schema. Host-side runtime capabilities are reached through the
+/// driver and runtime capability surfaces, so `core.`, `io.` and `mem.` name no
+/// namespace and are refused.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum IdNamespace<'a> {
+    /// Minted by the named workspace crate.
+    Workspace(&'a str),
+    /// Minted by a consumer outside the workspace.
+    External(&'a str),
+    /// Names no crate.
+    Unknown,
+}
+
+/// Read the minting namespace of one operation identity.
 #[must_use]
-pub fn classify_operation_id(id: &str) -> OperationTier {
-    if id.starts_with("vyre-primitives::") {
-        OperationTier::Intrinsic
-    } else if id.starts_with("vyre-libs::") {
-        OperationTier::Library
-    } else if id
-        .split_once("::")
-        .is_some_and(|(crate_name, _)| !crate_name.is_empty() && !crate_name.starts_with("vyre-"))
-    {
-        OperationTier::External
+pub fn operation_id_namespace(id: &str) -> IdNamespace<'_> {
+    let Some((namespace, rest)) = id.split_once("::") else {
+        return IdNamespace::Unknown;
+    };
+    if namespace.is_empty() || rest.is_empty() {
+        IdNamespace::Unknown
+    } else if namespace.starts_with("vyre-") {
+        IdNamespace::Workspace(namespace)
     } else {
-        OperationTier::Unknown
+        IdNamespace::External(namespace)
     }
 }
 
@@ -227,7 +255,14 @@ impl OperationRegistration {
         }
     }
 
-    /// Construct a library-composition registration.
+    /// Construct a Category A composition registration.
+    ///
+    /// Every registration built through a constructor is a composition over
+    /// existing IR. A Category C intrinsic declares a hardware contract as
+    /// well, so it writes the struct literal and names the extra fields the
+    /// contract needs; there is no constructor that sets
+    /// [`OperationTier::Intrinsic`] from four arguments, because 142 call
+    /// sites reached for one and declared a tier none of them meant.
     #[must_use]
     pub const fn library(
         id: &'static str,
@@ -238,23 +273,6 @@ impl OperationRegistration {
         Self::new(
             id,
             OperationTier::Library,
-            Some(build),
-            test_inputs,
-            expected_output,
-        )
-    }
-
-    /// Construct a Category C registration owned by `vyre-primitives`.
-    #[must_use]
-    pub const fn primitive(
-        id: &'static str,
-        build: fn() -> Program,
-        test_inputs: Option<OperationFixtures>,
-        expected_output: Option<OperationFixtures>,
-    ) -> Self {
-        Self::new(
-            id,
-            OperationTier::Intrinsic,
             Some(build),
             test_inputs,
             expected_output,
@@ -360,17 +378,25 @@ pub enum OperationRegistryError {
         /// Incomplete operation id.
         id: &'static str,
     },
-    /// Registration tier does not match its canonical namespace.
+    /// A registration id names no crate.
     #[error(
-        "operation `{id}` declares tier {declared:?}, but its canonical namespace classifies as {classified:?}"
+        "operation `{id}` names no minting crate; an id is `<crate>::<path>` and the crate is the one that published the identity"
+    )]
+    UnknownNamespace {
+        /// Invalid operation id.
+        id: &'static str,
+    },
+    /// Registration tier does not match the kind of crate that minted the id.
+    #[error(
+        "operation `{id}` declares tier {declared:?}, which no {origin} identity can carry"
     )]
     InvalidTier {
         /// Invalid operation id.
         id: &'static str,
         /// Tier supplied by the registration.
         declared: OperationTier,
-        /// Tier derived from the canonical namespace.
-        classified: OperationTier,
+        /// Whether the minting crate is inside the workspace.
+        origin: &'static str,
     },
 }
 
@@ -394,13 +420,33 @@ impl OperationRegistry {
             if entry.build.is_none() && entry.signature.is_none() {
                 return Err(OperationRegistryError::MissingSemantics { id: entry.id });
             }
-            let classified = classify_operation_id(entry.id);
-            if classified == OperationTier::Unknown || classified != entry.tier {
-                return Err(OperationRegistryError::InvalidTier {
-                    id: entry.id,
-                    declared: entry.tier,
-                    classified,
-                });
+            match operation_id_namespace(entry.id) {
+                IdNamespace::Unknown => {
+                    return Err(OperationRegistryError::UnknownNamespace { id: entry.id });
+                }
+                IdNamespace::Workspace(_) => {
+                    if !matches!(
+                        entry.tier,
+                        OperationTier::Intrinsic
+                            | OperationTier::Library
+                            | OperationTier::Foundation
+                    ) {
+                        return Err(OperationRegistryError::InvalidTier {
+                            id: entry.id,
+                            declared: entry.tier,
+                            origin: "workspace",
+                        });
+                    }
+                }
+                IdNamespace::External(_) => {
+                    if entry.tier != OperationTier::External {
+                        return Err(OperationRegistryError::InvalidTier {
+                            id: entry.id,
+                            declared: entry.tier,
+                            origin: "external",
+                        });
+                    }
+                }
             }
             if by_id.insert(entry.id, *entry).is_some() {
                 return Err(OperationRegistryError::DuplicateId { id: entry.id });
@@ -533,4 +579,44 @@ pub struct TargetOperationFacet {
     pub target_id: TargetId,
     /// Target facet schema version.
     pub version: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{IdNamespace, OperationTier, operation_id_namespace};
+    use std::collections::BTreeSet;
+
+    /// The tier roster carries every variant of the tier enum.
+    ///
+    /// `OperationTier` is `non_exhaustive`, so no integration test can match it
+    /// exhaustively; this is the only place the compiler can hold the roster to
+    /// the enum. Adding a variant stops this match compiling, and the arm count
+    /// then holds the roster to it.
+    #[test]
+    fn the_roster_carries_every_tier() {
+        let mut seen = BTreeSet::new();
+        for tier in OperationTier::ALL {
+            seen.insert(match tier {
+                OperationTier::Foundation => 0,
+                OperationTier::Intrinsic => 1,
+                OperationTier::Library => 2,
+                OperationTier::External => 3,
+                OperationTier::Unknown => 4,
+            });
+        }
+        assert_eq!(
+            seen.len(),
+            5,
+            "OperationTier::ALL must list every variant the match above names"
+        );
+    }
+
+    /// A namespace is a minting fact, never a placement one.
+    #[test]
+    fn the_namespace_never_answers_with_a_tier() {
+        assert_eq!(
+            operation_id_namespace("vyre-primitives::graph::toposort"),
+            IdNamespace::Workspace("vyre-primitives")
+        );
+    }
 }

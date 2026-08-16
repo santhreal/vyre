@@ -93,7 +93,7 @@ pub fn cpu_ref(values: &[u32]) -> u32 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         WORKGROUP_ANY_U32_OP_ID,
         || workgroup_any_u32("values", "out", 4),
         Some(|| vec![vec![
