@@ -568,7 +568,7 @@ fn usage_commands(help: &str, binary: &str) -> BTreeSet<String> {
     let mut commands = BTreeSet::new();
     let mut program: Option<String> = None;
     for line in help.lines() {
-        let mut words = line.trim().split_whitespace().peekable();
+        let mut words = line.split_whitespace().peekable();
         if words
             .peek()
             .is_some_and(|word| word.eq_ignore_ascii_case("usage:"))

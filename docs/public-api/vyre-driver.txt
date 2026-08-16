@@ -21,6 +21,7 @@ impl core::convert::From<vyre_driver::megakernel_barrier::MegakernelBarrierPlanE
 impl core::convert::From<vyre_driver::megakernel_barrier::MegakernelBarrierPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 impl core::convert::From<vyre_driver::megakernel_execution::MegakernelMemoryError> for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl core::convert::From<vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
+impl core::convert::From<vyre_foundation::program_dispatch::DispatchError> for vyre_driver::cache_invalidation::CacheInvalidationError
 impl core::default::Default for vyre_driver::DeviceProfile
 impl core::default::Default for vyre_driver::LaunchPlan
 impl core::default::Default for vyre_driver::Resource
@@ -159,6 +160,7 @@ impl vyre_driver::numeric::BackendNumericPolicy
 impl vyre_driver::observability::DriverObservability
 impl vyre_driver::param_inlining::ParamInliningDecision
 impl vyre_driver::param_inlining::ParamInliningPolicy
+impl vyre_driver::parity_harness::ParityInput
 impl vyre_driver::persistent::PersistentEngine
 impl vyre_driver::pgo::PgoTable
 impl vyre_driver::reservation_policy::ReservationPolicy
@@ -276,7 +278,20 @@ pub const vyre_driver::graph_capture::SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION: u3
 pub const vyre_driver::materialize::NEUTRAL_MESSAGES: vyre_driver::materialize::InstanceMessages
 pub const vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::FUSION_CAPABLE: Self
 pub const vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::FUSION_INCAPABLE: Self
+pub const vyre_driver::megakernel_fixtures::CHAIN_DEPENDENCIES: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency]
+pub const vyre_driver::megakernel_fixtures::CYCLE_DEPENDENCIES: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency]
+pub const vyre_driver::megakernel_fixtures::DIAMOND_DEPENDENCIES: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency]
+pub const vyre_driver::megakernel_fixtures::DIAMOND_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
+pub const vyre_driver::megakernel_fixtures::GROWING_PAIR_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
+pub const vyre_driver::megakernel_fixtures::LONG_CHAIN_DEPENDENCIES: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency]
+pub const vyre_driver::megakernel_fixtures::ONE_WAVE: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
+pub const vyre_driver::megakernel_fixtures::OUTPUT_HEAVY_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
+pub const vyre_driver::megakernel_fixtures::OVERFLOW_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
+pub const vyre_driver::megakernel_fixtures::THREE_EQUAL_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
+pub const vyre_driver::megakernel_fixtures::THREE_SMALL_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
 pub const vyre_driver::numeric::BASIS_POINTS_DENOMINATOR: u32
+pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURES: &[vyre_driver::self_optimizer_bench::ScalingFixture]
+pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURE_SIZES: &[usize]
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
 pub const vyre_driver::speculation_verdict::MIN_ADOPT_SAVINGS_BPS: u64
 pub const vyre_driver::speculation_verdict::MIN_DISPATCHES_FOR_VERDICT: u32
@@ -700,8 +715,9 @@ pub fn vyre_driver::cache_eviction_heat::CacheEntryStats::heat(&self, current_ti
 pub fn vyre_driver::cache_eviction_heat::entries_to_evict(entries: &[vyre_driver::cache_eviction_heat::CacheEntryStats], capacity: usize, current_time_s: f64) -> alloc::vec::Vec<u64>
 pub fn vyre_driver::cache_eviction_heat::try_entries_to_evict(entries: &[vyre_driver::cache_eviction_heat::CacheEntryStats], capacity: usize, current_time_s: f64) -> core::result::Result<alloc::vec::Vec<u64>, alloc::string::String>
 pub fn vyre_driver::cache_invalidation::CacheInvalidationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_driver::cache_invalidation::impacted_entries(intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, lineage_cells: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_driver::cache_invalidation::CacheInvalidationError>
-pub fn vyre_driver::cache_invalidation::impacted_entries_into(intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, lineage_cells: &[u32], out: &mut alloc::vec::Vec<u32>, _scratch: &mut vyre_driver::cache_invalidation::CacheInvalidationScratch) -> core::result::Result<(), vyre_driver::cache_invalidation::CacheInvalidationError>
+pub fn vyre_driver::cache_invalidation::CacheInvalidationError::from(error: vyre_foundation::program_dispatch::DispatchError) -> Self
+pub fn vyre_driver::cache_invalidation::impacted_entries(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, lineage_cells: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_driver::cache_invalidation::CacheInvalidationError>
+pub fn vyre_driver::cache_invalidation::impacted_entries_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, lineage_cells: &[u32], out: &mut alloc::vec::Vec<u32>, _scratch: &mut vyre_driver::cache_invalidation::CacheInvalidationScratch) -> core::result::Result<(), vyre_driver::cache_invalidation::CacheInvalidationError>
 pub fn vyre_driver::coerce_to_pow2_with_tail_mask(element_count: u32) -> vyre_driver::TailMaskPolicy
 pub fn vyre_driver::command_reuse_policy::decide_command_reuse(inputs: vyre_driver::command_reuse_policy::CommandReuseInputs) -> vyre_driver::command_reuse_policy::CommandReuseDecision
 pub fn vyre_driver::core_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
@@ -767,6 +783,12 @@ pub fn vyre_driver::grid_sync::split_on_grid_sync(program: &vyre_foundation::ir_
 pub fn vyre_driver::grid_sync::try_split_on_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>, vyre_driver::BackendError>
 pub fn vyre_driver::hex_encode(bytes: &[u8]) -> alloc::string::String
 pub fn vyre_driver::hex_short(bytes: &[u8; 32]) -> alloc::string::String
+pub fn vyre_driver::hostile_input_closure::assert_hostile_bytes_stay_actionable(backend: &dyn vyre_driver::VyreBackend, label: &str)
+pub fn vyre_driver::hostile_input_closure::assert_trailing_inputs_rejected(backend: &dyn vyre_driver::VyreBackend, label: &str)
+pub fn vyre_driver::hostile_input_closure::assert_zero_workgroup_rejected(backend: &dyn vyre_driver::VyreBackend, label: &str)
+pub fn vyre_driver::hostile_input_closure::read_one_write_one_program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_driver::hostile_input_closure::single_output_program(output_init: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_driver::hostile_input_closure::zero_workgroup_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_driver::infer_dispatch_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::infer_dispatch_grid_for_count(element_count: u32, workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::input_identity::domain_separated_exact_input_key(domain_tag: &[u8], domain_id: u64, feature_key: u64, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::input_identity::ExactInputKey, vyre_driver::BackendError>
@@ -834,6 +856,7 @@ pub fn vyre_driver::megakernel_execution::plan_megakernel_execution(sample: vyre
 pub fn vyre_driver::megakernel_execution::plan_megakernel_memory_budget(topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes: vyre_driver::megakernel_execution::MegakernelByteLayout) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelMemoryPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver::megakernel_execution::select_megakernel_topology(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
 pub fn vyre_driver::megakernel_execution::select_megakernel_topology_stable(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
+pub fn vyre_driver::megakernel_fixtures::layered_dag_dependencies(width: usize, depth: usize) -> alloc::vec::Vec<vyre_driver::megakernel_barrier::MegakernelWaveDependency>
 pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::from(error: vyre_driver::megakernel_barrier::MegakernelBarrierPlanError) -> Self
@@ -927,6 +950,14 @@ pub fn vyre_driver::output_slots::resize_vec_slots<T>(slots: &mut alloc::vec::Ve
 pub fn vyre_driver::output_slots::resize_vec_with<T, F>(vec: &mut alloc::vec::Vec<T>, len: usize, make: F, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where F: core::ops::function::FnMut() -> T
 pub fn vyre_driver::param_inlining::ParamInliningDecision::is_inline(&self) -> bool
 pub fn vyre_driver::param_inlining::decide_param_inlining(bytes_len: u32, policy: vyre_driver::param_inlining::ParamInliningPolicy) -> vyre_driver::param_inlining::ParamInliningDecision
+pub fn vyre_driver::parity_harness::ParityInput::packed(name: &'static str, element: vyre_spec::data_type::DataType, bytes: alloc::vec::Vec<u8>) -> Self
+pub fn vyre_driver::parity_harness::ParityInput::u32_words(name: &'static str, words: &[u32]) -> Self
+pub fn vyre_driver::parity_harness::dispatch_single_output(dispatch: vyre_driver::parity_harness::ParityDispatch<'_>, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_driver::parity_harness::ParityInput], output_bytes: usize, label: &str) -> alloc::vec::Vec<u8>
+pub fn vyre_driver::parity_harness::elementwise_program(out_element: vyre_spec::data_type::DataType, inputs: &[vyre_driver::parity_harness::ParityInput], count: u32, build: &dyn core::ops::function::Fn(&[vyre_foundation::ir_inner::model::generated::Expr]) -> vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_driver::parity_harness::u32_binop_parity(dispatch: vyre_driver::parity_harness::ParityDispatch<'_>, build: fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, pairs: &[(u32, u32)], label: &str) -> alloc::vec::Vec<u32>
+pub fn vyre_driver::parity_harness::u32_bytes(words: &[u32]) -> alloc::vec::Vec<u8>
+pub fn vyre_driver::parity_harness::u32_words(bytes: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_driver::parity_harness::u64_words(bytes: &[u8]) -> alloc::vec::Vec<u64>
 pub fn vyre_driver::parse_counter_tail(output_bytes: &[u8]) -> core::option::Option<vyre_driver::SpeculationReport>
 pub fn vyre_driver::persistent::PersistentEngine::claim(&self) -> core::option::Option<vyre_driver::persistent::PersistentWorkItem>
 pub fn vyre_driver::persistent::PersistentEngine::enqueue(&self, item: vyre_driver::persistent::PersistentWorkItem) -> core::result::Result<u32, vyre_driver::persistent::QueueFull>
@@ -994,6 +1025,18 @@ pub fn vyre_driver::reservation_policy::reserve_typed_hash_set_and_vec_to_capaci
 pub fn vyre_driver::reservation_policy::reserve_typed_hash_set_to_capacity<T, S, E>(policy: vyre_driver::reservation_policy::ReservationPolicy, set: &mut std::collections::hash::set::HashSet<T, S>, target_capacity: usize, item: &'static str, failure: vyre_driver::reservation_policy::StagingReservationFailureAdapter<E>) -> core::result::Result<(), E> where T: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
 pub fn vyre_driver::reservation_policy::reserve_typed_vec_to_capacity<T, E>(policy: vyre_driver::reservation_policy::ReservationPolicy, vec: &mut alloc::vec::Vec<T>, target_capacity: usize, item: &'static str, failure: vyre_driver::reservation_policy::StagingReservationFailureAdapter<E>) -> core::result::Result<(), E>
 pub fn vyre_driver::reservation_policy::reserved_typed_vec<T, E>(policy: vyre_driver::reservation_policy::ReservationPolicy, target_capacity: usize, item: &'static str, failure: vyre_driver::reservation_policy::StagingReservationFailureAdapter<E>) -> core::result::Result<alloc::vec::Vec<T>, E>
+pub fn vyre_driver::resident_transfer_fixtures::assert_fused_transfers_preserve_requests(seed: u64, requested: &[vyre_driver::resident_transfer_fusion::ResidentTransferInterval], fused: &vyre_driver::resident_transfer_fusion::FusedResidentTransfers)
+pub fn vyre_driver::resident_transfer_fixtures::assert_upload_fusion_preserves_ordered_writes<F>(seeds: core::ops::range::Range<u64>, fuse: F) where F: for<'a> core::ops::function::Fn(smallvec::SmallVec<[vyre_driver::resident_transfer_fusion::ResidentUploadCopy<'a>; 8]>) -> core::result::Result<(smallvec::SmallVec<[vyre_driver::resident_transfer_fusion::ResidentUploadCopy<'a>; 8]>, u64), vyre_driver::BackendError>
+pub fn vyre_driver::resident_transfer_fixtures::expected_transfer_union_bytes(requests: &[vyre_driver::resident_transfer_fusion::ResidentTransferInterval]) -> u64
+pub fn vyre_driver::resident_transfer_fixtures::generated_transfer_requests(seed: u64) -> alloc::vec::Vec<vyre_driver::resident_transfer_fusion::ResidentTransferInterval>
+pub fn vyre_driver::resident_transfer_fixtures::generated_upload_requests(seed: u64) -> alloc::vec::Vec<vyre_driver::resident_transfer_fixtures::UploadRequest>
+pub fn vyre_driver::resident_transfer_fixtures::materialize_fused_uploads(copies: &[vyre_driver::resident_transfer_fusion::ResidentUploadCopy<'_>]) -> std::collections::hash::map::HashMap<(u64, u64), u8>
+pub fn vyre_driver::resident_transfer_fixtures::materialize_transfer_request(request: vyre_driver::resident_transfer_fusion::ResidentTransferInterval) -> alloc::vec::Vec<u8>
+pub fn vyre_driver::resident_transfer_fixtures::materialize_transfer_view(copies: &[vyre_driver::resident_transfer_fusion::ResidentTransferInterval], copy_slot: usize, byte_offset: usize, byte_len: usize) -> alloc::vec::Vec<u8>
+pub fn vyre_driver::resident_transfer_fixtures::materialize_upload_requests(requests: &[vyre_driver::resident_transfer_fixtures::UploadRequest]) -> std::collections::hash::map::HashMap<(u64, u64), u8>
+pub fn vyre_driver::resident_transfer_fixtures::next_pseudo_random_u64(state: &mut u64) -> u64
+pub fn vyre_driver::resident_transfer_fixtures::ordered_transfer_requests(seed: u64) -> alloc::vec::Vec<vyre_driver::resident_transfer_fusion::ResidentTransferInterval>
+pub fn vyre_driver::resident_transfer_fixtures::synthetic_resident_byte(handle_id: u64, src: u64) -> u8
 pub fn vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>::as_slice(&self) -> &[u8]
 pub fn vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>::is_empty(&self) -> bool
 pub fn vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>::len(&self) -> usize
@@ -1014,6 +1057,12 @@ pub fn vyre_driver::result_compaction::ResultCompactionScratch::try_with_capacit
 pub fn vyre_driver::result_compaction::plan_result_compaction(slots: &[vyre_driver::result_compaction::ResultSlot], max_compact_record_bytes: u64) -> core::result::Result<vyre_driver::result_compaction::ResultCompactionPlan, vyre_driver::result_compaction::ResultCompactionError>
 pub fn vyre_driver::result_compaction::plan_result_compaction_with_scratch(slots: &[vyre_driver::result_compaction::ResultSlot], max_compact_record_bytes: u64, scratch: &mut vyre_driver::result_compaction::ResultCompactionScratch) -> core::result::Result<vyre_driver::result_compaction::ResultCompactionPlan, vyre_driver::result_compaction::ResultCompactionError>
 pub fn vyre_driver::select_sort_backend(distribution: vyre_driver::Distribution) -> vyre_driver::SortBackend
+pub fn vyre_driver::self_optimizer_bench::chain_program(count: usize) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_driver::self_optimizer_bench::cpu_pipeline(program: vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_driver::self_optimizer_bench::cpu_pipeline_on_oracle_stack(program: vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_driver::self_optimizer_bench::report_scaling(backend: &str, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, gpu_pipeline: fn(vyre_foundation::ir_inner::model::program::definition::Program, &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> vyre_foundation::ir_inner::model::program::definition::Program)
+pub fn vyre_driver::self_optimizer_bench::timed_cpu_pipeline_on_oracle_stack(program: vyre_foundation::ir_inner::model::program::definition::Program) -> u128
+pub fn vyre_driver::self_optimizer_bench::wide_program(count: usize) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_driver::shadow::ConformanceCase::inputs(&self) -> &[alloc::vec::Vec<u8>]
 pub fn vyre_driver::shadow::ConformanceCase::label(&self) -> &str
 pub fn vyre_driver::shadow::ConformanceCase::new(label: impl core::convert::Into<alloc::string::String>, inputs: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> Self
@@ -1138,12 +1187,14 @@ pub mod vyre_driver::extraction_cost
 pub mod vyre_driver::fusion
 pub mod vyre_driver::graph_capture
 pub mod vyre_driver::grid_sync
+pub mod vyre_driver::hostile_input_closure
 pub mod vyre_driver::input_identity
 pub mod vyre_driver::launch_fusion
 pub mod vyre_driver::lowering
 pub mod vyre_driver::materialize
 pub mod vyre_driver::megakernel_barrier
 pub mod vyre_driver::megakernel_execution
+pub mod vyre_driver::megakernel_fixtures
 pub mod vyre_driver::megakernel_frontier
 pub mod vyre_driver::multi_query_execution
 pub mod vyre_driver::numeric
@@ -1151,13 +1202,16 @@ pub mod vyre_driver::observability
 pub mod vyre_driver::ordering
 pub mod vyre_driver::output_slots
 pub mod vyre_driver::param_inlining
+pub mod vyre_driver::parity_harness
 pub mod vyre_driver::persistent
 pub mod vyre_driver::persistent_kernel_policy
 pub mod vyre_driver::pgo
 pub mod vyre_driver::pipeline_fusion
 pub mod vyre_driver::reservation_policy
+pub mod vyre_driver::resident_transfer_fixtures
 pub mod vyre_driver::resident_transfer_fusion
 pub mod vyre_driver::result_compaction
+pub mod vyre_driver::self_optimizer_bench
 pub mod vyre_driver::shadow
 pub mod vyre_driver::shape_prediction
 pub mod vyre_driver::speculation_verdict
@@ -1304,6 +1358,7 @@ pub struct vyre_driver::observability::DispatchTelemetry
 pub struct vyre_driver::observability::DriverObservability
 pub struct vyre_driver::observability::SubstrateAuditEvent
 pub struct vyre_driver::param_inlining::ParamInliningPolicy
+pub struct vyre_driver::parity_harness::ParityInput
 pub struct vyre_driver::persistent::PersistentEngine
 pub struct vyre_driver::persistent::QueueFull
 pub struct vyre_driver::persistent::RingAtomics
@@ -1313,6 +1368,7 @@ pub struct vyre_driver::pgo::PgoTable
 pub struct vyre_driver::pgo::RouteDecision
 pub struct vyre_driver::reservation_policy::ReservationPolicy
 pub struct vyre_driver::reservation_policy::ReusableIndexScratch<K, S>
+pub struct vyre_driver::resident_transfer_fixtures::UploadRequest
 pub struct vyre_driver::resident_transfer_fusion::FusedResidentTransfers
 pub struct vyre_driver::resident_transfer_fusion::ResidentTransferInterval
 pub struct vyre_driver::resident_transfer_fusion::ResidentTransferView
@@ -1321,6 +1377,7 @@ pub struct vyre_driver::result_compaction::CompactResultRecord
 pub struct vyre_driver::result_compaction::ResultCompactionPlan
 pub struct vyre_driver::result_compaction::ResultCompactionScratch
 pub struct vyre_driver::result_compaction::ResultSlot
+pub struct vyre_driver::self_optimizer_bench::ScalingFixture
 pub struct vyre_driver::shadow::ConformanceCase
 pub struct vyre_driver::shadow::ConformanceMatrix
 pub struct vyre_driver::shadow::DivergenceEvent
@@ -1364,6 +1421,7 @@ pub trait vyre_driver::strategy::LoweringStrategy: core::marker::Send + core::ma
 pub trait vyre_driver::tuner::BackendTimer
 pub type vyre_driver::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u8>>
 pub type vyre_driver::input_identity::ExactInputKey = [u8; 32]
+pub type vyre_driver::parity_harness::ParityDispatch<'a> = &'a dyn core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::definition::Program, &[&[u8]]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub type vyre_driver::reservation_policy::StagingReservationFailureAdapter<E> = fn(&'static str, usize, alloc::string::String) -> E
 pub type vyre_driver::shape_prediction::ShapeFingerprint = [u32; 8]
 pub type vyre_driver::target_dialect::EmitSelected = fn(&vyre_megakernel::target::SelectedLowering, &vyre_megakernel::envelope::TargetProfile) -> core::result::Result<vyre_driver::target_dialect::EmittedDialectModule, vyre_megakernel::target::TargetCompileError>
@@ -2241,6 +2299,9 @@ pub vyre_driver::param_inlining::ParamInliningDecision::UniformBuffer
 pub vyre_driver::param_inlining::ParamInliningPolicy::align_bytes: u32
 pub vyre_driver::param_inlining::ParamInliningPolicy::allow_padding_to_align: bool
 pub vyre_driver::param_inlining::ParamInliningPolicy::max_inline_bytes: u32
+pub vyre_driver::parity_harness::ParityInput::bytes: alloc::vec::Vec<u8>
+pub vyre_driver::parity_harness::ParityInput::element: vyre_spec::data_type::DataType
+pub vyre_driver::parity_harness::ParityInput::name: &'static str
 pub vyre_driver::persistent::PersistentThreadMode::Auto
 pub vyre_driver::persistent::PersistentThreadMode::Disable
 pub vyre_driver::persistent::PersistentThreadMode::Force
@@ -2270,6 +2331,9 @@ pub vyre_driver::pipeline_fusion::CrossPipelineConflict::WriteWriteConflict
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::Fuse
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::KeepSeparate
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::KeepSeparate::reason: vyre_driver::pipeline_fusion::CrossPipelineConflict
+pub vyre_driver::resident_transfer_fixtures::UploadRequest::bytes: alloc::vec::Vec<u8>
+pub vyre_driver::resident_transfer_fixtures::UploadRequest::dst_ptr: u64
+pub vyre_driver::resident_transfer_fixtures::UploadRequest::handle_id: u64
 pub vyre_driver::resident_transfer_fusion::FusedResidentTransfers::bytes: u64
 pub vyre_driver::resident_transfer_fusion::FusedResidentTransfers::copies: smallvec::SmallVec<[vyre_driver::resident_transfer_fusion::ResidentTransferInterval; 8]>
 pub vyre_driver::resident_transfer_fusion::FusedResidentTransfers::non_empty_copy_count: usize
@@ -2311,6 +2375,8 @@ pub vyre_driver::result_compaction::ResultCompactionPlan::selected_readback_byte
 pub vyre_driver::result_compaction::ResultSlot::capacity_bytes: u64
 pub vyre_driver::result_compaction::ResultSlot::meaningful_bytes: u64
 pub vyre_driver::result_compaction::ResultSlot::slot: u32
+pub vyre_driver::self_optimizer_bench::ScalingFixture::build: fn(usize) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_driver::self_optimizer_bench::ScalingFixture::label: &'static str
 pub vyre_driver::shadow::ConformanceError::BackendRejected
 pub vyre_driver::shadow::ConformanceError::BackendRejected::case_label: alloc::string::String
 pub vyre_driver::shadow::ConformanceError::BackendRejected::source: vyre_driver::BackendError

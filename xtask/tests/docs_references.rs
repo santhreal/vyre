@@ -1,4 +1,10 @@
 //! Published documentation reference contract tests.
+//!
+//! WHY: a backticked path and a copyable command are claims a reader acts on, and
+//! neither is checked by Markdown link validation. This target drives the
+//! `docs-references` gate over fixture trees, one fixture per way a claim can
+//! resolve to nothing, plus the real checkout so the gate cannot pass fixtures
+//! while covering no published document.
 
 #![forbid(unsafe_code)]
 
@@ -6,14 +12,38 @@ mod workspace_sources;
 
 use std::fs;
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Command;
 
 use tempfile::TempDir;
 
 use workspace_sources::workspace_root;
+use xtask::gate::{Gate, GateCtx, Report};
+use xtask::gates::docs_references::DocsReferences;
 
-fn run_checker(root: &Path) -> Output {
-    workspace_sources::run_python("scripts/check_docs_references.py", &[root.as_os_str()])
+fn judge(root: &Path) -> Report {
+    DocsReferences
+        .run(&GateCtx::new(root.to_path_buf(), Vec::new()))
+        .expect("Fix: the gate must be able to read the fixture tree")
+}
+
+/// Every finding rendered as one line, for substring assertions.
+fn rendered(report: &Report) -> String {
+    report
+        .findings
+        .iter()
+        .map(|finding| {
+            format!(
+                "{} {}",
+                finding
+                    .file
+                    .as_deref()
+                    .map(Path::to_string_lossy)
+                    .unwrap_or_default(),
+                finding.message
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn fixture() -> TempDir {
@@ -34,17 +64,19 @@ fn fixture() -> TempDir {
     root
 }
 
-fn stderr(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
-}
-
 /// Locks out regressions where the gate passes fixtures but no longer checks the real published corpus.
 #[test]
 fn current_workspace_references_resolve_to_published_inputs() {
-    let output = run_checker(&workspace_root());
-    assert!(output.status.success(), "{}", stderr(&output));
-    assert!(String::from_utf8_lossy(&output.stdout)
-        .contains("path-like code spans and command inputs resolve"));
+    let report = judge(&workspace_root());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
+    assert!(
+        report
+            .notes
+            .iter()
+            .any(|note| note.contains("path-like code span")),
+        "the gate must report how much it read: {:?}",
+        report.notes
+    );
 }
 
 /// Prevents a backticked nonexistent repository path from evading ordinary Markdown link validation.
@@ -57,11 +89,13 @@ fn missing_path_like_code_span_fails_closed() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains(
-        "MISSING docs/guide.md [code span: docs/missing-input.md] -> docs/missing-input.md"
-    ));
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(
+        text.contains("docs/guide.md code span `docs/missing-input.md` resolves to `docs/missing-input.md`, which the checkout does not carry"),
+        "{text}"
+    );
 }
 
 /// Prevents runnable examples from naming an input file that a clean checkout cannot provide.
@@ -74,10 +108,13 @@ fn missing_command_input_fails_closed() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(!output.status.success());
-    assert!(stderr(&output)
-        .contains("MISSING docs/guide.md [command: docs/missing.json] -> docs/missing.json"));
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(
+        text.contains("docs/guide.md command `docs/missing.json` resolves to `docs/missing.json`"),
+        "{text}"
+    );
 }
 
 /// Prevents a locally present but unpublished input from making public instructions appear reproducible.
@@ -92,10 +129,13 @@ fn gitignored_input_fails_closed() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(!output.status.success());
-    assert!(stderr(&output)
-        .contains("GITIGNORED docs/guide.md [code span: docs/private.json] -> docs/private.json"));
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(
+        text.contains("an ignore rule excludes from the checkout"),
+        "{text}"
+    );
 }
 
 /// Keeps generated destinations usable in examples while still checking the published input beside them.
@@ -110,8 +150,8 @@ fn output_destinations_do_not_need_to_preexist() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(output.status.success(), "{}", stderr(&output));
+    let report = judge(root.path());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
 }
 
 /// Ensures wildcard evidence references prove that at least one published artifact exists.
@@ -124,13 +164,14 @@ fn wildcard_input_requires_a_published_match() {
     )
     .unwrap();
 
-    let missing = run_checker(root.path());
-    assert!(!missing.status.success());
-    assert!(stderr(&missing).contains("MISSING docs/guide.md"));
+    let missing = judge(root.path());
+    let text = rendered(&missing);
+    assert_eq!(missing.count(), 1, "{text}");
+    assert!(text.contains("matches nothing published"), "{text}");
 
     fs::write(root.path().join("docs/evidence-01.json"), "{}\n").unwrap();
-    let present = run_checker(root.path());
-    assert!(present.status.success(), "{}", stderr(&present));
+    let present = judge(root.path());
+    assert_eq!(present.count(), 0, "{}", rendered(&present));
 }
 
 /// Keeps archived evidence from becoming an executable public-input contract after it is superseded.
@@ -144,8 +185,8 @@ fn archived_documents_are_not_scanned_as_current_instructions() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(output.status.success(), "{}", stderr(&output));
+    let report = judge(root.path());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
 }
 
 /// Prevents generated per-crate guides from bypassing the same clean-checkout input contract as root docs.
@@ -159,16 +200,23 @@ fn workspace_crate_readmes_are_scanned() {
     )
     .unwrap();
     fs::write(
+        root.path().join("crate-a/Cargo.toml"),
+        "[package]\nname = \"crate-a\"\nversion = \"0.0.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    fs::write(
         root.path().join("crate-a/README.md"),
         "Run with `scripts/missing-driver.sh`.\n",
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains(
-        "MISSING crate-a/README.md [code span: scripts/missing-driver.sh] -> scripts/missing-driver.sh"
-    ));
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(
+        text.contains("crate-a/README.md code span `scripts/missing-driver.sh`"),
+        "{text}"
+    );
 }
 
 /// Preserves source line anchors while validating the published file that carries the evidence.
@@ -183,8 +231,8 @@ fn source_line_selectors_resolve_the_underlying_file() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(output.status.success(), "{}", stderr(&output));
+    let report = judge(root.path());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
 }
 
 /// Prevents superseded prose from becoming an executable input contract.
@@ -202,8 +250,8 @@ fn superseded_manifest_documents_are_not_scanned() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(output.status.success(), "{}", stderr(&output));
+    let report = judge(root.path());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
 }
 
 /// Keeps crate-local source and test paths relative to that crate even when the workspace has the same top-level directory name.
@@ -218,6 +266,11 @@ fn crate_readme_relative_paths_resolve_inside_the_crate() {
     )
     .unwrap();
     fs::write(
+        root.path().join("crate-a/Cargo.toml"),
+        "[package]\nname = \"crate-a\"\nversion = \"0.0.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    fs::write(
         root.path().join("crate-a/tests/behavior.rs"),
         "#[test] fn behavior() {}\n",
     )
@@ -228,8 +281,8 @@ fn crate_readme_relative_paths_resolve_inside_the_crate() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(output.status.success(), "{}", stderr(&output));
+    let report = judge(root.path());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
 }
 
 /// A device or system path is not something this repository can publish, and
@@ -244,8 +297,8 @@ fn absolute_paths_outside_the_checkout_are_not_repository_claims() {
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(output.status.success(), "{}", stderr(&output));
+    let report = judge(root.path());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
 }
 
 /// An absolute path that lands inside the checkout is still a claim about a
@@ -253,21 +306,42 @@ fn absolute_paths_outside_the_checkout_are_not_repository_claims() {
 #[test]
 fn absolute_paths_inside_the_checkout_are_still_checked() {
     let root = fixture();
-    let absolute = root.path().join("docs/absent.md");
+    let absolute = root
+        .path()
+        .canonicalize()
+        .expect("Fix: the fixture root must resolve")
+        .join("docs/absent.md");
     fs::write(
         root.path().join("docs/guide.md"),
         format!("The input is `{}`.\n", absolute.display()),
     )
     .unwrap();
 
-    let output = run_checker(root.path());
-    assert!(
-        !output.status.success(),
-        "an absolute in-checkout path must be checked"
+    let report = judge(
+        &root
+            .path()
+            .canonicalize()
+            .expect("Fix: the fixture root must resolve"),
     );
-    assert!(
-        stderr(&output).contains("MISSING docs/guide.md"),
-        "{}",
-        stderr(&output)
-    );
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(text.contains("docs/absent.md"), "{text}");
+}
+
+/// A reference that climbs above the checkout is a claim this repository cannot
+/// satisfy, and it is reported as leaving rather than as merely absent, because
+/// the two need different corrections.
+#[test]
+fn a_reference_above_the_checkout_is_reported_as_leaving_it() {
+    let root = fixture();
+    fs::write(
+        root.path().join("docs/guide.md"),
+        "The sibling tree is at `../elsewhere/table.json`.\n",
+    )
+    .unwrap();
+
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(text.contains("outside this repository"), "{text}");
 }

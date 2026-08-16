@@ -3,7 +3,7 @@
 # integrator explicitly expands scope.
 #
 # Every write and avoid entry must match something in the tree, and every
-# `-p` package must be a workspace member. `scripts/architecture_docs.py`
+# `-p` package must be a workspace member. The `architecture-contract` gate
 # checks that on every run, so a lane cannot outlive the code it names.
 
 [lane.coordination]

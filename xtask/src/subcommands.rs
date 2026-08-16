@@ -82,6 +82,7 @@ pub static SUBSETS: &[Subset] = &[
         name: "structure",
         help: "Whether the tree still has the shape the layering and hygiene rules require",
         gates: &[
+            "bench-baselines",
             "check-tier-deps",
             "dup-scan",
             "hot-path-scan",
@@ -92,7 +93,13 @@ pub static SUBSETS: &[Subset] = &[
     Subset {
         name: "docs",
         help: "Whether the generated documentation artifacts still match the tree",
-        gates: &["docs-check", "optimization-docs", "release-docs"],
+        gates: &[
+            "architecture-contract",
+            "docs-check",
+            "docs-references",
+            "optimization-docs",
+            "release-docs",
+        ],
     },
     Subset {
         name: "ir",
@@ -192,7 +199,7 @@ static DELEGATED: &[Delegated] = &[
     },
     Delegated {
         name: "bench-crossback",
-        help: "Measure the registered cross-backend workloads and hold the recorded table to them; --write records it, --program NAME narrows to one workload",
+        help: "Derive the cross-backend comparison from the committed release benchmark evidence and hold the recorded table to it; --write records it",
         package: "xtask-evidence",
         generates: true,
     },

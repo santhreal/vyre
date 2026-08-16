@@ -221,6 +221,9 @@ impl Gate for DocsCheck {
     }
 }
 
+/// The owner table and the page rows a parsed manifest yields.
+type Manifest = (BTreeMap<String, String>, Vec<Page>);
+
 /// The owner table and the page rows, or `None` when the manifest cannot be
 /// judged row by row.
 ///
@@ -230,7 +233,7 @@ impl Gate for DocsCheck {
 fn load_manifest(
     root: &Path,
     report: &mut Report,
-) -> Result<Option<(BTreeMap<String, String>, Vec<Page>)>, GateError> {
+) -> Result<Option<Manifest>, GateError> {
     let text = read_text(root, MANIFEST)?;
     let document: toml::Table = toml::from_str(&text).map_err(|error| {
         GateError::new(

@@ -19,6 +19,10 @@ name = "abstraction-gate"
 findings = 0
 
 [[gate]]
+name = "architecture-contract"
+findings = 0
+
+[[gate]]
 name = "audit-status"
 findings = 0
 
@@ -28,6 +32,18 @@ findings = 0
 
 [[gate]]
 name = "backend-matrix"
+findings = 0
+
+[[gate]]
+name = "bench-baselines"
+findings = 0
+
+[[gate]]
+name = "bench-coverage"
+findings = 0
+
+[[gate]]
+name = "bench-smoke-runtime"
 findings = 0
 
 [[gate]]
@@ -84,6 +100,10 @@ findings = 0
 
 [[gate]]
 name = "docs-check"
+findings = 0
+
+[[gate]]
+name = "docs-references"
 findings = 0
 
 [[gate]]
@@ -276,6 +296,10 @@ findings = 0
 
 [[gate]]
 name = "public-api-paths"
+findings = 0
+
+[[gate]]
+name = "public-api-snapshot"
 findings = 0
 
 [[gate]]

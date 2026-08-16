@@ -118,6 +118,8 @@ pub fn vyre_driver_wgpu::WgpuBackend::max_storage_buffer_bytes(&self) -> u64
 pub fn vyre_driver_wgpu::WgpuBackend::max_workgroup_size(&self) -> [u32; 3]
 pub fn vyre_driver_wgpu::WgpuBackend::new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::pipeline_cache_snapshot(&self) -> core::option::Option<vyre_driver::pipeline::PipelineCacheSnapshot>
+pub fn vyre_driver_wgpu::WgpuBackend::probe_op(&self, op: vyre_spec::un_op::UnOp, input: &[u8]) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::probe_op_many(&self, op: vyre_spec::un_op::UnOp, inputs: &[f32]) -> core::result::Result<alloc::vec::Vec<f32>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::shared() -> core::result::Result<alloc::sync::Arc<Self>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::stats(&self) -> vyre_driver_wgpu::WgpuBackendStats
 pub fn vyre_driver_wgpu::WgpuBackend::subgroup_size(&self) -> core::option::Option<u32>

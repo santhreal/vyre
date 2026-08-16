@@ -299,7 +299,7 @@ fn crate_sources(tree: &scan::Tree, directory: &str) -> Result<Vec<String>, Gate
 }
 
 /// What an unreadable snapshot axis costs, and how to restore it.
-const SNAPSHOT_FIX: &str = "restore the committed snapshots under docs/public-api; `scripts/check_public_api_snapshot.sh --refresh <crate>` regenerates one from the crate it belongs to";
+const SNAPSHOT_FIX: &str = "restore the committed snapshots under docs/public-api; `xtask public-api-snapshot --write --crate <name>` regenerates one from the crate it belongs to";
 
 /// Every committed snapshot, keyed by the package it belongs to.
 fn snapshots(root: &Path) -> Result<BTreeMap<String, PathBuf>, GateError> {

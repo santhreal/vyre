@@ -23,7 +23,10 @@ jobs:
         run: ./cargo_full run -p xtask -- layering
 
       - name: Verify architecture and documentation authority
-        run: python3 scripts/architecture_docs.py . --check
+        run: ./cargo_full run -q -p xtask --bin xtask -- architecture-contract
+
+      - name: Verify every published document reference resolves
+        run: ./cargo_full run -q -p xtask --bin xtask -- docs-references
 
       - name: Verify architecture behavior contracts
         run: ./cargo_full test -p xtask --test tree_contracts

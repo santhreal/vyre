@@ -2,73 +2,42 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
+
+use xtask::gate::{Gate, GateCtx};
+use xtask::gates::public_api::{roster, PublicApiSnapshot};
+use xtask::gates::scan::Tree;
 
 use super::workspace_sources::workspace_root;
 
-fn inventory_script() -> PathBuf {
-    workspace_root().join("scripts/public_api_snapshot_inventory.py")
-}
-
-fn snapshot_script() -> PathBuf {
-    workspace_root().join("scripts/check_public_api_snapshot.sh")
-}
-
-fn run_snapshot_refresh(root: &Path, package: &str) -> Result<(), String> {
-    let scripts = root.join("scripts");
-    fs::create_dir(&scripts)
-        .map_err(|error| format!("could not create fixture scripts directory: {error}"))?;
-    for source in [snapshot_script(), inventory_script()] {
-        let file_name = source
-            .file_name()
-            .expect("Fix: public API scripts must have filenames");
-        fs::copy(&source, scripts.join(file_name))
-            .map_err(|error| format!("could not copy {}: {error}", source.display()))?;
-    }
-    fs::copy(workspace_root().join("cargo_full"), root.join("cargo_full"))
-        .map_err(|error| format!("could not copy bounded cargo wrapper: {error}"))?;
-
-    let output = Command::new("bash")
-        .arg(scripts.join("check_public_api_snapshot.sh"))
-        .arg("--refresh")
-        .arg(package)
+/// Turn a directory into something `Tree::open` can list.
+fn git_init(root: &Path) {
+    let status = Command::new("git")
+        .args(["init", "-q", "."])
         .current_dir(root)
-        .output()
-        .map_err(|error| format!("could not execute public API snapshot refresh: {error}"))?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "{}{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        ))
-    }
+        .status()
+        .expect("Fix: git must be available to build a fixture checkout");
+    assert!(status.success(), "Fix: git init must succeed in the fixture");
 }
 
-fn run_inventory(root: &Path) -> Result<BTreeSet<(String, String)>, String> {
-    let output = Command::new("python3")
-        .arg(inventory_script())
-        .arg(root)
-        .output()
-        .map_err(|error| format!("could not execute public API inventory: {error}"))?;
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
-    }
-    let stdout = String::from_utf8(output.stdout)
-        .map_err(|error| format!("public API inventory was not UTF-8: {error}"))?;
-    stdout
-        .lines()
-        .map(|line| {
-            let (member, package) = line
-                .split_once(':')
-                .ok_or_else(|| format!("inventory row has no separator: {line}"))?;
-            Ok((member.to_string(), package.to_string()))
-        })
+/// The roster the gate is taken over, as `(directory, package)` pairs.
+fn inventory(root: &Path) -> BTreeSet<(String, String)> {
+    let tree = Tree::open(root).expect("Fix: the fixture must be a git checkout");
+    roster(&tree)
+        .expect("Fix: the workspace must publish at least one package")
+        .into_iter()
+        .map(|row| (row.directory, row.package))
         .collect()
 }
 
+/// The same set derived independently, straight from the manifests.
+///
+/// Two derivations of one set is the point: the gate's own walk resolves member
+/// globs and reads `publish` through one code path, and this reads the raw TOML
+/// through another. A single derivation compared against itself would prove only
+/// that it equals itself, which is how a required list nothing could satisfy
+/// survived here once already.
 fn manifest_inventory(root: &Path) -> BTreeSet<(String, String)> {
     let workspace: toml::Value = toml::from_str(
         &fs::read_to_string(root.join("Cargo.toml"))
@@ -109,17 +78,14 @@ fn manifest_inventory(root: &Path) -> BTreeSet<(String, String)> {
         .collect()
 }
 
-/// The Python inventory must exactly match publishability in every workspace manifest.
+/// The gate's roster must exactly match publishability in every workspace manifest.
 ///
 /// This prevents a newly publishable crate from bypassing the stability gate and
 /// prevents private tooling from accidentally acquiring a public API promise.
 #[test]
 fn inventory_matches_publishable_workspace_manifests() {
     let root = workspace_root();
-    assert_eq!(
-        run_inventory(&root).expect("Fix: public API inventory must execute"),
-        manifest_inventory(&root)
-    );
+    assert_eq!(inventory(&root), manifest_inventory(&root));
 }
 
 /// Snapshot filenames must be identical to the publishable package-name set.
@@ -158,7 +124,7 @@ fn snapshot_directory_matches_publishable_package_set() {
 /// hand-maintained six-crate list as incomplete in both directions.
 #[test]
 fn inventory_includes_cuda_and_excludes_private_tooling() {
-    let inventory = run_inventory(&workspace_root()).expect("Fix: inventory must execute");
+    let inventory = inventory(&workspace_root());
     assert!(inventory.contains(&(
         "vyre-driver-cuda".to_string(),
         "vyre-driver-cuda".to_string()
@@ -196,38 +162,43 @@ fn inventory_excludes_false_and_empty_registry_publish_values() {
         )
         .expect("Fix: fixture member manifest must be writable");
     }
+    git_init(temp.path());
 
     assert_eq!(
-        run_inventory(temp.path()).expect("Fix: fixture inventory must execute"),
+        inventory(temp.path()),
         BTreeSet::from([("public".to_string(), "public".to_string())])
     );
 }
 
-/// Snapshot extraction must model the externally reachable Rust API.
+/// Snapshot extraction must model the externally reachable Rust API, including
+/// surface that only exists behind a feature.
 ///
 /// A source-line scan loses reexports and incorrectly includes `pub` items
-/// nested beneath private modules. The canonical refresh must preserve the
-/// public module and reexport while excluding both kinds of private item.
+/// nested beneath private modules. The feature-gated module is the case that was
+/// missing: an extraction over the default feature set promises stability for
+/// the default feature set only, and a whole gated surface sat outside the file
+/// that claims to pin the public API.
 #[test]
-fn snapshot_includes_modules_and_reexports_but_excludes_private_items() {
+fn snapshot_includes_modules_reexports_and_feature_gated_surface() {
     let temp = tempfile::tempdir().expect("Fix: temporary workspace must be creatable");
+    let root = temp.path();
     fs::write(
-        temp.path().join("Cargo.toml"),
+        root.join("Cargo.toml"),
         "[workspace]\nmembers = [\"fixture\"]\nresolver = \"2\"\n",
     )
     .expect("Fix: fixture workspace manifest must be writable");
 
-    let crate_dir = temp.path().join("fixture");
+    let crate_dir = root.join("fixture");
     fs::create_dir_all(crate_dir.join("src"))
         .expect("Fix: fixture crate source directory must be creatable");
     fs::write(
         crate_dir.join("Cargo.toml"),
-        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[features]\ndefault = []\ngated = []\n",
     )
     .expect("Fix: fixture crate manifest must be writable");
     fs::write(
         crate_dir.join("src/lib.rs"),
-        "mod private_module;\npub mod public_module;\npub use public_module::PublicType;\nfn private_function() {}\n",
+        "mod private_module;\npub mod public_module;\n#[cfg(feature = \"gated\")]\npub mod gated_module;\npub use public_module::PublicType;\nfn private_function() {}\n",
     )
     .expect("Fix: fixture crate root must be writable");
     fs::write(
@@ -240,16 +211,35 @@ fn snapshot_includes_modules_and_reexports_but_excludes_private_items() {
         "pub struct PublicType;\n",
     )
     .expect("Fix: fixture public module must be writable");
+    fs::write(
+        crate_dir.join("src/gated_module.rs"),
+        "pub struct GatedType;\n",
+    )
+    .expect("Fix: fixture gated module must be writable");
+    fs::copy(workspace_root().join("cargo_full"), root.join("cargo_full"))
+        .expect("Fix: the bounded cargo wrapper must be copyable into the fixture");
+    git_init(root);
 
-    run_snapshot_refresh(temp.path(), "fixture")
-        .expect("Fix: canonical public API snapshot refresh must succeed");
-    let snapshot = fs::read_to_string(temp.path().join("docs/public-api/fixture.txt"))
+    let report = PublicApiSnapshot
+        .run(&GateCtx::new(
+            root.to_path_buf(),
+            vec![
+                "--write".to_string(),
+                "--crate".to_string(),
+                "fixture".to_string(),
+            ],
+        ))
+        .expect("Fix: the snapshot gate must be able to extract the fixture surface");
+    assert_eq!(report.count(), 0, "{:?}", report.findings);
+    let snapshot = fs::read_to_string(root.join("docs/public-api/fixture.txt"))
         .expect("Fix: fixture public API snapshot must be readable");
 
     for public_item in [
         "pub mod fixture::public_module",
         "pub struct fixture::PublicType",
         "pub struct fixture::public_module::PublicType",
+        "pub mod fixture::gated_module",
+        "pub struct fixture::gated_module::GatedType",
     ] {
         assert!(
             snapshot.lines().any(|line| line == public_item),
@@ -264,27 +254,75 @@ fn snapshot_includes_modules_and_reexports_but_excludes_private_items() {
     }
 }
 
+/// A refreshed snapshot must be byte-stable on a second read.
+///
+/// WHY: the snapshot's line order used to come from `sort` under the caller's
+/// locale, so the committed file was a function of the environment rather than
+/// of the tree, and two hosts disagreed about a surface neither had changed.
+#[test]
+fn a_refreshed_snapshot_verifies_clean_against_the_same_tree() {
+    let temp = tempfile::tempdir().expect("Fix: temporary workspace must be creatable");
+    let root = temp.path();
+    fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"fixture\"]\nresolver = \"2\"\n",
+    )
+    .expect("Fix: fixture workspace manifest must be writable");
+    let crate_dir = root.join("fixture");
+    fs::create_dir_all(crate_dir.join("src"))
+        .expect("Fix: fixture crate source directory must be creatable");
+    fs::write(
+        crate_dir.join("Cargo.toml"),
+        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .expect("Fix: fixture crate manifest must be writable");
+    fs::write(
+        crate_dir.join("src/lib.rs"),
+        "pub struct Zed;\npub struct Alpha;\npub fn middle() {}\n",
+    )
+    .expect("Fix: fixture crate root must be writable");
+    fs::copy(workspace_root().join("cargo_full"), root.join("cargo_full"))
+        .expect("Fix: the bounded cargo wrapper must be copyable into the fixture");
+    git_init(root);
+
+    let write = GateCtx::new(root.to_path_buf(), vec!["--write".to_string()]);
+    PublicApiSnapshot
+        .run(&write)
+        .expect("Fix: the snapshot gate must be able to write the fixture surface");
+    let installed = fs::read_to_string(root.join("docs/public-api/fixture.txt"))
+        .expect("Fix: fixture public API snapshot must be readable");
+    let mut sorted: Vec<&str> = installed.lines().collect();
+    sorted.sort_unstable();
+    assert_eq!(
+        installed.lines().collect::<Vec<&str>>(),
+        sorted,
+        "the snapshot must be in byte order, not the caller's collation order"
+    );
+
+    let verify = PublicApiSnapshot
+        .run(&GateCtx::new(root.to_path_buf(), Vec::new()))
+        .expect("Fix: the snapshot gate must be able to verify the fixture surface");
+    assert_eq!(verify.count(), 0, "{:?}", verify.findings);
+}
+
 /// The committed snapshots are the live public surface.
 ///
 /// WHY: every other contract in this file judges which snapshot files exist and
 /// how one is extracted. None of them reads the committed bytes against today's
 /// rustdoc output, so a public item added without refreshing its snapshot
-/// passes all of them. `.github/workflows/public-api.yml` runs this script, so
-/// the drift was caught in CI and not by a local test run.
+/// passes all of them. `.github/workflows/public-api.yml` runs this gate, so the
+/// drift was caught in CI and not by a local test run.
 #[test]
 fn committed_snapshots_match_the_live_public_surface() {
-    let script = snapshot_script();
-    let output = Command::new("bash")
-        .arg(&script)
-        .current_dir(workspace_root())
-        .output()
-        .expect("Fix: bash must be available to run the public API snapshot gate");
-
-    assert!(
-        output.status.success(),
-        "Fix: the public API changed without its snapshot. Refresh it with `{} --refresh <package>`.\nstdout:\n{}\nstderr:\n{}",
-        script.display(),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let root = workspace_root();
+    let report = PublicApiSnapshot
+        .run(&GateCtx::new(root, Vec::new()))
+        .expect("Fix: the public API snapshot gate must be able to run");
+    assert_eq!(
+        report.count(),
+        0,
+        "Fix: the public API changed without its snapshot. Refresh it with \
+         `xtask public-api-snapshot --write --crate <package>`.\n{:#?}",
+        report.findings
     );
 }

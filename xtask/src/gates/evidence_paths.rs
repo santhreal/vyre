@@ -176,7 +176,7 @@ fn cited_conform_paths(text: &str) -> Vec<(String, u32)> {
         while let Some(at) = line[from..].find("conform/") {
             let start = from + at;
             let end = line[start..]
-                .find(|character| character == ':' || character == '"')
+                .find([':', '"'])
                 .map_or(line.len(), |offset| start + offset);
             if begins_a_path(line, start) {
                 let candidate = &line[start..end];

@@ -91,15 +91,16 @@ Findings:
 
 ### `scripts/bench/cross_backend_comparison.sh`
 
-Subject: gone: it writes into docs/perf/, and docs/ carries no Markdown after b1ed746d1c.
+Subject: gone: it wrapped a registered subcommand whose table now lives in the committed release evidence.
 
-Invoked by: nothing; the path appears in .gitignore only.
+Invoked by: nothing; the path appeared in .gitignore only, and that stanza is gone too.
 
 Gate: reported: it asserts nothing and its output directory is no longer published.
 
 Assertions:
 
 - Runs `xtask bench-crossback` for xor-1k and xor-1m and writes tables under docs/perf/.
+- Both programs are gone with it. The gate derives the comparison from the committed release benchmark evidence and records one table under release/evidence/benchmarks/.
 
 Exits nonzero on:
 
@@ -107,7 +108,7 @@ Exits nonzero on:
 
 Findings:
 
-- It is a wrapper around a registered subcommand and writes generated Markdown into a directory the repository no longer publishes. Nothing invokes it.
+- It is a wrapper around a registered subcommand and wrote generated Markdown into a gitignored directory, so a fresh checkout was red and one local run turned it green. Nothing invoked it.
 
 ### `scripts/bench_smoke.sh`
 
@@ -568,7 +569,7 @@ Exits nonzero on:
 - empty registry
 - missing representative case
 - missing cache contract file or test name
-- unregistered --case reference
+- a case id passed to the runner that the registry does not contain
 
 ### `scripts/lib/check_feature_msrv.py`
 
