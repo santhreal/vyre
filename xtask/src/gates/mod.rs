@@ -13,11 +13,14 @@ pub mod check_tier_deps;
 pub mod ci_contract;
 pub mod dedup_report;
 pub mod dep_drift;
+pub mod dispatch_surface;
 pub mod doc_contract;
 pub mod dup_scan;
 pub mod evidence_paths;
 pub mod feature_isolation;
 pub mod file_size;
+#[cfg(test)]
+pub mod fixture_checkout;
 pub mod frozen_contract;
 pub mod gpu_loudness;
 pub mod hot_path;
@@ -58,6 +61,7 @@ pub static GATES: &[&dyn Gate] = &[
     &ci_contract::CiMatrix,
     &ci_contract::CiRequired,
     &dep_drift::DepDrift,
+    &dispatch_surface::OwnedDispatch,
     &doc_contract::ContractInSource,
     &doc_contract::DocClaims,
     &dup_scan::DupScan,
@@ -73,7 +77,6 @@ pub static GATES: &[&dyn Gate] = &[
     &hot_path::BlockingWait,
     &hot_path::InventoryWalk,
     &hot_path::NestedRows,
-    &hot_path::OwnedDispatch,
     &hot_path::ReserveArgument,
     &hot_path::UnboundedCache,
     &hot_path::UnboundedRead,

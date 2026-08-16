@@ -145,40 +145,6 @@ impl Gate for UnboundedCache {
     }
 }
 
-/// Owned-row dispatch on production and conformance paths.
-pub struct OwnedDispatch;
-
-impl Gate for OwnedDispatch {
-    fn name(&self) -> &'static str {
-        "hot-path-owned-dispatch"
-    }
-
-    fn help(&self) -> &'static str {
-        "owned-row dispatch calls on production and conformance paths"
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let tree = Tree::open(&ctx.root)?;
-        scan::ratchet(
-            &tree,
-            &Rule {
-                roots: &["vyre-libs/src", "vyre-runtime/src", "conform/vyre-conform/src"],
-                skip: &is_test_path,
-                line: &|line| line.contains(".dispatch("),
-                reviewed: &[],
-                reviewed_line: None,
-                statement: None,
-                message: "owned-row dispatch call",
-                fix: "build borrowed rows with inputs.iter().map(Vec::as_slice) and call \
-                      dispatch_borrowed",
-                unreviewed_message: "owned-row dispatch call with no reviewed exemption",
-                unreviewed_fix: "call dispatch_borrowed so a backend with clone-free staging \
-                                 is not forced through owned row APIs",
-            },
-        )
-    }
-}
-
 /// Unbounded synchronous reads of external files on dispatch-critical paths.
 pub struct UnboundedRead;
 
@@ -376,13 +342,9 @@ fn is_test_path(path: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::process::Command;
-
-    use tempfile::TempDir;
-
     use super::*;
     use crate::gate::GateCtx;
+    use crate::gates::fixture_checkout;
 
     /// WHY: the shell rule was `^[[:space:]]*[^/]*inventory::iter::<`, and the
     /// only reason it worked was that a comment introduces a `/` before the
@@ -438,24 +400,16 @@ mod tests {
     /// and this proves both directions on one tree.
     #[test]
     fn a_quoted_reserve_is_not_a_call_and_a_real_one_still_is() {
-        let temporary = TempDir::new().expect("a temporary directory");
-        let root = temporary.path().to_path_buf();
-        fs::write(
-            root.join("quoted.rs"),
-            "fn fixture() {\n    let lines = vec![\"buffer.try_reserve(\", \"    x.capacity(),\", \")?;\"];\n}\n",
-        )
-        .expect("a quoted fixture");
-        fs::write(
-            root.join("real.rs"),
-            "fn stage(buffer: &mut Vec<u8>, target: usize) {\n    buffer.try_reserve(\n        target.saturating_sub(buffer.capacity()),\n    ).expect(\"Fix: reserve the staging buffer.\");\n}\n",
-        )
-        .expect("a real reserve");
-        let status = Command::new("git")
-            .args(["init", "-q", "."])
-            .current_dir(&root)
-            .status()
-            .expect("git is available");
-        assert!(status.success(), "the fixture git step failed");
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            (
+                "quoted.rs",
+                "fn fixture() {\n    let lines = vec![\"buffer.try_reserve(\", \"    x.capacity(),\", \")?;\"];\n}\n",
+            ),
+            (
+                "real.rs",
+                "fn stage(buffer: &mut Vec<u8>, target: usize) {\n    buffer.try_reserve(\n        target.saturating_sub(buffer.capacity()),\n    ).expect(\"Fix: reserve the staging buffer.\");\n}\n",
+            ),
+        ]);
 
         let report = ReserveArgument
             .run(&GateCtx::new(root, Vec::new()))

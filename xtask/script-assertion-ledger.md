@@ -959,7 +959,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `invariant-paths` | In `vyre-spec/src/invariants.rs`, change a cited conformance test path to one that does not exist. | 0 to 1 |
 | `doc-claims` | In `contracts/doc_claims_manifest.toml`, change one `phrase` to text its document does not contain. | 0 to 1 |
 | `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |
-| `hot-path-owned-dispatch` | Add a `.dispatch(` call taking an owned row to a file under `vyre-runtime/src`. | 114 to 116, one finding for the occurrence and one for its being unreviewed |
+| `hot-path-owned-dispatch` | In `vyre-driver/src/backend/compiled_pipeline.rs`, make `dispatch` the required method and give `dispatch_borrowed` a default that copies each row with `to_vec`. | 0 to 2, one finding for the requirement and one for the copy it forces |
 | `hot-path-inventory` | Delete a reviewed allowlist entry that currently matches an occurrence. | 12 to 13 |
 | `hot-path-unbounded-read` | Add `fs::read_to_string(` to a file under `vyre-driver/src` outside the reviewed cache modules. | 1 to 3 |
 | `lint-unsafe-budget` | Add `#![allow(unsafe_code)]` to a crate root not in the reviewed budget. | 0 to 1 |
