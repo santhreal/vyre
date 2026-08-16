@@ -213,7 +213,7 @@ pub(crate) mod put_node;
 pub(crate) mod put_nodes;
 
 /// Versioned scan database header encoder/decoder.
-pub mod scan_database_header;
+pub(crate) mod scan_database_header;
 
 /// Top-level program encoder.
 ///

@@ -29,4 +29,4 @@ pub mod impl_reader;
 /// Semantic decode invariants shared by wire readers.
 pub(crate) mod invariants;
 /// Decode-side budgets for serialized scan database payloads.
-pub mod scan_database_budget;
+pub(crate) mod scan_database_budget;

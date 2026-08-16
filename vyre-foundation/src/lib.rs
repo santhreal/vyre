@@ -13,7 +13,7 @@ pub mod diagnostics;
 /// Shared floating-point parity policy and typed buffer comparison.
 pub mod fp_parity;
 /// Target-neutral launch geometry requirements and lowering strategy.
-pub mod geometry;
+pub(crate) mod geometry;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
 pub use geometry::{

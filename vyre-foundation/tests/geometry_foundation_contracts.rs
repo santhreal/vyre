@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::geometry::{
+use vyre_foundation::{
     CooperativeWidth, ElementPolicy, GeometryLoweringError, GeometryRequirements, LaunchGeometry,
     Uniformity,
 };

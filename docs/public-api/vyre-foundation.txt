@@ -77,20 +77,20 @@ impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapsho
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 impl core::convert::From<vyre_foundation::serial::wire::encode::WireEncodeErr> for alloc::string::String
 impl core::convert::From<vyre_foundation::validate::ValidationError> for vyre_foundation::diagnostics::Diagnostic
+impl core::default::Default for vyre_foundation::CooperativeWidth
+impl core::default::Default for vyre_foundation::ElementPolicy
+impl core::default::Default for vyre_foundation::LaunchGeometry
+impl core::default::Default for vyre_foundation::Uniformity
 impl core::default::Default for vyre_foundation::execution_plan::SchedulingPolicy
-impl core::default::Default for vyre_foundation::geometry::CooperativeWidth
-impl core::default::Default for vyre_foundation::geometry::ElementPolicy
-impl core::default::Default for vyre_foundation::geometry::LaunchGeometry
-impl core::default::Default for vyre_foundation::geometry::Uniformity
 impl core::default::Default for vyre_foundation::ir::MemoryHints
 impl core::default::Default for vyre_foundation::ir::MemoryOrdering
 impl core::default::Default for vyre_foundation::ir::Program
 impl core::default::Default for vyre_foundation::optimizer::AdapterCaps
 impl core::default::Default for vyre_foundation::optimizer::PassScheduler
 impl core::default::Default for vyre_foundation::optimizer::hot_path_hints::HotPathHints
-impl core::default::Default for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::default::Default for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
+impl core::error::Error for vyre_foundation::GeometryLoweringError
 impl core::error::Error for vyre_foundation::execution_plan::fusion::FusionError
-impl core::error::Error for vyre_foundation::geometry::GeometryLoweringError
 impl core::error::Error for vyre_foundation::graph_view::GraphValidateError
 impl core::error::Error for vyre_foundation::ir::EvalError
 impl core::error::Error for vyre_foundation::lower::LoweringError
@@ -104,7 +104,7 @@ impl core::error::Error for vyre_foundation::program_caps::MissingCapability
 impl core::error::Error for vyre_foundation::program_dispatch::DispatchError
 impl core::error::Error for vyre_foundation::serial::EnvelopeError
 impl core::error::Error for vyre_foundation::serial::text::TextParseError
-impl core::error::Error for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::error::Error for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
 impl core::error::Error for vyre_foundation::serial::wire::encode::WireEncodeErr
 impl core::error::Error for vyre_foundation::transform::autodiff::AutodiffError
 impl core::error::Error for vyre_foundation::transform::collectives::SingleRankCollectiveError
@@ -113,6 +113,7 @@ impl core::error::Error for vyre_foundation::vast::VastEditCorpusError
 impl core::fmt::Debug for vyre_foundation::ir::Ident
 impl core::fmt::Debug for vyre_foundation::optimizer::AnalysisCache
 impl core::fmt::Debug for vyre_foundation::optimizer::hot_path_hints::HotPathHints
+impl core::fmt::Display for vyre_foundation::GeometryLoweringError
 impl core::fmt::Display for vyre_foundation::diagnostics::Diagnostic
 impl core::fmt::Display for vyre_foundation::diagnostics::DiagnosticCode
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionAliasingError
@@ -120,7 +121,6 @@ impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionOverDispatchError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
-impl core::fmt::Display for vyre_foundation::geometry::GeometryLoweringError
 impl core::fmt::Display for vyre_foundation::graph_view::GraphValidateError
 impl core::fmt::Display for vyre_foundation::ir::EvalError
 impl core::fmt::Display for vyre_foundation::ir::Ident
@@ -137,7 +137,7 @@ impl core::fmt::Display for vyre_foundation::program_caps::MissingCapability
 impl core::fmt::Display for vyre_foundation::program_dispatch::DispatchError
 impl core::fmt::Display for vyre_foundation::serial::EnvelopeError
 impl core::fmt::Display for vyre_foundation::serial::text::TextParseError
-impl core::fmt::Display for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::fmt::Display for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
 impl core::fmt::Display for vyre_foundation::serial::wire::encode::WireEncodeErr
 impl core::fmt::Display for vyre_foundation::transform::autodiff::AutodiffError
 impl core::fmt::Display for vyre_foundation::transform::collectives::SingleRankCollectiveError
@@ -159,7 +159,9 @@ impl inventory::Collect for vyre_foundation::extension::OpaqueNodeResolver
 impl inventory::Collect for vyre_foundation::operation::OperationRegistration
 impl inventory::Collect for vyre_foundation::optimizer::ProgramPassRegistration
 impl serde_core::ser::Serialize for vyre_foundation::operation::TargetId
+impl vyre_foundation::GeometryRequirements
 impl vyre_foundation::IrError
+impl vyre_foundation::LaunchGeometry
 impl vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
 impl vyre_foundation::diagnostics::Diagnostic
 impl vyre_foundation::diagnostics::DiagnosticCode
@@ -170,8 +172,6 @@ impl vyre_foundation::execution_plan::DeviceMemoryBudget
 impl vyre_foundation::execution_plan::ExecutionPlan
 impl vyre_foundation::execution_plan::ReadbackStrategy
 impl vyre_foundation::execution_plan::SchedulingPolicy
-impl vyre_foundation::geometry::GeometryRequirements
-impl vyre_foundation::geometry::LaunchGeometry
 impl vyre_foundation::graph_view::DataEdge
 impl vyre_foundation::graph_view::GraphNode
 impl vyre_foundation::graph_view::NodeGraph
@@ -335,10 +335,10 @@ impl vyre_foundation::program_caps::RequiredCapabilities
 impl vyre_foundation::serial::WireWriter
 impl vyre_foundation::serial::output_set::OutputSet
 impl vyre_foundation::serial::text::TextParseError
-impl vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
-impl vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence
+impl vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence
+impl vyre_foundation::serial::wire::encode::ScanDatabaseHeader
 impl vyre_foundation::serial::wire::encode::WireEncodeErr
-impl vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
 impl vyre_foundation::transform::collectives::CollectiveOpCounts
 impl vyre_foundation::transform::collectives::CollectiveTransportPlan
 impl vyre_foundation::validate::ValidationCode
@@ -361,6 +361,16 @@ impl<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> core::default::Default for vyre_foundation::optimizer::eqsat::EGraph<L>
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> vyre_foundation::optimizer::eqsat::EGraph<L>
 impl<L> vyre_foundation::optimizer::eqsat::Rule<L> for vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules where L: vyre_foundation::optimizer::eqsat::ENodeLang + vyre_foundation::optimizer::eqsat_toml::OpIdNode
+pub const fn vyre_foundation::GeometryRequirements::agnostic() -> Self
+pub const fn vyre_foundation::GeometryRequirements::cooperative(width: vyre_foundation::CooperativeWidth) -> Self
+pub const fn vyre_foundation::GeometryRequirements::with_element_policy(self, policy: vyre_foundation::ElementPolicy) -> Self
+pub const fn vyre_foundation::GeometryRequirements::with_min_shared_bytes(self, bytes: u32) -> Self
+pub const fn vyre_foundation::GeometryRequirements::with_subgroup_uniformity(self, uniformity: vyre_foundation::Uniformity) -> Self
+pub const fn vyre_foundation::LaunchGeometry::grid_total(&self) -> u32
+pub const fn vyre_foundation::LaunchGeometry::is_valid(&self) -> bool
+pub const fn vyre_foundation::LaunchGeometry::total_elements_covered(&self) -> u64
+pub const fn vyre_foundation::LaunchGeometry::total_invocations(&self) -> u64
+pub const fn vyre_foundation::LaunchGeometry::workgroup_invocations(&self) -> u32
 pub const fn vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration::new(op_id: &'static str, law: vyre_spec::algebraic_law::AlgebraicLaw) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_retry(self, retry: vyre_foundation::diagnostics::RetryClass) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_stage(self, stage: vyre_foundation::diagnostics::DiagnosticStage) -> Self
@@ -386,16 +396,6 @@ pub const fn vyre_foundation::execution_plan::SchedulingPolicy::standard() -> Se
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::use_persistent_megakernel(&self, _node_count: usize) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::use_persistent_runtime(&self, _node_count: usize) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32
-pub const fn vyre_foundation::geometry::GeometryRequirements::agnostic() -> Self
-pub const fn vyre_foundation::geometry::GeometryRequirements::cooperative(width: vyre_foundation::geometry::CooperativeWidth) -> Self
-pub const fn vyre_foundation::geometry::GeometryRequirements::with_element_policy(self, policy: vyre_foundation::geometry::ElementPolicy) -> Self
-pub const fn vyre_foundation::geometry::GeometryRequirements::with_min_shared_bytes(self, bytes: u32) -> Self
-pub const fn vyre_foundation::geometry::GeometryRequirements::with_subgroup_uniformity(self, uniformity: vyre_foundation::geometry::Uniformity) -> Self
-pub const fn vyre_foundation::geometry::LaunchGeometry::grid_total(&self) -> u32
-pub const fn vyre_foundation::geometry::LaunchGeometry::is_valid(&self) -> bool
-pub const fn vyre_foundation::geometry::LaunchGeometry::total_elements_covered(&self) -> u64
-pub const fn vyre_foundation::geometry::LaunchGeometry::total_invocations(&self) -> u64
-pub const fn vyre_foundation::geometry::LaunchGeometry::workgroup_invocations(&self) -> u32
 pub const fn vyre_foundation::ir::LinearType::forbids_drop(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_reuse(self) -> bool
 pub const fn vyre_foundation::ir::MemoryOrdering::is_valid_for_atomic_rmw(self) -> bool
@@ -418,7 +418,7 @@ pub const fn vyre_foundation::match_result::ByteRange::len(&self) -> u32
 pub const fn vyre_foundation::match_result::ByteRange::new(tag: u32, start: u32, end: u32) -> Self
 pub const fn vyre_foundation::operation::OperationEffects::union(self, other: Self) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::category(&self) -> core::option::Option<&'static str>
-pub const fn vyre_foundation::operation::OperationRegistration::geometry_requirements(&self) -> core::option::Option<vyre_foundation::geometry::GeometryRequirements>
+pub const fn vyre_foundation::operation::OperationRegistration::geometry_requirements(&self) -> core::option::Option<vyre_foundation::GeometryRequirements>
 pub const fn vyre_foundation::operation::OperationRegistration::intrinsic(id: &'static str, signature: vyre_foundation::dialect_lookup::Signature, build: core::option::Option<fn() -> vyre_foundation::ir::Program>, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::library(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::new(id: &'static str, tier: vyre_foundation::operation::OperationTier, build: core::option::Option<fn() -> vyre_foundation::ir::Program>, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
@@ -427,7 +427,7 @@ pub const fn vyre_foundation::operation::OperationRegistration::tolerance(&self)
 pub const fn vyre_foundation::operation::OperationRegistration::with_category(self, category: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_capabilities(self, capabilities: vyre_foundation::program_caps::RequiredCapabilities) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_effects(self, effects: vyre_foundation::operation::OperationEffects) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::with_geometry_requirements(self, requirements: vyre_foundation::geometry::GeometryRequirements) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::with_geometry_requirements(self, requirements: vyre_foundation::GeometryRequirements) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dialect_lookup::Signature) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_source_file(self, source_file: &'static str) -> Self
@@ -474,8 +474,8 @@ pub const fn vyre_foundation::optimizer::rewrite_proof::ProofExpr::sort(&self) -
 pub const fn vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::with_domain(self, domain: vyre_foundation::optimizer::rewrite_proof::ProofDomain) -> Self
 pub const fn vyre_foundation::program_caps::RequiredCapabilities::none() -> Self
 pub const fn vyre_foundation::program_caps::RequiredCapabilities::with_subgroup_ops(self) -> Self
-pub const fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
-pub const fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
+pub const fn vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
+pub const fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::encode::WireEncodeErr::static_msg(msg: &'static str) -> Self
 pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyre_foundation::validate::ValidationLocation
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
@@ -570,10 +570,6 @@ pub const vyre_foundation::serial::wire::encode::MAX_SCAN_DATABASE_UNSUPPORTED_F
 pub const vyre_foundation::serial::wire::encode::PROGRAM_WIRE_DIGEST_VERSION: &str
 pub const vyre_foundation::serial::wire::encode::SCAN_DATABASE_HEADER_MAGIC: &[u8; 4]
 pub const vyre_foundation::serial::wire::encode::SCAN_DATABASE_HEADER_VERSION: u32
-pub const vyre_foundation::serial::wire::encode::scan_database_header::MAX_SCAN_DATABASE_SECTIONS: usize
-pub const vyre_foundation::serial::wire::encode::scan_database_header::MAX_SCAN_DATABASE_UNSUPPORTED_FEATURES: usize
-pub const vyre_foundation::serial::wire::encode::scan_database_header::SCAN_DATABASE_HEADER_MAGIC: &[u8; 4]
-pub const vyre_foundation::serial::wire::encode::scan_database_header::SCAN_DATABASE_HEADER_VERSION: u32
 pub const vyre_foundation::serial::wire::framing::MAGIC: &[u8; 4]
 pub const vyre_foundation::serial::wire::framing::MAX_SHAPE_PREDICATE_DEPTH: usize
 pub const vyre_foundation::serial::wire::framing::MIN_SUPPORTED_WIRE_FORMAT_VERSION: u16
@@ -611,10 +607,6 @@ pub enum vyre_foundation::execution_plan::PolicyRoute
 pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
 pub enum vyre_foundation::fp_parity::BufferParity
-pub enum vyre_foundation::geometry::CooperativeWidth
-pub enum vyre_foundation::geometry::ElementPolicy
-pub enum vyre_foundation::geometry::GeometryLoweringError
-pub enum vyre_foundation::geometry::Uniformity
 pub enum vyre_foundation::ir::Layout
 pub enum vyre_foundation::ir::NodeStorage
 pub enum vyre_foundation::ir::ProgramGraphError
@@ -646,14 +638,10 @@ pub enum vyre_foundation::optimizer::rewrite_proof::ProofSort
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofStatus
 pub enum vyre_foundation::program_dispatch::DispatchError
 pub enum vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
-pub enum vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
 pub enum vyre_foundation::serial::wire::encode::ScanDatabaseMode
 pub enum vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility
 pub enum vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind
 pub enum vyre_foundation::serial::wire::encode::WireEncodeErr
-pub enum vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
-pub enum vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
-pub enum vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
 pub enum vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError
 pub enum vyre_foundation::transform::TransformContractClass
 pub enum vyre_foundation::transform::collectives::CollectiveTransportKind
@@ -666,10 +654,15 @@ pub enum vyre_foundation::visit::NameBinding
 pub enum vyre_foundation::visit::VisitOrder
 pub fn alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String
 pub fn alloc::vec::Vec<u8>::from(writer: vyre_foundation::opaque_payload::endian::LeBytesWriter) -> Self
-pub fn vyre_foundation::GeometryStrategy::lower_geometry(&self, requirements: &vyre_foundation::geometry::GeometryRequirements, problem_elements: u32) -> core::result::Result<vyre_foundation::geometry::LaunchGeometry, vyre_foundation::geometry::GeometryLoweringError>
-pub fn vyre_foundation::GeometryStrategy::rank_geometries(&self, requirements: &vyre_foundation::geometry::GeometryRequirements, problem_elements: u32) -> alloc::vec::Vec<vyre_foundation::geometry::LaunchGeometry>
+pub fn vyre_foundation::CooperativeWidth::default() -> Self
+pub fn vyre_foundation::ElementPolicy::default() -> Self
+pub fn vyre_foundation::GeometryLoweringError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::GeometryStrategy::lower_geometry(&self, requirements: &vyre_foundation::GeometryRequirements, problem_elements: u32) -> core::result::Result<vyre_foundation::LaunchGeometry, vyre_foundation::GeometryLoweringError>
+pub fn vyre_foundation::GeometryStrategy::rank_geometries(&self, requirements: &vyre_foundation::GeometryRequirements, problem_elements: u32) -> alloc::vec::Vec<vyre_foundation::LaunchGeometry>
 pub fn vyre_foundation::IrError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::IrError::lowering(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::LaunchGeometry::default() -> Self
+pub fn vyre_foundation::Uniformity::default() -> Self
 pub fn vyre_foundation::algebraic_law_registry::has_law<F>(op_id: &str, predicate: F) -> bool where F: core::ops::function::Fn(&vyre_spec::algebraic_law::AlgebraicLaw) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_associative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_commutative(op_id: &str) -> bool
@@ -759,13 +752,6 @@ pub fn vyre_foundation::fp_parity::f32_buffer_matches(bytes_a: &[u8], bytes_b: &
 pub fn vyre_foundation::fp_parity::f32_ulp_tolerance(program: &vyre_foundation::ir::Program) -> u32
 pub fn vyre_foundation::fp_parity::max_output_ulp(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> core::option::Option<u32>
 pub fn vyre_foundation::fp_parity::ulp_distance(left: f32, right: f32) -> core::option::Option<u32>
-pub fn vyre_foundation::geometry::CooperativeWidth::default() -> Self
-pub fn vyre_foundation::geometry::ElementPolicy::default() -> Self
-pub fn vyre_foundation::geometry::GeometryLoweringError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::geometry::GeometryStrategy::lower_geometry(&self, requirements: &vyre_foundation::geometry::GeometryRequirements, problem_elements: u32) -> core::result::Result<vyre_foundation::geometry::LaunchGeometry, vyre_foundation::geometry::GeometryLoweringError>
-pub fn vyre_foundation::geometry::GeometryStrategy::rank_geometries(&self, requirements: &vyre_foundation::geometry::GeometryRequirements, problem_elements: u32) -> alloc::vec::Vec<vyre_foundation::geometry::LaunchGeometry>
-pub fn vyre_foundation::geometry::LaunchGeometry::default() -> Self
-pub fn vyre_foundation::geometry::Uniformity::default() -> Self
 pub fn vyre_foundation::graph_view::DataEdge::new(from: u32, to: u32, kind: vyre_foundation::graph_view::EdgeKind) -> Self
 pub fn vyre_foundation::graph_view::GraphNode::new(id: u32, kind: vyre_foundation::graph_view::DataflowKind) -> Self
 pub fn vyre_foundation::graph_view::GraphValidateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1035,7 +1021,7 @@ pub fn vyre_foundation::ir::Program::output_buffer_indices(&self) -> &[u32]
 pub fn vyre_foundation::ir::Program::parallel_region_size(&self) -> [u32; 3]
 pub fn vyre_foundation::ir::Program::peak_intensity(&self) -> vyre_spec::bin_op::OpIntensity
 pub fn vyre_foundation::ir::Program::reconcile_runnable_top_level(self) -> Self
-pub fn vyre_foundation::ir::Program::set_launch_geometry(&mut self, geometry: &vyre_foundation::geometry::LaunchGeometry)
+pub fn vyre_foundation::ir::Program::set_launch_geometry(&mut self, geometry: &vyre_foundation::LaunchGeometry)
 pub fn vyre_foundation::ir::Program::set_parallel_region_size(&mut self, parallel_region_size: [u32; 3])
 pub fn vyre_foundation::ir::Program::set_workgroup_size(&mut self, workgroup_size: [u32; 3])
 pub fn vyre_foundation::ir::Program::stats(&self) -> &vyre_foundation::ir::ProgramStats
@@ -1050,11 +1036,11 @@ pub fn vyre_foundation::ir::Program::validate(&self) -> vyre_foundation::IrResul
 pub fn vyre_foundation::ir::Program::validation_mutation_provenance(&self) -> vyre_foundation::ir_inner::model::program::meta::ProgramMutationProvenance
 pub fn vyre_foundation::ir::Program::vsa_fingerprint(&self) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::ir::Program::with_entry_op_id(self, op_id: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::ir::Program::with_launch_geometry(&self, geometry: &vyre_foundation::geometry::LaunchGeometry) -> Self
+pub fn vyre_foundation::ir::Program::with_launch_geometry(&self, geometry: &vyre_foundation::LaunchGeometry) -> Self
 pub fn vyre_foundation::ir::Program::with_non_composable_with_self(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_buffers(&self, buffers: alloc::vec::Vec<vyre_foundation::ir::BufferDecl>) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_entry(&self, entry: alloc::vec::Vec<vyre_foundation::ir::Node>) -> Self
-pub fn vyre_foundation::ir::Program::with_rewritten_launch_geometry(&self, geometry: &vyre_foundation::geometry::LaunchGeometry) -> Self
+pub fn vyre_foundation::ir::Program::with_rewritten_launch_geometry(&self, geometry: &vyre_foundation::LaunchGeometry) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_workgroup_size_and_entry(&self, workgroup_size: [u32; 3], entry: alloc::vec::Vec<vyre_foundation::ir::Node>) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_wrapped_entry(&self, entry: alloc::vec::Vec<vyre_foundation::ir::Node>) -> Self
 pub fn vyre_foundation::ir::Program::workgroup_size(&self) -> [u32; 3]
@@ -2266,13 +2252,15 @@ pub fn vyre_foundation::serial::text::TextParseError::fmt(&self, f: &mut core::f
 pub fn vyre_foundation::serial::text::TextParseError::message(&self) -> alloc::string::String
 pub fn vyre_foundation::serial::wire::append_data_type_fingerprint(buf: &mut alloc::vec::Vec<u8>, value: &vyre_spec::data_type::DataType) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::serial::wire::append_node_list_fingerprint(buf: &mut alloc::vec::Vec<u8>, nodes: &[vyre_foundation::ir::Node]) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget::default() -> Self
+pub fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::serial::wire::decode::from_wire(bytes: &[u8]) -> core::result::Result<vyre_foundation::ir::Program, alloc::string::String>
-pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::default() -> Self
-pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::serial::wire::decode::scan_database_budget::validate_scan_construct_decode_budget(shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
-pub fn vyre_foundation::serial::wire::decode::scan_database_budget::validate_scan_database_decode_budget(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
-pub fn vyre_foundation::serial::wire::decode::validate_scan_construct_decode_budget(shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
-pub fn vyre_foundation::serial::wire::decode::validate_scan_database_decode_budget(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
+pub fn vyre_foundation::serial::wire::decode::validate_scan_construct_decode_budget(shape: vyre_foundation::serial::wire::decode::ScanConstructDecodeShape, budget: vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError>
+pub fn vyre_foundation::serial::wire::decode::validate_scan_database_decode_budget(header: &vyre_foundation::serial::wire::encode::ScanDatabaseHeader, shape: vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape, budget: vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError>
+pub fn vyre_foundation::serial::wire::encode::ScanDatabaseHeader::section_count(&self) -> usize
+pub fn vyre_foundation::serial::wire::encode::ScanDatabaseHeader::unsupported_feature_count(&self) -> usize
+pub fn vyre_foundation::serial::wire::encode::ScanDatabaseHeader::validate_compatible(&self, expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::ScanDatabaseMode) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::ScanDatabaseHeader::validate_database_compatibility(&self, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility]) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::serial::wire::encode::WireEncodeErr::as_bytes(&self) -> &[u8]
 pub fn vyre_foundation::serial::wire::encode::WireEncodeErr::as_ref(&self) -> &[u8]
 pub fn vyre_foundation::serial::wire::encode::WireEncodeErr::as_ref(&self) -> &str
@@ -2281,23 +2269,14 @@ pub fn vyre_foundation::serial::wire::encode::WireEncodeErr::fmt_u64(prefix: &st
 pub fn vyre_foundation::serial::wire::encode::WireEncodeErr::fmt_usize(prefix: &str, value: usize, suffix: &str) -> Self
 pub fn vyre_foundation::serial::wire::encode::WireEncodeErr::fmt_usize2(prefix: &str, v1: usize, mid: &str, v2: usize, suffix: &str) -> Self
 pub fn vyre_foundation::serial::wire::encode::WireEncodeErr::from(s: alloc::string::String) -> Self
-pub fn vyre_foundation::serial::wire::encode::decode_compatible_scan_database_header(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::decode_scan_database_header(bytes: &[u8]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::decode_scan_database_header_with_compatibility(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::encode_scan_database_header(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::serial::wire::encode::WireEncodeErr>
+pub fn vyre_foundation::serial::wire::encode::decode_compatible_scan_database_header(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::ScanDatabaseMode) -> core::result::Result<vyre_foundation::serial::wire::encode::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::decode_scan_database_header(bytes: &[u8]) -> core::result::Result<vyre_foundation::serial::wire::encode::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::decode_scan_database_header_with_compatibility(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::ScanDatabaseMode, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility]) -> core::result::Result<vyre_foundation::serial::wire::encode::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::encode_scan_database_header(header: &vyre_foundation::serial::wire::encode::ScanDatabaseHeader) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::serial::wire::encode::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_expr(out: &mut alloc::vec::Vec<u8>, expr: &vyre_foundation::ir::Expr) -> core::result::Result<(), vyre_foundation::serial::wire::encode::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_node(out: &mut alloc::vec::Vec<u8>, node: &vyre_foundation::ir::Node) -> core::result::Result<(), vyre_foundation::serial::wire::encode::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_nodes(out: &mut alloc::vec::Vec<u8>, nodes: &[vyre_foundation::ir::Node]) -> core::result::Result<(), vyre_foundation::serial::wire::encode::WireEncodeErr>
-pub fn vyre_foundation::serial::wire::encode::put_scan_database_header(out: &mut alloc::vec::Vec<u8>, header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<(), vyre_foundation::serial::wire::encode::WireEncodeErr>
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::section_count(&self) -> usize
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::unsupported_feature_count(&self) -> usize
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::validate_compatible(&self, expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::validate_database_compatibility(&self, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility]) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::decode_compatible_scan_database_header(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::decode_scan_database_header(bytes: &[u8]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::decode_scan_database_header_with_compatibility(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::encode_scan_database_header(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::serial::wire::encode::WireEncodeErr>
-pub fn vyre_foundation::serial::wire::encode::scan_database_header::put_scan_database_header(out: &mut alloc::vec::Vec<u8>, header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<(), vyre_foundation::serial::wire::encode::WireEncodeErr>
+pub fn vyre_foundation::serial::wire::encode::put_scan_database_header(out: &mut alloc::vec::Vec<u8>, header: &vyre_foundation::serial::wire::encode::ScanDatabaseHeader) -> core::result::Result<(), vyre_foundation::serial::wire::encode::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::to_wire(program: &vyre_foundation::ir::Program) -> core::result::Result<alloc::vec::Vec<u8>, alloc::string::String>
 pub fn vyre_foundation::serial::wire::encode::to_wire_into(program: &vyre_foundation::ir::Program, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::serial::wire::encode::to_wire_with_buffer_order_into(program: &vyre_foundation::ir::Program, buffers: &[vyre_foundation::ir::BufferDecl], dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_foundation::serial::wire::encode::WireEncodeErr>
@@ -2517,7 +2496,6 @@ pub mod vyre_foundation::execution_plan
 pub mod vyre_foundation::execution_plan::fusion
 pub mod vyre_foundation::extension
 pub mod vyre_foundation::fp_parity
-pub mod vyre_foundation::geometry
 pub mod vyre_foundation::graph_view
 pub mod vyre_foundation::hashing
 pub mod vyre_foundation::ir
@@ -2637,9 +2615,7 @@ pub mod vyre_foundation::serial::text
 pub mod vyre_foundation::serial::wire
 pub mod vyre_foundation::serial::wire::decode
 pub mod vyre_foundation::serial::wire::decode::impl_reader
-pub mod vyre_foundation::serial::wire::decode::scan_database_budget
 pub mod vyre_foundation::serial::wire::encode
-pub mod vyre_foundation::serial::wire::encode::scan_database_header
 pub mod vyre_foundation::serial::wire::framing
 pub mod vyre_foundation::serial::wire::tags
 pub mod vyre_foundation::serial::wire::tags::access_from_tag
@@ -2703,8 +2679,6 @@ pub struct vyre_foundation::extension::ExtensionDataTypeRegistration
 pub struct vyre_foundation::extension::ExtensionUnOpRegistration
 pub struct vyre_foundation::extension::OpaqueExprResolver
 pub struct vyre_foundation::extension::OpaqueNodeResolver
-pub struct vyre_foundation::geometry::GeometryRequirements
-pub struct vyre_foundation::geometry::LaunchGeometry
 pub struct vyre_foundation::ir::BufferDecl
 pub struct vyre_foundation::ir::EvalError
 pub struct vyre_foundation::ir::GraphInput
@@ -2868,20 +2842,10 @@ pub struct vyre_foundation::serial::wire::decode::ScanConstructDecodeShape
 pub struct vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
 pub struct vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence
 pub struct vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape
-pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
-pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
-pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
-pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
-pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
-pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
 pub struct vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord
 pub struct vyre_foundation::serial::wire::encode::ScanDatabaseHeader
 pub struct vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader
 pub struct vyre_foundation::serial::wire::encode::UnsupportedScanFeature
-pub struct vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
-pub struct vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
-pub struct vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
-pub struct vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
 pub struct vyre_foundation::transform::HostRewrite
 pub struct vyre_foundation::transform::TransformDescriptor
 pub struct vyre_foundation::transform::autodiff::rules::AdjointContrib
@@ -2912,7 +2876,6 @@ pub trait vyre_foundation::GeometryStrategy: core::marker::Send + core::marker::
 pub trait vyre_foundation::cpu_op::CategoryAOp
 pub trait vyre_foundation::cpu_op::CpuOp
 pub trait vyre_foundation::extension::RuleConditionExt: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
-pub trait vyre_foundation::geometry::GeometryStrategy: core::marker::Send + core::marker::Sync
 pub trait vyre_foundation::ir::ExprNode: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::NodeExtension: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::optimizer::ProgramPass: vyre_foundation::optimizer::sealed::Sealed + core::marker::Send + core::marker::Sync
@@ -2977,10 +2940,10 @@ pub vyre_foundation::GeometryLoweringError::UnsatisfiableRequirements(alloc::str
 pub vyre_foundation::GeometryLoweringError::UnsupportedCooperativeWidth
 pub vyre_foundation::GeometryLoweringError::UnsupportedCooperativeWidth::admitted: u32
 pub vyre_foundation::GeometryLoweringError::UnsupportedCooperativeWidth::requested: u32
-pub vyre_foundation::GeometryRequirements::cooperative_width: vyre_foundation::geometry::CooperativeWidth
+pub vyre_foundation::GeometryRequirements::cooperative_width: vyre_foundation::CooperativeWidth
 pub vyre_foundation::GeometryRequirements::min_shared_bytes: u32
-pub vyre_foundation::GeometryRequirements::per_invocation_elements: vyre_foundation::geometry::ElementPolicy
-pub vyre_foundation::GeometryRequirements::subgroup_uniformity: vyre_foundation::geometry::Uniformity
+pub vyre_foundation::GeometryRequirements::per_invocation_elements: vyre_foundation::ElementPolicy
+pub vyre_foundation::GeometryRequirements::subgroup_uniformity: vyre_foundation::Uniformity
 pub vyre_foundation::IrError::InlineArgCountMismatch
 pub vyre_foundation::IrError::InlineArgCountMismatch::expected: usize
 pub vyre_foundation::IrError::InlineArgCountMismatch::got: usize
@@ -3211,34 +3174,6 @@ pub vyre_foundation::extension::OpaqueNodeResolver::deserialize: vyre_foundation
 pub vyre_foundation::extension::OpaqueNodeResolver::kind: &'static str
 pub vyre_foundation::fp_parity::BufferParity::Mismatch(alloc::string::String)
 pub vyre_foundation::fp_parity::BufferParity::Ok
-pub vyre_foundation::geometry::CooperativeWidth::Agnostic
-pub vyre_foundation::geometry::CooperativeWidth::AtLeast(u32)
-pub vyre_foundation::geometry::CooperativeWidth::Exactly(u32)
-pub vyre_foundation::geometry::ElementPolicy::Any
-pub vyre_foundation::geometry::ElementPolicy::Multiple(u32)
-pub vyre_foundation::geometry::ElementPolicy::Scalar
-pub vyre_foundation::geometry::GeometryLoweringError::ExceedsSharedMemoryLimits
-pub vyre_foundation::geometry::GeometryLoweringError::ExceedsSharedMemoryLimits::max: u32
-pub vyre_foundation::geometry::GeometryLoweringError::ExceedsSharedMemoryLimits::requested: u32
-pub vyre_foundation::geometry::GeometryLoweringError::ExceedsWorkgroupLimits
-pub vyre_foundation::geometry::GeometryLoweringError::ExceedsWorkgroupLimits::max: u32
-pub vyre_foundation::geometry::GeometryLoweringError::ExceedsWorkgroupLimits::requested: u32
-pub vyre_foundation::geometry::GeometryLoweringError::UnsatisfiableRequirements(alloc::string::String)
-pub vyre_foundation::geometry::GeometryLoweringError::UnsupportedCooperativeWidth
-pub vyre_foundation::geometry::GeometryLoweringError::UnsupportedCooperativeWidth::admitted: u32
-pub vyre_foundation::geometry::GeometryLoweringError::UnsupportedCooperativeWidth::requested: u32
-pub vyre_foundation::geometry::GeometryRequirements::cooperative_width: vyre_foundation::geometry::CooperativeWidth
-pub vyre_foundation::geometry::GeometryRequirements::min_shared_bytes: u32
-pub vyre_foundation::geometry::GeometryRequirements::per_invocation_elements: vyre_foundation::geometry::ElementPolicy
-pub vyre_foundation::geometry::GeometryRequirements::subgroup_uniformity: vyre_foundation::geometry::Uniformity
-pub vyre_foundation::geometry::LaunchGeometry::elements_per_invocation: u32
-pub vyre_foundation::geometry::LaunchGeometry::grid: [u32; 3]
-pub vyre_foundation::geometry::LaunchGeometry::pipeline_stages: u32
-pub vyre_foundation::geometry::LaunchGeometry::shared_bytes: u32
-pub vyre_foundation::geometry::LaunchGeometry::workgroup: [u32; 3]
-pub vyre_foundation::geometry::Uniformity::None
-pub vyre_foundation::geometry::Uniformity::SubgroupUniform
-pub vyre_foundation::geometry::Uniformity::WorkgroupUniform
 pub vyre_foundation::graph_view::DataEdge::from: u32
 pub vyre_foundation::graph_view::DataEdge::kind: vyre_foundation::graph_view::EdgeKind
 pub vyre_foundation::graph_view::DataEdge::to: u32
@@ -3618,7 +3553,7 @@ pub vyre_foundation::operation::OperationRegistration::category: core::option::O
 pub vyre_foundation::operation::OperationRegistration::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::OperationRegistration::explicit_capabilities: core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub vyre_foundation::operation::OperationRegistration::explicit_effects: core::option::Option<vyre_foundation::operation::OperationEffects>
-pub vyre_foundation::operation::OperationRegistration::geometry_requirements: core::option::Option<vyre_foundation::geometry::GeometryRequirements>
+pub vyre_foundation::operation::OperationRegistration::geometry_requirements: core::option::Option<vyre_foundation::GeometryRequirements>
 pub vyre_foundation::operation::OperationRegistration::id: &'static str
 pub vyre_foundation::operation::OperationRegistration::laws: &'static [&'static str]
 pub vyre_foundation::operation::OperationRegistration::semantic_version: u32
@@ -3649,7 +3584,7 @@ pub vyre_foundation::operation::SemanticOperation::category: core::option::Optio
 pub vyre_foundation::operation::SemanticOperation::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::SemanticOperation::explicit_capabilities: core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub vyre_foundation::operation::SemanticOperation::explicit_effects: core::option::Option<vyre_foundation::operation::OperationEffects>
-pub vyre_foundation::operation::SemanticOperation::geometry_requirements: core::option::Option<vyre_foundation::geometry::GeometryRequirements>
+pub vyre_foundation::operation::SemanticOperation::geometry_requirements: core::option::Option<vyre_foundation::GeometryRequirements>
 pub vyre_foundation::operation::SemanticOperation::id: &'static str
 pub vyre_foundation::operation::SemanticOperation::laws: &'static [&'static str]
 pub vyre_foundation::operation::SemanticOperation::semantic_version: u32
@@ -4334,81 +4269,15 @@ pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::ver
 pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape::state_count: u64
 pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape::transition_count: u64
 pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape::verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::construct_id: &'static str
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_capture_slots: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_literal_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_states: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_transitions: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_unicode_table_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::capture_slots: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::construct_id: &'static str
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::literal_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_capture_slots: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_literal_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_states: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_transitions: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_unicode_table_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::states: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::transitions: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::unicode_table_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::capture_slots: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::construct_id: &'static str
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::literal_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::states: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::transitions: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::unicode_table_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_duplicate_section_kinds: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_section_count: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_total_table_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_transition_density_bps: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::actual: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::construct_id: &'static str
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::field: &'static str
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::max: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded::actual: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded::max: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::SectionCountExceeded
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::SectionCountExceeded::actual: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::SectionCountExceeded::max: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesExceeded
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesExceeded::actual: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesExceeded::max: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesOverflow
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded::actual_bps: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded::max_bps: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded::actual: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded::max: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::duplicate_section_kinds: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_duplicate_section_kinds: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_section_count: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_total_table_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_transition_density_bps: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::section_count: usize
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::total_table_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::transition_density_bps: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::verifier_fragment_bytes: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::state_count: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::transition_count: u64
-pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::verifier_fragment_bytes: u64
 pub vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord::construct_tier_digest: u64
 pub vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord::dialect_digest: u64
-pub vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord::reader_compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
-pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord::reader_compatibility: vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::compatibility: vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord
 pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::compiler_version: alloc::string::String
-pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::mode: vyre_foundation::serial::wire::encode::ScanDatabaseMode
 pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::pattern_set_digest: [u8; 32]
-pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::table_sections: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader>
-pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::unsupported_features: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature>
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::table_sections: alloc::vec::Vec<vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader>
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::unsupported_features: alloc::vec::Vec<vyre_foundation::serial::wire::encode::UnsupportedScanFeature>
 pub vyre_foundation::serial::wire::encode::ScanDatabaseMode::Block
 pub vyre_foundation::serial::wire::encode::ScanDatabaseMode::Streaming
 pub vyre_foundation::serial::wire::encode::ScanDatabaseMode::Vectored
@@ -4416,7 +4285,7 @@ pub vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility::Comp
 pub vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility::Incompatible
 pub vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility::RequiresVerifier
 pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::byte_len: u64
-pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::kind: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::kind: vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind
 pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::offset: u64
 pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::section_digest: u64
 pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind::AutomataTable
@@ -4429,33 +4298,6 @@ pub vyre_foundation::serial::wire::encode::UnsupportedScanFeature::feature: allo
 pub vyre_foundation::serial::wire::encode::UnsupportedScanFeature::pattern_index: u32
 pub vyre_foundation::serial::wire::encode::WireEncodeErr::Dynamic(alloc::boxed::Box<arrayvec::array_string::ArrayString<256>>)
 pub vyre_foundation::serial::wire::encode::WireEncodeErr::Static(&'static str)
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::construct_tier_digest: u64
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::dialect_digest: u64
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::reader_compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::compiler_version: alloc::string::String
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::pattern_set_digest: [u8; 32]
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::table_sections: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader>
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::unsupported_features: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature>
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Block
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Streaming
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Vectored
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Compatible
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Incompatible
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::RequiresVerifier
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::byte_len: u64
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::kind: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::offset: u64
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::section_digest: u64
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::AutomataTable
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::LiteralTable
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::OutputLayout
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::RelationSeeds
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::StreamingState
-pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::VerifierFragments
-pub vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::feature: alloc::string::String
-pub vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::pattern_index: u32
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::BadMagic
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::SectionTooLarge
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::Truncated
