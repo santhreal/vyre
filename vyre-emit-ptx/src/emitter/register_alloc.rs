@@ -28,6 +28,11 @@ impl<'a> BodyCtx<'a> {
     ) -> Self {
         let slot_count = bindings.slots.len();
         let full_workgroup_entry = requires_full_workgroup_entry(desc);
+        let grid_sync_barrier_total = if options.cooperative_grid_sync {
+            super::module::descriptor_grid_sync_barrier_count(desc)
+        } else {
+            0
+        };
         let slot_to_binding = bindings
             .slots
             .iter()
@@ -59,6 +64,7 @@ impl<'a> BodyCtx<'a> {
             slot_to_binding,
             full_workgroup_entry,
             grid_barrier_index: 0,
+            grid_sync_barrier_total,
             grid_sync_loop_depth: 0,
             uniform_results: FxHashSet::with_capacity_and_hasher(
                 op_capacity / 4,

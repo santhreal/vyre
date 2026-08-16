@@ -74,6 +74,20 @@ pub(super) struct BodyCtx<'a> {
     /// [`Self::emit_grid_sync_barrier`]); the indices must be assigned in
     /// emission order so every CTA agrees on each barrier's release target.
     pub(super) grid_barrier_index: u32,
+    /// Total cooperative grid barriers this kernel will emit, so a point in the
+    /// body can tell whether any arrival is still ahead of it: exactly
+    /// `grid_barrier_index < grid_sync_barrier_total`.
+    ///
+    /// Zero when the consumer did not enable `cooperative_grid_sync`, because a
+    /// `MemoryOrdering::GridSync` barrier is then refused rather than lowered, so
+    /// no arrival counter exists for a departing lane to strand.
+    ///
+    /// This exists for [`Self::emit_trap`]. A trap leaves the kernel, and the
+    /// monotonic-counter barrier is arrived at by one leader lane per CTA, so a
+    /// leader that traps under divergent control flow never bumps the counter and
+    /// every other CTA spins on a target it can no longer reach. A CTA-scope
+    /// `bar.sync` is unaffected: it waits only on non-exited threads.
+    pub(super) grid_sync_barrier_total: u32,
     /// Nesting depth of enclosing `StructuredForLoop` bodies during emission.
     ///
     /// A `MemoryOrdering::GridSync` barrier is ONLY correct at a static position

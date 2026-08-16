@@ -11,16 +11,26 @@ use super::text_capacity::{body_op_count_recursive, estimate_body_text_capacity}
 use super::BodyCtx;
 use crate::{EmitError, PtxEmitOptions, TRAP_SIDECAR_SYMBOL, TRAP_TAG_PTX_MARKER};
 
-/// Whether the descriptor contains a `MemoryOrdering::GridSync` barrier, which
-/// the body lowers to a monotonic-counter cooperative barrier
-/// ([`BodyCtx::emit_grid_sync_barrier`]) that reads/writes the module-scope
-/// `_vyre_grid_barrier` counter. The same recursive iterator drives
+/// How many `MemoryOrdering::GridSync` barriers the descriptor contains.
+///
+/// Each lowers to a monotonic-counter cooperative barrier
+/// ([`BodyCtx::emit_grid_sync_barrier`]) that reads and writes the module-scope
+/// `_vyre_grid_barrier` counter, so a nonzero count is what makes the module
+/// declare that counter. The same recursive iterator drives
 /// `requires_full_workgroup_entry`, so detection here and the all-lanes-live
 /// entry stay in lockstep.
-fn descriptor_has_grid_sync_barrier(desc: &KernelDescriptor) -> bool {
-    desc.ops_iter().any(
-        |op| matches!(op.kind, KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync()),
-    )
+///
+/// The count, rather than a bare yes/no, is what lets the body tell a lane exit
+/// that still has a barrier ahead of it from one that has none left: the counter
+/// is only stranded by a lane that leaves before its CTA's last arrival.
+pub(super) fn descriptor_grid_sync_barrier_count(desc: &KernelDescriptor) -> u32 {
+    desc.ops_iter()
+        .filter(|op| {
+            matches!(op.kind, KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync())
+        })
+        .count()
+        .try_into()
+        .unwrap_or(u32::MAX)
 }
 
 pub(super) struct ModuleBuilder {
@@ -114,7 +124,7 @@ impl ModuleBuilder {
         let trap_tags = vyre_lower::descriptor_trap_tags(&desc.body).map_err(|source| {
             EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
         })?;
-        if self.options.cooperative_grid_sync && descriptor_has_grid_sync_barrier(desc) {
+        if self.options.cooperative_grid_sync && descriptor_grid_sync_barrier_count(desc) > 0 {
             // Module-scope arrival counter for the cooperative grid barrier. A
             // single u32, zeroed by the host before each cooperative launch; each
             // CTA leader bumps it once per barrier and spins until it reaches

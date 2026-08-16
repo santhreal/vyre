@@ -41,7 +41,32 @@ impl BodyCtx<'_> {
     /// claim before the operands. The host reads it after a stream synchronize,
     /// which orders the kernel's writes before the readback copy, so the four
     /// words are always read together and always complete.
+    ///
+    /// REFUSES when the trap sits under a condition that was not proven
+    /// grid-uniform and a cooperative grid barrier is still ahead of it. The trap
+    /// ends with `bra $L_exit`, which is safe next to a CTA-scope `bar.sync`
+    /// because that instruction waits only on non-exited threads, but the
+    /// whole-grid barrier is a monotonic counter arrived at by one leader lane per
+    /// CTA. A leader that trapped and left never bumps it, and every other CTA
+    /// spins on a release target it can no longer reach. The refusal is narrow on
+    /// purpose: a trap in a kernel with no grid barrier, and a trap after the last
+    /// one, strand nothing and stay lowerable.
     pub(super) fn emit_trap(&mut self, tag: &str, address_id: u32) -> Result<(), EmitError> {
+        if self.nonuniform_cond_depth > 0 && self.grid_barrier_index < self.grid_sync_barrier_total
+        {
+            return Err(EmitError::InvalidDescriptor(format!(
+                "trap `{tag}` sits under a condition that is not provably uniform across the grid, \
+                 with {} cooperative grid barrier(s) still ahead of it. A trap leaves the kernel, \
+                 and the whole-grid barrier is a monotonic counter that one leader lane per CTA \
+                 arrives at, so a leader that takes this trap never arrives and every other CTA \
+                 spins on a release target it can no longer reach. This emitter proves uniformity \
+                 only for values built from literals, buffer lengths, the subgroup size, and loads \
+                 from global or constant memory at a uniform index. Fix: hoist the trap's guard to \
+                 a grid-uniform condition, or move the trap after the kernel's last GridSync \
+                 barrier so no arrival remains for a departing lane to strand.",
+                self.grid_sync_barrier_total - self.grid_barrier_index
+            )));
+        }
         let code = *self.trap_tag_codes.get(tag).ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
                 "trap tag `{tag}` has no code in the descriptor's trap tag table, so a host \
