@@ -24,9 +24,9 @@ Hardware: No accelerator is required.
 
 Environment: No environment variables alter CLI behavior.
 
-Configuration: The command reads the workspace manifests and Rust sources under the repository root. It takes no arguments other than help.
+Configuration: The command reads the workspace manifests, the ownership registry, structure-gate/backend-vocabulary.toml, and the Rust sources under the repository root. It takes no arguments other than help.
 
-Failure behavior: A workspace member outside the reviewed roster, an operation identity registered more than once, a concept with more than one home, a src/ module file beside a directory of its own name, a file, module or binary name that states no contract, sibling files told apart only by a number, or a file that repeats the directory holding it returns status 1 with the offending paths.
+Failure behavior: A workspace member outside the reviewed roster, an operation identity registered more than once, a concept with more than one home, a src/ module file beside a directory of its own name, a file, module or binary name that states no contract, sibling files told apart only by a number, a file that repeats the directory holding it, a glob re-export of another workspace crate, a concrete backend name in production source of a substrate-neutral crate, or a vocabulary row that no longer describes the tree returns status 1 with the offending paths.
 
 Exit codes: 0 when the structure is clean or on help, 1 on a structural finding.
 <!-- END GENERATED CLI CONTRACT -->

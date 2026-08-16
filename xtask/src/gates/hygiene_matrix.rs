@@ -2691,14 +2691,13 @@ fn is_release_rule_text(trimmed: &str) -> bool {
 /// belonged to, so the list exempted files that do not exist. The test below
 /// reads this array and requires every row to resolve, because an exemption that
 /// names nothing reads as a decision while doing nothing.
-const HYGIENE_RULE_SOURCES: [&str; 7] = [
+const HYGIENE_RULE_SOURCES: [&str; 6] = [
     "xtask/src/gates/lint_hygiene.rs",
     "xtask/src/release/feature_matrix.rs",
     "xtask/src/gates/hygiene_matrix.rs",
     "xtask-evidence/src/release/backend_matrix.rs",
     "xtask-evidence/src/release/vyre_release_gate/mod.rs",
     "xtask-registry/src/release/optimization_matrix.rs",
-    "xtask-registry/src/gates/whats_similar.rs",
 ];
 
 /// The files that own the hidden-fallback rule and spell the prose it catches.

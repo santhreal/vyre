@@ -224,7 +224,7 @@ pub fn try_lengauer_tarjan_idoms_into(
     scratch.bucket.clear();
     resize_dominator_vec(idom, n, None, "dominator_tree idoms")?;
     resize_dominator_vec(&mut scratch.ancestor, n, 0usize, "dominator_tree ancestors")?;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.label,
         n,
         "dominator tree CPU oracle",

@@ -4,18 +4,13 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::gated_delta::RecurrentGatedDeltaError;
-use super::gated_delta_layout::{
-    self, qk_index, scalar_index, state_index, value_index, GatedDeltaSpec,
-};
+use super::gated_delta_spec::{self, activation_index, scalar_index, state_index, GatedDeltaSpec};
+use super::layout::block_index;
 
 const OP_ID: &str = "vyre-libs::nn::chunked_gated_delta";
 const CHUNK_SIZE: u32 = 64;
 const CHUNK_DECAY: &str = "chunk_decay";
 const CHUNK_VALUE: &str = "chunk_value";
-
-fn chunk_value_index(value_dim: u32, row: Expr, value: Expr) -> Expr {
-    Expr::add(Expr::mul(row, Expr::u32(value_dim)), value)
-}
 
 fn key_norm_nodes(
     key: &str,
@@ -43,7 +38,14 @@ fn key_norm_nodes(
                         DataType::F32,
                         Expr::load(
                             key,
-                            qk_index(sequence, key_heads, key_dim, token, Expr::var(dimension)),
+                            activation_index(
+                                "key_head",
+                                sequence,
+                                key_heads,
+                                key_dim,
+                                token,
+                                Expr::var(dimension),
+                            ),
                         ),
                     ),
                 ),
@@ -56,7 +58,7 @@ fn key_norm_nodes(
                 ),
             ],
         ),
-        gated_delta_layout::l2_scale_node(scale, &sum, eps),
+        gated_delta_spec::l2_scale_node(scale, &sum, eps),
     ]
 }
 
@@ -72,7 +74,10 @@ fn normalized_key(
     Expr::mul(
         Expr::cast(
             DataType::F32,
-            Expr::load(key, qk_index(sequence, key_heads, key_dim, token, feature)),
+            Expr::load(
+                key,
+                activation_index("key_head", sequence, key_heads, key_dim, token, feature),
+            ),
         ),
         Expr::var(scale),
     )
@@ -159,7 +164,7 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
         ref dtype,
         ..
     } = *spec;
-    let chunk_value_count = gated_delta_layout::checked(&[CHUNK_SIZE, value_dim])?;
+    let chunk_value_count = gated_delta_spec::checked(&[CHUNK_SIZE, value_dim])?;
     let chunk_count = sequence.div_ceil(CHUNK_SIZE);
 
     let init_state = Node::loop_for(
@@ -248,7 +253,7 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                 ),
             ),
         ),
-        gated_delta_layout::beta_gate_node(),
+        gated_delta_spec::beta_gate_node(),
         Node::loop_for("tri_value", Expr::u32(0), Expr::u32(value_dim), {
             let mut value_nodes = vec![
                 Node::let_bind(
@@ -259,7 +264,8 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                             DataType::F32,
                             Expr::load(
                                 value,
-                                value_index(
+                                activation_index(
+                                    "value_head",
                                     sequence,
                                     value_heads,
                                     value_dim,
@@ -355,9 +361,9 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                         ),
                         Expr::load(
                             CHUNK_VALUE,
-                            chunk_value_index(
-                                value_dim,
+                            block_index(
                                 Expr::var("previous_row"),
+                                value_dim,
                                 Expr::var("tri_value"),
                             ),
                         ),
@@ -372,7 +378,7 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
             ));
             value_nodes.push(Node::Store {
                 buffer: CHUNK_VALUE.into(),
-                index: chunk_value_index(value_dim, Expr::var("chunk_row"), Expr::var("tri_value")),
+                index: block_index(Expr::var("chunk_row"), value_dim, Expr::var("tri_value")),
                 value: Expr::var("transformed_value"),
             });
             value_nodes
@@ -450,9 +456,9 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                             ),
                             Expr::load(
                                 CHUNK_VALUE,
-                                chunk_value_index(
-                                    value_dim,
+                                block_index(
                                     Expr::var("state_row"),
+                                    value_dim,
                                     Expr::var("final_value"),
                                 ),
                             ),
@@ -497,7 +503,8 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                         DataType::F32,
                         Expr::load(
                             query,
-                            qk_index(
+                            activation_index(
+                                "key_head",
                                 sequence,
                                 key_heads,
                                 key_dim,
@@ -516,7 +523,7 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                 ),
             ],
         ),
-        gated_delta_layout::query_scale_node(eps, key_dim),
+        gated_delta_spec::query_scale_node(eps, key_dim),
     ];
     output_row.push(Node::loop_for(
         "output_value",
@@ -575,9 +582,9 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                             ),
                             Expr::load(
                                 CHUNK_VALUE,
-                                chunk_value_index(
-                                    value_dim,
+                                block_index(
                                     Expr::var("future_row"),
+                                    value_dim,
                                     Expr::var("output_value"),
                                 ),
                             ),
@@ -614,7 +621,8 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
                                         DataType::F32,
                                         Expr::load(
                                             query,
-                                            qk_index(
+                                            activation_index(
+                                                "key_head",
                                                 sequence,
                                                 key_heads,
                                                 key_dim,
@@ -634,7 +642,8 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
             }),
             Node::Store {
                 buffer: output.into(),
-                index: value_index(
+                index: activation_index(
+                    "value_head",
                     sequence,
                     value_heads,
                     value_dim,
@@ -704,7 +713,7 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
         ),
     ];
 
-    let mut buffers = gated_delta_layout::gated_delta_buffers(spec, &counts);
+    let mut buffers = gated_delta_spec::gated_delta_buffers(spec, &counts);
     buffers.extend([
         BufferDecl::workgroup(CHUNK_DECAY, CHUNK_SIZE, DataType::F32),
         BufferDecl::workgroup(CHUNK_VALUE, chunk_value_count, DataType::F32),

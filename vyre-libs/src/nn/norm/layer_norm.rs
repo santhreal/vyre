@@ -22,7 +22,7 @@ use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduc
 use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child, BuildOptions,
 };
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::nn::layer_norm";
 #[cfg(test)]

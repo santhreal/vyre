@@ -220,7 +220,7 @@ pub fn try_newton_schulz_y_step_cpu_into(
 ) -> Result<(), String> {
     let n = y_curr.len().min(yzy.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "Newton-Schulz preconditioner CPU oracle",

@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:aa05ecde5b38160f55fd4ea8484ce2ab240a0fd4:dirty=true:worktree=4c3a03aa8bc22bfd454f3e7b89b8a2cf3f7d79ea1e2f03f4f0ccfea3e253391c",
+  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=false",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [

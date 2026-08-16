@@ -25,16 +25,17 @@ use vyre_bench::api::case::BenchCase;
 ///
 /// Three `frontend.c.parser*` cases were removed when the C frontend crate left
 /// the workspace. They measured that crate's whole-pipeline parse, and no
-/// surviving crate publishes an equivalent; `release.c_ast_traversal.1m` covers
-/// the traversal throughput the release plan requires.
+/// surviving crate publishes an equivalent. `release.ast_motif_traversal.1m` measures
+/// the traversal predicate stage the release plan requires, over generated node
+/// columns rather than a parse.
 ///
 /// The three `frontend.rust.*` cases went the same way in a2e24fcdf1, which
 /// moved the Rust front end to `software/frontend-rust` and took the case tree
 /// that existed to exercise it. `parser.c_lexer.small_state_transition.4k`
 /// followed when the C frontend itself left `vyre-libs`: it measured that
 /// frontend's lexer state-transition pass and there is no builder left to
-/// build it. `release.c_ast_traversal.1m` is the parsing workload that remains,
-/// and it is a synthetic IR traversal with no frontend dependency.
+/// build it. No parsing workload remains; `release.ast_motif_traversal.1m` is a
+/// synthetic traversal with no frontend dependency.
 const EXPECTED_CASE_IDS: &[&str] = &[
     "adversarial.register_exhaustion.u32_1024",
     "bigint.modexp.4096",
@@ -69,7 +70,7 @@ const EXPECTED_CASE_IDS: &[&str] = &[
     "primitives.graph.frontier_step.1m",
     "regex.backtracking.adversarial",
     "release.alias_reaching_def.1m",
-    "release.c_ast_traversal.1m",
+    "release.ast_motif_traversal.1m",
     "release.condition_eval.1m",
     "release.egraph_saturation.1m",
     "release.entropy_window.1m",

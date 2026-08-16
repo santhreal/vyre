@@ -243,7 +243,7 @@ pub fn try_csr_queue_delta_enqueue_cpu_into(
             layout.words
         ));
     }
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         next_queue,
         next_queue_capacity,
         "CSR queue delta CPU oracle",

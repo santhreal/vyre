@@ -275,7 +275,7 @@ bench_targets = []
 [[op]]
 family = "vyre-libs::builder::indexed_map"
 tier = "libs"
-owners = ["vyre-libs/src/builder"]
+owners = ["vyre-libs/src/builder/registrations.rs"]
 ops = ["vyre-libs::builder::indexed_map"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -290,7 +290,7 @@ bench_targets = []
 [[op]]
 family = "vyre-libs::builder::strided_accumulate"
 tier = "libs"
-owners = ["vyre-libs/src/builder"]
+owners = ["vyre-libs/src/builder/registrations.rs"]
 ops = ["vyre-libs::builder::strided_accumulate"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"

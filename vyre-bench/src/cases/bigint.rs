@@ -59,8 +59,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     INSTANCE_COUNT as u64 * LIMB_COUNT as u64 * 4 * 4,
     Some(ContractDescription {
         primitive: "Modular exponentiation",
-        baseline_crate: "rug",
-        baseline_name: "rug 1.27 (GMP 6.3.0 backend)",
+        baseline_crate: "vyre-bench",
+        baseline_name: "in-tree scalar u32-limb square-and-multiply modexp (cpu_modexp)",
         min_speedup_x: 2.0,
     }),
 );

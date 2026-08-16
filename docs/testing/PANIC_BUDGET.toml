@@ -45,7 +45,10 @@ ceiling = 5
 
 [[crate_budget]]
 name = "vyre-primitives"
-ceiling = 1
+# 1 -> 0 measured 2026-08-16 by hygiene-matrix: the crate carries no undocumented
+# panic outside the release surface since the composition domains moved to
+# vyre-libs and left only the hardware intrinsics, the catalog and the markers.
+ceiling = 0
 
 [[crate_budget]]
 name = "vyre-runtime"

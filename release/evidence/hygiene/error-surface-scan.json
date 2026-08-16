@@ -1,36 +1,36 @@
 {
-  "source_fingerprint": "git:aa05ecde5b38160f55fd4ea8484ce2ab240a0fd4:dirty=true:worktree=4c3a03aa8bc22bfd454f3e7b89b8a2cf3f7d79ea1e2f03f4f0ccfea3e253391c",
+  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=true:worktree=587be6a3b515782d4f5c2d438cfd280a4b2bfe2e4de21819ef31730913109ab1",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 273,
+      "line": 268,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 275,
+      "line": 270,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 980,
+      "line": 952,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1020,
-      "pattern": "panic_macro",
+      "line": 998,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1022,
-      "pattern": "panic_macro",
+      "line": 1000,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
     {
@@ -490,6 +490,12 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-driver-wgpu/src/runtime/device/acquire.rs",
+      "line": 50,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: a LoaderInstance is only empty while it is being dropped\")"
+    },
+    {
       "path": "vyre-reference/src/oob.rs",
       "line": 127,
       "pattern": "documented_panic_contract",
@@ -725,19 +731,19 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 210,
+      "line": 245,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 335,
+      "line": 370,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 341,
+      "line": 376,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },

@@ -76,15 +76,12 @@ vyre-reference = { path = "../vyre-reference" }
 # Required by several _gpu_parity tests that import vyre_primitives::*.
 # `cpu-parity` exposes the CPU reference oracles (hex_decode_reference_packed, …)
 # these parity tests diff the GPU output against; gated out of production builds.
-# `all-lego` is the whole Tier 2.5 substrate: the parity tests reach into
-# `bitset`, `decode`, `fixpoint`, `graph`, `hash`, `math`, `matching`, `parsing`,
-# `reduce`, `text` and `visual`, and naming them one at a time only moved the
-# break to whichever domain the next parity test reaches for. Without it a
-# standalone `cargo check -p vyre-driver-cuda --all-targets` fails with E0433 on
-# `vyre_libs::visual`; in-workspace it passed because another member
-# enabled the domain.
+# `hardware` is the one domain this crate declares. The composition domains the
+# parity tests reach into (bitset, decode, fixpoint, graph, hash, math,
+# matching, parsing, reduce, text, visual) come from the vyre-libs dev-dependency
+# above on `full`, which is why naming them here is no longer possible or needed.
 vyre-primitives = { path = "../vyre-primitives", features = [
-    "all-lego",
+    "hardware",
     "cpu-parity",
 ], default-features = false }
 # Required by tests/union_find_gpu_parity.rs, which imports the CPU union-find

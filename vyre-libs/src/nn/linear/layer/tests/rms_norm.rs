@@ -13,15 +13,15 @@ fn parity_rms_norm_linear_matches_reference_three_sizes() {
 fn try_rms_norm_linear_rejects_bad_dimensions_without_panic() {
     assert!(matches!(
         try_rms_norm_linear("input", "w", "b", "out", 0, 4, 4, 1e-5),
-        Err(crate::tensor_ref::TensorRefError::ShapeMismatch { .. })
+        Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { .. })
     ));
     assert!(matches!(
         try_rms_norm_linear("input", "w", "b", "out", 8, 4, 4, 1e-5),
-        Err(crate::tensor_ref::TensorRefError::ShapeMismatch { .. })
+        Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { .. })
     ));
     assert!(matches!(
         try_rms_norm_linear("input", "w", "b", "out", 1, u32::MAX, 2, 1e-5),
-        Err(crate::tensor_ref::TensorRefError::ElementCountOverflow { .. })
+        Err(crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow { .. })
     ));
 }
 
@@ -117,7 +117,7 @@ fn rms_norm_linear_empty_tensor_traps() {
     assert!(
         matches!(
             result,
-            Err(crate::tensor_ref::TensorRefError::ShapeMismatch { .. })
+            Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { .. })
         ),
         "rms_norm_linear n=0 must be rejected by the builder"
     );

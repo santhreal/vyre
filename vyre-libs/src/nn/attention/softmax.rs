@@ -25,7 +25,7 @@ use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate_child,
     strided_writeback_child, BuildOptions,
 };
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};

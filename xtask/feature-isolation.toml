@@ -326,7 +326,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),bitset,graph,nn-linear-4bit"
+feature = "(default),bitset,graph,nn-linear-4bit,predicate"
 outcome = "compiles"
 
 [[pair]]

@@ -418,8 +418,8 @@ pub mod size_argument_of;
 
 /// Little-endian `u32` word packing for [`inventory::submit!`] GPU fixtures.
 ///
-/// Centralizes the repeated `to_le_bytes` flatten used by every graph
-/// predicate's registry block (`audits/VYRE_PRIMITIVES_GAPS.md` dedup).
+/// One owner for the `to_le_bytes` flatten every graph predicate's registry
+/// block would otherwise restate.
 pub(crate) fn inventory_u32_le_bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }

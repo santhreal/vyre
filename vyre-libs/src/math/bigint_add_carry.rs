@@ -276,7 +276,7 @@ fn reserve_bigint_output(
     operation: &'static str,
 ) -> Result<(), BigIntAddCarryError> {
     if len > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             len - out.len(),
             "bigint add-carry CPU oracle",

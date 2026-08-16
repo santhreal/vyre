@@ -225,7 +225,7 @@ pub fn try_dp_clip_per_sample_cpu_into(
         format!("dp_clip_per_sample CPU oracle b*d overflows usize: b={b}, d={d}.")
     })?;
     if cells > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             cells - out.len(),
             "DP clip CPU oracle",

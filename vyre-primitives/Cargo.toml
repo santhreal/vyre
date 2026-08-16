@@ -35,11 +35,6 @@ vyre-foundation = ["dep:vyre-foundation"]
 # with it rather than being a second thing to remember.
 hardware = ["vyre-foundation", "inventory-registry"]
 
-# Convenience aggregate: every domain feature this crate declares. It equals
-# INTRINSIC_FEATURES union COMPOSITION_FEATURES from src/organization.rs, and
-# COMPOSITION_FEATURES is empty because every composition moved to vyre-libs.
-all-lego = ["hardware"]
-
 # Enable canonical `OperationRegistration::primitive(...)` submissions so the
 # universal conform harness and `cargo xtask print-composition` discover every
 # registered primitive. Off by default to keep default-build dep-free.

@@ -283,7 +283,7 @@ pub fn toposort_csr_into_with_scratch(
     }
 
     let node_words = layout.node_words;
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut scratch.indeg,
         node_words,
         "toposort CSR CPU oracle",
@@ -302,7 +302,7 @@ pub fn toposort_csr_into_with_scratch(
                 })?;
     }
 
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut scratch.queue,
         node_words,
         "toposort CSR CPU oracle",
@@ -314,7 +314,7 @@ pub fn toposort_csr_into_with_scratch(
             scratch.queue.push(node);
         }
     }
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         order,
         node_words,
         "toposort CSR CPU oracle",
@@ -570,7 +570,7 @@ fn validate_toposort_csr_order_with_layout(
         });
     }
     let mut pos: Vec<usize> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut pos,
         layout.node_words,
         "toposort CSR CPU oracle",
@@ -645,7 +645,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
 
     let n = node_count as usize;
     let mut indeg: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut indeg,
         n,
         "toposort CPU oracle",
@@ -654,7 +654,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
     )?;
     indeg.resize(n, 0);
     let mut outgoing_head: Vec<usize> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut outgoing_head,
         n,
         "toposort CPU oracle",
@@ -663,7 +663,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
     )?;
     outgoing_head.resize(n, NONE);
     let mut outgoing_to: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut outgoing_to,
         edges.len(),
         "toposort CPU oracle",
@@ -671,7 +671,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
         toposort_allocation,
     )?;
     let mut outgoing_next: Vec<usize> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut outgoing_next,
         edges.len(),
         "toposort CPU oracle",
@@ -679,7 +679,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
         toposort_allocation,
     )?;
     let mut depends_head: Vec<usize> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut depends_head,
         n,
         "toposort CPU oracle",
@@ -688,7 +688,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
     )?;
     depends_head.resize(n, NONE);
     let mut depends_to: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut depends_to,
         edges.len(),
         "toposort CPU oracle",
@@ -696,7 +696,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
         toposort_allocation,
     )?;
     let mut depends_next: Vec<usize> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut depends_next,
         edges.len(),
         "toposort CPU oracle",
@@ -721,7 +721,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
     }
 
     let mut queue: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut queue,
         n,
         "toposort CPU oracle",
@@ -734,7 +734,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
         }
     }
     let mut out: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         &mut out,
         n,
         "toposort CPU oracle",
@@ -785,7 +785,7 @@ pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, Topos
             });
         let seed = seed?;
         let mut on_stack: Vec<bool> = Vec::new();
-        crate::scratch::reserve_items_with(
+        crate::plumbing::host::scratch::reserve_items_with(
             &mut on_stack,
             n,
             "toposort CPU oracle",

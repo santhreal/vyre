@@ -85,7 +85,7 @@ fn try_line_index_with_source_type(
     }
 
     vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass])
-        .map(|program| crate::program_outputs::demote_intermediate_outputs(program, lines))
+        .map(|program| crate::plumbing::program::outputs::demote_intermediate_outputs(program, lines))
         .map_err(|error| {
             format!(
                 "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan fusion instead of falling back to a serial lane-0 loop."

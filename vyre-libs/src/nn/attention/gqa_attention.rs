@@ -6,9 +6,8 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_chi
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use crate::nn::attention_passes::{
-    attention_max_pass_bounded, attention_max_pass_with_bases, attention_sum_pass_bounded,
-    attention_sum_pass_with_bases, attention_write_pass_bounded_typed,
-    attention_write_pass_with_bases, ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID,
+    attention_max_pass_bounded, attention_sum_pass_bounded, attention_write_pass_bounded,
+    attention_write_pass_bounded_typed, ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID,
     ATTENTION_WRITE_PASS_OP_ID,
 };
 use crate::nn::attention_stability::positive_denominator;
@@ -79,11 +78,11 @@ pub fn gqa_attention(
                 wrap_child_region(
                     ATTENTION_MAX_PASS_OP_ID,
                     parent.clone(),
-                    attention_max_pass_with_bases(
+                    attention_max_pass_bounded(
                         q,
                         k,
                         head_dim,
-                        seq_len,
+                        Expr::u32(seq_len),
                         scale_expr.clone(),
                         query_base.clone(),
                         kv_base.clone(),
@@ -93,11 +92,11 @@ pub fn gqa_attention(
                 wrap_child_region(
                     ATTENTION_SUM_PASS_OP_ID,
                     parent.clone(),
-                    attention_sum_pass_with_bases(
+                    attention_sum_pass_bounded(
                         q,
                         k,
                         head_dim,
-                        seq_len,
+                        Expr::u32(seq_len),
                         scale_expr.clone(),
                         query_base.clone(),
                         kv_base.clone(),
@@ -107,12 +106,12 @@ pub fn gqa_attention(
                 wrap_child_region(
                     ATTENTION_WRITE_PASS_OP_ID,
                     parent,
-                    attention_write_pass_with_bases(
+                    attention_write_pass_bounded(
                         q,
                         k,
                         v_buf,
                         head_dim,
-                        seq_len,
+                        Expr::u32(seq_len),
                         scale_expr,
                         output,
                         query_base.clone(),

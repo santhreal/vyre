@@ -506,7 +506,7 @@ fn require_len(name: &str, got: usize, need: usize) -> Result<(), String> {
 #[cfg(any(test, feature = "cpu-parity"))]
 fn reserve_cpu_scratch(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), String> {
     if len > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             len - out.len(),
             "AMG V-cycle CPU oracle",

@@ -201,7 +201,7 @@ fn require_fixed_len(name: &str, got: usize, need: usize) -> Result<(), String> 
     }
 }
 
-crate::scratch::define_reserve_capacity!(
+crate::plumbing::host::scratch::define_reserve_capacity!(
     reserve_u32_vec,
     u32,
     "Sinkhorn iterate CPU oracle"

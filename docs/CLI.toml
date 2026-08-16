@@ -52,11 +52,9 @@ readme = "xtask/README.md"
 audience = "internal"
 hardware = "No accelerator is required."
 environment = "No environment variables alter CLI behavior."
-config = "The command reads the workspace manifests in this repository, resolved from the repository root. It takes no arguments other than help."
-failure = "An unreadable workspace, or a workspace that publishes nothing, returns status 1."
-exit_codes = "0 when the roster was printed or on help, 1 when the workspace could not be read or publishes nothing, 2 on invalid arguments."
-
-
+config = "The command reads the workspace manifests, resolved from the repository root."
+failure = "An unreadable workspace manifest returns status 1."
+exit_codes = "0 on a printed roster or help, 1 on a manifest read failure, 2 on invalid arguments."
 
 [[binary]]
 package = "xtask"

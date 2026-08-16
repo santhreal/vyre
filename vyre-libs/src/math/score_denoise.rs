@@ -136,7 +136,7 @@ pub fn try_score_denoise_step_cpu_into(
 ) -> Result<(), String> {
     let n = x.len().min(score.len()).min(noise.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "score-denoise CPU oracle",

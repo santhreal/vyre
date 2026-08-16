@@ -115,7 +115,7 @@ pub fn try_iht_top_k_cpu_into(
 ) -> Result<f64, String> {
     let n = z.len();
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "IHT sparse-recovery CPU oracle",
@@ -124,7 +124,7 @@ pub fn try_iht_top_k_cpu_into(
     }
     if n > scratch.order.capacity() {
         let additional = n - scratch.order.len();
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             &mut scratch.order,
             additional,
             "IHT sparse-recovery CPU oracle",

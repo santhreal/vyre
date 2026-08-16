@@ -4,7 +4,7 @@ use thiserror::Error;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{DataType, Expr, Node, Program, UnOp};
 
-use super::gated_delta_layout::{self, GatedDeltaSpec};
+use super::gated_delta_spec::{self, GatedDeltaSpec};
 
 const OP_ID: &str = "vyre-libs::nn::recurrent_gated_delta";
 
@@ -65,15 +65,29 @@ pub fn recurrent_gated_delta(
     } = *spec;
 
     let qk_index = |dim: Expr| {
-        gated_delta_layout::qk_index(sequence, key_heads, key_dim, Expr::var("token"), dim)
+        gated_delta_spec::activation_index(
+            "key_head",
+            sequence,
+            key_heads,
+            key_dim,
+            Expr::var("token"),
+            dim,
+        )
     };
     let state_index = |key_index: Expr, value_index: Expr| {
-        gated_delta_layout::state_index(key_dim, value_dim, key_index, value_index)
+        gated_delta_spec::state_index(key_dim, value_dim, key_index, value_index)
     };
     let value_index = |dim: Expr| {
-        gated_delta_layout::value_index(sequence, value_heads, value_dim, Expr::var("token"), dim)
+        gated_delta_spec::activation_index(
+            "value_head",
+            sequence,
+            value_heads,
+            value_dim,
+            Expr::var("token"),
+            dim,
+        )
     };
-    let scalar_index = gated_delta_layout::scalar_index(sequence, value_heads, Expr::var("token"));
+    let scalar_index = gated_delta_spec::scalar_index(sequence, value_heads, Expr::var("token"));
     let output_index = value_index(Expr::var("value_index"));
 
     let init_state = Node::loop_for(
@@ -132,8 +146,8 @@ pub fn recurrent_gated_delta(
                 ),
             ],
         ),
-        gated_delta_layout::query_scale_node(eps, key_dim),
-        gated_delta_layout::l2_scale_node("key_scale", "key_sum", eps),
+        gated_delta_spec::query_scale_node(eps, key_dim),
+        gated_delta_spec::l2_scale_node("key_scale", "key_sum", eps),
     ];
     let decay_state = Node::loop_for(
         "key_index",
@@ -272,7 +286,7 @@ pub fn recurrent_gated_delta(
             "beta_logit",
             Expr::cast(DataType::F32, Expr::load(beta_logits, scalar_index)),
         ),
-        gated_delta_layout::beta_gate_node(),
+        gated_delta_spec::beta_gate_node(),
         decay_state,
         value_update,
     ]);
@@ -304,7 +318,7 @@ pub fn recurrent_gated_delta(
     ];
 
     Ok(Program::wrapped(
-        gated_delta_layout::gated_delta_buffers(spec, &counts),
+        gated_delta_spec::gated_delta_buffers(spec, &counts),
         [64, 1, 1],
         vec![wrap_anonymous_region(OP_ID, body)],
     ))

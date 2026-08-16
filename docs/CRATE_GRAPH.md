@@ -305,8 +305,8 @@ graph TD
 | `vyre-registry-link` | `vyre-driver-spirv` | SPIR-V backend registration | None | `always` | `normal` | `true` | `true` | `private` | `spirv-driver` |
 | `vyre-registry-link` | `vyre-driver-wgpu` | portable backend registration | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
 | `vyre-registry-link` | `vyre-foundation` | operation registry contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-registry-link` | `vyre-libs` | product operation registrations | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
-| `vyre-registry-link` | `vyre-primitives` | primitive operation registrations | `all-lego` | `always` | `normal` | `true` | `false` | `private` | `primitive-library` |
+| `vyre-registry-link` | `vyre-libs` | product operation registrations | `full` | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
+| `vyre-registry-link` | `vyre-primitives` | primitive operation registrations | `hardware` | `always` | `normal` | `true` | `false` | `private` | `primitive-library` |
 | `vyre-runtime` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
@@ -326,7 +326,7 @@ graph TD
 | `xtask-registry` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `xtask-registry` | `vyre-libs` | product operation builders | `full`, `matching-regex` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `xtask-registry` | `vyre-megakernel` | neutral artifact compilation and target payload contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `all-lego` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `xtask-registry` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `xtask-registry` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `operations`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `xtask-registry` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |

@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:aa05ecde5b38160f55fd4ea8484ce2ab240a0fd4:dirty=true:worktree=4c3a03aa8bc22bfd454f3e7b89b8a2cf3f7d79ea1e2f03f4f0ccfea3e253391c",
+  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=true:worktree=587be6a3b515782d4f5c2d438cfd280a4b2bfe2e4de21819ef31730913109ab1",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 3960,
+  "scanned_files": 3961,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -45,7 +45,7 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 92
+      "count": 95
     },
     {
       "pattern": "expect_call",
@@ -53,7 +53,7 @@
     },
     {
       "pattern": "panic_macro",
-      "count": 12
+      "count": 10
     },
     {
       "pattern": "placeholder_text",
@@ -69,11 +69,11 @@
     },
     {
       "pattern": "std_thread_sleep",
-      "count": 2
+      "count": 3
     },
     {
       "pattern": "thread_sleep",
-      "count": 2
+      "count": 3
     },
     {
       "pattern": "tokio_sleep",
@@ -115,15 +115,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 6
+      "count": 10
     },
     {
       "owner_lane": "coordination",
@@ -132,6 +124,14 @@
       "hot_path": false,
       "release_blocker": false,
       "count": 24
+    },
+    {
+      "owner_lane": "driver_cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false,
+      "count": 2
     },
     {
       "owner_lane": "driver_cuda",
@@ -156,6 +156,14 @@
       "hot_path": false,
       "release_blocker": false,
       "count": 4
+    },
+    {
+      "owner_lane": "driver_wgpu",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false,
+      "count": 1
     },
     {
       "owner_lane": "foundation_wire",
@@ -311,7 +319,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 14
+      "count": 16
     },
     {
       "owner_lane": "coordination",
@@ -347,16 +355,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 6
+      "count": 10
     },
     {
       "owner_lane": "coordination",
@@ -382,6 +381,24 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "driver_cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "std_thread_sleep",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "driver_cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "thread_sleep",
       "release_blocker": false,
       "count": 1
     },
@@ -429,6 +446,15 @@
       "pattern": "placeholder_text",
       "release_blocker": false,
       "count": 4
+    },
+    {
+      "owner_lane": "driver_wgpu",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
     },
     {
       "owner_lane": "foundation_wire",
@@ -870,39 +896,34 @@
         "reason": "Resolves every `--test`/`--bin` name a CI workflow step passes against the\ncargo targets that package declares or auto-discovers. A workflow step is text\nuntil CI runs it, and a target named by a step is not reachable from any\nprocess running locally."
       },
       {
-        "file": "vyre-primitives/tests/shared_owner_closure.rs",
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
         "test": "no_dispatch_grid_function_hand_rolls_the_ceiling_division",
         "reason": "Asserts that exactly one implementation of the ceiling division exists. A\nbehavioural parity sweep catches a copy that rounds differently and passes a\ncopy that agrees today, and a second implementation that agrees today is the\ndefect this closes: the copies it replaced agreed until the zero case."
       },
       {
-        "file": "vyre-primitives/tests/shared_owner_closure.rs",
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
         "test": "every_domain_with_a_dispatch_grid_can_reach_the_owner",
-        "reason": "Asserts that the owner module is not gated behind a Cargo feature some domain\ndoes not enable. Feature reachability is decided at compile time, so a build\nwhere the owner is unreachable is a build in which this test does not run."
+        "reason": "Asserts that the owner of the dispatch-grid helper is declared unconditionally\nin the crate that holds it and that every crate with a dispatch-grid function\nreaches it through a non-optional dependency edge. Reachability is decided at\ncompile time, so a build where the owner is unreachable is a build in which\nthis test does not run."
       },
       {
-        "file": "vyre-primitives/tests/shared_owner_closure.rs",
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
         "test": "no_binding_record_spells_its_full_name_set_twice",
         "reason": "Asserts that no file in the workspace respells a binding record's full name set\ninstead of naming the record's canonical constant. Two spellings that agree\nproduce identical behaviour, which is why the drift it exists for went\nunnoticed; only the source distinguishes them."
       },
       {
-        "file": "vyre-primitives/tests/shared_owner_closure.rs",
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
         "test": "every_buffer_binding_record_publishes_canonical_names",
         "reason": "Asserts that every declared `*Buffers` record publishes canonical names. The\nsubject is the set of declared types, which a running program cannot enumerate\nwithout reflection."
       },
       {
-        "file": "vyre-primitives/tests/shared_owner_closure.rs",
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
         "test": "every_routed_convergence_op_registers_with_the_routing_contract",
         "reason": "Asserts that every op calling `routed_persistent_fixpoint` also registers with\nthe shared routing contract. An op that never registers runs correctly on the\ninputs it does have, so the omission has no run-time symptom until a dispatch\nspans more than one workgroup in production."
       },
       {
-        "file": "vyre-primitives/tests/shared_owner_closure.rs",
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
         "test": "no_op_re_asserts_the_routing_obligations_privately",
         "reason": "Asserts that no file outside the routing owner observes both halves of the\nrouting obligation itself. A private copy of an assertion passes, which is the\nwhole reason a copy survives; only the source shows there are two."
-      },
-      {
-        "file": "vyre-primitives/tests/shared_owner_closure.rs",
-        "test": "the_source_walk_reaches_the_modules_every_gate_above_depends_on",
-        "reason": "Floor check for the walk every gate in the file depends on. Its subject is the\nfile set that walk produced."
       },
       {
         "file": "xtask-registry/tests/registry_contracts/registration_visibility.rs",
@@ -981,7 +1002,7 @@
       },
       {
         "crate_name": "vyre-primitives",
-        "ceiling": 1,
+        "ceiling": 0,
         "measured": 0
       },
       {
@@ -1012,7 +1033,7 @@
   "finding_classes": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 273,
+      "line": 268,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1022,7 +1043,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 275,
+      "line": 270,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1032,7 +1053,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 980,
+      "line": 952,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1042,8 +1063,8 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1020,
-      "pattern": "panic_macro",
+      "line": 998,
+      "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
@@ -1052,8 +1073,8 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1022,
-      "pattern": "panic_macro",
+      "line": 1000,
+      "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
@@ -1581,6 +1602,26 @@
       "release_blocker": false
     },
     {
+      "path": "vyre-driver-cuda/src/stream.rs",
+      "line": 163,
+      "pattern": "std_thread_sleep",
+      "owner_lane": "driver_cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-driver-cuda/src/stream.rs",
+      "line": 163,
+      "pattern": "thread_sleep",
+      "owner_lane": "driver_cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
       "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
       "line": 284,
       "pattern": "placeholder_text",
@@ -1897,6 +1938,16 @@
       "owner_lane": "coordination",
       "surface": "test",
       "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-driver-wgpu/src/runtime/device/acquire.rs",
+      "line": 50,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "driver_wgpu",
+      "surface": "production",
+      "risk": "informational",
       "hot_path": false,
       "release_blocker": false
     },
@@ -2266,9 +2317,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
@@ -2276,9 +2327,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
@@ -2286,9 +2337,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
@@ -2296,9 +2347,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
@@ -2306,9 +2357,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
@@ -2316,9 +2367,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-spec/tests/token_ids_have_one_owner.rs",
@@ -2692,17 +2743,7 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 210,
-      "pattern": "panic_macro",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 335,
+      "line": 245,
       "pattern": "panic_macro",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -2721,36 +2762,17 @@
       "release_blocker": false
     },
     {
-      "path": "xtask/src/gates/backend_parity.rs",
-      "line": 269,
-      "pattern": "raw_workspace_cargo",
+      "path": "xtask/src/gates/check_tier_deps.rs",
+      "line": 376,
+      "pattern": "panic_macro",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "xtask/src/gates/crate_readmes.rs",
-      "line": 301,
-      "pattern": "placeholder_text",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_debt",
+      "risk": "informational",
       "hot_path": false,
       "release_blocker": false
     },
     {
-      "path": "xtask/src/gates/oracle_sweeps.rs",
-      "line": 325,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
+
       "path": "xtask/src/bin/audit_rule_contracts.rs",
       "line": 34,
       "pattern": "unwrap_call",
@@ -2895,32 +2917,32 @@
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 273,
+      "line": 268,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 275,
+      "line": 270,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 980,
+      "line": 952,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1020,
-      "pattern": "panic_macro",
+      "line": 998,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1022,
-      "pattern": "panic_macro",
+      "line": 1000,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
     {
@@ -3236,6 +3258,18 @@
       "text": "//! rather than a pending TODO: on the warm steady state the"
     },
     {
+      "path": "vyre-driver-cuda/src/stream.rs",
+      "line": 163,
+      "pattern": "std_thread_sleep",
+      "text": "std::thread::sleep(sleep.min(deadline - waited));"
+    },
+    {
+      "path": "vyre-driver-cuda/src/stream.rs",
+      "line": 163,
+      "pattern": "thread_sleep",
+      "text": "std::thread::sleep(sleep.min(deadline - waited));"
+    },
+    {
       "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
       "line": 284,
       "pattern": "placeholder_text",
@@ -3426,6 +3460,12 @@
       "line": 427,
       "pattern": "documented_panic_contract",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-driver-wgpu/src/runtime/device/acquire.rs",
+      "line": 50,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: a LoaderInstance is only empty while it is being dropped\")"
     },
     {
       "path": "vyre-reference/src/oob.rs",
@@ -3921,19 +3961,19 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 210,
+      "line": 245,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 335,
+      "line": 370,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 341,
+      "line": 376,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },

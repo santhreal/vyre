@@ -149,7 +149,7 @@ pub fn try_cpu_ref_into(
         edge_kind_mask,
         frontier_in,
     )?;
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         out,
         layout.words,
         "csr_bidirectional CPU oracle",
@@ -532,14 +532,14 @@ where
             seed.len()
         )));
     }
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         current,
         plan.frontier_words,
         "csr_bidirectional closure runner",
         "current frontier",
         |message| map_error(message),
     )?;
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         next,
         plan.frontier_words,
         "csr_bidirectional closure runner",

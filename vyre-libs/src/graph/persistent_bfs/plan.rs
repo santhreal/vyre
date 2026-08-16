@@ -114,7 +114,7 @@ pub fn copy_persistent_bfs_seed_frontier_into<E, MapError>(
 where
     MapError: FnMut(String) -> E,
 {
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         frontier_out,
         frontier_in.len(),
         context,
@@ -145,14 +145,14 @@ pub fn copy_persistent_bfs_batch_seed_and_clear_changed_into<E, MapError>(
 where
     MapError: FnMut(String) -> E,
 {
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         frontier_outputs,
         frontier_inputs.len(),
         context,
         "persistent BFS batch frontier",
         |message| map_error(message),
     )?;
-    crate::scratch::reserve_items_with(
+    crate::plumbing::host::scratch::reserve_items_with(
         changed_outputs,
         query_count,
         context,

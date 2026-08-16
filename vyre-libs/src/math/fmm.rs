@@ -412,7 +412,7 @@ pub fn try_p2m_zeroth_moment_cpu_into(
     }
     let n_cells = cell_assignment.iter().max().copied().unwrap_or(0) as usize + 1;
     if n_cells > moments.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             moments,
             n_cells - moments.len(),
             "FMM CPU oracle",

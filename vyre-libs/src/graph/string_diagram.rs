@@ -101,7 +101,7 @@ pub fn try_monoidal_compose_cpu_into(
         "monoidal_compose CPU oracle output shape overflows cell count. Fix: reduce a*c before parity comparison.".to_string()
     })?;
     if out_cells > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             out_cells - out.len(),
             "string diagram CPU oracle",

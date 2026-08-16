@@ -12,7 +12,7 @@ mod u32_outputs;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use crate::dispatch_program_cache::ProgramCache;
+pub(crate) use crate::plumbing::host::program_cache::ProgramCache;
 pub(crate) use inputs::{
     fingerprint_u32_slice, refresh_keyed_dispatch_inputs, write_dispatch_input, DispatchInput,
     U32SliceFingerprint,

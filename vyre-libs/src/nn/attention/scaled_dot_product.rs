@@ -17,7 +17,7 @@ use crate::nn::attention_passes::{
 };
 
 use crate::builder::{check_tensors, BuildOptions};
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 use crate::nn::attention_stability::{
     bounded_exp_arg, bounded_score, direct_score_expr, positive_denominator,
 };
