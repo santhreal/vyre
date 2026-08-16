@@ -112,6 +112,7 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 | `test` | `delegating_builder_equivalence` | `vyre-primitives/tests/delegating_builder_equivalence.rs` | None | `./cargo_full test -p vyre-primitives --test delegating_builder_equivalence` |
 | `test` | `dfa_wire_contracts` | `vyre-primitives/tests/dfa_wire_contracts.rs` | None | `./cargo_full test -p vyre-primitives --test dfa_wire_contracts` |
 | `test` | `do_calculus_rule2_value_parity` | `vyre-primitives/tests/do_calculus_rule2_value_parity.rs` | None | `./cargo_full test -p vyre-primitives --test do_calculus_rule2_value_parity` |
+| `test` | `dominator_tree_composition` | `vyre-primitives/tests/dominator_tree_composition.rs` | None | `./cargo_full test -p vyre-primitives --test dominator_tree_composition` |
 | `test` | `dominator_tree_pristine` | `vyre-primitives/tests/dominator_tree_pristine.rs` | None | `./cargo_full test -p vyre-primitives --test dominator_tree_pristine` |
 | `test` | `dominator_tree_pristine` | `vyre-primitives/tests/dominator_tree_pristine.rs` | `cpu-parity`, `graph` | `./cargo_full test -p vyre-primitives --test dominator_tree_pristine` |
 | `test` | `dominator_tree_proptest` | `vyre-primitives/tests/dominator_tree_proptest.rs` | None | `./cargo_full test -p vyre-primitives --test dominator_tree_proptest` |

@@ -736,20 +736,24 @@ const DEAD_EXEMPTION_FIX: &str =
 /// An exemption is a rule that a named subject is judged elsewhere: a phase of a
 /// larger composition, a declared pure-IR leaf, an op whose shape comes from a
 /// shared builder, a pair whose shapes were read side by side and judged
-/// distinct, or a directory that is plumbing rather than a dialect. A row naming
-/// something that was renamed or deleted stops exempting anything, and nothing
-/// says so: the list keeps its length, the audit keeps passing, and a reader
-/// takes the row as evidence the subject is covered. Two rows were already in
-/// that state.
+/// distinct, a directory that is plumbing rather than a dialect, or a leaf-stem
+/// family that is acknowledged rather than renamed. A row naming something that
+/// was renamed or deleted stops exempting anything, and nothing says so: the
+/// list keeps its length, the audit keeps passing, and a reader takes the row as
+/// evidence the subject is covered. Two rows were already in that state when the
+/// check was written, and six more turned up when the plumbing directories and
+/// the leaf-stem families came under the same rule.
+///
+/// A stem row is held to the condition it suppresses rather than to the mere
+/// existence of the stem, because a family that shrank below the collision
+/// threshold no longer needs acknowledging.
 fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
     let libs_src = xtask::checkout::checkout_root().join("vyre-libs").join("src");
-    for dir in SHARED_PLUMBING_DIRS {
-        if !libs_src.join(dir).is_dir() {
-            report.find(Finding::new(
-                format!("no directory `vyre-libs/src/{dir}` answers to the shared-plumbing row"),
-                "delete the row: a plumbing row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
-            ));
-        }
+    for dir in dead_plumbing_rows(&libs_src) {
+        report.find(Finding::new(
+            format!("no directory `vyre-libs/src/{dir}` answers to the shared-plumbing row"),
+            "delete the row: a plumbing row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
+        ));
     }
     for marker in PHASE_MARKERS {
         if !ops.iter().any(|op| op.id.contains(marker)) {
@@ -783,6 +787,19 @@ fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
                     DEAD_EXEMPTION_FIX,
                 ));
             }
+        }
+    }
+    let colliding = colliding_stems(ops);
+    for stem in KNOWN_STEM_FAMILIES {
+        if !colliding.contains_key(stem) {
+            report.find(Finding::new(
+                format!(
+                    "the stem allowlist row `{stem}` suppresses nothing: fewer than \
+                     {STEM_COLLISION_MIN} ops share it, or they already live under a `{stem}` \
+                     namespace segment"
+                ),
+                DEAD_EXEMPTION_FIX,
+            ));
         }
     }
 }
@@ -1038,11 +1055,8 @@ fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpInfo]) -> us
 /// collapsing them onto the stricter rule is open work.
 fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
     report.note("[4/10] Cross-dialect reach-through (a dialect names a sibling edge in vyre_libs::prelude, not from inside its own module tree)".to_string());
-    let libs_root = Some(
-        xtask::checkout::checkout_root()
-            .join("vyre-libs")
-            .join("src"),
-    );
+    let checkout = xtask::checkout::checkout_root();
+    let libs_root = Some(checkout.join("vyre-libs").join("src"));
     let Some(libs_root) = libs_root.filter(|p| p.is_dir()) else {
         report.find(violation(
             "  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root."
@@ -1093,10 +1107,13 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
                     continue;
                 }
             };
+            let relative = path
+                .strip_prefix(&checkout)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
             let Ok(file) = syn::parse_file(&text) else {
-                report.find(violation(format!("  ✗ {}/{}: failed to parse Rust source for reach-through audit. Fix: keep checked-in Rust source syntactically parseable.",
-                    dialect_name,
-                    path.file_name().and_then(|n| n.to_str()).unwrap_or("?"))));
+                report.find(violation(format!("  ✗ {relative}: failed to parse Rust source for reach-through audit. Fix: keep checked-in Rust source syntactically parseable.")));
                 flagged += 1;
                 continue;
             };
@@ -1111,12 +1128,10 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
                     }
                     if use_path.imports_dialect(other_name) {
                         report.find(violation(format!(
-                            "  ✗ {}/{} line {}: `{}` → reaches into the `{other_name}` dialect. \
-                             Fix: re-export the item from vyre-libs/src/prelude.rs and import it \
-                             as `crate::prelude::…`, or hoist the shared piece into \
+                            "  ✗ {relative} line {}: `{}` → reaches into the `{other_name}` \
+                             dialect. Fix: re-export the item from vyre-libs/src/prelude.rs and \
+                             import it as `crate::prelude::…`, or hoist the shared piece into \
                              vyre-primitives.",
-                            dialect_name,
-                            path.file_name().and_then(|n| n.to_str()).unwrap_or("?"),
                             use_path.line,
                             use_path.segments.join("::")
                         )));
@@ -1138,17 +1153,23 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
 /// Directories under `vyre-libs/src` that are shared plumbing rather than a
 /// dialect, so a dialect importing from one is not a cross-dialect edge.
 ///
-/// `check_0_every_exemption_is_live` holds each row to an existing directory: a
-/// row naming a directory that was renamed or removed exempts nothing, and the
-/// list still reads as if it did.
-const SHARED_PLUMBING_DIRS: [&str; 6] = [
-    "region",
-    "tensor_ref",
-    "builder",
-    "buffer_names",
-    "descriptor",
-    "test_support",
-];
+/// Only a directory can appear here, because `list_dialect_dirs` reads the
+/// dialect set from the directories under `vyre-libs/src` and a single-file
+/// module is never in that set to begin with. Five rows named single-file
+/// modules or a path that no longer exists and were removed for that reason:
+/// `region`, `tensor_ref`, `buffer_names`, `descriptor` and `test_support`.
+/// `check_0_every_exemption_is_live` holds each remaining row to an existing
+/// directory, so the next row that goes the same way fails instead of reading
+/// as coverage.
+const SHARED_PLUMBING_DIRS: [&str; 1] = ["builder"];
+
+/// Shared-plumbing rows that name no directory under `libs_src`.
+fn dead_plumbing_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
+    SHARED_PLUMBING_DIRS
+        .into_iter()
+        .filter(|dir| !libs_src.join(dir).is_dir())
+        .collect()
+}
 
 fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathBuf>, Vec<String>) {
     let read_dir = match std::fs::read_dir(root) {
@@ -1459,31 +1480,47 @@ fn check_8_composability(report: &mut Report, ops: &[OpInfo]) -> usize {
 
 const STEM_COLLISION_MIN: usize = 4;
 
+/// Stems whose family is acknowledged rather than renamed.
+///
+/// A row belongs here when the family is real and cannot be moved into a
+/// namespace segment without renaming an op id that is already registered.
+/// `dominator` is that case: `dominator_frontier` and `dominator_tree` predate
+/// the two phase operations the fixpoint now composes, and `dominator::tree`
+/// would rename both.
+///
+/// `check_0_every_exemption_is_live` holds each row to a stem that would be
+/// reported without it, so a row outliving its family fails instead of reading
+/// as a reviewed decision. The `opt` row was already dead when that rule landed.
+const KNOWN_STEM_FAMILIES: [&str; 14] = [
+    "and",
+    "ast",
+    "attention",
+    "c",
+    "c11",
+    "csr",
+    "dominator",
+    "i4x8",
+    "int4",
+    "linear",
+    "matmul",
+    "python312",
+    "quest",
+    "workgroup",
+];
+
 fn is_known_stem_family(stem: &str) -> bool {
-    matches!(
-        stem,
-        "and"
-            | "ast"
-            | "attention"
-            | "c"
-            | "c11"
-            | "csr"
-            | "i4x8"
-            | "int4"
-            | "linear"
-            | "matmul"
-            | "opt"
-            | "python312"
-            | "quest"
-            | "workgroup"
-    )
+    KNOWN_STEM_FAMILIES.contains(&stem)
 }
 
-fn check_9_name_stem_collision(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note(format!(
-        "[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)"
-    ));
-    let mut buckets: HashMap<String, Vec<String>> = HashMap::new();
+/// Stems the collision rule would report if the allowlist were empty.
+///
+/// A stem qualifies when at least `STEM_COLLISION_MIN` ops share it and they do
+/// not already live under a namespace segment of that name, which is the family
+/// being explicit by construction. Both the rule and the liveness check read
+/// this, so an allowlist row is judged against the condition it suppresses
+/// rather than against a second copy of it.
+fn colliding_stems(ops: &[OpInfo]) -> BTreeMap<String, Vec<String>> {
+    let mut buckets: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for op in ops {
         if is_internal_phase_op(&op.id) {
             continue;
@@ -1498,24 +1535,22 @@ fn check_9_name_stem_collision(report: &mut Report, ops: &[OpInfo]) -> usize {
             .or_default()
             .push(op.id.clone());
     }
+    buckets.retain(|stem, ids| {
+        ids.len() >= STEM_COLLISION_MIN
+            && !ids
+                .iter()
+                .all(|id| id.contains(&format!("::{stem}::")) || id.ends_with(&format!("::{stem}")))
+    });
+    buckets
+}
+
+fn check_9_name_stem_collision(report: &mut Report, ops: &[OpInfo]) -> usize {
+    report.note(format!(
+        "[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)"
+    ));
     let mut flagged = 0usize;
-    let mut keys: Vec<&String> = buckets.keys().collect();
-    keys.sort();
-    for stem in keys {
-        let ids = &buckets[stem];
-        if ids.len() < STEM_COLLISION_MIN {
-            continue;
-        }
-        if is_known_stem_family(stem) {
-            continue;
-        }
-        // Skip when every op in the stem already lives in its own
-        // namespace segment  -  that means the family is already
-        // explicit (e.g. matmul::tiled, matmul::strassen).
-        if ids
-            .iter()
-            .all(|id| id.contains(&format!("::{stem}::")) || id.ends_with(&format!("::{stem}")))
-        {
+    for (stem, ids) in colliding_stems(ops) {
+        if is_known_stem_family(&stem) {
             continue;
         }
         report.find(violation(format!("  ⚠ {} ops share leaf-stem `{stem}`: {}. Fix: namespace the family (e.g. `{stem}::tiled`, `{stem}::strassen`), merge near-duplicates, or add a stem allowlist entry.",
@@ -1987,6 +2022,43 @@ mod dedup_contract_tests {
         assert_eq!(
             resolved.ok(),
             Some(PathBuf::from("release/evidence/dedup/lego-duplicates.json"))
+        );
+    }
+
+    /// WHY: the shared-plumbing list is consumed by a directory filter, so a row
+    /// naming a single-file module or a path that was removed is skipped by
+    /// nothing and still reads as a reviewed exemption. Five of the six rows were
+    /// in that state. The check runs against a directory it is handed rather than
+    /// the checkout, so both directions are proved: a row with a directory behind
+    /// it is live, and one without it is reported.
+    ///
+    /// What this does not catch: a directory that exists but is a dialect rather
+    /// than plumbing. That judgement is the reviewer's and the row carries it.
+    #[test]
+    fn a_plumbing_row_without_a_directory_behind_it_is_dead() {
+        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+
+        assert_eq!(
+            dead_plumbing_rows(libs_src.path()),
+            SHARED_PLUMBING_DIRS.to_vec(),
+            "every row is dead against a tree that holds none of them"
+        );
+
+        for dir in SHARED_PLUMBING_DIRS {
+            std::fs::create_dir(libs_src.path().join(dir)).expect("plumbing directory");
+        }
+        assert_eq!(
+            dead_plumbing_rows(libs_src.path()),
+            Vec::<&str>::new(),
+            "no row is dead once every one of them names a directory"
+        );
+
+        let first = SHARED_PLUMBING_DIRS[0];
+        std::fs::remove_dir(libs_src.path().join(first)).expect("remove one plumbing directory");
+        assert_eq!(
+            dead_plumbing_rows(libs_src.path()),
+            vec![first],
+            "the row whose directory went away is the one reported"
         );
     }
 }

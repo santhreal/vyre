@@ -1,9 +1,9 @@
 {
   "schema_version": 4,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 363,
+  "operation_count": 365,
   "tier_counts": {
-    "intrinsic": 165,
+    "intrinsic": 167,
     "libs": 198
   },
   "category_counts": {
@@ -12,7 +12,7 @@
     "decode": 9,
     "fixpoint": 2,
     "geom": 2,
-    "graph": 25,
+    "graph": 27,
     "hardware": 9,
     "hash": 10,
     "label": 1,
@@ -24082,13 +24082,198 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::dominator_tree_recompute_depth",
-          "registered": false
+          "operation": "vyre-primitives::graph::dominator_tree_depth",
+          "registered": true
         },
         {
           "depth": 1,
-          "operation": "anonymous::dominator_tree_intersect_predecessors",
-          "registered": false
+          "operation": "vyre-primitives::graph::dominator_tree_intersect_step",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-primitives::graph::dominator_tree_depth",
+      "tier": "intrinsic",
+      "category": "graph",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "idom",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "dt_depth",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "graph",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::graph::dominator_tree_depth",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-primitives::graph::dominator_tree_intersect_step",
+      "tier": "intrinsic",
+      "category": "graph",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "pred_offsets",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 5,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "pred_targets",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "idom",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "dt_depth",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "dt_changed",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "graph",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::graph::dominator_tree_intersect_step",
+          "registered": true
         }
       ]
     },
