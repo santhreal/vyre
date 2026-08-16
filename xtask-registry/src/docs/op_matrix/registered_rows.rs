@@ -33,6 +33,18 @@ pub(super) fn registered_records(problems: &mut Vec<String>) -> Vec<OpRecord> {
         .collect()
 }
 
+/// Every op id the live registry declares.
+///
+/// The matrix is checked against this rather than against the rows it just
+/// built, so a row that names something the registry never registered is a
+/// blocker instead of an unremarkable line in a generated document.
+pub(super) fn live_operation_ids() -> BTreeSet<&'static str> {
+    vyre_registry_link::operation::live_operation_registry()
+        .iter()
+        .map(|entry| entry.id)
+        .collect()
+}
+
 fn push_registered(
     ids: &mut BTreeMap<String, BTreeSet<String>>,
     id: &str,

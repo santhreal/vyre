@@ -126,9 +126,21 @@ fn build() -> Result<String, String> {
     Ok(output)
 }
 
+/// `build` renders the document without touching the filesystem and is private
+/// to this gate, so no integration test can render one to check.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry;
+
+    /// Every catalog id the rendered document does not carry a row for.
+    fn missing_ids<'a>(document: &str, catalog: &'a [OptimizationCatalogEntry]) -> Vec<&'a str> {
+        catalog
+            .iter()
+            .map(|entry| entry.name)
+            .filter(|name| !document.contains(&format!("id = \"{name}\"\n")))
+            .collect()
+    }
 
     /// WHY: a hand-maintained pass document previously omitted newly registered passes.
     /// This contract derives every executable row from the live inventory and every
@@ -142,13 +154,32 @@ mod tests {
             .filter(|line| line.trim() == "[[pass]]")
             .count();
         assert_eq!(row_count, catalog.len());
-        for entry in catalog {
-            assert!(
-                document.contains(&format!("id = \"{}\"", entry.name)),
-                "missing optimizer catalog row {}",
-                entry.name
-            );
-        }
+        assert_eq!(missing_ids(&document, &catalog), Vec::<&str>::new());
+    }
+
+    /// WHY: a coverage check that cannot go red is worse than none. This drops one
+    /// rendered row and proves the check names exactly the id that left. The
+    /// strength-reduction rules are the case that motivated it: they are IR rewrites
+    /// with no op registration, so this document is the only artifact that names them.
+    #[test]
+    fn a_dropped_supplemental_rule_row_is_reported_missing() {
+        let catalog = optimization_catalog().expect("live optimizer catalog must build");
+        let document = build().expect("optimizer reference must render");
+        let dropped = catalog
+            .iter()
+            .map(|entry| entry.name)
+            .find(|name| name.starts_with("strength_reduce."))
+            .expect("the catalog must name the strength reduction rules");
+        let start = document
+            .find(&format!("\n[[pass]]\nid = \"{dropped}\"\n"))
+            .expect("the rendered document must carry that row");
+        let tail = &document[start + 1..];
+        let end = tail
+            .find("\n[[pass]]\n")
+            .map_or(document.len(), |offset| start + 1 + offset);
+        let mutilated = format!("{}{}", &document[..start], &document[end..]);
+
+        assert_eq!(missing_ids(&mutilated, &catalog), vec![dropped]);
     }
 
     /// WHY: dependency and invalidation metadata must remain visible when a pass moves.

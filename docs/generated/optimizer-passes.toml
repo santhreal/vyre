@@ -1864,6 +1864,51 @@ proof = "owning pass differential and invariant fixtures"
 benchmark = "foundation.optimizer.scalar.rules"
 
 [[pass]]
+id = "strength_reduce.div_constant_multiply_shift"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.mod_power_of_two_mask"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.mod_constant_subtract_quotient"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
 id = "loop.trip_zero_eliminate"
 kind = "supplemental rule"
 owner = "vyre-foundation-rules"
