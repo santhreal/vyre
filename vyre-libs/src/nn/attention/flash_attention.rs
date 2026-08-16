@@ -39,21 +39,21 @@
 //! exactly once instead of three times. The per-row online-state
 //! (`m, l, o[d]`) is held in workgroup-shared scratch.
 //!
-//! ## Implementation note
+//! ## Schedule
 //!
-//! This builder ships the per-row scalar online-softmax shape (one
-//! invocation per row, scalar k-loop). The fully tiled variant that
-//! parallelises the K-block scan + uses cooperative-warp reductions
-//! over `d` lanes lands on top of this substrate; the algorithmic
-//! correctness gate is the per-row reference.
+//! This builder selects the scalar plan: one invocation per query row, one key
+//! per tile. The recurrence itself belongs to
+//! [`online_softmax_attention`](super::tiled_online_softmax::online_softmax_attention),
+//! which [`flash_attention_2`](super::flash_attention_2::flash_attention_2)
+//! composes at a cooperative tile width. Scalar and tiled are one kernel under
+//! two plans, so a stability fix cannot reach one and miss the other.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{DataType, Program};
 
 use super::planner::plan_flash_attention_scalar;
-use super::scaled_dot_product::{attention_score_nodes, direct_attention_program};
-use crate::nn::attention_stability::{bounded_exp_arg, positive_denominator};
-use crate::nn::f32_stability::flush_tiny;
+use super::scaled_dot_product::direct_attention_program;
+use super::tiled_online_softmax::compose_online_softmax_attention;
 
 const OP_ID: &str = "vyre-libs::nn::flash_attention";
 
@@ -84,146 +84,7 @@ pub fn flash_attention(
         return Ok(program);
     }
     let plan = plan_flash_attention_scalar(s, d)?;
-    let elements = plan.logical_elements;
-    let scratch_elements = plan.o_acc_scratch_elements;
-    let scale = 1.0_f32 / (d as f32).sqrt();
-    let scale_expr = Expr::f32(scale);
-    let scratch_index = |t: Expr| Expr::add(Expr::mul(Expr::var("flash_local"), Expr::u32(d)), t);
-
-    // Per-row online-softmax body. `row` is the query row index.
-    let mut per_row = vec![
-        // Initial state: m = -INF (use f32::MIN as the finite sentinel
-        // the rest of the codebase already uses), l = 0.
-        Node::let_bind("flash_m", Expr::f32(f32::MIN)),
-        Node::let_bind("flash_l", Expr::f32(0.0)),
-        // For each j in [0, s) update (m, l, o). Wrapped in a Region
-        // marked with `source_region: Some(...)` so the structural
-        // discipline gate treats the j/k_idx/t loop nest as a child
-        // composition (`flash_attention_row_accumulate`) and stops
-        // counting nodes/loops once it descends past the boundary.
-        Node::loop_for("j", Expr::u32(0), Expr::u32(s), {
-            // The clamp the shared score owner applies is load-bearing here:
-            // an overflowing dot product would make flash_m_new infinite,
-            // then `score - flash_m_new` NaN, and poison the whole row. A NaN
-            // INPUT still propagates, which is the kernel's contract.
-            let mut per_j = attention_score_nodes(q, k, d, scale_expr.clone());
-            per_j.extend([
-                // m_new = max(m, score)
-                Node::let_bind(
-                    "flash_m_new",
-                    Expr::select(
-                        Expr::gt(Expr::var("score"), Expr::var("flash_m")),
-                        Expr::var("score"),
-                        Expr::var("flash_m"),
-                    ),
-                ),
-                // rescale = exp(m - m_new)  -  clamped to [0, 1]
-                Node::let_bind(
-                    "flash_rescale",
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(bounded_exp_arg(Expr::sub(
-                            Expr::var("flash_m"),
-                            Expr::var("flash_m_new"),
-                        ))),
-                    },
-                ),
-                // probability = exp(score - m_new)
-                Node::let_bind(
-                    "flash_prob",
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(bounded_exp_arg(Expr::sub(
-                            Expr::var("score"),
-                            Expr::var("flash_m_new"),
-                        ))),
-                    },
-                ),
-                // l_new = rescale * l + prob
-                Node::let_bind(
-                    "flash_l_new",
-                    Expr::add(
-                        Expr::mul(Expr::var("flash_rescale"), Expr::var("flash_l")),
-                        Expr::var("flash_prob"),
-                    ),
-                ),
-                // o[t] = rescale * o[t] + prob * V[j, t]
-                Node::loop_for(
-                    "t",
-                    Expr::u32(0),
-                    Expr::u32(d),
-                    vec![Node::store(
-                        "flash_o",
-                        scratch_index(Expr::var("t")),
-                        Expr::add(
-                            Expr::mul(
-                                Expr::var("flash_rescale"),
-                                Expr::select(
-                                    Expr::eq(Expr::var("j"), Expr::u32(0)),
-                                    Expr::f32(0.0),
-                                    Expr::load("flash_o", scratch_index(Expr::var("t"))),
-                                ),
-                            ),
-                            Expr::mul(
-                                Expr::var("flash_prob"),
-                                Expr::load(
-                                    v,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("j"), Expr::u32(d)),
-                                        Expr::var("t"),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )],
-                ),
-                Node::assign("flash_m", Expr::var("flash_m_new")),
-                Node::assign("flash_l", Expr::var("flash_l_new")),
-            ]);
-            per_j
-        }),
-        // Final: out[row, t] = o[t] / max(l, MIN_POSITIVE)
-        Node::let_bind("flash_denom", positive_denominator(Expr::var("flash_l"))),
-        Node::loop_for(
-            "out_t",
-            Expr::u32(0),
-            Expr::u32(d),
-            vec![Node::store(
-                out,
-                Expr::add(
-                    Expr::mul(Expr::var("row"), Expr::u32(d)),
-                    Expr::var("out_t"),
-                ),
-                flush_tiny(Expr::div(
-                    Expr::load("flash_o", scratch_index(Expr::var("out_t"))),
-                    Expr::var("flash_denom"),
-                )),
-            )],
-        ),
-    ];
-
-    // Wrap the per-row body in `let row = InvocationId.x; if row < s
-    // { body }`. One invocation per row.
-    let mut body_with_guard = vec![
-        Node::let_bind("row", Expr::InvocationId { axis: 0 }),
-        Node::let_bind("flash_local", Expr::LocalId { axis: 0 }),
-    ];
-    body_with_guard.push(Node::if_then(
-        Expr::lt(Expr::var("row"), Expr::u32(s)),
-        std::mem::take(&mut per_row),
-    ));
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::storage(v, 2, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::workgroup("flash_o", scratch_elements, DataType::F32),
-            BufferDecl::output(out, 3, DataType::F32).with_count(elements),
-        ],
-        [plan.workgroup_lanes, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body_with_guard)],
-    ))
+    Ok(compose_online_softmax_attention(OP_ID, q, k, v, out, &plan))
 }
 
 inventory::submit! {

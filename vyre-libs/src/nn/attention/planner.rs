@@ -102,6 +102,10 @@ pub fn plan_flash_attention_scalar(
         head_dim,
         "flash_attention q/o scratch",
     )?;
+    // One score per lane. The scalar kernel is the shared online-softmax core
+    // at `tile_size = 1`, and that core stages a tile's scores in workgroup
+    // scratch, so the scalar tile is one element wide rather than absent.
+    let score_scratch_elements = SCALAR_ONLINE_WORKGROUP_LANES;
     let memory_traffic = scalar_memory_traffic(seq_len, head_dim, q_scratch_elements)?;
     Ok(FlashAttentionWorkPlan {
         kernel: FlashAttentionKernelKind::ScalarOnline,
@@ -119,7 +123,7 @@ pub fn plan_flash_attention_scalar(
         warps_per_block: SCALAR_ONLINE_WORKGROUP_LANES / WARP_LANES,
         logical_elements,
         q_scratch_elements,
-        score_scratch_elements: 0,
+        score_scratch_elements,
         o_acc_scratch_elements: q_scratch_elements,
         split_reduce_scratch_elements: 0,
         bench_metrics: FlashAttentionBenchMetrics {
@@ -374,27 +378,55 @@ mod tests {
         assert!(tiled.bench_metrics.non_matmul_flops < scalar.bench_metrics.non_matmul_flops);
     }
 
+    /// Both entry points take their whole scratch table from the plan, and
+    /// both spell it the same way, because both build the same kernel. The
+    /// scalar row is the tiled row at `tile_size = 1`: one score per lane, not
+    /// no score buffer at all.
     #[test]
     fn shared_planner_feeds_flash_attention_builders() {
+        let scratch = |program: &vyre_foundation::ir::Program, name: &str| {
+            program
+                .buffers()
+                .iter()
+                .find(|buffer| buffer.name() == name)
+                .unwrap_or_else(|| panic!("Fix: the kernel must declare `{name}` scratch"))
+                .count()
+        };
+
         let scalar = plan_flash_attention_scalar(9, 7).expect("scalar plan");
         let scalar_program =
             super::super::flash_attention::flash_attention("q", "k", "v", "out", 9, 7)
                 .expect("flash_attention build");
         assert_eq!(scalar_program.workgroup_size()[0], scalar.workgroup_lanes);
-        assert!(scalar_program
-            .buffers()
-            .iter()
-            .any(|buffer| buffer.name() == "flash_o"
-                && buffer.count() == scalar.o_acc_scratch_elements));
+        assert_eq!(
+            scratch(&scalar_program, "o_acc"),
+            scalar.o_acc_scratch_elements
+        );
+        assert_eq!(
+            scratch(&scalar_program, "q_scratch"),
+            scalar.q_scratch_elements
+        );
+        assert_eq!(
+            scratch(&scalar_program, "score_tile"),
+            scalar.score_scratch_elements
+        );
+        assert_eq!(scalar.tile_size, 1);
 
         let tiled = plan_flash_attention_tiled(8, 16, 4).expect("tiled plan");
         let tiled_program =
             super::super::flash_attention_2::flash_attention_2("q", "k", "v", "out", 8, 16, 4);
         assert_eq!(tiled_program.workgroup_size()[0], tiled.workgroup_lanes);
-        assert!(tiled_program
-            .buffers()
-            .iter()
-            .any(|buffer| buffer.name() == "score_tile"
-                && buffer.count() == tiled.score_scratch_elements));
+        assert_eq!(
+            scratch(&tiled_program, "o_acc"),
+            tiled.o_acc_scratch_elements
+        );
+        assert_eq!(
+            scratch(&tiled_program, "q_scratch"),
+            tiled.q_scratch_elements
+        );
+        assert_eq!(
+            scratch(&tiled_program, "score_tile"),
+            tiled.score_scratch_elements
+        );
     }
 }

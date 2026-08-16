@@ -13,11 +13,11 @@ pub(crate) mod qk_gain;
 pub(crate) mod quest;
 mod scaled_dot_product;
 mod softmax;
-mod tiled_online_softmax;
+pub mod tiled_online_softmax;
 pub(crate) mod turboquant;
 
 pub use flash_attention::flash_attention;
-pub use flash_attention_2::{flash_attention_2, flash_attention_2_reference};
+pub use flash_attention_2::flash_attention_2;
 pub use gated_delta::{recurrent_gated_delta, RecurrentGatedDeltaError};
 pub use gated_delta_chunked::chunked_gated_delta;
 pub use gated_delta_spec::GatedDeltaSpec;

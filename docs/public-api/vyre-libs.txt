@@ -809,6 +809,7 @@ pub const vyre_libs::nfa::subgroup_nfa::NAME_TRANSITION: &str
 pub const vyre_libs::nfa::subgroup_nfa::OP_ID: &str
 pub const vyre_libs::nn::attention::FLASH_ATTENTION_OUTPUT_TOLERANCE_ABS: f32
 pub const vyre_libs::nn::attention::FLASH_ATTENTION_SEQUENCE_PARALLEL_TARGET_TILES_PER_SPLIT: u32
+pub const vyre_libs::nn::attention::tiled_online_softmax::OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_MAX_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_SUM_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_WRITE_PASS_OP_ID: &str
@@ -2576,7 +2577,6 @@ pub fn vyre_libs::nn::attention::attention_token_to_head(spec: vyre_libs::nn::at
 pub fn vyre_libs::nn::attention::chunked_gated_delta(spec: &vyre_libs::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>
 pub fn vyre_libs::nn::attention::flash_attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::flash_attention_2(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32, tile_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::nn::attention::flash_attention_2_reference(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::gqa_attention(q: &str, k: &str, v_buf: &str, output: &str, n_q_heads: u32, n_kv_heads: u32, seq_len: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal_typed(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -2593,6 +2593,7 @@ pub fn vyre_libs::nn::attention::quest_paging(query: &str, page_metadata: &str, 
 pub fn vyre_libs::nn::attention::recurrent_gated_delta(spec: &vyre_libs::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>
 pub fn vyre_libs::nn::attention::softmax(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::softmax_reference(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::nn::attention::tiled_online_softmax::online_softmax_attention(q: &str, k: &str, v: &str, out: &str, plan: &vyre_libs::nn::attention::FlashAttentionWorkPlan) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::try_attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::nn::attention::turboquant_attention(q: &str, k_packed: &str, v_packed: &str, out: &str, seq_len: u32, d_head: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention_passes::attention_max_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -3667,6 +3668,7 @@ pub mod vyre_libs::nfa::subgroup_nfa
 pub mod vyre_libs::nn
 pub mod vyre_libs::nn::activation
 pub mod vyre_libs::nn::attention
+pub mod vyre_libs::nn::attention::tiled_online_softmax
 pub mod vyre_libs::nn::attention_passes
 pub mod vyre_libs::nn::attention_stability
 pub mod vyre_libs::nn::backward

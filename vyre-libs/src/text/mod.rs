@@ -48,7 +48,7 @@ pub use encoding_classify::{
     ENCODING_CLASSIFY_OP_ID, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY,
     ENC_ISO8859_1, ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
 };
-#[cfg(all(feature = "reduce", any(test, feature = "cpu-parity")))]
+#[cfg(feature = "reduce")]
 pub use line_index::line_index;
 #[cfg(all(
     feature = "reduce",
