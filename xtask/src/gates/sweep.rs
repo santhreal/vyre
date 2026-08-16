@@ -319,6 +319,13 @@ fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> 
         &names.subsets,
     ));
     failures.extend(script_failures(root, &names.scripts));
+    match crate::gates::finding_capability::failures(root, gate_names) {
+        Ok(found) => failures.extend(found),
+        Err(error) => failures.push(format!(
+            "the finding-capability check could not read the gate sources: {}. Fix: {}",
+            error.message, error.fix
+        )),
+    }
     failures
 }
 

@@ -19,6 +19,7 @@ pub mod dup_scan;
 pub mod evidence_paths;
 pub mod feature_isolation;
 pub mod file_size;
+pub mod finding_capability;
 #[cfg(test)]
 pub mod fixture_checkout;
 pub mod frozen_contract;
