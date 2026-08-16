@@ -279,7 +279,7 @@ impl BenchContext {
             .submit_host_inputs(&borrowed_inputs)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         session
-            .ordered_outputs(&completion)
+            .program_outputs(prog, &completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
     }
 
@@ -297,7 +297,7 @@ impl BenchContext {
             .submit_host_inputs(&borrowed_inputs)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         let outputs = session
-            .ordered_outputs(&completion)
+            .program_outputs(prog, &completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
@@ -325,7 +325,7 @@ impl BenchContext {
             .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         let outputs = session
-            .ordered_outputs(&completion)
+            .program_outputs(prog, &completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
