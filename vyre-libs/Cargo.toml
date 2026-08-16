@@ -133,7 +133,6 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels"]
 "parsing" = ["go-parser", "python-parser"]
 "go-parser" = []
 "python-parser" = ["parsing-kernels"]
-"test-fixtures" = []
 security = ["label", "predicate"]
 
 [dependencies]
