@@ -87,7 +87,6 @@ fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRec
         spirv: "experimental",
         release_blocking_notes: release_notes(id, tier),
         tests: test_paths(id, tier),
-        bench_targets: Vec::new(),
     };
 
     Ok(record)

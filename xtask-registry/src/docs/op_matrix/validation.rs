@@ -107,7 +107,6 @@ mod tests {
             spirv: "experimental",
             release_blocking_notes: String::new(),
             tests: vec!["vyre-foundation/tests/op.rs".to_string()],
-            bench_targets: Vec::new(),
         }
     }
 

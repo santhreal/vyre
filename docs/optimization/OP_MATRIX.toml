@@ -120,7 +120,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::and_into"
@@ -135,7 +134,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::and_not"
@@ -150,7 +148,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::and_not_into"
@@ -165,7 +162,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::any"
@@ -180,7 +176,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::clear_bit"
@@ -195,7 +190,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::contains"
@@ -210,7 +204,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::copy"
@@ -225,7 +218,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::equal"
@@ -240,7 +232,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::four_russians_apply_byte_lut"
@@ -255,7 +246,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut"
@@ -270,7 +260,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::not"
@@ -285,7 +274,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::or"
@@ -300,7 +288,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::or_into"
@@ -315,7 +302,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::popcount"
@@ -330,7 +316,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::select1_query"
@@ -345,7 +330,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::set_bit"
@@ -360,7 +344,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::stochastic_and_mul"
@@ -375,7 +358,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::subset_of"
@@ -390,7 +372,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::test_bit"
@@ -405,7 +386,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::xor"
@@ -420,7 +400,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::xor_into"
@@ -435,7 +414,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::bitset::zero"
@@ -450,7 +428,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::decode::rle_segment_lengths"
@@ -465,7 +442,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::decode::ziftsieve_literal_copy"
@@ -480,7 +456,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::fixpoint::bitset_fixpoint"
@@ -495,7 +470,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::fixpoint::persistent_fixpoint"
@@ -510,7 +484,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::geom::clifford2_geometric_product"
@@ -525,7 +498,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::geom::tfn_scalar_mix"
@@ -540,7 +512,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::csr_backward_or_changed"
@@ -555,7 +526,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::csr_backward_traverse"
@@ -570,7 +540,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::csr_forward_or_changed"
@@ -585,7 +554,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::csr_forward_traverse"
@@ -600,7 +568,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::csr_forward_traverse_excluding"
@@ -615,7 +582,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::csr_frontier_degree_sum"
@@ -630,7 +596,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::csr_queue_strided_forward_traverse"
@@ -645,7 +610,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::dominator_frontier"
@@ -660,7 +624,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::dominator_tree"
@@ -675,7 +638,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::dominator_tree_depth"
@@ -690,7 +652,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::dominator_tree_intersect_step"
@@ -705,7 +666,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::functor_apply"
@@ -720,7 +680,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::monoidal_compose"
@@ -735,7 +694,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::motif"
@@ -750,7 +708,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::path_reconstruct"
@@ -765,7 +722,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::persistent_bfs"
@@ -780,7 +736,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::persistent_bfs_step"
@@ -795,7 +750,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::scc_decompose"
@@ -810,7 +764,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::sheaf_diffusion_step"
@@ -825,7 +778,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::sum_product_evaluate"
@@ -840,7 +792,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::sum_product_evaluate_leveled"
@@ -855,7 +806,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::tensor_flow_forward"
@@ -870,7 +820,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::union_find"
@@ -885,7 +834,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::vast_walk_postorder"
@@ -900,7 +848,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::graph::vast_walk_preorder"
@@ -915,7 +862,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::bit_reverse_u32"
@@ -930,7 +876,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::fma_f32"
@@ -945,7 +890,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::inverse_sqrt_f32"
@@ -960,7 +904,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::popcount_u32"
@@ -975,7 +918,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::storage_barrier"
@@ -990,7 +932,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::subgroup_add"
@@ -1005,7 +946,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::subgroup_ballot"
@@ -1020,7 +960,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::subgroup_shuffle"
@@ -1035,7 +974,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hardware::workgroup_barrier"
@@ -1050,7 +988,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::adler32"
@@ -1065,7 +1002,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::blake3_g"
@@ -1080,7 +1016,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::blake3_round"
@@ -1095,7 +1030,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::crc32"
@@ -1110,7 +1044,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::fnv1a32"
@@ -1125,7 +1058,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::fnv1a64"
@@ -1140,7 +1072,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::multi_hash"
@@ -1155,7 +1086,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::ntt_butterfly_stage"
@@ -1170,7 +1100,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::hash::sparse_fft_bin_hash"
@@ -1185,7 +1114,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::label::resolve_family"
@@ -1200,7 +1128,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::matching::bracket_match"
@@ -1215,7 +1142,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::amg_jacobi_step"
@@ -1230,7 +1156,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::amg_v_cycle"
@@ -1245,7 +1170,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::amg_v_cycle::v_cycle_phase"
@@ -1260,7 +1184,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::bellman_shortest_path"
@@ -1275,7 +1198,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::bhattacharyya_coefficient"
@@ -1290,7 +1212,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::bigint_add_carry"
@@ -1305,7 +1226,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::conformal_threshold"
@@ -1320,7 +1240,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::conv1d"
@@ -1335,7 +1254,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::dot_partial"
@@ -1350,7 +1268,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::eigenvector_column_sign"
@@ -1365,7 +1282,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::gaussian_rdp_step"
@@ -1380,7 +1296,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::givens_rotate_pair"
@@ -1395,7 +1310,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::hensel_lift_step"
@@ -1410,7 +1324,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::iht_threshold"
@@ -1425,7 +1338,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::interval_merge"
@@ -1440,7 +1352,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::jacobi_apply_rotation"
@@ -1455,7 +1366,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::matrix_diagonal_extract"
@@ -1470,7 +1380,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::matrix_identity_fill"
@@ -1485,7 +1394,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::mori_zwanzig_project_step"
@@ -1500,7 +1408,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::mp_edge_clip"
@@ -1515,7 +1422,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::newton_schulz_poly5_f32"
@@ -1530,7 +1436,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::qsvt_block_encode"
@@ -1545,7 +1450,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::quantized::i4x8_batched_matmul_f32_scaled"
@@ -1560,7 +1464,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled"
@@ -1575,7 +1478,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::quantized::i4x8_batched_matvec_f32_scaled"
@@ -1590,7 +1492,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::quantized::i4x8_dot_f32_scaled"
@@ -1605,7 +1506,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::quantized::i4x8_dot_i32"
@@ -1620,7 +1520,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled"
@@ -1635,7 +1534,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::quantized::unpack_i4x8"
@@ -1650,7 +1548,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::randomized_projection_step"
@@ -1665,7 +1562,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::scallop_join"
@@ -1680,7 +1576,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::semiring_gemm"
@@ -1695,7 +1590,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::sheaf_laplacian_eigenvalue"
@@ -1710,7 +1604,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase"
@@ -1725,7 +1618,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::sinkhorn_iterate"
@@ -1740,7 +1632,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::sinkhorn_scale"
@@ -1755,7 +1646,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::softmax_step"
@@ -1770,7 +1660,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::symmetric_eigen_jacobi"
@@ -1785,7 +1674,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::tensor_network_pair_contract"
@@ -1800,7 +1688,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::math::tensor_train_decompose"
@@ -1815,7 +1702,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::nn::attention_max_pass"
@@ -1830,7 +1716,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::nn::attention_sum_pass"
@@ -1845,7 +1730,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::nn::attention_write_pass"
@@ -1860,7 +1744,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::nn::quest_score_pages"
@@ -1875,7 +1758,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::nn::quest_select_top_k"
@@ -1890,7 +1772,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::nn::quest_zero_fill"
@@ -1905,7 +1786,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::opt::homotopy_euler_predictor"
@@ -1920,7 +1800,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::parsing::ast_cse_structural_hash"
@@ -1935,7 +1814,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::parsing::core_delimiter_match"
@@ -1950,7 +1828,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::parsing::line_splice_classify"
@@ -1965,7 +1842,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::parsing::planar_rewrite_schedule"
@@ -1980,7 +1856,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::parsing::ssa_dominance_scan"
@@ -1995,7 +1870,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::parsing::whitespace_classify_word"
@@ -2010,7 +1884,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::arg_of"
@@ -2025,7 +1898,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::call_to"
@@ -2040,7 +1912,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::edge"
@@ -2055,7 +1926,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::in_file"
@@ -2070,7 +1940,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::in_function"
@@ -2085,7 +1954,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::in_package"
@@ -2100,7 +1968,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::literal_of"
@@ -2115,7 +1982,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::node_kind_eq"
@@ -2130,7 +1996,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::return_value_of"
@@ -2145,7 +2010,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::predicate::size_argument_of"
@@ -2160,7 +2024,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::all"
@@ -2175,7 +2038,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::any"
@@ -2190,7 +2052,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::count"
@@ -2205,7 +2066,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::count_non_zero"
@@ -2220,7 +2080,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::gather"
@@ -2235,7 +2094,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::histogram"
@@ -2250,7 +2108,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::max"
@@ -2265,7 +2122,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::min"
@@ -2280,7 +2136,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum"
@@ -2295,7 +2150,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::radix_sort"
@@ -2310,7 +2164,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::range_counts_u32"
@@ -2325,7 +2178,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::scatter"
@@ -2340,7 +2192,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::segment_reduce_sum"
@@ -2355,7 +2206,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::sum"
@@ -2370,7 +2220,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::workgroup_any_u32"
@@ -2385,7 +2234,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::workgroup_max_f32"
@@ -2400,7 +2248,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::workgroup_sum_f32"
@@ -2415,7 +2262,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::reduce::workgroup_sum_u32"
@@ -2430,7 +2276,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::text::byte_histogram_256"
@@ -2445,7 +2290,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::text::char_class"
@@ -2460,7 +2304,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::text::encoding_classify"
@@ -2475,7 +2318,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::text::line_index"
@@ -2490,7 +2332,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::text::utf8_shape_counts"
@@ -2505,7 +2346,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::text::utf8_validate"
@@ -2520,7 +2360,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::vfs::resolve"
@@ -2535,7 +2374,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-primitives::visual::packed_rgba_map"
@@ -2550,7 +2388,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
 tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::builder::indexed_map"
@@ -2565,7 +2402,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::builder::strided_accumulate"
@@ -2580,7 +2416,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::decode::base64"
@@ -2595,7 +2430,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::decode::encodex"
@@ -2610,7 +2444,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::decode::hex"
@@ -2625,7 +2458,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::decode::inflate_stored_block"
@@ -2640,7 +2472,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::graph::ast_walk_postorder"
@@ -2655,7 +2486,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::graph::ast_walk_preorder"
@@ -2670,7 +2500,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::hash::blake3_compress"
@@ -2685,7 +2514,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::logical::nand"
@@ -2700,7 +2528,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::logical::nor"
@@ -2715,7 +2542,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::aho_corasick"
@@ -2730,7 +2556,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::compact_hits"
@@ -2745,7 +2570,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::cooperative_dfa"
@@ -2760,7 +2584,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::emit_hit"
@@ -2775,7 +2598,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::algebra::bool_semiring_matmul"
@@ -2790,7 +2612,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::algebra::join"
@@ -2805,7 +2626,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::algebra::meet"
@@ -2820,7 +2640,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::algebra::minplus_mul"
@@ -2835,7 +2654,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::algebra::sketch_mix"
@@ -2850,7 +2668,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_add_u32"
@@ -2865,7 +2682,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_and_u32"
@@ -2880,7 +2696,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_compare_exchange_u32"
@@ -2895,7 +2710,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_exchange_u32"
@@ -2910,7 +2724,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_max_u32"
@@ -2925,7 +2738,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_min_u32"
@@ -2940,7 +2752,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_or_u32"
@@ -2955,7 +2766,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_xor_u32"
@@ -2970,7 +2780,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::atomic::lru_update_u32"
@@ -2985,7 +2794,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::avg_floor"
@@ -3000,7 +2808,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::broadcast"
@@ -3015,7 +2822,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::clamp_u32"
@@ -3030,7 +2836,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::conv::conv2d_3x3_direct"
@@ -3045,7 +2850,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::conv::im2col_3x3"
@@ -3060,7 +2864,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::dot"
@@ -3075,7 +2878,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::fft::fft4_complex"
@@ -3090,7 +2892,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::fft::fft_convolve_circular_complex"
@@ -3105,7 +2906,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::fft::fft_radix2"
@@ -3120,7 +2920,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::fft::pointwise_complex_multiply_conjugate"
@@ -3135,7 +2934,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::fft::scale_conjugate_inverse"
@@ -3150,7 +2948,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::linalg::matmul_strassen_2x2"
@@ -3165,7 +2962,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::lzcnt_u32"
@@ -3180,7 +2976,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::matmul"
@@ -3195,7 +2990,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::matmul_bias"
@@ -3210,7 +3004,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::matmul_bias::scalar"
@@ -3225,7 +3018,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::matmul_bias_tiled"
@@ -3240,7 +3032,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::matmul_tiled"
@@ -3255,7 +3046,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::reduce_mean"
@@ -3270,7 +3060,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::reduce_variance"
@@ -3285,7 +3074,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::scan_prefix_sum"
@@ -3300,7 +3088,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::square"
@@ -3315,7 +3102,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::succinct::rank1_query"
@@ -3330,7 +3116,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::succinct::rank1_superblocks"
@@ -3345,7 +3130,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::tzcnt_u32"
@@ -3360,7 +3144,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::weighted_sum_fma_f32"
@@ -3375,7 +3158,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::math::wrapping_neg"
@@ -3390,7 +3172,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::attention"
@@ -3405,7 +3186,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::attention::quest_paging"
@@ -3420,7 +3200,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::attention::turboquant"
@@ -3435,7 +3214,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::attention_reference"
@@ -3450,7 +3228,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::cross_entropy"
@@ -3465,7 +3242,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::embedding"
@@ -3480,7 +3256,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::flash_attention"
@@ -3495,7 +3270,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::gelu"
@@ -3510,7 +3284,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::gqa_attention"
@@ -3525,7 +3298,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::layer_norm"
@@ -3540,7 +3312,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::layerwise_ln_scale"
@@ -3555,7 +3326,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::leaky_relu_sq"
@@ -3570,7 +3340,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::leaky_relu_sq_backward"
@@ -3585,7 +3354,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::linear"
@@ -3600,7 +3368,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::linear_4bit"
@@ -3615,7 +3382,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::linear_4bit_affine_grouped"
@@ -3630,7 +3396,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::linear_relu"
@@ -3645,7 +3410,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::linear_silu"
@@ -3660,7 +3424,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::linear_tiled"
@@ -3675,7 +3438,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::ln_scale_backward"
@@ -3690,7 +3452,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::logit_softcap"
@@ -3705,7 +3466,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::logit_softcap_backward"
@@ -3720,7 +3480,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::mlp_4x_leaky_sq"
@@ -3735,7 +3494,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection"
@@ -3750,7 +3508,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::mlp_4x_leaky_sq::output_projection"
@@ -3765,7 +3522,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::mlp_backward"
@@ -3780,7 +3536,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::moe_gate"
@@ -3795,7 +3550,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::moe_gate::softmax_stats"
@@ -3810,7 +3564,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::moe_gate::weight_write"
@@ -3825,7 +3578,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::parallel_residual_block"
@@ -3840,7 +3592,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::partial_rope"
@@ -3855,7 +3606,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::partial_rope_backward"
@@ -3870,7 +3620,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::qk_gain"
@@ -3885,7 +3634,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::qk_gain_backward"
@@ -3900,7 +3648,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::relu"
@@ -3915,7 +3662,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::residual_add"
@@ -3930,7 +3676,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::residual_block_backward"
@@ -3945,7 +3690,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::rms_norm"
@@ -3960,7 +3704,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::rms_norm_linear"
@@ -3975,7 +3718,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::sigmoid_gate"
@@ -3990,7 +3732,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::silu"
@@ -4005,7 +3746,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::skip_gate"
@@ -4020,7 +3760,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::skip_gate_backward"
@@ -4035,7 +3774,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::softmax"
@@ -4050,7 +3788,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::softmax_top_k"
@@ -4065,7 +3802,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::swiglu"
@@ -4080,7 +3816,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::nn::top_k"
@@ -4095,7 +3830,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::optim::adamw_step"
@@ -4110,7 +3844,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::optim::ema_apply"
@@ -4125,7 +3858,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::optim::muon_update"
@@ -4140,7 +3872,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::optim::muoneq_r"
@@ -4155,7 +3886,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::optim::newton_schulz_5step"
@@ -4170,7 +3900,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::ast_binding_strength"
@@ -4185,7 +3914,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::ast_cfg_blocks"
@@ -4200,7 +3928,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::ast_shunting_yard"
@@ -4215,7 +3942,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_calls"
@@ -4230,7 +3956,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_decorators"
@@ -4245,7 +3970,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_imports"
@@ -4260,7 +3984,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_structure"
@@ -4275,7 +3998,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_with_blocks"
@@ -4290,7 +4012,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::parsing::python312_lexer"
@@ -4305,7 +4026,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::byte_shuffle"
@@ -4320,7 +4040,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::gptq_round"
@@ -4335,7 +4054,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::gptq_sdclip"
@@ -4350,7 +4068,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int4_batched_matmul_f32_scaled"
@@ -4365,7 +4082,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled"
@@ -4380,7 +4096,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int4_batched_matvec_f32_scaled"
@@ -4395,7 +4110,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int4_dot_f32_scaled"
@@ -4410,7 +4124,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int4_dot_i32"
@@ -4425,7 +4138,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int4_matvec_f32_scaled"
@@ -4440,7 +4152,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int6_pack"
@@ -4455,7 +4166,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int6_unpack"
@@ -4470,7 +4180,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int8_pack"
@@ -4485,7 +4194,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::quant::int8_unpack"
@@ -4500,7 +4208,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::representation::unpack_4bit_f32"
@@ -4515,7 +4222,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::scan::substring_search"
@@ -4530,7 +4236,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::aliases_dataflow"
@@ -4545,7 +4250,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::auth_check_dominates"
@@ -4560,7 +4264,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::bounded_by_comparison"
@@ -4575,7 +4278,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::buffer_size_check"
@@ -4590,7 +4292,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::dominance_predecessors"
@@ -4605,7 +4306,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::flows_to"
@@ -4620,7 +4320,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::flows_to_to_sink"
@@ -4635,7 +4334,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::flows_to_with_sanitizer"
@@ -4650,7 +4348,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::format_string_check"
@@ -4665,7 +4362,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::integer_overflow_arith"
@@ -4680,7 +4376,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::label_by_family"
@@ -4695,7 +4390,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::lock_dominates"
@@ -4710,7 +4404,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::path_canonical"
@@ -4725,7 +4418,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::sanitized_by"
@@ -4740,7 +4432,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::sanitizer_dominates"
@@ -4755,7 +4446,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::sink_intersection"
@@ -4770,7 +4460,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::sql_param_bound"
@@ -4785,7 +4474,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::taint_flow"
@@ -4800,7 +4488,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::taint_kill"
@@ -4815,7 +4502,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::taint_pollution"
@@ -4830,7 +4516,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::unchecked_return"
@@ -4845,7 +4530,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::security::xss_escape"
@@ -4860,7 +4544,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::blur"
@@ -4875,7 +4558,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::box_shadow"
@@ -4890,7 +4572,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::cell_grid"
@@ -4905,7 +4586,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::composite"
@@ -4920,7 +4600,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::downsample"
@@ -4935,7 +4614,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::filter_chain"
@@ -4950,7 +4628,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::glass"
@@ -4965,7 +4642,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::glyph_grid"
@@ -4980,7 +4656,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::gradient"
@@ -4995,7 +4670,6 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 
 [[op]]
 family = "vyre-libs::visual::upsample"
@@ -5010,5 +4684,4 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
 

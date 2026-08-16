@@ -38,7 +38,6 @@ pub(super) fn render_matrix(records: &[OpRecord]) -> String {
             &record.release_blocking_notes,
         );
         push_array(&mut out, "tests", &record.tests);
-        push_array(&mut out, "bench_targets", &record.bench_targets);
         out.push('\n');
     }
     out
