@@ -4618,6 +4618,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   implementations gave one program two answers depending on which arm read it.
   `V113`, the malformed-alias-frame code the deleted copy raised, is retired
   from the registry and the code catalog.
+- Every cargo-fuzz job now installs and selects nightly, matching the sanitizer
+  flags the libFuzzer runner passes to rustc.
 - Every gate now resolves the checkout it reports on from the working directory
   at run time. Two checkouts of this repository that share one cargo target
   directory compute the same unit hash for a member, so cargo hands one
