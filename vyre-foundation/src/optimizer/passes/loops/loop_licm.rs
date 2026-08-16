@@ -64,6 +64,7 @@ use crate::optimizer::passes::{
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::count_bound_names;
+use crate::visit::node_map::map_body;
 use crate::visit::{any_descendant, for_each_node};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -186,56 +187,15 @@ fn hoist_in_body(body: Vec<Node>, read_only: &FxHashSet<Ident>, changed: &mut bo
                     body: kept,
                 });
             }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                let then = hoist_in_body(then, read_only, changed);
-                let otherwise = hoist_in_body(otherwise, read_only, changed);
-                out.push(Node::If {
-                    cond,
-                    then,
-                    otherwise,
-                });
-            }
-            Node::Block(inner) => {
-                out.push(Node::Block(hoist_in_body(inner, read_only, changed)));
-            }
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => {
-                let body_vec =
-                    std::sync::Arc::try_unwrap(body).unwrap_or_else(|arc| (*arc).clone());
-                let body_vec = hoist_in_body(body_vec, read_only, changed);
-                out.push(Node::Region {
-                    generator,
-                    source_region,
-                    body: std::sync::Arc::new(body_vec),
-                });
-            }
-            // Nests no other node, so the walk stops. Exhaustive with no
-            // catch-all: a new body-bearing variant would carry a loop the
-            // hoist never entered, and the pass would report no change for a
-            // program it should have rewritten.
-            other @ (Node::Let { .. }
-            | Node::Assign { .. }
-            | Node::Store { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::Opaque(_)) => out.push(other),
+            // Every other variant recurses through the one owner of which
+            // variants nest bodies. A leaf has no body slot, so the map hands
+            // it back untouched and the walk stops. A body-bearing variant
+            // added tomorrow is descended into here rather than carrying a
+            // loop the hoist never entered, which would leave the pass
+            // reporting no change for a program it should have rewritten.
+            other => out.push(map_body(other, &mut |body| {
+                hoist_in_body(body, read_only, changed)
+            })),
         }
     }
     out

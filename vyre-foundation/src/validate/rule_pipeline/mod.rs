@@ -18,6 +18,7 @@ use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::visit::child_bodies;
 use crate::visit::node_visitor::{dispatch_node, NodeVisitor};
 use hashbrown::hash_map::RawEntryMut;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -429,42 +430,32 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                                 }),
                             );
                         }
-                        Node::Block(body) => {
+                        // Every other variant descends through the one owner
+                        // of which variants nest bodies. A body scopes its
+                        // bindings like a block: a `let` inside one does not
+                        // outlive it. `region_inline_scope` pins that, because
+                        // `region_inline` flattening a Region into its parent
+                        // is only sound while the parent cannot already see the
+                        // flattened bindings. A leaf yields no body and pushes
+                        // nothing, and a body-bearing variant added tomorrow
+                        // descends here instead of having its children skipped
+                        // by every rule in the pipeline.
+                        other => {
                             let depth = self.current_depth();
                             let divergent = self.current_divergent();
-                            push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
+                            for body in child_bodies(other).into_iter().rev() {
+                                if body.is_empty() {
+                                    continue;
+                                }
+                                push_nested_sequence(
+                                    &mut stack,
+                                    body,
+                                    divergent,
+                                    depth + 1,
+                                    None,
+                                );
+                            }
                         }
-                        // A region scopes its body like a block: a `let` inside
-                        // one does not outlive the region. `region_inline_scope`
-                        // pins that, because `region_inline` flattening a Region
-                        // into its parent is only sound while the parent cannot
-                        // already see the flattened bindings.
-                        Node::Region { body, .. } => {
-                            let depth = self.current_depth();
-                            let divergent = self.current_divergent();
-                            push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
-                        }
-                        // No body, so nothing to descend into. Exhaustive with
-                        // no catch-all: a new body-bearing variant under one
-                        // would have its children skipped by every rule in the
-                        // pipeline, and the program would validate because
-                        // nothing looked inside it.
-                        Node::Let { .. }
-                        | Node::Assign { .. }
-                        | Node::Store { .. }
-                        | Node::Return
-                        | Node::Barrier { .. }
-                        | Node::IndirectDispatch { .. }
-                        | Node::AsyncLoad { .. }
-                        | Node::AsyncStore { .. }
-                        | Node::AsyncWait { .. }
-                        | Node::Trap { .. }
-                        | Node::Resume { .. }
-                        | Node::AllReduce { .. }
-                        | Node::AllGather { .. }
-                        | Node::ReduceScatter { .. }
-                        | Node::Broadcast { .. }
-                        | Node::Opaque(_) => {}
                     }
                     for issue in &mut self.errors[first_new_error..] {
                         if matches!(issue.location(), ValidationLocation::Program) {

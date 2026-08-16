@@ -8,6 +8,7 @@
 use crate::ir::{Expr, Node, Program, SubgroupReduceOp};
 use crate::optimizer::ctx::AdapterCaps;
 use crate::optimizer::rewrite::rewrite_node_slices;
+use crate::visit::map_bodies_cow;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -123,65 +124,16 @@ fn rewrite_node(node: &Node, plan: SubgroupReductionPlan) -> Cow<'_, [Node]> {
                 }]),
             }
         }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            let t = rewrite_nodes(then, plan);
-            let o = rewrite_nodes(otherwise, plan);
-            if matches!((&t, &o), (Cow::Borrowed(_), Cow::Borrowed(_))) {
-                Cow::Borrowed(std::slice::from_ref(node))
-            } else {
-                Cow::Owned(vec![Node::if_then_else(
-                    cond.clone(),
-                    t.into_owned(),
-                    o.into_owned(),
-                )])
-            }
-        }
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => {
-            let b = rewrite_nodes(body, plan);
-            if matches!(b, Cow::Borrowed(_)) {
-                Cow::Borrowed(std::slice::from_ref(node))
-            } else {
-                Cow::Owned(vec![Node::loop_for(
-                    var.clone(),
-                    from.clone(),
-                    to.clone(),
-                    b.into_owned(),
-                )])
-            }
-        }
-        Node::Block(body) => match rewrite_nodes(body, plan) {
+        // Every other variant recurses through the one owner of which variants
+        // nest bodies. A leaf has no body slot, the map hands it straight back
+        // borrowed, and the walk stops. A body-bearing variant added tomorrow
+        // is walked here rather than reaching a backend with the reduction
+        // region inside it still on the portable shared-memory tree while the
+        // rest of the program lowered.
+        other => match map_bodies_cow(other, &mut |body| rewrite_nodes(body, plan)) {
             Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
-            Cow::Owned(b) => Cow::Owned(vec![Node::block(b)]),
+            Cow::Owned(rewritten) => Cow::Owned(vec![rewritten]),
         },
-        // Nests no other node, so the walk stops. Exhaustive with no catch-all:
-        // a new body-bearing variant would keep its subtree unlowered, and the
-        // reduction region hidden inside it would reach a backend as the
-        // portable shared-memory tree while the rest of the program lowered.
-        Node::Let { .. }
-        | Node::Assign { .. }
-        | Node::Store { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::Opaque(_) => Cow::Borrowed(std::slice::from_ref(node)),
     }
 }
 
