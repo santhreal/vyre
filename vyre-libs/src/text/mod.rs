@@ -15,6 +15,12 @@ pub(crate) mod char_class;
 #[cfg(feature = "reduce")]
 pub(crate) mod encoding_classify;
 /// Line-number-per-byte index for diagnostic-producing parsers.
+///
+/// Behind `reduce`, like `encoding_classify`: the pipeline scans line-start
+/// flags through `reduce::multi_block_prefix_scan`, so the module does not
+/// compile without it. The `text` feature enables `reduce`, and this gate is
+/// what makes the module honest for a build that reaches `text` without it.
+#[cfg(feature = "reduce")]
 pub(crate) mod line_index;
 /// UTF-8 shape counters over byte histograms.
 pub(crate) mod utf8_shape_counts;
@@ -42,10 +48,14 @@ pub use encoding_classify::{
     ENCODING_CLASSIFY_OP_ID, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY,
     ENC_ISO8859_1, ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(all(feature = "reduce", any(test, feature = "cpu-parity")))]
 pub use line_index::line_index;
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
+#[cfg(all(
+    feature = "reduce",
+    any(test, feature = "cpu-parity", feature = "text")
+))]
 pub use line_index::reference_line_index;
+#[cfg(feature = "reduce")]
 pub use line_index::{line_index_u8, LINE_INDEX_OP_ID};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use utf8_shape_counts::reference_utf8_shape_counts;

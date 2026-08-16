@@ -6,12 +6,17 @@
 //! The path IS the interface. Callers write
 //! `vyre_libs::graph::toposort::toposort(...)`; no wildcard re-exports.
 
+/// AST walk orders over the packed VAST buffer layout.
+///
+/// Behind `graph` because the walk bodies come from `graph::vast_tree_walk`.
+#[cfg(feature = "graph")]
 pub(crate) mod ast_walk;
 
 /// Graph traversal, dominance, and dispatch-pipeline compositions.
 #[cfg(feature = "graph-dispatch")]
 pub mod dispatch;
 
+#[cfg(feature = "graph")]
 pub use ast_walk::{
     ast_walk, ast_walk_postorder, ast_walk_postorder_nodes, ast_walk_preorder,
     pack_branching_fixture, pack_spine_fixture, VastWalkOrder,
