@@ -887,65 +887,7 @@ fn eval_tile_load(
         origin_coords.push(coord);
     }
     let target = eval_expr::buffer_mut(memory, program, buffer)?;
-    let total_elements = tile_type.element_count();
-    let mut elements = vec![Value::U32(0); total_elements];
-
-    let mut strides = vec![1u32; tile_type.extents.len()];
-    for i in (0..tile_type.extents.len().saturating_sub(1)).rev() {
-        strides[i] = strides[i + 1] * tile_type.extents[i + 1];
-    }
-
-    if tile_type.extents.is_empty() {
-        let global_idx = origin_coords.first().copied().unwrap_or(0);
-        let val = oob::load(target, global_idx);
-        elements = vec![val];
-    } else if tile_type.extents.len() == 1 {
-        let n = tile_type.extents[0];
-        let base = origin_coords.first().copied().unwrap_or(0);
-        for i in 0..n {
-            let global_idx = base + i;
-            let val = oob::load(target, global_idx);
-            let local_idx = layout.linear_index(&[i], &tile_type.extents);
-            if local_idx < elements.len() {
-                elements[local_idx] = val;
-            }
-        }
-    } else if tile_type.extents.len() == 2 {
-        let rows = tile_type.extents[0];
-        let cols = tile_type.extents[1];
-        let r_base = origin_coords.first().copied().unwrap_or(0);
-        let c_base = origin_coords.get(1).copied().unwrap_or(0);
-        for r in 0..rows {
-            for c in 0..cols {
-                let global_idx = (r_base + r) * cols + (c_base + c);
-                let val = oob::load(target, global_idx);
-                let local_idx = layout.linear_index(&[r, c], &tile_type.extents);
-                if local_idx < elements.len() {
-                    elements[local_idx] = val;
-                }
-            }
-        }
-    } else {
-        for idx in 0..total_elements {
-            let mut coords = Vec::with_capacity(tile_type.extents.len());
-            let mut temp = idx as u32;
-            for &extent in tile_type.extents.iter().rev() {
-                coords.push(temp % extent);
-                temp /= extent;
-            }
-            coords.reverse();
-            let mut global_idx = 0u32;
-            for (i, &c) in coords.iter().enumerate() {
-                let base = origin_coords.get(i).copied().unwrap_or(0);
-                global_idx += (base + c) * strides[i];
-            }
-            let val = oob::load(target, global_idx);
-            let local_idx = layout.linear_index(&coords, &tile_type.extents);
-            if local_idx < elements.len() {
-                elements[local_idx] = val;
-            }
-        }
-    }
+    let elements = crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout);
     invocation.bind(tile_name, Value::Array(elements))
 }
 
@@ -973,11 +915,7 @@ fn eval_tile_store(
         single => vec![single.clone()],
     };
     let target = eval_expr::buffer_mut(memory, program, buffer)?;
-    let base = origin_coords.first().copied().unwrap_or(0);
-    for (i, elem) in elements.iter().enumerate() {
-        let global_idx = base + (i as u32);
-        oob::store(target, global_idx, elem);
-    }
+    crate::execution::tile::store_elements(target, &origin_coords, &elements);
     Ok(())
 }
 
@@ -994,55 +932,10 @@ fn eval_tile_matmul(
     let b_val = invocation.local(b_name).cloned().ok_or_else(|| {
         crate::ReferenceError::new(format!("tile `{b_name}` not found for matmul"))
     })?;
-
-    let a_elems = match a_val {
-        Value::Array(e) => e,
-        s => vec![s],
-    };
-    let b_elems = match b_val {
-        Value::Array(e) => e,
-        s => vec![s],
-    };
-    let mut acc_elems = match acc_val {
-        Value::Array(e) => e,
-        s => vec![s],
-    };
-
-    let a_len = a_elems.len();
-    let b_len = b_elems.len();
-    let (m, k, n) = if a_len == 16 * 16 && b_len == 16 * 8 {
-        (16, 16, 8)
-    } else if a_len == 16 * 8 && b_len == 8 * 16 {
-        (16, 8, 16)
-    } else {
-        let k = (a_len as f64).sqrt().round() as usize;
-        let k = if k == 0 { 1 } else { k };
-        let m = a_len / k;
-        let n = if k > 0 { b_len / k } else { 1 };
-        (m.max(1), k.max(1), n.max(1))
-    };
-
-    if acc_elems.len() < m * n {
-        acc_elems.resize(m * n, Value::Float(0.0));
-    }
-
-    for i in 0..m {
-        for j in 0..n {
-            let mut sum = 0.0f64;
-            for p in 0..k {
-                let a_idx = i * k + p;
-                let b_idx = p * n + j;
-                let a_num = a_elems.get(a_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
-                let b_num = b_elems.get(b_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
-                sum += a_num * b_num;
-            }
-            let acc_idx = i * n + j;
-            let prev = acc_elems.get(acc_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
-            if acc_idx < acc_elems.len() {
-                acc_elems[acc_idx] = Value::Float(prev + sum);
-            }
-        }
-    }
+    let a_elems = crate::execution::tile::to_elements(&a_val);
+    let b_elems = crate::execution::tile::to_elements(&b_val);
+    let mut acc_elems = crate::execution::tile::to_elements(&acc_val);
+    crate::execution::tile::matmul(&mut acc_elems, &a_elems, &b_elems);
     invocation.assign(acc_name, Value::Array(acc_elems))
 }
 
@@ -1050,7 +943,7 @@ fn eval_tile_reduce(
     out_name: &str,
     tile_name: &str,
     op: vyre_foundation::ir::SubgroupReduceOp,
-    _axis: u32,
+    axis: u32,
     invocation: &mut Invocation<'_>,
 ) -> Result<(), crate::ReferenceError> {
     let tile_val = invocation.local(tile_name).cloned().ok_or_else(|| {
@@ -1060,24 +953,8 @@ fn eval_tile_reduce(
         Value::Array(e) => e,
         s => vec![s],
     };
-    if elements.is_empty() {
-        return invocation.bind(out_name, Value::Float(0.0));
-    }
-    let mut acc = elements[0].try_as_f64().unwrap_or(0.0);
-    for elem in elements.iter().skip(1) {
-        let val = elem.try_as_f64().unwrap_or(0.0);
-        acc = match op {
-            vyre_foundation::ir::SubgroupReduceOp::Add => acc + val,
-            vyre_foundation::ir::SubgroupReduceOp::Mul => acc * val,
-            vyre_foundation::ir::SubgroupReduceOp::Min => acc.min(val),
-            vyre_foundation::ir::SubgroupReduceOp::Max => acc.max(val),
-            vyre_foundation::ir::SubgroupReduceOp::And => ((acc as u64) & (val as u64)) as f64,
-            vyre_foundation::ir::SubgroupReduceOp::Or => ((acc as u64) | (val as u64)) as f64,
-            vyre_foundation::ir::SubgroupReduceOp::Xor => ((acc as u64) ^ (val as u64)) as f64,
-            _ => acc + val,
-        };
-    }
-    invocation.bind(out_name, Value::Float(acc))
+    let res = crate::execution::tile::reduce(&elements, op, axis);
+    invocation.bind(out_name, Value::Array(res))
 }
 
 fn eval_tile_elementwise<'a>(
