@@ -5,13 +5,36 @@
 
 # Architecture and ownership
 
+- [Crate boundaries](architecture/crates.md)
 - [LEGO-block rule](lego-block-rule.md)
+- [Parsing](architecture/parsing.md)
+- [The artifact is the output type](architecture/artifact.md)
 - [Vyre Crate Graph](CRATE_GRAPH.md)
 - [Vyre Crate Ownership](OWNERSHIP.md)
 - [Vyre architecture](ARCHITECTURE.md)
+- [Whole-program compile search](architecture/compile-search.md)
+
+# Lifecycle and extension contracts
+
+- [Add a backend](extending/backend.md)
+- [Add an operation from outside the workspace](extending/operation.md)
+
+# User workflows
+
+- [Compile a graph to an artifact](guide/first-program.md)
+- [Install](guide/install.md)
+- [Run an artifact on a device](guide/backends.md)
+
+# API and operation reference
+
+- [Diagnostics](reference/diagnostics.md)
+- [Program wire format](reference/wire-format.md)
+- [The operation registry](reference/operations.md)
+- [Value contracts](reference/values.md)
 
 # Testing and conformance
 
+- [Conformance](conformance/program.md)
 - [Testing `structure-gate`](testing/structure-gate.md)
 - [Testing `vyre-aot`](testing/vyre-aot.md)
 - [Testing `vyre-bench`](testing/vyre-bench.md)
@@ -46,3 +69,7 @@
 - [Testing `xtask-evidence`](testing/xtask-evidence.md)
 - [Testing `xtask-registry`](testing/xtask-registry.md)
 - [Testing `xtask`](testing/xtask.md)
+
+# Performance and release
+
+- [Release](release/process.md)

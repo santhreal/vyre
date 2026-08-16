@@ -23,10 +23,6 @@ name = "architecture-contract"
 findings = 0
 
 [[gate]]
-name = "audit-status"
-findings = 0
-
-[[gate]]
 name = "backend-extension"
 findings = 0
 
@@ -103,6 +99,10 @@ name = "docs-check"
 findings = 0
 
 [[gate]]
+name = "docs-coupling"
+findings = 0
+
+[[gate]]
 name = "docs-references"
 findings = 0
 
@@ -112,6 +112,10 @@ findings = 0
 
 [[gate]]
 name = "evidence-paths"
+findings = 0
+
+[[gate]]
+name = "example-capability"
 findings = 0
 
 [[gate]]

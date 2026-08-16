@@ -1,53 +1,35 @@
 {
-  "source_fingerprint": "git:1d28c2277fea9ef670ec31f3078009ade08303c8:dirty=true:worktree=f49c41626bd1dade0d57b2fa27466a8aefba9ee4d7adf36003d430c58b1a597d",
+  "source_fingerprint": "git:261d5680b496cb24fb7b6a690cb85803ef552597:dirty=true:worktree=2c18660c3b1d404b74dcf146623918242bf56bdcb18f09756f8b07bcd80e30d4",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
-      "path": "vyre-grammar-gen/src/lex_c11_max_munch.rs",
-      "line": 40,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-grammar-gen/src/c11_lexer.rs",
-      "line": 162,
-      "pattern": "documented_panic_contract",
-      "text": "b.build().expect("
-    },
-    {
-      "path": "vyre-grammar-gen/src/c11_lexer.rs",
-      "line": 182,
-      "pattern": "documented_panic_contract",
-      "text": "b.build_with_match_kind(MatchKind::LeftmostFirst).expect("
-    },
-    {
       "path": "structure-gate/src/lib.rs",
-      "line": 230,
+      "line": 252,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 232,
+      "line": 254,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 581,
+      "line": 933,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 601,
+      "line": 953,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 603,
+      "line": 955,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -359,25 +341,25 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 282,
+      "line": 281,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 325,
+      "line": 324,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 420,
+      "line": 419,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 428,
+      "line": 427,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -605,13 +587,13 @@
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 58,
+      "line": 59,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 59,
+      "line": 60,
       "pattern": "unwrap_call",
       "text": "compile(&request).unwrap()"
     },
@@ -676,24 +658,6 @@
       "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
     },
     {
-      "path": "conform/vyre-conform/src/lens.rs",
-      "line": 126,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
-    },
-    {
-      "path": "conform/vyre-conform/src/lens.rs",
-      "line": 211,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
-    },
-    {
-      "path": "conform/vyre-conform/src/lens.rs",
-      "line": 293,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
-    },
-    {
       "path": "xtask/src/fixture_checkout.rs",
       "line": 30,
       "pattern": "documented_panic_contract",
@@ -749,13 +713,13 @@
     },
     {
       "path": "xtask/src/gates/fixture_checkout.rs",
-      "line": 35,
+      "line": 34,
       "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"the fixture file {path}: {error}\"));"
+      "text": "fs::write(&target, text).unwrap_or_else(|error| panic!(\"the fixture file {path}: {error}\"));"
     },
     {
       "path": "xtask/src/gates/fixture_checkout.rs",
-      "line": 41,
+      "line": 40,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"git is available to initialize a fixture checkout. Fix: install git and put it on PATH; the fixture gates read a real checkout\");"
     },

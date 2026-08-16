@@ -9,7 +9,6 @@
 //! registered gate connected to a pinned baseline and a workflow.
 
 pub mod architecture_contract;
-pub mod audit_status;
 pub mod bench;
 pub mod check_tier_deps;
 pub mod ci_contract;
@@ -20,6 +19,7 @@ pub mod doc_contract;
 pub mod docs_references;
 pub mod dup_scan;
 pub mod evidence_paths;
+pub mod example_capability;
 pub mod feature_isolation;
 pub mod file_size;
 pub mod finding_capability;
@@ -63,7 +63,6 @@ use crate::gate::Gate;
 /// yields, which is why a gate cannot be registered and left unswept.
 pub static GATES: &[&dyn Gate] = &[
     &architecture_contract::ArchitectureContract,
-    &audit_status::AuditStatus,
     &bench::BenchBaselines,
     &bench::BenchCoverage,
     &bench::BenchSmokeRuntime,
@@ -79,6 +78,7 @@ pub static GATES: &[&dyn Gate] = &[
     &dup_scan::DupScan,
     &evidence_paths::EvidencePaths,
     &evidence_paths::InvariantPaths,
+    &example_capability::ExampleCapability,
     &feature_isolation::FeatureIsolation,
     &file_size::FileSize,
     &frozen_contract::BackendExtension,

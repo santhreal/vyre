@@ -114,21 +114,39 @@ pub(crate) fn split_graph(graph: ProgramGraph) -> Result<ProgramGraph, CompileEr
 }
 
 /// Append one graph node per segment and record the values downstream nodes bind.
+///
+/// The final segment is taken off the list first, so the leading segments and the
+/// one that carries the node's own output ports are two values the types keep
+/// apart. An empty list cannot express a program, and the splitter never returns
+/// one, so it is refused through the failure channel this function already has
+/// rather than through a panic that says the same thing later.
 fn add_segments(
     rebuilt: &mut ProgramGraph,
     value_map: &mut BTreeMap<u32, GraphValueId>,
     node: &ProgramGraphNode,
     segments: Vec<Program>,
 ) -> Result<(), CompileError> {
-    let last = segments.len() - 1;
+    let mut leading = segments;
+    let Some(final_segment) = leading.pop() else {
+        return Err(failure(
+            CompilerFailureKind::InvalidProgram,
+            format!("request.graph.nodes[{}].program", node.id.0),
+            format!("splitting node `{}` on its whole-grid fences produced no segment, so the node has no program left to compile", node.name),
+            "keep the fence splitter from returning an empty segment list",
+        ));
+    };
+    let last = leading.len();
     if last == 0 {
         let inputs = remap_inputs(value_map, node)?;
         let outputs = remap_ports(value_map, node)?;
-        let only = segments
-            .into_iter()
-            .next()
-            .expect("a segment list of length one yields its only segment. Fix: keep the splitter from returning an empty segment list; add_segments reads its length before consuming it");
-        let produced = insert(rebuilt, node.name.clone(), only, 0, inputs, outputs)?;
+        let produced = insert(
+            rebuilt,
+            node.name.clone(),
+            final_segment,
+            0,
+            inputs,
+            outputs,
+        )?;
         record_ports(value_map, node, &produced);
         return Ok(());
     }
@@ -154,8 +172,7 @@ fn add_segments(
     }
 
     let mut current = mapped(value_map, chain.value, &node.name)?;
-    let mut segments = segments.into_iter().enumerate();
-    for (index, segment) in segments.by_ref().take(last) {
+    for (index, segment) in leading.into_iter().enumerate() {
         let mut inputs = remap_inputs(value_map, node)?;
         set_chain_input(&mut inputs, &chain.buffer, current);
         let outputs = vec![GraphOutput {
@@ -175,9 +192,8 @@ fn add_segments(
         current = produced[0];
     }
 
-    let (index, segment) = segments
-        .next()
-        .expect("a segment list of length last + 1 yields a final segment. Fix: keep the splitter from shrinking the list after its length was read; the loop above consumes exactly last items");
+    let index = last;
+    let segment = final_segment;
     let mut inputs = remap_inputs(value_map, node)?;
     set_chain_input(&mut inputs, &chain.buffer, current);
     let mut outputs = remap_ports(value_map, node)?;

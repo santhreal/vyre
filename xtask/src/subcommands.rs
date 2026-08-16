@@ -85,6 +85,7 @@ pub static SUBSETS: &[Subset] = &[
             "bench-baselines",
             "check-tier-deps",
             "dup-scan",
+            "example-capability",
             "hot-path-scan",
             "hygiene-matrix",
             "heuristic-audit",
@@ -96,6 +97,7 @@ pub static SUBSETS: &[Subset] = &[
         gates: &[
             "architecture-contract",
             "docs-check",
+            "docs-coupling",
             "docs-references",
             "optimization-docs",
             "release-docs",
@@ -156,7 +158,6 @@ pub static SUBSETS: &[Subset] = &[
             "lint-unsafe-budget",
             "lint-unsafe-justification",
             "proptest-coverage",
-            "audit-status",
         ],
     },
     Subset {

@@ -8,11 +8,14 @@ use vyre_libs::TensorRef;
 use vyre_reference::value::Value;
 
 fn u32_bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
+    words.iter().flat_map(|word| word.to_le_bytes()).collect()
 }
 
 fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {
-    vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
+    bytes
+        .chunks_exact(4)
+        .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
+        .collect()
 }
 
 #[test]

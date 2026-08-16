@@ -6,9 +6,11 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::composition::wrap_region;
-use vyre_libs::{check_tensors, BuildOptions, TensorRef, TensorRefError};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs::{
+    check_same_shape, check_tensors, checked_element_count, BuildOptions, TensorRef, TensorRefError,
+};
 
 const OP_ID: &str = "{{crate_name}}::example_op";
 
@@ -58,15 +60,8 @@ impl ExampleOp {
             OP_ID,
             &[(&self.input, DataType::U32), (&self.output, DataType::U32)],
         )?;
-        if self.input.shape != self.output.shape {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.output.name.as_str().to_string(),
-                found: self.output.shape.clone(),
-                expected: self.input.shape.clone(),
-                op: OP_ID,
-            });
-        }
-        let n = self.input.element_count().expect("Fix: checked above; restore this invariant before continuing.");
+        check_same_shape(OP_ID, &self.input, &self.output)?;
+        let n = checked_element_count(OP_ID, &self.input)?;
         let input_name = self.input.name_str();
         let output_name = self.output.name_str();
 

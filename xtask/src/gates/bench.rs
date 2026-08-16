@@ -71,7 +71,7 @@ impl Gate for BenchBaselines {
                 report.find(Finding::in_file(
                     RESULTS,
                     format!("`{package}` declares a bench target but has no `### {package}` section"),
-                    format!("run `cargo bench -p {package}` and record the medians under a `### {package}` heading"),
+                    format!("run `./cargo_full bench -p {package}` and record the medians under a `### {package}` heading"),
                 ));
             }
         }
@@ -89,8 +89,8 @@ fn has_section(text: &str, package: &str) -> bool {
 /// Every workspace package `cargo bench` can run a target for.
 ///
 /// A crate qualifies by owning a bench target, not by owning a directory called
-/// `benches`: `vyre-grammar-gen/benches` holds documentation and no target, and
-/// a directory-name search demanded a measured section for a crate `cargo bench`
+/// `benches`: a `benches/` directory holding documentation and no target made a
+/// directory-name search demand a measured section for a crate `cargo bench`
 /// cannot run, which could only be satisfied with an invented number.
 ///
 /// Both target shapes count, because both publish a benchmark. An explicit
@@ -250,7 +250,10 @@ fn build_bench_binary(root: &Path) -> Result<PathBuf, GateError> {
         .status()
         .map_err(|error| {
             GateError::new(
-                format!("cannot run `{} build -p vyre-bench`: {error}", cargo.display()),
+                format!(
+                    "cannot run `{} build -p vyre-bench`: {error}",
+                    cargo.display()
+                ),
                 "restore the cargo_full wrapper at the workspace root",
             )
         })?;
@@ -302,7 +305,10 @@ fn build_bench_binary(root: &Path) -> Result<PathBuf, GateError> {
     let binary = Path::new(target_directory).join("debug").join("vyre-bench");
     if !binary.is_file() {
         return Err(GateError::new(
-            format!("`vyre-bench` built but no binary exists at `{}`", binary.display()),
+            format!(
+                "`vyre-bench` built but no binary exists at `{}`",
+                binary.display()
+            ),
             "repair the cargo target directory, or the vyre-bench binary target",
         ));
     }
@@ -317,7 +323,11 @@ fn run_bench(root: &Path, binary: &Path, arguments: &[&str]) -> Result<Vec<u8>, 
         .output()
         .map_err(|error| {
             GateError::new(
-                format!("cannot run `{} {}`: {error}", binary.display(), arguments.join(" ")),
+                format!(
+                    "cannot run `{} {}`: {error}",
+                    binary.display(),
+                    arguments.join(" ")
+                ),
                 "rebuild vyre-bench; a harness that cannot start measures nothing",
             )
         })?;
@@ -391,13 +401,23 @@ fn registered_cases(root: &Path) -> Result<BTreeSet<String>, GateError> {
     let cargo = crate::output_arg::cargo_runner(root);
     let listing = Command::new(&cargo)
         .args([
-            "run", "-q", "-p", "vyre-bench", "--", "list", "--format", "json",
+            "run",
+            "-q",
+            "-p",
+            "vyre-bench",
+            "--",
+            "list",
+            "--format",
+            "json",
         ])
         .current_dir(root)
         .output()
         .map_err(|error| {
             GateError::new(
-                format!("cannot run `{} run -p vyre-bench -- list`: {error}", cargo.display()),
+                format!(
+                    "cannot run `{} run -p vyre-bench -- list`: {error}",
+                    cargo.display()
+                ),
                 "restore the cargo_full wrapper at the workspace root",
             )
         })?;
@@ -686,9 +706,7 @@ mod tests {
             "Cargo.toml",
             "[workspace]\nresolver = \"2\"\nmembers = []\n",
         )]);
-        let report = BenchBaselines
-            .run(&GateCtx::new(root, Vec::new()))
-            .unwrap();
+        let report = BenchBaselines.run(&GateCtx::new(root, Vec::new())).unwrap();
         assert_eq!(report.count(), 1);
         assert!(report.findings[0].message.contains("not published"));
     }
@@ -708,7 +726,9 @@ mod tests {
             toml::from_str("[crates.vyre-bench.targets.other]\nbudget = 1\n").unwrap();
         let error = smoke_budget_ms(&missing).unwrap_err();
         assert!(
-            error.message.contains("crates.vyre-bench.targets.smoke_runtime"),
+            error
+                .message
+                .contains("crates.vyre-bench.targets.smoke_runtime"),
             "{}",
             error.message
         );
@@ -723,7 +743,10 @@ mod tests {
     /// spellings those files use and must not read a longer flag as this one.
     #[test]
     fn a_cited_case_is_read_in_every_spelling_a_command_uses() {
-        assert_eq!(cited_cases("bench run --case foo.bar.1m"), vec!["foo.bar.1m"]);
+        assert_eq!(
+            cited_cases("bench run --case foo.bar.1m"),
+            vec!["foo.bar.1m"]
+        );
         assert_eq!(cited_cases("bench run --case=foo.bar"), vec!["foo.bar"]);
         assert_eq!(
             cited_cases("--case a.b   --case   c.d"),

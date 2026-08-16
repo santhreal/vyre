@@ -957,6 +957,17 @@ The `findings` column is the count with the injection applied, given the pin in
 | `evidence-paths` | In any artifact under `release/evidence`, change one cited path to a filename that does not exist but keeps a tree extension. | 18 to 19 |
 | `evidence-paths` | Add `"manifest": "target/debug/build.rs"` to an artifact object, with `target/` gitignored. | 18 to 19, in the gitignored class rather than the missing class |
 | `evidence-paths` | Change a cited path to `1.2.0`. | stays 18; a version string is not a citation |
+| `docs-coupling` | Delete the `covers` key from the `docs/reference/wire-format.md` page row. | 0 to 1 |
+| `docs-coupling` | Change one `covers` entry to a path the tree does not hold. | 0 to 1 |
+| `docs-coupling` | In `docs/architecture/parsing.md`, change a cited source path inside a code span to one that does not exist. | 0 to 1 |
+| `docs-coupling` | Edit a file `docs/reference/wire-format.md` covers without editing that page. | 0 to 2, one for the page and one for the missing changelog fragment |
+| `docs-coupling` | Run it with `--base` naming a ref the checkout does not hold. | 0 to 1, reported as an unreachable base rather than as a gate that could not run |
+| `example-capability` | In `examples/libs-template/Cargo.toml.liquid`, change `license` to `{{license}}`. | 0 to 1, naming the placeholder the gate cannot render |
+| `example-capability` | In `examples/external_backend_extension/tests/backend_probe.rs`, change the expected dispatch output to `vec![9, 9, 9, 9]`. | 0 to 1, naming the failing test |
+| `example-capability` | Delete the `[workspace]` table from `examples/external_backend_extension/Cargo.toml`. | 0 to 3, one for the isolation rule and one for each cargo invocation that then refuses to resolve |
+| `example-capability` | Move `examples/external_backend_extension/Cargo.lock` aside so `--locked` cannot resolve. | 0 to 2, one per cargo invocation |
+| `example-capability` | Track a file under a new `examples/<name>/` directory and give it no manifest. | 0 to 1 |
+| `example-capability` | Track a 400-line Rust file and no lockfile under a new `examples/<name>/` directory carrying a manifest. | 0 to 2, one for the line cap and one for the missing lockfile |
 | `invariant-paths` | In `vyre-spec/src/invariants.rs`, change a cited conformance test path to one that does not exist. | 0 to 1 |
 | `doc-claims` | In `contracts/doc_claims_manifest.toml`, change one `phrase` to text its document does not contain. | 0 to 1 |
 | `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |
@@ -969,7 +980,6 @@ The `findings` column is the count with the injection applied, given the pin in
 | `lint-unsafe-justification` | Add an `unsafe {` block with no SAFETY comment above it. | 2 to 3 |
 | `lint-missing-docs-override` | Add `#![allow(missing_docs)]` to any crate root. | 0 to 1 |
 | `proptest-coverage` | Delete two property-test files, taking the count from 182 to 180 against the floor of 181. | 0 to 1 |
-| `audit-status` | Remove one status tag from a row in a status-managed audit document. | 0 to 1 |
 | `repo-hygiene` | Add a second `BACKLOG.md` under any crate directory and track it. | 2 to 3 |
 | `shader-source` | Add `out.push_str("@compute");` to a file under `vyre-driver-wgpu/src`. | 0 to 1 |
 | `layering` | Add `vyre-lints.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 29, one per member that reaches it, each naming the chain |

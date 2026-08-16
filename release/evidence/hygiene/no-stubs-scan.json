@@ -1,11 +1,11 @@
 {
-  "source_fingerprint": "git:faa8731f525cc2b9626f2601372c1eb1eb308327:dirty=true:worktree=8c12e19ae94a270ecdba06f9a0f5ce0a01d7e27b7653ed4d3c68734e925a1064",
+  "source_fingerprint": "git:261d5680b496cb24fb7b6a690cb85803ef552597:dirty=true:worktree=3c95a2ffad1e8d50ef7ab8975481b090ed37a8bb94d130cdaab77893052d3e07",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
     {
       "path": "vyre-driver/src/grid_sync/resident_dispatch.rs",
-      "line": 204,
+      "line": 203,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
@@ -74,6 +74,72 @@
       "line": 165,
       "pattern": "placeholder_text",
       "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 16,
+      "pattern": "placeholder_text",
+      "text": "//! rather than skipped, and a template placeholder this gate cannot render is"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 44,
+      "pattern": "placeholder_text",
+      "text": "/// A placeholder outside this table is a finding, because rendering an unknown"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 200,
+      "pattern": "placeholder_text",
+      "text": "/// One template: every placeholder known, and the rendered crate passing."
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 216,
+      "pattern": "placeholder_text",
+      "text": "format!(\"`{path}` uses the placeholder `{unknown}`, which this gate cannot render\"),"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 363,
+      "pattern": "placeholder_text",
+      "text": "/// Substitute every known placeholder."
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 366,
+      "pattern": "placeholder_text",
+      "text": "for (placeholder, value) in PLACEHOLDERS {"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 367,
+      "pattern": "placeholder_text",
+      "text": "rendered = rendered.replace(placeholder, value);"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 381,
+      "pattern": "placeholder_text",
+      "text": "let placeholder = &after[..close + 2];"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 384,
+      "pattern": "placeholder_text",
+      "text": ".any(|(known, _)| *known == placeholder)"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 385,
+      "pattern": "placeholder_text",
+      "text": "&& !unknown.iter().any(|found| found == placeholder)"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 387,
+      "pattern": "placeholder_text",
+      "text": "unknown.push(placeholder.to_string());"
     },
     {
       "path": "xtask-evidence/src/report_fixture.rs",

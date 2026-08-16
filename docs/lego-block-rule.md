@@ -108,11 +108,14 @@ tree and passes an op when either half holds:
    are at least 60 percent of total nodes.
 
 Wrapping a region around inlined code does not satisfy the second half. A
-phase boundary inside one op is named with the `anonymous::` prefix and
-carries a `source_region` naming its own op, so a `source_region` alone
-says nothing about composition; the generator has to name another
-registered op. On failure the diagnostic lists the inline sub-blocks that
-should have been primitive calls.
+region that names no operation carries one of the two prefixes in
+`vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES`: `inline::`,
+minted when the composer reparents a body onto its caller, and
+`anonymous::`, written by a builder that needs a named boundary inside one
+operation. Such a region still carries a `source_region` naming its own op,
+so a `source_region` alone says nothing about composition; the generator
+has to name another registered op. On failure the diagnostic lists the
+inline sub-blocks that should have been primitive calls.
 
 `gate1` owns the budget. `abstraction-gate` reads the same walk for the
 boundary question: whether every child region names a building block that

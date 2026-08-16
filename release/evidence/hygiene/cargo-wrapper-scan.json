@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3356274ef6472913070264718bbc2ed30b6b9490:dirty=true:worktree=f7bc1830f4831f9ec8c7c0416d06cb5d99e031568131a7e9f36ee0c8a64f3745",
+  "source_fingerprint": "git:261d5680b496cb24fb7b6a690cb85803ef552597:dirty=true:worktree=4d5090a9f12145cd1afa49f05334e42bb55f5d2442fa25dc1e736d104b6fc8fc",
   "schema_version": 1,
   "scan": "cargo-wrapper",
   "findings": [],
