@@ -27,9 +27,9 @@ done
 
 # Every crate that declares a bench target must have a section in RESULTS.md.
 # A crate qualifies by owning at least one bench source file, not by owning a
-# directory called benches: vyre-grammar-gen/benches holds documentation and no
-# target, so a directory-name search demanded a measured section for a crate
-# `cargo bench` cannot run.
+# directory called benches. A benches directory that holds only documentation
+# owns no target, and a directory-name search demanded a measured section for a
+# crate `cargo bench` cannot run.
 while IFS= read -r bench_source; do
     name=$(basename "$(dirname "$(dirname "$bench_source")")")
     if ! grep -q "^### $name\b" "$RESULTS"; then

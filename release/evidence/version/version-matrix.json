@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=7aa6f646821e67ad47098581c63561f3020799ac626306bb13152939a14bfe84",
+  "source_fingerprint": "git:b29ca5069a03d67a2634572101c4844e26763813:dirty=true:worktree=d66d676af34043929bc6575a4558a8a2951b8aa77cff9a5e18ef371b81721602",
   "schema_version": 2,
   "requested_vyre_release": "0.7.2",
   "tag_story": {
@@ -150,13 +150,6 @@
       "package": "vyre-foundation",
       "version": "0.7.2",
       "manifest": "vyre-foundation/Cargo.toml",
-      "release_group": "vyre",
-      "publishable": true
-    },
-    {
-      "package": "vyre-grammar-gen",
-      "version": "0.7.2",
-      "manifest": "vyre-grammar-gen/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
@@ -559,13 +552,6 @@
     {
       "lockfile": "Cargo.lock",
       "package": "vyre-foundation",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "Cargo.lock",
-      "package": "vyre-grammar-gen",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"

@@ -1,12 +1,5 @@
 schema_version = 1
 
-[[binary]]
-package = "vyre-grammar-gen"
-name = "vyre-grammar-gen"
-readme = "vyre-grammar-gen/README.md"
-audience = "public"
-hardware = "No accelerator is required."
-environment = "No environment variables alter CLI behavior."
 config = "Input and output paths are explicit command-line arguments."
 failure = "Invalid JSON, malformed LR data, unsupported formats, and filesystem errors return a non-zero status with context."
 exit_codes = "0 on success, 1 on generation or I/O failure, 2 on invalid arguments."

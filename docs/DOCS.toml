@@ -330,19 +330,6 @@ generator = "../scripts/testing_guides.py"
 nav = true
 
 [[page]]
-path = "testing/vyre-grammar-gen.md"
-title = "Testing `vyre-grammar-gen`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
 path = "testing/vyre-libs.md"
 title = "Testing `vyre-libs`"
 status = "generated"

@@ -350,12 +350,3 @@ owned = 'Inspect, explain, and diagnose typed programs, lowering, and product-li
 non_owned = 'Production library semantics, device drivers as libraries.'
 allowed_dependencies = ['vyre', 'vyre-emit-naga', 'vyre-foundation', 'vyre-libs', 'vyre-lower', 'vyre-primitives']
 profile = 'tooling'
-
-[package.vyre-grammar-gen]
-path = 'vyre-grammar-gen'
-owner = 'grammar-generation'
-layer = 'tooling'
-owned = 'Generate host-side grammar tables consumed by frontend and parsing crates.'
-non_owned = 'Production library semantics, device drivers as libraries.'
-allowed_dependencies = []
-profile = 'tooling'
