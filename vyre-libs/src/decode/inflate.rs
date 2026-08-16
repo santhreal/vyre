@@ -5,7 +5,7 @@
 //! id is `vyre-libs::decode::inflate_stored_block`.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
@@ -163,9 +163,7 @@ pub fn inflate_stored_child(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         inflate_stored_body(input, output, inflated_len_buffer),
     )
 }

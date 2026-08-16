@@ -23,7 +23,7 @@ use vyre_libs::encoding::bitset_mask_algebra::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn word_parallel_and_or_xor_not_via_match_cpu_ref() {

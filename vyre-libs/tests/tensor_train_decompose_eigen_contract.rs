@@ -24,11 +24,11 @@
 //! What it does not catch: a change to the shared body that is a valid eigendecomposition with
 //! the same sign convention (a different rotation ORDER, say) is invisible here by design, and
 //! so is any drift in the f64 CPU oracle, which is a separate independent implementation.
-#![cfg(all(feature = "math", feature = "test-fixtures"))]
+#![cfg(feature = "math")]
 
 use vyre_libs::math::eigenvector_column_sign::EIGENVECTOR_SIGN_EPSILON;
 use vyre_libs::math::tensor_train_decompose::tensor_train_decompose_step;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 use vyre_primitives::wire::{decode_f32_le_bytes_all as unpack_f32, pack_f32_slice as pack_f32};
 use vyre_reference::value::Value;
 

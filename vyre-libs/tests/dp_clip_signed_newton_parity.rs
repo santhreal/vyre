@@ -12,10 +12,10 @@
 //! five Newton steps reach ~full 16.16 precision so a small tolerance holds. Two BIT-EXACT anchors are
 //! also asserted: (a) the NO-CLIP case `n ≤ C` must return the gradient UNCHANGED (factor clamps to
 //! exactly 1.0), and (b) negative gradients keep their sign.
-#![cfg(all(feature = "math", feature = "test-fixtures"))]
+#![cfg(feature = "math")]
 
 use vyre_libs::math::dp_clip::dp_clip_per_sample;
-use vyre_libs::test_parity_oracles::{from_fixed, to_fixed, xorshift32 as xorshift};
+use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
 

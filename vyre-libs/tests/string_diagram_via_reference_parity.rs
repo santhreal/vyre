@@ -18,7 +18,7 @@
 use vyre_libs::reasoning::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{
+use vyre_test_support::fixed_point::{
     fixed_mul, signed_fixed_17 as signed_fixed, to_fixed, xorshift32 as xorshift, FIXED_ONE,
 };
 

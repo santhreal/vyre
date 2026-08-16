@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
 
-use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{Expr, Ident, Node};
 use vyre_foundation::visit::NodeVisitor;
 
@@ -147,7 +146,7 @@ impl NodeVisitor for TrapTagCollector {
         &mut self,
         _: &Node,
         _: &vyre_foundation::ir::Ident,
-        _: &Option<GeneratorRef>,
+        _: &Option<Ident>,
         _: &[Node],
     ) -> ControlFlow<()> {
         Continue(())

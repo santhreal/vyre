@@ -478,17 +478,6 @@ impl RingTelemetry {
         }
     }
 
-    /// Aggregate queue, idle, fairness, and drain counters into one cheap
-    /// runtime snapshot for SRE dashboards and launch-policy feedback.
-    #[must_use]
-    #[cfg(test)]
-    pub fn runtime_counters(&self) -> ResidentRuntimeCounters {
-        match self.try_runtime_counters() {
-            Ok(counters) => counters,
-            Err(_) => zero_runtime_counters(),
-        }
-    }
-
     /// Fallibly aggregate queue, idle, fairness, and drain counters.
     ///
     /// # Errors
@@ -496,8 +485,8 @@ impl RingTelemetry {
     /// Returns [`PipelineError`] when counter aggregation overflows or decoded
     /// telemetry contains an impossible relationship.
     pub fn try_runtime_counters(&self) -> Result<ResidentRuntimeCounters, PipelineError> {
-        let total_slots = self.occupancy.total_slots();
-        let queue_depth = self.occupancy.queue_depth();
+        let total_slots = self.occupancy.total_slots()?;
+        let queue_depth = self.occupancy.queue_depth()?;
         let gpu_idle_slots = self.occupancy.empty;
         let gpu_idle_ppm = if total_slots == 0 {
             0
@@ -534,17 +523,6 @@ impl RingTelemetry {
             requeue_slots: self.occupancy.requeue,
             fault_slots: self.occupancy.fault,
         })
-    }
-
-    /// Derive persistent-kernel health from two snapshots without polling the
-    /// device or synchronizing with the GPU.
-    #[must_use]
-    #[cfg(test)]
-    pub fn health_since(&self, previous: &RingTelemetry) -> ResidentWatchdogSnapshot {
-        match self.try_health_since(previous) {
-            Ok(snapshot) => snapshot,
-            Err(_) => zero_watchdog_snapshot(),
-        }
     }
 
     /// Fallibly derive persistent-kernel health from two snapshots.
@@ -626,41 +604,6 @@ impl RingTelemetry {
             .checked_add(u64::from(self.occupancy.requeue))
             .ok_or_else(errors::requeue_count_overflow)?;
         ResidentLaunchPolicy::standard().recommend(request)
-    }
-}
-
-/// All-zero runtime counters, returned by the infallible `runtime_counters`
-/// accessor when the fallible decode path reports an error.
-#[cfg(test)]
-fn zero_runtime_counters() -> ResidentRuntimeCounters {
-    ResidentRuntimeCounters {
-        total_slots: 0,
-        queue_depth: 0,
-        gpu_idle_slots: 0,
-        gpu_idle_ppm: 0,
-        frontier_density_bps: 0,
-        occupancy_proxy_bps: 0,
-        drained_slots: 0,
-        unreclaimed_done_slots: 0,
-        tenant_fairness_total: 0,
-        tenant_fairness_skew: 0,
-        priority_fairness_total: 0,
-        requeue_slots: 0,
-        fault_slots: 0,
-    }
-}
-
-/// All-zero watchdog snapshot, returned by the infallible `health_since`
-/// accessor when the fallible derivation path reports an error.
-#[cfg(test)]
-fn zero_watchdog_snapshot() -> ResidentWatchdogSnapshot {
-    ResidentWatchdogSnapshot {
-        done_delta: 0,
-        queue_depth: 0,
-        fault_slots: 0,
-        requeue_slots: 0,
-        gpu_idle_ppm: 0,
-        suspected_stall: false,
     }
 }
 
@@ -754,9 +697,9 @@ fn try_fairness_skew(counters: &[u32]) -> Result<u32, PipelineError> {
 }
 
 // Inline: the suite drives the `#[cfg(test)]` panicking accessors (`decode`,
-// `active_slots_for_opcode`, `active_windows`, `runtime_counters`, `health_since`)
-// and the private `zero_runtime_counters` and `zero_watchdog_snapshot`, none of
-// which an integration test can reach.
+// `active_slots_for_opcode`, `active_windows`), which an integration test cannot
+// reach. The panicking counter and health accessors it also used to drive are
+// gone; their cases now run through `try_runtime_counters` and `try_health_since`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -926,7 +869,9 @@ mod tests {
             let done = slot_status(1);
             ring[done..done + 4].copy_from_slice(&slot::DONE.to_le_bytes());
 
-            let counters = RingTelemetry::decode(&control, &ring).runtime_counters();
+            let counters = RingTelemetry::decode(&control, &ring)
+                .try_runtime_counters()
+                .expect("Fix: a four-slot ring must aggregate without overflow");
             assert_eq!(counters.total_slots, 4);
             assert_eq!(counters.queue_depth, 2);
             assert_eq!(counters.gpu_idle_slots, 1);
@@ -955,7 +900,13 @@ mod tests {
                 .recommend_launch(ResidentLaunchRequest::direct(8, 64, 256))
                 .expect("Fix: telemetry launch recommendation must accept valid limits");
 
-            assert_eq!(telemetry.runtime_counters().frontier_density_bps, 5_000);
+            assert_eq!(
+                telemetry
+                    .try_runtime_counters()
+                    .expect("Fix: an eight-slot ring must aggregate without overflow")
+                    .frontier_density_bps,
+                5_000
+            );
             assert_eq!(rec.topology, ResidentQueueTopology::DenseFrontier);
         }
 
@@ -1090,13 +1041,17 @@ mod tests {
             let mut current_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
             ResidentWorkQueue::publish_slot(&mut current_ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
                 .unwrap();
-            let stalled = RingTelemetry::decode(&current_control, &current_ring).health_since(&previous);
+            let stalled = RingTelemetry::decode(&current_control, &current_ring)
+                .try_health_since(&previous)
+                .expect("Fix: two well-formed snapshots must derive health without overflow");
             assert_eq!(stalled.done_delta, 0);
             assert_eq!(stalled.queue_depth, 1);
             assert!(stalled.suspected_stall);
 
             current_control[done_count..done_count + 4].copy_from_slice(&9u32.to_le_bytes());
-            let progressed = RingTelemetry::decode(&current_control, &current_ring).health_since(&previous);
+            let progressed = RingTelemetry::decode(&current_control, &current_ring)
+                .try_health_since(&previous)
+                .expect("Fix: two well-formed snapshots must derive health without overflow");
             assert_eq!(progressed.done_delta, 2);
             assert!(!progressed.suspected_stall);
         }

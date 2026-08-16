@@ -731,8 +731,8 @@ pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::try_add(&mu
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::host_copy_avoidance_bps(&self) -> u16
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::is_complete(&self) -> bool
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::missing_metric_families(&self) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily>
-pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::queue_depth(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::total_slots(&self) -> u32
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::queue_depth(&self) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::total_slots(&self) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::active_slots_for_opcode_iter(&self, opcode: u32) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot>
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::decode_capacity_evidence(&self, scratch: &vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch) -> vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::priority_accounting(&self) -> vyre_runtime::resident_work_queue::policy::PriorityRequeueAccounting

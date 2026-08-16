@@ -8,7 +8,6 @@
 use std::sync::Arc;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use super::complex_length::validate_complex_len;
@@ -62,9 +61,7 @@ pub fn fft_convolve_circular_complex(
         // the structural-budget gate stops counting nodes once it
         // descends below this Region. The `multiply + conjugate` step
         // is a self-contained sub-op of the FFT-convolve composition.
-        source_region: Some(GeneratorRef {
-            name: MULTIPLY_OP_ID.to_string(),
-        }),
+        source_region: Some(Ident::from(MULTIPLY_OP_ID)),
         body: Arc::new(multiply_and_conjugate_body(
             signal_freq,
             kernel_freq,
@@ -75,9 +72,7 @@ pub fn fft_convolve_circular_complex(
     entry.push(fft_region(product_freq, output, n)?);
     entry.push(wrap_child_region(
         SCALE_OP_ID,
-        GeneratorRef {
-            name: SCALE_OP_ID.to_string(),
-        },
+        Ident::from(SCALE_OP_ID),
         scale_conjugate_body(output, n),
     ));
 
@@ -117,9 +112,7 @@ fn validate_names(names: &[&str]) -> Result<(), String> {
 fn fft_region(input: &str, output: &str, n: u32) -> Result<Node, String> {
     Ok(wrap_child_region(
         FFT_OP_ID,
-        GeneratorRef {
-            name: FFT_OP_ID.to_string(),
-        },
+        Ident::from(FFT_OP_ID),
         fft_radix2_complex(input, output, n)?.into_entry_vec(),
     ))
 }

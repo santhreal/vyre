@@ -6,6 +6,7 @@
 //! the multi-block chain. The primitives own the two bodies and neither of them
 //! chooses.
 
+
 use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
 use crate::plumbing::program::attribution::attribute_child_nodes;
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;

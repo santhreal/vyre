@@ -10,7 +10,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -90,9 +90,7 @@ pub fn givens_rotate_pair_region(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         vec![givens_rotate_pair(
             matrix,
             loop_var,

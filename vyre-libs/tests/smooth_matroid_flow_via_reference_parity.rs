@@ -38,7 +38,7 @@ use vyre_libs::solvers::amg_pass_solver::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{from_fixed, xorshift32 as xorshift};
+use vyre_test_support::fixed_point::{from_fixed, xorshift32 as xorshift};
 
 const FIXED_ONE: f64 = 65536.0;
 

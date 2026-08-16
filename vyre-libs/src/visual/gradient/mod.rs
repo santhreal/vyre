@@ -4,7 +4,7 @@
 //! Category A composition  -  pure IR expressions.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::gradient";
@@ -302,9 +302,7 @@ pub fn try_linear_gradient(
             OP_ID,
             vec![wrap_child_region(
                 crate::visual::packed_rgba_map::OP_ID,
-                GeneratorRef {
-                    name: OP_ID.to_string(),
-                },
+                Ident::from(OP_ID),
                 body,
             )],
         )],

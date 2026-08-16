@@ -12,7 +12,7 @@
 pub(crate) struct ProgramCache<K, V> {
     hot: Option<ProgramCacheEntry<K, V>>,
     warm: Option<ProgramCacheEntry<K, V>>,
-    #[cfg(any(test, feature = "test-fixtures"))]
+    #[cfg(test)]
     builds: usize,
 }
 
@@ -27,7 +27,7 @@ impl<K, V> Default for ProgramCache<K, V> {
         Self {
             hot: None,
             warm: None,
-            #[cfg(any(test, feature = "test-fixtures"))]
+            #[cfg(test)]
             builds: 0,
         }
     }
@@ -85,7 +85,7 @@ impl<K: Eq, V> ProgramCache<K, V> {
     fn insert_hot(&mut self, key: K, value: V) {
         self.warm = self.hot.take();
         self.hot = Some(ProgramCacheEntry { key, value });
-        #[cfg(any(test, feature = "test-fixtures"))]
+        #[cfg(test)]
         {
             self.builds += 1;
         }
@@ -101,7 +101,7 @@ impl<K: Eq, V> ProgramCache<K, V> {
     }
 
     /// Number of times `build` ran, i.e. cache misses since construction.
-    #[cfg(any(test, feature = "test-fixtures"))]
+    #[cfg(test)]
     #[must_use]
     pub(crate) const fn builds(&self) -> usize {
         self.builds

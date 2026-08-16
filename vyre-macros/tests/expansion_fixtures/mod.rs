@@ -1,3 +1,10 @@
+//! The `::vyre` surface the expanded attribute writes its paths against.
+//!
+//! Each suite declares `extern crate self as vyre` and re-exports `ir` and
+//! `optimizer` from here, so the expansion's `::vyre::optimizer::ProgramPass`
+//! resolves inside the test binary. Every item below has to be `pub` for that
+//! resolution, and the module holding them is declared privately by suites
+//! that only need the registry half, which is what the lint reports.
 #![allow(unreachable_pub)]
 
 pub mod ir {

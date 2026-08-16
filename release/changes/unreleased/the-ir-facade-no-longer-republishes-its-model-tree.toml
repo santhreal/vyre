@@ -1,2 +1,2 @@
 category = "Changed"
-text = "vyre_foundation::ir publishes each IR type once. The facade previously re-exported the whole private model tree, so every expression, node, and program type answered to both ir::Name and ir::model::<submodule>::Name. Callers use the flat ir:: path; GeneratorRef, node_op_id, Scope and the program-graph identity types joined it."
+text = "vyre_foundation::ir publishes each IR type once. The facade previously re-exported the whole private model tree, so every expression, node, and program type answered to both ir::Name and ir::model::<submodule>::Name. Callers use the flat ir:: path; node_op_id, Scope and the program-graph identity types joined it."

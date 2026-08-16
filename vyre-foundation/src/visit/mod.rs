@@ -77,7 +77,7 @@ pub use lowerable::Lowerable;
 pub(crate) use node_parts::map_bodies_cow;
 pub use node_parts::{
     child_bodies, child_bodies_mut, node_bound_name, node_buffer_refs, node_operands, node_scalars,
-    node_shape, BufferRefs, NameBinding, NodeScalars, NodeShape,
+    node_shape, node_tag, BufferRefs, NameBinding, NodeScalars, NodeShape,
 };
 pub use node_visitor::{
     visit_node, visit_node_postorder, visit_node_preorder, walk_node_children_default, NodeVisitor,

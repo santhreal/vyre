@@ -14,7 +14,7 @@ use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 #[cfg(test)]
 use vyre_foundation::ir::BufferAccess;
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
 
@@ -391,7 +391,7 @@ impl NodeVisitor for LocalSlots {
         &mut self,
         _: &Node,
         _: &vyre_foundation::ir::Ident,
-        _: &Option<GeneratorRef>,
+        _: &Option<Ident>,
         _: &[Node],
     ) -> ControlFlow<Self::Break> {
         Continue(())

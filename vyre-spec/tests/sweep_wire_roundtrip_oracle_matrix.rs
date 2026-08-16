@@ -1,8 +1,9 @@
 //! Sweep oracle matrix for VIR0 wire encode/decode round-trips.
 //!
 //! Builds hostile `Program` shapes whose literals and casts exercise the
-//! frozen `vyre_spec` wire tag surface, then pins byte-identical canonical
-//! round-trip idempotence: encode → decode → re-encode must match bytes.
+//! frozen `vyre_spec` wire tag surface. What a round trip has to preserve is
+//! owned by `tests/support/wire_round_trip.rs`; the shapes below are this
+//! suite's contribution.
 
 #![forbid(unsafe_code)]
 
@@ -10,6 +11,8 @@
 mod spec_variant_tables;
 #[path = "../../tests/support/sweep_rng.rs"]
 mod sweep_rng;
+#[path = "../../tests/support/wire_round_trip.rs"]
+mod wire_round_trip;
 
 use smallvec::smallvec;
 use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
@@ -22,49 +25,22 @@ use vyre_spec::{
     AtomicOp, BinOp, DataType, QuantizationScale, QuantizationZeroPoint, TypeId, UnOp,
 };
 use vyre_test_support::data_type_elements::flat_buffer_element_types;
+use wire_round_trip::assert_canonical_wire_round_trip;
 
 const CASES: usize = 1024;
 
 #[test]
 fn sweep_wire_roundtrip_oracle_matrix_preserves_canonical_bytes() {
-    let mut assertions = 0usize;
+    let mut verified = 0usize;
     for case in 0..CASES {
-        let program = hostile_program(case as u64);
-        let encoded = program
-            .to_wire()
-            .unwrap_or_else(|error| panic!("Fix: hostile wire case {case} must encode: {error}"));
-        let decoded = Program::from_wire(&encoded)
-            .unwrap_or_else(|error| panic!("Fix: hostile wire case {case} must decode: {error}"));
-
-        let reencoded = decoded.to_wire().unwrap_or_else(|error| {
-            panic!("Fix: hostile wire case {case} must re-encode canonically: {error}")
-        });
-        assert_eq!(
-            reencoded, encoded,
-            "Fix: hostile wire case {case} canonical bytes drifted after round-trip"
-        );
-        assertions += 1;
-
-        let redecoded = Program::from_wire(&reencoded).unwrap_or_else(|error| {
-            panic!("Fix: hostile wire case {case} must decode canonical bytes: {error}")
-        });
-        let roundtrip_again = redecoded.to_wire().unwrap_or_else(|error| {
-            panic!("Fix: hostile wire case {case} must triple-encode: {error}")
-        });
-        assert_eq!(
-            roundtrip_again, encoded,
-            "Fix: hostile wire case {case} lost byte identity on second canonical encode"
-        );
-        assertions += 1;
-
-        assert_ne!(
-            encoded.len(),
-            0,
-            "Fix: hostile wire case {case} must emit non-empty bytes"
-        );
-        assertions += 1;
+        assert_canonical_wire_round_trip(&hostile_program(case as u64), &format!("hostile {case}"));
+        verified += 1;
     }
-    assert_eq!(assertions, CASES * 3);
+    assert_eq!(
+        verified, CASES,
+        "Fix: the hostile sweep skipped a case, so the oracle above ran on fewer programs \
+         than the matrix declares"
+    );
 }
 
 fn hostile_program(case: u64) -> Program {
@@ -264,8 +240,9 @@ fn hostile_datatype(rng: &mut Rng) -> DataType {
 
 #[test]
 fn sweep_wire_roundtrip_exercises_spec_atomic_tags_in_programs() {
-    let mut assertions = 0usize;
-    for case in 0..128usize {
+    const ATOMIC_CASES: usize = 128;
+    let mut verified = 0usize;
+    for case in 0..ATOMIC_CASES {
         let mut rng = Rng::new(0xA71C_0000 ^ case as u64);
         let mut ops = builtin_atomic_ops();
         ops.push(AtomicOp::Opaque(ExtensionAtomicOpId(
@@ -290,29 +267,12 @@ fn sweep_wire_roundtrip_exercises_spec_atomic_tags_in_programs() {
                 Node::Return,
             ],
         );
-        let encoded = program
-            .to_wire()
-            .unwrap_or_else(|error| panic!("Fix: atomic wire case {case} must encode: {error}"));
-        let decoded = Program::from_wire(&encoded)
-            .unwrap_or_else(|error| panic!("Fix: atomic wire case {case} must decode: {error}"));
-        let reencoded = decoded
-            .to_wire()
-            .unwrap_or_else(|error| panic!("Fix: atomic wire case {case} must re-encode: {error}"));
-        assert_eq!(
-            reencoded, encoded,
-            "Fix: atomic wire case {case} byte drift"
-        );
-        let roundtrip_again = Program::from_wire(&reencoded)
-            .unwrap_or_else(|error| panic!("Fix: atomic wire case {case} must re-decode: {error}"))
-            .to_wire()
-            .unwrap_or_else(|error| {
-                panic!("Fix: atomic wire case {case} must triple-encode: {error}")
-            });
-        assert_eq!(
-            roundtrip_again, encoded,
-            "Fix: atomic wire case {case} triple-encode drift"
-        );
-        assertions += 2;
+        assert_canonical_wire_round_trip(&program, &format!("atomic {case}"));
+        verified += 1;
     }
-    assert_eq!(assertions, 128 * 2);
+    assert_eq!(
+        verified, ATOMIC_CASES,
+        "Fix: the atomic tag sweep skipped a case, so the oracle above ran on fewer programs \
+         than the loop declares"
+    );
 }

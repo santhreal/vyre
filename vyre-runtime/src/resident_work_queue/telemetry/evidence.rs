@@ -180,31 +180,25 @@ mod evidence_tests {
         assert!(!evidence.is_complete());
     }
 
+    /// The record carries the snapshot it was handed, and derives the copy ratio.
+    ///
+    /// What the two occupancy accessors answer over a snapshot is
+    /// `RingOccupancy`'s contract, proved in
+    /// `tests/resident_work_queue_adversarial_overflow.rs`. Restating it here
+    /// asserts the same sum twice and says nothing about the record.
     #[test]
     fn runtime_evidence_records_copy_avoidance_and_occupancy() {
-        let evidence = ResidentRuntimeEvidence::complete(
-            4096,
-            1024,
-            3072,
-            RingOccupancy {
-                empty: 1,
-                published: 2,
-                claimed: 3,
-                done: 4,
-                wait_io: 5,
-                yield_count: 6,
-                requeue: 7,
-                fault: 8,
-                unknown: 9,
-            },
-            11,
-            13,
-        );
+        let occupancy = RingOccupancy {
+            empty: 1,
+            published: 2,
+            claimed: 3,
+            ..RingOccupancy::default()
+        };
+        let evidence = ResidentRuntimeEvidence::complete(4096, 1024, 3072, occupancy, 11, 13);
 
         assert!(evidence.is_complete());
         assert_eq!(evidence.resident_device_bytes, 4096);
-        assert_eq!(evidence.ring_occupancy.total_slots(), 45);
-        assert_eq!(evidence.ring_occupancy.queue_depth(), 40);
+        assert_eq!(evidence.ring_occupancy, occupancy);
         assert_eq!(evidence.host_copy_avoidance_bps(), 7500);
     }
 }

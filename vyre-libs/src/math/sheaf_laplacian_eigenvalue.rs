@@ -20,7 +20,7 @@
 use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::ir::{GeneratorRef, Ident};
+use vyre_foundation::ir::Ident;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::sheaf_laplacian_eigenvalue";
@@ -139,9 +139,7 @@ pub fn sheaf_laplacian_eigenvalue(
             OP_ID,
             vec![Node::Region {
                 generator: Ident::from(POWER_ITERATION_PHASE_OP_ID),
-                source_region: Some(GeneratorRef {
-                    name: OP_ID.to_string(),
-                }),
+                source_region: Some(Ident::from(OP_ID)),
                 // The scan is single-threaded (no per-lane work partitioning). The reference/GPU
                 // infers the dispatch grid from buffer shapes, so a count-`cells` vector spawns
                 // `cells` invocations. The running-max scratch is a plain (non-atomic) accumulator,

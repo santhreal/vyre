@@ -219,9 +219,7 @@ fn every_statement_variant_roundtrips_in_one_program() {
             },
             Node::Region {
                 generator: "gen".into(),
-                source_region: Some(vyre_foundation::ir::GeneratorRef {
-                    name: "src".to_string(),
-                }),
+                source_region: Some(vyre_foundation::ir::Ident::from("src")),
                 body: region_body,
             },
             Node::Opaque(Arc::new(EchoNode {

@@ -21,7 +21,7 @@
 use vyre_libs::solvers::natural_gradient_autotuner::precondition_autotune_gradient_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{
+use vyre_test_support::fixed_point::{
     fixed_matvec as natural_gradient_fixed, signed_fixed_19 as signed_fixed, to_fixed,
     xorshift32 as xorshift,
 };

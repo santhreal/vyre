@@ -3,10 +3,10 @@ use crate::ir::{Expr, Node, Program};
 use crate::optimizer::rewrite::rewrite_node_slices;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::transform::subst::{substitute_node, substitute_nodes};
+use crate::visit::map_bodies_cow;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::ops::Range;
-use std::sync::Arc;
 
 const MAX_UNROLL_TRIP_COUNT: u32 = 16;
 const MAX_UNROLLED_BODY_COST: u32 = 64;
@@ -119,19 +119,14 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
             Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
             Cow::Owned(body) => Cow::Owned(vec![Node::block(body)]),
         },
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => match rewrite_nodes(body) {
-            Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
-            Cow::Owned(body) => Cow::Owned(vec![Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(body),
-            }]),
+        // A `Region`, and every other body-bearing variant this match does not
+        // name, is rewritten through the one owner of the slot list, so the
+        // unroller reaches every nested loop the applicability search reports
+        // and an unchanged subtree still costs no clone.
+        other => match map_bodies_cow(other, &mut |body| rewrite_nodes(body)) {
+            Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(other)),
+            Cow::Owned(rebuilt) => Cow::Owned(vec![rebuilt]),
         },
-        _ => Cow::Borrowed(std::slice::from_ref(node)),
     }
 }
 

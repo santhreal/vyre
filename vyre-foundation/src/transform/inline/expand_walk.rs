@@ -147,8 +147,8 @@ struct Positions<'a, P> {
     prefix: &'a mut Vec<Node>,
     /// The first refusal, which stops every later position.
     failure: &'a mut Option<Error>,
-    /// What the statement being visited does to the name it binds, or `None`
-    /// when it binds nothing in the value namespace.
+    /// Which kind of binding the statement being visited makes, so the policy
+    /// can tell a fresh declaration from a rebinding.
     binding: Option<NameBinding>,
 }
 
@@ -170,12 +170,10 @@ impl<P: ExpandPolicy> NodeRewrite for Positions<'_, P> {
         }
     }
 
-    fn ident(&mut self, name: &Ident) -> Option<Ident> {
-        // Which name a statement binds in the value namespace is
-        // `node_scalars`'s decision. A statement that binds none reaches this
-        // hook only for an async copy, trap, or resume tag, which is a
-        // different namespace: renaming a tag would break its pairing with the
-        // matching wait, so tags are carried through.
+    /// Tags reach [`NodeRewrite::tag`], which this policy leaves at its default,
+    /// so the only names offered here are the value bindings `node_scalars`
+    /// reports and `enter` has already recorded the kind of.
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
         let binding = self.binding?;
         self.policy.binding(binding, name)
     }

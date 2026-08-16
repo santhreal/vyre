@@ -252,12 +252,20 @@ fn validate_node_inner(
             );
         }
         Node::AsyncLoad {
-            offset, size, tag, ..
+            destination,
+            offset,
+            size,
+            tag,
+            ..
         }
         | Node::AsyncStore {
-            offset, size, tag, ..
+            destination,
+            offset,
+            size,
+            tag,
+            ..
         } => {
-            node_rules::check_async_tag(tag, &mut report.errors);
+            node_rules::check_async_transfer(destination, tag, buffers, &mut report.errors);
             validate_expr(offset, buffers, scope, options, report, 0);
             validate_expr(size, buffers, scope, options, report, 0);
         }

@@ -7,7 +7,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for an f32 workgroup sum over a scratch buffer.
@@ -342,9 +342,7 @@ fn reduction_program(spec: WorkgroupReduction<'_>) -> Program {
 fn child_region(generator: &'static str, parent_op_id: &str, body: Vec<Node>) -> Node {
     wrap_child_region(
         generator,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         body,
     )
 }
@@ -605,7 +603,7 @@ mod tests {
         assert_eq!(
             source_region
                 .expect("Fix: child Region must name parent.")
-                .name,
+                .as_str(),
             "vyre-libs::math::reduce_mean"
         );
         assert!(!body.is_empty());

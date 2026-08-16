@@ -19,7 +19,7 @@
 use vyre_libs::solvers::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{fixed_mul, xorshift32 as xorshift, FIXED_ONE};
+use vyre_test_support::fixed_point::{fixed_mul, xorshift32 as xorshift, FIXED_ONE};
 
 /// Exact u32 oracle for one diagonal sheaf-diffusion step, mirroring the kernel bit-for-bit.
 fn sheaf_step_fixed(stalks: &[u32], restriction: &[u32], damping: u32) -> Vec<u32> {

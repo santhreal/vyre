@@ -3,7 +3,8 @@
 //! reuses.
 
 use super::slot;
-use super::{TelemetryDecodeCapacityEvidence, TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION};
+use super::{errors, TelemetryDecodeCapacityEvidence, TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION};
+use crate::PipelineError;
 use rustc_hash::FxHashMap;
 
 /// Decoded top-level ring slot state.
@@ -153,8 +154,11 @@ pub struct RingOccupancy {
 
 impl RingOccupancy {
     /// Total slots represented by this occupancy snapshot.
-    #[must_use]
-    pub fn total_slots(&self) -> u32 {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError`] when the decoded counts sum past `u32`.
+    pub fn total_slots(&self) -> Result<u32, PipelineError> {
         checked_status_sum(
             [
                 self.empty,
@@ -172,8 +176,11 @@ impl RingOccupancy {
     }
 
     /// Host-visible active queue depth: all non-empty slots that are not done.
-    #[must_use]
-    pub fn queue_depth(&self) -> u32 {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError`] when the decoded counts sum past `u32`.
+    pub fn queue_depth(&self) -> Result<u32, PipelineError> {
         checked_status_sum(
             [
                 self.published,
@@ -330,9 +337,19 @@ pub(super) struct WindowAccumulator {
     pub(super) fault: u32,
 }
 
-pub(super) fn checked_status_sum<const N: usize>(values: [u32; N], label: &'static str) -> u32 {
-    let _ = label;
-    values
-        .into_iter()
-        .fold(0_u32, |acc, value| acc.saturating_add(value))
+/// Sum status counts, reporting `label` when the total does not fit `u32`.
+///
+/// The counts are decoded from a device buffer, so a total wider than the slot
+/// index space means the snapshot is impossible rather than merely large. A
+/// clamped total reads as a plausible ring and every ratio derived from it is
+/// wrong, so the overflow is returned.
+pub(super) fn checked_status_sum<const N: usize>(
+    values: [u32; N],
+    label: &'static str,
+) -> Result<u32, PipelineError> {
+    values.into_iter().try_fold(0_u32, |total, value| {
+        total
+            .checked_add(value)
+            .ok_or_else(|| errors::status_sum_overflow(label))
+    })
 }

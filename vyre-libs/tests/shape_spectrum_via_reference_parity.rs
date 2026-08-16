@@ -21,7 +21,7 @@ use vyre_libs::math::spectral_shape::mp_edge_clip_cpu;
 use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{xorshift32 as xorshift, FIXED_ONE};
+use vyre_test_support::fixed_point::{xorshift32 as xorshift, FIXED_ONE};
 
 #[test]
 fn shape_spectrum_via_matches_u32_min_clip_bit_exact() {

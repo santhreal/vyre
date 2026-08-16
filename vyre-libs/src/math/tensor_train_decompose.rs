@@ -8,7 +8,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
@@ -214,9 +214,7 @@ pub fn tensor_train_decompose_step(
                     // which is exactly that primitive's contract.
                     wrap_child_region(
                         DOT_PARTIAL_OP_ID,
-                        GeneratorRef {
-                            name: OP_ID.to_string(),
-                        },
+                        Ident::from(OP_ID),
                         vec![dot_partial(
                             input_matrix,
                             rem_out,

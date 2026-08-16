@@ -1,19 +1,24 @@
 # vyre-libs
 
 Every composition in the workspace. You call a builder and you get a
-`vyre_foundation::ir::Program` built from existing IR. The crate does
-not emit shaders, does not pick a backend, and does not run the program.
+`vyre_foundation::ir::Program` built from existing IR as pure mathematical
+and semantic mappings. The crate does not emit shaders, does not pick a backend,
+does not decide execution-level schedules (serial vs parallel thread mappings,
+workgroup geometries), and does not run the program.
 
 Consumer domains and compiler-internal domains are equal residents.
 `nn::attention` and a solver the optimizer composes for itself are the
 same kind of thing. Reuse count is not an admission criterion.
 
-Not here: anything that names a concrete backend, links an emitter
-crate, or reimplements in host Rust what IR already expresses.
+Not here: anything that names a concrete backend, links an emitter crate,
+reimplements in host Rust what IR already expresses (including CPU reference
+oracles), encodes execution-level thread indexing, or implements host dispatch
+orchestration.
 
 Place the program in a validated `ProgramGraph` and compile it through
-`vyre-megakernel`. Dispatch belongs to `vyre-driver` and `vyre-runtime`.
-
+`vyre-megakernel`. Schedule selection, vectorization, and loop fusion belong to
+the optimizer and megakernel planner; dispatch belongs to `vyre-driver` and
+`vyre-runtime`.
 ## Domains
 
 Product dialects, enabled by feature:
@@ -135,7 +140,7 @@ Run the checked-in behavior from `vyre-libs/examples/dominator_tree_e2e.rs`:
 
 ### Features
 
-- Manifest features: `analysis`, `bitset`, `builder-ops`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `hash`, `intern`, `label`, `llm`, `logical`, `matching`, `matching-dfa`, `matching-kernels`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `predicate`, `python-parser`, `reasoning`, `reduce`, `representation`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `topology`, `visual`
+- Manifest features: `analysis`, `bitset`, `builder-ops`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `hash`, `intern`, `label`, `llm`, `logical`, `matching`, `matching-dfa`, `matching-kernels`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `predicate`, `python-parser`, `reasoning`, `reduce`, `representation`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `text`, `topology`, `visual`
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
 
 ### Errors and unsupported behavior

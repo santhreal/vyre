@@ -18,7 +18,7 @@ use crate::math::multigrid::jacobi_smooth_step_serial_body;
 use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::ir::{GeneratorRef, Ident};
+use vyre_foundation::ir::Ident;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::amg_v_cycle";
@@ -277,9 +277,7 @@ pub fn amg_v_cycle(
             OP_ID,
             vec![Node::Region {
                 generator: Ident::from(V_CYCLE_PHASE_OP_ID),
-                source_region: Some(GeneratorRef {
-                    name: OP_ID.to_string(),
-                }),
+                source_region: Some(Ident::from(OP_ID)),
                 // The V-cycle is a SINGLE-THREADED serial algorithm: its smoothing steps are
                 // inlined as serial loops (see jacobi_smooth_step_serial_body) and its
                 // restriction/prolongation phases are serial loop-nests. The reference/GPU infers

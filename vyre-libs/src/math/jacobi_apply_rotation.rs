@@ -14,7 +14,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::givens_rotate_pair::givens_rotate_pair_region;
@@ -121,9 +121,7 @@ pub fn jacobi_apply_rotation_region(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         jacobi_apply_rotation_body(a, eigenvectors, n, p, q),
     )
 }

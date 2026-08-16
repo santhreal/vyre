@@ -8,6 +8,7 @@
 use crate::ir::{Expr, Node, Program, SubgroupReduceOp};
 use crate::optimizer::ctx::AdapterCaps;
 use crate::optimizer::rewrite::rewrite_node_slices;
+use crate::visit::map_bodies_cow;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -33,22 +34,24 @@ impl ReductionValueType {
     /// Identity element for `op` at this value type. Used as the second-level
     /// `select` fill for out-of-range lanes so they cannot perturb the result:
     /// `0` for `Add` (sum), `-inf`/`0` for `Max`, etc.
-    fn neutral(self, op: SubgroupReduceOp) -> Expr {
+    ///
+    /// `None` for an op this table has no identity for. `SubgroupReduceOp` is
+    /// `#[non_exhaustive]`, so a variant added upstream reaches here, and any
+    /// fill this table guessed for it would be a wrong reduction result rather
+    /// than a slow one. Refusing leaves the portable workgroup tree in place.
+    fn neutral(self, op: SubgroupReduceOp) -> Option<Expr> {
         match (op, self) {
-            (SubgroupReduceOp::Add, Self::F32) => Expr::f32(0.0),
-            (SubgroupReduceOp::Add, Self::U32) => Expr::u32(0),
-            (SubgroupReduceOp::Mul, Self::F32) => Expr::f32(1.0),
-            (SubgroupReduceOp::Mul, Self::U32) => Expr::u32(1),
-            (SubgroupReduceOp::Max, Self::F32) => Expr::f32(f32::NEG_INFINITY),
-            (SubgroupReduceOp::Max, Self::U32) => Expr::u32(0),
-            (SubgroupReduceOp::Min, Self::F32) => Expr::f32(f32::INFINITY),
-            (SubgroupReduceOp::Min, Self::U32) => Expr::u32(u32::MAX),
-            (SubgroupReduceOp::And, _) => Expr::u32(u32::MAX),
-            (SubgroupReduceOp::Or | SubgroupReduceOp::Xor, _) => Expr::u32(0),
-            // #[non_exhaustive]: an unknown future op falls back to the additive
-            // identity, which is only reached if a new generator is wired
-            // without updating this table.
-            _ => Expr::u32(0),
+            (SubgroupReduceOp::Add, Self::F32) => Some(Expr::f32(0.0)),
+            (SubgroupReduceOp::Add, Self::U32) => Some(Expr::u32(0)),
+            (SubgroupReduceOp::Mul, Self::F32) => Some(Expr::f32(1.0)),
+            (SubgroupReduceOp::Mul, Self::U32) => Some(Expr::u32(1)),
+            (SubgroupReduceOp::Max, Self::F32) => Some(Expr::f32(f32::NEG_INFINITY)),
+            (SubgroupReduceOp::Max, Self::U32) => Some(Expr::u32(0)),
+            (SubgroupReduceOp::Min, Self::F32) => Some(Expr::f32(f32::INFINITY)),
+            (SubgroupReduceOp::Min, Self::U32) => Some(Expr::u32(u32::MAX)),
+            (SubgroupReduceOp::And, _) => Some(Expr::u32(u32::MAX)),
+            (SubgroupReduceOp::Or | SubgroupReduceOp::Xor, _) => Some(Expr::u32(0)),
+            _ => None,
         }
     }
 }
@@ -121,46 +124,16 @@ fn rewrite_node(node: &Node, plan: SubgroupReductionPlan) -> Cow<'_, [Node]> {
                 }]),
             }
         }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            let t = rewrite_nodes(then, plan);
-            let o = rewrite_nodes(otherwise, plan);
-            if matches!((&t, &o), (Cow::Borrowed(_), Cow::Borrowed(_))) {
-                Cow::Borrowed(std::slice::from_ref(node))
-            } else {
-                Cow::Owned(vec![Node::if_then_else(
-                    cond.clone(),
-                    t.into_owned(),
-                    o.into_owned(),
-                )])
-            }
-        }
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => {
-            let b = rewrite_nodes(body, plan);
-            if matches!(b, Cow::Borrowed(_)) {
-                Cow::Borrowed(std::slice::from_ref(node))
-            } else {
-                Cow::Owned(vec![Node::loop_for(
-                    var.clone(),
-                    from.clone(),
-                    to.clone(),
-                    b.into_owned(),
-                )])
-            }
-        }
-        Node::Block(body) => match rewrite_nodes(body, plan) {
+        // Every other variant recurses through the one owner of which variants
+        // nest bodies. A leaf has no body slot, the map hands it straight back
+        // borrowed, and the walk stops. A body-bearing variant added tomorrow
+        // is walked here rather than reaching a backend with the reduction
+        // region inside it still on the portable shared-memory tree while the
+        // rest of the program lowered.
+        other => match map_bodies_cow(other, &mut |body| rewrite_nodes(body, plan)) {
             Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
-            Cow::Owned(b) => Cow::Owned(vec![Node::block(b)]),
+            Cow::Owned(rewritten) => Cow::Owned(vec![rewritten]),
         },
-        _ => Cow::Borrowed(std::slice::from_ref(node)),
     }
 }
 
@@ -177,36 +150,36 @@ fn try_lower_workgroup_reduction(
     let scope = detect_scope(body)?;
 
     if let Some(value_type) = workgroup_sum_value_type(generator) {
-        Some(subgroup_reduce_body(
+        subgroup_reduce_body(
             SubgroupReduceOp::Add,
             &scratch,
             scope,
             plan,
             value_type,
-        ))
+        )
     } else if let Some(value_type) = workgroup_max_value_type(generator) {
         // Max reductions lower to `subgroup_reduce(Max, ...)`, mirroring the
         // sum path but with the max identity (`-inf`) filling out-of-range
         // lanes in the two-level reduction. Backends emit the native
         // `subgroupMax` / `redux.sync.max` instead of the slow shared tree.
-        Some(subgroup_reduce_body(
+        subgroup_reduce_body(
             SubgroupReduceOp::Max,
             &scratch,
             scope,
             plan,
             value_type,
-        ))
+        )
     } else if let Some(value_type) = workgroup_min_value_type(generator) {
         // Min reductions lower to `subgroup_reduce(Min, ...)`, with the min
         // identity (`+inf` for f32, `u32::MAX` for u32) filling out-of-range
         // lanes. Backends emit the native `subgroupMin` / `redux.sync.min`.
-        Some(subgroup_reduce_body(
+        subgroup_reduce_body(
             SubgroupReduceOp::Min,
             &scratch,
             scope,
             plan,
             value_type,
-        ))
+        )
     } else {
         None
     }
@@ -305,15 +278,19 @@ fn contains_workgroup_zero_guard(expr: &Expr) -> bool {
     }
 }
 
+/// Body that replaces the portable workgroup reduction, or `None` when the
+/// two-level form has no identity for `op` to fill its out-of-range lanes
+/// with. The single-subgroup form reads every lane, so it needs no identity
+/// and is always available.
 fn subgroup_reduce_body(
     op: SubgroupReduceOp,
     scratch: &str,
     scope: ReductionScope,
     plan: SubgroupReductionPlan,
     value_type: ReductionValueType,
-) -> Vec<Node> {
+) -> Option<Vec<Node>> {
     if plan.workgroup_total <= plan.subgroup_size {
-        return single_subgroup_reduce_body(op, scratch, scope);
+        return Some(single_subgroup_reduce_body(op, scratch, scope));
     }
     two_level_subgroup_reduce_body(op, scratch, scope, plan, value_type)
 }
@@ -342,7 +319,7 @@ fn two_level_subgroup_reduce_body(
     scope: ReductionScope,
     plan: SubgroupReductionPlan,
     value_type: ReductionValueType,
-) -> Vec<Node> {
+) -> Option<Vec<Node>> {
     let subgroup_count = plan.workgroup_total.div_ceil(plan.subgroup_size);
     let subgroup_slot = Expr::div(Expr::var("local"), Expr::u32(plan.subgroup_size));
     let subgroup_sum = Expr::subgroup_reduce(op, Expr::load(scratch, Expr::var("local")));
@@ -363,7 +340,7 @@ fn two_level_subgroup_reduce_body(
         Expr::select(
             Expr::lt(Expr::var("local"), Expr::u32(subgroup_count)),
             Expr::load(scratch, Expr::var("local")),
-            value_type.neutral(op),
+            value_type.neutral(op)?,
         ),
     );
     let second_level = vec![
@@ -378,7 +355,7 @@ fn two_level_subgroup_reduce_body(
         ),
     ];
 
-    match scope {
+    Some(match scope {
         ReductionScope::EveryWorkgroup => {
             let mut nodes = first_level;
             nodes.push(Node::barrier());
@@ -392,7 +369,7 @@ fn two_level_subgroup_reduce_body(
             Node::if_then(Expr::is_first_workgroup(), second_level),
             Node::barrier(),
         ],
-    }
+    })
 }
 
 #[cfg(test)]

@@ -13,17 +13,15 @@
 // so `opaque_count` moves. That difference is the parameter of
 // `arb_expr_with`, not a reason for a second corpus.
 
-#[path = "../../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
+#[path = "../../../tests/support/spec_op_strategies.rs"]
+mod spec_op_strategies;
 
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
-use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use spec_op_strategies::{arb_atomic_op, arb_bin_op, arb_un_op};
 use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_spec::extension::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
-};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::extension::ExtensionDataTypeId;
 use vyre_spec::TypeId;
 pub(crate) use vyre_test_support::data_type_elements::flat_buffer_element_types;
 
@@ -166,12 +164,12 @@ pub(crate) fn arb_expr_with(opaque_leaf: BoxedStrategy<Expr>) -> BoxedStrategy<E
                     index: Box::new(index),
                 }
             ),
-            (arb_binop(), inner.clone(), inner.clone()).prop_map(|(op, left, right)| Expr::BinOp {
+            (arb_bin_op(), inner.clone(), inner.clone()).prop_map(|(op, left, right)| Expr::BinOp {
                 op,
                 left: Box::new(left),
                 right: Box::new(right),
             }),
-            (arb_unop(), inner.clone()).prop_map(|(op, operand)| Expr::UnOp {
+            (arb_un_op(), inner.clone()).prop_map(|(op, operand)| Expr::UnOp {
                 op,
                 operand: Box::new(operand),
             }),
@@ -221,50 +219,6 @@ pub(crate) fn arb_expr_with(opaque_leaf: BoxedStrategy<Expr>) -> BoxedStrategy<E
         ]
     })
     .boxed()
-}
-
-/// Draw uniformly from a builtin variant table, with one extra opaque arm.
-///
-/// The builtins keep the combined weight they had when each was its own
-/// `prop_oneof!` arm, so folding a table into a single `select` does not hand
-/// the opaque arm half the corpus.
-fn builtin_arm_with_opaque<T: std::fmt::Debug + Clone + 'static>(
-    builtins: Vec<T>,
-    opaque: BoxedStrategy<T>,
-) -> BoxedStrategy<T> {
-    let weight = u32::try_from(builtins.len()).expect("Fix: variant tables stay small.");
-    prop_oneof![
-        weight => prop::sample::select(builtins),
-        1 => opaque,
-    ]
-    .boxed()
-}
-
-pub(crate) fn arb_binop() -> BoxedStrategy<BinOp> {
-    builtin_arm_with_opaque(
-        builtin_bin_ops(),
-        any::<u32>()
-            .prop_map(|id| BinOp::Opaque(ExtensionBinOpId(id | 0x8000_0000)))
-            .boxed(),
-    )
-}
-
-pub(crate) fn arb_unop() -> BoxedStrategy<UnOp> {
-    builtin_arm_with_opaque(
-        builtin_un_ops(),
-        any::<u32>()
-            .prop_map(|id| UnOp::Opaque(ExtensionUnOpId(id | 0x8000_0000)))
-            .boxed(),
-    )
-}
-
-pub(crate) fn arb_atomic_op() -> BoxedStrategy<AtomicOp> {
-    builtin_arm_with_opaque(
-        builtin_atomic_ops(),
-        any::<u32>()
-            .prop_map(|id| AtomicOp::Opaque(ExtensionAtomicOpId(id | 0x8000_0000)))
-            .boxed(),
-    )
 }
 
 /// An expression generator, passed as a function so one statement generator can

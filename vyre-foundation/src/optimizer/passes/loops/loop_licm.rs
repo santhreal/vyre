@@ -35,10 +35,14 @@
 //!
 //! - Hoists only `Node::Let` (single-assignment binding). `Node::Assign`
 //!   inside a loop is by definition loop-carrying and cannot be hoisted.
-//! - Skips Lets whose value expression contains `Expr::Load`, `Expr::Atomic`,
-//!   `Expr::Call`, `Expr::Opaque`, or `Expr::BufLen`  -  these can be
-//!   side-effecting or order-sensitive. The shared re-execution safety
-//!   predicate classifies every expression variant explicitly.
+//! - Skips Lets whose value expression contains `Expr::Atomic`, `Expr::Call`,
+//!   `Expr::Opaque`, or `Expr::BufLen`  -  these can be side-effecting or
+//!   order-sensitive. The shared re-execution safety predicate classifies every
+//!   expression variant explicitly.
+//! - Skips `Expr::Load` unless the buffer is declared `BufferAccess::ReadOnly`.
+//!   Nothing in a valid program writes such a buffer, so the load answers the
+//!   same value on every iteration and the binding may leave the loop. A load
+//!   from a writable buffer stays: a store in or after the loop may target it.
 //! - Skips Lets whose value references the loop var, any other Let
 //!   shadowed inside the body that is itself loop-carrying, or any
 //!   `Node::Assign` target in the body.
@@ -52,11 +56,15 @@
 //! - Walks one container body at a time. Nested loops get their own
 //!   pass invocation through the recursion.
 
-use crate::ir::{Expr, Ident, Node, Program};
-use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
+use crate::ir::{BufferAccess, Expr, Ident, Node, Program};
+use crate::optimizer::passes::loops::{loop_entry, LoopEntry};
+use crate::optimizer::passes::{
+    expr_is_observably_free_for_reexecution, expr_is_reexecutable_over_read_only_loads,
+};
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::count_bound_names;
+use crate::visit::node_map::map_body;
 use crate::visit::{any_descendant, for_each_node};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -87,7 +95,12 @@ impl LoopLicm {
         if !stats.has_any_node_kind(NODE_KIND_LOOP) || !stats.has_any_node_kind(NODE_KIND_LET) {
             return PassAnalysis::SKIP;
         }
-        if program.entry().iter().any(has_hoistable_let_in_any_loop) {
+        let read_only = read_only_buffers(program);
+        if program
+            .entry()
+            .iter()
+            .any(|node| has_hoistable_let_in_any_loop(node, &read_only))
+        {
             PassAnalysis::RUN
         } else {
             PassAnalysis::SKIP
@@ -99,14 +112,41 @@ impl LoopLicm {
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
         let mut changed = false;
-        let program = program.map_entry(|entry| hoist_in_body(entry, &mut changed));
+        let read_only = read_only_buffers(&program);
+        let program = program.map_entry(|entry| hoist_in_body(entry, &read_only, &mut changed));
         PassResult { program, changed }
     }
 }
 
+/// Buffers the program declares read-only.
+///
+/// Nothing in a valid program writes one, so a `Load` from it answers the same
+/// value on every iteration. This is the alias proof the hoist needs, and the
+/// buffer table is where the program states it.
+///
+/// The alias proof alone does not release the load. A loop the header does not
+/// prove is entered may run zero times, and a load hoisted out of it becomes a
+/// read the program never performed, which the reference interpreter absorbs
+/// and a device does not. `loop_entry` answers that second question, and only
+/// `LoopEntry::AtLeastOnce` passes this set to the rewrite.
+///
+/// Two rules make the table a proof rather than a convention: `V063` refuses a
+/// `Store` into a buffer that admits no store, and `V134` refuses an async
+/// transfer whose destination is such a buffer. Without the second, a DMA could
+/// write a read-only destination inside the loop and the hoisted load would
+/// answer a value from before the transfer.
+fn read_only_buffers(program: &Program) -> FxHashSet<Ident> {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| matches!(buffer.access, BufferAccess::ReadOnly))
+        .map(|buffer| Ident::new(std::sync::Arc::clone(&buffer.name)))
+        .collect()
+}
+
 /// Walk one container body, recursing into every nested container,
 /// and hoist invariant Lets out of every `Node::Loop` we find.
-fn hoist_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
+fn hoist_in_body(body: Vec<Node>, read_only: &FxHashSet<Ident>, changed: &mut bool) -> Vec<Node> {
     // Names bound anywhere in THIS enclosing body's subtree, with multiplicity.
     // A Let hoisted out of a loop lands in this body's scope, so it is only
     // safe to flat-splice when its name is bound nowhere else here (count == 1);
@@ -125,8 +165,18 @@ fn hoist_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                 to,
                 body: loop_body,
             } => {
-                let inner = hoist_in_body(loop_body, changed);
-                let (hoisted, kept) = split_invariant_lets(&var, inner, &bound_counts, changed);
+                // A read may leave the loop only when the loop is proven to run.
+                // Out of a header that proves nothing, a load that the body would
+                // have skipped becomes a read this program never performed, and
+                // the reference interpreter's zero-fill for an out-of-range read
+                // is exactly the absorption a real device does not do.
+                let loads = match loop_entry(&from, &to) {
+                    LoopEntry::AtLeastOnce => Some(read_only),
+                    LoopEntry::Never | LoopEntry::Unknown => None,
+                };
+                let inner = hoist_in_body(loop_body, read_only, changed);
+                let (hoisted, kept) =
+                    split_invariant_lets(&var, inner, &bound_counts, loads, changed);
                 for h in hoisted {
                     out.push(h);
                 }
@@ -137,37 +187,15 @@ fn hoist_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                     body: kept,
                 });
             }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                let then = hoist_in_body(then, changed);
-                let otherwise = hoist_in_body(otherwise, changed);
-                out.push(Node::If {
-                    cond,
-                    then,
-                    otherwise,
-                });
-            }
-            Node::Block(inner) => {
-                out.push(Node::Block(hoist_in_body(inner, changed)));
-            }
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => {
-                let body_vec =
-                    std::sync::Arc::try_unwrap(body).unwrap_or_else(|arc| (*arc).clone());
-                let body_vec = hoist_in_body(body_vec, changed);
-                out.push(Node::Region {
-                    generator,
-                    source_region,
-                    body: std::sync::Arc::new(body_vec),
-                });
-            }
-            other => out.push(other),
+            // Every other variant recurses through the one owner of which
+            // variants nest bodies. A leaf has no body slot, so the map hands
+            // it back untouched and the walk stops. A body-bearing variant
+            // added tomorrow is descended into here rather than carrying a
+            // loop the hoist never entered, which would leave the pass
+            // reporting no change for a program it should have rewritten.
+            other => out.push(map_body(other, &mut |body| {
+                hoist_in_body(body, read_only, changed)
+            })),
         }
     }
     out
@@ -182,6 +210,7 @@ fn split_invariant_lets(
     loop_var: &Ident,
     body: Vec<Node>,
     enclosing_bound_counts: &FxHashMap<Ident, usize>,
+    loadable: Option<&FxHashSet<Ident>>,
     changed: &mut bool,
 ) -> (Vec<Node>, Vec<Node>) {
     let mut mutated: FxHashSet<Ident> = FxHashSet::default();
@@ -210,7 +239,7 @@ fn split_invariant_lets(
                 if !name_reassigned_in_loop
                     && !any_dependency_mutated
                     && name_unique_in_enclosing
-                    && expr_is_observably_free_for_reexecution(&value, false)
+                    && hoistable_value(&value, loadable)
                 {
                     *changed = true;
                     // The hoisted Let no longer counts as
@@ -226,6 +255,22 @@ fn split_invariant_lets(
         }
     }
     (hoisted, kept)
+}
+
+/// May this bound value be evaluated at the point above the loop?
+///
+/// `loadable` carries the read-only buffer set when the loop is proven to run,
+/// and `None` when the header proves nothing. Without that proof a load stays
+/// inside: hoisting it turns a read the body would have skipped into a read the
+/// program performs, and an out-of-range read is absorbed by the reference
+/// interpreter and by nothing on a device. Everything else the classifier
+/// admits is arithmetic over values already in scope, which costs a register
+/// and observes nothing.
+fn hoistable_value(value: &Expr, loadable: Option<&FxHashSet<Ident>>) -> bool {
+    match loadable {
+        Some(read_only) => expr_is_reexecutable_over_read_only_loads(value, read_only),
+        None => expr_is_observably_free_for_reexecution(value, false),
+    }
 }
 
 /// Every name `nodes` mutates, at any nesting depth: `Assign` targets, plus
@@ -294,9 +339,11 @@ fn expr_references_any(expr: &Expr, mutated: &FxHashSet<Ident>) -> bool {
 }
 
 /// True iff `body` holds a top-level `Let` whose value references neither
-/// `var` nor any name mutated inside `body`, and is observably free to
-/// re-execute outside the loop.
-fn loop_has_hoistable_let(var: &Ident, body: &[Node]) -> bool {
+/// `var` nor any name mutated inside `body`, and is safe to re-execute outside
+/// the loop. `loadable` carries the read-only buffer set exactly when the
+/// header proves the loop runs, so this question and the rewrite ask the same
+/// one and the pass cannot report RUN for a hoist it will then refuse.
+fn loop_has_hoistable_let(var: &Ident, body: &[Node], loadable: Option<&FxHashSet<Ident>>) -> bool {
     let mut mutated: FxHashSet<Ident> = FxHashSet::default();
     mutated.insert(var.clone());
     collect_assigned_and_let_bound_names(body, &mut mutated);
@@ -310,7 +357,7 @@ fn loop_has_hoistable_let(var: &Ident, body: &[Node]) -> bool {
             // can skip the masked id without rebuilding the set.
             !assigned.contains(name)
                 && !expr_references_any_except(value, &mutated, name)
-                && expr_is_observably_free_for_reexecution(value, false)
+                && hoistable_value(value, loadable)
         } else {
             false
         }
@@ -326,10 +373,14 @@ fn loop_has_hoistable_let(var: &Ident, body: &[Node]) -> bool {
 /// body-bearing variant read as absent and the pass reported SKIP. Every loop
 /// the walk reaches, nested or not, is asked about its own body, so nesting no
 /// longer needs a recursive arm here.
-fn has_hoistable_let_in_any_loop(node: &Node) -> bool {
+fn has_hoistable_let_in_any_loop(node: &Node, read_only: &FxHashSet<Ident>) -> bool {
     any_descendant(node, &mut |n| {
-        if let Node::Loop { var, body, .. } = n {
-            loop_has_hoistable_let(var, body)
+        if let Node::Loop { var, from, to, body } = n {
+            let loadable = match loop_entry(from, to) {
+                LoopEntry::AtLeastOnce => Some(read_only),
+                LoopEntry::Never | LoopEntry::Unknown => None,
+            };
+            loop_has_hoistable_let(var, body, loadable)
         } else {
             false
         }
@@ -368,8 +419,8 @@ mod tests {
     fn references_helpers_see_a_var_inside_a_shuffle_lane() {
         // The invariance helpers must report a mutated var referenced ANYWHERE
         // in the expression, including a `SubgroupShuffle`'s lane operand. The
-        // hoist gate also independently refuses any shuffle today (via
-        // `expr_is_observably_free_for_reexecution`), so a dropped lane is currently masked; this
+        // hoist gate also independently refuses any shuffle today (the
+        // re-execution predicate does), so a dropped lane is currently masked; this
         // guards the helpers' own completeness so a future uniform-shuffle hoist
         // cannot silently treat a lane-dependent value as loop-invariant.
         let mut mutated: FxHashSet<Ident> = FxHashSet::default();

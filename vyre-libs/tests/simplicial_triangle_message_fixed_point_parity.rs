@@ -20,9 +20,9 @@
 //! BIT-EXACT: all features are exact 16.16 values (`k / 65536` for a bounded integer `k`), so the u32
 //! two's-complement sum `k_jk - k_ik + k_ij` (kept within i32 range) reinterpreted as i32 equals the
 //! exact f64 boundary value (no tolerance).
-#![cfg(all(feature = "topology", feature = "test-fixtures"))]
+#![cfg(feature = "topology")]
 
-use vyre_libs::test_parity_oracles::{from_fixed, to_fixed, xorshift32 as xorshift};
+use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_libs::topology::simplicial::simplicial_triangle_message;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;

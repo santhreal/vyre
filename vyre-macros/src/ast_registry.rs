@@ -298,6 +298,12 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
     out.into()
 }
 
+/// WHY: `AstManifest` and its validation are `pub(crate)` in a proc-macro
+/// crate, which exports macros and nothing else, so no integration test under
+/// `tests/` can name them. `tests/ui` pins the compile errors a malformed
+/// manifest produces; this module pins the parse and the validation those
+/// errors come from, including the accepted shapes that produce no error at
+/// all and so leave no diagnostic for a UI test to read.
 #[cfg(test)]
 mod tests {
     use super::*;

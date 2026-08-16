@@ -4,7 +4,7 @@
 //! All math is integer fixed-point 16.16. Category A  -  pure IR.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::filter_chain";
@@ -58,9 +58,7 @@ pub fn filter_chain(
             OP_ID,
             vec![wrap_child_region(
                 crate::visual::packed_rgba_map::OP_ID,
-                GeneratorRef {
-                    name: OP_ID.to_string(),
-                },
+                Ident::from(OP_ID),
                 vec![
                     Node::let_bind("idx", Expr::gid_x()),
                     Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(count)), {

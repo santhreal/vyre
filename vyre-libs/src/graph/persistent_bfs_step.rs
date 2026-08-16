@@ -2,7 +2,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_child_prefixed;
@@ -121,9 +121,7 @@ pub fn persistent_bfs_step_child_prefixed(
 ) -> Node {
     wrap_child_region(
         PERSISTENT_BFS_STEP_OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         persistent_bfs_step_body_prefixed(
             shape,
             frontier_out,
@@ -150,9 +148,7 @@ pub fn persistent_bfs_step_child_prefixed_with_active(
 ) -> Node {
     wrap_child_region(
         PERSISTENT_BFS_STEP_OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         persistent_bfs_step_body_prefixed_with_active(
             shape,
             frontier_out,

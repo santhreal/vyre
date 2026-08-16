@@ -3,7 +3,7 @@
 //! Category-A composition over `nn::softmax` and `nn::top_k`.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
 
@@ -25,9 +25,7 @@ pub fn moe_gate(
 ) -> Program {
     // Lane-0 deterministic gate: stable softmax denominator followed
     // by duplicate-suppressed top-k selection.
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
     let body = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         vec![

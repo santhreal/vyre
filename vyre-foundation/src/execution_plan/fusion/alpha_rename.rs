@@ -158,7 +158,16 @@ impl NodeRewrite for ArmRenamer<'_> {
         }
     }
 
-    fn ident(&mut self, name: &Ident) -> Option<Ident> {
+    /// A fused arm renames its tags for the same reason it renames its values:
+    /// two arms spliced into one scope that both opened a transfer under the
+    /// tag `stage0` would pair each start with the other arm's wait. Both ends
+    /// of a pair sit in the same arm, so prefixing every occurrence keeps them
+    /// together.
+    fn tag(&mut self, name: &Ident) -> Option<Ident> {
+        self.renamed(name)
+    }
+
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
         self.renamed(name)
     }
 }

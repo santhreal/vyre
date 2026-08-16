@@ -28,8 +28,7 @@ pub mod dead_branch;
 
 /// Loop-invariant code motion.
 ///
-/// Hoists a let whose value does not depend on the loop index out of the loop
-/// body, including a `Load` from a buffer the loop only reads.
+/// The resident pipeline's binding of the loop LICM pass, which owns the rule.
 pub mod licm;
 
 /// Shared-nothing parallel dispatch analysis.
@@ -78,9 +77,10 @@ pub struct HostRewrite {
 /// is not here does not run, and `vyre-foundation/tests/transform_rewrites_still_fire.rs`
 /// derives its coverage from it rather than from a scan of this directory.
 pub const HOST_REWRITES: &[HostRewrite] = &[
-    // For each `Loop`, hoist Let bindings whose value does not reference the
-    // iteration variable to a sibling above the loop. Conservative: hoisting
-    // stops at the first side-effecting node, so observable behaviour holds.
+    // For each `Loop`, hoist a binding whose value is invariant across the
+    // iteration space to a sibling above the loop. A load leaves the loop only
+    // when the buffer is declared read-only, and a name bound elsewhere in the
+    // enclosing scope stays put so the hoist cannot duplicate a binding.
     HostRewrite {
         name: "licm",
         apply: licm::apply_licm,

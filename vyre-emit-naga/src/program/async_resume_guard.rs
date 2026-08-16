@@ -16,7 +16,6 @@
 
 use std::ops::ControlFlow::{self, Break, Continue};
 
-use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::Node;
 use vyre_foundation::ir::{Expr, Ident, NodeExtension, Program};
 use vyre_foundation::visit::{visit_node_preorder, NodeVisitor};
@@ -129,7 +128,7 @@ impl NodeVisitor for AsyncResumeRejector {
         &mut self,
         _: &Node,
         _: &Ident,
-        _: &Option<GeneratorRef>,
+        _: &Option<Ident>,
         _: &[Node],
     ) -> ControlFlow<&'static str> {
         Continue(())

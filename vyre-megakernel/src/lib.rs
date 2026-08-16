@@ -69,7 +69,7 @@ pub use target::{
 pub use vyre_foundation::diagnostics::Diagnostic;
 
 pub(crate) use dependency_order::{build_barriers, ensure_node_dag, group_stages};
-pub(crate) use device_facts::workgroup_scratch_bytes;
+pub(crate) use device_facts::workgroup_scratch_declarations;
 pub(crate) use error::{failure, CompilerFailureKind};
 pub(crate) use identity::domain_digest;
 pub(crate) use resource_records::{build_materializations, value_byte_count};

@@ -169,9 +169,7 @@ impl Reader<'_> {
                 let presence = self.u8()?;
                 let source_region = match presence {
                     0 => None,
-                    1 => Some(crate::ir::GeneratorRef {
-                        name: self.string()?,
-                    }),
+                    1 => Some(crate::ir::Ident::from(self.string()?)),
                     other => {
                         return Err(format!(
                             "Fix: Region source_region presence byte must be 0 or 1, got {other}"
