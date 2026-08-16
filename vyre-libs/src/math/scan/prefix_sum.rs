@@ -13,6 +13,17 @@ use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 
+/// The two scan bodies this composition selects between, as phase boundaries
+/// inside one operation.
+///
+/// Both carry the `anonymous::` prefix because neither scan primitive
+/// registers a canonical operation of its own: the selection is a real edge in
+/// the IR, and naming it after an unregistered id would claim a building block
+/// that does not exist.
+const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-libs::math::prefix_scan_inclusive_sum";
+const MULTI_BLOCK_CHILD: &str =
+    "anonymous::vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum";
+
 /// Build a Program that computes the inclusive prefix sum of `input`
 /// into `output`, both sized `n`.
 ///
@@ -30,12 +41,12 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
     }
     if n <= MAX_SINGLE_BLOCK_SCAN {
         compose_scan_primitive(
-            crate::math::prefix_scan::OP_ID_INCLUSIVE_SUM,
+            SINGLE_BLOCK_CHILD,
             prefix_scan(input, output, n, ScanKind::InclusiveSum),
         )
     } else {
         compose_scan_primitive(
-            crate::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM,
+            MULTI_BLOCK_CHILD,
             multi_block_prefix_scan_sum_u32(input, output, n),
         )
     }
