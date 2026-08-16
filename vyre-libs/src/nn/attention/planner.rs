@@ -106,7 +106,17 @@ pub fn plan_flash_attention_scalar(
     // at `tile_size = 1`, and that core stages a tile's scores in workgroup
     // scratch, so the scalar tile is one element wide rather than absent.
     let score_scratch_elements = SCALAR_ONLINE_WORKGROUP_LANES;
-    let memory_traffic = scalar_memory_traffic(seq_len, head_dim, q_scratch_elements)?;
+    // Every workgroup buffer the scalar program declares, the same sum the
+    // tiled path reports: q_scratch, score_tile and o_acc. Reporting only
+    // q_scratch understates the footprint the occupancy comparison reads, and
+    // the score tile is the buffer folding onto the shared core introduced.
+    let shared_elements = q_scratch_elements
+        .checked_add(score_scratch_elements)
+        .and_then(|value| value.checked_add(q_scratch_elements))
+        .ok_or_else(|| {
+            "Fix: flash_attention shared scratch element count overflows u32".to_string()
+        })?;
+    let memory_traffic = scalar_memory_traffic(seq_len, head_dim, shared_elements)?;
     Ok(FlashAttentionWorkPlan {
         kernel: FlashAttentionKernelKind::ScalarOnline,
         seq_len,
@@ -175,10 +185,16 @@ pub fn plan_flash_attention_tiled(
         "flash_attention_2 o_acc",
     )?;
     let split_reduce_scratch_elements = split_reduce_scratch_elements(sequence_splits, head_dim)?;
+    // The three workgroup buffers the program declares, and only those. The
+    // split reduction combines partial softmax state ACROSS workgroups, so its
+    // scratch cannot be workgroup memory and the emitted program allocates no
+    // buffer for it; counting it here overstated the footprint the occupancy
+    // comparison reads by one softmax state per split. It stays a reported plan
+    // field, because the split count is what a caller sizes that global
+    // allocation from.
     let shared_elements = q_scratch_elements
         .checked_add(score_scratch_elements)
         .and_then(|value| value.checked_add(o_acc_scratch_elements))
-        .and_then(|value| value.checked_add(split_reduce_scratch_elements))
         .ok_or_else(|| "Fix: flash_attention_2 shared scratch overflows u32".to_string())?;
     let memory_traffic = tiled_memory_traffic(seq_len, head_dim, shared_elements)?;
     Ok(FlashAttentionWorkPlan {
@@ -254,14 +270,14 @@ fn checked_mul(lhs: u32, rhs: u32, context: &str) -> Result<u32, String> {
 fn scalar_memory_traffic(
     seq_len: u32,
     head_dim: u32,
-    scratch_elements: u32,
+    shared_elements: u32,
 ) -> Result<FlashAttentionMemoryTraffic, String> {
     let pair_elements = square_times_dim(seq_len, head_dim, "flash_attention scalar traffic")?;
     let output_elements = u64::from(seq_len) * u64::from(head_dim);
     Ok(FlashAttentionMemoryTraffic {
         global_read_bytes: pair_elements.saturating_mul(3).saturating_mul(F32_BYTES),
         global_write_bytes: output_elements.saturating_mul(F32_BYTES),
-        shared_memory_bytes: u64::from(scratch_elements).saturating_mul(F32_BYTES),
+        shared_memory_bytes: u64::from(shared_elements).saturating_mul(F32_BYTES),
     })
 }
 

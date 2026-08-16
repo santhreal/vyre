@@ -688,6 +688,11 @@ path = "tests/attention_layout_dispatch_grid.rs"
 required-features = ["llm"]
 
 [[test]]
+name = "flash_attention_plan_shared_memory"
+path = "tests/flash_attention_plan_shared_memory.rs"
+required-features = ["nn-attention"]
+
+[[test]]
 name = "recurrent_gated_delta_contract"
 path = "tests/recurrent_gated_delta_contract.rs"
 required-features = ["nn-attention"]
