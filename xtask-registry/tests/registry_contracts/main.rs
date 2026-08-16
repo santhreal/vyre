@@ -8,5 +8,6 @@
 #![forbid(unsafe_code)]
 
 mod cli_docs;
+mod handrolled_operations;
 mod operation_schema;
 mod registration_visibility;

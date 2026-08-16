@@ -8,7 +8,7 @@ use xtask::gates::dedup_report::{
     duplicate_report_generator_command, structural_similarity, write_duplicate_report_json,
 };
 
-use crate::gates::lego_audit::OpInfo;
+use crate::gates::lego_audit::{OpInfo, MIN_COMPARABLE_FINGERPRINT_BYTES};
 
 use super::pair_facts::{
     implementation_family, known_distinct_implementation_family, pair_verdict,
@@ -51,7 +51,7 @@ pub(super) fn run_target_query(
     let mut scored: Vec<(f64, bool, bool, &OpInfo)> = ops
         .iter()
         .filter(|o| o.id != target.id)
-        .filter(|o| o.fingerprint.len() >= 10)
+        .filter(|o| o.fingerprint.len() >= MIN_COMPARABLE_FINGERPRINT_BYTES)
         .map(|o| {
             (
                 structural_similarity(&target.fingerprint, &o.fingerprint),
@@ -144,7 +144,10 @@ pub(super) fn run_all_pairs_query(
     min_score: f64,
     duplicate_report_json: Option<&PathBuf>,
 ) -> Result<(), GateError> {
-    let eligible: Vec<&OpInfo> = ops.iter().filter(|op| op.fingerprint.len() >= 10).collect();
+    let eligible: Vec<&OpInfo> = ops
+        .iter()
+        .filter(|op| op.fingerprint.len() >= MIN_COMPARABLE_FINGERPRINT_BYTES)
+        .collect();
     let mut pairs: Vec<(f64, &OpInfo, &OpInfo)> = Vec::new();
     let mut contract_variants = 0usize;
     let mut centralized_family_variants = 0usize;

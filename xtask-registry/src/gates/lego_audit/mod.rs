@@ -65,6 +65,7 @@ use self::depth_of_composition::*;
 use self::duplicates::*;
 use self::exemptions::*;
 use self::fingerprint::*;
+pub use self::fingerprint::{fingerprint_program, MIN_COMPARABLE_FINGERPRINT_BYTES};
 use self::god_files::*;
 use self::name_stem::*;
 use self::no_reinvention::*;
