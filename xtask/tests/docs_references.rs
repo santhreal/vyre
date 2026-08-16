@@ -330,13 +330,14 @@ fn absolute_paths_inside_the_checkout_are_still_checked() {
 
 /// A reference that climbs above the checkout is a claim this repository cannot
 /// satisfy, and it is reported as leaving rather than as merely absent, because
-/// the two need different corrections.
+/// the two need different corrections. One `..` from `docs/` still lands inside
+/// the checkout, so the escape needs two.
 #[test]
 fn a_reference_above_the_checkout_is_reported_as_leaving_it() {
     let root = fixture();
     fs::write(
         root.path().join("docs/guide.md"),
-        "The sibling tree is at `../elsewhere/table.json`.\n",
+        "The sibling tree is at `../../elsewhere/table.json`.\n",
     )
     .unwrap();
 

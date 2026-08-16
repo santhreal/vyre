@@ -336,13 +336,12 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 - Path: `vyre-libs`
 - Owner: `product-libraries`
 - Layer: `libraries`
-- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
-| `vyre-reference` | reference interpreter behind the test-fixtures dispatcher | `private` | `reference-semantics` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-lints`
