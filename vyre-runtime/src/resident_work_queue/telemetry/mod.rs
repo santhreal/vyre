@@ -496,8 +496,8 @@ impl RingTelemetry {
     /// Returns [`PipelineError`] when counter aggregation overflows or decoded
     /// telemetry contains an impossible relationship.
     pub fn try_runtime_counters(&self) -> Result<ResidentRuntimeCounters, PipelineError> {
-        let total_slots = self.occupancy.total_slots();
-        let queue_depth = self.occupancy.queue_depth();
+        let total_slots = self.occupancy.total_slots()?;
+        let queue_depth = self.occupancy.queue_depth()?;
         let gpu_idle_slots = self.occupancy.empty;
         let gpu_idle_ppm = if total_slots == 0 {
             0

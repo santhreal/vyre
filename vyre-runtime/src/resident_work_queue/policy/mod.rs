@@ -1186,10 +1186,8 @@ impl ResidentLaunchPolicy {
             return self.hit_capacity_multiplier;
         }
         let n = candidate_multipliers.len().min(costs.len());
-        let chosen = best_cost_index(&costs[..n]);
-        candidate_multipliers
-            .get(chosen)
-            .copied()
+        best_cost_index(&costs[..n])
+            .and_then(|chosen| candidate_multipliers.get(chosen).copied())
             .unwrap_or(self.hit_capacity_multiplier)
     }
 
@@ -1209,8 +1207,9 @@ impl ResidentLaunchPolicy {
             return current_size;
         }
         let n = candidate_sizes.len().min(costs.len());
-        let chosen = best_cost_index(&costs[..n]);
-        candidate_sizes.get(chosen).copied().unwrap_or(current_size)
+        best_cost_index(&costs[..n])
+            .and_then(|chosen| candidate_sizes.get(chosen).copied())
+            .unwrap_or(current_size)
     }
 
     /// Compute the next-step parameter delta for a continuous autotune
@@ -1351,17 +1350,22 @@ fn reserve_target_capacity<T>(
     })
 }
 
-fn best_cost_index(costs: &[f64]) -> usize {
-    debug_assert!(!costs.is_empty());
+/// Index of the lowest cost, or `None` when no cost was measured.
+///
+/// The empty case is in the return type rather than in an assertion, because an
+/// assertion compiled out of the shipped binary leaves an unchecked index at the
+/// only point where the caller has nothing to select from.
+fn best_cost_index(costs: &[f64]) -> Option<usize> {
+    let (first, rest) = costs.split_first()?;
     let mut best = 0;
-    let mut best_cost = costs[0];
-    for (index, &cost) in costs.iter().enumerate().skip(1) {
+    let mut best_cost = *first;
+    for (index, &cost) in rest.iter().enumerate() {
         if cost.total_cmp(&best_cost).is_lt() {
-            best = index;
+            best = index + 1;
             best_cost = cost;
         }
     }
-    best
+    Some(best)
 }
 
 fn u32_to_usize_checked(value: u32, label: &'static str) -> Result<usize, BackendError> {

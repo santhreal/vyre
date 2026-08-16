@@ -203,8 +203,20 @@ mod evidence_tests {
 
         assert!(evidence.is_complete());
         assert_eq!(evidence.resident_device_bytes, 4096);
-        assert_eq!(evidence.ring_occupancy.total_slots(), 45);
-        assert_eq!(evidence.ring_occupancy.queue_depth(), 40);
+        assert_eq!(
+            evidence
+                .ring_occupancy
+                .total_slots()
+                .expect("Fix: the fixture occupancy must sum without overflow"),
+            45
+        );
+        assert_eq!(
+            evidence
+                .ring_occupancy
+                .queue_depth()
+                .expect("Fix: the fixture occupancy must sum without overflow"),
+            40
+        );
         assert_eq!(evidence.host_copy_avoidance_bps(), 7500);
     }
 }

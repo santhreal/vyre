@@ -3,9 +3,9 @@
 
 use vyre_runtime::resident_work_queue::{
     protocol::{self, control, control::OBSERVABLE_BASE},
+    telemetry::RingOccupancy,
     ResidentWorkQueue,
 };
-// PipelineError intentionally not used in this file  -  all tests use Option/Result returns.
 
 fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
     let off = word_idx * 4;
@@ -107,4 +107,97 @@ fn control_byte_len_observable_boundary_exactly_max_safe_succeeds_without_alloca
     let expected_words = OBSERVABLE_BASE + max_safe;
     let expected_bytes = (expected_words as usize) * core::mem::size_of::<u32>();
     assert_eq!(protocol::control_byte_len(max_safe), Some(expected_bytes));
+}
+
+// ---------------------------------------------------------------------------
+// 4. Ring occupancy sums
+// ---------------------------------------------------------------------------
+
+/// An occupancy whose counts do not fit `u32` is reported, not clamped.
+///
+/// The counts are decoded from device memory, so a corrupt or hostile ring can
+/// present a set that sums past the slot index space. A saturating sum answers
+/// `u32::MAX`, which reads as a very full ring and silently poisons every ratio
+/// derived from it, so the impossible snapshot has to fail instead.
+#[test]
+fn an_occupancy_summing_past_u32_is_reported_rather_than_clamped() {
+    let occupancy = RingOccupancy {
+        empty: u32::MAX,
+        published: 1,
+        ..RingOccupancy::default()
+    };
+    let error = occupancy
+        .total_slots()
+        .expect_err("Fix: an occupancy wider than u32 must be reported");
+    let text = error.to_string();
+    assert!(
+        text.contains("total ring slots"),
+        "Fix: the overflow must name the sum it came from: {text}"
+    );
+    assert!(
+        text.contains("Fix:"),
+        "Fix: the overflow must state the corrective action: {text}"
+    );
+}
+
+/// The queue depth ignores empty and done slots, so it survives a total that
+/// does not fit while reporting its own overflow under its own name.
+#[test]
+fn queue_depth_answers_over_a_total_that_does_not_fit() {
+    let occupancy = RingOccupancy {
+        empty: u32::MAX,
+        published: 1,
+        claimed: 2,
+        done: 4,
+        ..RingOccupancy::default()
+    };
+    assert!(occupancy.total_slots().is_err());
+    assert_eq!(
+        occupancy
+            .queue_depth()
+            .expect("Fix: the active slots must sum without overflow"),
+        3
+    );
+
+    let contested = RingOccupancy {
+        published: u32::MAX,
+        requeue: 1,
+        ..RingOccupancy::default()
+    };
+    let text = contested
+        .queue_depth()
+        .expect_err("Fix: an active depth wider than u32 must be reported")
+        .to_string();
+    assert!(
+        text.contains("ring queue depth"),
+        "Fix: the overflow must name the sum it came from: {text}"
+    );
+}
+
+/// A snapshot that fits sums exactly, so the check did not replace the answer.
+#[test]
+fn an_occupancy_that_fits_sums_every_status_exactly() {
+    let occupancy = RingOccupancy {
+        empty: 1,
+        published: 2,
+        claimed: 3,
+        done: 4,
+        wait_io: 5,
+        yield_count: 6,
+        requeue: 7,
+        fault: 8,
+        unknown: 9,
+    };
+    assert_eq!(
+        occupancy
+            .total_slots()
+            .expect("Fix: a small occupancy must sum"),
+        45
+    );
+    assert_eq!(
+        occupancy
+            .queue_depth()
+            .expect("Fix: a small occupancy must sum"),
+        40
+    );
 }

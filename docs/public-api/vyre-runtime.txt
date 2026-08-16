@@ -21,7 +21,7 @@ impl core::clone::Clone for vyre_runtime::resident_work_queue::resident::Residen
 impl core::cmp::Eq for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 impl core::cmp::PartialEq for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 impl core::convert::From<vyre_driver::backend::error::BackendError> for vyre_runtime::PipelineError
-impl core::convert::From<vyre_megakernel::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
+impl core::convert::From<vyre_megakernel::error::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
 impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
 impl core::default::Default for vyre_runtime::pipeline_cache::InMemoryPipelineCache
@@ -148,7 +148,7 @@ impl<'a> vyre_runtime::uring::UringResidentQueuePump<'a>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
-pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::Artifact
+pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::schema::Artifact
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
 pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::new(state_id: u32, byte_index: u32) -> Self
@@ -369,13 +369,13 @@ pub fn vyre_runtime::UringCompletionPump<'a>::request_shutdown(&mut self)
 pub fn vyre_runtime::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::AsyncUringStream<'a>) -> Self
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::into_envelope(self) -> vyre_megakernel::envelope::ArtifactEnvelope
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload(&self) -> &vyre_megakernel::envelope::TargetPayload
-pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::from(source: vyre_megakernel::CompileError) -> Self
-pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::into_compile_error(self) -> vyre_megakernel::CompileError
+pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::from(source: vyre_megakernel::error::CompileError) -> Self
+pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::into_compile_error(self) -> vyre_megakernel::error::CompileError
 pub fn vyre_runtime::artifact_admission::ArtifactSession::allocate_resident(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::compile(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::compile_with_materializer(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, request: &vyre_megakernel::ValidatedCompileRequest, materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::compile(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, request: &vyre_megakernel::request::ValidatedCompileRequest) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::compile_with_materializer(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, request: &vyre_megakernel::request::ValidatedCompileRequest, materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::free_resident(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::from_bytes(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope_bytes: &[u8]) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -383,26 +383,26 @@ pub fn vyre_runtime::artifact_admission::ArtifactSession::from_envelope(registra
 pub fn vyre_runtime::artifact_admission::ArtifactSession::from_envelope_with_materializer(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope: vyre_megakernel::envelope::ArtifactEnvelope, materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::host_bindings(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::ordered_outputs(&self, completion: &vyre_driver::backend::artifact_lifecycle::Completion) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::payload(&self) -> core::result::Result<vyre_megakernel::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::payload(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::rematerialize(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings(&self, resources: &[vyre_driver::backend::resource::Resource]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::resource(&self, name: &str) -> core::result::Result<vyre_megakernel::ArtifactValueId, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::resource(&self, name: &str) -> core::result::Result<vyre_megakernel::identity::ArtifactValueId, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::Submission>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_host_inputs(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident(&self, resource: &vyre_driver::backend::resource::Resource, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident_at(&self, resource: &vyre_driver::backend::resource::Resource, offset_bytes: usize, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::new(session: vyre_runtime::artifact_admission::ArtifactSession, initial: alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::new(session: vyre_runtime::artifact_admission::ArtifactSession, initial: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::rematerialize(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::replace_retained(&self, values: alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::replace_retained(&self, values: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
-pub fn vyre_runtime::persistent_executor::PersistentExecutor::artifact(&self) -> core::result::Result<vyre_megakernel::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::persistent_executor::PersistentExecutor::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::from_bytes(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope_bytes: &[u8], initial: vyre_runtime::persistent_executor::ResidentQueueState) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::recover(&self, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -445,7 +445,7 @@ pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::get_arc(&self, fp: &vyr
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::hex(&self) -> alloc::string::String
-pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::of(artifact: &vyre_megakernel::Artifact) -> Self
+pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::of(artifact: &vyre_megakernel::schema::Artifact) -> Self
 pub fn vyre_runtime::pipeline_cache::RemoteCache::flush(&self) -> std::io::error::Result<()>
 pub fn vyre_runtime::pipeline_cache::RemoteCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
 pub fn vyre_runtime::pipeline_cache::RemoteCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
@@ -581,12 +581,12 @@ pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry::defau
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::calculate_optimal_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default() -> Self
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::geometry_from_slots(&self, slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
-pub fn vyre_runtime::resident_work_queue::planner::build_bellman_tn_order_program(buffers: vyre_primitives::math::bellman_shortest_path::BellmanBuffers<'_>, extents: vyre_primitives::math::bellman_shortest_path::BellmanExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_bellman_tn_order_program(buffers: vyre_libs::math::bellman_shortest_path::BellmanBuffers<'_>, extents: vyre_libs::math::bellman_shortest_path::BellmanExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_kfac_autotune_step_program(blocks_out: &str, blocks_in: &str, scratch: &str, num_blocks: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_persistent_fixpoint_program(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_scallop_provenance_wide_program(state: &str, next: &str, join_rules: &str, changed: &str, n: u32, w: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_full_clustering_program(buffers: vyre_primitives::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_primitives::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_full_clustering_program(buffers: vyre_libs::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_libs::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::planner::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
 pub fn vyre_runtime::resident_work_queue::planner::elide_value_flow_barriers(program: vyre_foundation::ir_inner::model::program::definition::Program) -> (vyre_foundation::ir_inner::model::program::definition::Program, vyre_runtime::resident_work_queue::planner::BarrierElisionReport)
@@ -730,8 +730,8 @@ pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::try_add(&mu
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::host_copy_avoidance_bps(&self) -> u16
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::is_complete(&self) -> bool
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::missing_metric_families(&self) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily>
-pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::queue_depth(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::total_slots(&self) -> u32
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::queue_depth(&self) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::total_slots(&self) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::active_slots_for_opcode_iter(&self, opcode: u32) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot>
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::decode_capacity_evidence(&self, scratch: &vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch) -> vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::priority_accounting(&self) -> vyre_runtime::resident_work_queue::policy::PriorityRequeueAccounting
@@ -1089,7 +1089,7 @@ pub vyre_runtime::UringPollState::Completed(u32)
 pub vyre_runtime::UringPollState::Detached
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver::backend::error::BackendError)
-pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::CompileError)
+pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::error::CompileError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::State(alloc::string::String)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakernel::target::TargetCompileError)
 pub vyre_runtime::persistent_executor::ResidentQueueCompletion::device_ns: core::option::Option<u64>
