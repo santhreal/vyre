@@ -3,7 +3,6 @@
 //! These helpers keep reduction planning in `vyre-pass-engine` while the
 //! executable IR and reference contracts stay in `vyre-primitives`.
 
-use vyre_foundation::ir::{Node, Program};
 use crate::reduce::{
     multi_block_prefix_scan::{
         multi_block_prefix_scan_sum_u32, pass_a_local_scan, pass_c_broadcast_offsets,
@@ -19,6 +18,7 @@ use crate::reduce::{
         workgroup_sum_u32, WorkgroupReductionScope,
     },
 };
+use vyre_foundation::ir::{Node, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::reduce::{

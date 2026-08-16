@@ -1,10 +1,10 @@
 //! `audit` pattern analysis contracts.
 
-use vyre_emit_ptx::ComputeCapability;
-use vyre_lower::pattern_audit::PatternAudit;
 use vyre_emit_ptx::patterns::*;
+use vyre_emit_ptx::ComputeCapability;
 use vyre_foundation::ir::DataType;
 use vyre_lower::descriptor_builder::{body, descriptor, global_rw, lit, op};
+use vyre_lower::pattern_audit::PatternAudit;
 use vyre_lower::{KernelOpKind, LiteralValue};
 
 #[test]

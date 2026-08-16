@@ -421,7 +421,9 @@ pub fn usage_report(gate: &dyn Gate) -> Report {
     ));
     report.note(gate.help());
     if gate.generates() {
-        report.note("--write regenerates the artifact this gate owns; without it the gate only judges");
+        report.note(
+            "--write regenerates the artifact this gate owns; without it the gate only judges",
+        );
     }
     for line in gate.usage() {
         report.note(*line);
@@ -492,10 +494,7 @@ pub fn render(name: &str, report: &Report) -> String {
         text.push_str(&format!("{location}: {}\n", finding.message));
         text.push_str(&format!("  Fix: {}\n", finding.fix));
     }
-    text.push_str(&format!(
-        "{name}: {} finding(s)\n",
-        report.findings.len()
-    ));
+    text.push_str(&format!("{name}: {} finding(s)\n", report.findings.len()));
     text
 }
 
@@ -556,8 +555,15 @@ mod tests {
             report.notes[0],
             "usage: ./cargo_full run -p xtask --bin xtask -- fixture [--write]"
         );
-        assert!(report.notes.iter().any(|note| note.contains("--write regenerates")));
-        assert!(usage_gaps(&[&gate]).is_empty(), "{:?}", usage_gaps(&[&gate]));
+        assert!(report
+            .notes
+            .iter()
+            .any(|note| note.contains("--write regenerates")));
+        assert!(
+            usage_gaps(&[&gate]).is_empty(),
+            "{:?}",
+            usage_gaps(&[&gate])
+        );
     }
 
     /// WHY: only the leading flag is a usage request. `--only --help` names a
@@ -674,10 +680,7 @@ mod tests {
         assert!(!GateCtx::new(root.clone(), vec![]).write);
         assert!(!GateCtx::new(root.clone(), vec!["--check".to_string()]).write);
         assert!(GateCtx::new(root.clone(), vec!["--write".to_string()]).write);
-        let ctx = GateCtx::new(
-            root,
-            vec!["--op-id".to_string(), "add.f32".to_string()],
-        );
+        let ctx = GateCtx::new(root, vec!["--op-id".to_string(), "add.f32".to_string()]);
         assert_eq!(ctx.flag("--op-id"), Some("add.f32"));
         assert_eq!(ctx.flag("--missing"), None);
         assert!(ctx.has("--op-id"));
@@ -689,8 +692,7 @@ mod tests {
     #[test]
     fn findings_report_paths_relative_to_the_checkout() {
         let root = PathBuf::from("/w/tree");
-        let finding =
-            Finding::at("/w/tree/src/a.rs", 1, "m", "f").relative_to(&root);
+        let finding = Finding::at("/w/tree/src/a.rs", 1, "m", "f").relative_to(&root);
         assert_eq!(finding.file, Some(PathBuf::from("src/a.rs")));
         let outside = Finding::in_file("/other/a.rs", "m", "f").relative_to(&root);
         assert_eq!(outside.file, Some(PathBuf::from("/other/a.rs")));

@@ -749,8 +749,9 @@ mod tests {
         /// error must both name the malformed buffer and carry the corrective action.
         #[test]
         fn control_try_decode_rejects_short_snapshot_without_panic() {
-            let err = ControlSnapshot::try_decode(&[])
-                .expect_err("Fix: strict control telemetry decode must reject missing control words");
+            let err = ControlSnapshot::try_decode(&[]).expect_err(
+                "Fix: strict control telemetry decode must reject missing control words",
+            );
             let message = err.to_string();
             assert!(
                 message.contains("control snapshot"),
@@ -774,8 +775,9 @@ mod tests {
                 .expect("Fix: a well-formed control buffer must decode");
             assert_eq!(out.done_count, 41);
 
-            let err = ControlSnapshot::try_decode_into(&[], &mut out)
-                .expect_err("Fix: strict control telemetry decode_into must reject missing control words");
+            let err = ControlSnapshot::try_decode_into(&[], &mut out).expect_err(
+                "Fix: strict control telemetry decode_into must reject missing control words",
+            );
             assert!(
                 err.to_string()
                     .contains("Fix: capture the full control buffer"),
@@ -815,7 +817,8 @@ mod tests {
         fn decode_published_slot_reads_prefix() {
             let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
             let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11]).unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11])
+                .unwrap();
             let telemetry = RingTelemetry::decode(&control, &ring);
             let slot = &telemetry.slots[1];
             assert_eq!(slot.status, RingStatus::Published);
@@ -861,7 +864,8 @@ mod tests {
             control[priority_a..priority_a + 4].copy_from_slice(&5u32.to_le_bytes());
 
             let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 2, 11, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 2, 11, opcode::ATOMIC_ADD, &[1, 2, 3])
+                .unwrap();
             let slot_status =
                 |slot_idx: usize| slot_idx * (SLOT_WORDS as usize) * 4 + (STATUS_WORD as usize) * 4;
             let requeue = slot_status(0);
@@ -890,10 +894,14 @@ mod tests {
         fn telemetry_launch_recommendation_uses_frontier_density_for_topology() {
             let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
             let mut ring = ResidentWorkQueue::try_encode_empty_ring(8).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 2, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 3, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
+                .unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
+                .unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 2, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
+                .unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 3, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
+                .unwrap();
 
             let telemetry = RingTelemetry::decode(&control, &ring);
             let rec = telemetry
@@ -914,8 +922,10 @@ mod tests {
         fn telemetry_decode_into_reports_caller_owned_capacity_evidence() {
             let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
             let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[11, 0, 0]).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[11, 1, 0]).unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[11, 0, 0])
+                .unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[11, 1, 0])
+                .unwrap();
             let mut telemetry = RingTelemetry::default();
             let mut scratch = TelemetryDecodeScratch::new();
 
@@ -982,7 +992,8 @@ mod tests {
             let metric_off = (control::METRICS_BASE as usize) * 4;
             control[metric_off..metric_off + 4].copy_from_slice(&0xAA55AA55u32.to_le_bytes());
             let observable_off = (control::OBSERVABLE_BASE as usize) * 4;
-            control[observable_off..observable_off + 4].copy_from_slice(&0x11223344u32.to_le_bytes());
+            control[observable_off..observable_off + 4]
+                .copy_from_slice(&0x11223344u32.to_le_bytes());
 
             let ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
             let telemetry = RingTelemetry::decode(&control, &ring);
@@ -1005,7 +1016,8 @@ mod tests {
         fn sketch_into_reuses_counter_storage() {
             let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
             let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
-            ResidentWorkQueue::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11]).unwrap();
+            ResidentWorkQueue::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11])
+                .unwrap();
             let telemetry = RingTelemetry::decode(&control, &ring);
             let mut scratch = SketchTelemetryScratch::new(3, 16).unwrap();
 
@@ -1039,8 +1051,14 @@ mod tests {
 
             let mut current_control = previous_control.clone();
             let mut current_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
-            ResidentWorkQueue::publish_slot(&mut current_ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
-                .unwrap();
+            ResidentWorkQueue::publish_slot(
+                &mut current_ring,
+                0,
+                7,
+                opcode::ATOMIC_ADD,
+                &[1, 2, 3],
+            )
+            .unwrap();
             let stalled = RingTelemetry::decode(&current_control, &current_ring)
                 .try_health_since(&previous)
                 .expect("Fix: two well-formed snapshots must derive health without overflow");
@@ -1111,7 +1129,8 @@ mod tests {
                 &[7, WindowClass::Required.into_wire(), 123],
             )
             .unwrap();
-            let telemetry = RingTelemetry::decode_with_window_opcodes(&control, &ring, &[window_opcode]);
+            let telemetry =
+                RingTelemetry::decode_with_window_opcodes(&control, &ring, &[window_opcode]);
             assert_eq!(telemetry.windows.len(), 1);
             let window = &telemetry.windows[0];
             assert_eq!(window.ticket, 7);
@@ -1135,7 +1154,9 @@ mod tests {
             let slots_ptr = active_slots.as_ptr();
             telemetry
                 .try_active_windows_into(&mut active_windows)
-                .expect("Fix: active-window staging must fit the caller-owned buffer reserved above");
+                .expect(
+                    "Fix: active-window staging must fit the caller-owned buffer reserved above",
+                );
             telemetry
                 .try_active_slots_for_opcode_into(window_opcode, &mut active_slots)
                 .expect("Fix: active-slot staging must fit the caller-owned buffer reserved above");
@@ -1211,7 +1232,9 @@ mod tests {
                 control: ControlSnapshot {
                     metrics: Vec::with_capacity(control::METRICS_SLOTS as usize),
                     tenant_fairness: Vec::with_capacity(control::TENANT_FAIRNESS_SLOTS as usize),
-                    priority_fairness: Vec::with_capacity(control::PRIORITY_FAIRNESS_SLOTS as usize),
+                    priority_fairness: Vec::with_capacity(
+                        control::PRIORITY_FAIRNESS_SLOTS as usize,
+                    ),
                     ..ControlSnapshot::default()
                 },
                 slots: Vec::with_capacity(4),
@@ -1335,7 +1358,8 @@ mod tests {
             };
             mark_done(0);
             mark_done(1);
-            let telemetry = RingTelemetry::decode_with_window_opcodes(&control, &ring, &[window_opcode]);
+            let telemetry =
+                RingTelemetry::decode_with_window_opcodes(&control, &ring, &[window_opcode]);
             assert_eq!(telemetry.windows.len(), 1);
             assert!(!telemetry.windows[0].is_active());
             assert!(telemetry.active_windows().is_empty());

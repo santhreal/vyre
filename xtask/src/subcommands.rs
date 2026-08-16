@@ -373,10 +373,7 @@ mod tests {
     /// declares its usage there and is judged by that package's own table.
     #[test]
     fn every_gate_answers_help_with_the_options_it_names() {
-        assert_eq!(
-            crate::gate::usage_gaps(&registry()),
-            Vec::<String>::new()
-        );
+        assert_eq!(crate::gate::usage_gaps(&registry()), Vec::<String>::new());
     }
 
     /// WHY: a subset that names an unregistered gate silently runs fewer gates

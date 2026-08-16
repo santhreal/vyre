@@ -11,13 +11,13 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(test)]
 use crate::graph::chebyshev_filter::chebyshev_filter_cpu;
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use crate::math::spectral_shape::mp_edge_clip;
 #[cfg(test)]
 use crate::math::spectral_shape::{mp_edge_clip_cpu, mp_upper_edge};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for spectral scheduling primitives.
 #[derive(Debug, Default)]

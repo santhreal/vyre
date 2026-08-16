@@ -223,9 +223,7 @@ fn gated_targets(manifest: &toml::Table, feature: &str) -> BTreeSet<String> {
                 .get("required-features")
                 .and_then(toml::Value::as_array)
                 .is_some_and(|features| {
-                    features
-                        .iter()
-                        .any(|value| value.as_str() == Some(feature))
+                    features.iter().any(|value| value.as_str() == Some(feature))
                 })
         })
         .filter_map(|entry| {

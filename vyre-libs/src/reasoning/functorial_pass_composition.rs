@@ -40,8 +40,8 @@
 //! helpers instead of changing this row-level contract.
 
 use crate::dispatch_buffers::{ceil_div_u32, decode_u32_output_exact, u32_slice_to_le_bytes};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::functorial::functor_apply_sized;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Apply a functor to a row of IR-view data. `view_in[i]` is the
 /// i-th column's value in the input view; `column_mapping[i]` is

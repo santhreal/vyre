@@ -830,10 +830,7 @@ fn resolve(tree: &Tree, document: &Path, raw: &str, source: Source) -> Option<St
     if source == Source::Command && token.starts_with("./") {
         candidates.push((tree.absolute(&token[2..]), Origin::Anchored));
     }
-    candidates.push((
-        tree.absolute(document_parent).join(&token),
-        Origin::Beside,
-    ));
+    candidates.push((tree.absolute(document_parent).join(&token), Origin::Beside));
 
     let mut readings: Vec<(String, Origin)> = Vec::new();
     for (candidate, origin) in candidates {

@@ -371,7 +371,6 @@ impl OperationRegistration {
         self.geometry_requirements
     }
 
-
     /// Build the canonical program and stamp its stable operation identity.
     #[must_use]
     pub fn program(&self) -> Option<Program> {
@@ -441,9 +440,7 @@ pub enum OperationRegistryError {
         id: &'static str,
     },
     /// Registration tier does not match the kind of crate that minted the id.
-    #[error(
-        "operation `{id}` declares tier {declared:?}, which no {origin} identity can carry"
-    )]
+    #[error("operation `{id}` declares tier {declared:?}, which no {origin} identity can carry")]
     InvalidTier {
         /// Invalid operation id.
         id: &'static str,
@@ -650,8 +647,8 @@ pub struct TargetOperationFacet {
 #[cfg(test)]
 mod tests {
     use super::{
-        IdNamespace, OperationRegistration, OperationRegistryError, OperationTier,
-        operation_id_namespace, validate_identity,
+        operation_id_namespace, validate_identity, IdNamespace, OperationRegistration,
+        OperationRegistryError, OperationTier,
     };
     use std::collections::BTreeSet;
 

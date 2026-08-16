@@ -183,14 +183,16 @@ fn collect_package_blockers(
             }
         }
     }
-    if package.name == "vyre-driver-cuda" && !package.features.iter().any(|feature| feature == "cuda")
+    if package.name == "vyre-driver-cuda"
+        && !package.features.iter().any(|feature| feature == "cuda")
     {
         record(
             "vyre-driver-cuda is missing explicit `cuda` release feature".to_string(),
             format!("Declare a `cuda` feature in {}.", package.manifest),
         );
     }
-    if package.name == "vyre-driver-wgpu" && !package.features.iter().any(|feature| feature == "wgpu")
+    if package.name == "vyre-driver-wgpu"
+        && !package.features.iter().any(|feature| feature == "wgpu")
     {
         record(
             "vyre-driver-wgpu is missing explicit `wgpu` fallback release feature".to_string(),

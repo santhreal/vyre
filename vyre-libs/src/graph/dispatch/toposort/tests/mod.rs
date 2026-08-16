@@ -1,11 +1,9 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::graph::toposort::{toposort as toposort_cpu, toposort_csr_into, ToposortError};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use crate::graph::toposort::{
-    toposort as toposort_cpu, toposort_csr_into, ToposortError,
-};
 
 #[test]
 fn topo_order_chain_emits_dependency_first() {

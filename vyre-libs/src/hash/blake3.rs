@@ -6,8 +6,8 @@
 
 use std::sync::Arc;
 use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id for the BLAKE3 `G` mixing function.
 pub const BLAKE3_G_OP_ID: &str = "vyre-libs::hash::blake3_g";

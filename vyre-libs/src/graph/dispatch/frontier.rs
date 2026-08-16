@@ -4,11 +4,11 @@
 //! Primitive traversal semantics stay in `vyre-primitives`.
 
 #[cfg(test)]
-use vyre_foundation::program_dispatch::DispatchError;
-#[cfg(test)]
 use crate::bitset::bitset_words;
 #[cfg(test)]
 use crate::bitset::frontier as primitive_frontier;
+#[cfg(test)]
+use vyre_foundation::program_dispatch::DispatchError;
 
 #[cfg(test)]
 pub(crate) use primitive_frontier::{frontier_tail_mask, mask_frontier_tail_bits};

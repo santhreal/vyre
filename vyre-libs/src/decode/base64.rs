@@ -757,7 +757,9 @@ mod primitive_tests {
         let program = base64_decode_program("input", "table", "output", "decoded_len", input_len);
         let inputs = vec![
             Value::from(vyre_primitives::wire::pack_u32_slice(&dirty)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(standard_decode_table_ref())),
+            Value::from(vyre_primitives::wire::pack_u32_slice(
+                standard_decode_table_ref(),
+            )),
             Value::from(vec![0u8; decoded_capacity(input_len) as usize * 4]),
             Value::from(vyre_primitives::wire::pack_u32_slice(&[0])),
         ];
@@ -771,7 +773,8 @@ mod primitive_tests {
             .expect("Fix: base64 decoded_len buffer must be a reference output");
         let words = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[out_idx].to_bytes());
         let decoded_len =
-            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[len_idx].to_bytes())[0] as usize;
+            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[len_idx].to_bytes())[0]
+                as usize;
         let bytes: Vec<u8> = words
             .into_iter()
             .take(decoded_len)

@@ -271,7 +271,8 @@ fn eval_cap_survivors(pids: &[u32], k: u32) -> Vec<u32> {
 
     let count = pids.len() as u32;
     let program = cap_regions_per_pattern_flag_program("pids", "survivors", k, count);
-    let to_value = |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+    let to_value =
+        |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
     // Binding order: pids (in), survivors (out, seeded zero).
     let inputs = vec![to_value(pids), to_value(&vec![0u32; pids.len()])];
     let results = reference_eval(&program, &inputs).expect("Fix: cap kernel interpreter failed");
@@ -510,7 +511,8 @@ fn eval_compact_survivors(regions: &[u32], pids: &[u32]) -> Vec<u32> {
     let count = regions.len() as u32;
     let program =
         compact_first_per_region_pattern_flag_program("regions", "pids", "survivors", count);
-    let to_value = |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+    let to_value =
+        |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
     // Binding order: regions (in), pids (in), survivors (out, seeded zero).
     let inputs = vec![
         to_value(regions),

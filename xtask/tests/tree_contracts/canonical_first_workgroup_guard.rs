@@ -135,9 +135,9 @@ fn workspace_sources_reject_raw_first_workgroup_predicates() {
             )
         });
         violations.extend(
-            locations
-                .into_iter()
-                .map(|location| super::workspace_sources::violation_location(&root, &path, location)),
+            locations.into_iter().map(|location| {
+                super::workspace_sources::violation_location(&root, &path, location)
+            }),
         );
     }
 

@@ -243,11 +243,7 @@ fn citation_findings(
 }
 
 /// Findings for a covered path that changed without its page or a fragment.
-fn coupling_findings(
-    pages: &[Covering],
-    changed: &BTreeSet<String>,
-    root: &Path,
-) -> Vec<Finding> {
+fn coupling_findings(pages: &[Covering], changed: &BTreeSet<String>, root: &Path) -> Vec<Finding> {
     if changed.is_empty() {
         return Vec::new();
     }
@@ -456,7 +452,10 @@ fn changed_paths(root: &Path, base: Option<&str>) -> Result<Diff, GateError> {
         .filter(|reference| !reference.is_empty());
     let Some(reference) = base else {
         let mut paths = diff_names(root, &["diff", "--name-only", "HEAD"])?;
-        paths.extend(diff_names(root, &["diff", "--name-only", "--cached", "HEAD"])?);
+        paths.extend(diff_names(
+            root,
+            &["diff", "--name-only", "--cached", "HEAD"],
+        )?);
         return Ok(Diff::Read(paths));
     };
     let remote = format!("origin/{reference}");
@@ -599,10 +598,22 @@ mod tests {
     /// than through a fixture tree, because the pattern language is the contract.
     #[test]
     fn double_star_crosses_separators_and_single_star_does_not() {
-        assert!(glob_matches("vyre-libs/src/parsing/**", "vyre-libs/src/parsing/go/lex.rs"));
-        assert!(glob_matches("vyre-libs/src/parsing/**", "vyre-libs/src/parsing"));
-        assert!(!glob_matches("vyre-libs/src/parsing/**", "vyre-libs/src/graph/mod.rs"));
-        assert!(glob_matches("vyre-megakernel/src/*.rs", "vyre-megakernel/src/cost.rs"));
+        assert!(glob_matches(
+            "vyre-libs/src/parsing/**",
+            "vyre-libs/src/parsing/go/lex.rs"
+        ));
+        assert!(glob_matches(
+            "vyre-libs/src/parsing/**",
+            "vyre-libs/src/parsing"
+        ));
+        assert!(!glob_matches(
+            "vyre-libs/src/parsing/**",
+            "vyre-libs/src/graph/mod.rs"
+        ));
+        assert!(glob_matches(
+            "vyre-megakernel/src/*.rs",
+            "vyre-megakernel/src/cost.rs"
+        ));
         assert!(!glob_matches(
             "vyre-megakernel/src/*.rs",
             "vyre-megakernel/src/target/mod.rs"
@@ -691,7 +702,11 @@ mod tests {
             .map(str::to_string)
             .collect();
         let findings = coupling_findings(&pages, &changed, root);
-        assert_eq!(findings.len(), 2, "Fix: expected the page and the fragment, got {findings:?}");
+        assert_eq!(
+            findings.len(),
+            2,
+            "Fix: expected the page and the fragment, got {findings:?}"
+        );
 
         let with_both: BTreeSet<String> = [
             "vyre-foundation/src/serial/wire/framing/mod.rs",
@@ -714,12 +729,18 @@ mod tests {
     #[test]
     fn an_unreachable_base_ref_is_a_finding_and_not_a_crash() {
         let root = std::env::current_dir().expect("Fix: the test runs inside the checkout.");
-        let root = root.ancestors().find(|path| path.join(".git").exists()).unwrap_or(&root);
+        let root = root
+            .ancestors()
+            .find(|path| path.join(".git").exists())
+            .unwrap_or(&root);
         match changed_paths(root, Some("no-such-base-ref-cbb0a1")) {
             Ok(Diff::UnreachableBase(reference)) => {
                 assert_eq!(reference, "origin/no-such-base-ref-cbb0a1");
             }
-            other => panic!("Fix: an unreachable base must report itself, got {:?}", other.is_ok()),
+            other => panic!(
+                "Fix: an unreachable base must report itself, got {:?}",
+                other.is_ok()
+            ),
         }
         assert!(matches!(changed_paths(root, None), Ok(Diff::Read(_))));
     }
@@ -733,7 +754,10 @@ mod tests {
             page: "reference/wire-format.md".to_string(),
             covers: vec!["vyre-foundation/src/serial/wire/**".to_string()],
         }];
-        let changed: BTreeSet<String> = ["xtask/src/main.rs"].into_iter().map(str::to_string).collect();
+        let changed: BTreeSet<String> = ["xtask/src/main.rs"]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
         assert!(coupling_findings(&pages, &changed, Path::new("/nonexistent")).is_empty());
     }
 }

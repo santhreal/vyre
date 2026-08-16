@@ -331,7 +331,10 @@ fn gate_sources(root: &Path, registry: &[&'static dyn Gate]) -> Result<Vec<Strin
         })?;
     if !output.status.success() {
         return Err(GateError::new(
-            format!("cannot list the gate sources: git ls-files exited {}", output.status),
+            format!(
+                "cannot list the gate sources: git ls-files exited {}",
+                output.status
+            ),
             "run this gate inside a git checkout of the repository",
         ));
     }
@@ -440,7 +443,11 @@ fn integer_constant(line: &str) -> Option<(String, u128)> {
     let rest = strip_visibility(code).strip_prefix("const ")?;
     let (name, rest) = rest.split_once(':')?;
     let name = name.trim();
-    if name.is_empty() || !name.bytes().all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit()) {
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit())
+    {
         return None;
     }
     let (declared, literal) = rest.split_once('=')?;
@@ -448,8 +455,14 @@ fn integer_constant(line: &str) -> Option<(String, u128)> {
         return None;
     }
     let literal = literal.trim().trim_end_matches(';').trim();
-    let digits: String = literal.chars().filter(|character| *character != '_').collect();
-    digits.parse::<u128>().ok().map(|value| (name.to_string(), value))
+    let digits: String = literal
+        .chars()
+        .filter(|character| *character != '_')
+        .collect();
+    digits
+        .parse::<u128>()
+        .ok()
+        .map(|value| (name.to_string(), value))
 }
 
 /// Which way a constant of this name may move, or `None` when the name marks no
@@ -757,7 +770,10 @@ mod tests {
                 "{declaration}"
             );
         }
-        assert_eq!(integer_constant("published const MAX_LINES: usize = 4;"), None);
+        assert_eq!(
+            integer_constant("published const MAX_LINES: usize = 4;"),
+            None
+        );
     }
 
     /// WHY: the doc comment is the record of what was measured, so it is the
@@ -823,11 +839,15 @@ mod tests {
         );
         let failures = registry_failures(&["ci-matrix", "unpinned-gate"], &baselines);
         assert!(
-            failures.iter().any(|text| text.contains("`unpinned-gate` has no row")),
+            failures
+                .iter()
+                .any(|text| text.contains("`unpinned-gate` has no row")),
             "{failures:?}"
         );
         assert!(
-            failures.iter().any(|text| text.contains("pins `retired-gate`")),
+            failures
+                .iter()
+                .any(|text| text.contains("pins `retired-gate`")),
             "{failures:?}"
         );
         assert!(
@@ -859,4 +879,3 @@ mod tests {
         }
     }
 }
-

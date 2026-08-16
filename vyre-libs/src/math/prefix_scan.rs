@@ -36,8 +36,8 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_primitives::ir_safe::clamped_load_to;
 use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
+use vyre_primitives::ir_safe::clamped_load_to;
 
 /// Canonical op id for inclusive sum-scan.
 pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-libs::math::prefix_scan_inclusive_sum";
@@ -63,8 +63,8 @@ pub const MAX_SINGLE_BLOCK_SCAN: u32 = 1024;
 /// Emit a single-workgroup prefix-sum Program.
 ///
 /// `n` is the number of input slots, in `1..=`[`MAX_SINGLE_BLOCK_SCAN`]. The
-/// emitted workgroup holds `min(n.next_power_of_two(), 256)`
-/// lanes and each lane walks `ceil(n / lanes)` elements.
+/// emitted workgroup is capped at the portable workgroup width and each lane
+/// walks `ceil(n / lanes)` elements.
 #[must_use]
 pub fn prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Program {
     let op_id = match kind {
@@ -94,7 +94,9 @@ pub fn prefix_scan_with_op_id(
         );
     }
 
-    let lanes = n.next_power_of_two().min(256);
+    let lanes = n
+        .next_power_of_two()
+        .min(vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS);
     let run = n.div_ceil(lanes);
     let lane = Expr::InvocationId { axis: 0 };
     let scratch_a = format!("__{out_buf}_scan_a");

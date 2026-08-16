@@ -1,4 +1,3 @@
-use vyre_foundation::ir::{Node, Program};
 use crate::graph::{
     adaptive_traverse::{adaptive_dense_step, cpu_dense_step, should_use_dense},
     csr_closure_inputs::{CsrClosureInputs, CsrGraphView},
@@ -21,6 +20,7 @@ use crate::graph::{
     },
     program_graph::ProgramGraphShape,
 };
+use vyre_foundation::ir::{Node, Program};
 
 fn shape() -> ProgramGraphShape {
     ProgramGraphShape::new(4, 4)

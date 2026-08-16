@@ -18,9 +18,9 @@ pub use dispatch::{
 };
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
+use crate::graph::path_reconstruct::PathReconstructStaticInputKey;
 #[cfg(test)]
 use vyre_foundation::ir::Program;
-use crate::graph::path_reconstruct::PathReconstructStaticInputKey;
 
 #[cfg(test)]
 mod reference;

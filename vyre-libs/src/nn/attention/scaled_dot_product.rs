@@ -8,20 +8,20 @@
 //! The default builder maps one invocation to one query row. The
 //! scalar row-loop reference remains available through [`attention_reference`].
 
-use vyre_foundation::composition::{trap_program, wrap_child_region, wrap_region};
-use vyre_foundation::ir::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::nn::attention_passes::{
     attention_max_pass, attention_sum_pass, attention_write_pass, ATTENTION_MAX_PASS_OP_ID,
     ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
 };
+use vyre_foundation::composition::{trap_program, wrap_child_region, wrap_region};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::builder::{check_tensors, BuildOptions};
-use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 use crate::nn::attention_stability::{
     bounded_exp_arg, bounded_score, direct_score_expr, positive_denominator,
 };
 use crate::nn::f32_stability::flush_tiny;
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::nn::attention";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::attention_reference";

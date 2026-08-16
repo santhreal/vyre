@@ -8,8 +8,8 @@
 
 use crate::dialect_lookup::Signature;
 use crate::ir_inner::model::expr::Expr;
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::DataType;
+use crate::ir_inner::model::program::BufferDecl;
 use crate::operation::OperationRegistry;
 use crate::validate::typecheck::{expr_type, ScopeTypes};
 use crate::validate::{err, Binding, ValidationError};

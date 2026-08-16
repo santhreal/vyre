@@ -1,8 +1,8 @@
 //! `audit` pattern analysis contracts.
 
-use vyre_lower::pattern_audit::PatternAudit;
 use vyre_emit_spirv::patterns::*;
 use vyre_lower::descriptor_builder::{body, descriptor, op};
+use vyre_lower::pattern_audit::PatternAudit;
 use vyre_lower::KernelOpKind;
 
 #[test]

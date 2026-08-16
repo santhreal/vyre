@@ -4,9 +4,7 @@
 #![cfg(all(feature = "decode", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
-use vyre_libs::decode::hex::{
-    hex_decode_reference_packed, hex_decode_table, hex_decoded_capacity,
-};
+use vyre_libs::decode::hex::{hex_decode_reference_packed, hex_decode_table, hex_decoded_capacity};
 
 fn manual_hex_decode(input: &[u8]) -> Vec<u32> {
     let table = hex_decode_table();

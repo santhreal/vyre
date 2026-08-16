@@ -1,8 +1,8 @@
 //! `subgroup_capabilities` pattern analysis contracts.
 
-use vyre_lower::SubgroupCapabilities;
 use vyre_emit_spirv::patterns::subgroup_capabilities::*;
 use vyre_lower::descriptor_builder::{body, descriptor, effect, lit, op};
+use vyre_lower::SubgroupCapabilities;
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 fn empty_desc() -> KernelDescriptor {

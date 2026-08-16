@@ -197,7 +197,10 @@ fn retired_architecture_version_fails_closed() {
     let report = judge(temp.path());
     let text = rendered(&report);
     assert_eq!(report.count(), 1, "{text}");
-    assert!(text.contains("stale architecture phrase `version 0.6`"), "{text}");
+    assert!(
+        text.contains("stale architecture phrase `version 0.6`"),
+        "{text}"
+    );
 }
 
 /// WGPU cannot be presented as the primary production route when evidence selects CUDA.

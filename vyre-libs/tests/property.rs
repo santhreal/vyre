@@ -9,9 +9,10 @@
 
 use proptest::prelude::*;
 use vyre::ir::Program;
+use vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
-use vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
+
 use vyre_libs::math::prefix_scan::MAX_SINGLE_BLOCK_SCAN;
 use vyre_libs::math::scan::scan_prefix_sum;
 
@@ -48,11 +49,10 @@ proptest! {
         prop_assert_eq!(p.workgroup_size(), [256, 1, 1]);
     }
 
-    /// The workgroup is capped, not inflated. A scan past
-    /// `PORTABLE_WORKGROUP_INVOCATIONS` elements gives each lane a longer run instead of
-    /// asking for more lanes, so the next power of two stops being the answer
-    /// at n = 257 and the cap is the answer from there to the single-block
-    /// ceiling.
+    /// The workgroup is capped, not inflated. A scan past the portable
+    /// workgroup width gives each lane a longer run instead of asking for more
+    /// lanes, so the next power of two stops being the answer one element past
+    /// that width and the cap remains the answer to the single-block ceiling.
     #[test]
     fn scan_prefix_sum_is_valid_for_all_sizes(n in 1u32..=MAX_SINGLE_BLOCK_SCAN) {
         let p = scan_prefix_sum("in", "out", n);
@@ -82,8 +82,14 @@ proptest! {
 fn scan_prefix_sum_caps_lanes_one_element_past_the_workgroup_width() {
     let lanes = |n: u32| scan_prefix_sum("in", "out", n).workgroup_size()[0];
 
-    assert_eq!(lanes(PORTABLE_WORKGROUP_INVOCATIONS), PORTABLE_WORKGROUP_INVOCATIONS);
-    assert_eq!(lanes(PORTABLE_WORKGROUP_INVOCATIONS + 1), PORTABLE_WORKGROUP_INVOCATIONS);
+    assert_eq!(
+        lanes(PORTABLE_WORKGROUP_INVOCATIONS),
+        PORTABLE_WORKGROUP_INVOCATIONS
+    );
+    assert_eq!(
+        lanes(PORTABLE_WORKGROUP_INVOCATIONS + 1),
+        PORTABLE_WORKGROUP_INVOCATIONS
+    );
     assert_eq!(lanes(MAX_SINGLE_BLOCK_SCAN), PORTABLE_WORKGROUP_INVOCATIONS);
     assert!(
         (PORTABLE_WORKGROUP_INVOCATIONS + 1).next_power_of_two() > PORTABLE_WORKGROUP_INVOCATIONS,

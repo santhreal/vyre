@@ -47,10 +47,10 @@ use walkdir::WalkDir;
 pub mod backend_vocabulary;
 pub mod cfg_test;
 pub mod crate_ownership;
+pub mod geometry_constants;
 pub mod module_layout;
 pub mod registration_text;
 pub mod source_scan;
-pub mod geometry_constants;
 pub use geometry_constants::geometry_constant_failures;
 pub use source_scan::opaque_span;
 
@@ -443,7 +443,10 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
             continue;
         };
         let hardware = matches!(tier, "Intrinsic" | "Hardware");
-        if hardware && reg.crate_name == CATEGORY_A_CRATE && !reg.op_id.starts_with("vyre-primitives::") {
+        if hardware
+            && reg.crate_name == CATEGORY_A_CRATE
+            && !reg.op_id.starts_with("vyre-primitives::")
+        {
             failures.push(format!(
                 "{} registers Category C `{}` in {CATEGORY_A_CRATE}; hardware-contract operations live in {CATEGORY_C_CRATE}",
                 reg.file, reg.op_id

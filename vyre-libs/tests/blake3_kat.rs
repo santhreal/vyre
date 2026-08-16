@@ -14,10 +14,10 @@
 #![cfg(feature = "crypto-blake3")]
 #![allow(deprecated)]
 mod wire_words;
-use wire_words::{decode_u32_words, u32_bytes};
 use vyre::ir::Program;
 use vyre_libs::hash::blake3_compress;
 use vyre_reference::value::Value;
+use wire_words::{decode_u32_words, u32_bytes};
 
 /// BLAKE3 IV  -  matches `vyre-libs::crypto::blake3::IV` by spec.
 const IV: [u32; 8] = [

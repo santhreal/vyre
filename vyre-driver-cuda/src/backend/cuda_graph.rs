@@ -47,7 +47,6 @@ use std::ptr::NonNull;
 use std::sync::Arc;
 
 use cudarc::driver::sys::{CUgraphExec_st, CUgraph_st, CUstream_st};
-use cudarc::driver::CudaContext;
 use smallvec::SmallVec;
 use vyre_driver::graph_capture::plan_graph_capture_bindings;
 use vyre_driver::transfer_accounting::TransferAccountingPolicy;
@@ -97,41 +96,14 @@ super::define_required_input!(
 /// Mirrors `CU_STREAM_CAPTURE_MODE_THREAD_LOCAL` from `cuda.h`.
 const CU_STREAM_CAPTURE_MODE_THREAD_LOCAL: u32 = 1;
 
-/// The CUDA context a raw-handle guard destroys its handle against.
-///
-/// Releasing the last reference to a context frees every driver-side object
-/// that context owns, including the internal mutex `cuGraphExecDestroy` takes.
-/// A destroy call issued afterwards reads freed driver memory: on the CUDA 12
-/// driver it blocks forever on a lock word whose owner field is zero, so the
-/// process stops with no CPU use, no device work, and no error.
-///
-/// Sibling-field drop order is therefore not a safe place to encode this
-/// requirement. Every guard below keeps its own context reference instead, so
-/// the context outlives the handle no matter which field of an enclosing struct
-/// is declared first.
-#[derive(Debug, Clone)]
-pub(crate) struct OwningContext(Arc<CudaContext>);
-
-impl OwningContext {
-    fn new(ctx: Arc<CudaContext>) -> Self {
-        Self(ctx)
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct DevicePtrGuard {
     ptr: u64,
-    /// Read by no code: held so `cuMemFree_v2` below cannot run after the
-    /// context that owns this allocation was released.
-    _context: OwningContext,
 }
 
 impl DevicePtrGuard {
-    fn new(ptr: u64, context: OwningContext) -> Self {
-        Self {
-            ptr,
-            _context: context,
-        }
+    fn new(ptr: u64) -> Self {
+        Self { ptr }
     }
 
     fn ptr(&self) -> u64 {
@@ -148,21 +120,15 @@ impl Drop for DevicePtrGuard {
 #[derive(Debug)]
 pub(crate) struct StreamGuard {
     stream: NonNull<CUstream_st>,
-    context: OwningContext,
 }
 
 impl StreamGuard {
-    fn new(stream: NonNull<CUstream_st>, context: OwningContext) -> Self {
-        Self { stream, context }
+    fn new(stream: NonNull<CUstream_st>) -> Self {
+        Self { stream }
     }
 
     pub(crate) fn ptr(&self) -> NonNull<CUstream_st> {
         self.stream
-    }
-
-    /// Context this stream belongs to, for the guards captured off it.
-    fn context(&self) -> OwningContext {
-        self.context.clone()
     }
 }
 
@@ -177,10 +143,10 @@ impl Drop for StreamGuard {
     }
 }
 
-fn create_cuda_graph_stream(context: OwningContext) -> Result<StreamGuard, BackendError> {
+fn create_cuda_graph_stream() -> Result<StreamGuard, BackendError> {
     let _nonblocking_flag_contract = cudarc::driver::sys::CUstream_flags::CU_STREAM_NON_BLOCKING;
     crate::stream::create_non_blocking_raw_stream("cuStreamCreate (cuda_graph dedicated stream)")
-        .map(|stream| StreamGuard::new(stream, context))
+        .map(StreamGuard::new)
 }
 
 fn synchronize_cuda_graph_stream(
@@ -271,15 +237,13 @@ fn record_cuda_graph_output_readbacks(
 
 struct CaptureGuard {
     stream: NonNull<CUstream_st>,
-    context: OwningContext,
     active: bool,
 }
 
 impl CaptureGuard {
-    fn armed(stream: NonNull<CUstream_st>, context: OwningContext) -> Self {
+    fn armed(stream: NonNull<CUstream_st>) -> Self {
         Self {
             stream,
-            context,
             active: true,
         }
     }
@@ -289,8 +253,7 @@ impl CaptureGuard {
         label: &'static str,
         null_message: &'static str,
     ) -> Result<GraphGuard, BackendError> {
-        let graph =
-            end_cuda_graph_capture(self.stream, self.context.clone(), label, null_message);
+        let graph = end_cuda_graph_capture(self.stream, label, null_message);
         self.disarm();
         graph
     }
@@ -305,7 +268,6 @@ impl Drop for CaptureGuard {
         if self.active {
             match end_cuda_graph_capture(
                 self.stream,
-                self.context.clone(),
                 "cuStreamEndCapture (capture guard drop)",
                 "cuStreamEndCapture returned a null graph while dropping an active capture guard. Fix: ensure graph capture is finished explicitly before resource cleanup.",
             ) {
@@ -321,21 +283,15 @@ impl Drop for CaptureGuard {
 #[derive(Debug)]
 pub(crate) struct GraphGuard {
     graph: NonNull<CUgraph_st>,
-    context: OwningContext,
 }
 
 impl GraphGuard {
-    fn new(graph: NonNull<CUgraph_st>, context: OwningContext) -> Self {
-        Self { graph, context }
+    fn new(graph: NonNull<CUgraph_st>) -> Self {
+        Self { graph }
     }
 
     fn ptr(&self) -> NonNull<CUgraph_st> {
         self.graph
-    }
-
-    /// Context this graph belongs to, for the executable instantiated from it.
-    fn context(&self) -> OwningContext {
-        self.context.clone()
     }
 }
 
@@ -350,17 +306,11 @@ impl Drop for GraphGuard {
 #[derive(Debug)]
 pub(crate) struct GraphExecGuard {
     graph_exec: NonNull<CUgraphExec_st>,
-    /// Read by no code: held so `cuGraphExecDestroy` below cannot run after the
-    /// context that owns this executable graph was released.
-    _context: OwningContext,
 }
 
 impl GraphExecGuard {
-    fn new(graph_exec: NonNull<CUgraphExec_st>, context: OwningContext) -> Self {
-        Self {
-            graph_exec,
-            _context: context,
-        }
+    fn new(graph_exec: NonNull<CUgraphExec_st>) -> Self {
+        Self { graph_exec }
     }
 
     pub(crate) fn ptr(&self) -> NonNull<CUgraphExec_st> {
@@ -391,12 +341,11 @@ fn begin_cuda_graph_capture(
             label,
         )?;
     }
-    Ok(CaptureGuard::armed(stream.ptr(), stream.context()))
+    Ok(CaptureGuard::armed(stream.ptr()))
 }
 
 fn end_cuda_graph_capture(
     stream: NonNull<CUstream_st>,
-    context: OwningContext,
     label: &'static str,
     null_message: &'static str,
 ) -> Result<GraphGuard, BackendError> {
@@ -414,7 +363,7 @@ fn end_cuda_graph_capture(
         code: None,
         message: null_message.to_string(),
     })?;
-    Ok(GraphGuard::new(graph, context))
+    Ok(GraphGuard::new(graph))
 }
 
 fn instantiate_cuda_graph(
@@ -439,7 +388,7 @@ fn instantiate_cuda_graph(
         code: None,
         message: null_message.to_string(),
     })?;
-    Ok(GraphExecGuard::new(graph_exec, graph.context()))
+    Ok(GraphExecGuard::new(graph_exec))
 }
 
 fn upload_cuda_graph_exec(
@@ -588,7 +537,7 @@ impl Drop for GraphHostBuffers {
     }
 }
 
-// Inline: covers `GraphHostBuffers`, `context`, which no integration test can name.
+// Inline: covers `GraphHostBuffers`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::GraphHostBuffers;
@@ -649,13 +598,14 @@ mod tests {
 ///     same address the captured memcpy reads from) and every output (so
 ///     readback target stays stable across replays).
 ///
-/// Every raw CUDA handle below keeps its own context reference, so the release
-/// of the context cannot be ordered before the destroy calls in `drop`.
+/// Drop ordering contract:
+/// `backend` is declared as the final field of `CachedCudaGraph`. Rust drops struct
+/// fields in declaration order after running `CachedCudaGraph::drop`. Placing `backend`
+/// (which holds `Arc<CudaContext>`) last guarantees that the CUDA driver context remains
+/// live while `cuGraphExecDestroy`, `cuGraphDestroy`, `cuStreamDestroy_v2`, and
+/// `cuMemFree_v2` run on all child handles.
 #[derive(Debug)]
 pub struct CachedCudaGraph {
-    /// Backend reference, for the pinned-host pool the `drop` body returns the
-    /// cached host buffers to.
-    pub(crate) backend: CudaBackend,
     /// Instantiated graph executable (owned). Destroyed in `drop` BEFORE
     /// `graph`.
     pub(crate) graph_exec: GraphExecGuard,
@@ -725,6 +675,9 @@ pub struct CachedCudaGraph {
     /// The kernel reads launch parameters (workgroup-related constants)
     /// from this buffer.
     pub(crate) params_device_ptr: DevicePtrGuard,
+    /// Backend reference, for the pinned-host pool the `drop` body returns the
+    /// cached host buffers to, and ensuring the CUDA context outlives all raw handles.
+    pub(crate) backend: CudaBackend,
 }
 
 // SAFETY: `CachedCudaGraph` holds raw CUDA resource pointers (graph,
@@ -926,7 +879,6 @@ impl CudaBackend {
         let mut replay_device_readback_operations = 0_u64;
         let resident_input_replay_safe = capture_binding_plan.resident_input_replay_safe;
         let cached_input_key = exact_input_key(sample_inputs)?;
-        let context = OwningContext::new(Arc::clone(&self.ctx));
 
         // Walk binding plan in order, allocating + classifying input vs output.
         for binding in &prepared.bindings.bindings {
@@ -990,13 +942,13 @@ impl CudaBackend {
                 }
                 host_buffers.push_input_padded(sample_input, input_transfer_len)?;
                 input_indices.push(input_index);
-                input_device_ptrs.push(DevicePtrGuard::new(device_ptr, context.clone()));
+                input_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             } else {
                 output_clears.push(OutputClear {
                     dst: device_ptr,
                     byte_len: device_byte_len,
                 });
-                output_device_ptrs.push(DevicePtrGuard::new(device_ptr, context.clone()));
+                output_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             }
             if let Some(output_index) = binding.output_index {
                 let readback = cuda_output_readback_for_binding(
@@ -1067,10 +1019,10 @@ impl CudaBackend {
         } else {
             0
         };
-        let params_device_ptr = DevicePtrGuard::new(params_device_ptr, context.clone());
+        let params_device_ptr = DevicePtrGuard::new(params_device_ptr);
 
         // Create dedicated stream for capture + replay.
-        let stream = create_cuda_graph_stream(context)?;
+        let stream = create_cuda_graph_stream()?;
         // SAFETY: FFI to libcuda.so. Pointer args were validated by the
         // matching alloc / store API; lifetimes are documented in the
         // surrounding function. cuda_check (or matching CUresult guard)
@@ -1317,7 +1269,6 @@ impl CudaBackend {
         let (input_host_bufs, output_host_bufs) = host_buffers.into_raw();
 
         Ok(CachedCudaGraph {
-            backend: self.clone(),
             graph_exec,
             graph,
             resident_input_graph_exec,
@@ -1341,6 +1292,7 @@ impl CudaBackend {
             device_inputs_initialized: false,
             host_outputs_initialized: false,
             params_device_ptr,
+            backend: self.clone(),
         })
     }
 }

@@ -163,8 +163,7 @@ fn stale_dependency_record_fails_closed() {
     let report = run(temp.path());
     let messages = messages(&report);
     assert!(
-        messages
-            .contains("`a` declares a record for `b` and no manifest edge resolves to it"),
+        messages.contains("`a` declares a record for `b` and no manifest edge resolves to it"),
         "Fix: stale record diagnostic must name consumer and dependency; got\n{messages}"
     );
 }

@@ -8,8 +8,8 @@
 //! Composes the `crate::math::sinkhorn_iterate` primitive to run
 //! entirely on device without host round-trips.
 
-use vyre_foundation::ir::Program;
 use crate::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
+use vyre_foundation::ir::Program;
 
 /// Stable op identifier for the full-clustering Sinkhorn iteration self-consumer.
 pub const OP_ID: &str = "vyre-libs::self_substrate::sinkhorn_full_clustering";

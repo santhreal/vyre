@@ -102,7 +102,8 @@ pub(super) static IFDS_WITNESS: SyntheticCountWorkload = SyntheticCountWorkload 
 pub(super) static C_AST_TRAVERSAL: SyntheticCountWorkload = SyntheticCountWorkload {
     id: "release.ast_motif_traversal.1m",
     name: "Release AST Motif Traversal 1M",
-    description: "Node-kind, depth and motif mask predicate traversal over generated AST-shaped node columns",
+    description:
+        "Node-kind, depth and motif mask predicate traversal over generated AST-shaped node columns",
     tags: &["ast", "motif", "traversal"],
     owner_crate: "vyre-libs",
     primitive: "AST-shaped node motif predicate traversal",

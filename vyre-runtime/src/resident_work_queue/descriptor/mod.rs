@@ -541,7 +541,11 @@ mod tests {
             1,
             vec![
                 SlotDescriptor::single(0, SlotOpcode::Builtin(BuiltinOpcode::Nop), vec![]),
-                SlotDescriptor::single(0, SlotOpcode::Builtin(BuiltinOpcode::AtomicAdd), vec![1, 2]),
+                SlotDescriptor::single(
+                    0,
+                    SlotOpcode::Builtin(BuiltinOpcode::AtomicAdd),
+                    vec![1, 2],
+                ),
             ],
         );
         let consumed = batch.publish_into(&mut ring).unwrap();

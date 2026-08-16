@@ -239,11 +239,7 @@ fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
     assert_eq!(run.steps().len(), 3);
     assert_eq!(
         run.grids()[2],
-        Some(
-            crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
-                queue_slots
-            )
-        ),
+        Some(crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(queue_slots)),
         "uniformly high-degree sparse queue traversal should keep the single row-strided consumer"
     );
 }

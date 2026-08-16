@@ -1,9 +1,9 @@
 //! `workgroup_size_validation` pattern analysis contracts.
 
-use vyre_lower::WorkgroupLimitViolation;
-use vyre_lower::WorkgroupLimits;
 use vyre_emit_spirv::patterns::workgroup_size_validation::*;
 use vyre_lower::descriptor_builder::body;
+use vyre_lower::WorkgroupLimitViolation;
+use vyre_lower::WorkgroupLimits;
 use vyre_lower::{BindingLayout, Dispatch, KernelDescriptor};
 
 fn empty_with_dispatch(d: Dispatch) -> KernelDescriptor {

@@ -14,15 +14,14 @@ mod plan;
 mod program;
 mod registry;
 
-pub use layout::{
-    count_witness_participants, validate_csr_inputs, validate_motif_inputs,
-    validate_motif_witness, MotifLayout,
-};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use cpu_ref::{
     cpu_ref, cpu_ref_into, cpu_ref_matches, cpu_ref_participation_count, try_cpu_ref_into,
-    try_cpu_ref_participation_count, try_cpu_ref_participation_count_with_scratch,
-    MotifCpuScratch,
+    try_cpu_ref_participation_count, try_cpu_ref_participation_count_with_scratch, MotifCpuScratch,
+};
+pub use layout::{
+    count_witness_participants, validate_csr_inputs, validate_motif_inputs, validate_motif_witness,
+    MotifLayout,
 };
 pub use pattern::{MotifEdge, TWO_EDGE_PATH_MOTIF};
 pub use plan::{

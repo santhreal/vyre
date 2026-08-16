@@ -162,9 +162,10 @@ impl TokenSampler<'_> {
             ),
         );
 
-        let fused = fuse_programs(&[adjust, select, draw]).map_err(|error| SamplingError::Fusion {
-            reason: error.to_string(),
-        })?;
+        let fused =
+            fuse_programs(&[adjust, select, draw]).map_err(|error| SamplingError::Fusion {
+                reason: error.to_string(),
+            })?;
         Ok(demote_intermediate_outputs(fused, self.token))
     }
 
@@ -218,8 +219,10 @@ pub fn logit_adjust(
     penalty: f32,
 ) -> Program {
     let buffers = vec![
-        BufferDecl::storage(logits, 0, BufferAccess::ReadOnly, DataType::F32).with_count(vocabulary),
-        BufferDecl::storage(counts, 1, BufferAccess::ReadOnly, DataType::U32).with_count(vocabulary),
+        BufferDecl::storage(logits, 0, BufferAccess::ReadOnly, DataType::F32)
+            .with_count(vocabulary),
+        BufferDecl::storage(counts, 1, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(vocabulary),
         BufferDecl::output(adjusted, 2, DataType::F32).with_count(vocabulary),
     ];
 
@@ -237,10 +240,7 @@ pub fn logit_adjust(
                 Expr::mul(logit.clone(), Expr::f32(penalty)),
             );
             let seen = Expr::gt(Expr::load(counts, i.clone()), Expr::u32(0));
-            let value = Expr::div(
-                Expr::select(seen, penalized, logit),
-                Expr::f32(temperature),
-            );
+            let value = Expr::div(Expr::select(seen, penalized, logit), Expr::f32(temperature));
             (i, value)
         },
     )
@@ -443,16 +443,17 @@ struct FixtureSelection {
 
 fn fixture_selection() -> FixtureSelection {
     let adjusted = fixture_adjusted();
-    let max = adjusted
-        .iter()
-        .copied()
-        .fold(f32::NEG_INFINITY, |best, value| {
-            if value > best {
-                value
-            } else {
-                best
-            }
-        });
+    let max =
+        adjusted.iter().copied().fold(
+            f32::NEG_INFINITY,
+            |best, value| {
+                if value > best {
+                    value
+                } else {
+                    best
+                }
+            },
+        );
     let exponentials: Vec<f32> = adjusted.iter().map(|value| (value - max).exp()).collect();
     let sum = exponentials
         .iter()

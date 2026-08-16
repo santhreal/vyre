@@ -137,16 +137,13 @@ fn a_bounded_step_that_never_returns_is_reported_with_its_operation_and_backend(
         .expect("Fix: at least one backend must be linked to name in a bounded step.");
     let deadline = Duration::from_millis(50);
     let started = Instant::now();
-    let error = run_bounded_step::<()>(
-        "wedged step",
-        LIFECYCLE_OP_ID,
-        backend,
-        deadline,
-        || loop {
+    let error =
+        run_bounded_step::<()>("wedged step", LIFECYCLE_OP_ID, backend, deadline, || loop {
             std::thread::park();
-        },
-    )
-    .expect_err("Fix: a bounded step whose work never returns must fail, not block the caller.");
+        })
+        .expect_err(
+            "Fix: a bounded step whose work never returns must fail, not block the caller.",
+        );
 
     let elapsed = started.elapsed();
     assert!(

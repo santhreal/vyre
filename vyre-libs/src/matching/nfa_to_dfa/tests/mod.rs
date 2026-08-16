@@ -197,8 +197,7 @@ fn generated_nfa_to_dfa_matches_reference_nfa_for_thousands_of_inputs() {
         if let Some(last) = mutated_primary.last_mut() {
             *last = last.wrapping_add(1);
         }
-        let primary_prefix =
-            nfa.primary_word[..nfa.primary_word.len().saturating_sub(1)].to_vec();
+        let primary_prefix = nfa.primary_word[..nfa.primary_word.len().saturating_sub(1)].to_vec();
         let mut reversed_primary = nfa.primary_word.clone();
         reversed_primary.reverse();
         let generated_noise = vec![
@@ -362,9 +361,8 @@ fn generated_dfa_dedup_table_canonicalizes_repeated_automata() {
     let mut checked = 0usize;
     for seed in 0..1024u32 {
         let nfa = generated_nfa(seed);
-        let first = nfa_to_dfa(&nfa.tables(), 4096).unwrap_or_else(|err| {
-            panic!("Fix: generated NFA must lower for seed {seed}: {err}")
-        });
+        let first = nfa_to_dfa(&nfa.tables(), 4096)
+            .unwrap_or_else(|err| panic!("Fix: generated NFA must lower for seed {seed}: {err}"));
         let replay = nfa_to_dfa(&nfa.tables(), 4096).unwrap_or_else(|err| {
             panic!("Fix: generated NFA must lower on replay for seed {seed}: {err}")
         });
@@ -411,9 +409,8 @@ fn generated_dfa_batch_dedup_preserves_input_order_and_stats() {
     let mut input = Vec::new();
     for seed in 0..512u32 {
         let nfa = generated_nfa(seed);
-        let dfa = nfa_to_dfa(&nfa.tables(), 4096).unwrap_or_else(|err| {
-            panic!("Fix: generated NFA must lower for seed {seed}: {err}")
-        });
+        let dfa = nfa_to_dfa(&nfa.tables(), 4096)
+            .unwrap_or_else(|err| panic!("Fix: generated NFA must lower for seed {seed}: {err}"));
         input.push(dfa.clone());
         input.push(dfa.clone());
         let mut changed = dfa;
@@ -461,17 +458,15 @@ fn generated_dfa_table_merge_deduplicates_cross_shard_plans() {
     let mut right = DfaDedupTable::default();
     for seed in 0..256u32 {
         let nfa = generated_nfa(seed);
-        let dfa = nfa_to_dfa(&nfa.tables(), 4096).unwrap_or_else(|err| {
-            panic!("Fix: generated NFA must lower for seed {seed}: {err}")
-        });
+        let dfa = nfa_to_dfa(&nfa.tables(), 4096)
+            .unwrap_or_else(|err| panic!("Fix: generated NFA must lower for seed {seed}: {err}"));
         left.insert(dfa.clone());
         right.insert(dfa);
     }
     for seed in 256..512u32 {
         let nfa = generated_nfa(seed);
-        let dfa = nfa_to_dfa(&nfa.tables(), 4096).unwrap_or_else(|err| {
-            panic!("Fix: generated NFA must lower for seed {seed}: {err}")
-        });
+        let dfa = nfa_to_dfa(&nfa.tables(), 4096)
+            .unwrap_or_else(|err| panic!("Fix: generated NFA must lower for seed {seed}: {err}"));
         right.insert(dfa);
     }
 
@@ -758,8 +753,8 @@ fn accept_pattern_id_u32_max_minus_one_is_valid() {
         accept_pattern_ids: &pids,
         max_pattern_len: 3,
     };
-    let dfa = nfa_to_dfa(&tables, 1024)
-        .expect("Fix: pid=u32::MAX-1 is encodable and must lower cleanly");
+    let dfa =
+        nfa_to_dfa(&tables, 1024).expect("Fix: pid=u32::MAX-1 is encodable and must lower cleanly");
     let s_a = dfa.transitions[b'a' as usize];
     let s_ab = dfa.transitions[s_a as usize * 256 + b'b' as usize];
     let s_abc = dfa.transitions[s_ab as usize * 256 + b'c' as usize];

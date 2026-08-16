@@ -1,6 +1,6 @@
 mod payload;
-use crate::ir_inner::model::program::{LinearType, MemoryHints, MemoryKind, ShapePredicate};
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::ir_inner::model::program::{LinearType, MemoryHints, MemoryKind, ShapePredicate};
 use crate::serial::wire::framing::{
     FLAG_COMPRESSED, FLAG_OPAQUE_ENDIAN_FIXED, FLAG_SEALED, MAGIC, WIRE_FORMAT_VERSION,
 };

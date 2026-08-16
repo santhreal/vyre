@@ -255,5 +255,4 @@ mod tests {
         ));
         assert_eq!(check_3_primitive_coverage(&mut Report::clean(), &ops), 1);
     }
-
 }

@@ -340,11 +340,7 @@ fn reduction_program(spec: WorkgroupReduction<'_>) -> Program {
 }
 
 fn child_region(generator: &'static str, parent_op_id: &str, body: Vec<Node>) -> Node {
-    wrap_child_region(
-        generator,
-        Ident::from(parent_op_id),
-        body,
-    )
+    wrap_child_region(generator, Ident::from(parent_op_id), body)
 }
 
 fn sum_body(tile: u32, scratch: &'static str, scope: WorkgroupReductionScope) -> Vec<Node> {

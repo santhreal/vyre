@@ -34,13 +34,15 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::plumbing::host::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
+use crate::math::matroid_intersection_full::cpu_ref_into as matroid_cpu_ref_into;
+use crate::math::matroid_intersection_full::matroid_intersection_full;
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::plumbing::host::scratch::{
+    reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic,
+};
 #[cfg(any(test, feature = "cpu-parity"))]
 use rustc_hash::FxHashSet;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::matroid_intersection_full::cpu_ref_into as matroid_cpu_ref_into;
-use crate::math::matroid_intersection_full::matroid_intersection_full;
 
 /// Caller-owned dispatch scratch for exact megakernel matroid certification.
 #[derive(Debug, Default)]

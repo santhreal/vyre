@@ -36,7 +36,11 @@ fn loop_over(from: Expr, to: Expr) -> Program {
             vec![
                 Node::let_bind("base", Expr::load("src", Expr::u32(0))),
                 Node::let_bind("bump", Expr::add(Expr::u32(1), Expr::u32(2))),
-                Node::store("out", Expr::var("i"), Expr::add(Expr::var("base"), Expr::var("bump"))),
+                Node::store(
+                    "out",
+                    Expr::var("i"),
+                    Expr::add(Expr::var("base"), Expr::var("bump")),
+                ),
             ],
         )],
     )

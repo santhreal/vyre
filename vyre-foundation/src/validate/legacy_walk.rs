@@ -100,12 +100,8 @@ fn validate_node_inner(
     match node {
         Node::Let { name, value } => {
             validate_expr(value, buffers, scope, options, report, 0);
-            let duplicate_sibling = check_sibling_duplicate(
-                name,
-                region_bindings,
-                options.allow_shadowing,
-                &mut report.errors,
-            );
+            let duplicate_sibling =
+                check_sibling_duplicate(name, region_bindings, false, &mut report.errors);
             if !duplicate_sibling {
                 shadowing::check_local(name, scope, options, &mut report.errors);
             }
@@ -333,13 +329,7 @@ fn validate_node_inner(
             for expr in origin {
                 validate_expr(expr, buffers, scope, options, report, 0);
             }
-            node_rules::check_tile_store(
-                buffer,
-                origin,
-                tile,
-                buffers,
-                &mut report.errors,
-            );
+            node_rules::check_tile_store(buffer, origin, tile, buffers, &mut report.errors);
         }
         Node::TileMatmul { acc, a, b } => {
             node_rules::check_tile_matmul(acc, a, b, options, &mut report.errors);
@@ -409,4 +399,86 @@ fn validate_scoped_nested_nodes(
         Some(&mut scope_log),
     );
     restore_scope(scope, scope_log);
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir_inner::model::expr::Expr;
+    use rustc_hash::FxHashMap;
+
+    #[test]
+    fn same_scope_duplicate_lets_rejected_even_with_allow_shadowing() {
+        let nodes = vec![
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(1),
+            },
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(2),
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        assert!(
+            report.errors.iter().any(|e| e.code().as_str() == "V032"),
+            "same-scope duplicate let must be rejected with V032 even when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
+
+    #[test]
+    fn nested_scope_shadowing_accepted_with_allow_shadowing() {
+        let nodes = vec![
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(1),
+            },
+            Node::If {
+                cond: Expr::bool(true),
+                then: vec![Node::Let {
+                    name: "x".into(),
+                    value: Expr::u32(2),
+                }],
+                otherwise: Vec::new(),
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        assert!(
+            report.errors.is_empty(),
+            "nested-scope shadowing must be accepted when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
 }

@@ -150,36 +150,18 @@ fn try_lower_workgroup_reduction(
     let scope = detect_scope(body)?;
 
     if let Some(value_type) = workgroup_sum_value_type(generator) {
-        subgroup_reduce_body(
-            SubgroupReduceOp::Add,
-            &scratch,
-            scope,
-            plan,
-            value_type,
-        )
+        subgroup_reduce_body(SubgroupReduceOp::Add, &scratch, scope, plan, value_type)
     } else if let Some(value_type) = workgroup_max_value_type(generator) {
         // Max reductions lower to `subgroup_reduce(Max, ...)`, mirroring the
         // sum path but with the max identity (`-inf`) filling out-of-range
         // lanes in the two-level reduction. Backends emit the native
         // `subgroupMax` / `redux.sync.max` instead of the slow shared tree.
-        subgroup_reduce_body(
-            SubgroupReduceOp::Max,
-            &scratch,
-            scope,
-            plan,
-            value_type,
-        )
+        subgroup_reduce_body(SubgroupReduceOp::Max, &scratch, scope, plan, value_type)
     } else if let Some(value_type) = workgroup_min_value_type(generator) {
         // Min reductions lower to `subgroup_reduce(Min, ...)`, with the min
         // identity (`+inf` for f32, `u32::MAX` for u32) filling out-of-range
         // lanes. Backends emit the native `subgroupMin` / `redux.sync.min`.
-        subgroup_reduce_body(
-            SubgroupReduceOp::Min,
-            &scratch,
-            scope,
-            plan,
-            value_type,
-        )
+        subgroup_reduce_body(SubgroupReduceOp::Min, &scratch, scope, plan, value_type)
     } else {
         None
     }

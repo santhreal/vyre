@@ -286,7 +286,8 @@ mod tests {
                 Value::from(vyre_primitives::wire::pack_u32_slice(&triangle_edges)),
                 Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
                     0u32;
-                    (n_triangles * d) as usize
+                    (n_triangles * d)
+                        as usize
                 ])),
             ],
         )

@@ -156,6 +156,170 @@ fn derive_type_facts_records_loads_and_expression_types() {
 }
 
 #[test]
+fn derive_type_facts_descends_into_tile_elementwise_bodies() {
+    let program = Program::wrapped(
+        Vec::new(),
+        [1, 1, 1],
+        vec![Node::tile_elementwise(
+            "tile",
+            Vec::new(),
+            vec![Node::let_bind("inside_tile", Expr::u32(1))],
+        )],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().expect("type facts are derived");
+    assert_eq!(
+        types.var_types.get(&Ident::from("inside_tile")),
+        Some(&DataType::U32),
+        "TileElementwise is a child-body scope and must participate in type inference"
+    );
+}
+
+#[test]
+fn derive_type_facts_loop_induction_binding_and_restoration() {
+    // Tests:
+    // 1. Induction variable is typed as U32 inside loop body.
+    // 2. Expressions depending on induction variable are resolved as U32.
+    // 3. Shadowed outer variable type is restored after loop completes.
+    // 4. Unshadowed induction variable is removed after loop completes.
+    // 5. Nested loops bind both induction variables in inner body.
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("shadowed_var", Expr::f32(1.0)),
+            Node::Loop {
+                var: Ident::from("shadowed_var"),
+                from: Expr::u32(0),
+                to: Expr::u32(4),
+                body: vec![
+                    Node::let_bind(
+                        "inner_dep",
+                        Expr::add(Expr::var("shadowed_var"), Expr::u32(1)),
+                    ),
+                    Node::Loop {
+                        var: Ident::from("nested_var"),
+                        from: Expr::u32(0),
+                        to: Expr::u32(2),
+                        body: vec![Node::let_bind(
+                            "nested_dep",
+                            Expr::add(Expr::var("shadowed_var"), Expr::var("nested_var")),
+                        )],
+                    },
+                ],
+            },
+            Node::let_bind(
+                "post_loop_dep",
+                Expr::add(Expr::var("shadowed_var"), Expr::f32(2.0)),
+            ),
+            Node::Loop {
+                var: Ident::from("unshadowed_var"),
+                from: Expr::u32(0),
+                to: Expr::u32(3),
+                body: vec![Node::let_bind(
+                    "unshadowed_dep",
+                    Expr::mul(Expr::var("unshadowed_var"), Expr::u32(2)),
+                )],
+            },
+        ],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().unwrap();
+
+    // Body bindings depending on loop variables were successfully typed as U32
+    assert_eq!(
+        types.var_types.get(&Ident::from("inner_dep")),
+        Some(&DataType::U32),
+        "expression depending on induction variable must be inferred as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("nested_dep")),
+        Some(&DataType::U32),
+        "expression depending on nested induction variables must be inferred as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("unshadowed_dep")),
+        Some(&DataType::U32),
+        "expression depending on unshadowed loop variable must be inferred as U32"
+    );
+
+    // Outer shadowed variable was restored to F32, so post-loop expression is typed as F32
+    assert_eq!(
+        types.var_types.get(&Ident::from("shadowed_var")),
+        Some(&DataType::F32),
+        "outer variable type must be restored after loop exit"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("post_loop_dep")),
+        Some(&DataType::F32),
+        "post-loop expression using restored variable must be inferred as F32"
+    );
+
+    // Unshadowed loop variable is not present in final var_types
+    assert_eq!(
+        types.var_types.get(&Ident::from("unshadowed_var")),
+        None,
+        "unshadowed loop variable must be removed after loop exit"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("nested_var")),
+        None,
+        "nested loop variable must be removed after loop exit"
+    );
+}
+
+#[test]
+fn derive_type_facts_assign_unknown_evicts_stale_facts() {
+    // Tests:
+    // 1. Assign with unknown type removes stale var_types entry.
+    // 2. Assign with valid type updates var_types.
+    // 3. Assign with different type updates var_types to new type.
+    // 4. Subsequent uses of evicted variable cannot resolve stale type.
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("a", Expr::f32(1.0)),
+            Node::Assign {
+                name: Ident::from("a"),
+                value: Expr::var("unbound_unknown_identifier"),
+            },
+            Node::let_bind("b", Expr::f32(1.0)),
+            Node::Assign {
+                name: Ident::from("b"),
+                value: Expr::f32(2.5),
+            },
+            Node::let_bind("c", Expr::f32(1.0)),
+            Node::Assign {
+                name: Ident::from("c"),
+                value: Expr::u32(42),
+            },
+        ],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().unwrap();
+
+    assert_eq!(
+        types.var_types.get(&Ident::from("a")),
+        None,
+        "reassignment to unknown expression must evict stale type fact"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("b")),
+        Some(&DataType::F32),
+        "reassignment to matching type must update type fact"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("c")),
+        Some(&DataType::U32),
+        "reassignment to different valid type must update type fact to new type"
+    );
+}
+
+#[test]
 fn invalidate_clears_all() {
     let program = Program::wrapped(
         vec![BufferDecl::read_write("out", 0, DataType::U32)],

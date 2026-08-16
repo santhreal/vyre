@@ -77,7 +77,10 @@ fn skip_class_findings(report: &mut Report, classes: &[SkipClass]) {
                 class.label,
                 class.claim,
                 if class.counted < class.ceiling {
-                    format!("lower the ceiling from {} to {}", class.ceiling, class.counted)
+                    format!(
+                        "lower the ceiling from {} to {}",
+                        class.ceiling, class.counted
+                    )
                 } else {
                     format!("at the measured ceiling of {}", class.ceiling)
                 }
@@ -329,7 +332,7 @@ pub(super) fn run_all_pairs_query(
 
 #[cfg(test)]
 mod tests {
-    use super::{SkipClass, skip_class_findings};
+    use super::{skip_class_findings, SkipClass};
     use xtask::gate::Report;
 
     /// `SkipClass` and `skip_class_findings` are private to this module and the

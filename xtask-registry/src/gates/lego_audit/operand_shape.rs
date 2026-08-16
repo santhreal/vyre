@@ -129,5 +129,4 @@ mod tests {
         assert_eq!(pairs.len(), 1, "the pair past the key must still be found");
         assert!(pairs[0].0 >= OPERAND_DUP_MIN_COSINE);
     }
-
 }

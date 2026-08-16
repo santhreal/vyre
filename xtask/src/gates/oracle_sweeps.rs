@@ -305,7 +305,10 @@ fn run_partition(
     if shard >= shards {
         return Err(GateError::new(
             format!("shard index {shard} is outside shard count {shards}"),
-            format!("use 0 through {}; a shard that selects no target proves nothing", shards - 1),
+            format!(
+                "use 0 through {}; a shard that selects no target proves nothing",
+                shards - 1
+            ),
         ));
     }
     if shards > selected.len() {
@@ -433,13 +436,12 @@ mod tests {
     fn a_sweep_source_names_the_member_directory_that_holds_it() {
         assert_eq!(
             sweep_source(Path::new("vyre-libs/tests/sweep_matching_oracle.rs")),
-            Some((
-                "vyre-libs".to_string(),
-                "sweep_matching_oracle".to_string()
-            ))
+            Some(("vyre-libs".to_string(), "sweep_matching_oracle".to_string()))
         );
         assert_eq!(
-            sweep_source(Path::new("conform/vyre-conform/tests/sweep_backend_oracle.rs")),
+            sweep_source(Path::new(
+                "conform/vyre-conform/tests/sweep_backend_oracle.rs"
+            )),
             Some((
                 "conform/vyre-conform".to_string(),
                 "sweep_backend_oracle".to_string()

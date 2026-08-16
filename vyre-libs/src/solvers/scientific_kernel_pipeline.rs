@@ -8,7 +8,6 @@
 //! primitive crate owns the executable semantics; this crate owns only the
 //! self-consumer dispatch surface and reusable CPU parity adapters.
 
-use vyre_foundation::ir::Program;
 use crate::math::{
     bigint_add_carry::bigint_add_carry,
     conformal::conformal_threshold,
@@ -18,14 +17,15 @@ use crate::math::{
     ode_step::rk4_step,
     padic::hensel_lift_step,
     qsvt::qsvt_block_encode,
-    semiring_gemm::semiring_gemm_wide,
     score_denoise::score_denoise_step,
+    semiring_gemm::semiring_gemm_wide,
     semiring_gemm::{semiring_gemm, Semiring},
     sinkhorn::sinkhorn_scale,
     sos_certificate::sos_gram_construct,
     tensor_network::tn_pair_contract,
     tensor_train::tt_contract_step,
 };
+use vyre_foundation::ir::Program;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::{

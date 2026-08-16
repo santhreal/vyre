@@ -17,9 +17,9 @@
 ))]
 
 mod wire_words;
-use wire_words::{decode_u32_words, u32_bytes};
 use vyre::ir::Program;
 use vyre_reference::value::Value;
+use wire_words::{decode_u32_words, u32_bytes};
 
 /// Run `program` on `inputs` and return the read-write buffer outputs.
 fn run_program(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
@@ -127,8 +127,8 @@ fn cat_a_dot_matches_cpu_reference() {
 
 #[test]
 fn cat_a_aho_corasick_matches_cpu_reference() {
-    use vyre_libs::scan::aho_corasick;
     use vyre_libs::matching::dfa_compile;
+    use vyre_libs::scan::aho_corasick;
 
     let patterns: [&[u8]; 4] = [b"he", b"she", b"his", b"hers"];
     let compiled = dfa_compile(&patterns);

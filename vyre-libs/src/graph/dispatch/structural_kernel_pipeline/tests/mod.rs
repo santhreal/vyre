@@ -1,4 +1,3 @@
-use vyre_foundation::ir::{Node, Program};
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::graph::{
     adjustment_set::{backdoor_descendants_check, backdoor_descendants_check_cpu},
@@ -43,6 +42,7 @@ use crate::graph::{
     union_find::{find_root_body, union_find_program, union_roots_body},
 };
 use crate::math::tensor_scc::{cpu_ref as tensor_scc_cpu_ref, tensor_scc_fixpoint};
+use vyre_foundation::ir::{Node, Program};
 
 fn approx_eq(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-8 * (1.0 + a.abs() + b.abs())

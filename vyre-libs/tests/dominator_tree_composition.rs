@@ -101,7 +101,10 @@ fn fixpoint_composes_every_registered_phase() {
     );
 
     let mut generators = BTreeSet::new();
-    child_generators(dominator_tree_program(4, 4, 4, "idom").entry(), &mut generators);
+    child_generators(
+        dominator_tree_program(4, 4, 4, "idom").entry(),
+        &mut generators,
+    );
 
     let composed: BTreeSet<String> = generators
         .iter()
@@ -141,7 +144,11 @@ fn depth_phase_witness_matches_reference() {
     for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
         let outputs = vyre_reference::reference_eval(
             &build(),
-            &input_set.iter().cloned().map(Value::from).collect::<Vec<_>>(),
+            &input_set
+                .iter()
+                .cloned()
+                .map(Value::from)
+                .collect::<Vec<_>>(),
         )
         .expect("reference run for dominator_tree_depth")
         .into_iter()
@@ -203,7 +210,11 @@ fn intersect_phase_witness_matches_reference() {
     for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
         let outputs = vyre_reference::reference_eval(
             &build(),
-            &input_set.iter().cloned().map(Value::from).collect::<Vec<_>>(),
+            &input_set
+                .iter()
+                .cloned()
+                .map(Value::from)
+                .collect::<Vec<_>>(),
         )
         .expect("reference run for dominator_tree_intersect_step")
         .into_iter()

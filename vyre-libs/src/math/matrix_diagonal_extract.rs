@@ -10,25 +10,29 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_chi
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::builder::cooperative::{for_each_index, LANES};
+
 /// Op id.
 pub const OP_ID: &str = "vyre-libs::math::matrix_diagonal_extract";
 
-/// Emit the loop that copies `matrix[i * n + i]` into `diagonal[i]`.
+/// Emit the walk that copies `matrix[i * n + i]` into `diagonal[i]`.
+///
+/// The entries are independent, so `lanes` of them are copied at a time and the
+/// walk needs `local` bound to the lane id. `lanes` is the width of the program
+/// the nodes end up in: a program that declares fewer leaves entries unwritten.
 #[must_use]
-pub fn matrix_diagonal_extract_body(matrix: &str, diagonal: &str, n: u32) -> Vec<Node> {
-    vec![Node::loop_for(
+pub fn matrix_diagonal_extract_body(matrix: &str, diagonal: &str, n: u32, lanes: u32) -> Vec<Node> {
+    let entry = Expr::var("mde_i");
+    vec![for_each_index(
+        n,
+        lanes,
         "mde_i",
-        Expr::u32(0),
-        Expr::u32(n),
         vec![Node::store(
             diagonal,
-            Expr::var("mde_i"),
+            entry.clone(),
             Expr::load(
                 matrix,
-                Expr::add(
-                    Expr::mul(Expr::var("mde_i"), Expr::u32(n)),
-                    Expr::var("mde_i"),
-                ),
+                Expr::add(Expr::mul(entry.clone(), Expr::u32(n)), entry),
             ),
         )],
     )]
@@ -41,11 +45,12 @@ pub fn matrix_diagonal_extract_region(
     matrix: &str,
     diagonal: &str,
     n: u32,
+    lanes: u32,
 ) -> Node {
     wrap_child_region(
         OP_ID,
         Ident::from(parent_op_id),
-        matrix_diagonal_extract_body(matrix, diagonal, n),
+        matrix_diagonal_extract_body(matrix, diagonal, n, lanes),
     )
 }
 
@@ -56,19 +61,15 @@ pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program 
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((diagonal, DataType::F32)), message),
     };
+    let mut body = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+    body.extend(matrix_diagonal_extract_body(matrix, diagonal, n, LANES));
     Program::wrapped(
         vec![
             BufferDecl::storage(matrix, 0, BufferAccess::ReadOnly, DataType::F32).with_count(cells),
             BufferDecl::output(diagonal, 1, DataType::F32).with_count(n),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                matrix_diagonal_extract_body(matrix, diagonal, n),
-            )],
-        )],
+        [LANES, 1, 1],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -126,6 +127,34 @@ mod tests {
             errors.is_empty(),
             "Fix: the diagonal read-out must validate, got {:?}.",
             errors
+        );
+    }
+
+    #[test]
+    fn diagonal_extract_dispatches_declared_lanes() {
+        let program = matrix_diagonal_extract("m", "diag", 4);
+        assert_eq!(
+            program.workgroup_size(),
+            [LANES, 1, 1],
+            "Fix: matrix_diagonal_extract must dispatch LANES cooperative lanes."
+        );
+    }
+
+    #[test]
+    fn diagonal_extract_binds_local_id() {
+        let program = matrix_diagonal_extract("m", "diag", 4);
+        let has_local_binding = program.entry().iter().any(|node| match node {
+            Node::Region { body, .. } => body.iter().any(|inner| match inner {
+                Node::Let { name, value } => {
+                    name == "local" && matches!(value, Expr::LocalId { axis: 0 })
+                }
+                _ => false,
+            }),
+            _ => false,
+        });
+        assert!(
+            has_local_binding,
+            "Fix: matrix_diagonal_extract must bind `local` to LocalId {{ axis: 0 }}."
         );
     }
 }

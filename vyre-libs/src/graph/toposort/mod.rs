@@ -26,9 +26,8 @@ mod plan;
 mod program;
 
 pub use csr::{
-    toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch,
-    validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrLayout,
-    ToposortCsrScratch,
+    toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch, validate_toposort_csr_inputs,
+    validate_toposort_csr_order, ToposortCsrLayout, ToposortCsrScratch,
 };
 pub use edge_list::toposort;
 pub use error::{ToposortCsrError, ToposortError};

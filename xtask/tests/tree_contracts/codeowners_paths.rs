@@ -61,7 +61,8 @@ fn matches_a_path(root: &Path, pattern: &str) -> bool {
     };
     let base = root.join(prefix.trim_end_matches('/'));
     walk(&base).iter().any(|path| {
-        path.to_string_lossy().ends_with(suffix.trim_start_matches('*'))
+        path.to_string_lossy()
+            .ends_with(suffix.trim_start_matches('*'))
     })
 }
 

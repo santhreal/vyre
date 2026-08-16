@@ -115,8 +115,7 @@ pub fn handrolls<'a>(ops: &[FingerprintedOperation<'a>]) -> Vec<Handroll<'a>> {
             };
             for &index in candidates {
                 let candidate = &ops[index];
-                if candidate.id == host.id
-                    || candidate.fingerprint.len() >= host.fingerprint.len()
+                if candidate.id == host.id || candidate.fingerprint.len() >= host.fingerprint.len()
                 {
                     continue;
                 }

@@ -1,11 +1,11 @@
 //! Stable bounded wire codec for connected [`ProgramGraph`] compositions.
 
+use super::op_signature::{BufferAccess, DataType};
 use super::program::Program;
 use super::program_graph::{
     GraphInput, GraphOutput, GraphValueId, ProgramGraph, ProgramGraphError, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use super::op_signature::{BufferAccess, DataType};
 
 const MAGIC: &[u8; 4] = b"VGR0";
 const VERSION: u16 = 2;

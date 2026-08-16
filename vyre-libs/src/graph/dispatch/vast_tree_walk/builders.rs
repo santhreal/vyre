@@ -1,9 +1,9 @@
 use super::VastTreeWalkPlan;
-use vyre_foundation::ir::Program;
 use crate::graph::vast_tree_walk::{
     try_ast_walk_plan, try_ast_walk_postorder, try_ast_walk_preorder, POSTORDER_OP_ID,
     PREORDER_OP_ID,
 };
+use vyre_foundation::ir::Program;
 
 /// Build checked VAST traversal programs for self-hosted compiler passes.
 ///

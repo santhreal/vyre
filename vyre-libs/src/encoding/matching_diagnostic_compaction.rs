@@ -9,8 +9,6 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::matching::{
     bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
     BRACKET_KIND_OTHER,
@@ -22,6 +20,8 @@ use crate::matching::{
     dfa_compile, dfa_compile_with_budget, dfa_fingerprint, dfa_wire_bytes, nfa_to_dfa, CompiledDfa,
     DfaCompileError, DfaDedupBatch, DfaDedupResult, DfaDedupTable, NfaTables, NfaToDfaError,
 };
+use crate::plumbing::host::scratch::reserve_vec_capacity;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::wire::pack_u32_slice;
 
 #[cfg(any(test, feature = "cpu-parity"))]

@@ -15,7 +15,8 @@ use structure_gate::source_scan::string_literals;
 /// A char literal holding a quote does not open a string.
 #[test]
 fn a_quote_inside_a_char_literal_does_not_swallow_the_rest_of_the_file() {
-    let source = "table[usize::from(b'\"')] = C_DQUOTE;\nconst ID: &str = \"vyre-libs::parsing::lex\";\n";
+    let source =
+        "table[usize::from(b'\"')] = C_DQUOTE;\nconst ID: &str = \"vyre-libs::parsing::lex\";\n";
 
     assert_eq!(string_literals(source), vec!["vyre-libs::parsing::lex"]);
 }

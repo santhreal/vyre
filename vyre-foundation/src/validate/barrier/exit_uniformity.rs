@@ -9,7 +9,7 @@ use crate::memory_model::MemoryOrdering;
 use crate::validate::binding::Binding;
 use crate::validate::uniformity::is_uniform_with_load_policy;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 struct ExitUniformityState {
     scope: FxHashMap<Ident, Binding>,
     dirty_buffers: FxHashSet<Ident>,
@@ -141,21 +141,33 @@ fn analyze_exit_node(
             invalidate_expr_atomics(from, state);
             invalidate_expr_atomics(to, state);
             let before = state.clone();
-            let mut body_state = before.clone();
-            body_state.scope.insert(
-                var.clone(),
-                Binding {
-                    ty: DataType::U32,
-                    ty_known: true,
-                    mutable: false,
-                    uniform: bounds_uniform,
-                },
-            );
-            let proof =
-                analyze_exit_sequence(body, &mut body_state, path_uniform && bounds_uniform);
-            body_state.scope.remove(var.as_str());
-            *state = merge_exit_states(before, body_state);
-            proof
+            let mut loop_entry_state = before.clone();
+            let mut accumulated_proof = ExitProof::NONE;
+
+            loop {
+                let mut body_state = loop_entry_state.clone();
+                body_state.scope.insert(
+                    var.clone(),
+                    Binding {
+                        ty: DataType::U32,
+                        ty_known: true,
+                        mutable: false,
+                        uniform: bounds_uniform,
+                    },
+                );
+                let proof =
+                    analyze_exit_sequence(body, &mut body_state, path_uniform && bounds_uniform);
+                accumulated_proof.merge(proof);
+                body_state.scope.remove(var.as_str());
+                let next_entry_state = merge_exit_states(loop_entry_state.clone(), body_state);
+                if next_entry_state == loop_entry_state {
+                    break;
+                }
+                loop_entry_state = next_entry_state;
+            }
+
+            *state = merge_exit_states(before, loop_entry_state);
+            accumulated_proof
         }
         Node::IndirectDispatch { .. } | Node::AsyncWait { .. } | Node::Resume { .. } => {
             ExitProof::NONE
@@ -217,7 +229,9 @@ fn analyze_exit_node(
             ExitProof::NONE
         }
         Node::TileElementwise { body, .. } => analyze_exit_sequence(body, state, path_uniform),
-        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => ExitProof::NONE,
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {
+            ExitProof::NONE
+        }
         Node::Opaque(_) => {
             state.unknown_write = true;
             ExitProof::NONE

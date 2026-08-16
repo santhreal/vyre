@@ -125,8 +125,12 @@ impl ExternalIfdsSecurityDispatch<'_> {
     ///
     /// Returns [`ExternalIfdsSecurityRouteError`] if the external engine rejects the shape.
     pub fn step_program(&self) -> Result<Program, ExternalIfdsSecurityRouteError> {
-        ifds_gpu_step(self.shape, self.buffers.frontier_in, self.buffers.frontier_out)
-            .map_err(|reason| ExternalIfdsSecurityRouteError::BuildProgram { reason })
+        ifds_gpu_step(
+            self.shape,
+            self.buffers.frontier_in,
+            self.buffers.frontier_out,
+        )
+        .map_err(|reason| ExternalIfdsSecurityRouteError::BuildProgram { reason })
     }
 }
 

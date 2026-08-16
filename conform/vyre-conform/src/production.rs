@@ -242,7 +242,10 @@ impl ProductionSession {
         }
         // The bounded step outlives this call when it exceeds its deadline, so it
         // cannot borrow the caller's input slices.
-        let owned = inputs.iter().map(|bytes| bytes.to_vec()).collect::<Vec<_>>();
+        let owned = inputs
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
         let session = Arc::clone(&self.session);
         let program = Arc::clone(&self.program);
         let outcome = run_bounded_step(
@@ -384,7 +387,10 @@ impl ExecutionRoute {
                 let backend = Arc::clone(backend);
                 let program = program.clone();
                 let config = config.clone();
-                let owned = inputs.iter().map(|bytes| bytes.to_vec()).collect::<Vec<_>>();
+                let owned = inputs
+                    .iter()
+                    .map(|bytes| bytes.to_vec())
+                    .collect::<Vec<_>>();
                 run_bounded_step(
                     "dispatch",
                     op_id,

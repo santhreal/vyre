@@ -5,7 +5,10 @@
 
 use super::*;
 
-pub(super) fn lego_duplicate_report(ops: &[OpInfo], generator_command: &str) -> DuplicateFamilyReport {
+pub(super) fn lego_duplicate_report(
+    ops: &[OpInfo],
+    generator_command: &str,
+) -> DuplicateFamilyReport {
     let mut families = Vec::new();
     families.extend(
         no_reinvention_pairs(ops)
@@ -101,5 +104,4 @@ mod tests {
             Some(PathBuf::from("release/evidence/dedup/lego-duplicates.json"))
         );
     }
-
 }

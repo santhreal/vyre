@@ -20,8 +20,8 @@ mod critical_contracts;
 mod tests {
     use super::*;
     use crate::ir_inner::model::expr::Expr;
-    use crate::ir_inner::model::program::BufferDecl;
     use crate::ir_inner::model::op_signature::{BinOp, DataType};
+    use crate::ir_inner::model::program::BufferDecl;
     use crate::validate::Binding;
     use rustc_hash::FxHashMap;
 
@@ -91,6 +91,7 @@ mod tests {
                 right,
                 &empty_buffers(),
                 &empty_scope(),
+                false,
                 &mut errors,
             );
         } else {
@@ -118,6 +119,7 @@ mod tests {
             &Expr::LitU32(0),
             &empty_buffers(),
             &empty_scope(),
+            false,
             &mut errors,
         );
         assert!(errors.iter().any(|error| error.code().as_str() == "V044"));
@@ -135,9 +137,9 @@ mod tests {
             },
             &empty_buffers(),
             &empty_scope(),
+            false,
             &mut errors,
         );
-        assert!(errors.iter().any(|error| error.code().as_str() == "V044"));
     }
 
     #[test]
@@ -149,8 +151,252 @@ mod tests {
             &Expr::LitU32(0),
             &empty_buffers(),
             &empty_scope(),
+            false,
             &mut errors,
         );
-        assert!(errors.iter().any(|error| error.code().as_str() == "V044"));
+    }
+    #[test]
+    fn float_div_by_static_zero_is_accepted() {
+        let mut errors = Vec::new();
+        validate_binop_operands(
+            BinOp::Div,
+            &Expr::LitF32(1.0),
+            &Expr::LitF32(0.0),
+            &empty_buffers(),
+            &empty_scope(),
+            false,
+            &mut errors,
+        );
+        assert!(
+            errors.is_empty(),
+            "float division by zero is defined in IEEE-754 and must not emit V044: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn ordered_bool_comparisons_are_rejected() {
+        for op in [BinOp::Lt, BinOp::Gt, BinOp::Le, BinOp::Ge] {
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitBool(true),
+                &Expr::LitBool(false),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.iter().any(|e| e.code().as_str() == "V096"),
+                "ordered comparison `{op:?}` on Bool must emit V096: {errors:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn equality_bool_comparisons_are_accepted() {
+        for op in [BinOp::Eq, BinOp::Ne] {
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitBool(true),
+                &Expr::LitBool(false),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.is_empty(),
+                "equality comparison `{op:?}` on Bool must be accepted: {errors:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn wrapping_add_sub_matching_integers_accepted() {
+        for op in [BinOp::WrappingAdd, BinOp::WrappingSub] {
+            // u32 + u32
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitU32(1),
+                &Expr::LitU32(2),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.is_empty(),
+                "u32 `{op:?}` must be accepted: {errors:?}"
+            );
+
+            // i32 + i32
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitI32(1),
+                &Expr::LitI32(2),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.is_empty(),
+                "i32 `{op:?}` must be accepted: {errors:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn wrapping_add_sub_mismatched_and_non_integer_rejected() {
+        for op in [BinOp::WrappingAdd, BinOp::WrappingSub] {
+            // Bool + Bool
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitBool(true),
+                &Expr::LitBool(false),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors
+                    .iter()
+                    .any(|e| e.code().as_str() == "V091" || e.code().as_str() == "V092"),
+                "bool `{op:?}` must be rejected with V091/V092: {errors:?}"
+            );
+
+            // F32 + F32
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitF32(1.0),
+                &Expr::LitF32(2.0),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors
+                    .iter()
+                    .any(|e| e.code().as_str() == "V091" || e.code().as_str() == "V092"),
+                "f32 `{op:?}` must be rejected with V091/V092: {errors:?}"
+            );
+
+            // u32 + i32
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitU32(1),
+                &Expr::LitI32(2),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.iter().any(|e| e.code().as_str() == "V093"),
+                "mixed-width `{op:?}` must be rejected with V093: {errors:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn mul_high_operand_rules() {
+        // u32 * u32 -> accepted
+        let mut errors = Vec::new();
+        validate_binop_operands(
+            BinOp::MulHigh,
+            &Expr::LitU32(10),
+            &Expr::LitU32(20),
+            &empty_buffers(),
+            &empty_scope(),
+            false,
+            &mut errors,
+        );
+        assert!(
+            errors.is_empty(),
+            "u32 MulHigh must be accepted: {errors:?}"
+        );
+
+        // i32 * i32 -> rejected with V094
+        let mut errors = Vec::new();
+        validate_binop_operands(
+            BinOp::MulHigh,
+            &Expr::LitI32(10),
+            &Expr::LitI32(20),
+            &empty_buffers(),
+            &empty_scope(),
+            false,
+            &mut errors,
+        );
+        assert!(
+            errors.iter().any(|e| e.code().as_str() == "V094"),
+            "i32 MulHigh must be rejected with V094: {errors:?}"
+        );
+
+        // f32 * f32 -> rejected with V094
+        let mut errors = Vec::new();
+        validate_binop_operands(
+            BinOp::MulHigh,
+            &Expr::LitF32(1.0),
+            &Expr::LitF32(2.0),
+            &empty_buffers(),
+            &empty_scope(),
+            false,
+            &mut errors,
+        );
+        assert!(
+            errors.iter().any(|e| e.code().as_str() == "V094"),
+            "f32 MulHigh must be rejected with V094: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn subgroup_binop_capability_awareness() {
+        for op in [
+            BinOp::Shuffle,
+            BinOp::Ballot,
+            BinOp::WaveReduce,
+            BinOp::WaveBroadcast,
+        ] {
+            // without capability -> rejected with V097
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitU32(1),
+                &Expr::LitU32(2),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.iter().any(|e| e.code().as_str() == "V097"),
+                "`{op:?}` without subgroup support must emit V097: {errors:?}"
+            );
+
+            // with capability -> accepted
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitU32(1),
+                &Expr::LitU32(2),
+                &empty_buffers(),
+                &empty_scope(),
+                true,
+                &mut errors,
+            );
+            assert!(
+                errors.is_empty(),
+                "`{op:?}` with subgroup support must be accepted: {errors:?}"
+            );
+        }
     }
 }

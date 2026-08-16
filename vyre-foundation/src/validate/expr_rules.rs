@@ -1,6 +1,6 @@
 use crate::ir_inner::model::expr::Expr;
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::DataType;
+use crate::ir_inner::model::program::BufferDecl;
 use crate::validate::atomic_rules;
 use crate::validate::bytes_rejection;
 use crate::validate::call_rules::validate_call;
@@ -86,6 +86,7 @@ pub(crate) fn validate_expr(
                 right,
                 buffers,
                 scope,
+                options.requires_subgroup_ops(),
                 &mut report.errors,
             );
         }

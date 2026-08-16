@@ -183,9 +183,7 @@ fn test_regions(lines: &[&str]) -> Vec<(usize, usize)> {
         let indent = indent_of(line);
         let end = lines[index + 1..]
             .iter()
-            .position(|candidate| {
-                candidate.trim_end() == format!("{}}}", " ".repeat(indent))
-            })
+            .position(|candidate| candidate.trim_end() == format!("{}}}", " ".repeat(indent)))
             .map_or(lines.len(), |offset| index + 1 + offset);
         regions.push((index, end));
     }

@@ -26,9 +26,7 @@ use vyre_libs::graph::csr_forward_traverse::{
     csr_forward_traverse, csr_forward_traverse_excluding,
 };
 use vyre_libs::graph::csr_frontier_queue::csr_queue_forward_traverse;
-use vyre_libs::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
-};
+use vyre_libs::graph::csr_queue_delta::{csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue};
 use vyre_libs::graph::csr_queue_split::csr_queue_split_low_forward_traverse;
 use vyre_libs::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 use vyre_libs::graph::program_graph::ProgramGraphShape;

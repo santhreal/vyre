@@ -24,12 +24,8 @@ pub(crate) const INTRINSIC_FEATURES: &[&str] = &["hardware"];
 pub(crate) const COMPOSITION_FEATURES: &[&str] = &[];
 
 /// Crate-support features. Not domains.
-pub(crate) const SUPPORT_FEATURES: &[&str] = &[
-    "cpu-parity",
-    "gpu",
-    "inventory-registry",
-    "vyre-foundation",
-];
+pub(crate) const SUPPORT_FEATURES: &[&str] =
+    &["cpu-parity", "gpu", "inventory-registry", "vyre-foundation"];
 
 /// WHY: a new domain feature that is not classified as intrinsic or composition
 /// is how the "shared builder reused by two dialects" third category comes back,
@@ -126,8 +122,8 @@ mod tests {
     /// hardware intrinsic domain is admitted, which the lego block rule allows.
     #[test]
     fn every_classified_domain_gates_a_module_in_this_crate() {
-        let src = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
-            .join("src");
+        let src =
+            vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src");
         let domains: Vec<&str> = INTRINSIC_FEATURES
             .iter()
             .chain(COMPOSITION_FEATURES)

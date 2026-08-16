@@ -824,7 +824,9 @@ mod tests {
     /// tag is not a pull request context and is deliberately not held to this.
     #[test]
     fn a_pull_request_sweep_is_told_from_a_release_sweep() {
-        assert!(invokes_sweep("run: ./cargo_full run -p xtask -- gates --subset cat-a"));
+        assert!(invokes_sweep(
+            "run: ./cargo_full run -p xtask -- gates --subset cat-a"
+        ));
         assert!(invokes_sweep(
             "run: ./cargo_full run -q -p xtask --bin xtask -- gates"
         ));
@@ -841,7 +843,10 @@ mod tests {
             Some("gates.yml".to_string())
         );
         assert_eq!(workflow_file(".github/workflows-paused/book.yml"), None);
-        assert_eq!(workflow_file(".github/workflows/actions/x/action.yml"), None);
+        assert_eq!(
+            workflow_file(".github/workflows/actions/x/action.yml"),
+            None
+        );
 
         let root = crate::checkout::checkout_root();
         let tree = Tree::open(&root).expect("Fix: the checkout must be listable");

@@ -1,10 +1,10 @@
 use super::super::resident_scratch::PersistentBfsPlanCache;
 use super::super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::graph::csr_closure_inputs::graphs;
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
-use crate::graph::csr_closure_inputs::graphs;
 
 #[derive(Default)]
 struct ResidentPersistentBfsDispatcher {

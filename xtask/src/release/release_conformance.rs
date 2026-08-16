@@ -137,7 +137,10 @@ impl Gate for ReleaseConformanceGate {
 const BACKEND_ARTIFACTS: &[(&str, &str)] = &[
     ("cuda", "release/evidence/conformance/cuda-conformance.json"),
     ("wgpu", "release/evidence/conformance/wgpu-conformance.json"),
-    ("metal", "release/evidence/conformance/metal-conformance.json"),
+    (
+        "metal",
+        "release/evidence/conformance/metal-conformance.json",
+    ),
     (
         "cpu-ref",
         "release/evidence/conformance/reference-conformance.json",
@@ -523,9 +526,7 @@ fn artifact_body(
         catalog_covered_op_count: assessed.coverage.catalog_covered_op_count,
         missing_catalog_ops: assessed.coverage.missing_catalog_ops,
         release_backend_row_count: assessed.coverage.release_backend_row_count,
-        supported_release_backend_row_count: assessed
-            .coverage
-            .supported_release_backend_row_count,
+        supported_release_backend_row_count: assessed.coverage.supported_release_backend_row_count,
         release_backend_rows: assessed.catalog.release_backend_rows,
         missing_release_backend_rows: assessed.catalog.missing_release_backend_rows,
         op_matrix_blocked_release_count: assessed.coverage.op_matrix_blocked_release_count,
@@ -566,11 +567,7 @@ fn recorded_summary_divergences(
         recorded.distinct_op_count,
         assessed.distinct_op_count,
     );
-    compare(
-        "failed_pairs",
-        recorded.failed_pairs,
-        assessed.failed_pairs,
-    );
+    compare("failed_pairs", recorded.failed_pairs, assessed.failed_pairs);
     compare(
         "passed_pairs",
         recorded.passed_pairs,
@@ -602,8 +599,7 @@ fn recorded_summary_divergences(
         assessed.diff_summaries.len(),
     );
     if recorded.diff_summaries != assessed.diff_summaries {
-        divergences
-            .push("records diff summaries its own pairs do not produce".to_string());
+        divergences.push("records diff summaries its own pairs do not produce".to_string());
     }
     if recorded.missing_catalog_ops != assessed.coverage.missing_catalog_ops {
         divergences.push(

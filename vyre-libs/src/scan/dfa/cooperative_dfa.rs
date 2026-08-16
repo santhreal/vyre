@@ -4,9 +4,9 @@
 //! subgroup forward DFA state with [`Expr::SubgroupShuffle`] instead of
 //! replaying the whole prefix independently.
 
+use crate::matching::{dfa_compile, CompiledDfa};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use crate::matching::{dfa_compile, CompiledDfa};
 
 const OP_ID: &str = "vyre-libs::matching::cooperative_dfa";
 const ALPHABET_SIZE: u32 = 256;

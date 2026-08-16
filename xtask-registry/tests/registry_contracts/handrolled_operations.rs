@@ -17,9 +17,7 @@
 
 use vyre_foundation::composition::{wrap_child_region, wrap_region};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use xtask_registry::gates::handrolled_operations::{
-    handrolls, FingerprintedOperation, Handroll,
-};
+use xtask_registry::gates::handrolled_operations::{handrolls, FingerprintedOperation, Handroll};
 use xtask_registry::gates::lego_audit::{fingerprint_program, MIN_COMPARABLE_FINGERPRINT_BYTES};
 
 /// A body long enough to clear the comparison floor once fingerprinted.

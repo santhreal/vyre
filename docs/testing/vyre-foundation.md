@@ -63,6 +63,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `dead_store_elim_overwriter_reads` | `vyre-foundation/tests/dead_store_elim_overwriter_reads.rs` | None | `./cargo_full test -p vyre-foundation --test dead_store_elim_overwriter_reads` |
 | `test` | `demos_orphan_risk` | `vyre-foundation/tests/demos_orphan_risk.rs` | None | `./cargo_full test -p vyre-foundation --test demos_orphan_risk` |
 | `test` | `diagnostic_protocol` | `vyre-foundation/tests/diagnostic_protocol.rs` | None | `./cargo_full test -p vyre-foundation --test diagnostic_protocol` |
+| `test` | `eqsat_gpu_mirror` | `vyre-foundation/tests/eqsat_gpu_mirror.rs` | None | `./cargo_full test -p vyre-foundation --test eqsat_gpu_mirror` |
 | `test` | `execution_plan` | `vyre-foundation/tests/execution_plan.rs` | None | `./cargo_full test -p vyre-foundation --test execution_plan` |
 | `test` | `expr_builder_surface` | `vyre-foundation/tests/expr_builder_surface.rs` | None | `./cargo_full test -p vyre-foundation --test expr_builder_surface` |
 | `test` | `expr_type_single_owner` | `vyre-foundation/tests/expr_type_single_owner.rs` | None | `./cargo_full test -p vyre-foundation --test expr_type_single_owner` |
@@ -128,6 +129,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `program_graph_identity_contract` | `vyre-foundation/tests/program_graph_identity_contract.rs` | None | `./cargo_full test -p vyre-foundation --test program_graph_identity_contract` |
 | `test` | `program_meta_surface` | `vyre-foundation/tests/program_meta_surface.rs` | None | `./cargo_full test -p vyre-foundation --test program_meta_surface` |
 | `test` | `program_rebuild_preserves_metadata` | `vyre-foundation/tests/program_rebuild_preserves_metadata.rs` | None | `./cargo_full test -p vyre-foundation --test program_rebuild_preserves_metadata` |
+| `test` | `program_soa_facts` | `vyre-foundation/tests/program_soa_facts.rs` | None | `./cargo_full test -p vyre-foundation --test program_soa_facts` |
 | `test` | `program_stats_proptest` | `vyre-foundation/tests/program_stats_proptest.rs` | None | `./cargo_full test -p vyre-foundation --test program_stats_proptest` |
 | `test` | `program_wire_property_contracts` | `vyre-foundation/tests/program_wire_property_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test program_wire_property_contracts` |
 | `test` | `quantized_datatype_wire` | `vyre-foundation/tests/quantized_datatype_wire.rs` | None | `./cargo_full test -p vyre-foundation --test quantized_datatype_wire` |

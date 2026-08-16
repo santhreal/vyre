@@ -3146,12 +3146,20 @@ mod tests {
             );
         }
         assert_eq!(
-            hygiene_surface_for_path(Path::new("/w"), "/w/docs/optimization/PASSES.md", &BTreeSet::new()),
+            hygiene_surface_for_path(
+                Path::new("/w"),
+                "/w/docs/optimization/PASSES.md",
+                &BTreeSet::new()
+            ),
             "docs",
             "Fix: real documentation must still classify as docs."
         );
         assert_eq!(
-            hygiene_surface_for_path(Path::new("/w"), "/w/vyre-libs/src/docs/loader.rs", &BTreeSet::new()),
+            hygiene_surface_for_path(
+                Path::new("/w"),
+                "/w/vyre-libs/src/docs/loader.rs",
+                &BTreeSet::new()
+            ),
             "docs",
             "Fix: only the xtask tree is reclassified; other trees keep the docs rule."
         );
@@ -3734,10 +3742,10 @@ mod tests {
     fn feature_gated_test_harness_sources_are_test_hygiene() {
         assert_eq!(
             hygiene_surface_for_path(
-            Path::new("/repo"),
-            "/repo/vyre-driver-cuda/src/test_harness/fake_backend.rs",
-            &BTreeSet::new(),
-        ),
+                Path::new("/repo"),
+                "/repo/vyre-driver-cuda/src/test_harness/fake_backend.rs",
+                &BTreeSet::new(),
+            ),
             "test"
         );
     }
@@ -3746,10 +3754,10 @@ mod tests {
     fn fuzz_targets_are_test_surface_not_release_production() {
         assert_eq!(
             hygiene_surface_for_path(
-            Path::new("."),
-            "vyre-foundation/fuzz/fuzz_targets/reachability.rs",
-            &BTreeSet::new(),
-        ),
+                Path::new("."),
+                "vyre-foundation/fuzz/fuzz_targets/reachability.rs",
+                &BTreeSet::new(),
+            ),
             "test"
         );
     }

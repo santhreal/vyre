@@ -28,7 +28,8 @@ use vyre_lower::artifact_golden::{
 };
 use vyre_lower::program_stability_corpus::{self, StabilityCase};
 use vyre_megakernel::{
-    Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetCompiler, TargetPayload,
+    Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetCompiler,
+    TargetPayload,
 };
 
 fn golden_path() -> PathBuf {

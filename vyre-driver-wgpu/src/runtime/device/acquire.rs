@@ -1,6 +1,6 @@
 use std::future::Future;
-use std::pin::Pin;
 use std::ops::Deref;
+use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::{self, Thread};
