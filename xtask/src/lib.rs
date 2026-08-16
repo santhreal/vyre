@@ -19,6 +19,7 @@
 pub mod artifact_paths;
 pub mod artifact_gate;
 pub mod binary;
+pub mod cargo_runner;
 pub mod checkout;
 pub mod cli;
 pub mod delegate;

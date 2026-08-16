@@ -182,18 +182,14 @@ pub fn print_dispatch_help(
     }
 }
 
-/// Cargo binary that is building this process, so the child build matches it.
-fn cargo() -> String {
-    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string())
-}
-
 /// Build one delegated crate and return the path of the binary cargo produced.
 ///
 /// A crate that does not compile is a gate that could not run, so the compiler
 /// diagnostics travel in the error rather than to this process's stderr: the
 /// caller may be the sweep, which renders every gate's outcome in one place.
 fn build(package: &str) -> Result<PathBuf, GateError> {
-    let output = Command::new(cargo())
+    let root = crate::checkout::checkout_root();
+    let output = Command::new(crate::cargo_runner::runner(&root))
         .args([
             "build",
             "--quiet",

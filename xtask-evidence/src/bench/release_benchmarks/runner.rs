@@ -303,7 +303,7 @@ const MAX_CHILD_OUTPUT_BYTES: usize = 4096;
 /// captured and only a failure carries its tail, which is the only case a reader
 /// needs it for.
 pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result<(), String> {
-    let runner = xtask::output_arg::cargo_runner(workspace_root);
+    let runner = xtask::cargo_runner::runner(workspace_root);
     let output = Command::new(&runner)
         .args(args)
         .current_dir(workspace_root)

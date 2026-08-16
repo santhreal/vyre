@@ -34,7 +34,7 @@ struct Diagnostic {
 /// as long as it stood. Nothing here sets a build-affecting flag or variable,
 /// because build configuration is declared once in `.cargo/config.toml`.
 fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Vec<Diagnostic>, GateError> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::runner(root);
     let (cargo_arguments, driver_arguments) = split_at_driver(arguments);
     let output = Command::new(&cargo)
         .args(cargo_arguments)
@@ -216,7 +216,7 @@ impl Gate for WorkspaceTests {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let cargo = crate::output_arg::cargo_runner(&ctx.root);
+        let cargo = crate::cargo_runner::runner(&ctx.root);
         let mut report = Report::clean();
         let mut command = Command::new(&cargo);
         command.arg("test");
