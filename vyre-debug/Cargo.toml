@@ -29,7 +29,7 @@ naga = { workspace = true, features = ["wgsl-out"] }
 clap = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-vyre-libs = { workspace = true, features = ["c-parser"] }
+vyre-libs = { workspace = true, features = ["python-parser"] }
 vyre-primitives.workspace = true
 bincode = { workspace = true }
 

@@ -16,7 +16,7 @@ post-processing pass.
 - `find_uncarriered_assigns` / `FindUncarriered`  -  Assigns inside loops not tagged
 - `carrier_summary` / `CarrierSummary`  -  vyre-IR carrier analysis
 - `diff_descriptors` / `DiffDescriptors`  -  diff two descriptors
-- `get_program`  -  hard-coded synthetic Programs (c11_lexer + a few others)
+- `get_program`  -  hard-coded synthetic Programs (python312_lexer + a few others)
 
 Everything above is **vyre-IR-side**. Naga-side and runtime-failure-side coverage is missing.
 

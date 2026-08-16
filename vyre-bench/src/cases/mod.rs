@@ -77,7 +77,6 @@ pub(crate) mod harness;
 pub mod hashtable;
 pub(crate) mod histogram;
 pub mod interpreter;
-pub mod lexer_transition;
 pub(crate) mod matmul;
 pub mod megakernel_condition;
 pub mod megakernel_latency;

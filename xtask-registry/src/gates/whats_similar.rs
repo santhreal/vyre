@@ -848,10 +848,6 @@ mod tests {
             implementation_family_id("vyre-libs::nn::rms_norm"),
             implementation_family_id("vyre-libs::nn::softmax")
         );
-        assert_eq!(
-            implementation_family_id("vyre-libs::parsing::c_sema_scope.scope"),
-            implementation_family_id("vyre-libs::parsing::c_sema_scope.identifier_intern")
-        );
         assert!(known_distinct_implementation_family_id(
             "vyre-primitives::hardware::workgroup_barrier",
             "vyre-primitives::hardware::bit_reverse_u32"

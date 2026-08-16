@@ -1,16 +1,15 @@
-//! Reference-oracle tests for C expression AST shunting-yard lowering.
+//! Reference-oracle tests for expression AST shunting-yard lowering.
 
-#![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod common;
 
 use common::bytes_from_words;
 use common::words_from_bytes;
 use vyre::ir::Expr;
-use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::core::ast::node::*;
 use vyre_libs::parsing::core::ast::shunting::ast_shunting_yard_with_capacity;
 use vyre_reference::value::Value;
+use vyre_spec::c11_token::*;
 
 const MAX_TOK_SCAN: usize = 65_536;
 const STACK_SLOTS: usize = 64;

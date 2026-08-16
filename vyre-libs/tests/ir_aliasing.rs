@@ -1,6 +1,6 @@
 //! IR aliasing regression tests.
 
-#![cfg(feature = "c-parser")]
+#![cfg(all(feature = "parsing", feature = "decode"))]
 use std::collections::HashSet;
 
 use vyre::ir::{BufferAccess, Program};

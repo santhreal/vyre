@@ -1,16 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[cfg(feature = "c-parser")]
-pub(crate) mod c_macro_table;
-#[cfg(feature = "c-parser")]
-pub(crate) mod gpu_if_expression;
-#[cfg(feature = "c-parser")]
-pub(crate) mod gpu_pipeline_filter;
 pub(crate) mod ir_fingerprint;
 pub(crate) mod optimizer;
-#[cfg(feature = "c-parser")]
-pub(crate) mod preprocess_stream;
 
 /// This crate's directory, resolved from the working directory at run time.
 pub(crate) fn crate_dir() -> PathBuf {
@@ -21,29 +13,6 @@ pub(crate) fn crate_file(path: &str) -> String {
     fs::read_to_string(crate_dir().join(path)).unwrap_or_else(|error| {
         panic!("failed to read {path}: {error}");
     })
-}
-
-pub(crate) fn assert_byte_lru_core_tracks_resident_bytes() {
-    let byte_lru_cache = crate_file("src/parsing/c/preprocess/gpu_pipeline/byte_lru_cache.rs");
-    assert!(
-        byte_lru_cache.contains("bytes: usize") && byte_lru_cache.contains("max_bytes: usize"),
-        "Fix: shared GPU preprocessor cache core must track resident bytes and byte limit."
-    );
-}
-
-pub(crate) fn assert_byte_lru_core_rejects_and_accounts() {
-    let byte_lru_cache = crate_file("src/parsing/c/preprocess/gpu_pipeline/byte_lru_cache.rs");
-    // Insert overflow is detected with `checked_add` (saturating to usize::MAX
-    // forces eviction); the per-entry decrement on remove uses `saturating_sub`
-    // so an impossible-by-construction underflow cannot panic. Both are the
-    // correct, consistent accounting idioms, assert the decrement by its real
-    // form so this contract does not regress to a stale string on idiom changes.
-    assert!(
-        byte_lru_cache.contains("entry_bytes > self.max_bytes")
-            && byte_lru_cache.contains(".checked_add(entry_bytes)")
-            && byte_lru_cache.contains("saturating_sub(entry.bytes)"),
-        "Fix: shared GPU preprocessor cache core must reject oversized entries, evict to byte budget, and update byte accounting."
-    );
 }
 
 pub(crate) fn assert_contains_all(source: &str, needles: &[&str], message: &str) {

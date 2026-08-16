@@ -7,7 +7,7 @@
 //! expected empty scratch buffers back. The compiled registration in
 //! `shunting.rs` is the one kept here.
 
-use crate::parsing::c::lex::tokens::TOK_IDENTIFIER;
+use vyre_spec::c11_token::TOK_IDENTIFIER;
 use crate::parsing::core::ast::node::AST_VAR;
 use vyre_foundation::ir::Expr;
 use vyre_primitives::wire::pack_u32_slice as pack_u32;

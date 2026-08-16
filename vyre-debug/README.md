@@ -27,10 +27,10 @@ The crate provides the `vyre-dbg` executable for interactive debugging. It opera
 cargo run --bin vyre-dbg -- dump-wgsl --prog loop_carry_smoke --lines
 
 # Check for dangling SSA references
-cargo run --bin vyre-dbg -- find-dangling --prog c11_extract_calls --num-tokens 8
+cargo run --bin vyre-dbg -- find-dangling --prog python312_lexer --num-tokens 8
 
 # Compare descriptors before and after lowering passes
-cargo run --bin vyre-dbg -- diff-lower --prog c11_extract_calls --num-tokens 4
+cargo run --bin vyre-dbg -- diff-lower --prog python312_lexer --num-tokens 4
 ```
 
 ## Architecture
