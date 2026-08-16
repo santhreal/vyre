@@ -1,9 +1,9 @@
-use vyre_spec::c11_token::*;
 use crate::parsing::composition::child_phase;
 use emit::{binary_token_body, emit_value_leaf, final_sweep_body, rparen_body};
 use operator::{is_assignment_token, is_value_token, precedence};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::c11_token::*;
 
 mod emit;
 mod operator;

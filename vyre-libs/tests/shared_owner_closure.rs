@@ -85,7 +85,9 @@ fn assert_walk_is_closed_under_the_module_tree(files: &[(String, String)], src: 
             let flat = format!("{directory}/{name}.rs");
             let nested = format!("{directory}/{name}/mod.rs");
             if !present.contains(flat.as_str()) && !present.contains(nested.as_str()) {
-                missing.push(format!("{path} declares `mod {name};` but neither {flat} nor {nested} was read"));
+                missing.push(format!(
+                    "{path} declares `mod {name};` but neither {flat} nor {nested} was read"
+                ));
             }
         }
     }
@@ -393,8 +395,12 @@ fn gate_above(source: &str, declaration: &str) -> Option<Option<String>> {
 /// Whether `root`'s manifest takes `package` as a non-optional `[dependencies]`
 /// entry. A dev-dependency does not count: it is absent from the shipped build.
 fn unconditional_dependency(root: &Path, package: &str) -> bool {
-    let manifest = std::fs::read_to_string(root.join("Cargo.toml"))
-        .unwrap_or_else(|e| panic!("Fix: cannot read {}: {e}", root.join("Cargo.toml").display()));
+    let manifest = std::fs::read_to_string(root.join("Cargo.toml")).unwrap_or_else(|e| {
+        panic!(
+            "Fix: cannot read {}: {e}",
+            root.join("Cargo.toml").display()
+        )
+    });
     let mut section = String::new();
     for line in manifest.lines() {
         let trimmed = line.trim();

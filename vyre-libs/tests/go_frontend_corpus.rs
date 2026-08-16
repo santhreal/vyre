@@ -4,10 +4,10 @@
 #![allow(deprecated)]
 
 mod wire_words;
-use wire_words::decode_u32_words;
-use wire_words::go::{pack_source, run, tokenize, zeroed_u32_words};
 use std::fs;
 use std::path::{Path, PathBuf};
+use wire_words::decode_u32_words;
+use wire_words::go::{pack_source, run, tokenize, zeroed_u32_words};
 
 use tree_sitter::Parser;
 use vyre::ir::Expr;

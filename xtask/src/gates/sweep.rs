@@ -27,7 +27,7 @@ use std::path::Path;
 use std::process;
 
 use crate::gate::{self, GateCtx, GateError, Report};
-use crate::gates::gate_canon::{self, Baseline, baseline_path, load_baselines};
+use crate::gates::gate_canon::{self, baseline_path, load_baselines, Baseline};
 use crate::subcommands::{self, SUBSETS};
 
 /// The name the dispatcher answers to with this runner.

@@ -10,7 +10,7 @@
 
 use std::path::Path;
 
-use structure_gate::crate_ownership::{REGISTRY, Registry};
+use structure_gate::crate_ownership::{Registry, REGISTRY};
 use structure_gate::workspace_root;
 
 /// The declared checkout resolves every member it declares.
@@ -96,7 +96,12 @@ fn a_declared_directory_owns_its_files_whichever_separator_wrote_it() {
          [[crate]]\npackage = \"win\"\npath = \"tools\\\\win\"\nowner = \"win-owner\"\nlayer = \"tooling\"\n",
     )
     .expect("Fix: the fixture registry must be readable");
-    for query in ["tools/win", "tools\\win", "tools/win/src/lib.rs", "tools\\win\\src\\lib.rs"] {
+    for query in [
+        "tools/win",
+        "tools\\win",
+        "tools/win/src/lib.rs",
+        "tools\\win\\src\\lib.rs",
+    ] {
         assert_eq!(
             registry.owning_crate(query).map(|row| row.owner.as_str()),
             Some("win-owner"),
@@ -135,8 +140,9 @@ fn a_row_missing_a_required_field_fails_closed() {
             "Fix: a row with no `{field}` reported {error:?}"
         );
     }
-    let error = Registry::parse("[[crate]]\npath = \"a\"\nowner = \"a-owner\"\nlayer = \"a-layer\"\n")
-        .expect_err("Fix: a row with no package must be reported");
+    let error =
+        Registry::parse("[[crate]]\npath = \"a\"\nowner = \"a-owner\"\nlayer = \"a-layer\"\n")
+            .expect_err("Fix: a row with no package must be reported");
     assert!(
         error.contains("entry with no `package`"),
         "Fix: a row with no package reported {error:?}"
@@ -147,7 +153,8 @@ fn a_row_missing_a_required_field_fails_closed() {
 /// roster every rule then passes against.
 #[test]
 fn an_empty_registry_fails_closed() {
-    let error = Registry::parse("schema_version = 2\n").expect_err("Fix: an empty registry must fail");
+    let error =
+        Registry::parse("schema_version = 2\n").expect_err("Fix: an empty registry must fail");
     assert!(
         error.contains("declares no [[crate]] entries"),
         "Fix: an empty registry reported {error:?}"

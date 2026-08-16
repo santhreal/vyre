@@ -189,7 +189,9 @@ pub fn child_bodies_mut(node: &mut Node) -> SmallVec<[&mut Vec<Node>; 2]> {
             slots.push(then);
             slots.push(otherwise);
         }
-        Node::Loop { body, .. } | Node::Block(body) | Node::TileElementwise { body, .. } => slots.push(body),
+        Node::Loop { body, .. } | Node::Block(body) | Node::TileElementwise { body, .. } => {
+            slots.push(body)
+        }
         Node::Region { body, .. } => slots.push(Arc::make_mut(body)),
         Node::Let { .. }
         | Node::Assign { .. }

@@ -2,16 +2,15 @@
 
 use vyre::ir::BufferAccess;
 use vyre::ir::Program;
-use vyre_conform::witness_plan::*;
 use vyre::ir::{BufferDecl, DataType, Node};
+use vyre_conform::witness_plan::*;
 
 #[test]
 fn witness_input_plan_accepts_logical_fixture_order_after_output_buffer() {
     let program = Program::wrapped(
         vec![
             BufferDecl::output("out", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(2),
+            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(2),
         ],
         [1, 1, 1],
         Vec::<Node>::new(),
@@ -41,10 +40,8 @@ fn witness_input_plan_accepts_logical_fixture_order_after_output_buffer() {
 fn owned_expansion_matches_the_borrowed_stream_byte_for_byte() {
     let program = Program::wrapped(
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         Vec::<Node>::new(),
@@ -121,10 +118,8 @@ fn witness_input_plan_accepts_fixture_backed_runtime_sized_read_input() {
 fn witness_input_plan_uses_zeroed_static_read_write_inputs() {
     let program = Program::wrapped(
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         Vec::<Node>::new(),

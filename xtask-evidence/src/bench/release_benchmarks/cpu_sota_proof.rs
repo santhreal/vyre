@@ -92,9 +92,7 @@ pub(super) fn write_cpu_100x_proof(
             .and_then(nonblank_str)
             .map(str::to_string);
         if let Some(fingerprint) = &report_source_fingerprint {
-            if !xtask::source_provenance::issues(fingerprint)
-                .is_empty()
-            {
+            if !xtask::source_provenance::issues(fingerprint).is_empty() {
                 blockers.push(format!(
                     "100x source artifact `{artifact}` source_fingerprint `{fingerprint}` is not release-grade provenance"
                 ));

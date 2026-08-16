@@ -8,8 +8,8 @@
 //! to invert the block-diagonal Fisher information matrix of the
 //! autotuner's policy network.
 
-use vyre_foundation::ir::Program;
 use crate::math::kfac_block_inverse::kfac_block_inverse;
+use vyre_foundation::ir::Program;
 
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
@@ -214,7 +214,8 @@ mod tests {
         let p2 = kfac_autotune_step_program("bo2", "bi2", "s2", 1, 4);
         let p3 = kfac_autotune_step_program("bo3", "bi3", "s3", 1, 4);
 
-        let final_p = crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p =
+            crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         let region_count = final_p
             .entry()
             .iter()

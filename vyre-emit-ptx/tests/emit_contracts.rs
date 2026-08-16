@@ -3,8 +3,8 @@
 //! Every descriptor fixture in this file is shared by the submodules below,
 //! which reach it through `use super::*`.
 use vyre_emit_ptx::*;
-use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
 use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
 use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_wo, lit, mma_f16_m16n8k16, op, SlotCount,
 };

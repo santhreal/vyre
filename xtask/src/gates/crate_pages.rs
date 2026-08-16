@@ -27,7 +27,6 @@
 
 use std::collections::BTreeSet;
 
-
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
@@ -160,7 +159,11 @@ fn manifest_edges(tree: &Tree, name: &str, members: &[String]) -> BTreeSet<Strin
     };
     let mut edges = BTreeSet::new();
     let mut tables: Vec<&toml::Table> = vec![&member.manifest];
-    if let Some(targets) = member.manifest.get("target").and_then(toml::Value::as_table) {
+    if let Some(targets) = member
+        .manifest
+        .get("target")
+        .and_then(toml::Value::as_table)
+    {
         tables.extend(targets.values().filter_map(toml::Value::as_table));
     }
     for table in tables {
@@ -373,7 +376,10 @@ mod tests {
                 "# other\n\n## Owns\n\nThings.\n\n## Must never contain\n\nA device.\n",
             ),
             ("other/README.md", "# other\n\nA crate.\n"),
-            ("examples/external_backend_extension/README.md", "# example\n"),
+            (
+                "examples/external_backend_extension/README.md",
+                "# example\n",
+            ),
             ("fuzz/README.md", "# fuzz\n"),
         ];
         checkout(&files)
@@ -482,7 +488,9 @@ mod tests {
             let found = findings(&root);
             assert_eq!(found.len(), 1, "{}", messages(&found));
             assert!(
-                found[0].message.contains("placeholder where its exclusion belongs"),
+                found[0]
+                    .message
+                    .contains("placeholder where its exclusion belongs"),
                 "{}",
                 found[0].message
             );
@@ -503,7 +511,9 @@ mod tests {
 
         let found = findings(&root);
         assert_eq!(found.len(), 1, "{}", messages(&found));
-        assert!(found[0].message.contains("claims an outbound edge to `demo`"));
+        assert!(found[0]
+            .message
+            .contains("claims an outbound edge to `demo`"));
         assert_eq!(found[0].line, Some(15));
     }
 

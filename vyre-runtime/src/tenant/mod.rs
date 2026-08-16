@@ -124,8 +124,10 @@ mod tests {
         // Slot 0 should carry tenant=t.id(), opcode=t.base_opcode()+7.
         let tenant_off = super::super::resident_work_queue::protocol::TENANT_WORD as usize * 4;
         let opcode_off = super::super::resident_work_queue::protocol::OPCODE_WORD as usize * 4;
-        let stored_tenant = u32::from_le_bytes(ring[tenant_off..tenant_off + 4].try_into().unwrap());
-        let stored_opcode = u32::from_le_bytes(ring[opcode_off..opcode_off + 4].try_into().unwrap());
+        let stored_tenant =
+            u32::from_le_bytes(ring[tenant_off..tenant_off + 4].try_into().unwrap());
+        let stored_opcode =
+            u32::from_le_bytes(ring[opcode_off..opcode_off + 4].try_into().unwrap());
         assert_eq!(stored_tenant, t.id());
         assert_eq!(stored_opcode, t.base_opcode() + 7);
     }

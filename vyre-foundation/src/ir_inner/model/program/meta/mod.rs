@@ -189,7 +189,10 @@ impl Program {
     #[must_use]
     #[inline]
     pub fn with_launch_geometry(&self, geometry: &crate::geometry::LaunchGeometry) -> Self {
-        self.with_rewritten_workgroup_size_and_entry(geometry.workgroup, self.entry.as_ref().clone())
+        self.with_rewritten_workgroup_size_and_entry(
+            geometry.workgroup,
+            self.entry.as_ref().clone(),
+        )
     }
 
     /// Entry-point nodes.

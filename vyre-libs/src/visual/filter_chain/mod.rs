@@ -84,15 +84,24 @@ pub fn filter_chain(
                             // 1. Brightness: channel = channel * brightness >> 16
                             Node::assign(
                                 "r",
-                                super::fixed_mul_16_16_unsigned_expr(Expr::var("r"), Expr::u32(br_fp)),
+                                super::fixed_mul_16_16_unsigned_expr(
+                                    Expr::var("r"),
+                                    Expr::u32(br_fp),
+                                ),
                             ),
                             Node::assign(
                                 "g",
-                                super::fixed_mul_16_16_unsigned_expr(Expr::var("g"), Expr::u32(br_fp)),
+                                super::fixed_mul_16_16_unsigned_expr(
+                                    Expr::var("g"),
+                                    Expr::u32(br_fp),
+                                ),
                             ),
                             Node::assign(
                                 "b",
-                                super::fixed_mul_16_16_unsigned_expr(Expr::var("b"), Expr::u32(br_fp)),
+                                super::fixed_mul_16_16_unsigned_expr(
+                                    Expr::var("b"),
+                                    Expr::u32(br_fp),
+                                ),
                             ),
                         ];
                         body.extend(clamp255("r"));
@@ -151,10 +160,19 @@ pub fn filter_chain(
                             "luma",
                             Expr::add(
                                 Expr::add(
-                                    super::fixed_mul_16_16_unsigned_expr(Expr::var("r"), Expr::u32(luma_r)),
-                                    super::fixed_mul_16_16_unsigned_expr(Expr::var("g"), Expr::u32(luma_g)),
+                                    super::fixed_mul_16_16_unsigned_expr(
+                                        Expr::var("r"),
+                                        Expr::u32(luma_r),
+                                    ),
+                                    super::fixed_mul_16_16_unsigned_expr(
+                                        Expr::var("g"),
+                                        Expr::u32(luma_g),
+                                    ),
                                 ),
-                                super::fixed_mul_16_16_unsigned_expr(Expr::var("b"), Expr::u32(luma_b)),
+                                super::fixed_mul_16_16_unsigned_expr(
+                                    Expr::var("b"),
+                                    Expr::u32(luma_b),
+                                ),
                             ),
                         ));
 

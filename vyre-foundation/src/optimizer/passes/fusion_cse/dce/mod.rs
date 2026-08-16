@@ -29,6 +29,8 @@
 // say `super::expr_has_effect` without learning about the cse path.
 pub(crate) use super::cse::expr_has_effect;
 
+/// Return the node prefix reachable before an unconditional return.
+pub(crate) use crate::transform::rewrite_walk::reachable_prefix;
 /// Collect variable references from an expression tree.
 pub(crate) use collect_expr_refs::collect_expr_refs;
 /// Evaluate whether loop bounds make a loop statically empty.
@@ -43,8 +45,6 @@ pub(crate) use eliminate_unreachable::eliminate_unreachable;
 pub(crate) use live_result::LiveResult;
 /// The identifier set liveness propagates; the only place its type is named.
 pub(crate) use live_result::LiveSet;
-/// Return the node prefix reachable before an unconditional return.
-pub(crate) use crate::transform::rewrite_walk::reachable_prefix;
 
 /// Iterative `Expr::Var` collector.
 pub mod collect_expr_refs;

@@ -7,10 +7,10 @@
 //! expected empty scratch buffers back. The compiled registration in
 //! `shunting.rs` is the one kept here.
 
-use vyre_spec::c11_token::TOK_IDENTIFIER;
 use crate::parsing::core::ast::node::AST_VAR;
 use vyre_foundation::ir::Expr;
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
+use vyre_spec::c11_token::TOK_IDENTIFIER;
 
 use super::{ast_shunting_yard_with_capacity, MAX_TOK_SCAN, OP_ID};
 

@@ -43,9 +43,7 @@ impl Gate for OperationSchemaGate {
     }
 
     fn usage(&self) -> &'static [&'static str] {
-        &[
-            "--validate PATH judges one schema document instead of the committed one",
-        ]
+        &["--validate PATH judges one schema document instead of the committed one"]
     }
 
     fn generates(&self) -> bool {

@@ -4,8 +4,8 @@
 //! (`ReadWrite` or `WriteOnly`) so that decoders can reconstruct the exact
 //! output set without re-scanning the buffer table.
 
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::BufferAccess;
+use crate::ir_inner::model::program::BufferDecl;
 use crate::serial::{put_leb_u32, put_leb_u64};
 
 /// Ordered list of output (writable) buffer indices.

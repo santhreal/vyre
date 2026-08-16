@@ -15,7 +15,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
-use xtask_registry::docs::operation_schema::placement::{Placement, read};
+use xtask_registry::docs::operation_schema::placement::{read, Placement};
 
 fn write(path: &Path, text: &str) {
     fs::create_dir_all(path.parent().expect("Fix: fixture path must have a parent"))
@@ -105,7 +105,9 @@ fn a_crate_that_only_names_the_id_is_not_the_defining_crate() {
 
     assert_eq!(errors, Vec::<String>::new());
     assert_eq!(
-        placements.get("libs::square").map(|found| &found.crate_name),
+        placements
+            .get("libs::square")
+            .map(|found| &found.crate_name),
         Some(&"libs".to_string())
     );
 }
@@ -293,7 +295,10 @@ fn a_member_without_a_package_name_is_an_error_naming_the_manifest() {
         &root.join("Cargo.toml"),
         "[workspace]\nmembers = [\"libs\"]\n",
     );
-    write(&root.join("libs/Cargo.toml"), "[package]\nversion = \"0\"\n");
+    write(
+        &root.join("libs/Cargo.toml"),
+        "[package]\nversion = \"0\"\n",
+    );
     write(
         &root.join("libs/src/lib.rs"),
         "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",

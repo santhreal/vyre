@@ -9,9 +9,10 @@
 //! Givens rotation that depends on the current matrix, so sweep `k + 1` cannot start before sweep
 //! `k`'s rotation has landed. The pivot SEARCH inside a sweep is not sequential — it is an argmax
 //! over the `n²` index pairs — so the kernel runs a workgroup of lanes: the search is a cooperative
-//! reduction ([`crate::builder::cooperative::Argmax`]) and only the rotation, the identity seeding,
-//! the sign pass and the diagonal read-out stay on one lane, each behind a barrier. The serial work
-//! per sweep drops from `n²` iterations in one lane to `n² / lanes` plus a log-depth tree. It
+//! reduction ([`crate::builder::cooperative::Argmax`]), the identity seeding, the sign pass and the
+//! diagonal read-out each walk their own cells across the lanes, and only the rotation stays on one
+//! lane, behind a barrier, because the next sweep reads what it wrote. The serial work per sweep
+//! drops from `n²` iterations in one lane to `n² / lanes` plus a log-depth tree. It
 //! mirrors the CPU reference [`crate::math::tensor_train_decompose`]'s `symmetric_eigen_jacobi_into`
 //! step for step, so the two agree up to f32-vs-f64 rounding; the kernel is verified by the
 //! basis/order-invariant eigenpair contract (`A·vᵢ ≈ λᵢ·vᵢ` and `VᵀV ≈ I`) rather than element-wise,
@@ -151,13 +152,15 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
 
     vec![
         Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        serial(vec![matrix_identity_fill_region(OP_ID, eigenvectors, n)]),
+        // The accumulator seed, the sign canonicalization and the diagonal
+        // read-out each touch cells no other lane touches, so they run across
+        // the workgroup at the width this program declares. Only the rotation
+        // is serial, and it is serial because the next sweep reads it.
+        matrix_identity_fill_region(OP_ID, eigenvectors, n, LANES),
         Node::barrier(),
         Node::loop_for("jac_sweep", Expr::u32(0), Expr::u32(sweeps), sweep),
-        serial(vec![
-            eigenvector_column_sign_region(OP_ID, eigenvectors, n),
-            matrix_diagonal_extract_region(OP_ID, a, eigenvalues, n),
-        ]),
+        eigenvector_column_sign_region(OP_ID, eigenvectors, n, LANES),
+        matrix_diagonal_extract_region(OP_ID, a, eigenvalues, n, LANES),
     ]
 }
 
@@ -294,4 +297,105 @@ inventory::submit! {
         }),
     )
     .with_tolerance(vyre_foundation::operation::TolerancePolicy { f32_ulp: 1 })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn zero_order_is_rejected() {
+        let program = symmetric_eigen_jacobi("a", "evec", "eval", 0);
+        assert!(
+            program.entry().iter().any(|node| matches!(
+                node,
+                Node::Region { body, .. } if body.iter().any(|inner| matches!(inner, Node::Trap { .. }))
+            )),
+            "Fix: n = 0 must produce a trapping Program."
+        );
+    }
+
+    #[test]
+    fn jacobi_validates_as_a_program() {
+        let program = symmetric_eigen_jacobi("a", "evec", "eval", 4);
+        let errors = vyre_foundation::validate::validate(&program);
+        assert!(
+            errors.is_empty(),
+            "Fix: the Jacobi eigensolver must validate, got {:?}.",
+            errors
+        );
+    }
+
+    #[test]
+    fn jacobi_dispatches_declared_lanes() {
+        let program = symmetric_eigen_jacobi("a", "evec", "eval", 4);
+        assert_eq!(
+            program.workgroup_size(),
+            [LANES, 1, 1],
+            "Fix: symmetric_eigen_jacobi must dispatch [LANES, 1, 1] workgroup size."
+        );
+        assert_eq!(
+            jacobi_workgroup(),
+            [LANES, 1, 1],
+            "Fix: jacobi_workgroup() must return [LANES, 1, 1]."
+        );
+    }
+
+    #[test]
+    fn jacobi_cooperative_phases_not_serialized() {
+        let body = jacobi_eigen_body("a", "evec", "eval", 4);
+        // Identity fill region, column sign region, and diagonal extract region must be at top-level body
+        let has_identity = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_identity_fill::OP_ID));
+        let has_sign = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::eigenvector_column_sign::OP_ID));
+        let has_diagonal = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_diagonal_extract::OP_ID));
+
+        assert!(
+            has_identity,
+            "Fix: matrix_identity_fill must be at top-level cooperative scope, not inside serial."
+        );
+        assert!(has_sign, "Fix: eigenvector_column_sign must be at top-level cooperative scope, not inside serial.");
+        assert!(has_diagonal, "Fix: matrix_diagonal_extract must be at top-level cooperative scope, not inside serial.");
+
+        // Sweep loop must have rotation inside serial If-guard
+        let sweep_loop = body
+            .iter()
+            .find(|node| matches!(node, Node::Loop { var, .. } if var == "jac_sweep"))
+            .expect("jac_sweep loop");
+        if let Node::Loop {
+            body: sweep_body, ..
+        } = sweep_loop
+        {
+            let rotation_is_in_if = sweep_body.iter().any(|node| matches!(node, Node::If { then, .. } if then.iter().any(|inner| matches!(inner, Node::If { then: inner_then, .. } if inner_then.iter().any(|r| matches!(r, Node::Region { generator, .. } if generator.as_str() == crate::math::jacobi_apply_rotation::OP_ID))))));
+            assert!(
+                rotation_is_in_if,
+                "Fix: jacobi_apply_rotation must remain guarded inside serial execution."
+            );
+        }
+    }
+
+    #[test]
+    fn jacobi_barriers_placed_correctly() {
+        let body = jacobi_eigen_body("a", "evec", "eval", 4);
+        // Position of identity fill and following barrier
+        let identity_idx = body.iter().position(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_identity_fill::OP_ID)).expect("identity fill");
+        assert!(
+            matches!(body.get(identity_idx + 1), Some(Node::Barrier { .. })),
+            "Fix: a workgroup barrier must immediately follow cooperative identity fill."
+        );
+
+        // Sweep loop has barrier after rotation
+        let sweep_loop = body
+            .iter()
+            .find(|node| matches!(node, Node::Loop { var, .. } if var == "jac_sweep"))
+            .expect("jac_sweep loop");
+        if let Node::Loop {
+            body: sweep_body, ..
+        } = sweep_loop
+        {
+            assert!(
+                matches!(sweep_body.last(), Some(Node::Barrier { .. })),
+                "Fix: a workgroup barrier must follow each rotation sweep."
+            );
+        }
+    }
 }

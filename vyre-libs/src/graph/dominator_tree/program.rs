@@ -204,11 +204,7 @@ pub fn try_dominator_tree_program(
 }
 
 fn child_phase(generator: &'static str, body: Vec<Node>) -> Node {
-    wrap_child_region(
-        generator,
-        Ident::from(OP_ID),
-        body,
-    )
+    wrap_child_region(generator, Ident::from(OP_ID), body)
 }
 
 fn inert_dominator_tree_program(idom_out: &str) -> Program {

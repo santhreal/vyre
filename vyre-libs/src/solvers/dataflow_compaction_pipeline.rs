@@ -5,7 +5,6 @@
 //! sparse recovery, DP clipping, differentiable selection, and attention dot
 //! partials. The kernel domains in this crate own the executable semantics.
 
-use vyre_foundation::ir::{Expr, Node, Program};
 use crate::{
     bitset::stochastic_compute::{
         decode_bitstream, encode_bitstream, encode_bitstream_into, stochastic_and_mul,
@@ -20,6 +19,7 @@ use crate::{
         stream_compact::stream_compact,
     },
 };
+use vyre_foundation::ir::{Expr, Node, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::{

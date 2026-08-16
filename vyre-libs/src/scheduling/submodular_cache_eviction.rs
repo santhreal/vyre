@@ -56,11 +56,11 @@
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::submodular_greedy::argmax_of_marginals_cpu;
 use crate::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
+use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for submodular cache eviction.
 #[derive(Debug, Default)]

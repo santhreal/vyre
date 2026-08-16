@@ -30,7 +30,15 @@ fn words(v: &Value) -> Vec<u32> {
 /// Run the IR and return the final `state` (binding 0, first RW buffer).
 fn run_ir(state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32) -> Vec<u32> {
     let cells = (n * n) as usize;
-    let program = scallop_join("state", "next", "join_rules", "changed", n, 1, max_iterations);
+    let program = scallop_join(
+        "state",
+        "next",
+        "join_rules",
+        "changed",
+        n,
+        1,
+        max_iterations,
+    );
     let outputs = vyre_reference::reference_eval(
         &program,
         &[

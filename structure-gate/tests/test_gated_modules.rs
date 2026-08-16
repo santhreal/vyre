@@ -106,8 +106,7 @@ fn a_declaration_inside_an_inline_module_resolves_under_it() {
     .expect("Fix: the fixture crate root must be writable.");
     std::fs::write(source.join("outer/checks.rs"), "")
         .expect("Fix: the fixture module must be writable.");
-    std::fs::write(source.join("checks.rs"), "")
-        .expect("Fix: the decoy module must be writable.");
+    std::fs::write(source.join("checks.rs"), "").expect("Fix: the decoy module must be writable.");
 
     let gated = test_gated_module_files(tree.path());
 

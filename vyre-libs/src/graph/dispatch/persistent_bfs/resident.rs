@@ -7,13 +7,13 @@ use crate::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
 use crate::graph::dispatch::dispatch_bridge::{
     resident_dispatch_three_u32_outputs_into, upload_resident_dispatch_inputs, DispatchInput,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 use crate::graph::persistent_bfs::{
     persistent_bfs_layout_hash as primitive_persistent_bfs_layout_hash,
     plan_persistent_bfs_resident_batch_dispatch, plan_persistent_bfs_resident_dispatch,
     validate_persistent_bfs_changed_flag, validate_persistent_bfs_converged_flag,
     validate_persistent_bfs_graph_layout,
 };
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 
 /// Upload CSR graph topology once into resident device buffers.
 ///

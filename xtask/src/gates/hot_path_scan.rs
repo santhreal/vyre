@@ -1147,10 +1147,7 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         let mut out = Vec::new();
         let _ = collect_findings("x.rs", text, &mut out);
 
-        let reported: Vec<(&str, u32)> = out
-            .iter()
-            .map(|hit| (hit.pattern, hit.line))
-            .collect();
+        let reported: Vec<(&str, u32)> = out.iter().map(|hit| (hit.pattern, hit.line)).collect();
         assert_eq!(
             reported,
             vec![("FxHashMap::new", 3), ("Vec::new", 4)],
@@ -1197,10 +1194,7 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         let mut out = Vec::new();
         let _ = collect_findings("x.rs", text, &mut out);
 
-        let reported: Vec<(&str, u32)> = out
-            .iter()
-            .map(|hit| (hit.pattern, hit.line))
-            .collect();
+        let reported: Vec<(&str, u32)> = out.iter().map(|hit| (hit.pattern, hit.line)).collect();
         assert_eq!(
             reported,
             vec![("FxHashMap::new", 3), ("Vec::new", 4)],

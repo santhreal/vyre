@@ -10,12 +10,12 @@ use super::decode_first_output;
 use crate::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::reduce::{
     all::reduce_all, any::reduce_any, count_non_zero::reduce_count_non_zero,
     histogram::histogram_atomic_scatter, max::reduce_max, min::reduce_min,
     segment_reduce::segment_reduce_sum, sum::reduce_sum,
 };
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::reduce::{

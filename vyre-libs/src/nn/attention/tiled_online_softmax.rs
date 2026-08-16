@@ -15,9 +15,7 @@
 //! scalar one.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp,
-};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp};
 
 use super::planner::FlashAttentionWorkPlan;
 use crate::nn::attention_stability::{bounded_exp_arg, bounded_score, positive_denominator};

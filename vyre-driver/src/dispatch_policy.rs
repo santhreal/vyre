@@ -308,8 +308,7 @@ mod tests {
     fn assert_bundle_equals_parts(inputs: &DispatchPolicyInputs) {
         let verdict = evaluate_dispatch_policy(inputs);
         assert_eq!(
-            verdict.execution,
-            inputs.execution,
+            verdict.execution, inputs.execution,
             "Fix: the bundle must carry the artifact's execution mode unchanged."
         );
         assert_eq!(

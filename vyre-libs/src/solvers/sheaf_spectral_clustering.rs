@@ -25,10 +25,10 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::sheaf_laplacian_eigenvalue::cpu_ref_into;
 use crate::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Default value for the retained (interface-stability) `iterations` parameter.
 ///

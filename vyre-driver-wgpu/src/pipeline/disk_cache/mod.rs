@@ -886,8 +886,9 @@ mod tests {
             )
             .unwrap();
 
-            let result = load_compiled_pipeline_blob(&key)
-                .expect("Fix: stale metadata must be a miss; restore this invariant before continuing.");
+            let result = load_compiled_pipeline_blob(&key).expect(
+                "Fix: stale metadata must be a miss; restore this invariant before continuing.",
+            );
             assert!(
                 result.is_none(),
                 "Fix: compiled-pipeline cache must miss when adapter fingerprint metadata is stale"
@@ -1047,20 +1048,36 @@ mod tests {
             ];
             let straight = Program::wrapped(
                 vec![
-                    vyre_foundation::ir::BufferDecl::output("a", 0, vyre_foundation::ir::DataType::U32)
-                        .with_count(64),
-                    vyre_foundation::ir::BufferDecl::output("b", 1, vyre_foundation::ir::DataType::U32)
-                        .with_count(64),
+                    vyre_foundation::ir::BufferDecl::output(
+                        "a",
+                        0,
+                        vyre_foundation::ir::DataType::U32,
+                    )
+                    .with_count(64),
+                    vyre_foundation::ir::BufferDecl::output(
+                        "b",
+                        1,
+                        vyre_foundation::ir::DataType::U32,
+                    )
+                    .with_count(64),
                 ],
                 [64, 1, 1],
                 entry.clone(),
             );
             let swapped = Program::wrapped(
                 vec![
-                    vyre_foundation::ir::BufferDecl::output("a", 1, vyre_foundation::ir::DataType::U32)
-                        .with_count(64),
-                    vyre_foundation::ir::BufferDecl::output("b", 0, vyre_foundation::ir::DataType::U32)
-                        .with_count(64),
+                    vyre_foundation::ir::BufferDecl::output(
+                        "a",
+                        1,
+                        vyre_foundation::ir::DataType::U32,
+                    )
+                    .with_count(64),
+                    vyre_foundation::ir::BufferDecl::output(
+                        "b",
+                        0,
+                        vyre_foundation::ir::DataType::U32,
+                    )
+                    .with_count(64),
                 ],
                 [64, 1, 1],
                 entry,
@@ -1197,10 +1214,12 @@ mod tests {
             };
 
             let program = Program::wrapped(
-                vec![
-                    vyre_foundation::ir::BufferDecl::output("out", 0, vyre_foundation::ir::DataType::U32)
-                        .with_count(1),
-                ],
+                vec![vyre_foundation::ir::BufferDecl::output(
+                    "out",
+                    0,
+                    vyre_foundation::ir::DataType::U32,
+                )
+                .with_count(1)],
                 [1, 1, 1],
                 vec![vyre_foundation::ir::Node::store(
                     "out",

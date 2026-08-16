@@ -186,9 +186,8 @@ fn train_findings(train: &toml::Table, report: &mut Report) {
         let version_key = group
             .and_then(|table| table.get("version"))
             .and_then(toml::Value::as_str);
-        let known = version_key.is_some_and(|key| {
-            versions.is_some_and(|table| table.contains_key(key))
-        });
+        let known =
+            version_key.is_some_and(|key| versions.is_some_and(|table| table.contains_key(key)));
         if !known {
             report.find(Finding::in_file(
                 RELEASE_TRAIN_TOML_PATH,
@@ -298,7 +297,10 @@ fn fragment_entries(
                 )
             })?
             .path();
-        if path.extension().is_some_and(|extension| extension == "toml") {
+        if path
+            .extension()
+            .is_some_and(|extension| extension == "toml")
+        {
             files.push(path);
         }
     }
@@ -482,7 +484,9 @@ fn replace_unreleased(changelog: &str, section: &str) -> Result<String, String> 
     let end = changelog[after..]
         .find("\n## [")
         .map(|offset| after + offset)
-        .ok_or_else(|| "the changelog carries no released section after `## [Unreleased]`".to_string())?;
+        .ok_or_else(|| {
+            "the changelog carries no released section after `## [Unreleased]`".to_string()
+        })?;
     Ok(format!(
         "{}{}\n{}",
         &changelog[..start],
@@ -571,7 +575,6 @@ fn read_toml(root: &Path, relative: &str) -> Result<toml::Table, GateError> {
     })
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -611,8 +614,8 @@ mod tests {
     #[test]
     fn replacing_the_unreleased_section_keeps_the_released_history() {
         let changelog = "# Changelog\n\n## [Unreleased]\n\nold\n\n## [0.1.0]\n\nkept\n";
-        let replaced =
-            replace_unreleased(changelog, "## [Unreleased]\n\nnew\n").expect("a section to replace");
+        let replaced = replace_unreleased(changelog, "## [Unreleased]\n\nnew\n")
+            .expect("a section to replace");
         assert_eq!(
             replaced,
             "# Changelog\n\n## [Unreleased]\n\nnew\n\n## [0.1.0]\n\nkept\n"

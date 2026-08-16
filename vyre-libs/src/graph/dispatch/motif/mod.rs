@@ -25,8 +25,8 @@ pub use reference::{
     try_motif_participation_count,
 };
 
-use vyre_foundation::ir::Program;
 use crate::graph::motif::{MotifLayout, MotifProgramCacheKey, MotifStaticInputKey};
+use vyre_foundation::ir::Program;
 
 use crate::graph::dispatch::dispatch_bridge::ProgramCache;
 

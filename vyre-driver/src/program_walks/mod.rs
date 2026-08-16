@@ -36,8 +36,10 @@ mod tests {
     fn singleton_atomic_byte_flag_program() -> Program {
         Program::wrapped(
             vec![
-                BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8).with_count(0),
-                BufferDecl::storage("flag", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+                BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8)
+                    .with_count(0),
+                BufferDecl::storage("flag", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
             ],
             [256, 1, 1],
             vec![Node::let_bind(
@@ -55,7 +57,8 @@ mod tests {
     fn infer_grid_uses_readonly_input_for_accumulator_kernels() {
         let program = Program::wrapped(
             vec![
-                BufferDecl::storage("accum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+                BufferDecl::storage("accum", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
                 BufferDecl::storage("values", 1, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(1_000_000),
             ],
@@ -82,8 +85,9 @@ mod tests {
         let program = singleton_atomic_byte_flag_program();
         let inputs = vec![vec![0u8; 4097], vec![0u8; 4]];
 
-        let grid = infer_dispatch_grid(&program, &inputs, &DispatchConfig::default())
-            .expect("Fix: singleton atomic flags must still dispatch across the dynamic byte input.");
+        let grid = infer_dispatch_grid(&program, &inputs, &DispatchConfig::default()).expect(
+            "Fix: singleton atomic flags must still dispatch across the dynamic byte input.",
+        );
 
         assert_eq!(grid, [17, 1, 1]);
     }
@@ -160,7 +164,8 @@ mod tests {
     fn infer_grid_counts_readwrite_live_out_buffers() {
         let program = Program::wrapped(
             vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(5),
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(5),
                 BufferDecl::storage("histogram", 1, BufferAccess::ReadWrite, DataType::U32)
                     .with_count(256),
                 BufferDecl::output("encoding", 2, DataType::U32).with_count(1),

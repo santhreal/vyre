@@ -20,8 +20,8 @@ mod critical_contracts;
 mod tests {
     use super::*;
     use crate::ir_inner::model::expr::Expr;
-    use crate::ir_inner::model::program::BufferDecl;
     use crate::ir_inner::model::op_signature::{BinOp, DataType};
+    use crate::ir_inner::model::program::BufferDecl;
     use crate::validate::Binding;
     use rustc_hash::FxHashMap;
 
@@ -227,7 +227,10 @@ mod tests {
                 false,
                 &mut errors,
             );
-            assert!(errors.is_empty(), "u32 `{op:?}` must be accepted: {errors:?}");
+            assert!(
+                errors.is_empty(),
+                "u32 `{op:?}` must be accepted: {errors:?}"
+            );
 
             // i32 + i32
             let mut errors = Vec::new();
@@ -240,7 +243,10 @@ mod tests {
                 false,
                 &mut errors,
             );
-            assert!(errors.is_empty(), "i32 `{op:?}` must be accepted: {errors:?}");
+            assert!(
+                errors.is_empty(),
+                "i32 `{op:?}` must be accepted: {errors:?}"
+            );
         }
     }
 
@@ -259,7 +265,9 @@ mod tests {
                 &mut errors,
             );
             assert!(
-                errors.iter().any(|e| e.code().as_str() == "V091" || e.code().as_str() == "V092"),
+                errors
+                    .iter()
+                    .any(|e| e.code().as_str() == "V091" || e.code().as_str() == "V092"),
                 "bool `{op:?}` must be rejected with V091/V092: {errors:?}"
             );
 
@@ -275,7 +283,9 @@ mod tests {
                 &mut errors,
             );
             assert!(
-                errors.iter().any(|e| e.code().as_str() == "V091" || e.code().as_str() == "V092"),
+                errors
+                    .iter()
+                    .any(|e| e.code().as_str() == "V091" || e.code().as_str() == "V092"),
                 "f32 `{op:?}` must be rejected with V091/V092: {errors:?}"
             );
 
@@ -310,7 +320,10 @@ mod tests {
             false,
             &mut errors,
         );
-        assert!(errors.is_empty(), "u32 MulHigh must be accepted: {errors:?}");
+        assert!(
+            errors.is_empty(),
+            "u32 MulHigh must be accepted: {errors:?}"
+        );
 
         // i32 * i32 -> rejected with V094
         let mut errors = Vec::new();
@@ -347,7 +360,12 @@ mod tests {
 
     #[test]
     fn subgroup_binop_capability_awareness() {
-        for op in [BinOp::Shuffle, BinOp::Ballot, BinOp::WaveReduce, BinOp::WaveBroadcast] {
+        for op in [
+            BinOp::Shuffle,
+            BinOp::Ballot,
+            BinOp::WaveReduce,
+            BinOp::WaveBroadcast,
+        ] {
             // without capability -> rejected with V097
             let mut errors = Vec::new();
             validate_binop_operands(

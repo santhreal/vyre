@@ -1,12 +1,12 @@
 //! `ldmatrix_cp_async` pattern analysis contracts.
 
-use vyre_emit_ptx::ComputeCapability;
-use vyre_lower::KernelOpKind;
 use vyre_emit_ptx::patterns::ldmatrix_cp_async::*;
+use vyre_emit_ptx::ComputeCapability;
 use vyre_foundation::ir::DataType;
 use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw,
 };
+use vyre_lower::KernelOpKind;
 use vyre_lower::{KernelDescriptor, LiteralValue};
 
 fn cp_async_kernel() -> KernelDescriptor {

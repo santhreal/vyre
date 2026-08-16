@@ -225,11 +225,23 @@ fn fixed_roots(workspace: &Path, roots: &[&str]) -> Result<Vec<PathBuf>> {
 /// declare rather than execute. Every other member is scanned, including one
 /// added after this line was written.
 const CPU_GUARD_EXEMPT_CRATES: &[(&str, &str)] = &[
-    ("vyre-reference", "the host parity oracle, which is the one legitimate host execution"),
-    ("vyre-test-support", "test harness, publish = false, never on a dispatch path"),
-    ("vyre-lints", "this tool; its own fixtures name the patterns it forbids"),
+    (
+        "vyre-reference",
+        "the host parity oracle, which is the one legitimate host execution",
+    ),
+    (
+        "vyre-test-support",
+        "test harness, publish = false, never on a dispatch path",
+    ),
+    (
+        "vyre-lints",
+        "this tool; its own fixtures name the patterns it forbids",
+    ),
     ("vyre-spec", "declares the frozen surface, executes nothing"),
-    ("vyre-macros", "proc macros run at compile time, not on a dispatch path"),
+    (
+        "vyre-macros",
+        "proc macros run at compile time, not on a dispatch path",
+    ),
 ];
 
 /// The nearest ancestor of `start`, itself included, whose manifest declares a
@@ -279,7 +291,8 @@ fn production_source_roots(workspace: &Path) -> Result<Vec<PathBuf>> {
     // `toml::Table` rather than `toml::Value`: with the pinned toml, a whole
     // document does not deserialize into `Value`, which is why the rest of the
     // workspace parses a table and reads fields off it.
-    let manifest: toml::Table = toml::from_str(&manifest).context("parsing the workspace manifest")?;
+    let manifest: toml::Table =
+        toml::from_str(&manifest).context("parsing the workspace manifest")?;
     let members = manifest
         .get("workspace")
         .and_then(toml::Value::as_table)
@@ -290,7 +303,10 @@ fn production_source_roots(workspace: &Path) -> Result<Vec<PathBuf>> {
              guard cannot derive what to scan and will not fall back to a stale list",
         )?;
 
-    let exempt: Vec<&str> = CPU_GUARD_EXEMPT_CRATES.iter().map(|(name, _)| *name).collect();
+    let exempt: Vec<&str> = CPU_GUARD_EXEMPT_CRATES
+        .iter()
+        .map(|(name, _)| *name)
+        .collect();
     let mut roots = Vec::with_capacity(members.len());
     for member in members {
         let Some(member) = member.as_str() else {
@@ -616,10 +632,14 @@ mod tests {
             .collect();
         assert!(members.len() > 20, "the workspace member list is truncated");
 
-        let scanned: std::collections::BTreeSet<PathBuf> =
-            production_source_roots(&workspace).expect("roots resolve").into_iter().collect();
-        let exempt: std::collections::BTreeSet<&str> =
-            CPU_GUARD_EXEMPT_CRATES.iter().map(|(name, _)| *name).collect();
+        let scanned: std::collections::BTreeSet<PathBuf> = production_source_roots(&workspace)
+            .expect("roots resolve")
+            .into_iter()
+            .collect();
+        let exempt: std::collections::BTreeSet<&str> = CPU_GUARD_EXEMPT_CRATES
+            .iter()
+            .map(|(name, _)| *name)
+            .collect();
 
         for member in &members {
             let source = workspace.join(member).join("src");

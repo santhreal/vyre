@@ -20,8 +20,8 @@ use super::typecheck::{expr_type, ScopeTypes};
 use super::{bytes_rejection, err, ValidationError, ValidationOptions};
 use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::{Node, NodeExtension};
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::ir_inner::model::program::BufferDecl;
 use crate::validate::{ValidationLocation, ValidationPhase};
 
 /// Bindings displaced by a nested scope, in insertion order, so leaving the

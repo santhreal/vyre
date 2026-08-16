@@ -5,8 +5,8 @@
 mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
-use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 use vyre_libs::math::kfac_block_inverse::cpu_ref;
+use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 
 fn approx_eq(a: f32, b: f32) -> bool {
     (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())

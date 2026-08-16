@@ -16,8 +16,8 @@ use super::{depth, err, node_rules, ValidationError, ValidationOptions, Validati
 use crate::composition::self_exclusive_region_key;
 use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::program::Program;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::ir_inner::model::program::Program;
 use crate::visit::child_bodies;
 use crate::visit::node_visitor::{dispatch_node, NodeVisitor};
 use hashbrown::hash_map::RawEntryMut;
@@ -465,13 +465,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                                 if body.is_empty() {
                                     continue;
                                 }
-                                push_nested_sequence(
-                                    &mut stack,
-                                    body,
-                                    divergent,
-                                    depth + 1,
-                                    None,
-                                );
+                                push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
                             }
                         }
                     }
@@ -958,13 +952,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                 for expr in origin {
                     self.validate_expr(expr, 0);
                 }
-                node_rules::check_tile_store(
-                    buffer,
-                    origin,
-                    tile,
-                    &self.buffers,
-                    &mut self.errors,
-                );
+                node_rules::check_tile_store(buffer, origin, tile, &self.buffers, &mut self.errors);
             }
             Node::TileMatmul { acc, a, b } => {
                 node_rules::check_tile_matmul(acc, a, b, self.options, &mut self.errors);

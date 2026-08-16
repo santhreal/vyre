@@ -14,7 +14,9 @@ use vyre_foundation::ir::{
     ValueContract, ValueLifetime,
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_megakernel::{CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
+use vyre_megakernel::{
+    CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetModuleBundle,
+};
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn artifact() -> vyre_megakernel::Artifact {
@@ -82,8 +84,7 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 #[test]
 fn non_apple_hosts_publish_no_metal_registration() {
-    let registrations =
-        vyre_driver::registered_backends().expect("valid backend registry");
+    let registrations = vyre_driver::registered_backends().expect("valid backend registry");
     assert!(registrations
         .iter()
         .all(|registration| registration.id != vyre_driver_metal::METAL_BACKEND_ID));

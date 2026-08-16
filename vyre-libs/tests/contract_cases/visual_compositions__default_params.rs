@@ -64,9 +64,7 @@ mod glass {
 // ================================================================
 
 mod conv1d {
-    use vyre_libs::math::conv1d::{
-        conv1d_program, gaussian_weights, pack_params, MAX_RADIUS,
-    };
+    use vyre_libs::math::conv1d::{conv1d_program, gaussian_weights, pack_params, MAX_RADIUS};
 
     #[test]
     fn program_has_four_buffers() {

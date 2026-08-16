@@ -71,7 +71,8 @@ impl InFlight {
     /// State after control flow that could have taken either side.
     fn merge(&mut self, other: &Self) {
         self.must.retain(|tag| other.must.contains(tag));
-        self.may.extend(other.may.iter().map(Ident::duplicate_handle));
+        self.may
+            .extend(other.may.iter().map(Ident::duplicate_handle));
     }
 }
 
@@ -222,9 +223,7 @@ fn walk_node(node: &Node, state: &mut InFlight, found: &mut Vec<Finding>) -> Seq
             let mut skipped = state.clone();
             let skipped_outcome = walk_sequence(otherwise, &mut skipped, found);
             match (taken_outcome, skipped_outcome) {
-                (SequenceOutcome::Diverged, SequenceOutcome::Diverged) => {
-                    SequenceOutcome::Diverged
-                }
+                (SequenceOutcome::Diverged, SequenceOutcome::Diverged) => SequenceOutcome::Diverged,
                 // A branch that leaves the invocation reaches no successor, so
                 // it contributes nothing to what is in flight after the `If`.
                 (SequenceOutcome::Diverged, SequenceOutcome::Continues) => {

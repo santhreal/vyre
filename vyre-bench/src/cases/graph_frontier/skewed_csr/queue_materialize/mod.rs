@@ -23,12 +23,12 @@ use vyre_libs::graph::csr_frontier_queue::{
 };
 use vyre_libs::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
 
-use super::metrics::{skewed_csr_baseline_metric_points, skewed_csr_queue_metric_points};
 use super::fixture::{
     build_skewed_csr_fixture, skewed_csr_active_high_degree_sources, skewed_csr_cpu_oracle,
     skewed_csr_queue_capacity, skewed_csr_queue_inputs, SkewedCsrStats, CSR_ALLOW_MASK,
     CSR_NODE_COUNT, SUITES,
 };
+use super::metrics::{skewed_csr_baseline_metric_points, skewed_csr_queue_metric_points};
 
 /// Degree at which a queued graph row is handed to the high-degree pass.
 ///

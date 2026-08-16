@@ -101,10 +101,7 @@ fn elided_scope(nodes: &[Node], report: &mut BarrierElisionReport) -> Option<Vec
         let mut policy = ElideBarriers { report };
         rewrite_body(nodes, &mut policy)
     };
-    let elided = elide_barrier_siblings(
-        descended.unwrap_or_else(|| nodes.to_vec()),
-        report,
-    );
+    let elided = elide_barrier_siblings(descended.unwrap_or_else(|| nodes.to_vec()), report);
     (report.removed != before).then_some(elided)
 }
 

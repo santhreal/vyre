@@ -2,10 +2,10 @@
 //!
 //! The descriptor fixtures in this file are the ones every submodule below
 //! reaches through `use super::*`.
-use vyre_emit_naga::*;
 use naga::{Binding, BuiltIn, Statement, TypeInner};
-use vyre_foundation::ir::{BinOp, DataType, UnOp};
+use vyre_emit_naga::*;
 use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, SlotCount};
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelDescriptor, KernelOpKind,
@@ -89,11 +89,11 @@ mod byte_element_load;
 mod cache_entry;
 #[path = "emit_contracts/descriptor_control.rs"]
 mod descriptor_control;
-#[path = "emit_contracts/subgroup.rs"]
-mod subgroup;
 #[path = "emit_contracts/pattern_audit.rs"]
 mod pattern_audit;
 #[path = "emit_contracts/pattern_pipeline_prewarm.rs"]
 mod pattern_pipeline_prewarm;
 #[path = "emit_contracts/pattern_vec_pack.rs"]
 mod pattern_vec_pack;
+#[path = "emit_contracts/subgroup.rs"]
+mod subgroup;

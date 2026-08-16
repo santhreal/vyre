@@ -50,11 +50,11 @@
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::knowledge_compile::ddnnf_evaluate;
 #[cfg(test)]
 use crate::graph::knowledge_compile::ddnnf_evaluate_cpu;
+use crate::plumbing::host::scratch::reserve_vec_capacity;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned scratch for pass-precondition d-DNNF dispatch.
 #[derive(Debug, Default)]
@@ -392,8 +392,8 @@ fn validate_waves(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
     use crate::graph::knowledge_compile::{AND_NODE, LITERAL_TRUE};
+    use vyre_foundation::ir::Program;
 
     #[test]
     fn unconditional_pass_always_applies() {

@@ -22,10 +22,10 @@
 //! exact f64 boundary value (no tolerance).
 #![cfg(feature = "topology")]
 
-use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_libs::topology::simplicial::simplicial_triangle_message;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 
 /// A signed exact-16.16 feature in roughly `[-32.0, 32.0)`: a bounded integer numerator over 65536,
 /// optionally negated. The magnitude stays small enough that a 3-term boundary sum never leaves i32

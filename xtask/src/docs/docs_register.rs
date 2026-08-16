@@ -223,10 +223,7 @@ fn load_register(tree: &Tree) -> Result<Register, GateError> {
             "declare the register before asking a page to hold to it; a rule with no phrase judges nothing",
         ));
     }
-    Ok(Register {
-        banned,
-        host_local,
-    })
+    Ok(Register { banned, host_local })
 }
 
 /// Every group under `key`, with `fixed` overriding the row's own match mode.
@@ -557,7 +554,10 @@ fn sentence_openings(lowered: &str) -> Vec<usize> {
 fn is_line_marker(character: char) -> bool {
     character.is_whitespace()
         || character.is_ascii_digit()
-        || matches!(character, '#' | '>' | '-' | '*' | '+' | '|' | ')' | '.' | '_')
+        || matches!(
+            character,
+            '#' | '>' | '-' | '*' | '+' | '|' | ')' | '.' | '_'
+        )
 }
 
 /// Whether the sentence at `start` opens with `phrase` as whole words.
@@ -581,7 +581,7 @@ mod tests {
 
     use tempfile::TempDir;
 
-    use super::{DocsRegister, Match, opens_with, sentence_openings};
+    use super::{opens_with, sentence_openings, DocsRegister, Match};
     use crate::gate::{Gate, GateCtx, Report};
     use crate::gates::fixture_checkout::checkout;
 
@@ -659,7 +659,8 @@ audience = "contributor"
 
     /// A wrapper that exports one build variable, for the derived half of the
     /// host-local rule.
-    const WRAPPER_FIXTURE: &str = "#!/usr/bin/env bash\nexport CARGO_TARGET_DIR=\"/elsewhere\"\nexec cargo \"$@\"\n";
+    const WRAPPER_FIXTURE: &str =
+        "#!/usr/bin/env bash\nexport CARGO_TARGET_DIR=\"/elsewhere\"\nexec cargo \"$@\"\n";
 
     /// The tree every test starts from: clean, and judged by all three rules.
     fn fixture() -> (TempDir, std::path::PathBuf) {
@@ -719,7 +720,11 @@ audience = "contributor"
 
         let report = run(&root);
 
-        assert!(messages(&report).contains("hype: `blazing`"), "{}", messages(&report));
+        assert!(
+            messages(&report).contains("hype: `blazing`"),
+            "{}",
+            messages(&report)
+        );
         assert_eq!(report.findings[0].line, Some(3));
     }
 
@@ -750,11 +755,19 @@ audience = "contributor"
     #[test]
     fn an_em_dash_is_reported() {
         let (_temporary, root) = fixture();
-        write(&root, "crate/GUIDE.md", "# Guide\n\nOne call\u{2014}one program.\n");
+        write(
+            &root,
+            "crate/GUIDE.md",
+            "# Guide\n\nOne call\u{2014}one program.\n",
+        );
 
         let report = run(&root);
 
-        assert!(messages(&report).contains("an em dash"), "{}", messages(&report));
+        assert!(
+            messages(&report).contains("an em dash"),
+            "{}",
+            messages(&report)
+        );
     }
 
     /// WHY: a phrase bounded by word characters must not fire inside a longer
@@ -762,7 +775,11 @@ audience = "contributor"
     #[test]
     fn a_bounded_phrase_does_not_fire_inside_a_longer_word() {
         let (_temporary, root) = fixture();
-        write(&root, "crate/GUIDE.md", "# Guide\n\nSimplyfied is not simply.\n");
+        write(
+            &root,
+            "crate/GUIDE.md",
+            "# Guide\n\nSimplyfied is not simply.\n",
+        );
 
         let report = run(&root);
 
@@ -836,7 +853,8 @@ audience = "contributor"
         let report = run(&root);
 
         assert!(
-            messages(&report).contains("root page row names a page the root does not hold: GONE.md"),
+            messages(&report)
+                .contains("root page row names a page the root does not hold: GONE.md"),
             "{}",
             messages(&report)
         );
@@ -871,7 +889,11 @@ audience = "contributor"
             "{MANIFEST_FIXTURE}\n[[page]]\npath = \"generated.md\"\ntitle = \"Generated\"\nstatus = \"generated\"\naudience = \"contributor\"\nowner = \"architecture\"\nkind = \"reference\"\nsection = \"Architecture and ownership\"\nauthority = \"ARCHITECTURE.md\"\ngeneration = \"generated\"\ngenerator = \"../cargo_full\"\nnav = true\n"
         );
         write(&root, "docs/DOCS.toml", &manifest);
-        write(&root, "docs/generated.md", "# Generated\n\nBlazing output.\n");
+        write(
+            &root,
+            "docs/generated.md",
+            "# Generated\n\nBlazing output.\n",
+        );
 
         let report = run(&root);
 
@@ -946,19 +968,29 @@ audience = "contributor"
     /// substring search, and markdown marks the opening in several ways.
     #[test]
     fn a_sentence_opens_after_markdown_marks_and_after_a_full_stop() {
-        assert!(opens_with("- this document states", sentence_openings("- this document states")[0], "this document"));
+        assert!(opens_with(
+            "- this document states",
+            sentence_openings("- this document states")[0],
+            "this document"
+        ));
         let quoted = "> **this page** holds";
-        assert!(sentence_openings(quoted)
-            .iter()
-            .any(|start| opens_with(quoted, *start, "this page")));
+        assert!(sentence_openings(quoted).iter().any(|start| opens_with(
+            quoted,
+            *start,
+            "this page"
+        )));
         let second = "the walk is bounded. this section lists it";
-        assert!(sentence_openings(second)
-            .iter()
-            .any(|start| opens_with(second, *start, "this section")));
+        assert!(sentence_openings(second).iter().any(|start| opens_with(
+            second,
+            *start,
+            "this section"
+        )));
         let middle = "everything in this section holds";
-        assert!(!sentence_openings(middle)
-            .iter()
-            .any(|start| opens_with(middle, *start, "this section")));
+        assert!(!sentence_openings(middle).iter().any(|start| opens_with(
+            middle,
+            *start,
+            "this section"
+        )));
     }
 
     /// WHY: the modes are the register's vocabulary, and one the gate cannot

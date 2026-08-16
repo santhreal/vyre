@@ -11,7 +11,6 @@
 //! - `succinct`  -  rank/select bitvector metadata
 //!
 
-
 #[cfg(feature = "math-linalg")]
 pub mod linalg;
 
@@ -370,4 +369,3 @@ pub(crate) mod fixed_u32_matmul;
     any(test, feature = "cpu-parity")
 ))]
 pub(crate) mod chebyshev_recurrence;
-

@@ -1,6 +1,6 @@
-use vyre_spec::c11_token::*;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::c11_token::*;
 
 /// SIMT Binding Strength Pass (Innovation 1: Divergence-Free Shunting Yard)
 ///

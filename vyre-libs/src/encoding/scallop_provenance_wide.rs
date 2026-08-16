@@ -5,8 +5,8 @@
 //!
 //! Dispatches the `crate::math::scallop_join` primitive at `w > 1`.
 
-use vyre_foundation::ir::Program;
 use crate::math::scallop_join::scallop_join;
+use vyre_foundation::ir::Program;
 
 /// Stable op identifier for the wide-lineage Scallop provenance closure.
 pub const OP_ID: &str = "vyre-libs::self_substrate::scallop_provenance_wide";
@@ -44,7 +44,8 @@ mod tests {
         let p2 = scallop_provenance_wide_program("s2", "n2", "j2", "c2", 4, 1, 5);
         let p3 = scallop_provenance_wide_program("s3", "n3", "j3", "c3", 4, 1, 5);
 
-        let final_p = crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p =
+            crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         let region_count = final_p
             .entry()
             .iter()

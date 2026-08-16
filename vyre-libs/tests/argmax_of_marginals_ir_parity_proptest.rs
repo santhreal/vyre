@@ -15,9 +15,7 @@
 #![cfg(all(feature = "math", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
-use vyre_libs::math::submodular_greedy::{
-    argmax_of_marginals, argmax_of_marginals_cpu, NO_WINNER,
-};
+use vyre_libs::math::submodular_greedy::{argmax_of_marginals, argmax_of_marginals_cpu, NO_WINNER};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
 

@@ -28,7 +28,8 @@ fn workspace_cli_documentation_is_current() {
 
     let summary = String::from_utf8(output.stdout).expect("Fix: gate output must be UTF-8");
     let manifest: toml::Value = toml::from_str(
-        &fs::read_to_string(root.join("docs/CLI.toml")).expect("Fix: docs/CLI.toml must be readable"),
+        &fs::read_to_string(root.join("docs/CLI.toml"))
+            .expect("Fix: docs/CLI.toml must be readable"),
     )
     .expect("Fix: docs/CLI.toml must be valid TOML");
     let binaries = manifest["binary"]
@@ -106,7 +107,11 @@ fn helper_binaries() -> Vec<(String, std::path::PathBuf)> {
     let mut binaries: Vec<(String, std::path::PathBuf)> =
         fs::read_dir(workspace_root().join("xtask/src/bin"))
             .expect("Fix: xtask/src/bin must be readable")
-            .map(|entry| entry.expect("Fix: xtask/src/bin entries must be readable").path())
+            .map(|entry| {
+                entry
+                    .expect("Fix: xtask/src/bin entries must be readable")
+                    .path()
+            })
             .filter(|path| path.extension().is_some_and(|value| value == "rs"))
             .map(|path| {
                 let name = path
@@ -229,7 +234,10 @@ fn a_help_word_is_help_only_when_it_is_the_whole_command_line() {
     assert_eq!(line(&[]), Request::Run);
     assert_eq!(line(&["-h"]), Request::Help);
     assert_eq!(line(&["--help"]), Request::Help);
-    assert_eq!(line(&["--help", "extra"]), Request::Unknown("--help".into()));
+    assert_eq!(
+        line(&["--help", "extra"]),
+        Request::Unknown("--help".into())
+    );
     assert_eq!(line(&["--write"]), Request::Unknown("--write".into()));
 }
 

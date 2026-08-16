@@ -1,13 +1,13 @@
 //! `vec_memory_fusion` pattern analysis contracts.
 
+use vyre_emit_ptx::patterns::vec_memory_fusion::*;
+use vyre_foundation::ir::BinOp;
 use vyre_foundation::ir::DataType;
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_ro, global_wo, lit, op};
 use vyre_lower::BindingSlot;
 use vyre_lower::KernelDescriptor;
 use vyre_lower::KernelOp;
 use vyre_lower::KernelOpKind;
-use vyre_emit_ptx::patterns::vec_memory_fusion::*;
-use vyre_foundation::ir::BinOp;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_ro, global_wo, lit, op};
 use vyre_lower::{BindingVisibility, LiteralValue};
 
 const KINDS: [MemoryFusionKind; 2] = [MemoryFusionKind::Load, MemoryFusionKind::Store];
@@ -48,9 +48,7 @@ fn access(
 ) -> KernelOp {
     match kind {
         MemoryFusionKind::Load => op(KernelOpKind::LoadGlobal, [slot, index_id], result),
-        MemoryFusionKind::Store => {
-            effect(KernelOpKind::StoreGlobal, [slot, index_id, value_id])
-        }
+        MemoryFusionKind::Store => effect(KernelOpKind::StoreGlobal, [slot, index_id, value_id]),
     }
 }
 

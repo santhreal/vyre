@@ -112,9 +112,7 @@ impl Gate for FeatureMsrv {
             }
             compiled += 1;
         }
-        report.note(format!(
-            "compiled {compiled} selection(s) on {version}"
-        ));
+        report.note(format!("compiled {compiled} selection(s) on {version}"));
         Ok(report)
     }
 }
@@ -142,7 +140,8 @@ fn names_a_toolchain(version: &str) -> bool {
     if parts.next().is_some() {
         return false;
     }
-    let numeric = |value: &str| !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit());
+    let numeric =
+        |value: &str| !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit());
     numeric(major) && numeric(minor) && patch.is_none_or(numeric)
 }
 
@@ -173,8 +172,7 @@ fn installed(version: &str) -> Result<(), GateError> {
     if stdout.lines().any(|line| line.starts_with(version)) {
         return Ok(());
     }
-    Err(GateError::new
-        (
+    Err(GateError::new(
         format!("the advertised toolchain {version} is not installed"),
         format!("rustup toolchain install {version}"),
     ))
@@ -188,11 +186,7 @@ fn installed(version: &str) -> Result<(), GateError> {
 /// workspace into a directory another checkout owns, where the same member path
 /// hashes to the same unit and one checkout's artifact answers another's
 /// request. `installed` above still holds the toolchain to a named version.
-fn compile_failure(
-    root: &Path,
-    version: &str,
-    pair: &Pair,
-) -> Result<Option<Finding>, GateError> {
+fn compile_failure(root: &Path, version: &str, pair: &Pair) -> Result<Option<Finding>, GateError> {
     let output = cargo_runner::command(root)
         .arg(format!("+{version}"))
         .args(["check", "--locked", "-p"])

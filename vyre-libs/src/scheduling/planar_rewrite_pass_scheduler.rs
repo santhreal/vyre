@@ -47,10 +47,10 @@ use crate::dispatch_buffers::{
     checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::parsing::planar_rewrite::planar_rewrite_schedule;
 #[cfg(test)]
 use crate::parsing::planar_rewrite::reference_planar_rewrite_schedule;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for planar rewrite scheduling.
 #[derive(Debug, Default)]

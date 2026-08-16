@@ -74,8 +74,6 @@ mod segment_buffers;
 #[cfg(test)]
 mod test_programs;
 
-pub use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
-pub(crate) use vyre_foundation::transform::grid_sync_split::entry_sequence;
 pub use host_dispatch::{
     dispatch_with_grid_sync_split, dispatch_with_grid_sync_split_into,
     dispatch_with_grid_sync_split_timed, dispatch_with_grid_sync_split_via,
@@ -85,6 +83,8 @@ pub use resident_dispatch::{
     dispatch_resident_grid_sync_fixpoint_into, dispatch_resident_with_grid_sync_split_timed,
 };
 pub use segment_buffers::plan_host_grid_sync_segment_programs;
+pub use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
+pub(crate) use vyre_foundation::transform::grid_sync_split::entry_sequence;
 
 /// Split `program` at every grid-sync fence, or produce no segments when the
 /// split itself fails.

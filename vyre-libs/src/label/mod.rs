@@ -20,4 +20,3 @@ pub mod resolve_family;
 /// `predicate` already enables `label` while the reverse edge does not exist.
 #[cfg(any(feature = "label", feature = "predicate"))]
 pub(crate) mod nodeset_filter;
-

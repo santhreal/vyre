@@ -103,14 +103,13 @@ fn compact(value: &impl Serialize) -> Vec<u8> {
 fn every_literal_variant_round_trips_through_a_compact_format() {
     for literal in every_literal() {
         let bytes = compact(&literal);
-        let (decoded, _): (LiteralValue, usize) =
-            bincode::serde::decode_from_slice(&bytes, bincode::config::standard()).unwrap_or_else(
-                |error| {
-                    panic!(
-                        "Fix: `{literal:?}` must decode back out of a compact descriptor dump: {error}"
-                    )
-                },
-            );
+        let (decoded, _): (LiteralValue, usize) = bincode::serde::decode_from_slice(
+            &bytes,
+            bincode::config::standard(),
+        )
+        .unwrap_or_else(|error| {
+            panic!("Fix: `{literal:?}` must decode back out of a compact descriptor dump: {error}")
+        });
         assert!(
             identical(&decoded, &literal),
             "Fix: a compact format must carry every literal exactly; `{literal:?}` came back as `{decoded:?}`."

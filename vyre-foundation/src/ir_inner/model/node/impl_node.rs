@@ -370,11 +370,7 @@ impl Node {
     /// Store a tile to a buffer: `store_tile(buffer, origin, tile);`
     #[must_use]
     #[inline]
-    pub fn tile_store(
-        buffer: impl Into<Ident>,
-        origin: Vec<Expr>,
-        tile: impl Into<Ident>,
-    ) -> Self {
+    pub fn tile_store(buffer: impl Into<Ident>, origin: Vec<Expr>, tile: impl Into<Ident>) -> Self {
         Self::TileStore {
             buffer: buffer.into(),
             origin,
@@ -385,11 +381,7 @@ impl Node {
     /// Accumulate matrix product: `acc += a x b;`
     #[must_use]
     #[inline]
-    pub fn tile_matmul(
-        acc: impl Into<Ident>,
-        a: impl Into<Ident>,
-        b: impl Into<Ident>,
-    ) -> Self {
+    pub fn tile_matmul(acc: impl Into<Ident>, a: impl Into<Ident>, b: impl Into<Ident>) -> Self {
         Self::TileMatmul {
             acc: acc.into(),
             a: a.into(),
@@ -417,11 +409,7 @@ impl Node {
     /// Apply elementwise body: `out = elementwise(inputs, body);`
     #[must_use]
     #[inline]
-    pub fn tile_elementwise(
-        out: impl Into<Ident>,
-        inputs: Vec<Ident>,
-        body: Vec<Node>,
-    ) -> Self {
+    pub fn tile_elementwise(out: impl Into<Ident>, inputs: Vec<Ident>, body: Vec<Node>) -> Self {
         Self::TileElementwise {
             out: out.into(),
             inputs,
@@ -432,10 +420,7 @@ impl Node {
     /// Declare a tile binding: `tile name: Tile;`
     #[must_use]
     #[inline]
-    pub fn tile_decl(
-        name: impl Into<Ident>,
-        tile: crate::ir_inner::model::tile::Tile,
-    ) -> Self {
+    pub fn tile_decl(name: impl Into<Ident>, tile: crate::ir_inner::model::tile::Tile) -> Self {
         Self::TileDecl {
             name: name.into(),
             tile,
