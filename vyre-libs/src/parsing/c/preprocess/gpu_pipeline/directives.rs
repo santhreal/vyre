@@ -609,10 +609,10 @@ mod tests {
     struct NoDispatch;
 
     impl ProgramOracle for NoDispatch {
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
         ) -> Result<Vec<Vec<u8>>, String> {
             Err("directive-free fixture must not dispatch".to_string())
         }

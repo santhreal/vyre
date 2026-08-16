@@ -16,8 +16,12 @@ use vyre_reference::value::Value;
 pub(crate) struct ReferenceOracle;
 
 impl ProgramOracle for ReferenceOracle {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
+    fn dispatch_borrowed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, String> {
+        let values: Vec<Value> = inputs.iter().map(|row| Value::from(row.to_vec())).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
             .map_err(|error| format!("reference_eval: {error}"))?;
         Ok(outputs.into_iter().map(|value| value.to_bytes()).collect())
@@ -32,12 +36,6 @@ impl ProgramOracle for ReferenceOracle {
 pub(crate) struct CudaOracle<'a>(pub(crate) &'a CudaBackend);
 
 impl ProgramOracle for CudaOracle<'_> {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        self.0
-            .dispatch(program, inputs, &DispatchConfig::default())
-            .map_err(|error| format!("CUDA dispatch: {error}"))
-    }
-
     fn dispatch_borrowed(
         &self,
         program: &Program,

@@ -6,21 +6,16 @@ use vyre_foundation::ir::Program;
 /// artifact lifecycle. This seam exists only to compare frontend stage programs
 /// against independent reference or target oracles.
 pub trait ProgramOracle {
-    /// Run `program` with owned inputs and return one buffer per output.
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String>;
-
-    /// Run `program` with borrowed input buffers.
+    /// Run `program` with borrowed input buffers and return one buffer per output.
     ///
-    /// The default stages the borrowed slices for oracles that implement only
-    /// the owned path.
+    /// The oracle receives caller memory. Every stage of the preprocess pipeline
+    /// hands the same source arena to the next program, so an owned entry point
+    /// here would copy that arena once per stage.
     fn dispatch_borrowed(
         &self,
         program: &Program,
         inputs: &[&[u8]],
-    ) -> Result<Vec<Vec<u8>>, String> {
-        let owned: Vec<Vec<u8>> = inputs.iter().map(|slice| slice.to_vec()).collect();
-        ProgramOracle::dispatch(self, program, &owned)
-    }
+    ) -> Result<Vec<Vec<u8>>, String>;
 
     /// Run `program` with borrowed inputs and write outputs into caller-owned slots.
     ///

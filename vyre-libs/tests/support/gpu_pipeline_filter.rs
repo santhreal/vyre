@@ -10,8 +10,12 @@ use vyre_reference::value::Value;
 struct RefDispatcher;
 
 impl ProgramOracle for RefDispatcher {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
+    fn dispatch_borrowed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, String> {
+        let values: Vec<Value> = inputs.iter().map(|row| Value::from(row.to_vec())).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
             .map_err(|e| format!("reference_eval: {e}"))?;
         Ok(outputs.into_iter().map(|v| v.to_bytes().to_vec()).collect())
@@ -43,7 +47,11 @@ impl CountingDispatcher {
 }
 
 impl ProgramOracle for CountingDispatcher {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
+    fn dispatch_borrowed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, String> {
         self.calls.set(self.calls.get() + 1);
         self.op_ids.borrow_mut().push(
             program
@@ -63,7 +71,7 @@ impl ProgramOracle for CountingDispatcher {
                 .iter()
                 .position(|buffer| buffer.name() == "bytes_in")
                 .and_then(|index| inputs.get(index))
-                .map(Vec::len),
+                .map(|row| row.len()),
         );
         for (index, buffer) in program.buffers().iter().enumerate() {
             let name = buffer.name();
@@ -71,11 +79,11 @@ impl ProgramOracle for CountingDispatcher {
                 self.preflight_flags.borrow_mut().push((
                     name.to_string(),
                     buffer.count(),
-                    inputs.get(index).map_or(0, Vec::len),
+                    inputs.get(index).map_or(0, |row| row.len()),
                 ));
             }
         }
-        RefDispatcher.dispatch(program, inputs)
+        RefDispatcher.dispatch_borrowed(program, inputs)
     }
 
     fn requires_output_inputs(&self) -> bool {

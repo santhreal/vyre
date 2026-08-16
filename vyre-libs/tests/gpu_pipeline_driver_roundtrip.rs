@@ -24,8 +24,12 @@ use vyre_reference::value::Value;
 
 struct RefDispatcher;
 impl ProgramOracle for RefDispatcher {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
+    fn dispatch_borrowed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, String> {
+        let values: Vec<Value> = inputs.iter().map(|row| Value::from(row.to_vec())).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
             .map_err(|e| format!("reference_eval: {e}"))?;
         Ok(outputs.into_iter().map(|v| v.to_bytes().to_vec()).collect())
@@ -65,7 +69,11 @@ impl CountingDispatcher {
 }
 
 impl ProgramOracle for CountingDispatcher {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
+    fn dispatch_borrowed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, String> {
         self.dispatches.set(self.dispatches.get() + 1);
         if program
             .entry_op_id
@@ -87,7 +95,7 @@ impl ProgramOracle for CountingDispatcher {
                     .push((name.to_string(), buffer.element()));
                 let input_index = input_index_for_buffer(program, name)
                     .ok_or_else(|| format!("missing materialized macro input slot {name}"))?;
-                let len = inputs.get(input_index).map(Vec::len).ok_or_else(|| {
+                let len = inputs.get(input_index).map(|row| row.len()).ok_or_else(|| {
                     format!(
                     "missing materialized macro input {name} at slot {input_index}; got {} inputs",
                     inputs.len()
@@ -98,7 +106,7 @@ impl ProgramOracle for CountingDispatcher {
                     .push((name.to_string(), len));
             }
         }
-        RefDispatcher.dispatch(program, inputs)
+        RefDispatcher.dispatch_borrowed(program, inputs)
     }
 
     fn requires_output_inputs(&self) -> bool {

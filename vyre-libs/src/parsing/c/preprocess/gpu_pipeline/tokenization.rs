@@ -468,10 +468,10 @@ mod tests {
     struct SparsePathSentinel;
 
     impl ProgramOracle for SparsePathSentinel {
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
         ) -> Result<Vec<Vec<u8>>, String> {
             Err("entered dispatcher".to_string())
         }

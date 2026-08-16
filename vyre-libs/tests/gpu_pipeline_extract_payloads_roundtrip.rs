@@ -13,8 +13,12 @@ use vyre_reference::value::Value;
 struct RefDispatcher;
 
 impl ProgramOracle for RefDispatcher {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
+    fn dispatch_borrowed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, String> {
+        let values: Vec<Value> = inputs.iter().map(|row| Value::from(row.to_vec())).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
             .map_err(|e| format!("reference_eval: {e}"))?;
         Ok(outputs.into_iter().map(|v| v.to_bytes().to_vec()).collect())
@@ -42,7 +46,11 @@ impl CountingDispatcher {
 }
 
 impl ProgramOracle for CountingDispatcher {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
+    fn dispatch_borrowed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, String> {
         if program
             .entry_op_id
             .as_deref()
@@ -60,7 +68,7 @@ impl ProgramOracle for CountingDispatcher {
                 &self.condition_macro_name_elements,
             );
         }
-        RefDispatcher.dispatch(program, inputs)
+        RefDispatcher.dispatch_borrowed(program, inputs)
     }
 
     fn requires_output_inputs(&self) -> bool {
