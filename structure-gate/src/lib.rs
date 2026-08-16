@@ -167,8 +167,8 @@ pub struct Workspace {
     pub registry_submitters: Vec<String>,
     /// Every `use <crate> as _;` found in member sources.
     pub discarding_imports: Vec<DiscardingImport>,
-    /// Crate directories the layout rules judge, checkout-relative.
-    pub crate_roots: Vec<String>,
+    /// Crates the layout rules judge.
+    pub crate_roots: Vec<CrateRoot>,
     /// Every `src/` module file of every crate root, checkout-relative.
     pub module_files: Vec<String>,
     /// Module paths the committed public-API snapshots publish.
@@ -224,6 +224,7 @@ pub fn violations(root: &Path) -> Vec<String> {
     failures.extend(sibling_module_failures(&workspace.module_files));
     failures.extend(generic_module_name_failures(
         &workspace.module_files,
+        &workspace.crate_roots,
         &workspace.published_modules,
     ));
     failures
@@ -470,6 +471,21 @@ const BANNED_MODULE_SUFFIX: &str = "_ext";
 /// Committed snapshot of the API each publishable crate reaches out with.
 const PUBLIC_API_SNAPSHOT_DIR: &str = "docs/public-api";
 
+/// One crate the module-layout rules judge.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CrateRoot {
+    /// Checkout-relative crate directory.
+    pub directory: String,
+    /// Identifier a consumer writes to name this crate.
+    ///
+    /// Read from the manifest, `[lib] name` first and the package name second,
+    /// never from the directory. A crate whose directory does not spell its
+    /// package name would otherwise be looked up in the public-API snapshot
+    /// under a name the snapshot never uses, and every published module of that
+    /// crate would lose the exemption that keeps a published name stable.
+    pub ident: String,
+}
+
 /// Reject a module file that sits beside a directory of the same name.
 ///
 /// `foo.rs` next to `foo/` splits one module across two places in a listing:
@@ -527,6 +543,7 @@ pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
 #[must_use]
 pub fn generic_module_name_failures(
     module_files: &[String],
+    crate_roots: &[CrateRoot],
     published_modules: &[String],
 ) -> Vec<String> {
     let published: BTreeSet<&str> = published_modules.iter().map(String::as_str).collect();
@@ -546,14 +563,18 @@ pub fn generic_module_name_failures(
         if !is_banned_module_name(name) {
             continue;
         }
-        let Some(path) = module_path_of(file) else {
-            continue;
-        };
-        if published.contains(path.as_str()) {
+        let path = module_path_of(file, crate_roots);
+        if path
+            .as_deref()
+            .is_some_and(|path| published.contains(path))
+        {
             continue;
         }
+        let published_note = path.map_or_else(String::new, |path| {
+            format!(" ({path} is published at no public path, so renaming it breaks nothing)")
+        });
         failures.push(format!(
-            "`{file}` declares module `{name}`, which states no contract; name it for what it holds ({path} is published at no public path, so renaming it breaks nothing)"
+            "`{file}` declares module `{name}`, which states no contract; name it for what it holds{published_note}"
         ));
     }
     failures.sort();
@@ -600,13 +621,18 @@ fn binary_name_of(file: &str) -> Option<&str> {
 
 /// The module path a `src/` file declares, as a consumer writes it.
 ///
-/// `vyre-libs/src/parsing/core/mod.rs` is `vyre_libs::parsing::core`. The
-/// member directory is read from the `/src/` boundary rather than from the
-/// roster, because a member's directory is not always its package name and
-/// that boundary is what every member shares.
-fn module_path_of(file: &str) -> Option<String> {
-    let (member, inside) = file.split_once("/src/")?;
-    let mut path = crate_ident(member.rsplit('/').next()?);
+/// `vyre-libs/src/parsing/core/mod.rs` is `vyre_libs::parsing::core`. The crate
+/// part comes from the [`CrateRoot`] whose directory holds the file, so it is
+/// the name the manifest declares rather than the name the directory spells.
+/// `None` when no scanned crate holds the file, which is the only honest answer:
+/// a guessed crate name would be looked up in the public-API snapshot and miss.
+fn module_path_of(file: &str, crate_roots: &[CrateRoot]) -> Option<String> {
+    let mut path = crate_roots
+        .iter()
+        .filter(|crate_root| file.starts_with(&format!("{}/src/", crate_root.directory)))
+        .max_by_key(|crate_root| crate_root.directory.len())
+        .map(|crate_root| crate_root.ident.clone())?;
+    let (_, inside) = file.split_once("/src/")?;
     let name = inside.rsplit('/').next()?;
     let parents = inside.rsplit_once('/').map_or("", |(head, _)| head);
     let tail = if name == "mod.rs" {
@@ -842,24 +868,39 @@ fn source_tree_files(directory: &Path) -> Vec<PathBuf> {
 /// is judged without an edit here. This crate is included; [`source_files`]
 /// exempts it only because its registration fixtures name other crates, and a
 /// rule over file names has no such fixtures.
-fn crate_source_roots(root: &Path) -> Vec<PathBuf> {
+fn crate_source_roots(root: &Path) -> Vec<CrateRoot> {
     WalkDir::new(root)
         .into_iter()
         .filter_entry(|entry| !matches!(entry.file_name().to_str(), Some(".git" | "target")))
         .filter_map(Result::ok)
         .filter(|entry| entry.file_name() == "Cargo.toml")
-        .filter(|entry| declares_package(entry.path()))
-        .filter_map(|entry| entry.path().parent().map(Path::to_path_buf))
-        .filter(|directory| directory.join("src").is_dir())
+        .filter_map(|entry| {
+            let ident = manifest_crate_ident(entry.path())?;
+            let directory = entry.path().parent()?.to_path_buf();
+            directory.join("src").is_dir().then(|| CrateRoot {
+                directory: relative(root, &directory),
+                ident,
+            })
+        })
         .collect()
 }
 
-/// True when a manifest declares a package rather than only a workspace.
-fn declares_package(manifest: &Path) -> bool {
-    read_source_bounded(manifest)
-        .ok()
-        .and_then(|text| toml::from_str::<toml::Table>(&text).ok())
-        .is_some_and(|table| table.contains_key("package"))
+/// The identifier a manifest's library carries, or `None` for no package.
+///
+/// `[lib] name` wins where it is written, because that is the name a consumer
+/// and `cargo public-api` both use; the package name is the default Cargo
+/// applies when it is not.
+fn manifest_crate_ident(manifest: &Path) -> Option<String> {
+    let text = read_source_bounded(manifest).ok()?;
+    let table: toml::Table = toml::from_str(&text).ok()?;
+    let value = Value::Table(table);
+    let package = value.get("package")?.get("name")?.as_str()?;
+    let name = value
+        .get("lib")
+        .and_then(|lib| lib.get("name"))
+        .and_then(Value::as_str)
+        .unwrap_or(package);
+    Some(crate_ident(name))
 }
 
 fn relative(root: &Path, path: &Path) -> String {
@@ -1460,22 +1501,19 @@ fn scan_frontend_paths(root: &Path, members: &[String]) -> Vec<(String, String)>
     paths
 }
 
-/// Every crate directory the layout rules judge, checkout-relative.
-fn scan_crate_roots(root: &Path) -> Vec<String> {
-    let mut roots: Vec<String> = crate_source_roots(root)
-        .iter()
-        .map(|directory| relative(root, directory))
-        .collect();
-    roots.sort();
+/// Every crate the layout rules judge, ordered by directory.
+fn scan_crate_roots(root: &Path) -> Vec<CrateRoot> {
+    let mut roots = crate_source_roots(root);
+    roots.sort_by(|left, right| left.directory.cmp(&right.directory));
     roots.dedup();
     roots
 }
 
 /// Every `src/` module file of every crate root, checkout-relative.
-fn scan_module_files(root: &Path, crate_roots: &[String]) -> Vec<String> {
+fn scan_module_files(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
     let mut files = Vec::new();
     for crate_root in crate_roots {
-        for path in source_tree_files(&root.join(crate_root).join("src")) {
+        for path in source_tree_files(&root.join(&crate_root.directory).join("src")) {
             files.push(relative(root, &path));
         }
     }
@@ -2574,12 +2612,26 @@ inventory::submit! {
         assert!(failures.is_empty(), "{failures:?}");
     }
 
+    fn crate_roots(pairs: &[(&str, &str)]) -> Vec<CrateRoot> {
+        pairs
+            .iter()
+            .map(|(directory, ident)| CrateRoot {
+                directory: (*directory).to_string(),
+                ident: (*ident).to_string(),
+            })
+            .collect()
+    }
+
     #[test]
     fn every_banned_module_name_is_rejected_as_a_file_and_as_a_directory() {
         for name in BANNED_MODULE_NAMES {
             let flat = format!("vyre-libs/src/scan/{name}.rs");
             let nested = format!("vyre-libs/src/scan/{name}/mod.rs");
-            let failures = generic_module_name_failures(&[flat, nested], &[]);
+            let failures = generic_module_name_failures(
+                &[flat, nested],
+                &crate_roots(&[("vyre-libs", "vyre_libs")]),
+                &[],
+            );
 
             assert_eq!(failures.len(), 2, "{name}: {failures:?}");
             assert!(
@@ -2598,6 +2650,7 @@ inventory::submit! {
                 "vyre-libs/src/scan/region_ext/mod.rs",
                 "xtask/src/bin/dump_ext.rs",
             ]),
+            &crate_roots(&[("vyre-libs", "vyre_libs"), ("xtask", "xtask")]),
             &[],
         );
 
@@ -2607,14 +2660,50 @@ inventory::submit! {
     #[test]
     fn a_published_module_keeps_its_name() {
         let files = paths(&["vyre-libs/src/parsing/core/mod.rs"]);
+        let roots = crate_roots(&[("vyre-libs", "vyre_libs")]);
+
+        assert!(generic_module_name_failures(
+            &files,
+            &roots,
+            &["vyre_libs::parsing::core".to_string()]
+        )
+        .is_empty());
+        assert_eq!(
+            generic_module_name_failures(&files, &roots, &["vyre_libs::parsing".to_string()]).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn the_exemption_is_keyed_on_the_name_the_manifest_declares() {
+        let files = paths(&["fuzz/src/harness/types/mod.rs"]);
+        let published = ["vyre_fuzz::harness::types".to_string()];
 
         assert!(
-            generic_module_name_failures(&files, &["vyre_libs::parsing::core".to_string()])
-                .is_empty()
+            generic_module_name_failures(
+                &files,
+                &crate_roots(&[("fuzz", "vyre_fuzz")]),
+                &published
+            )
+            .is_empty(),
+            "a published module lost its exemption because the crate was named after its directory"
         );
         assert_eq!(
-            generic_module_name_failures(&files, &["vyre_libs::parsing".to_string()]).len(),
+            generic_module_name_failures(&files, &crate_roots(&[("fuzz", "fuzz")]), &published)
+                .len(),
             1
+        );
+    }
+
+    #[test]
+    fn a_module_in_no_scanned_crate_is_still_reported() {
+        let failures =
+            generic_module_name_failures(&paths(&["stray/src/types/mod.rs"]), &[], &[]);
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            !failures[0].contains("published at no public path"),
+            "the message claimed a public path it could not resolve: {failures:?}"
         );
     }
 
@@ -2631,8 +2720,11 @@ inventory::submit! {
         for name in BANNED_MODULE_NAMES {
             let flat = format!("xtask/src/bin/{name}.rs");
             let nested = format!("xtask/src/bin/{name}/main.rs");
-            let failures =
-                generic_module_name_failures(&[flat, nested], &["xtask::bin".to_string()]);
+            let failures = generic_module_name_failures(
+                &[flat, nested],
+                &crate_roots(&[("xtask", "xtask")]),
+                &["xtask::bin".to_string()],
+            );
 
             assert_eq!(failures.len(), 2, "{name}: {failures:?}");
             assert!(
@@ -2667,6 +2759,7 @@ inventory::submit! {
                 "xtask/src/bin/scaffold_rule.rs",
                 "xtask-registry/src/bin/vyre_new_op/main.rs",
             ]),
+            &crate_roots(&[("xtask", "xtask"), ("xtask-registry", "xtask_registry")]),
             &[],
         );
 
@@ -2675,14 +2768,20 @@ inventory::submit! {
 
     #[test]
     fn a_module_path_is_read_through_the_src_boundary() {
+        let roots = crate_roots(&[
+            ("conform/vyre-conform", "vyre_conform"),
+            ("vyre-libs", "vyre_libs"),
+        ]);
+
         assert_eq!(
-            module_path_of("conform/vyre-conform/src/report/common/mod.rs").as_deref(),
+            module_path_of("conform/vyre-conform/src/report/common/mod.rs", &roots).as_deref(),
             Some("vyre_conform::report::common")
         );
         assert_eq!(
-            module_path_of("vyre-libs/src/types.rs").as_deref(),
+            module_path_of("vyre-libs/src/types.rs", &roots).as_deref(),
             Some("vyre_libs::types")
         );
+        assert_eq!(module_path_of("vyre-libs/src/types.rs", &[]), None);
     }
 
     #[test]
@@ -2693,6 +2792,7 @@ inventory::submit! {
                 "vyre-libs/src/graph/dispatch/mod.rs",
                 "vyre-libs/src/lib.rs",
             ]),
+            &crate_roots(&[("vyre-libs", "vyre_libs")]),
             &[],
         );
 

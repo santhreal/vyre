@@ -205,8 +205,11 @@ fn no_module_file_sits_beside_its_own_directory() {
 #[test]
 fn no_module_name_states_no_contract() {
     let workspace = workspace();
-    let failures =
-        generic_module_name_failures(&workspace.module_files, &workspace.published_modules);
+    let failures = generic_module_name_failures(
+        &workspace.module_files,
+        &workspace.crate_roots,
+        &workspace.published_modules,
+    );
 
     assert!(
         failures.is_empty(),
@@ -234,21 +237,29 @@ fn every_crate_in_the_checkout_is_judged() {
         workspace.crate_roots
     );
     for crate_root in &workspace.crate_roots {
-        let prefix = format!("{crate_root}/src/");
+        let prefix = format!("{}/src/", crate_root.directory);
         assert!(
             workspace
                 .module_files
                 .iter()
                 .any(|file| file.starts_with(&prefix)),
-            "`{crate_root}` declares a package and holds a src/ directory, but the module-file \
-             scan read nothing under it, so its layout is unjudged"
+            "`{}` declares a package and holds a src/ directory, but the module-file scan read \
+             nothing under it, so its layout is unjudged",
+            crate_root.directory
+        );
+        assert!(
+            !crate_root.ident.contains('-'),
+            "`{}` resolved to crate identifier `{}`, which no consumer can write; the \
+             public-API exemption would never match it",
+            crate_root.directory,
+            crate_root.ident
         );
     }
     assert!(
         workspace
             .crate_roots
             .iter()
-            .any(|crate_root| !workspace.members.contains(crate_root)),
+            .any(|crate_root| !workspace.members.contains(&crate_root.directory)),
         "every judged crate root is a workspace member, so a crate outside the workspace would \
          grow pairs unjudged. Roots: {:?}",
         workspace.crate_roots
