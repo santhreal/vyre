@@ -32,7 +32,7 @@ fn emit_ptx_module(
                 minor: profile.generation() as u32 % 10,
             },
             subgroup_size: profile.subgroup_size().max(1),
-            ulp_budget: None,
+            ulp_budget: Some(selected.f32_ulp_budget()),
             cooperative_grid_sync: true,
         },
     )
