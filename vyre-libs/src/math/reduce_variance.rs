@@ -8,7 +8,6 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 const OP_ID: &str = "vyre-libs::math::reduce_variance";
 #[cfg(test)]
 const REFERENCE_OP_ID: &str = "vyre-libs::math::reduce_variance_reference";
-const REDUCE_VARIANCE_TILE: u32 = 256;
 const EMPTY_REDUCTION_FIX: &str =
     "Fix: reduce_variance n=0 is invalid; pass at least one input element or route empty reductions to a caller-defined identity.";
 
@@ -43,7 +42,7 @@ fn reduce_variance_invalid_program(input: &str, output: &str) -> Program {
 }
 
 fn reduce_variance_tiled_program(input: &str, output: &str, n: u32, bessel: bool) -> Program {
-    let tile = REDUCE_VARIANCE_TILE;
+    let tile = 256_u32;
     let chunks = n.div_ceil(tile);
     let local = Expr::var("local");
     let idx = Expr::var("idx");

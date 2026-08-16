@@ -4199,6 +4199,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and the consumer boundary went through that compiled-in path and now ask the
   helper. `ConsumerBoundaryScan::for_crate` takes the crate directory as a
   path.
+- The workspace cargo runner no longer exports a workstation-specific target
+  directory, so hosted CI and new checkouts use their own writable Cargo
+  configuration.
 - Two CI jobs named cargo test targets that do not exist and would have failed
   with `no test target named` on the first run that reached them. The
   architecture gate ran `--test architecture_docs --test
@@ -4618,6 +4621,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   implementations gave one program two answers depending on which arm read it.
   `V113`, the malformed-alias-frame code the deleted copy raised, is retired
   from the registry and the code catalog.
+- Every cargo-fuzz job now installs and selects nightly, matching the sanitizer
+  flags the libFuzzer runner passes to rustc.
 - Every gate now resolves the checkout it reports on from the working directory
   at run time. Two checkouts of this repository that share one cargo target
   directory compute the same unit hash for a member, so cargo hands one
@@ -5826,6 +5831,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now takes `vyre-libs` with `default-features = false`, since it uses only
   `dispatch_buffers` and `graph`, so an optimizer-only consumer resolves seven
   primitive features instead of thirteen.
+- The workspace lockfile now records the TOML parser already declared by
+  vyre-libs, so locked builds resolve without modifying the checkout.
 - `vyre-lints` resolves the workspace root by walking ancestors for a manifest
   that declares `[workspace]`, and `--print-default-roots` prints those roots
   relative to it. A run from inside a member directory previously enumerated no

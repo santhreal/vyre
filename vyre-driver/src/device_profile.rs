@@ -7,6 +7,9 @@
 
 use vyre_foundation::optimizer::AdapterCaps;
 use vyre_foundation::validate;
+use vyre_foundation::geometry::{
+    CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
+};
 
 /// Quality class for backend timing data exposed through [`DeviceProfile`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -291,6 +294,114 @@ impl From<DeviceProfile> for validate::BackendCapabilities {
     #[inline]
     fn from(profile: DeviceProfile) -> Self {
         profile.validation_capabilities()
+    }
+}
+
+impl GeometryStrategy for DeviceProfile {
+    fn rank_geometries(
+        &self,
+        requirements: &GeometryRequirements,
+        problem_elements: u32,
+    ) -> Vec<LaunchGeometry> {
+        if requirements.min_shared_bytes > self.max_shared_memory_bytes
+            && self.max_shared_memory_bytes > 0
+        {
+            return Vec::new();
+        }
+
+        let max_x = self
+            .max_invocations_per_workgroup
+            .min(self.max_workgroup_size[0])
+            .max(1);
+        let warp_floor = if self.subgroup_size > 0 {
+            self.subgroup_size.min(max_x).max(1)
+        } else {
+            1
+        };
+
+        let allowed_widths: Vec<u32> = match requirements.cooperative_width {
+            CooperativeWidth::Exactly(exact) => {
+                if exact <= max_x && exact > 0 {
+                    vec![exact]
+                } else {
+                    return Vec::new();
+                }
+            }
+            CooperativeWidth::AtLeast(min_w) => {
+                if min_w > max_x {
+                    return Vec::new();
+                }
+                let mut widths = Vec::new();
+                let mut w = min_w.max(1).next_power_of_two();
+                while w <= max_x {
+                    widths.push(w);
+                    match w.checked_mul(2) {
+                        Some(next) if next > w => w = next,
+                        _ => break,
+                    }
+                }
+                widths
+            }
+            CooperativeWidth::Agnostic => {
+                let mut widths = Vec::new();
+                let start = warp_floor.next_power_of_two();
+                let mut w = 1_u32;
+                while w <= max_x {
+                    if w >= start || w == 1 {
+                        widths.push(w);
+                    }
+                    match w.checked_mul(2) {
+                        Some(next) if next > w => w = next,
+                        _ => break,
+                    }
+                }
+                if widths.is_empty() {
+                    widths.push(max_x);
+                }
+                widths
+            }
+        };
+
+        let epi = match requirements.per_invocation_elements {
+            ElementPolicy::Scalar => 1,
+            ElementPolicy::Multiple(factor) => factor.max(1),
+            ElementPolicy::Any => 1,
+        };
+
+        let mut candidates: Vec<LaunchGeometry> = allowed_widths
+            .into_iter()
+            .map(|w| {
+                let elements_per_wg = (w as u64).saturating_mul(epi as u64).max(1);
+                let grid_x = if problem_elements == 0 {
+                    1
+                } else {
+                    ((problem_elements as u64).div_ceil(elements_per_wg) as u32).max(1)
+                };
+                LaunchGeometry {
+                    workgroup: [w, 1, 1],
+                    grid: [grid_x, 1, 1],
+                    elements_per_invocation: epi,
+                    pipeline_stages: 1,
+                    shared_bytes: requirements.min_shared_bytes,
+                }
+            })
+            .collect();
+
+        candidates.sort_by(|a, b| {
+            let width_a = a.workgroup[0];
+            let width_b = b.workgroup[0];
+            if problem_elements >= 1024 {
+                width_b.cmp(&width_a)
+            } else if problem_elements > 0 {
+                let cover_a = (width_a * a.elements_per_invocation).abs_diff(problem_elements);
+                let cover_b = (width_b * b.elements_per_invocation).abs_diff(problem_elements);
+                cover_a.cmp(&cover_b).then_with(|| width_b.cmp(&width_a))
+            } else {
+                width_b.cmp(&width_a)
+            }
+        });
+
+        candidates
     }
 }
 

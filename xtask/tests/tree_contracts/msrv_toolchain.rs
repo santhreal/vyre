@@ -93,3 +93,52 @@ fn normal_feature_msrv_preserves_standard_gate_report() {
         "Fix: normal gate execution must end with standard finding count summary: {stdout}"
     );
 }
+
+/// WHY: `cargo-fuzz` installs on stable, but the libFuzzer runner passes `-Z`
+/// sanitizer flags and therefore requires nightly. The smoke workflow installed
+/// and selected stable, so every fuzz target failed before reading one byte.
+/// The job set is derived from the workflow so a new fuzz job is covered.
+#[test]
+fn every_cargo_fuzz_job_selects_nightly() {
+    let root = workspace_root();
+    let workflow = std::fs::read_to_string(root.join(".github/workflows/fuzz.yml"))
+        .expect("Fix: the fuzz workflow must be readable");
+    let mut job = "<none>";
+    let mut toolchain = None;
+    let mut installs = 0usize;
+
+    for line in workflow.lines() {
+        if line.starts_with("  ")
+            && !line.starts_with("    ")
+            && line.trim_end().ends_with(':')
+        {
+            job = line.trim().trim_end_matches(':');
+            toolchain = None;
+        }
+
+        let trimmed = line.trim();
+        if let Some(selected) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
+            toolchain = Some(selected);
+        }
+        if !trimmed.contains("install --locked cargo-fuzz") {
+            continue;
+        }
+
+        installs += 1;
+        assert_eq!(
+            toolchain,
+            Some("nightly"),
+            "Fix: fuzz job `{job}` must select nightly before installing cargo-fuzz"
+        );
+        assert_eq!(
+            trimmed,
+            "run: cargo +nightly install --locked cargo-fuzz",
+            "Fix: fuzz job `{job}` must install cargo-fuzz with the selected nightly toolchain"
+        );
+    }
+
+    assert!(
+        installs > 0,
+        "Fix: the fuzz workflow contains no cargo-fuzz install, so this contract guards nothing"
+    );
+}
