@@ -21,10 +21,10 @@ itself instead of surfacing as an arbitrary parse failure further in.
 | Constant | Value |
 |---|---|
 | `MAGIC` | `b"VYRE"` |
-| `WIRE_FORMAT_VERSION` | 6 |
+| `WIRE_FORMAT_VERSION` | 7 |
 | `MIN_SUPPORTED_WIRE_FORMAT_VERSION` | 4 |
 
-This decoder reads versions 4 through 6 and writes 6. Version 2 was never
+This decoder reads versions 4 through 7 and writes 7. Version 2 was never
 released.
 
 ## Bounds are checked before allocation
