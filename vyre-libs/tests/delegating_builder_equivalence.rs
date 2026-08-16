@@ -79,6 +79,88 @@ mod op_id_forms_math {
     }
 }
 
+#[cfg(feature = "solvers")]
+mod op_id_forms_pipeline {
+    use vyre_libs::math::prefix_scan::{
+        prefix_scan_large_with_op_id, prefix_scan_with_op_id, ScanKind, OP_ID_EXCLUSIVE_SUM,
+        OP_ID_INCLUSIVE_SUM,
+    };
+    use vyre_libs::solvers::dataflow_compaction_pipeline::{
+        dispatch_prefix_scan, dispatch_prefix_scan_large, dispatch_prefix_scan_large_with_op_id,
+        dispatch_prefix_scan_with_op_id,
+    };
+
+    #[test]
+    fn the_pipeline_scan_facade_forwards_every_argument_including_the_op_id() {
+        for (kind, op_id) in [
+            (ScanKind::InclusiveSum, OP_ID_INCLUSIVE_SUM),
+            (ScanKind::ExclusiveSum, OP_ID_EXCLUSIVE_SUM),
+        ] {
+            let facade = dispatch_prefix_scan_with_op_id("in", "out", 8, kind, op_id);
+            let direct = prefix_scan_with_op_id("in", "out", 8, kind, op_id);
+            assert!(
+                facade.structural_eq(&direct),
+                "Fix: dispatch_prefix_scan_with_op_id must build the same program as \
+                 prefix_scan_with_op_id for {kind:?} with op id {op_id}."
+            );
+            assert!(
+                dispatch_prefix_scan("in", "out", 8, kind).structural_eq(&direct),
+                "Fix: dispatch_prefix_scan must select the same id the explicit form is given \
+                 for {kind:?}."
+            );
+            let caller_id = dispatch_prefix_scan_with_op_id("in", "out", 8, kind, "caller::id");
+            assert!(
+                !facade.structural_eq(&caller_id),
+                "Fix: the op id the facade is handed must reach the program identity for \
+                 {kind:?}, otherwise the equality above proves nothing."
+            );
+            let swapped = dispatch_prefix_scan_with_op_id("out", "in", 8, kind, op_id);
+            assert!(
+                !facade.structural_eq(&swapped),
+                "Fix: swapping the input and output buffer names must change the program for \
+                 {kind:?}; if it does not, the facade is dropping a forwarded argument."
+            );
+        }
+    }
+
+    #[test]
+    fn the_pipeline_large_scan_facade_forwards_across_its_three_regimes() {
+        // Empty, single-workgroup and multi-block are three different programs
+        // behind one entry, so a facade that dropped an argument on one branch
+        // would pass a check that only exercises another.
+        for n in [0, 8, 4096] {
+            let facade = dispatch_prefix_scan_large_with_op_id("in", "out", n, OP_ID_INCLUSIVE_SUM);
+            let direct = prefix_scan_large_with_op_id("in", "out", n, OP_ID_INCLUSIVE_SUM);
+            assert!(
+                facade.structural_eq(&direct),
+                "Fix: dispatch_prefix_scan_large_with_op_id must build the same program as \
+                 prefix_scan_large_with_op_id at n = {n}."
+            );
+            assert!(
+                dispatch_prefix_scan_large("in", "out", n).structural_eq(&direct),
+                "Fix: dispatch_prefix_scan_large must select the inclusive-sum id at n = {n}."
+            );
+            assert!(
+                !facade.structural_eq(&dispatch_prefix_scan_large_with_op_id(
+                    "in",
+                    "out",
+                    n,
+                    "caller::id"
+                )),
+                "Fix: the supplied op id must reach the program identity at n = {n}."
+            );
+            let swapped =
+                dispatch_prefix_scan_large_with_op_id("out", "in", n, OP_ID_INCLUSIVE_SUM);
+            assert!(
+                !facade.structural_eq(&swapped),
+                "Fix: swapping the input and output buffer names must change the program at \
+                 n = {n}; if it does not, the facade is dropping a forwarded argument. The \
+                 empty regime is included because it still declares both buffers."
+            );
+        }
+    }
+}
+
 #[cfg(feature = "graph")]
 mod params_struct_forms {
     use vyre_foundation::ir::Program;
@@ -342,7 +424,7 @@ mod closure {
 
     #[test]
     fn every_published_delegating_form_is_compared_here() {
-        let crate_dir: PathBuf = vyre_crate_directory("vyre-primitives");
+        let crate_dir: PathBuf = vyre_crate_directory(env!("CARGO_PKG_NAME"));
         let mut sources = Vec::new();
         collect_rust_files(&crate_dir.join("src"), &mut sources);
         let declared: BTreeSet<String> = sources

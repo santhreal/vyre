@@ -123,12 +123,36 @@ mod tests {
         );
     }
 
+    /// WHY: a classified domain names a Cargo feature that gates a module
+    /// directory in this crate. A name that gates nothing is a classification
+    /// nobody can act on, and a directory renamed without its class entry
+    /// leaves the feature switching on an absent module. Pinning the class to a
+    /// literal member set instead would go stale the first time a second
+    /// hardware intrinsic domain is admitted, which the lego block rule allows.
     #[test]
-    fn hardware_is_the_only_intrinsic_domain() {
-        assert_eq!(INTRINSIC_FEATURES, &["hardware"]);
+    fn every_classified_domain_gates_a_module_in_this_crate() {
+        let src = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
+            .join("src");
+        let domains: Vec<&str> = INTRINSIC_FEATURES
+            .iter()
+            .chain(COMPOSITION_FEATURES)
+            .copied()
+            .collect();
+        assert!(
+            !domains.is_empty(),
+            "Fix: this crate carries no classified domain, so no operation in it is reachable through a domain feature"
+        );
+        for name in domains {
+            let module = src.join(name);
+            assert!(
+                module.join("mod.rs").is_file(),
+                "Fix: feature `{name}` is classified as a domain but {} declares no module; classify it as support or add the module",
+                module.display()
+            );
+        }
         assert!(
             !COMPOSITION_FEATURES.contains(&"hardware"),
-            "Fix: hardware must not be classified as a composition"
+            "Fix: hardware is a hardware intrinsic, not a composition"
         );
     }
 
