@@ -1159,14 +1159,3 @@ required-features = ["cpu-parity", "label"]
 name = "graph_primitive_binding_contracts"
 path = "tests/graph_primitive_binding_contracts.rs"
 required-features = ["graph"]
-
-
-[[test]]
-name = "literal_set_presence_and_positions_reference"
-path = "tests/literal_set_presence_and_positions_reference.rs"
-required-features = ["cpu-parity", "matching-substring"]
-
-[[test]]
-name = "literal_set_presence_reference"
-path = "tests/literal_set_presence_reference.rs"
-required-features = ["cpu-parity", "matching-substring"]
