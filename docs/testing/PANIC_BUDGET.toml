@@ -3,9 +3,11 @@
 # `cargo xtask hygiene-matrix` classifies every panicking call it finds. A call
 # whose function documents a `# Panics` section is a documented contract and is
 # not counted here. A call on a file listed in `docs/optimization/HOT_PATHS.toml`
-# is a release blocker whatever its documentation says. What is left is a panic
-# that is neither documented nor on the release surface, and until this file
-# existed nothing bounded it.
+# is a release blocker whatever its documentation says. A call in a module its
+# parent declares under `#[cfg(test)]` is test code, because no build outside
+# `cargo test` compiles it; a module a feature can also turn on is not. What is
+# left is a panic that is neither documented nor on the release surface, and
+# until this file existed nothing bounded it.
 #
 # The ceiling is per crate because the crate is who fixes it, and it is checked
 # in both directions. A crate over its ceiling fails: document the contract,

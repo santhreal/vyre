@@ -317,30 +317,32 @@ fn end_of_item(text: &str, from: usize) -> Option<usize> {
 /// that turns the feature on, so it stays production code here.
 #[must_use]
 pub fn test_gated_module_files(root: &Path) -> BTreeSet<String> {
-    let mut directories = BTreeSet::new();
-    let mut files = BTreeSet::new();
-    for (file, text) in rust_sources_with_text(root) {
+    let sources: Vec<(String, String)> = rust_sources_with_text(root).collect();
+    let mut declared = BTreeSet::new();
+    for (file, text) in &sources {
         let Some((parent, _)) = file.rsplit_once('/') else {
             continue;
         };
-        for span in cfg_test_spans_detailed(&text) {
+        for span in cfg_test_spans_detailed(text) {
             if !span.test_only {
                 continue;
             }
             let Some(name) = declared_module_name(&text[span.start..span.end]) else {
                 continue;
             };
-            let home = module_home(parent, &file);
-            files.insert(format!("{home}/{name}.rs"));
-            directories.insert(format!("{home}/{name}/"));
+            declared.insert(format!("{}/{name}", module_home(parent, file)));
         }
     }
-    for (file, _) in rust_sources_with_text(root) {
-        if directories.iter().any(|prefix| file.starts_with(prefix)) {
-            files.insert(file);
-        }
-    }
-    files
+    sources
+        .into_iter()
+        .map(|(file, _)| file)
+        .filter(|file| {
+            declared.iter().any(|module| {
+                file.strip_prefix(module)
+                    .is_some_and(|rest| rest == ".rs" || rest.starts_with('/'))
+            })
+        })
+        .collect()
 }
 
 /// Directory a module declared in `file` looks for its children in.

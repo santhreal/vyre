@@ -35,33 +35,57 @@ fn a_production_module_is_not_reported() {
     }
 }
 
-/// The set covers the whole subtree of a gated directory module.
+/// The set covers the whole subtree of a gated directory module, and no more.
 ///
-/// A gated `mod tests;` whose body is `tests/mod.rs` reaches every file under
-/// `tests/`, and stopping at the declaration would hold each of those to a
-/// production contract.
+/// A gated `mod fixtures;` whose body is `fixtures/mod.rs` reaches every file
+/// under `fixtures/`, and stopping at the declaration would hold each of those
+/// to a production contract. A file whose name merely starts with the module's
+/// is a different module and stays out.
 #[test]
 fn every_file_under_a_gated_directory_is_reported() {
-    let gated = test_gated_module_files(&workspace_root());
-    let root = workspace_root();
-    let directories: Vec<String> = gated
-        .iter()
-        .filter(|file| root.join(file.trim_end_matches(".rs")).is_dir())
-        .cloned()
-        .collect();
-    assert!(
-        !directories.is_empty(),
-        "Fix: the tree declares no gated directory module, so this case proves nothing"
+    let tree = tempfile::tempdir().expect("Fix: the fixture root must be creatable.");
+    let source = tree.path().join("demo/src");
+    std::fs::create_dir_all(source.join("fixtures/deep"))
+        .expect("Fix: the fixture source tree must be creatable.");
+    std::fs::write(
+        source.join("lib.rs"),
+        "#[cfg(test)]\nmod fixtures;\npub mod fixtures_registry;\n",
+    )
+    .expect("Fix: the fixture crate root must be writable.");
+    for file in [
+        "fixtures/mod.rs",
+        "fixtures/helper.rs",
+        "fixtures/deep/inner.rs",
+        "fixtures_registry.rs",
+    ] {
+        std::fs::write(source.join(file), "").expect("Fix: a fixture module must be writable.");
+    }
+
+    let gated = test_gated_module_files(tree.path());
+
+    assert_eq!(
+        gated.into_iter().collect::<Vec<_>>(),
+        vec![
+            "demo/src/fixtures/deep/inner.rs".to_string(),
+            "demo/src/fixtures/helper.rs".to_string(),
+            "demo/src/fixtures/mod.rs".to_string(),
+        ],
+        "Fix: a gated directory module reaches its whole subtree and nothing beside it"
     );
-    for declaration in directories {
-        let home = declaration.trim_end_matches(".rs");
-        let child = format!("{home}/mod.rs");
-        if root.join(&child).is_file() {
-            assert!(
-                gated.contains(&child),
-                "Fix: {child} sits under the gated module {declaration} and is not in the set"
-            );
-        }
+}
+
+/// Every path the set names is a file the tree holds.
+///
+/// A caller opens what the set names. Reporting `<name>.rs` beside a directory
+/// module that has no such file hands out a path that cannot be read.
+#[test]
+fn every_reported_path_is_a_file() {
+    let root = workspace_root();
+    for file in test_gated_module_files(&root) {
+        assert!(
+            root.join(&file).is_file(),
+            "Fix: {file} is in the set and the tree has no such file"
+        );
     }
 }
 
