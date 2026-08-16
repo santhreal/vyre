@@ -112,3 +112,104 @@ fn tile_program_shared_memory_overflow_rejected() {
     let res = validate_with_options(&prog, opts);
     assert!(!res.is_ok());
 }
+
+#[test]
+fn tile_program_rejects_subgroup_incompatibility() {
+    let tile_unaligned = Tile::new(
+        DataType::F32,
+        vec![15], // 15 elements is not a multiple of subgroup size 32
+        Layout::RowMajor,
+        Residency::Subgroup,
+    );
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(100),
+            BufferDecl::output("out", 1, DataType::F32).with_count(100),
+        ],
+        [32, 1, 1],
+        vec![Node::tile_decl("unaligned_tile", tile_unaligned)],
+    );
+
+    let caps = BackendCapabilities {
+        supports_tensor_cores: true,
+        max_shared_memory_bytes: 65536,
+        regs_per_thread_max: 255,
+        subgroup_size: 32,
+        ..BackendCapabilities::default()
+    };
+    let opts = ValidationOptions::default().with_backend_capabilities(caps);
+    let res = validate_with_options(&prog, opts);
+    assert!(!res.is_ok());
+}
+
+#[test]
+fn tile_program_rejects_register_overflow() {
+    let tile_huge_reg = Tile::new(
+        DataType::F32,
+        vec![64, 64], // 4096 floats = 4096 words > 255 regs
+        Layout::RowMajor,
+        Residency::Register,
+    );
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4096),
+            BufferDecl::output("out", 1, DataType::F32).with_count(4096),
+        ],
+        [32, 1, 1],
+        vec![Node::tile_decl("huge_reg_tile", tile_huge_reg)],
+    );
+
+    let caps = BackendCapabilities {
+        supports_tensor_cores: true,
+        max_shared_memory_bytes: 65536,
+        regs_per_thread_max: 255,
+        subgroup_size: 32,
+        ..BackendCapabilities::default()
+    };
+    let opts = ValidationOptions::default().with_backend_capabilities(caps);
+    let res = validate_with_options(&prog, opts);
+    assert!(!res.is_ok());
+}
+
+#[test]
+fn tile_program_rejects_write_only_load_and_read_only_store() {
+    let tile = Tile::new(DataType::F32, vec![4, 4], Layout::RowMajor, Residency::Register);
+    let prog_bad_load = Program::wrapped(
+        vec![
+            BufferDecl::storage("wo_buf", 0, BufferAccess::WriteOnly, DataType::F32).with_count(16),
+            BufferDecl::output("out", 1, DataType::F32).with_count(16),
+        ],
+        [32, 1, 1],
+        vec![Node::tile_load("t", tile.clone(), "wo_buf", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor)],
+    );
+    let res_load = validate_with_options(&prog_bad_load, ValidationOptions::default());
+    assert!(!res_load.is_ok());
+
+    let prog_bad_store = Program::wrapped(
+        vec![
+            BufferDecl::storage("ro_buf", 0, BufferAccess::ReadOnly, DataType::F32).with_count(16),
+            BufferDecl::output("out", 1, DataType::F32).with_count(16),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::tile_decl("t", tile),
+            Node::tile_store("ro_buf", vec![Expr::u32(0), Expr::u32(0)], "t"),
+        ],
+    );
+    let res_store = validate_with_options(&prog_bad_store, ValidationOptions::default());
+    assert!(!res_store.is_ok());
+}
+
+#[test]
+fn tile_encoder_rejects_over_limit_extents() {
+    use vyre_foundation::serial::wire::MAX_TENSOR_RANK;
+    let huge_extents = vec![1u32; MAX_TENSOR_RANK + 1];
+    let tile = Tile::new(DataType::F32, huge_extents, Layout::RowMajor, Residency::Register);
+    let prog = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::tile_decl("huge", tile)],
+    );
+    let err = to_wire(&prog).expect_err("should reject over-limit extents");
+    assert!(err.contains("Fix:"));
+}

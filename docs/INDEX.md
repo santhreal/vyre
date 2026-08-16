@@ -24,7 +24,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 
 ## Lifecycle counts
 
-- current: 17.
+- current: 18.
 - generated: 37.
 - superseded: 0.
 - archived: 33.
@@ -75,6 +75,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/stability.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/0.7-2026-08-15/wire-format-0.6-reservations.md` | self | manual |
 | `current` | `contributor` | `testing` | `testing` | `conformance/program.md` | self | manual |
+| `current` | `contributor` | `architecture` | `architecture` | `design/tile-values.md` | self | manual |
 | `current` | `extension` | `architecture` | `lifecycle` | `extending/backend.md` | self | manual |
 | `current` | `extension` | `operation-registry` | `lifecycle` | `extending/operation.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `guide/backends.md` | self | manual |

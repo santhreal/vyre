@@ -190,6 +190,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   a failure, so a new member or feature is red until a decision is recorded for
   it. The declaration half runs inside the gate sweep; the compile half is
   `--sweep` and CI owns it.
+- The IR now supports first-class Tile values with explicit element type,
+  static extents, layout, and hardware residency, introducing dedicated
+  TileLoad, TileStore, TileMatmul, TileReduce, TileElementwise, and TileDecl
+  statement nodes, capability validation, reference interpreter execution, and
+  VIR0 schema version 7 serialization.
 - `vyre_foundation::fp_parity::max_output_ulp` reports the largest ULP distance
   over a program's declared F32 output slots. Output-slot alignment is one
   internal walk shared with the tolerance comparison. The conform ULP audit
@@ -2429,11 +2434,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   chebyshev_recurrence are vyre_libs::math. nodeset_filter is
   vyre_libs::label::nodeset_filter, under label rather than predicate because
   predicate already reaches label and the reverse edge would invert that
-  closure. demote_intermediate_outputs is vyre_libs::program_outputs. lane_grid
-  has one owner reachable as vyre_primitives::lane_grid and the graph re-export
-  of it is deleted. The unsigned helper in the visual dialect that shared the
-  name fixed_mul_16_16_expr is now fixed_mul_16_16_unsigned_expr; it delegates
-  to wide_mul_shr_u32 and builds the same nodes as before. The graph scratch
+  closure. demote_intermediate_outputs is
+  vyre_libs::plumbing::program::outputs. lane_grid has one owner reachable as
+  vyre_primitives::lane_grid and the graph re-export of it is deleted. The
+  unsigned helper in the visual dialect that shared the name
+  fixed_mul_16_16_expr is now fixed_mul_16_16_unsigned_expr; it delegates to
+  wide_mul_shr_u32 and builds the same nodes as before. The graph scratch
   reservation helpers fold into the crate scratch owner as reserve_items,
   reserve_capacity, reserve_items_with and resize_vec.
 - Six source files over their measured ceiling are split along the boundaries
@@ -2795,10 +2801,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   module and field documentation names the concern each policy decides instead
   of an internal plan label.
 - `vyre-libs` no longer reaches across dialect boundaries in private code.
-  `telemetry` is a crate-root module rather than a one-file directory, because
-  counters instrument every dialect and belong to none; `scratch` and
-  `dispatch_program_cache` sit at the crate root beside `dispatch_buffers`,
-  because host dispatch plumbing is not a dialect either. The
+  `telemetry` has one owner rather than a one-file directory, because counters
+  instrument every dialect and belong to none; the scratch reservation, the
+  host program cache and the dispatch byte marshalling sit together under
+  `plumbing::host`, because host dispatch plumbing is not a dialect either. The
   `analysis::dataflow_fixpoint` re-export of the foundation substrate is
   deleted, so the closure family has one path instead of two, and every caller
   names the owner. Composition that crosses dialects names the module that owns
@@ -2810,6 +2816,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   measured. What remains between the three match-emitting entry points is their
   frozen positional signatures and the shared value they each construct from
   them, which no owner can absorb without changing the public ABI.
+- The vyre-libs crate root is a table of contents. Fourteen loose files sat
+  beside twenty-five dialect directories, so the root did not say what the
+  crate is. Each one now sits under the concern it serves: buffer names, tensor
+  references and operand shape under plumbing::operand, program introspection
+  and fused-output demotion under plumbing::program, type signatures, contract
+  presets and the catalog view under plumbing::registration, operand
+  marshalling, scratch reservation, the shape-keyed program cache and the
+  composition counters under plumbing::host, and the byte-range ordering
+  predicates and the builder registrations under builder. Every path that was
+  public is still public at the same spelling, and no operation id,
+  registration or built program changed.
 - `vyre_lints::read_source_bounded` is public surface with its bound stated,
   and `vyre_lints::LINT_SOURCE_READ_CAP` is public beside it so the number a
   caller is refused at has one home instead of a constant and a sentence that
@@ -3527,6 +3544,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   straight to `u64`, so a reference slower than roughly 18 seconds was reported
   as a small number instead of a large one, inverting the speedup it was
   compared against.
+- A benchmark performance contract may only name a CPU baseline this checkout
+  can run. Ten release workload rows advertised tree-sitter, libclang,
+  Hyperscan, ripgrep, egg and unnamed SIMD or optimized CPU implementations,
+  bigint.modexp.4096 named rug 1.27 with a GMP backend, and interpreter named a
+  hand-tuned C threaded interpreter with computed goto. None of those were
+  linked: every one of those cases timed an in-tree scalar Rust routine. The
+  labels now come from one owner that describes the routine actually timed, and
+  a new contract test resolves every named crate against the workspace members
+  and the vyre-bench dependency tables read at run time, so a case that invents
+  a competitor fails instead of shipping. The baselines that do run, faer,
+  openssl, hashbrown, pcre2 and rayon, are unchanged.
 - Enforced benchmark contract failures now retain correctness, timing metrics,
   device identity, and measured speedup in the failed case report instead of
   collapsing into an unprobed error shell.
@@ -4744,6 +4772,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   feature instead of a list kept by hand, and the regenerated documents are
   byte-identical, which is the proof that the documents were right and the edge
   was wrong.
+- The release macro benchmarks no longer time a CPU baseline that rebuilds its
+  own input. `synthetic_cpu_count` regenerated every record from its index
+  inside the timed region, twelve to twenty-four rotate-multiply rounds per
+  column, while the GPU side was handed pre-materialized, pre-uploaded buffers.
+  The recorded evidence read 5508x to 6729x for the count patterns and 928x for
+  the one case that already read materialized bitmaps, and the gap was the
+  generator, not the device. `synthetic_cpu_count_over_inputs` now counts over
+  the same host buffers the device reads and the generator cross-check happens
+  outside the clock. Re-measured on the shipping path,
+  release.condition_eval.1m reports 165.708x with a 4422427 ns baseline p50,
+  and no speedup pin had to move.
 - Four release surfaces named documents the book deletion removed, and each
   failed open. `release_contract_path` pointed at `docs/RELEASE.md` and now
   names `release-train.toml`, the surviving authority for versions, tags,

@@ -1,6 +1,6 @@
 # Tile values in the IR
 
-Status: specification. Nothing here is implemented yet.
+Status: implemented.
 
 ## What is missing
 

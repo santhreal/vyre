@@ -58,6 +58,14 @@ rejected before the stack frame is pushed.
 Lengths are written as `u32` rather than `usize` so the blob does not
 depend on the pointer width of the host that produced it.
 
+
+## Tile values and nodes
+
+Version 7 introduces first-class tile values and dedicated tile nodes (`TileLoad`,
+`TileStore`, `TileMatmul`, `TileReduce`, `TileElementwise`, `TileDecl`). Tile
+extents, layout swizzle permutation vectors, origin vectors, and elementwise
+input lists are bounds-checked symmetrically in the encoder and decoder against
+`MAX_TENSOR_RANK` and `MAX_ARGS` before serialization or allocation.
 ## What is proved
 
 `vyre/tests/wire_v1_round_trip.rs` covers the round trip, encoder

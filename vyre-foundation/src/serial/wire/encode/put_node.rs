@@ -3,7 +3,7 @@
 use super::{put_expr, put_nodes};
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{put_len_u32, put_string, put_u32, put_u8};
-use crate::serial::wire::{Node, MAX_OPAQUE_PAYLOAD_LEN};
+use crate::serial::wire::{Node, MAX_ARGS, MAX_OPAQUE_PAYLOAD_LEN, MAX_TENSOR_RANK};
 use crate::ir::{Layout, Residency, Tile};
 use crate::serial::wire::tags::put_data_type;
 
@@ -22,6 +22,15 @@ fn put_layout(out: &mut Vec<u8>, layout: &Layout) -> Result<(), WireEncodeErr> {
         Layout::ColumnMajor => put_u8(out, 1),
         Layout::Swizzled { permutation, period } => {
             put_u8(out, 2);
+            if permutation.len() > MAX_TENSOR_RANK {
+                return Err(WireEncodeErr::fmt_usize2(
+                    "Fix: swizzled permutation length ",
+                    permutation.len(),
+                    " exceeds wire-format limit ",
+                    MAX_TENSOR_RANK,
+                    "; cap permutation before serialization.",
+                ));
+            }
             put_len_u32(out, permutation.len(), "permutation count")?;
             for &p in permutation {
                 put_u32(out, p);
@@ -34,6 +43,15 @@ fn put_layout(out: &mut Vec<u8>, layout: &Layout) -> Result<(), WireEncodeErr> {
 
 fn put_tile(out: &mut Vec<u8>, tile: &Tile) -> Result<(), WireEncodeErr> {
     put_data_type(out, &tile.element)?;
+    if tile.extents.len() > MAX_TENSOR_RANK {
+        return Err(WireEncodeErr::fmt_usize2(
+            "Fix: tile extents count ",
+            tile.extents.len(),
+            " exceeds wire-format limit ",
+            MAX_TENSOR_RANK,
+            "; cap extents before serialization.",
+        ));
+    }
     put_len_u32(out, tile.extents.len(), "tile extents count")?;
     for &extent in &tile.extents {
         put_u32(out, extent);
@@ -253,6 +271,15 @@ pub fn put_node(out: &mut Vec<u8>, node: &Node) -> Result<(), WireEncodeErr> {
             put_string(out, tile.as_str())?;
             put_tile(out, tile_type)?;
             put_string(out, buffer.as_str())?;
+            if origin.len() > MAX_TENSOR_RANK {
+                return Err(WireEncodeErr::fmt_usize2(
+                    "Fix: tile origin count ",
+                    origin.len(),
+                    " exceeds wire-format limit ",
+                    MAX_TENSOR_RANK,
+                    "; cap origin before serialization.",
+                ));
+            }
             put_len_u32(out, origin.len(), "tile origin count")?;
             for expr in origin {
                 put_expr(out, expr)?;
@@ -266,6 +293,15 @@ pub fn put_node(out: &mut Vec<u8>, node: &Node) -> Result<(), WireEncodeErr> {
         } => {
             put_u8(out, 20);
             put_string(out, buffer.as_str())?;
+            if origin.len() > MAX_TENSOR_RANK {
+                return Err(WireEncodeErr::fmt_usize2(
+                    "Fix: tile origin count ",
+                    origin.len(),
+                    " exceeds wire-format limit ",
+                    MAX_TENSOR_RANK,
+                    "; cap origin before serialization.",
+                ));
+            }
             put_len_u32(out, origin.len(), "tile origin count")?;
             for expr in origin {
                 put_expr(out, expr)?;
@@ -297,6 +333,15 @@ pub fn put_node(out: &mut Vec<u8>, node: &Node) -> Result<(), WireEncodeErr> {
         } => {
             put_u8(out, 23);
             put_string(out, out_name.as_str())?;
+            if inputs.len() > MAX_ARGS {
+                return Err(WireEncodeErr::fmt_usize2(
+                    "Fix: tile elementwise inputs count ",
+                    inputs.len(),
+                    " exceeds wire-format limit ",
+                    MAX_ARGS,
+                    "; cap input count before serialization.",
+                ));
+            }
             put_len_u32(out, inputs.len(), "tile elementwise inputs")?;
             for input in inputs {
                 put_string(out, input.as_str())?;
