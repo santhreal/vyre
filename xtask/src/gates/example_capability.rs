@@ -448,10 +448,7 @@ mod tests {
     /// the gate into one that skips its own subject.
     #[test]
     fn every_tracked_template_placeholder_has_a_value() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("xtask sits in the workspace root")
-            .to_path_buf();
+        let root = structure_gate::workspace_root();
         let tracked = tracked_example_paths(&root).expect("the checkout tracks its examples");
         let mut unknown = Vec::new();
         for paths in tracked.values() {
@@ -480,10 +477,7 @@ mod tests {
     /// a path that does not exist.
     #[test]
     fn the_patch_table_names_every_declared_dependency_this_checkout_provides() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("xtask sits in the workspace root")
-            .to_path_buf();
+        let root = structure_gate::workspace_root();
 
         let section = checkout_patch_section(
             &root,
@@ -515,10 +509,7 @@ mod tests {
     /// consumer outside the tree gets.
     #[test]
     fn a_manifest_without_its_own_workspace_is_a_finding() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("xtask sits in the workspace root")
-            .to_path_buf();
+        let root = structure_gate::workspace_root();
 
         let isolated =
             workspace_isolation_findings(&root, "examples/libs-template/Cargo.toml.liquid");
