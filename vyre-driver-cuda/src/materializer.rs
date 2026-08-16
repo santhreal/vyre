@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 use vyre_driver::materialize::{
-    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
+    self, DeviceSpec, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
     MaterializerDevice, ResidentInstance,
 };
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, CompiledPipeline,
-    DeviceIdentity, DispatchConfig, ResidentOwner, Submission, TimedDispatchResult,
+    DispatchConfig, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, TargetPayload};
 
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
@@ -150,24 +150,18 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
         code: None,
         message: format!("CUDA artifact device acquisition failed: {message}"),
     })?;
-    let format = TargetPayloadFormat::new("ptx", 1)
-        .map_err(|error| materialize::compile_error(CUDA_BACKEND_ID, error))?;
-    let profile = crate::target_compiler::target_profile()?;
-    let generation = ResidentOwner::new()?.get();
     let device = backend.caps.name.clone();
     Ok(Box::new(CudaMaterializer {
         resident: CudaBackendRegistration {
             inner: backend.clone(),
         },
         backend,
-        descriptor: MaterializerDevice::new(
-            DeviceIdentity {
-                backend: CUDA_BACKEND_ID,
-                device,
-                generation,
-            },
-            format,
-            profile,
-        ),
+        descriptor: MaterializerDevice::acquire(DeviceSpec {
+            backend: CUDA_BACKEND_ID,
+            device,
+            format_extension: "ptx",
+            format_version: 1,
+            profile: crate::target_compiler::target_profile()?,
+        })?,
     }))
 }

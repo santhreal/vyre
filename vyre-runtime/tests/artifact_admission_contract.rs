@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
 
-use vyre_driver::materialize::MaterializerDevice;
+use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_driver::BackendRegistration;
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
@@ -556,7 +556,6 @@ fn cached_envelope_payload_admits_and_miss_is_none() {
     );
 }
 
-static MATERIALIZER_GENERATION: AtomicU64 = AtomicU64::new(0);
 static MATERIALIZER_CALLS: AtomicU64 = AtomicU64::new(0);
 static TEST_SUPPORTED_OPS: LazyLock<HashSet<vyre_foundation::ir::OpId>> =
     LazyLock::new(HashSet::new);
@@ -669,17 +668,14 @@ fn test_supported_ops() -> &'static HashSet<vyre_foundation::ir::OpId> {
 
 fn test_materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     MATERIALIZER_CALLS.fetch_add(1, Ordering::AcqRel);
-    let generation = MATERIALIZER_GENERATION.fetch_add(1, Ordering::AcqRel) + 1;
     Ok(Box::new(TestMaterializer {
-        device: MaterializerDevice::new(
-            DeviceIdentity {
-                backend: "test-artifact",
-                device: "test-device".to_string(),
-                generation,
-            },
-            format("test.cache-target", 1),
-            profile("test.cache-target", 1),
-        ),
+        device: MaterializerDevice::acquire(DeviceSpec {
+            backend: "test-artifact",
+            device: "test-device".to_string(),
+            format_extension: "test.cache-target",
+            format_version: 1,
+            profile: profile("test.cache-target", 1),
+        })?,
     }))
 }
 
