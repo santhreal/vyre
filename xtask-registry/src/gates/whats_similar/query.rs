@@ -19,6 +19,73 @@ use super::report::{all_pairs_duplicate_report, target_duplicate_report};
 /// Score at or above which two operations are the same operation twice.
 const DUPLICATE_SCORE: f64 = 0.95;
 
+/// Pairs skipped because the two bodies match and the buffer contracts differ.
+///
+/// Measured 323 on 2026-08-15. A skip is not a note. A gate that reports zero
+/// findings while stepping over five hundred pairs has described the surface
+/// politely rather than judged it, so every class it steps over carries a
+/// ceiling: a pair added to the class is a duplicate nobody looked at and fails
+/// here, and the number moves down only when the pairs it counted left the
+/// registry.
+const CONTRACT_VARIANT_CEILING: usize = 323;
+
+/// Pairs skipped because both are routed through one centralized builder.
+///
+/// Measured 157 on 2026-08-15.
+const CENTRALIZED_FAMILY_CEILING: usize = 157;
+
+/// Pairs skipped because their families are recorded as distinct.
+///
+/// Measured 24 on 2026-08-15.
+const KNOWN_DISTINCT_FAMILY_CEILING: usize = 24;
+
+/// One skipped class, its measured ceiling and what the skip claims.
+struct SkipClass {
+    /// What the class is called in the report.
+    label: &'static str,
+    /// Pairs the scan stepped over for this reason.
+    counted: usize,
+    /// The measured ceiling the class is held to.
+    ceiling: usize,
+    /// What the class asserts about the pairs in it.
+    claim: &'static str,
+    /// What to do when the class grew.
+    fix: &'static str,
+}
+
+/// Judge each skipped class against its ceiling.
+///
+/// A class over its ceiling is one finding naming the class, because the pairs
+/// it hides are exactly the ones the scan was run to find. A class under its
+/// ceiling is reported the way the sweep reports an improved gate, so the
+/// number here follows the registry down instead of holding slack a later
+/// duplicate can grow into.
+fn skip_class_findings(report: &mut Report, classes: &[SkipClass]) {
+    for class in classes {
+        if class.counted > class.ceiling {
+            report.find(Finding::new(
+                format!(
+                    "`{}` skipped {} pair(s) against a measured {}; {}",
+                    class.label, class.counted, class.ceiling, class.claim
+                ),
+                class.fix,
+            ));
+        } else {
+            report.note(format!(
+                "  skipped {} pair(s) as {} ({}); {}",
+                class.counted,
+                class.label,
+                class.claim,
+                if class.counted < class.ceiling {
+                    format!("lower the ceiling from {} to {}", class.ceiling, class.counted)
+                } else {
+                    format!("at the measured ceiling of {}", class.ceiling)
+                }
+            ));
+        }
+    }
+}
+
 /// One finding for a pair that is the same shape twice.
 fn duplicate_finding(left: &str, right: &str, score: f64) -> Finding {
     Finding::new(
@@ -196,15 +263,32 @@ pub(super) fn run_all_pairs_query(
         eligible.len(),
         min_score,
         top_n));
-    if contract_variants > 0 {
-        report.note(format!("  skipped {contract_variants} same-body pairs with different buffer contracts; these are wrapper/variant candidates, not raw duplicate ops."));
-    }
-    if centralized_family_variants > 0 {
-        report.note(format!("  skipped {centralized_family_variants} same-family pairs already routed through a centralized builder."));
-    }
-    if distinct_family_variants > 0 {
-        report.note(format!("  skipped {distinct_family_variants} known-distinct implementation-family pairs with shared scaffolding but different semantics."));
-    }
+    skip_class_findings(
+        report,
+        &[
+            SkipClass {
+                label: "same-body pairs with different buffer contracts",
+                counted: contract_variants,
+                ceiling: CONTRACT_VARIANT_CEILING,
+                claim: "each is a wrapper or variant of the other, not the same operation twice",
+                fix: "compose the variant from the operation it wraps, or record why the two buffer contracts describe different operations; a pair added to this class is a duplicate the scan was told to ignore",
+            },
+            SkipClass {
+                label: "same-family pairs routed through a centralized builder",
+                counted: centralized_family_variants,
+                ceiling: CENTRALIZED_FAMILY_CEILING,
+                claim: "both bodies come from one shared builder, so the shape they share is the builder's",
+                fix: "route the new pair through the builder its family already uses, or take it out of the family; a family that grows on its own is a shape nobody attributed",
+            },
+            SkipClass {
+                label: "known-distinct implementation-family pairs",
+                counted: distinct_family_variants,
+                ceiling: KNOWN_DISTINCT_FAMILY_CEILING,
+                claim: "the two families share scaffolding and mean different things",
+                fix: "read the new pair and either merge it or record the distinction with its reason; a known-distinct list that grows silently is an exemption surface",
+            },
+        ],
+    );
     if pairs.is_empty() {
         report.note("no registered-op pair crossed the duplicate or similarity floor");
         return Ok(());
@@ -238,4 +322,77 @@ pub(super) fn run_all_pairs_query(
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SkipClass, skip_class_findings};
+    use xtask::gate::Report;
+
+    /// `SkipClass` and `skip_class_findings` are private to this module and the
+    /// all-pairs scan that calls them needs the whole registered operation set,
+    /// so no integration test can hand the rule a class and read the verdict.
+    fn judge(counted: usize, ceiling: usize) -> Report {
+        let mut report = Report::clean();
+        skip_class_findings(
+            &mut report,
+            &[SkipClass {
+                label: "same-body pairs with different buffer contracts",
+                counted,
+                ceiling,
+                claim: "each is a wrapper or variant of the other",
+                fix: "compose the variant from the operation it wraps",
+            }],
+        );
+        report
+    }
+
+    /// A class that grew past its measured ceiling is a finding naming both
+    /// numbers, because the pairs it hides are the ones the scan was run to
+    /// find.
+    #[test]
+    fn a_skip_class_over_its_ceiling_is_a_finding() {
+        let report = judge(324, 323);
+        assert_eq!(report.count(), 1);
+        assert!(
+            report.findings[0]
+                .message
+                .contains("skipped 324 pair(s) against a measured 323"),
+            "{}",
+            report.findings[0].message
+        );
+    }
+
+    /// A class at its ceiling reports nothing and says so, so the sweep reads
+    /// the same zero it reads for a gate with nothing to say.
+    #[test]
+    fn a_skip_class_at_its_ceiling_is_silent() {
+        let report = judge(323, 323);
+        assert_eq!(report.count(), 0);
+        assert!(
+            report
+                .notes
+                .iter()
+                .any(|note| note.contains("at the measured ceiling of 323")),
+            "{:?}",
+            report.notes
+        );
+    }
+
+    /// A class that shrank asks for the ceiling to follow it down, which is how
+    /// the sweep reports an improved gate. A ceiling left above the measurement
+    /// is slack a later duplicate grows into without ever being reported.
+    #[test]
+    fn a_skip_class_under_its_ceiling_asks_for_the_lower_number() {
+        let report = judge(300, 323);
+        assert_eq!(report.count(), 0);
+        assert!(
+            report
+                .notes
+                .iter()
+                .any(|note| note.contains("lower the ceiling from 323 to 300")),
+            "{:?}",
+            report.notes
+        );
+    }
 }
