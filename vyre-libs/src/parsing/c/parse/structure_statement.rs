@@ -687,7 +687,7 @@ pub fn c11_statement_bounds(
                 },
                 child_phase(
                     "vyre-libs::parsing::c11_statement_bounds",
-                    vyre_primitives::bitset::select::OP_ID,
+                    crate::bitset::select::OP_ID,
                     vec![Node::if_then(
                         owns_tile,
                         ctx.pass_emit_spans(out_statements, out_counts),

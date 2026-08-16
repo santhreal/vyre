@@ -21,7 +21,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT, C_AST_KIND_LABEL_STMT, C_AST_KIND_POINTER_DECL,
     C_AST_KIND_RETURN_STMT, C_AST_KIND_SIZEOF_EXPR, C_AST_KIND_SWITCH_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 use c_frontend::rows::{
     assert_words_eq, flags_at, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,

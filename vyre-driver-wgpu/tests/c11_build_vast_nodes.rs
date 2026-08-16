@@ -26,7 +26,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_SIZEOF_EXPR, C_AST_KIND_SWITCH_STMT, C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_RIGHT,
     C_EXPR_SHAPE_CONDITIONAL,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 /// Classified rows for a token stream, already compared against the CPU oracle.
 fn classified_rows(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32]) -> Vec<u8> {

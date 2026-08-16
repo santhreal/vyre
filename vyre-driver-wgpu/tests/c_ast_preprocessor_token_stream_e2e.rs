@@ -12,7 +12,7 @@ mod c_frontend;
 mod c_token_support;
 
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 use c_ast_gpu_parity_support::{
     run_gpu_classifier, run_gpu_expr_shape, run_gpu_pg_lower, word_at, VAST_STRIDE_U32,

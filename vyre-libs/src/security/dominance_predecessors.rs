@@ -5,8 +5,8 @@
 //! checks use the independent `cpu_dominator_sets` test oracle.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 
 use crate::security::flow_composition::{
     dominance_fixture_expected, dominance_fixture_inputs, security_flow_program, FlowPredicate,
@@ -45,8 +45,8 @@ pub(crate) fn cpu_dominator_sets(
     entry: u32,
     edges: &[(u32, u32)],
 ) -> Vec<Vec<u32>> {
-    let idoms = vyre_primitives::graph::dominator_tree::cpu_ref(num_nodes, entry, edges);
-    vyre_primitives::graph::dominator_tree::idoms_to_dominator_sets(&idoms, num_nodes)
+    let idoms = crate::graph::dominator_tree::cpu_ref(num_nodes, entry, edges);
+    crate::graph::dominator_tree::idoms_to_dominator_sets(&idoms, num_nodes)
 }
 
 inventory::submit! {
@@ -70,7 +70,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::security::flow_composition::diamond_dominance_tree;
-    use vyre_primitives::graph::csr_backward_traverse::cpu_ref;
+    use crate::graph::csr_backward_traverse::cpu_ref;
 
     #[test]
     fn cpu_dominator_sets_linear_chain() {

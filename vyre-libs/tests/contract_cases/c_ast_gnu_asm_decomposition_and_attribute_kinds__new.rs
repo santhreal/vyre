@@ -25,7 +25,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ATTRIBUTE_WEAK, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT,
     C_AST_KIND_INLINE_ASM,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 use crate::c_frontend::rows::{row_indices_by_stride as row_indices, word_at, VAST_STRIDE_U32};
 use crate::c_frontend::token_fixture::{build_fixture, classify, Fixture, FixtureToken};

@@ -7,7 +7,7 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;

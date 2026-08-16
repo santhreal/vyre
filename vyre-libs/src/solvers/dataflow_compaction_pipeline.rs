@@ -270,7 +270,7 @@ pub fn stochastic_decode(bs: &[u32], len_bits: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::math::prefix_scan::OP_ID_INCLUSIVE_SUM;
+    use crate::math::prefix_scan::OP_ID_INCLUSIVE_SUM;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-8 * (1.0 + a.abs() + b.abs())

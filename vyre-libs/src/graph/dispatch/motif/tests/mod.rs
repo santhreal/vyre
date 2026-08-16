@@ -2,7 +2,7 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::StaticOutputs;
 use vyre_foundation::program_dispatch::DispatchError;
-use vyre_primitives::graph::motif::{
+use crate::graph::motif::{
     cpu_ref as reference_motif, cpu_ref_matches as reference_motif_matches,
     cpu_ref_participation_count as reference_motif_participation_count, plan_motif_launch,
     MotifEdge,
@@ -62,7 +62,7 @@ fn launch_plan_matches_primitive_dispatch_plan() {
     let (offsets, targets, masks, motif) = chain_graph();
     let launch = plan_motif_launch(3, &offsets, &targets, &masks, &motif, "witness")
         .expect("Fix: motif launch planning must accept the canonical chain graph");
-    let dispatch = vyre_primitives::graph::motif::plan_motif_dispatch(
+    let dispatch = crate::graph::motif::plan_motif_dispatch(
         3, &offsets, &targets, &masks, &motif, "witness",
     )
     .expect("Fix: motif dispatch planning must accept the canonical chain graph");

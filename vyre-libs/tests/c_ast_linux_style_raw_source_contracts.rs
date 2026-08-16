@@ -34,7 +34,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_INITIALIZER_LIST, C_AST_KIND_INLINE_ASM, C_AST_KIND_MEMBER_ACCESS_EXPR,
     C_AST_KIND_RANGE_DESIGNATOR_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 /// Assert that `lex_c11_max_munch_kinds` agrees with the filtered, keyword-promoted oracle stream.
 fn assert_max_munch_agrees(source: &[u8], types: &[u32]) {

@@ -3,8 +3,8 @@ use super::resident_scratch::{copy_frontier_seed_into, PersistentBfsGpuScratch};
 use crate::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs;
-use vyre_primitives::graph::persistent_bfs::{
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
+use crate::graph::persistent_bfs::{
     plan_persistent_bfs_dispatch, validate_persistent_bfs_changed_flag,
     validate_persistent_bfs_converged_flag,
 };

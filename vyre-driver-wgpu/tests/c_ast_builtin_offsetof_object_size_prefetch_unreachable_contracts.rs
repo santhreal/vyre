@@ -26,7 +26,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_BUILTIN_OFFSETOF_EXPR, C_AST_KIND_BUILTIN_PREFETCH_EXPR,
     C_AST_KIND_BUILTIN_UNREACHABLE_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // Fixtures

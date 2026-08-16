@@ -17,7 +17,7 @@ use crate::c_frontend::expression_pipeline::{
 use crate::c_frontend::rows::{row_indices_by_stride, VAST_STRIDE_U32};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_LEFT};
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // Ambiguity tests

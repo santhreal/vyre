@@ -185,7 +185,7 @@ pub fn opt_dynamic_macro_expansion(
             "vyre-libs::parsing::opt_dynamic_macro_expansion",
             vec![child_phase(
                 "vyre-libs::parsing::opt_dynamic_macro_expansion",
-                vyre_primitives::bitset::select::OP_ID,
+                crate::bitset::select::OP_ID,
                 vec![Node::if_then(Expr::lt(t.clone(), num_tokens), loop_body)],
             )],
         )],

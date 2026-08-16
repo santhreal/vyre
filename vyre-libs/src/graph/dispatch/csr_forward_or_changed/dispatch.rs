@@ -1,4 +1,4 @@
-use vyre_primitives::graph::csr_forward_or_changed::{
+use crate::graph::csr_forward_or_changed::{
     copy_csr_forward_seed_frontier_into, plan_csr_forward_or_changed_launch,
     validate_csr_forward_or_changed_flag, CsrForwardOrChangedLaunchPlan,
     CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey,
@@ -10,7 +10,7 @@ use crate::graph::dispatch::dispatch_bridge::{
 };
 use crate::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs;
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 
 /// Caller-owned GPU dispatch scratch for `csr_forward_or_changed` fixpoint loops.
 #[derive(Debug, Default)]

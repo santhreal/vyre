@@ -20,7 +20,7 @@ pub(crate) use crate::cases::queue_stage::{
     QUEUE_HIGH_LEN_INDEX, QUEUE_HIGH_QUEUE_INDEX, QUEUE_LEN_INDEX, QUEUE_RESET_GRID,
 };
 use crate::cases::queue_traverse_plan::{should_use_row_strided, traverse_logical_lanes};
-use vyre_primitives::graph::csr_queue_split::{
+use vyre_libs::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
     CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
 };
@@ -265,7 +265,7 @@ fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
     assert!(prepared.row_strided_traverse);
     assert_eq!(
         prepared.traverse_grid,
-        vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
+        vyre_libs::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
             prepared.queue_capacity
         )
     );
@@ -291,7 +291,7 @@ fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
 
 #[test]
 fn ifds_queue_reset_only_clears_len_before_fused_queue_build() {
-    let program = vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init("queue_len");
+    let program = vyre_libs::graph::csr_frontier_queue::frontier_queue_len_init("queue_len");
 
     assert_eq!(program.workgroup_size(), [1, 1, 1]);
     assert_eq!(program.buffers().len(), 1);

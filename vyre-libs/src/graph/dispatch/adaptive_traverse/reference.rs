@@ -1,4 +1,4 @@
-use vyre_primitives::graph::adaptive_traverse::{
+use crate::graph::adaptive_traverse::{
     adaptive_frontier_popcount_in_domain,
     cpu_sparse_dense_step as reference_adaptive_sparse_dense_step,
     validate_adaptive_frontier as primitive_validate_adaptive_frontier,

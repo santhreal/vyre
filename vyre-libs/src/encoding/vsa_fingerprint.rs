@@ -11,8 +11,8 @@ use crate::dispatch_buffers::{
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::hash::hypervector::xor_bind_cpu;
-use vyre_primitives::hash::hypervector::{hamming_similarity, hypervector_xor_bind};
+use crate::hash::hypervector::xor_bind_cpu;
+use crate::hash::hypervector::{hamming_similarity, hypervector_xor_bind};
 
 /// Caller-owned GPU dispatch scratch for VSA fingerprint XOR binding.
 #[derive(Debug, Default)]

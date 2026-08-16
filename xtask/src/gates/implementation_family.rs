@@ -71,15 +71,15 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
     ),
     (
         "vyre-primitives::predicate::literal_of",
-        "vyre-primitives::nodeset_filter",
+        "vyre-libs::label::nodeset_filter",
     ),
     (
         "vyre-primitives::predicate::node_kind_eq",
-        "vyre-primitives::nodeset_filter",
+        "vyre-libs::label::nodeset_filter",
     ),
     (
         "vyre-primitives::label::resolve_family",
-        "vyre-primitives::nodeset_filter",
+        "vyre-libs::label::nodeset_filter",
     ),
     (
         "vyre-primitives::graph::vast_walk_preorder",

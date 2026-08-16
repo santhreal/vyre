@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn base64_decode_ptx_compiles_with_ptxas() {
     let program =
-        vyre_primitives::decode::base64::base64_decode("input", "table", "output", "len", 8);
+        vyre_libs::decode::base64::base64_decode("input", "table", "output", "len", 8);
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: base64 decode must lower to PTX.");
     let dir = tempfile::tempdir().expect("Fix: create temp dir for ptxas smoke.");
@@ -28,7 +28,7 @@ fn base64_decode_ptx_compiles_with_ptxas() {
 
 #[test]
 fn inflate_stored_ptx_compiles_with_ptxas() {
-    let program = vyre_primitives::decode::inflate::inflate_stored("input", "output", "len", 10);
+    let program = vyre_libs::decode::inflate::inflate_stored("input", "output", "len", 10);
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: inflate stored must lower to PTX.");
     let dir = tempfile::tempdir().expect("Fix: create temp dir for ptxas smoke.");

@@ -11,7 +11,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_GOTO_STMT, C_AST_KIND_INLINE_ASM, C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT,
     C_AST_KIND_SWITCH_STMT, C_AST_KIND_WHILE_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn nested_declarator_parity_and_shape() {

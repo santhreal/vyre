@@ -6,7 +6,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::scc_decompose::{cpu_ref, scc_decompose, scc_decompose_dispatch_grid};
+use vyre_libs::graph::scc_decompose::{cpu_ref, scc_decompose, scc_decompose_dispatch_grid};
 
 fn run(
     node_count: u32,

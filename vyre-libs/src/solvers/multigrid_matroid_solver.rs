@@ -52,7 +52,7 @@ use crate::dispatch_buffers::{
 #[cfg(test)]
 use vyre_foundation::pass_substrate::multigrid_matroid_solver as foundation_multigrid;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::multigrid::jacobi_smooth_step;
+use crate::math::multigrid::jacobi_smooth_step;
 
 /// Caller-owned dispatch scratch for fixed-point multigrid Jacobi smoothing.
 #[derive(Debug, Default)]

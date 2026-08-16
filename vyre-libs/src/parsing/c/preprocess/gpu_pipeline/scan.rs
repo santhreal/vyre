@@ -1,5 +1,5 @@
 use vyre_foundation::ir::{BufferAccess, Program};
-use vyre_primitives::reduce::multi_block_prefix_scan::{
+use crate::reduce::multi_block_prefix_scan::{
     multi_block_prefix_scan_sum_u32, pass_a_local_scan, pass_c_broadcast_offsets, BLOCK_LANES,
 };
 

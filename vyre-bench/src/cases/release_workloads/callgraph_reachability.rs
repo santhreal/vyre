@@ -17,7 +17,7 @@ use crate::api::metric::MetricPoint;
 use crate::api::resident::{input_bytes_total, ResidentInputPool};
 use crate::cases::reference_sample::timed_reference;
 use vyre::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 pub struct CallgraphReachabilityStep;
 
@@ -79,7 +79,7 @@ impl BenchCase for CallgraphReachabilityStep {
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let shape = ProgramGraphShape::new(CALLGRAPH_NODES, CALLGRAPH_EDGES);
-        let program = vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse(
+        let program = vyre_libs::graph::csr_forward_traverse::csr_forward_traverse(
             shape,
             "frontier_in",
             "frontier_out",

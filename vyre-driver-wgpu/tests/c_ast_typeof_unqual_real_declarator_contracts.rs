@@ -14,7 +14,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ARRAY_DECL, C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_POINTER_DECL,
     C_AST_KIND_SIZEOF_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 fn real_typeof_unqual_function_pointer_table() -> Fixture {
     c_tokens("__typeof_unqual__ ( int ) * const ( * table [ 2 ] ) ( unsigned long ) ;")

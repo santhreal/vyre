@@ -18,7 +18,7 @@ use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_primitives::hash::adler32::{adler32, adler32_program};
+use vyre_libs::hash::adler32::{adler32, adler32_program};
 
 /// Dispatch the real `adler32_program` on the GPU: one U32 word per source byte,
 /// single u32 checksum `(b << 16) | a` out at `out[0]`.

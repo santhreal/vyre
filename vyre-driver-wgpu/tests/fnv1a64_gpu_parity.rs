@@ -21,7 +21,7 @@ use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_primitives::hash::fnv1a::{fnv1a64, fnv1a64_program_n};
+use vyre_libs::hash::fnv1a::{fnv1a64, fnv1a64_program_n};
 
 /// Dispatch the real `fnv1a64_program_n` on the GPU. Input is one U32 word per
 /// source byte; output is the 64-bit hash as two u32 words (`out[0]` = low,

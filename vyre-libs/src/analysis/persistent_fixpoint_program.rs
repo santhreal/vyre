@@ -1,7 +1,7 @@
 //! Persistent-fixpoint Program builder for runtime and driver scheduling loops.
 
 use vyre_foundation::ir::{Node, Program};
-use vyre_primitives::fixpoint::persistent_fixpoint::{
+use crate::fixpoint::persistent_fixpoint::{
     fixpoint_route, routed_persistent_fixpoint, FixpointRoute, FixpointState,
 };
 
@@ -17,7 +17,7 @@ use vyre_primitives::fixpoint::persistent_fixpoint::{
 /// `words` sizes the widest buffer this wrapper declares, so `words` is also the
 /// launch span here and it selects the harness. The selection and the `changed`
 /// width that goes with it belong to
-/// [`vyre_primitives::fixpoint::persistent_fixpoint::routed_persistent_fixpoint`],
+/// [`crate::fixpoint::persistent_fixpoint::routed_persistent_fixpoint`],
 /// which owns both halves; see [`FixpointRoute`] for why they cannot be chosen
 /// separately.
 ///
@@ -68,10 +68,10 @@ pub fn persistent_fixpoint_program_route(words: u32, max_iterations: u32) -> Fix
 mod tests {
     use super::persistent_fixpoint_program;
     use vyre_foundation::ir::{Expr, Node, Program};
-    use vyre_primitives::fixpoint::persistent_fixpoint::{
+    use crate::fixpoint::persistent_fixpoint::{
         count_grid_sync, declared_words, required_workgroups,
     };
-    use vyre_primitives::fixpoint::persistent_fixpoint::{
+    use crate::fixpoint::persistent_fixpoint::{
         persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
     };
 

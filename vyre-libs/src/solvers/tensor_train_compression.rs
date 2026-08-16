@@ -1,6 +1,6 @@
 //! Tensor-train compression of the dispatch-graph cost tensor.
 //!
-//! Self-consumer for [#12 `tensor_train_decompose`](vyre_primitives::math::tensor_train_decompose).
+//! Self-consumer for [#12 `tensor_train_decompose`](crate::math::tensor_train_decompose).
 //!
 //! The dispatch-graph cost tensor (per-Region × per-buffer × per-config
 //! cost) grows with the cube of the dispatch size. For a 1k-region
@@ -19,7 +19,7 @@ use crate::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::tensor_train_decompose::tensor_train_decompose_step;
+use crate::math::tensor_train_decompose::tensor_train_decompose_step;
 
 /// Compressed cost tensor in tensor-train form.
 ///
@@ -337,7 +337,7 @@ pub fn reference_compress_cost_tensor(
 ) -> CompressedCostTensor {
     use crate::telemetry::{bump, tensor_train_compression_calls};
     bump(&tensor_train_compression_calls);
-    let cores = vyre_primitives::math::tensor_train_decompose::cpu_ref(tensor, dims, target_ranks);
+    let cores = crate::math::tensor_train_decompose::cpu_ref(tensor, dims, target_ranks);
     CompressedCostTensor {
         cores,
         dims: dims.to_vec(),

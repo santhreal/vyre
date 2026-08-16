@@ -72,8 +72,8 @@ impl ProgramDispatcher for CpuOracleDispatcher {
         })?;
 
         match generator {
-            vyre_primitives::graph::persistent_bfs::OP_ID => persistent_bfs_oracle(program, inputs),
-            vyre_primitives::graph::exploded::OP_ID => exploded_ifds_csr_oracle(program, inputs),
+            crate::graph::persistent_bfs::OP_ID => persistent_bfs_oracle(program, inputs),
+            crate::graph::exploded::OP_ID => exploded_ifds_csr_oracle(program, inputs),
             other if self.persistent_bfs_aliases.contains(&other) => {
                 persistent_bfs_oracle(program, inputs)
             }
@@ -139,9 +139,9 @@ fn persistent_bfs_oracle(
         trim_padded_edge_buffer("edge_kind_mask", &edge_kind_mask_raw, edge_count)?;
 
     let (frontier_out, convergence) =
-        vyre_primitives::graph::persistent_bfs::try_cpu_ref_converged(
-            vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs {
-                graph: vyre_primitives::graph::csr_closure_inputs::CsrGraphView {
+        crate::graph::persistent_bfs::try_cpu_ref_converged(
+            crate::graph::csr_closure_inputs::CsrClosureInputs {
+                graph: crate::graph::csr_closure_inputs::CsrGraphView {
                     node_count,
                     edge_offsets: &edge_offsets,
                     edge_targets,
@@ -204,7 +204,7 @@ fn persistent_bfs_oracle(
 /// here is a silently misread flag rather than a visible failure.
 fn changed_words_for(
     count: u32,
-    convergence: &vyre_primitives::graph::persistent_bfs::PersistentBfsConvergence,
+    convergence: &crate::graph::persistent_bfs::PersistentBfsConvergence,
 ) -> Result<Vec<u32>, DispatchError> {
     let per_iteration = u32::from(!convergence.converged);
     match count {
@@ -226,7 +226,7 @@ fn changed_words_for(
 #[allow(clippy::items_after_test_module)]
 mod changed_words_tests {
     use super::changed_words_for;
-    use vyre_primitives::graph::persistent_bfs::PersistentBfsConvergence;
+    use crate::graph::persistent_bfs::PersistentBfsConvergence;
 
     fn convergence(changed: u32, converged: bool) -> PersistentBfsConvergence {
         PersistentBfsConvergence {
@@ -295,11 +295,11 @@ fn exploded_ifds_csr_oracle(
         )));
     }
 
-    let key = vyre_primitives::graph::exploded::ifds_program_cache_key_from_program(program)
+    let key = crate::graph::exploded::ifds_program_cache_key_from_program(program)
         .map_err(DispatchError::BackendError)?;
     let (intra_edges, inter_edges, flow_gen, flow_kill) = parse_ifds_rule_inputs(&key, inputs)?;
 
-    let (row_ptr, col_idx) = vyre_primitives::graph::exploded::build_cpu_reference(
+    let (row_ptr, col_idx) = crate::graph::exploded::build_cpu_reference(
         key.num_procs,
         key.blocks_per_proc,
         key.facts_per_proc,
@@ -342,7 +342,7 @@ fn exploded_ifds_csr_oracle(
 }
 
 fn parse_ifds_rule_inputs(
-    key: &vyre_primitives::graph::exploded::IfdsCsrProgramCacheKey,
+    key: &crate::graph::exploded::IfdsCsrProgramCacheKey,
     inputs: &[Vec<u8>],
 ) -> Result<ParsedIfdsRules, DispatchError> {
     let intra_proc = crate::dispatch_buffers::read_u32s(&inputs[0]);

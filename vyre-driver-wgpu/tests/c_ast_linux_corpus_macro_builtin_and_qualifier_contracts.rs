@@ -34,7 +34,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_GOTO_STMT, C_AST_KIND_IF_STMT, C_AST_KIND_LABEL_STMT, C_AST_KIND_MEMBER_ACCESS_EXPR,
     C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts/kernel_macros_builtins_and_qualifiers.rs"]
 mod kernel_macros_builtins_and_qualifiers;

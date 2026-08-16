@@ -5,7 +5,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_primitives::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
+use crate::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
 
 const ROUND_OP_ID: &str = "vyre-libs::quant::gptq_round";
 const SDCLIP_OP_ID: &str = "vyre-libs::quant::gptq_sdclip";

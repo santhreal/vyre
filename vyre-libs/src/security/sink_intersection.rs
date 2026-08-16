@@ -3,9 +3,9 @@
 //! confidence ("X% of nodes reachable from source landed in sinks").
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::and::bitset_and;
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::reduce::count::reduce_count;
+use crate::bitset::and::bitset_and;
+use crate::bitset::bitset_words;
+use crate::reduce::count::reduce_count;
 
 use crate::security::flow_composition::fuse_security_flow;
 
@@ -41,7 +41,7 @@ pub fn sink_intersection(
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_ref(query_set: &[u32], sink_set: &[u32]) -> u32 {
-    vyre_primitives::reduce::count::cpu_ref(&vyre_primitives::bitset::and::cpu_ref(
+    crate::reduce::count::cpu_ref(&crate::bitset::and::cpu_ref(
         query_set, sink_set,
     ))
 }

@@ -5,7 +5,7 @@ use super::scratch::{copy_output_bytes, write_zero_bytes};
 use super::FilteredBytes;
 use crate::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask;
 use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;
-use vyre_primitives::parsing::line_splice_classify::line_splice_classify;
+use crate::parsing::line_splice_classify::line_splice_classify;
 
 #[derive(Default)]
 pub(super) struct FullCommentScratch {

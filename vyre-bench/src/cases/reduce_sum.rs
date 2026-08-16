@@ -6,7 +6,7 @@ use crate::api::case::{
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
 use vyre_driver::TimedDispatchResult;
-use vyre_primitives::reduce::{sum, workgroup_tree};
+use vyre_libs::reduce::{sum, workgroup_tree};
 
 pub struct ReduceSumBench;
 

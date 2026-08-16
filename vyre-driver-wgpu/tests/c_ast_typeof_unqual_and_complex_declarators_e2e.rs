@@ -24,7 +24,7 @@ use vyre_libs::parsing::c::parse::vast::{
     reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL, C_AST_KIND_FUNCTION_DECLARATOR,
     C_AST_KIND_POINTER_DECL,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // Fixture builders

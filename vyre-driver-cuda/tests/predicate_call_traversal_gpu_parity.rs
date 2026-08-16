@@ -11,13 +11,13 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::arg_of::{arg_of, cpu_ref as arg_of_cpu};
-use vyre_primitives::predicate::call_to::{call_to, cpu_ref as call_to_cpu};
-use vyre_primitives::predicate::edge_kind;
-use vyre_primitives::predicate::return_value_of::{
+use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
+use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_libs::predicate::arg_of::{arg_of, cpu_ref as arg_of_cpu};
+use vyre_libs::predicate::call_to::{call_to, cpu_ref as call_to_cpu};
+use vyre_libs::predicate::edge_kind;
+use vyre_libs::predicate::return_value_of::{
     cpu_ref as return_value_of_cpu, return_value_of,
 };
 

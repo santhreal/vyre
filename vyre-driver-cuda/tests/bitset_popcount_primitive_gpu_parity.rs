@@ -1,4 +1,4 @@
-//! Parity test: `vyre_primitives::bitset::popcount::bitset_popcount` on CUDA
+//! Parity test: `vyre_libs::bitset::popcount::bitset_popcount` on CUDA
 //! matches its CPU reference per word.
 
 #![cfg(test)]
@@ -7,7 +7,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::bitset::popcount::{bitset_popcount, cpu_ref as popcount_cpu};
+use vyre_libs::bitset::popcount::{bitset_popcount, cpu_ref as popcount_cpu};
 
 fn run_popcount(input: &[u32]) -> Vec<u32> {
     let words = input.len() as u32;

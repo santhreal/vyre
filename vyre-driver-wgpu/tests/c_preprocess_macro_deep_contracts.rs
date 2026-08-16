@@ -44,7 +44,7 @@ use vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask_with_dire
 use vyre_libs::parsing::c::preprocess::{
     c_translation_phase_line_splice, reference_c_preprocessor_directive_metadata,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 use vyre_reference::value::Value;
 
 // ---------------------------------------------------------------------------

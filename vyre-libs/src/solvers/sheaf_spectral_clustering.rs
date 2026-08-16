@@ -1,6 +1,6 @@
 //! Sheaf-spectral clustering of dispatch graphs.
 //!
-//! Self-consumer for [#9 `sheaf_laplacian_eigenvalue`](vyre_primitives::math::sheaf_laplacian_eigenvalue).
+//! Self-consumer for [#9 `sheaf_laplacian_eigenvalue`](crate::math::sheaf_laplacian_eigenvalue).
 //!
 //! The dispatch graph's sheaf Laplacian carries spectral information
 //! about cluster structure: the dominant eigenvalue corresponds to
@@ -27,8 +27,8 @@ use crate::dispatch_buffers::{
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::math::sheaf_laplacian_eigenvalue::cpu_ref_into;
-use vyre_primitives::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
+use crate::math::sheaf_laplacian_eigenvalue::cpu_ref_into;
+use crate::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
 
 /// Default value for the retained (interface-stability) `iterations` parameter.
 ///

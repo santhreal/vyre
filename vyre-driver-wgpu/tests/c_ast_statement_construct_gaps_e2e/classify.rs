@@ -19,7 +19,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_DO_STMT, C_AST_KIND_FOR_STMT, C_AST_KIND_GOTO_STMT, C_AST_KIND_IF_STMT,
     C_AST_KIND_LABEL_STMT, C_AST_KIND_RETURN_STMT, C_AST_KIND_SWITCH_STMT, C_AST_KIND_WHILE_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // Fixture builders

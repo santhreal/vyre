@@ -14,7 +14,7 @@ use crate::parsing::c::parse::vast_kinds::{
     C_AST_KIND_BUILTIN_VA_INTRIN_EXPR,
 };
 use std::sync::OnceLock;
-use vyre_primitives::hash::fnv1a::fnv1a32_const;
+use crate::hash::fnv1a::fnv1a32_const;
 
 /// One GNU builtin spelling and its parser-local VAST kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1028,5 +1028,5 @@ mod tests {
         }
     }
 
-    use vyre_primitives::hash::fnv1a::fnv1a32;
+    use crate::hash::fnv1a::fnv1a32;
 }

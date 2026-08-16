@@ -7,8 +7,8 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_primitives::hash::sketch::{count_sketch_update, count_sketch_update_cpu};
-use vyre_primitives::hash::sparse_fft::{sparse_fft_bin_hash, sparse_fft_bin_hash_cpu};
+use vyre_libs::hash::sketch::{count_sketch_update, count_sketch_update_cpu};
+use vyre_libs::hash::sparse_fft::{sparse_fft_bin_hash, sparse_fft_bin_hash_cpu};
 
 // ---------------------------------------------------------------------
 // count_sketch_update

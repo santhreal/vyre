@@ -28,7 +28,7 @@ fn inflate_fixed_huffman_reports_wgpu_trap_tag() {
     // op and the remedy instead, which is strictly more useful to an operator.
     for needle in [
         "wgpu dispatch trapped",
-        "vyre-primitives::decode::inflate_stored",
+        "vyre-libs::decode::inflate_stored_block",
         "BTYPE=1",
         "Fix:",
     ] {

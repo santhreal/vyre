@@ -22,7 +22,7 @@ use vyre_libs::security::{
     FactKind, EXTERNAL_IFDS_SECURITY_BACKEND_ID,
 };
 use vyre_libs::security::{FindingProofBundle, FindingProofStep, SourceToSinkFindingRequest};
-use vyre_primitives::predicate::edge_kind;
+use vyre_libs::predicate::edge_kind;
 use vyre_spec::soundness::{DynamicPrimitiveSoundness, PrecisionContract, Soundness};
 
 #[test]

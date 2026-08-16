@@ -81,7 +81,7 @@ vyre-reference = { path = "../vyre-reference" }
 # `reduce`, `text` and `visual`, and naming them one at a time only moved the
 # break to whichever domain the next parity test reaches for. Without it a
 # standalone `cargo check -p vyre-driver-cuda --all-targets` fails with E0433 on
-# `vyre_primitives::visual`; in-workspace it passed because another member
+# `vyre_libs::visual`; in-workspace it passed because another member
 # enabled the domain.
 vyre-primitives = { path = "../vyre-primitives", features = [
     "all-lego",

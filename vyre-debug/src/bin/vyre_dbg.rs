@@ -124,7 +124,7 @@ fn get_program(name: &str, num_tokens: Option<usize>) -> Result<Program, String>
                 "out_pg_edges",
             ),
         ),
-        "bracket_match" => Ok(vyre_primitives::matching::bracket_match(
+        "bracket_match" => Ok(vyre_libs::matching::bracket_match(
             "k",
             "s",
             "mp",

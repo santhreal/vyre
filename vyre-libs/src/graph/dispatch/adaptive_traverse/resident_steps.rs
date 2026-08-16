@@ -26,15 +26,15 @@ use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-use vyre_primitives::bitset::zero::bitset_zero;
-use vyre_primitives::graph::adaptive_traverse::{
+use crate::bitset::zero::bitset_zero;
+use crate::graph::adaptive_traverse::{
     adaptive_four_russians_dense_step as primitive_adaptive_four_russians_dense_step,
     adaptive_sparse_dense_step as primitive_adaptive_sparse_dense_step,
     plan_adaptive_resident_auto_step, plan_adaptive_resident_frontier_step,
     plan_adaptive_resident_sparse_queue_step, AdaptiveResidentFrontierPlan,
     AdaptiveTraversalPlanCacheKey,
 };
-use vyre_primitives::reduce::count::reduce_count;
+use crate::reduce::count::reduce_count;
 
 /// Buffer adaptive traversal stages its own frontier upload into.
 const ADAPTIVE_FRONTIER_IN: &str = "frontier_in";

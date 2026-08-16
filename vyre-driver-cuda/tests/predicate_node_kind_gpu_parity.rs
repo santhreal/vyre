@@ -6,8 +6,8 @@
 mod common;
 
 use common::{cuda_u32_bitset_output, with_live_backend};
-use vyre_primitives::predicate::literal_of::{cpu_ref as literal_cpu, literal_of};
-use vyre_primitives::predicate::node_kind_eq::{cpu_ref as kind_eq_cpu, node_kind_eq};
+use vyre_libs::predicate::literal_of::{cpu_ref as literal_cpu, literal_of};
+use vyre_libs::predicate::node_kind_eq::{cpu_ref as kind_eq_cpu, node_kind_eq};
 
 fn run_node_kind_eq(nodes: &[u32], kind: u32) -> Vec<u32> {
     let n = nodes.len() as u32;

@@ -175,7 +175,7 @@ pub fn opt_propagate_type_specifiers(
             "vyre-libs::parsing::opt_propagate_type_specifiers",
             vec![child_phase(
                 "vyre-libs::parsing::opt_propagate_type_specifiers",
-                vyre_primitives::parsing::ssa_dominance_scan::OP_ID,
+                crate::parsing::ssa_dominance_scan::OP_ID,
                 vec![Node::if_then(Expr::lt(t.clone(), num_tokens), loop_body)],
             )],
         )],

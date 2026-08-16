@@ -1,7 +1,7 @@
 use vyre_foundation::composition::{wrap_child_region, wrap_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
-use vyre_primitives::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
+use crate::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
 
 use crate::tensor_ref::TensorRefError;
 

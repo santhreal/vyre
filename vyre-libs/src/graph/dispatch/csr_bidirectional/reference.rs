@@ -1,9 +1,9 @@
 #[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) use vyre_primitives::graph::csr_bidirectional::cpu_ref as reference_csr_bidir;
+pub(crate) use crate::graph::csr_bidirectional::cpu_ref as reference_csr_bidir;
 #[cfg(test)]
-pub(crate) use vyre_primitives::graph::csr_bidirectional::cpu_ref_closure as reference_csr_bidir_closure;
+pub(crate) use crate::graph::csr_bidirectional::cpu_ref_closure as reference_csr_bidir_closure;
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::graph::csr_bidirectional::cpu_ref_closure_into_with_step_hook as reference_csr_bidir_closure_into_with_step_hook;
+use crate::graph::csr_bidirectional::cpu_ref_closure_into_with_step_hook as reference_csr_bidir_closure_into_with_step_hook;
 
 /// Compute one bidirectional BFS step over a CSR-encoded Region
 /// graph: returns the bitset that includes every node reachable
@@ -31,7 +31,7 @@ pub fn reference_bidirectional_step(
     )
 }
 
-vyre_primitives::define_csr_closure_entry_points! {
+crate::define_csr_closure_entry_points! {
     allocating: reference_bidirectional_closure {
         /// Iterate `bidirectional_step` to fixpoint or `max_iters`.
     },

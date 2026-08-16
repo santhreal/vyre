@@ -27,9 +27,9 @@
 //! `gpu_algebraic_identities` → `gpu_dce` chain.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::persistent_bfs::validate_persistent_bfs_converged_flag;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::persistent_bfs::validate_persistent_bfs_converged_flag;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
 

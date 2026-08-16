@@ -1,5 +1,5 @@
 use super::*;
-use vyre_primitives::hash::fnv1a::fnv1a32;
+use crate::hash::fnv1a::fnv1a32;
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

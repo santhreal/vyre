@@ -51,9 +51,9 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::mori_zwanzig::mz_project_step;
+use crate::math::mori_zwanzig::mz_project_step;
 #[cfg(test)]
-use vyre_primitives::math::mori_zwanzig::mz_project_step_cpu_into;
+use crate::math::mori_zwanzig::mz_project_step_cpu_into;
 
 /// Caller-owned dispatch scratch for fixed-point Mori-Zwanzig projection.
 #[derive(Debug, Default)]

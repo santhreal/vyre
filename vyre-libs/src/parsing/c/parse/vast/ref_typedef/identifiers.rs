@@ -1,5 +1,5 @@
 use super::*;
-pub(super) use vyre_primitives::hash::fnv1a::fnv1a32;
+pub(super) use crate::hash::fnv1a::fnv1a32;
 
 pub(super) fn identifier_lexeme<'a>(
     vast_nodes: &[u32],

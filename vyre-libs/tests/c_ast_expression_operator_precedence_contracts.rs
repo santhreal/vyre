@@ -22,7 +22,7 @@ use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_CONDITIONAL_EXPR, C_EXPR_ASSOC_LEFT, C_EXPR_ASSOC_RIGHT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "c_ast_expression_operator_precedence_contracts/precedence_ladder_and_associativity.rs"]
 mod precedence_ladder_and_associativity;

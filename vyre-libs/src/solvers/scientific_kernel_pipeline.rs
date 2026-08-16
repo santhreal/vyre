@@ -9,7 +9,7 @@
 //! self-consumer dispatch surface and reusable CPU parity adapters.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::{
+use crate::math::{
     bigint_add_carry::bigint_add_carry,
     conformal::conformal_threshold,
     fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_step, p2m_zeroth_f32_step},
@@ -28,7 +28,7 @@ use vyre_primitives::math::{
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::math::{
+use crate::math::{
     bigint_add_carry::{
         bigint_add_carry_cpu, bigint_add_carry_cpu_into, resolve_carry_chain_cpu,
         resolve_carry_chain_cpu_into, BigIntAddCarryError,

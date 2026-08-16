@@ -14,9 +14,9 @@
 //! crate use the in-tree `CpuOracleDispatcher` (test-only).
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::persistent_bfs::validate_persistent_bfs_converged_flag;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::persistent_bfs::validate_persistent_bfs_converged_flag;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,

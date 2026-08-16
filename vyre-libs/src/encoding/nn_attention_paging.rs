@@ -5,7 +5,7 @@
 //! dispatch stages.
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_primitives::nn::{
+use crate::nn::{
     attention_passes::{
         attention_max_pass, attention_max_pass_program, attention_sum_pass,
         attention_sum_pass_program, attention_write_pass, attention_write_pass_program,

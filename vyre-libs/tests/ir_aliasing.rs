@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use vyre::ir::{BufferAccess, Program};
 use vyre_foundation::composition::tag_program;
 use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
-use vyre_primitives::parsing::core_delimiter_match::core_delimiter_match;
+use vyre_libs::parsing::core_delimiter_match::core_delimiter_match;
 
 fn rebind_program(program: &Program, binding_base: u32) -> Program {
     let mut next_binding = binding_base;
@@ -64,7 +64,7 @@ fn fused_decode_programs_keep_generic_buffers_disjoint() {
 
 #[test]
 fn duplicate_self_exclusive_parser_regions_fail_validation() {
-    let op_id = vyre_primitives::parsing::core_delimiter_match::OP_ID;
+    let op_id = vyre_libs::parsing::core_delimiter_match::OP_ID;
     let scanner = core_delimiter_match("tok_types_a", "tok_depths_a", 8, 12, 13);
     assert!(
         scanner.is_non_composable_with_self(),

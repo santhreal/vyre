@@ -22,7 +22,7 @@ workspace = true
 
 [features]
 default = ["optimizer"]
-optimizer = ["vyre-primitives/graph"]
+optimizer = ["vyre-libs/graph"]
 all-solvers = [
     "vyre-libs/analysis",
     "vyre-libs/encoding",

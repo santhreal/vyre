@@ -1,4 +1,4 @@
-//! Parity test: `vyre_primitives::parsing::planar_rewrite::planar_rewrite_schedule`
+//! Parity test: `vyre_libs::parsing::planar_rewrite::planar_rewrite_schedule`
 //! on CUDA matches its CPU reference for planar candidate scheduling.
 
 #![cfg(test)]
@@ -7,7 +7,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::parsing::planar_rewrite::{
+use vyre_libs::parsing::planar_rewrite::{
     planar_rewrite_schedule, reference_planar_rewrite_schedule,
 };
 

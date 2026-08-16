@@ -8,7 +8,7 @@ use vyre_libs::parsing::c::parse::vast::{
     reference_c11_classify_vast_node_kinds, C_AST_KIND_FOR_STMT, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR,
     C_AST_KIND_LABEL_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn pg_lower_preserves_computed_goto_rows() {

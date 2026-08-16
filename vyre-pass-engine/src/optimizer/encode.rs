@@ -493,7 +493,7 @@ pub fn collect_expr_var_refs(expr: &Expr, out: &mut Vec<Ident>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::graph::program_graph::{validate_program_graph, ProgramGraphShape};
+    use vyre_libs::graph::program_graph::{validate_program_graph, ProgramGraphShape};
 
     #[test]
     fn empty_program_encodes_to_root_only() {

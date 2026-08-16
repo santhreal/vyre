@@ -3,8 +3,8 @@
 use vyre::ir::{Node, Program};
 use vyre_foundation::visit::walk_nodes;
 use vyre_libs::decode::{base64_decode, inflate_stored_block};
-use vyre_primitives::decode::base64::BASE64_DECODE_OP_ID;
-use vyre_primitives::decode::inflate::INFLATE_STORED_OP_ID;
+use vyre_libs::decode::base64::BASE64_DECODE_OP_ID;
+use vyre_libs::decode::inflate::INFLATE_STORED_OP_ID;
 
 fn region_count(program: &Program, expected: &str) -> usize {
     let mut count = 0usize;

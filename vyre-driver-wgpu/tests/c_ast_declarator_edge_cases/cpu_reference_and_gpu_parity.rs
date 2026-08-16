@@ -10,7 +10,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_CAST_EXPR, C_AST_KIND_FIELD_DECL, C_AST_KIND_FUNCTION_DECLARATOR,
     C_AST_KIND_POINTER_DECL, C_AST_KIND_SIZEOF_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn cpu_array_of_function_pointers_kinds() {

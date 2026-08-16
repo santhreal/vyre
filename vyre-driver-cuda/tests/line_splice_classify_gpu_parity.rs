@@ -1,4 +1,4 @@
-//! Parity test: `vyre_primitives::parsing::line_splice_classify` on CUDA
+//! Parity test: `vyre_libs::parsing::line_splice_classify` on CUDA
 //! matches its CPU reference across packed-u32 and raw-u8 source layouts,
 //! including word- and workgroup-boundary splices.
 
@@ -10,7 +10,7 @@ mod line_splice_generated_corpus;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::parsing::line_splice_classify::{
+use vyre_libs::parsing::line_splice_classify::{
     line_splice_classify, line_splice_classify_dispatch_grid, line_splice_classify_u8,
     reference_line_splice_classify,
 };

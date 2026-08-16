@@ -32,16 +32,16 @@ use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGra
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
     resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::csr_frontier_queue::{
+use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::csr_frontier_queue::{
     csr_queue_forward_traverse, csr_queue_forward_traverse_cpu, frontier_to_queue,
     frontier_to_queue_cpu, frontier_to_queue_parallel,
 };
-use vyre_primitives::graph::csr_queue_delta::{
+use vyre_libs::graph::csr_queue_delta::{
     csr_queue_delta_enqueue, csr_queue_delta_enqueue_cpu, csr_queue_delta_strided_dispatch_grid,
     csr_queue_delta_strided_enqueue,
 };
-use vyre_primitives::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
+use vyre_libs::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 
 fn skewed_high_degree_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     assert!(

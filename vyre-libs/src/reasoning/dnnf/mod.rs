@@ -23,7 +23,7 @@ pub(crate) mod compile;
 
 pub use compile::{compile_dnnf, is_satisfiable, is_tautology, model_count, DnnfDag, DnnfGate};
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate_cpu;
-pub use vyre_primitives::graph::knowledge_compile::{
+pub use crate::graph::knowledge_compile::ddnnf_evaluate_cpu;
+pub use crate::graph::knowledge_compile::{
     ddnnf_evaluate, AND_NODE, LITERAL_FALSE, LITERAL_TRUE, OR_NODE,
 };

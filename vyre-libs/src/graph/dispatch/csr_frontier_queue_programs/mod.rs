@@ -14,14 +14,14 @@
 
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::DispatchError;
-use vyre_primitives::bitset::zero::bitset_zero;
-use vyre_primitives::graph::csr_frontier_queue::{
+use crate::bitset::zero::bitset_zero;
+use crate::graph::csr_frontier_queue::{
     csr_queue_forward_traverse, frontier_queue_len_init, frontier_word_block_offsets_in_place,
     frontier_word_block_offsets_to_queue_parallel, frontier_word_block_prefix_to_queue_parallel,
     frontier_word_counts_scan_pass_a, frontier_words_to_queue_clear_out_parallel,
 };
-use vyre_primitives::graph::csr_queue_split::csr_queue_split_low_forward_traverse;
-use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
+use crate::graph::csr_queue_split::csr_queue_split_low_forward_traverse;
+use crate::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 
 use crate::graph::dispatch::csr_frontier_queue_scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind, STRIDED_FORWARD_MIN_ROW_DEGREE,

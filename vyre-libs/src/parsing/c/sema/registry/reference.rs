@@ -447,5 +447,5 @@ fn identifier_intern_id_for_node(
         "C semantic identifier span is empty at token {node_idx}. Fix: repair lexer identifier lengths."
     );
 
-    vyre_primitives::hash::fnv1a::fnv1a32_packed_u32_low8(&haystack[start_usize..end])
+    crate::hash::fnv1a::fnv1a32_packed_u32_low8(&haystack[start_usize..end])
 }

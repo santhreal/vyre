@@ -14,8 +14,8 @@ use crate::cases::frontier_step::{
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::reference_sample::timed_reference;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 #[cfg(test)]
 mod tests;

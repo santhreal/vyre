@@ -20,7 +20,7 @@ use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_classify_vast_node_kinds, C_AST_KIND_POINTER_DECL,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "c_ast_sema_scope_typedef_shadow_restore_contracts/annotation_and_gpu_parity.rs"]
 mod annotation_and_gpu_parity;

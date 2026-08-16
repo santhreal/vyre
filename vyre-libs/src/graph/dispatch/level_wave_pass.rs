@@ -29,7 +29,7 @@
 //! consume this rather than hand-rolling a host depth loop.
 
 use vyre_foundation::ir::{BufferDecl, Node, Program};
-use vyre_primitives::graph::level_wave::{level_wave_program, level_wave_program_with_buffers};
+use crate::graph::level_wave::{level_wave_program, level_wave_program_with_buffers};
 
 /// Build a Program that visits every function in callee-before-caller
 /// order using GPU-side level-wave dispatch.

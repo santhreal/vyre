@@ -7,7 +7,7 @@ use crate::parsing::c::preprocess::expansion::{
 use crate::parsing::c::preprocess::gpu_pipeline::buffers::{checked_gpu_u32, pack_u32_words};
 use crate::parsing::c::preprocess::gpu_pipeline::MacroDef;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use vyre_primitives::hash::fnv1a::fnv1a32 as primitive_fnv1a32;
+use crate::hash::fnv1a::fnv1a32 as primitive_fnv1a32;
 
 #[derive(Debug)]
 #[allow(dead_code)]

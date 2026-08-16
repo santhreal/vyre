@@ -24,7 +24,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_CONDITIONAL_EXPR, C_AST_KIND_MEMBER_ACCESS_EXPR, C_EXPR_ASSOC_LEFT,
     C_EXPR_ASSOC_RIGHT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "c_ast_expression_precedence_e2e/precedence_shapes_lowered_to_pg.rs"]
 mod precedence_shapes_lowered_to_pg;

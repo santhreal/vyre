@@ -6,7 +6,7 @@ mod common;
 
 use common::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::motif::{match_motif as reference_match_motif, match_motif_via};
-use vyre_primitives::graph::motif::MotifEdge;
+use vyre_libs::graph::motif::MotifEdge;
 
 #[test]
 fn cuda_match_motif_via_triangle_full_match() {

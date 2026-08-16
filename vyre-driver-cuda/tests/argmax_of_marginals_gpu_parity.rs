@@ -1,4 +1,4 @@
-//! Parity test: `vyre_primitives::math::submodular_greedy::argmax_of_marginals` on
+//! Parity test: `vyre_libs::math::submodular_greedy::argmax_of_marginals` on
 //! CUDA matches its CPU reference, including the all-picked sentinel.
 
 #![cfg(test)]
@@ -7,7 +7,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::math::submodular_greedy::{
+use vyre_libs::math::submodular_greedy::{
     argmax_of_marginals, argmax_of_marginals_cpu, NO_WINNER,
 };
 

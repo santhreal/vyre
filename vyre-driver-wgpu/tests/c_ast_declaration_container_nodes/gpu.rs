@@ -11,7 +11,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_STATIC_ASSERT_DECL, C_AST_KIND_STRUCT_DECL, C_AST_KIND_TYPEDEF_DECL,
     C_AST_KIND_UNION_DECL,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn gpu_parity_vast_builder_struct_definition() {

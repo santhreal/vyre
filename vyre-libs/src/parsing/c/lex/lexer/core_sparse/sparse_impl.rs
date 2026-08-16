@@ -58,7 +58,7 @@ pub(super) fn c11_lexer_regular_sparse_impl(spec: &SparseLexerSpec<'_>) -> Progr
     } = *spec;
 
     let workgroup_lanes = if block_totals.is_some() {
-        vyre_primitives::reduce::multi_block_prefix_scan::BLOCK_LANES
+        crate::reduce::multi_block_prefix_scan::BLOCK_LANES
     } else {
         256
     };

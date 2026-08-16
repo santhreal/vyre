@@ -37,7 +37,7 @@ pub fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32; 3]) ->
 }
 
 /// Signed 16.16 fixed-point multiply: bits `[16..48]` of the signed 64-bit
-/// product, identical to the IR's `vyre_primitives::fixed_mul_16_16_expr`.
+/// product, identical to the IR's `crate::math::fixed::fixed_mul_16_16_expr`.
 ///
 /// Operands are two's-complement `i32` carried in a `u32`. A weighted-Jacobi
 /// residual, a sheaf coupling, and a gradient are all routinely negative, so
@@ -91,7 +91,7 @@ pub fn signed_fixed_17(state: &mut u32) -> u32 {
 }
 
 /// Signed integer division by a known-positive divisor, truncating toward
-/// zero, identical to the IR's `vyre_primitives::fixed_sdiv_by_positive_expr`.
+/// zero, identical to the IR's `crate::math::fixed::fixed_sdiv_by_positive_expr`.
 ///
 /// Mirrors the fixed weighted-Jacobi `delta` divide, whose numerator is
 /// negative whenever the residual is negative.

@@ -31,7 +31,7 @@ use vyre_libs::parsing::c::lower::c_lower_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::structure::{c11_extract_calls, c11_extract_functions};
 use vyre_libs::parsing::c::parse::vast::{c11_build_vast_nodes, c11_classify_vast_node_kinds};
 use vyre_libs::parsing::c::sema::c_sema_scope;
-use vyre_primitives::graph::program_graph::NAME_NODES;
+use vyre_libs::graph::program_graph::NAME_NODES;
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 const C11_PIPELINE_SMOKE_TOKENS: u32 = 9;

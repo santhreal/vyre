@@ -11,13 +11,13 @@ use common::{bytes_u32, u32_bytes, with_live_backend};
 use std::num::NonZeroU32;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_primitives::hash::crc32::{
+use vyre_libs::hash::crc32::{
     crc32, crc32_chunk_program, crc32_combine_chunks, crc32_map_reduce_plan, crc32_pack_chunks_u32,
     crc32_pair_reduce_program, crc32_unpack_chunks_u32, Crc32Chunk, Crc32MapReduceStep,
     Crc32MapReduceStepKind,
 };
-use vyre_primitives::hash::hypervector::hypervector_xor_bind;
-use vyre_primitives::parsing::whitespace_classify_word::{
+use vyre_libs::hash::hypervector::hypervector_xor_bind;
+use vyre_libs::parsing::whitespace_classify_word::{
     reference_whitespace_classify_word, whitespace_classify_word,
     whitespace_classify_word_dispatch_grid,
 };

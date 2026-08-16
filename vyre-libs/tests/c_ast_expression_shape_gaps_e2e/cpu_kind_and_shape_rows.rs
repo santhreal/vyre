@@ -12,7 +12,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_RANGE_DESIGNATOR_EXPR, C_AST_KIND_SWITCH_STMT,
     C_AST_KIND_UNARY_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn prefix_unary_operators_have_unary_expr_kind_and_postfix_inc_dec_stays_unshaped() {

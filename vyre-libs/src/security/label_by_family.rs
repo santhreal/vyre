@@ -1,9 +1,9 @@
 //! `label_by_family`  -  Tier-3 shim over
-//! [`vyre_primitives::label::resolve_family`].
+//! [`crate::label::resolve_family`].
 
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
-use vyre_primitives::label::resolve_family::resolve_family;
+use crate::label::resolve_family::resolve_family;
 
 const OP_ID: &str = "vyre-libs::security::label_by_family";
 
@@ -154,7 +154,7 @@ mod tests {
         ) {
             let node_count = tags.len() as u32;
             let words = node_count.div_ceil(32);
-            let expected = vyre_primitives::label::resolve_family::cpu_ref(&tags, mask);
+            let expected = crate::label::resolve_family::cpu_ref(&tags, mask);
             let p = label_by_family("node_tags", "out", node_count, mask);
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let inputs = vec![

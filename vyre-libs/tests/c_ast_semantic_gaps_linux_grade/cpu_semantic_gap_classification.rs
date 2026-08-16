@@ -29,7 +29,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_INITIALIZER_LIST,
     C_AST_KIND_INLINE_ASM, C_AST_KIND_MEMBER_ACCESS_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // CPU reference contracts

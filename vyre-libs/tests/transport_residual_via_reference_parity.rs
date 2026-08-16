@@ -20,7 +20,7 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
-use vyre_primitives::graph::chebyshev_filter::chebyshev_filter_cpu;
+use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

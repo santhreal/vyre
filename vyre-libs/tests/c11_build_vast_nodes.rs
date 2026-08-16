@@ -30,7 +30,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_SIZEOF_EXPR, C_AST_KIND_SWITCH_STMT, C_AST_KIND_UNARY_EXPR, C_AST_KIND_WHILE_STMT,
     C_EXPR_ASSOC_LEFT, C_EXPR_SHAPE_BINARY,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "c11_build_vast_nodes/cpu_delimiter_tree_and_statement_keywords.rs"]
 mod cpu_delimiter_tree_and_statement_keywords;

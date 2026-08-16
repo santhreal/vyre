@@ -19,8 +19,8 @@ use crate::cases::queue_stage::{
 };
 use crate::cases::queue_traverse_plan::should_use_row_strided;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init;
-use vyre_primitives::graph::csr_queue_delta::{
+use vyre_libs::graph::csr_frontier_queue::frontier_queue_len_init;
+use vyre_libs::graph::csr_queue_delta::{
     csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid,
     csr_queue_delta_strided_enqueue, CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
 };

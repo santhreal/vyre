@@ -22,7 +22,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GNU_STATEMENT_EXPR, C_AST_KIND_IF_STMT,
     C_AST_KIND_LABEL_STMT, C_AST_KIND_SWITCH_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // CPU reference contracts

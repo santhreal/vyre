@@ -15,9 +15,9 @@ use crate::dispatch_buffers::{
 #[cfg(test)]
 use crate::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::differentiable::softmax_step;
+use crate::math::differentiable::softmax_step;
 #[cfg(test)]
-use vyre_primitives::math::differentiable::{differentiable_argmax_cpu_into, softmax_cpu_into};
+use crate::math::differentiable::{differentiable_argmax_cpu_into, softmax_cpu_into};
 
 /// Caller-owned scratch for fixed-point differentiable-autotune dispatch.
 #[derive(Debug, Default)]

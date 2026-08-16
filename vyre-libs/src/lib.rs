@@ -78,11 +78,25 @@ pub(crate) mod descriptor;
 /// Host-side byte marshalling for `ProgramDispatcher` calls.
 pub mod dispatch_buffers;
 
-/// Host-side capacity reservation for dispatch staging buffers. Crate-root
-/// plumbing, not a dialect: every dialect that stages a dispatch reserves
-/// through this one owner.
-#[cfg(feature = "device")]
+/// Host-side capacity reservation for staging buffers and CPU-oracle scratch.
+/// Crate-root plumbing, not a dialect: every dialect that stages a dispatch or
+/// grows an oracle scratch vector reserves through this one owner.
+#[cfg(any(
+    feature = "device",
+    feature = "graph",
+    feature = "math-kernels"
+))]
 pub(crate) mod scratch;
+
+/// Cell counts of a matrix operand, refused the same way by every op. Crate-root
+/// plumbing for the same reason as `scratch`: several domains need it and none
+/// of them may enable another.
+#[cfg(any(feature = "graph", feature = "math-kernels"))]
+pub(crate) mod operand_shape;
+
+/// Which buffers a fused Program still publishes to the host.
+#[cfg(any(feature = "reduce", feature = "text"))]
+pub(crate) mod program_outputs;
 
 /// Host-side compiled-`Program` cache keyed by dispatch shape. Crate-root
 /// plumbing for the same reason as `scratch`.
@@ -122,13 +136,16 @@ pub mod encoding;
 #[cfg(feature = "solvers")]
 pub mod solvers;
 
-/// Math dialect  -  linear algebra, scans, broadcasting.
+/// Math dialect: linear algebra, scans, broadcasting, plus the reusable math
+/// kernels. `math-dialect` gates the dialect surface; `math-kernels` gates the
+/// kernels. `graph`, `geom` and `opt` reach `math::fixed` and
+/// `math::fixed_u32_matmul` without either.
 #[cfg(any(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "math-broadcast",
-    feature = "math-algebra",
-    feature = "math-succinct"
+    feature = "math-dialect",
+    feature = "math-kernels",
+    feature = "graph",
+    feature = "geom",
+    feature = "opt"
 ))]
 pub mod math;
 
@@ -197,6 +214,58 @@ pub mod security;
 /// Molten web engine's visual effect substrate.
 #[cfg(feature = "visual")]
 pub mod visual;
+
+/// Bitset kernels: `and`/`or`/`not`/`xor`/`popcount`/`any`/`contains` over
+/// packed u32 bitsets. The NodeSet and ValueSet representation every graph
+/// kernel consumes.
+#[cfg(feature = "bitset")]
+pub mod bitset;
+
+/// Reduction kernels: `count`/`min`/`max`/`sum` over bitsets and fixed-width
+/// ValueSets. Backs source-query dialect aggregates.
+#[cfg(feature = "reduce")]
+pub mod reduce;
+
+/// Label to NodeSet resolver: turn a TagFamily bitmask into a NodeSet bitset.
+#[cfg(feature = "label")]
+pub mod label;
+
+/// Frozen predicate kernels: the engine predicates (call_to, return_value_of,
+/// arg_of, size_argument_of, edge, in_function, in_file, in_package,
+/// literal_of, node_kind) that source-query stdlib rules compose into every
+/// higher-level query.
+#[cfg(feature = "predicate")]
+pub mod predicate;
+
+/// Deterministic fixpoint kernel: ping-pong with a convergence flag. Composes
+/// `csr_forward_traverse` and bitset OR into the transitive-closure driver every
+/// stdlib taint rule needs.
+#[cfg(feature = "fixpoint")]
+pub mod fixpoint;
+
+/// Geometric and Clifford-algebra kernels. Multivector products for equivariant
+/// networks, physics simulation, robotics, 3D vision.
+#[cfg(feature = "geom")]
+pub mod geom;
+
+/// Optimization kernels: homotopy continuation, sum-of-squares, matroid
+/// intersection.
+#[cfg(feature = "opt")]
+pub mod opt;
+
+/// Topological-data-analysis kernels: Vietoris-Rips filtration and simplicial
+/// complex operations.
+#[cfg(feature = "topology")]
+pub mod topology;
+
+/// Pattern-matching kernels. Distinct from `scan`, which is the neutral
+/// program-builder dialect over them.
+#[cfg(feature = "matching-kernels")]
+pub mod matching;
+
+/// NFA kernels: subgroup-cooperative simulator.
+#[cfg(feature = "nfa")]
+pub mod nfa;
 
 #[cfg(any(
     feature = "math-linalg",

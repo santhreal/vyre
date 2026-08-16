@@ -28,7 +28,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_POINTER_DECL, C_AST_KIND_STRUCT_DECL,
     C_AST_KIND_TYPEDEF_DECL, C_AST_KIND_UNION_DECL,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "c_ast_declaration_advanced_contracts/cpu_reference_and_pg_lowering.rs"]
 mod cpu_reference_and_pg_lowering;

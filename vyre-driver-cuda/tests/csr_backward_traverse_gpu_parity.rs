@@ -6,10 +6,10 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_backward_traverse::{
+use vyre_libs::graph::csr_backward_traverse::{
     cpu_ref, csr_backward_traverse, csr_backward_traverse_dispatch_grid,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 fn run(
     node_count: u32,

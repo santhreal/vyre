@@ -1,6 +1,6 @@
 //! Exact (Edmonds) matroid intersection for megakernel fusion-grouping.
 //!
-//! Self-consumer for [#10 `matroid_intersection_full`](vyre_primitives::math::matroid_intersection_full).
+//! Self-consumer for [#10 `matroid_intersection_full`](crate::math::matroid_intersection_full).
 //!
 //! Today the megakernel scheduler uses
 //! [`super::matroid_megakernel_scheduler::max_fusion_subset`] which is
@@ -39,8 +39,8 @@ use crate::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or
 use rustc_hash::FxHashSet;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::math::matroid_intersection_full::cpu_ref_into as matroid_cpu_ref_into;
-use vyre_primitives::math::matroid_intersection_full::matroid_intersection_full;
+use crate::math::matroid_intersection_full::cpu_ref_into as matroid_cpu_ref_into;
+use crate::math::matroid_intersection_full::matroid_intersection_full;
 
 /// Caller-owned dispatch scratch for exact megakernel matroid certification.
 #[derive(Debug, Default)]

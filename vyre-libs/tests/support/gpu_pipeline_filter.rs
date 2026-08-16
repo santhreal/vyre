@@ -139,7 +139,7 @@ pub(crate) fn assert_preflight_flags_match_declared_extent(dispatcher: &Counting
 
 pub(crate) fn reference_filter_source_bytes(raw: &[u8]) -> Vec<u8> {
     use vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::reference_gpu_comment_strip_mask;
-    use vyre_primitives::parsing::line_splice_classify::reference_line_splice_classify;
+    use vyre_libs::parsing::line_splice_classify::reference_line_splice_classify;
     let splice_keep = reference_line_splice_classify(raw);
     let comment_mask = reference_gpu_comment_strip_mask(raw);
     raw.iter()

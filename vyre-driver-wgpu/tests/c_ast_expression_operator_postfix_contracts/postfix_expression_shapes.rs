@@ -4,7 +4,7 @@ use crate::c_frontend::expression_pipeline::{assert_shape_none, run_pipeline};
 use crate::c_frontend::rows::{word_at, VAST_STRIDE_U32};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::C_AST_KIND_UNARY_EXPR;
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn postfix_inc_dec_are_not_unary_and_not_binary() {

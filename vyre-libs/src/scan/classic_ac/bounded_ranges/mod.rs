@@ -17,7 +17,7 @@ use crate::scan::builders::{
     append_match, append_match_subgroup, load_packed_byte, load_packed_byte_expr,
 };
 
-use vyre_primitives::matching::CompiledDfa;
+use crate::matching::CompiledDfa;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::ClassicAcAutomaton;
@@ -966,7 +966,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn classic_ac_bounded_ranges_scan_panics_on_oob_pid() {
-        use vyre_primitives::matching::CompiledDfa;
+        use crate::matching::CompiledDfa;
 
         // Craft a ClassicAcAutomaton whose output_records contains pid=5
         // but we only supply pattern_lengths of length 3.

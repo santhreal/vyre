@@ -517,7 +517,7 @@ pub fn python312_lexer(
             "vyre-libs::parsing::python312_lexer",
             vec![child_phase(
                 "vyre-libs::parsing::python312_lexer",
-                vyre_primitives::text::LINE_INDEX_OP_ID,
+                crate::text::LINE_INDEX_OP_ID,
                 vec![Node::if_then(
                     Expr::lt(t.clone(), Expr::u32(haystack_len)),
                     body,

@@ -2,7 +2,7 @@ use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::source_bytes::{load_source_byte, source_haystack_words};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-pub use vyre_primitives::hash::fnv1a::fnv1a32;
+pub use crate::hash::fnv1a::fnv1a32;
 
 /// C11 keyword table consumed by the GPU keyword promotion pass.
 pub const C_KEYWORDS: &[(&str, u32)] = &[

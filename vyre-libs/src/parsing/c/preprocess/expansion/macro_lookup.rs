@@ -2,7 +2,7 @@
 //! source-span hash the hashed scan is keyed on.
 
 use vyre_foundation::ir::{Expr, Node};
-use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_node};
+use crate::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_node};
 
 use super::*;
 

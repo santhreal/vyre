@@ -1,4 +1,4 @@
-use vyre_primitives::graph::dominator_frontier::try_cpu_ref as try_reference_dominator_frontier;
+use crate::graph::dominator_frontier::try_cpu_ref as try_reference_dominator_frontier;
 
 /// Compute the dominance frontier for `seed` over the Region graph
 /// described by the CSR dominance closure (`dom_offsets`/`dom_targets`,

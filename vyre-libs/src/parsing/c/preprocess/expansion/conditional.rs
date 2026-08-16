@@ -324,7 +324,7 @@ pub fn opt_conditional_mask_with_directives(
             "vyre-libs::parsing::opt_conditional_mask_with_directives",
             vec![child_phase(
                 "vyre-libs::parsing::opt_conditional_mask_with_directives",
-                vyre_primitives::text::LINE_INDEX_OP_ID,
+                crate::text::LINE_INDEX_OP_ID,
                 vec![Node::if_then(
                     Expr::eq(t, Expr::u32(0)),
                     vec![

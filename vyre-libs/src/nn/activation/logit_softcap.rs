@@ -6,7 +6,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use vyre_primitives::nn::f32_stability::flush_tiny;
+use crate::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::nn::logit_softcap";
 

@@ -15,8 +15,7 @@ documentation = "https://docs.rs/vyre-primitives"
 exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [features]
-# Default: marker types only, zero IR-builder deps. Domain features
-# enable either hardware (belongs here) or a parked composition.
+# Default: marker types only, zero IR-builder deps.
 default = []
 
 # Enable GPU-backend parity tests (requires CUDA driver + device).
@@ -27,60 +26,19 @@ gpu = []
 # available without host execution paths.
 cpu-parity = []
 
-# Internal marker feature  -  ON whenever any domain feature pulls
-# vyre-foundation. Keeps `#[cfg]` expressions terse (one gate
-# instead of `any(feature = "text", feature = "matching", …)`).
-# AUDIT_2026-04-24 F-RANGE-03: replaces the previous dead
-# `cfg(feature = "vyre-foundation")` which matched nothing.
+# Pulls vyre-foundation in as an optional dep. `hardware` and `vfs` need it;
+# nothing else in this crate builds IR.
 vyre-foundation = ["dep:vyre-foundation"]
 
-# Domain features. `hardware` is Category C and belongs here. Every
-# other domain is a composition parked until it moves to vyre-libs.
-# Classified in src/organization.rs. Every IR domain pulls foundation.
-text = ["vyre-foundation", "reduce"]
-# `hash`: `matching/nfa_to_dfa.rs` imports `crate::hash::fnv1a` UNCONDITIONALLY, so
-# the `matching` domain does not compile standalone without it. Previously omitted
-# (the bug was masked in-workspace by feature unification, another member always
-# enabled `hash`); a consumer enabling ONLY `matching` against the published crate
-# fails with E0433. Self-enable it so `matching` is a complete, standalone feature.
-matching = ["vyre-foundation", "hash"]
-decode = ["vyre-foundation"]
-# Subgroup-cooperative NFA step (G1). Composes bitset + matching.
-nfa = ["vyre-foundation", "bitset", "matching"]
-math = ["vyre-foundation", "graph", "fixpoint"]
-nn = ["vyre-foundation", "math"]
-hash = ["vyre-foundation"]
-parsing = ["vyre-foundation", "text", "matching"]
-graph = ["vyre-foundation", "bitset", "reduce", "hash", "fixpoint"]
-bitset = ["vyre-foundation"]
-reduce = ["vyre-foundation"]
-label = ["vyre-foundation", "bitset"]
-predicate = ["vyre-foundation", "graph", "bitset", "label"]
-fixpoint = ["vyre-foundation", "bitset"]
-# Geometric / Clifford algebra primitives (#8). Multivector products
-# unify quaternions, dual quaternions, and projective transformations
-# on a single substrate; reused by equivariant NNs (#33), physics
-# simulation, robotics, 3D vision.
-geom = ["vyre-foundation", "math"]
-# Convex / combinatorial optimization primitives (#9, #14, #46).
-opt = ["vyre-foundation", "math"]
-# Persistent homology + simplicial complex primitives (#15, #32).
-topology = ["vyre-foundation", "math", "graph"]
-visual = ["vyre-foundation"]
-
-# Category C hardware intrinsics. Every op here submits an
-# `OperationRegistration`, so the registry feature comes with it rather than
-# being a second thing to remember.
+# Category C hardware intrinsics: the one domain feature this crate declares.
+# Every op here submits an `OperationRegistration`, so the registry feature comes
+# with it rather than being a second thing to remember.
 hardware = ["vyre-foundation", "inventory-registry"]
 
-# Convenience aggregate: every domain currently in this crate,
-# including parked compositions and hardware.
-all-lego = [
-    "text", "matching", "math", "nn", "hash", "parsing",
-    "geom", "opt", "topology",
-    "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "decode",
-    "nfa", "visual", "hardware",
-]
+# Convenience aggregate: every domain feature this crate declares. It equals
+# INTRINSIC_FEATURES union COMPOSITION_FEATURES from src/organization.rs, and
+# COMPOSITION_FEATURES is empty because every composition moved to vyre-libs.
+all-lego = ["hardware"]
 
 # Enable canonical `OperationRegistration::primitive(...)` submissions so the
 # universal conform harness and `cargo xtask print-composition` discover every
@@ -121,360 +79,36 @@ workspace = true
 name = "shared_owner_closure"
 path = "tests/shared_owner_closure.rs"
 
-# Master plan: integration smoke needs hash builders + inventory walk.
 [[test]]
 name = "integration"
 path = "tests/integration.rs"
-required-features = ["hash", "inventory-registry"]
-
-[[test]]
-name = "inflate_program"
-path = "tests/inflate_program.rs"
-required-features = ["decode"]
+required-features = ["hardware"]
 
 [[bench]]
 name = "wire_throughput"
 harness = false
 
-
-
-
-
-
-[[test]]
-name = "bitset_word_contracts"
-path = "tests/bitset_word_contracts.rs"
-required-features = ["bitset", "cpu-parity"]
-
-[[test]]
-name = "adversarial_bitset_reduce_matrix"
-path = "tests/adversarial_bitset_reduce_matrix.rs"
-required-features = ["bitset", "cpu-parity"]
-
-[[test]]
-name = "adversarial_bitset_contains"
-path = "tests/adversarial_bitset_contains.rs"
-required-features = ["bitset", "cpu-parity"]
-
-[[test]]
-name = "adversarial_reduce_gather"
-path = "tests/adversarial_reduce_gather.rs"
-required-features = ["reduce"]
-
-[[test]]
-name = "adversarial_reduce_histogram"
-path = "tests/adversarial_reduce_histogram.rs"
-required-features = ["reduce"]
-
-[[test]]
-name = "adversarial_reduce_radix_sort"
-path = "tests/adversarial_reduce_radix_sort.rs"
-required-features = ["reduce"]
-
-[[test]]
-name = "adversarial_reduce_scatter"
-path = "tests/adversarial_reduce_scatter.rs"
-required-features = ["reduce"]
-
-[[test]]
-name = "adversarial_reduce_segment_reduce"
-path = "tests/adversarial_reduce_segment_reduce.rs"
-required-features = ["reduce"]
-
-[[test]]
-name = "adversarial_text_char_class"
-path = "tests/adversarial_text_char_class.rs"
-required-features = ["text"]
-
-[[test]]
-name = "adversarial_text_byte_histogram"
-path = "tests/adversarial_text_byte_histogram.rs"
-required-features = ["text", "cpu-parity"]
-
-[[test]]
-name = "adversarial_text_utf8_shape_counts"
-path = "tests/adversarial_text_utf8_shape_counts.rs"
-required-features = ["text", "cpu-parity"]
-
-[[test]]
-name = "adversarial_text_line_index"
-path = "tests/adversarial_text_line_index.rs"
-required-features = ["text"]
-
-[[test]]
-name = "proptest_text_line_index"
-path = "tests/proptest_text_line_index.rs"
-required-features = ["text", "cpu-parity"]
-
-[[test]]
-name = "proptest_text_encoding_classify"
-path = "tests/proptest_text_encoding_classify.rs"
-required-features = ["text", "cpu-parity"]
-
-[[test]]
-name = "proptest_text_utf8_validate"
-path = "tests/proptest_text_utf8_validate.rs"
-required-features = ["text", "cpu-parity"]
-
-[[test]]
-name = "adversarial_text_utf8_validate"
-path = "tests/adversarial_text_utf8_validate.rs"
-required-features = ["text"]
-
-[[test]]
-name = "adversarial_math"
-path = "tests/adversarial_math.rs"
-required-features = ["math", "cpu-parity"]
-
-[[test]]
-name = "adversarial_graph_reachability_fixpoint"
-path = "tests/adversarial_graph_reachability_fixpoint.rs"
-required-features = ["graph", "fixpoint", "math", "cpu-parity"]
-
-[[test]]
-name = "adversarial_graph_csr_validation_contracts"
-path = "tests/adversarial_graph_csr_validation_contracts.rs"
-required-features = ["graph"]
-
-[[test]]
-name = "proptest_csr_frontier_queue"
-path = "tests/proptest_csr_frontier_queue.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "proptest_csr_frontier_shard"
-path = "tests/proptest_csr_frontier_shard.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "proptest_csr_queue_strided"
-path = "tests/proptest_csr_queue_strided.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "proptest_csr_queue_split"
-path = "tests/proptest_csr_queue_split.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "adversarial_boolean_packing_four_russians_readiness"
-path = "tests/adversarial_boolean_packing_four_russians_readiness.rs"
-required-features = ["bitset", "cpu-parity"]
-
-[[test]]
-name = "four_russians_dense_matvec_generated"
-path = "tests/four_russians_dense_matvec_generated.rs"
-required-features = ["bitset", "cpu-parity"]
-
-[[test]]
-name = "adversarial_graph_ops"
-path = "tests/adversarial_graph_ops.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "adaptive_four_russians_dense_generated"
-path = "tests/adaptive_four_russians_dense_generated.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "adversarial_bitset_ops"
-path = "tests/adversarial_bitset_ops.rs"
-required-features = ["bitset", "cpu-parity"]
-
-[[test]]
-name = "region_adversarial"
-path = "tests/region_adversarial.rs"
-required-features = ["matching"]
-
-[[test]]
-name = "dominator_tree_pristine"
-path = "tests/dominator_tree_pristine.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "dominator_tree_scale_gate"
-path = "tests/dominator_tree_scale_gate.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "dominator_tree_proptest"
-path = "tests/dominator_tree_proptest.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "sweep_segment_reduce_oracle_matrix"
-path = "tests/sweep_segment_reduce_oracle_matrix.rs"
-required-features = ["cpu-parity", "reduce"]
-
-[[test]]
-name = "sweep_radix_sort_oracle_matrix"
-path = "tests/sweep_radix_sort_oracle_matrix.rs"
-required-features = ["cpu-parity", "reduce"]
-
-[[test]]
-name = "sweep_predicate_node_kind_oracle_matrix"
-path = "tests/sweep_predicate_node_kind_oracle_matrix.rs"
-required-features = ["cpu-parity", "predicate"]
-
-[[test]]
-name = "arg_of_slot_precision"
-path = "tests/arg_of_slot_precision.rs"
-required-features = ["cpu-parity", "predicate"]
-
-[[test]]
-name = "sweep_hash_crc_oracle_matrix"
-path = "tests/sweep_hash_crc_oracle_matrix.rs"
-required-features = ["hash"]
-
-[[test]]
-name = "sweep_hash_fnv1a_oracle_matrix"
-path = "tests/sweep_hash_fnv1a_oracle_matrix.rs"
-required-features = ["hash"]
-
-[[test]]
-name = "fnv1a64_builder_parity"
-path = "tests/fnv1a64_builder_parity.rs"
-required-features = ["hash"]
-
-[[test]]
-name = "hash_registration_witnesses"
-path = "tests/hash_registration_witnesses.rs"
-required-features = ["hash", "inventory-registry"]
-
-[[test]]
-name = "sweep_toposort_oracle_matrix"
-path = "tests/sweep_toposort_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "sweep_bitset_oracle_matrix"
-path = "tests/sweep_bitset_oracle_matrix.rs"
-required-features = ["bitset", "cpu-parity"]
-
-[[test]]
-name = "sweep_graph_motif_oracle_matrix"
-path = "tests/sweep_graph_motif_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "sweep_graph_path_reconstruct_oracle_matrix"
-path = "tests/sweep_graph_path_reconstruct_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[test]]
-name = "sweep_graph_csr_bidirectional_oracle_matrix"
-path = "tests/sweep_graph_csr_bidirectional_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-
-[[example]]
-name = "dominator_tree_e2e"
-path = "examples/dominator_tree_e2e.rs"
-required-features = ["graph", "cpu-parity"]
-[[test]]
-name = "sweep_hash_adler32_volume_oracle_matrix"
-path = "tests/sweep_hash_adler32_volume_oracle_matrix.rs"
-required-features = ["hash"]
-[[test]]
-name = "sweep_hash_multi_hash_volume_oracle_matrix"
-path = "tests/sweep_hash_multi_hash_volume_oracle_matrix.rs"
-required-features = ["hash"]
-[[test]]
-name = "sweep_hash_blake3_g_volume_oracle_matrix"
-path = "tests/sweep_hash_blake3_g_volume_oracle_matrix.rs"
-required-features = ["hash", "cpu-parity"]
-[[test]]
-name = "sweep_hash_blake3_round_volume_oracle_matrix"
-path = "tests/sweep_hash_blake3_round_volume_oracle_matrix.rs"
-required-features = ["hash", "cpu-parity"]
-[[test]]
-name = "sweep_graph_csr_forward_traverse_volume_oracle_matrix"
-path = "tests/sweep_graph_csr_forward_traverse_volume_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-[[test]]
-name = "sweep_graph_csr_backward_traverse_volume_oracle_matrix"
-path = "tests/sweep_graph_csr_backward_traverse_volume_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-[[test]]
-name = "sweep_graph_reachable_volume_oracle_matrix"
-path = "tests/sweep_graph_reachable_volume_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-[[test]]
-name = "sweep_graph_csr_forward_or_changed_volume_oracle_matrix"
-path = "tests/sweep_graph_csr_forward_or_changed_volume_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-[[test]]
-name = "sweep_graph_persistent_bfs_volume_oracle_matrix"
-path = "tests/sweep_graph_persistent_bfs_volume_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-[[test]]
-name = "sweep_math_prefix_scan_inclusive_volume_oracle_matrix"
-path = "tests/sweep_math_prefix_scan_inclusive_volume_oracle_matrix.rs"
-required-features = ["math", "cpu-parity"]
-[[test]]
-name = "sweep_math_prefix_scan_exclusive_volume_oracle_matrix"
-path = "tests/sweep_math_prefix_scan_exclusive_volume_oracle_matrix.rs"
-required-features = ["math", "cpu-parity"]
-[[test]]
-name = "proptest_prefix_scan_large"
-path = "tests/proptest_prefix_scan_large.rs"
-required-features = ["math", "cpu-parity"]
-[[test]]
-name = "sweep_decode_hex_primitives_volume_oracle_matrix"
-path = "tests/sweep_decode_hex_primitives_volume_oracle_matrix.rs"
-required-features = ["decode"]
-[[test]]
-name = "sweep_decode_base64_volume_oracle_matrix"
-path = "tests/sweep_decode_base64_volume_oracle_matrix.rs"
-required-features = ["decode"]
-[[test]]
-name = "sweep_reduce_oracle_matrix"
-path = "tests/sweep_reduce_oracle_matrix.rs"
-required-features = ["reduce", "cpu-parity"]
-[[test]]
-name = "sweep_graph_scc_decompose_volume_oracle_matrix"
-path = "tests/sweep_graph_scc_decompose_volume_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-[[test]]
-name = "sweep_hash_crc32_volume_oracle_matrix"
-path = "tests/sweep_hash_crc32_volume_oracle_matrix.rs"
-required-features = ["hash"]
-[[test]]
-name = "sweep_hash_volume_oracle_matrix"
-path = "tests/sweep_hash_volume_oracle_matrix.rs"
-required-features = ["hash"]
-[[test]]
-name = "persistent_fixpoint_grid_contracts"
-path = "tests/persistent_fixpoint_grid_contracts.rs"
-required-features = ["fixpoint", "cpu-parity"]
 [[test]]
 name = "hardware_conform"
 path = "tests/hardware_conform.rs"
 required-features = ["hardware"]
+
 [[test]]
 name = "hardware_registry_contract"
 path = "tests/hardware_registry_contract.rs"
 required-features = ["hardware"]
+
 [[test]]
 name = "generated_hardware_f32_matrix"
 path = "tests/generated_hardware_f32_matrix.rs"
 required-features = ["hardware"]
+
 [[test]]
 name = "generated_hardware_u32_matrix"
 path = "tests/generated_hardware_u32_matrix.rs"
 required-features = ["hardware"]
+
 [[test]]
 name = "generated_hardware_registry_matrix"
 path = "tests/generated_hardware_registry_matrix.rs"
 required-features = ["hardware"]
-[[test]]
-name = "node_kind_eq_ir_parity_proptest"
-path = "tests/node_kind_eq_ir_parity_proptest.rs"
-required-features = ["predicate", "cpu-parity"]
-[[test]]
-name = "resolve_family_ir_parity_proptest"
-path = "tests/resolve_family_ir_parity_proptest.rs"
-required-features = ["label", "cpu-parity"]
-[[test]]
-name = "graph_primitive_binding_contracts"
-path = "tests/graph_primitive_binding_contracts.rs"
-required-features = ["graph", "inventory-registry"]

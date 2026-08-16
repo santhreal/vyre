@@ -30,7 +30,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_IF_STMT, C_AST_KIND_INITIALIZER_LIST,
     C_AST_KIND_INLINE_ASM, C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT, C_AST_KIND_SIZEOF_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[path = "c11_ast_corpus_complete_constructs/gpu_classifier_aggregates_and_designators.rs"]
 mod gpu_classifier_aggregates_and_designators;

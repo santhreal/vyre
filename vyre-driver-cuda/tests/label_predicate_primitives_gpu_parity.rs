@@ -7,10 +7,10 @@
 mod common;
 
 use common::{cuda_u32_bitset_output, with_live_backend};
-use vyre_primitives::label::resolve_family::{cpu_ref as resolve_family_cpu, resolve_family};
-use vyre_primitives::predicate::in_file::{cpu_ref as in_file_cpu, in_file};
-use vyre_primitives::predicate::in_function::{cpu_ref as in_func_cpu, in_function};
-use vyre_primitives::predicate::in_package::{cpu_ref as in_pkg_cpu, in_package};
+use vyre_libs::label::resolve_family::{cpu_ref as resolve_family_cpu, resolve_family};
+use vyre_libs::predicate::in_file::{cpu_ref as in_file_cpu, in_file};
+use vyre_libs::predicate::in_function::{cpu_ref as in_func_cpu, in_function};
+use vyre_libs::predicate::in_package::{cpu_ref as in_pkg_cpu, in_package};
 
 fn run_resolve_family(node_tags: &[u32], family: u32) -> Vec<u32> {
     let n = node_tags.len() as u32;

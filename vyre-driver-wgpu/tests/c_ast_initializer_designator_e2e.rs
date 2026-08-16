@@ -19,7 +19,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ENUMERATOR_DECL, C_AST_KIND_FIELD_DECL, C_AST_KIND_INITIALIZER_LIST,
     C_AST_KIND_MEMBER_ACCESS_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]

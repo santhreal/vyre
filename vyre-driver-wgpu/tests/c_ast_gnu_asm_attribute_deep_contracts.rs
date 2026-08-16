@@ -30,7 +30,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ATTRIBUTE_WEAK, C_AST_KIND_FIELD_DECL, C_AST_KIND_FUNCTION_DEFINITION,
     C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT, C_AST_KIND_INLINE_ASM,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // Fixture builders  -  extended GNU asm

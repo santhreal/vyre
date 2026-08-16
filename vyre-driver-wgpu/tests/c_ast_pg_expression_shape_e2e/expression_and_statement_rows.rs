@@ -18,7 +18,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_INITIALIZER_LIST, C_AST_KIND_LABEL_STMT, C_AST_KIND_MEMBER_ACCESS_EXPR,
     C_AST_KIND_SWITCH_STMT, C_EXPR_ASSOC_RIGHT, C_EXPR_SHAPE_BINARY,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn compound_literal_designators_and_nested_conditional_lower_to_pg() {

@@ -12,7 +12,7 @@ use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 fn fixture_macro_call_with_trailing_comma() -> Fixture {
     c_tokens("int v ; v = FOO ( a , ) ;")

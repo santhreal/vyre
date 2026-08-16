@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let inputs = [to_bytes(&bits), to_bytes(&queries), vec![0u8; 5 * 4]];
     let values: Vec<Value> = inputs.into_iter().map(Value::from).collect();
 
-    let program = vyre_primitives::bitset::select::select1_query("bits", "queries", "out", 4, 5);
+    let program = vyre_libs::bitset::select::select1_query("bits", "queries", "out", 4, 5);
     let optimized = vyre_foundation::optimizer::optimize(program.clone()).map_err(|error| {
         format!("the registered optimizer did not converge on select1_query: {error}")
     })?;

@@ -4,7 +4,7 @@ mod common;
 use common::u32_bytes;
 
 use vyre_driver::VyreBackend;
-use vyre_primitives::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
+use vyre_libs::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
 
 #[test]
 fn sinkhorn_iterate_matches_registered_fixture() {

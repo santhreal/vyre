@@ -6,12 +6,12 @@
 
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::quantized::i4x8_batched_matmul_f32_scaled as primitive_i4x8_batched_matmul_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled as primitive_i4x8_batched_matmul_top1_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_batched_matvec_f32_scaled as primitive_i4x8_batched_matvec_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_dot_f32_scaled as primitive_i4x8_dot_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_dot_i32 as primitive_i4x8_dot_i32;
-use vyre_primitives::math::quantized::i4x8_matvec_f32_scaled as primitive_i4x8_matvec_f32_scaled;
+use crate::math::quantized::i4x8_batched_matmul_f32_scaled as primitive_i4x8_batched_matmul_f32_scaled;
+use crate::math::quantized::i4x8_batched_matmul_top1_f32_scaled as primitive_i4x8_batched_matmul_top1_f32_scaled;
+use crate::math::quantized::i4x8_batched_matvec_f32_scaled as primitive_i4x8_batched_matvec_f32_scaled;
+use crate::math::quantized::i4x8_dot_f32_scaled as primitive_i4x8_dot_f32_scaled;
+use crate::math::quantized::i4x8_dot_i32 as primitive_i4x8_dot_i32;
+use crate::math::quantized::i4x8_matvec_f32_scaled as primitive_i4x8_matvec_f32_scaled;
 
 /// Stable spec-level extension name for packed INT4 dot products.
 pub const INT4_DOT_EXTENSION_NAME: &str = "quant.int4.dot";
@@ -335,8 +335,8 @@ mod tests {
     use vyre_reference::{reference_eval, value::Value};
 
     fn run(lhs: &[i32], rhs: &[i32]) -> i32 {
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(rhs);
+        let lhs_packed = crate::math::quantized::pack_i4x8_cpu(lhs);
+        let rhs_packed = crate::math::quantized::pack_i4x8_cpu(rhs);
         let program = int4_dot_i32("lhs", "rhs", "out", lhs.len() as u32);
         let outputs = reference_eval(
             &program,
@@ -356,8 +356,8 @@ mod tests {
     }
 
     fn run_scaled(lhs: &[i32], rhs: &[i32], lhs_scale: f32, rhs_scale: f32) -> f32 {
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(rhs);
+        let lhs_packed = crate::math::quantized::pack_i4x8_cpu(lhs);
+        let rhs_packed = crate::math::quantized::pack_i4x8_cpu(rhs);
         let program = int4_dot_f32_scaled(
             "lhs",
             "rhs",
@@ -387,10 +387,10 @@ mod tests {
 
     fn pack_i4_matrix_rows(rows: &[Vec<i32>]) -> Vec<u32> {
         let cols = rows.first().map_or(0, Vec::len) as u32;
-        let words_per_row = vyre_primitives::math::quantized::i4_packed_words(cols) as usize;
+        let words_per_row = crate::math::quantized::i4_packed_words(cols) as usize;
         let mut out = Vec::with_capacity(rows.len() * words_per_row);
         for row in rows {
-            let mut packed = vyre_primitives::math::quantized::pack_i4x8_cpu(row);
+            let mut packed = crate::math::quantized::pack_i4x8_cpu(row);
             packed.resize(words_per_row, 0);
             out.extend_from_slice(&packed);
         }
@@ -542,13 +542,13 @@ mod tests {
     fn packed_dot_matches_cpu_oracle() {
         let lhs = [1, 2, 3, 4, -1, -2, -3, -4];
         let rhs = [4, 3, 2, 1, -4, -3, -2, -1];
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&rhs);
+        let lhs_packed = crate::math::quantized::pack_i4x8_cpu(&lhs);
+        let rhs_packed = crate::math::quantized::pack_i4x8_cpu(&rhs);
 
         assert_eq!(run(&lhs, &rhs), 40);
         assert_eq!(
             run(&lhs, &rhs),
-            vyre_primitives::math::quantized::i4x8_dot_i32_cpu(&lhs_packed, &rhs_packed, 8)
+            crate::math::quantized::i4x8_dot_i32_cpu(&lhs_packed, &rhs_packed, 8)
         );
     }
 
@@ -558,12 +558,12 @@ mod tests {
         let rhs = [4, 3, 2, 1, -4, -3, -2, -1];
         let lhs_scale = 0.5_f32;
         let rhs_scale = 0.25_f32;
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&rhs);
+        let lhs_packed = crate::math::quantized::pack_i4x8_cpu(&lhs);
+        let rhs_packed = crate::math::quantized::pack_i4x8_cpu(&rhs);
 
         assert_eq!(
             run_scaled(&lhs, &rhs, lhs_scale, rhs_scale).to_bits(),
-            vyre_primitives::math::quantized::i4x8_dot_f32_scaled_cpu(
+            crate::math::quantized::i4x8_dot_f32_scaled_cpu(
                 &lhs_packed,
                 &rhs_packed,
                 lhs_scale,
@@ -586,7 +586,7 @@ mod tests {
         let packed = pack_i4_matrix_rows(&weights);
 
         let actual = run_matvec(&weights, &x, &scales);
-        let expected = vyre_primitives::math::quantized::i4x8_matvec_f32_scaled_cpu(
+        let expected = crate::math::quantized::i4x8_matvec_f32_scaled_cpu(
             &packed,
             &x,
             &scales,
@@ -615,7 +615,7 @@ mod tests {
         let packed = pack_i4_matrix_rows(&weights);
 
         let actual = run_batched_matvec(&weights, &x_batches, &scales, 2);
-        let expected = vyre_primitives::math::quantized::i4x8_batched_matvec_f32_scaled_cpu(
+        let expected = crate::math::quantized::i4x8_batched_matvec_f32_scaled_cpu(
             &packed,
             &x_batches,
             &scales,
@@ -647,7 +647,7 @@ mod tests {
         let activations_packed = pack_i4_matrix_rows(&activation_batches);
 
         let actual = run_batched_matmul(&weights, &activation_batches, &row_scales, &batch_scales);
-        let expected = vyre_primitives::math::quantized::i4x8_batched_matmul_f32_scaled_cpu(
+        let expected = crate::math::quantized::i4x8_batched_matmul_f32_scaled_cpu(
             &weights_packed,
             &activations_packed,
             &row_scales,
@@ -682,7 +682,7 @@ mod tests {
         let (actual_scores, actual_indices) =
             run_batched_matmul_top1(&weights, &activation_batches, &row_scales, &batch_scales);
         let (expected_scores, expected_indices) =
-            vyre_primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled_cpu(
+            crate::math::quantized::i4x8_batched_matmul_top1_f32_scaled_cpu(
                 &weights_packed,
                 &activations_packed,
                 &row_scales,

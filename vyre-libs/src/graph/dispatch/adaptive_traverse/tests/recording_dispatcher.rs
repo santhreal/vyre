@@ -343,7 +343,7 @@ pub(super) fn graph_of(node_count: u32) -> ResidentAdaptiveTraversalGraph {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
-        words: vyre_primitives::bitset::bitset_words(node_count) as usize,
+        words: crate::bitset::bitset_words(node_count) as usize,
         ..traversal_graph()
     }
 }

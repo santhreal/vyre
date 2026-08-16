@@ -12,7 +12,7 @@
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::nn::quest_paging_passes::{
+use crate::nn::quest_paging_passes::{
     quest_score_pages_body, quest_select_top_k_body, quest_zero_fill_body, QUEST_SCORE_PAGES_OP_ID,
     QUEST_SELECT_TOP_K_OP_ID, QUEST_ZERO_FILL_OP_ID,
 };

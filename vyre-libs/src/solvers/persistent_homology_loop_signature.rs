@@ -36,7 +36,7 @@
 //! ```
 //!
 //! Per-ε cycle counting consumes
-//! [`vyre_primitives::topology::betti_persistence::betti_persistence_cpu`]:
+//! [`crate::topology::betti_persistence::betti_persistence_cpu`]:
 //! the 1-skeleton's union-find pass returns `(b0, b1, edges)` and lets
 //! the optimizer track how many independent cycles persist as ε grows.
 //!
@@ -53,8 +53,8 @@ use crate::dispatch_buffers::{
 use crate::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::topology::vietoris_rips::extract_edges_cpu;
-use vyre_primitives::topology::vietoris_rips::vietoris_rips_edge_filter;
+use crate::topology::vietoris_rips::extract_edges_cpu;
+use crate::topology::vietoris_rips::vietoris_rips_edge_filter;
 
 /// Reusable buffers for loop-topology filtration sweeps.
 #[derive(Debug, Default)]
@@ -451,7 +451,7 @@ mod fixed_via_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::topology::betti_persistence::betti_persistence_cpu;
+    use crate::topology::betti_persistence::betti_persistence_cpu;
 
     #[test]
 

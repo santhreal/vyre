@@ -23,7 +23,7 @@ pub use resident::{
 pub use resident_scratch::{AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch};
 pub use resident_steps::*;
 pub use upload::*;
-pub use vyre_primitives::graph::adaptive_traverse::{
+pub use crate::graph::adaptive_traverse::{
     select_adaptive_traversal_mode, select_dense_traversal_kernel, AdaptiveTraversalMode,
     DenseTraversalKernel,
 };

@@ -1,12 +1,12 @@
 //! Bitset summary substrate consumer.
 //!
-//! Wires `vyre_primitives::bitset::popcount` and several companion bitset
+//! Wires `crate::bitset::popcount` and several companion bitset
 //! operations into the dispatch path so the optimizer / cache invalidator can
 //! summarize how saturated their reachability / alias / dirty-set bitsets are
 //! without each pass re-implementing popcount inline.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::bitset::popcount::{
+use crate::bitset::popcount::{
     cpu_ref as primitive_popcount, cpu_ref_into as primitive_popcount_into,
 };
 
@@ -123,7 +123,7 @@ pub fn per_word_popcount_via_with_scratch_into(
         ))
     })?;
     let program =
-        vyre_primitives::bitset::popcount::bitset_popcount("input", "count_words", word_count);
+        crate::bitset::popcount::bitset_popcount("input", "count_words", word_count);
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(

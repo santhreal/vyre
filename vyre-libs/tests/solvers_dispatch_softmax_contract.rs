@@ -1,7 +1,7 @@
 //! Delegation and normalization contract for `solvers::dispatch_softmax`.
 //!
 //! WHY: `dispatch_softmax` is a Category A wrapper over the Category C owner
-//! `vyre_primitives::math::differentiable::softmax_step`. Nothing named it:
+//! `vyre_libs::math::differentiable::softmax_step`. Nothing named it:
 //! no `inventory::submit!` block, no test. A wrapper with no coverage is the
 //! exact place a delegation quietly becomes a copy, and a copy of a
 //! fixed-point normalizer is a second owner of a rounding rule.
@@ -20,7 +20,7 @@
 
 use vyre_foundation::ir::{BufferAccess, Node, Program};
 use vyre_libs::solvers::dataflow_compaction_pipeline::dispatch_softmax;
-use vyre_primitives::math::differentiable::{softmax_step, OP_ID};
+use vyre_libs::math::differentiable::{softmax_step, OP_ID};
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 

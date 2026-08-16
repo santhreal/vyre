@@ -16,7 +16,7 @@ use vyre_foundation::composition::trap_program;
 #[cfg(test)]
 use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::builder::{

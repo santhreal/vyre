@@ -9,7 +9,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_CAST_EXPR, C_AST_KIND_SIZEOF_EXPR, C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_LEFT,
     C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_NONE,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn plus_binary_is_binary_and_unary_is_unary() {

@@ -47,7 +47,6 @@ pub(crate) fn randomize_buffer(op_id: &str, program: &Program, buffer_idx: usize
 
     match op_id {
         "vyre-libs::decode::inflate_stored_block" => false,
-        "vyre-libs::decode::ziftsieve" => buffer_idx == 0,
         "vyre-libs::parsing::c_lexer" => buffer_idx == 0,
         "vyre-libs::parsing::c_keyword" | "vyre-libs::parsing::c_keyword_packed_haystack" => {
             buffer_idx == 4 || buffer_idx == 5

@@ -17,13 +17,13 @@ use vyre_libs::graph::dispatch::exploded::{
     build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
 };
 use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
-use vyre_primitives::graph::csr_backward_or_changed;
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-use vyre_primitives::graph::csr_forward_or_changed;
-use vyre_primitives::graph::exploded::build_cpu_reference;
-use vyre_primitives::graph::motif::{self, MotifEdge};
-use vyre_primitives::graph::path_reconstruct;
-use vyre_primitives::graph::persistent_bfs;
+use vyre_libs::graph::csr_backward_or_changed;
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_forward_or_changed;
+use vyre_libs::graph::exploded::build_cpu_reference;
+use vyre_libs::graph::motif::{self, MotifEdge};
+use vyre_libs::graph::path_reconstruct;
+use vyre_libs::graph::persistent_bfs;
 
 /// Shapes per substrate-wrapper family. The wrappers delegate to the primitive
 /// references swept below, so they need breadth, not depth.

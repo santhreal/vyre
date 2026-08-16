@@ -21,7 +21,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ARRAY_SUBSCRIPT_EXPR, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR,
     C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_UNARY_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // Tests

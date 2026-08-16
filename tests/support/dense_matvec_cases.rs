@@ -2,7 +2,7 @@
 //! boolean-semiring oracle every arm is measured against.
 //!
 //! Two suites asserted the same contract over the same corpus generator: the
-//! primitive `dense_matvec_*` family owned by `vyre_primitives::bitset::four_russians`
+//! primitive `dense_matvec_*` family owned by `vyre_libs::bitset::four_russians`
 //! and the substrate transform family in `vyre_libs::encoding::bitset_transform_pipeline`.
 //! The two files were identical apart from their sweep bounds, and the bounds
 //! disagreed in both directions: the primitive suite swept 0..=18 tiles by
@@ -25,7 +25,7 @@
 
 use vyre_test_support::case_table::ArmCoverage;
 
-use vyre_primitives::bitset::four_russians::{
+use vyre_libs::bitset::four_russians::{
     frontier_words_for_byte_tiles, BYTE_TILE_STATES, BYTE_TILE_WIDTH,
 };
 use vyre_primitives::wire::pack_u32_slice;

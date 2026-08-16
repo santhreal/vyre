@@ -11,14 +11,14 @@
 use vyre_foundation::composition::{trap_program, wrap_child_region, wrap_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::nn::attention_passes::{
+use crate::nn::attention_passes::{
     attention_max_pass, attention_sum_pass, attention_write_pass, ATTENTION_MAX_PASS_OP_ID,
     ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
 };
 
 use crate::builder::{check_tensors, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};
-use vyre_primitives::nn::attention_stability::{
+use crate::nn::attention_stability::{
     bounded_exp_arg, bounded_score, direct_score_expr, flush_tiny, positive_denominator,
 };
 

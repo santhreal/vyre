@@ -8,7 +8,7 @@ use super::scratch::{prepare_filter_scratch, write_zero_bytes};
 use super::FilteredBytes;
 use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_primitives::parsing::line_splice_classify::line_splice_classify_u8;
+use crate::parsing::line_splice_classify::line_splice_classify_u8;
 
 #[derive(Default)]
 pub(super) struct SpliceOnlyScratch {

@@ -24,7 +24,7 @@ use vyre_libs::parsing::c::parse::vast::{
     CReferenceDecodeError, C_EXPR_SHAPE_NONE,
 };
 use vyre_libs::parsing::c::pipeline::stages::C11_AST_MAX_TOK_SCAN;
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 use vyre_reference::value::Value;
 
 // ---------------------------------------------------------------------------

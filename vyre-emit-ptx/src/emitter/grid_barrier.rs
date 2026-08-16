@@ -44,7 +44,7 @@ impl BodyCtx<'_> {
                  the barrier silently becomes a no-op, leaving the grid unsynchronized with no \
                  error. Fix: unroll the loop so each GridSync barrier is a distinct top-level \
                  barrier with its own release target (this is what \
-                 vyre_primitives::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does, \
+                 vyre_libs::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does, \
                  emitting max_iterations top-level waves), or split the program at the barrier and \
                  let the host loop re-launch each segment."
                     .to_string(),

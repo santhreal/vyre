@@ -17,7 +17,7 @@ count is not an admission criterion, so a test written here pins a builder that
 is on its way out, not a placement decision.
 
 The path is the interface. A caller writes
-`vyre_primitives::text::char_class::char_class(..)`, so the composition chain
+`vyre_libs::text::char_class::char_class(..)`, so the composition chain
 is visible at the call site, and a test is named for the builder it pins.
 
 ## Critical invariants

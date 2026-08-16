@@ -1,7 +1,7 @@
 use crate::parsing::c::lex::tokens::TOK_IDENTIFIER;
 use crate::parsing::c::source_bytes::load_source_byte;
 use vyre_foundation::ir::{Expr, Node};
-use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_node};
+use crate::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_node};
 
 /// Emit IR that interns an identifier token by hashing its source bytes.
 pub fn emit_identifier_intern(

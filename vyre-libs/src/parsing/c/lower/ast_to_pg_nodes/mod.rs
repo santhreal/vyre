@@ -33,7 +33,7 @@ pub use reference::{
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_foundation::ir::Expr;
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::predicate::node_kind;
+use crate::predicate::node_kind;
 
 /// Number of `u32` words in one packed `PgNode`.
 const PG_NODE_STRIDE_U32: u32 = 6;

@@ -6,7 +6,7 @@
 //! and Method-of-Four-Russians byte-tile application.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::{
+use crate::bitset::{
     and_into::bitset_and_into,
     and_not::bitset_and_not,
     and_not_into::bitset_and_not_into,
@@ -23,7 +23,7 @@ use vyre_primitives::bitset::{
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::bitset::{
+use crate::bitset::{
     and_into::cpu_ref as primitive_and_into,
     and_not::cpu_ref as primitive_and_not,
     and_not_into::cpu_ref as primitive_and_not_into,
@@ -216,43 +216,43 @@ mod tests {
         let cases = [
             (
                 subtract_mask_program("lhs", "rhs", "out", 2),
-                vyre_primitives::bitset::and_not::OP_ID,
+                crate::bitset::and_not::OP_ID,
             ),
             (
                 narrow_mask_in_place_program("target", "mask", 2),
-                vyre_primitives::bitset::and_into::OP_ID,
+                crate::bitset::and_into::OP_ID,
             ),
             (
                 grow_mask_in_place_program("target", "addend", 2),
-                vyre_primitives::bitset::or_into::OP_ID,
+                crate::bitset::or_into::OP_ID,
             ),
             (
                 diff_mask_in_place_program("target", "addend", 2),
-                vyre_primitives::bitset::xor_into::OP_ID,
+                crate::bitset::xor_into::OP_ID,
             ),
             (
                 subtract_mask_in_place_program("target", "sub", 2),
-                vyre_primitives::bitset::and_not_into::OP_ID,
+                crate::bitset::and_not_into::OP_ID,
             ),
             (
                 copy_mask_program("target", "source", 2),
-                vyre_primitives::bitset::copy::OP_ID,
+                crate::bitset::copy::OP_ID,
             ),
             (
                 any_mask_program("input", "out", 2),
-                vyre_primitives::bitset::any::OP_ID,
+                crate::bitset::any::OP_ID,
             ),
             (
                 select1_navigation_program("bits", "queries", "out", 2, 2),
-                vyre_primitives::bitset::select::OP_ID,
+                crate::bitset::select::OP_ID,
             ),
             (
                 four_russians_transform_program("lhs", "rhs", "lut", "out", 2),
-                vyre_primitives::bitset::four_russians::OP_ID,
+                crate::bitset::four_russians::OP_ID,
             ),
             (
                 four_russians_dense_matvec_program("frontier", "tile_lut", "out", 2, 2),
-                vyre_primitives::bitset::four_russians::DENSE_MATVEC_OP_ID,
+                crate::bitset::four_russians::DENSE_MATVEC_OP_ID,
             ),
         ];
 

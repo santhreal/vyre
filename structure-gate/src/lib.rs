@@ -1825,12 +1825,12 @@ inventory::submit! {
     fn a_production_registration_survives_a_file_full_of_test_gated_items() {
         let parsed = parse_registrations(
             r#"
-            use vyre_primitives::hash::adler32::{adler32_program, ADLER32_OP_ID};
+            use vyre_libs::hash::adler32::{adler32_program, ADLER32_OP_ID};
 
             #[cfg(test)]
             use crate::buffer_names::fixed_name;
             #[cfg(test)]
-            use vyre_primitives::hash::adler32::adler32 as adler32_cpu_reference;
+            use vyre_libs::hash::adler32::adler32 as adler32_cpu_reference;
 
             const OP_ID: &str = "vyre-libs::hash::adler32";
 

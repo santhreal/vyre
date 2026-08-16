@@ -104,7 +104,7 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
         u64::from(prepared.queue_capacity)
             + u64::from(prepared.high_degree_queue_capacity)
                 * u64::from(
-                    vyre_primitives::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
+                    vyre_libs::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
                 )
     );
     assert_eq!(
@@ -138,7 +138,7 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
 #[test]
 fn skewed_csr_graph_row_striding_requires_wide_rows() {
     let lanes =
-        vyre_primitives::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
+        vyre_libs::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
     assert_eq!(
         queue_traverse_plan::ROW_STRIDED_MIN_DEGREE,
         lanes.saturating_mul(lanes)
@@ -296,7 +296,7 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
     assert!(prepared.row_strided_delta);
     assert_eq!(
         prepared.delta_grid,
-        vyre_primitives::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
+        vyre_libs::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
             prepared.queue_capacity
         )
     );
@@ -352,7 +352,7 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
     assert!(lane_profile.elided_delta_lanes > 0);
     assert!(lane_profile.delta_lane_elision_x1000 > 500);
     if prepared.queue_capacity
-        > vyre_primitives::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY
+        > vyre_libs::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY
     {
         assert!(lane_profile.launched_delta_lanes < lane_profile.fixed_delta_lanes);
         assert!(lane_profile.launch_elided_delta_lanes > 0);

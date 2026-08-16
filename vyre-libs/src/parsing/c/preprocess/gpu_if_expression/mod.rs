@@ -95,7 +95,7 @@ use builtin_calls::{ident_hash_equals, push_has_builtin_call_parser};
 use byte_load::safe_load_src_expr;
 use opcodes::*;
 use stack::{peek_stack, pop_stack, push_stack};
-use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_expr};
+use crate::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_expr};
 
 /// Build the 17b.4 `#if`/`#elif` evaluator `Program`.
 ///

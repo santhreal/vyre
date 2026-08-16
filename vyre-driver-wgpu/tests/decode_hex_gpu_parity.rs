@@ -7,7 +7,7 @@ use common::bytes_u32;
 use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_primitives::decode::hex::{
+use vyre_libs::decode::hex::{
     hex_decode, hex_decode_reference_packed, hex_decode_table, hex_decoded_capacity,
     HEX_WORKGROUP_SIZE,
 };

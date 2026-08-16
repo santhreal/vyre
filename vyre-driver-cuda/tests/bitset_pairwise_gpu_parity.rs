@@ -8,11 +8,11 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_primitives::bitset::and::{bitset_and, cpu_ref as and_cpu};
-use vyre_primitives::bitset::and_not::{bitset_and_not, cpu_ref as and_not_cpu};
-use vyre_primitives::bitset::any::{bitset_any, cpu_ref as any_cpu};
-use vyre_primitives::bitset::set_bit::{bitset_set_bit, cpu_ref as set_bit_cpu};
-use vyre_primitives::bitset::xor::{bitset_xor, cpu_ref as xor_cpu};
+use vyre_libs::bitset::and::{bitset_and, cpu_ref as and_cpu};
+use vyre_libs::bitset::and_not::{bitset_and_not, cpu_ref as and_not_cpu};
+use vyre_libs::bitset::any::{bitset_any, cpu_ref as any_cpu};
+use vyre_libs::bitset::set_bit::{bitset_set_bit, cpu_ref as set_bit_cpu};
+use vyre_libs::bitset::xor::{bitset_xor, cpu_ref as xor_cpu};
 
 fn run_pairwise<F>(backend: &CudaBackend, program_builder: F, lhs: &[u32], rhs: &[u32]) -> Vec<u32>
 where

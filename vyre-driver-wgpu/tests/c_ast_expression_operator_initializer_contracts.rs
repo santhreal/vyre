@@ -20,7 +20,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_FOR_STMT, C_EXPR_ASSOC_LEFT, C_EXPR_ASSOC_RIGHT,
     C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_NONE, C_EXPR_SHAPE_STRIDE_U32,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]

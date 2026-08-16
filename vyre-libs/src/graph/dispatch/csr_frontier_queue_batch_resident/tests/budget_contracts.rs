@@ -10,7 +10,7 @@ fn budgeted_batch_memory_plan_uses_effective_queue_capacity() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let mut one = vec![0u32; words];
     one[0] = 1;
     let frontiers: [&[u32]; 4] = [&one, &one, &one, &one];
@@ -94,7 +94,7 @@ fn budgeted_batch_packs_sparse_runs_around_dense_outlier() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let mut sparse = vec![0u32; words];
     sparse[0] = 1;
     let dense = vec![u32::MAX; words];

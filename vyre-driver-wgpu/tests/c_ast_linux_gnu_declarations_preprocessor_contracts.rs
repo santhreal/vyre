@@ -52,7 +52,7 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask_with_directives;
 use vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata;
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 use vyre_reference::value::Value;
 // ---------------------------------------------------------------------------
 // Local helpers

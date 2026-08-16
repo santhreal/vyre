@@ -5,7 +5,7 @@ use vyre_foundation::ir::{Expr, Node};
 use super::super::gpu_directive_parse_program::{payload_ws_skip, PayloadWsSkip};
 use super::super::gpu_source_bytes::SourceByteLayout;
 use super::byte_load::safe_load_src_expr;
-use vyre_primitives::hash::fnv1a::{fnv1a32, fnv1a32_initial_expr, fnv1a32_update_byte_expr};
+use crate::hash::fnv1a::{fnv1a32, fnv1a32_initial_expr, fnv1a32_update_byte_expr};
 
 fn fnv1a32_bytes(bytes: &[u8]) -> u32 {
     fnv1a32(bytes)

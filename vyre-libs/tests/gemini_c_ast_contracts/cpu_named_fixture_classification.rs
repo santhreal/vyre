@@ -7,7 +7,7 @@ use super::gemini_named_fixtures::*;
 use crate::c_frontend::rows::{row_indices as typed_indices, word_at, VAST_STRIDE_U32};
 use crate::c_frontend::scope_fixture::{annotate_cpu, c_atoms, fixture};
 use vyre_libs::parsing::c::parse::vast::*;
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
 // Tests

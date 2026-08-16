@@ -2,7 +2,7 @@
 
 use crate::parsing::c::parse::vast::c_vast_word_at;
 use crate::parsing::c::parse::vast::*;
-use vyre_primitives::predicate::node_kind;
+use crate::predicate::node_kind;
 
 use super::*;
 

@@ -7,10 +7,10 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::Program;
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_frontier_degree_sum::{
+use vyre_libs::graph::csr_frontier_degree_sum::{
     csr_frontier_degree_sum, csr_frontier_degree_sum_cpu, csr_frontier_degree_sum_dispatch_grid,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 fn run(
     program: &Program,

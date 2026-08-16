@@ -17,7 +17,7 @@ use vyre_libs::parsing::c::parse::vast::{
     reference_c11_classify_vast_node_kinds, C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_DO_STMT,
     C_AST_KIND_FOR_STMT, C_AST_KIND_WHILE_STMT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 use vyre_reference::value::Value;
 
 const VAST_STRIDE_U32: usize = 10;

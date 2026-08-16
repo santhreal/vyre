@@ -1,6 +1,6 @@
 //! Multi-step BFS frontier expansion substrate consumer.
 //!
-//! Wires `vyre_primitives::graph::persistent_bfs` so the optimizer can
+//! Wires `crate::graph::persistent_bfs` so the optimizer can
 //! compute multi-step reachability in a single primitive call instead
 //! of looping `csr_forward_traverse` by hand. The primitive accumulates
 //! into `frontier_out` via OR and reports a sticky changed-flag, so the

@@ -2,18 +2,18 @@
 
 #![cfg(test)]
 
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
-use vyre_primitives::graph::persistent_bfs::{
+use vyre_libs::graph::persistent_bfs::{
     persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_dispatch_grid,
     persistent_bfs_single_dispatch_grid, try_cpu_ref_converged,
     validate_persistent_bfs_converged_flag,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 fn run(
     node_count: u32,

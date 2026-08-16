@@ -21,20 +21,20 @@ use vyre_foundation::composition::{
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::and::bitset_and;
+use crate::bitset::and::bitset_and;
 #[cfg(test)]
-use vyre_primitives::bitset::and::cpu_ref as bitset_and_cpu_ref;
-use vyre_primitives::bitset::and_not::bitset_and_not;
+use crate::bitset::and::cpu_ref as bitset_and_cpu_ref;
+use crate::bitset::and_not::bitset_and_not;
 #[cfg(test)]
-use vyre_primitives::bitset::and_not::cpu_ref as bitset_and_not_cpu_ref;
-use vyre_primitives::bitset::any::bitset_any;
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse;
+use crate::bitset::and_not::cpu_ref as bitset_and_not_cpu_ref;
+use crate::bitset::any::bitset_any;
+use crate::bitset::bitset_words;
+use crate::graph::csr_backward_traverse::csr_backward_traverse;
 #[cfg(test)]
-use vyre_primitives::graph::csr_forward_traverse::cpu_ref as csr_forward_cpu_ref;
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::graph::csr_forward_traverse::cpu_ref as csr_forward_cpu_ref;
+use crate::graph::csr_forward_traverse::csr_forward_traverse;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 
 use crate::security::flows_to::{FLOWS_TO_MASK, OP_ID as FLOWS_TO_OP_ID};
 

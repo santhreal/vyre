@@ -35,7 +35,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT,
     C_AST_KIND_SIZEOF_EXPR, C_AST_KIND_UNARY_EXPR,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 use vyre_reference::value::Value;
 
 #[path = "../../tests/support/c_frontend/mod.rs"]

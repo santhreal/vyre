@@ -157,7 +157,7 @@ proptest! {
 
 // ---------- Aho-Corasick ----------
 
-fn cpu_aho_corasick(dfa: &vyre_primitives::matching::CompiledDfa, haystack: &[u8]) -> Vec<u32> {
+fn cpu_aho_corasick(dfa: &vyre_libs::matching::CompiledDfa, haystack: &[u8]) -> Vec<u32> {
     let mut state = 0u32;
     let mut out = Vec::with_capacity(haystack.len());
     for &b in haystack {
@@ -176,7 +176,7 @@ proptest! {
         haystack in "[a-c]{1,32}",
     ) {
         use vyre_libs::scan::{aho_corasick};
-use vyre_primitives::matching::{dfa_compile};
+use vyre_libs::matching::{dfa_compile};
 
         let pattern_bytes: Vec<&[u8]> = patterns.iter().map(|p| p.as_bytes()).collect();
         let compiled = dfa_compile(&pattern_bytes);

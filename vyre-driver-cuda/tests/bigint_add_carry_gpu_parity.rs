@@ -1,4 +1,4 @@
-//! Parity test: `vyre_primitives::math::bigint_add_carry` on CUDA matches its
+//! Parity test: `vyre_libs::math::bigint_add_carry` on CUDA matches its
 //! CPU reference for per-limb sums and carries, across block boundaries.
 
 #![cfg(test)]
@@ -7,7 +7,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::math::bigint_add_carry::{
+use vyre_libs::math::bigint_add_carry::{
     bigint_add_carry, bigint_add_carry_cpu, bigint_add_carry_dispatch_grid, BINDING_A_IN,
     BINDING_B_IN, BINDING_CARRY_PARTIAL_OUT, BINDING_SUM_PARTIAL_OUT,
 };

@@ -10,7 +10,7 @@
 //! the region carries.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use crate::graph::program_graph::ProgramGraphShape;
 
 use crate::security::flow_composition::{
     forward_reach_fixture_expected, forward_reach_fixture_inputs, security_flow_program,
@@ -52,7 +52,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::predicate::edge_kind;
+    use crate::predicate::edge_kind;
 
     #[test]
     fn taint_flow_uses_restricted_dataflow_mask() {

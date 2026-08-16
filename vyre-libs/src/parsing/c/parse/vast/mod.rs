@@ -61,7 +61,7 @@ pub use typedef_ann::{
 // while sharing one explicit helper surface. If a helper becomes specific to a
 // single pass, move it into that pass instead of growing this shared prelude.
 
-use vyre_primitives::predicate::node_kind;
+use crate::predicate::node_kind;
 
 pub use super::vast_kinds::{
     C_AST_KIND_ALIGNOF_EXPR, C_AST_KIND_ARRAY_DECL, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR,

@@ -29,7 +29,7 @@
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 use vyre_foundation::transform::rewrite_walk::NodeRewrite;
-use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
+use vyre_libs::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
 
 use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,

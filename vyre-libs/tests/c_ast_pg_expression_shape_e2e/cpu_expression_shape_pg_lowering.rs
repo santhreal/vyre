@@ -11,7 +11,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ARRAY_SUBSCRIPT_EXPR, C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_CONDITIONAL_EXPR,
     C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_LEFT, C_EXPR_ASSOC_RIGHT,
 };
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 pub(crate) fn assignment_chain_comma_conditional_member_and_unary_shapes_lower_to_pg() {

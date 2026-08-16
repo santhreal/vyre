@@ -5,7 +5,7 @@ use crate::c_ast_gpu_parity_support::{
 };
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::*;
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 
 #[test]
 fn cpu_reference_tag_separation() {

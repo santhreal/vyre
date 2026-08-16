@@ -1,0 +1,291 @@
+//! Generated truth and structure checks for the GPU-native text line index.
+
+#![cfg(all(feature = "text", feature = "cpu-parity"))]
+
+mod ir_shape;
+use ir_shape::{contains_invocation_zero_gate, contains_loop};
+
+use proptest::prelude::*;
+use vyre_foundation::ir::{BufferAccess, DataType, Program};
+use vyre_libs::reduce::multi_block_prefix_scan::BLOCK_LANES;
+use vyre_libs::text::{line_index, line_index_u8, reference_line_index};
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
+use vyre_reference::value::Value;
+
+fn independent_prefix_flag_line_index(source: &[u8]) -> Vec<u32> {
+    let mut acc = 0u32;
+    let mut out = Vec::with_capacity(source.len());
+    for (index, &byte) in source.iter().enumerate() {
+        let flag = u32::from(
+            byte == b'\n'
+                || (byte == b'\r' && index + 1 < source.len() && source[index + 1] != b'\n'),
+        );
+        acc = acc.wrapping_add(flag);
+        out.push(acc.wrapping_sub(flag));
+    }
+    out
+}
+
+fn independent_line_start_flags(source: &[u8]) -> Vec<u32> {
+    let mut out = Vec::with_capacity(source.len());
+    for index in 0..source.len() {
+        let flag = u32::from(
+            index > 0
+                && (source[index - 1] == b'\n'
+                    || (source[index - 1] == b'\r' && source[index] != b'\n')),
+        );
+        out.push(flag);
+    }
+    out
+}
+
+fn inclusive_scan(input: &[u32]) -> Vec<u32> {
+    let mut acc = 0u32;
+    let mut out = Vec::with_capacity(input.len());
+    for &value in input {
+        acc = acc.wrapping_add(value);
+        out.push(acc);
+    }
+    out
+}
+
+fn byte_strategy() -> impl Strategy<Value = u8> {
+    prop_oneof![
+        4 => Just(b'\n'),
+        4 => Just(b'\r'),
+        1 => Just(0u8),
+        1 => Just(0xFFu8),
+        8 => any::<u8>(),
+    ]
+}
+
+// Locate outputs via the interpreter's OWN selection predicate
+// (`vyre_reference::{output_index, is_reference_output}`) so these helpers can never
+// drift from `reference_eval`'s real returned-output ABI.
+fn output_buffer_names(program: &Program) -> Vec<&str> {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| vyre_reference::is_reference_output(buffer))
+        .map(|buffer| buffer.name())
+        .collect()
+}
+
+fn output_index(program: &Program, name: &str) -> usize {
+    vyre_reference::output_index(program, name)
+        .expect("Fix: line_index output buffer must be declared")
+}
+
+fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
+    let program = line_index_u8("source", "lines", source.len() as u32);
+    let lines_index = output_index(&program, "lines");
+    let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
+        .expect("Fix: packed-u8 line_index reference evaluation must succeed");
+    let mut out = unpack_u32s(&outputs[lines_index].to_bytes());
+    out.truncate(source.len());
+    out
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10_000))]
+
+    #[test]
+    fn reference_matches_independent_prefix_flags(
+        source in proptest::collection::vec(byte_strategy(), 0..=256),
+    ) {
+        prop_assert_eq!(
+            reference_line_index(&source),
+            independent_prefix_flag_line_index(&source)
+        );
+    }
+
+    #[test]
+    fn reference_matches_direct_line_start_flag_scan(
+        source in proptest::collection::vec(byte_strategy(), 0..=256),
+    ) {
+        let flags = independent_line_start_flags(&source);
+
+        prop_assert_eq!(reference_line_index(&source), inclusive_scan(&flags));
+    }
+
+    #[test]
+    fn builder_does_not_regress_to_lane_zero_serial_loop(
+        n in 1u32..=(BLOCK_LANES * 4),
+    ) {
+        let program = line_index("source", "lines", n);
+
+        prop_assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
+        prop_assert!(
+            !contains_loop(&program),
+            "line_index must not contain a serial byte loop for n={n}"
+        );
+        prop_assert!(
+            !contains_invocation_zero_gate(&program),
+            "line_index must not gate all useful work behind InvocationId.x == 0 for n={n}"
+        );
+        let has_source = program.buffers().iter().any(|buffer| {
+            buffer.name() == "source"
+                && buffer.access() == BufferAccess::ReadOnly
+                && buffer.count() == n
+        });
+        let has_flags = program.buffers().iter().any(|buffer| {
+            buffer.name() == "__lines_line_start_flags"
+                && buffer.count() == n
+                && buffer.is_pipeline_live_out()
+                && !buffer.is_output()
+        });
+        let has_lines = program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.name() == "lines" && buffer.count() == n && buffer.is_output());
+        prop_assert!(has_source, "line_index source input missing for n={n}");
+        prop_assert!(has_flags, "line_index line-start flags missing for n={n}");
+        prop_assert!(has_lines, "line_index final output missing for n={n}");
+        prop_assert!(
+            !program
+                .buffers()
+                .iter()
+                .any(|buffer| buffer.name() == "__lines_line_break_prefix"),
+            "line_index must scan line-start flags directly into lines for n={n}"
+        );
+        prop_assert_eq!(
+            program
+                .buffers()
+                .iter()
+                .filter(|buffer| buffer.is_output())
+                .count(),
+            1
+        );
+        prop_assert!(
+            output_buffer_names(&program).contains(&"lines"),
+            "line_index final output must remain visible for n={n}"
+        );
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(2_048))]
+
+    #[test]
+    fn packed_u8_program_matches_independent_prefix_flags(
+        source in proptest::collection::vec(byte_strategy(), 0..=256),
+    ) {
+        prop_assert_eq!(
+            run_packed_u8_program(&source),
+            independent_prefix_flag_line_index(&source)
+        );
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10_000))]
+
+    #[test]
+    fn packed_u8_builder_keeps_byte_source_without_serial_fallback(
+        n in 1u32..=(BLOCK_LANES * 4),
+    ) {
+        let program = line_index_u8("source", "lines", n);
+
+        prop_assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
+        prop_assert!(
+            !contains_loop(&program),
+            "line_index_u8 must not contain a serial byte loop for n={n}"
+        );
+        prop_assert!(
+            !contains_invocation_zero_gate(&program),
+            "line_index_u8 must not gate useful work behind InvocationId.x == 0 for n={n}"
+        );
+        let has_u8_source = program.buffers().iter().any(|buffer| {
+            buffer.name() == "source"
+                && buffer.access() == BufferAccess::ReadOnly
+                && buffer.element() == DataType::U8
+                && buffer.count() == n
+        });
+        let has_u32_lines = program.buffers().iter().any(|buffer| {
+            buffer.name() == "lines"
+                && buffer.element() == DataType::U32
+                && buffer.count() == n
+                && buffer.is_output()
+        });
+        prop_assert!(has_u8_source, "line_index_u8 source must be packed U8 for n={n}");
+        prop_assert!(has_u32_lines, "line_index_u8 output must remain U32 for n={n}");
+        prop_assert_eq!(
+            program
+                .buffers()
+                .iter()
+                .filter(|buffer| buffer.is_output())
+                .count(),
+            1
+        );
+    }
+}
+
+/// A byte source spanning several Pass-A blocks, with line breaks scattered across
+/// every block so the line-number prefix must carry from one block into the next.
+/// `\n` at every 37th byte and `\r` at every 53rd guarantee breaks inside each block
+/// AND straddling the block boundaries; the remaining bytes are printable filler.
+fn multi_block_source(n: usize) -> Vec<u8> {
+    (0..n)
+        .map(|i| {
+            if i % 37 == 0 {
+                b'\n'
+            } else if i % 53 == 0 {
+                b'\r'
+            } else {
+                b'a' + (i % 26) as u8
+            }
+        })
+        .collect()
+}
+
+/// Drive `line_index_u8` through `reference_eval` for sources LONGER than one Pass-A
+/// block, so the fused flag-pass → multi-block-prefix-scan (Pass-A → GridSync → Pass-B
+/// → Pass-C) program actually runs its cross-block carry. Every element is checked
+/// against the independent prefix-flag oracle, so a dropped or double-counted block
+/// carry surfaces as a concrete index mismatch.
+///
+/// This is the coverage the single-block `packed_u8_program_matches_independent_prefix_flags`
+/// proptest cannot reach: it caps `source` at 0..=256 < BLOCK_LANES precisely because,
+/// before the interpreter honored `MemoryOrdering::GridSync`, Pass-B raced Pass-A and
+/// the multi-block result was wrong. With GridSync honored, `line_index` over a large
+/// file must match byte-for-byte.
+#[test]
+fn packed_u8_reference_matches_oracle_across_block_boundaries() {
+    let block = BLOCK_LANES as usize;
+    for &n in &[block + 1, block + 500, block * 2, block * 3 + 7] {
+        let source = multi_block_source(n);
+        let gpu = run_packed_u8_program(&source);
+        let oracle = independent_prefix_flag_line_index(&source);
+
+        assert_eq!(
+            gpu.len(),
+            source.len(),
+            "line_index length mismatch at n={n}"
+        );
+        if let Some(i) = (0..gpu.len()).find(|&i| gpu[i] != oracle[i]) {
+            let blk = i / block;
+            panic!(
+                "line_index_u8 diverges from the prefix-flag oracle at n={n}: first mismatch \
+                 at byte {i} (block {blk}, lane {} of {} blocks): gpu={} oracle={}; a mismatch \
+                 here means the fused multi-block scan dropped the cross-block line-number carry",
+                i % block,
+                n.div_ceil(block),
+                gpu[i],
+                oracle[i],
+            );
+        }
+
+        // Explicit carry lock at the first Pass-A block boundary: the line number of
+        // the byte just past BLOCK_LANES must equal the total number of line breaks in
+        // the whole preceding block. If Pass-C failed to add block 0's total, this is
+        // exactly where it breaks.
+        let breaks_in_block_0 = independent_line_start_flags(&source)[..=block]
+            .iter()
+            .filter(|&&flag| flag == 1)
+            .count() as u32;
+        assert_eq!(
+            gpu[block], breaks_in_block_0,
+            "line_index carry wrong at block boundary byte {block} for n={n}"
+        );
+    }
+}

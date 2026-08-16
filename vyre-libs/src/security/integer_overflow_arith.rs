@@ -6,9 +6,9 @@
 //! `@http_input_family` AND there is no dominating overflow check.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::and::bitset_and;
-use vyre_primitives::bitset::and_not::bitset_and_not;
-use vyre_primitives::bitset::bitset_words;
+use crate::bitset::and::bitset_and;
+use crate::bitset::and_not::bitset_and_not;
+use crate::bitset::bitset_words;
 
 use crate::security::flow_composition::fuse_security_flow;
 
@@ -45,8 +45,8 @@ pub(crate) fn cpu_ref(
     attacker_reach: &[u32],
     overflow_check_dominates: &[u32],
 ) -> Vec<u32> {
-    let inter = vyre_primitives::bitset::and::cpu_ref(arith_set, attacker_reach);
-    vyre_primitives::bitset::and_not::cpu_ref(&inter, overflow_check_dominates)
+    let inter = crate::bitset::and::cpu_ref(arith_set, attacker_reach);
+    crate::bitset::and_not::cpu_ref(&inter, overflow_check_dominates)
 }
 
 /// Soundness marker for [`integer_overflow_arith`].

@@ -20,8 +20,8 @@
 
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
-use vyre_primitives::text::byte_histogram_256_child;
-pub use vyre_primitives::text::{
+use crate::text::byte_histogram_256_child;
+pub use crate::text::{
     classify_from_histogram, encoding_classify_child, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
     ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
 };
@@ -85,7 +85,7 @@ pub fn encodex_gpu(input: &str, output: &str, count: u32) -> Program {
 /// classification rules so the host oracle and `encodex_gpu` agree on
 /// every fixture input.
 pub fn encodex_reference(input: &[u8]) -> u32 {
-    let histogram = vyre_primitives::text::reference_byte_histogram(input);
+    let histogram = crate::text::reference_byte_histogram(input);
     classify_from_histogram(&histogram, input.len() as u32)
 }
 
@@ -118,7 +118,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
     fixture_cases()
         .into_iter()
         .map(|input| {
-            let histogram = vyre_primitives::text::reference_byte_histogram(&input);
+            let histogram = crate::text::reference_byte_histogram(&input);
             let enc_id = classify_from_histogram(&histogram, input.len() as u32);
             vec![
                 vyre_primitives::wire::pack_u32_slice(&histogram),

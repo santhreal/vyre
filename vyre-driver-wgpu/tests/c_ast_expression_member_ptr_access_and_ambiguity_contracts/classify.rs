@@ -15,7 +15,7 @@ use crate::c_ast_gpu_parity_support::{
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{C_AST_KIND_CAST_EXPR, C_AST_KIND_MEMBER_ACCESS_EXPR};
-use vyre_primitives::predicate::node_kind;
+use vyre_libs::predicate::node_kind;
 // ---------------------------------------------------------------------------
 // Fixtures – member / pointer-member access
 // ---------------------------------------------------------------------------

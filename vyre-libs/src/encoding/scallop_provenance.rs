@@ -58,7 +58,7 @@ use crate::dispatch_buffers::{
 };
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::scallop_join;
+use crate::math::scallop_join;
 
 /// Default safety cap on Datalog fixpoint iterations. Monotone Datalog
 /// converges in ≤ n² iterations on n-cell systems; this cap is a

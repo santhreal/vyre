@@ -47,7 +47,7 @@ use crate::scan::nfa::NfaPlan;
 use self::construct_budget::STATE_CAP;
 use self::set_compiler::compile_regex_set_inner;
 
-const LANES: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
+const LANES: usize = crate::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 
 /// Default whole-match replay budget for a pattern containing `*`, `+`, or
 /// `{n,}`. Open-ended regexes have no finite maximum, so accelerator extraction

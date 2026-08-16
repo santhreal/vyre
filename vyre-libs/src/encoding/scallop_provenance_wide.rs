@@ -3,10 +3,10 @@
 //! Extends `#39 scallop_provenance` from a 32-rule (single u32) capacity to
 //! up to 256 rules (`W=8`). Uses the wide-lineage variant of `scallop_join`.
 //!
-//! Dispatches the `vyre_primitives::math::scallop_join_wide` primitive.
+//! Dispatches the `crate::math::scallop_join_wide` primitive.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::scallop_join_wide::scallop_join_wide;
+use crate::math::scallop_join_wide::scallop_join_wide;
 
 /// Stable op identifier for the wide-lineage Scallop provenance closure.
 pub const OP_ID: &str = "vyre-libs::self_substrate::scallop_provenance_wide";

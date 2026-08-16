@@ -13,7 +13,7 @@ use crate::cases::frontier_step::{
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::reference_sample::timed_reference;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 mod metrics;
 mod queue_closure;
@@ -104,7 +104,7 @@ fn prepare_skewed_csr_case(
 ) -> Result<GraphCsrSkewedPrepared, BenchError> {
     let fixture = build_skewed_csr_fixture(CSR_NODE_COUNT)?;
     let shape = ProgramGraphShape::new(fixture.stats.node_count, fixture.stats.edge_count);
-    let program = vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse(
+    let program = vyre_libs::graph::csr_forward_traverse::csr_forward_traverse(
         shape,
         "frontier_in",
         "frontier_out",

@@ -1,5 +1,5 @@
 use vyre_foundation::ir::{Node, Program};
-use vyre_primitives::graph::{
+use crate::graph::{
     adaptive_traverse::{adaptive_dense_step, cpu_dense_step, should_use_dense},
     csr_closure_inputs::{CsrClosureInputs, CsrGraphView},
     csr_forward_or_changed::{
@@ -46,7 +46,7 @@ fn program_generator(program: &Program) -> &str {
 }
 
 fn dense_adj(edges: &[(u32, u32)], node_count: u32) -> Vec<u32> {
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let mut rows = vec![0; node_count as usize * words];
     for &(src, dst) in edges {
         rows[dst as usize * words + src as usize / 32] |= 1 << (src % 32);

@@ -571,7 +571,7 @@ fn declared_vast_kinds() -> Vec<(String, u32)> {
         .collect();
     kinds.push((
         "node_kind::FUNCTION_DECL".to_string(),
-        vyre_primitives::predicate::node_kind::FUNCTION_DECL,
+        vyre_libs::predicate::node_kind::FUNCTION_DECL,
     ));
     kinds
 }

@@ -322,7 +322,7 @@ pub fn c11_build_vast_nodes(
             BUILD_VAST_OP_ID,
             vec![child_phase(
                 BUILD_VAST_OP_ID,
-                vyre_primitives::parsing::ast_cse_structural_hash::OP_ID,
+                crate::parsing::ast_cse_structural_hash::OP_ID,
                 body,
             )],
         )],
