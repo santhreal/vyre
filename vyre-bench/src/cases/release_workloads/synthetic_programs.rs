@@ -18,7 +18,7 @@ pub(super) fn build_synthetic_release_program(pattern: SyntheticPattern, records
         SyntheticPattern::QuantifiedLoops => quantified_condition_loops_program(records),
         SyntheticPattern::AliasReachingDef => alias_reaching_def_program(records),
         SyntheticPattern::IfdsWitness => ifds_witness_program(records),
-        SyntheticPattern::CAstTraversal => c_ast_traversal_program(records),
+        SyntheticPattern::AstMotifTraversal => ast_motif_traversal_program(records),
         SyntheticPattern::MegakernelQueuedBatch => megakernel_queue_program(records),
         SyntheticPattern::EgraphSaturation => egraph_saturation_program(records),
     }
@@ -341,7 +341,7 @@ fn ifds_witness_program(records: u32) -> Program {
     )
 }
 
-fn c_ast_traversal_program(records: u32) -> Program {
+fn ast_motif_traversal_program(records: u32) -> Program {
     triple_mask_threshold_count_program(
         records,
         ["node_kind_mask", "depth_mask", "motif_mask"],
@@ -416,7 +416,7 @@ fn pattern_condition(pattern: SyntheticPattern) -> Expr {
             Expr::ne(load_u32("frontier"), Expr::u32(0)),
             Expr::eq(load_u32("edge_kind"), Expr::u32(1)),
         ),
-        SyntheticPattern::CAstTraversal => Expr::and(
+        SyntheticPattern::AstMotifTraversal => Expr::and(
             Expr::eq(load_u32("node_kind"), Expr::u32(42)),
             Expr::gt(load_u32("depth"), Expr::u32(3)),
         ),
@@ -444,7 +444,7 @@ pub(super) fn pattern_buffers(pattern: SyntheticPattern) -> &'static [&'static s
         SyntheticPattern::QuantifiedLoops => &["any_mask", "all_mask", "threshold_mask"],
         SyntheticPattern::AliasReachingDef => &["def_mask", "use_mask", "kill_mask"],
         SyntheticPattern::IfdsWitness => &["frontier_mask", "transfer_mask", "witness_mask"],
-        SyntheticPattern::CAstTraversal => &["node_kind_mask", "depth_mask", "motif_mask"],
+        SyntheticPattern::AstMotifTraversal => &["node_kind_mask", "depth_mask", "motif_mask"],
         SyntheticPattern::MegakernelQueuedBatch => {
             &["queue_mask", "predicate_mask", "dispatch_mask"]
         }

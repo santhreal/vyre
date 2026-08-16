@@ -185,17 +185,17 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         ),
     },
     ReleaseWorkloadFamily {
-        id: "c-ast-traversal",
-        title: "C AST traversal and motif predicates",
+        id: "ast-motif-traversal",
+        title: "AST-shaped node motif predicate traversal",
         release_plan_workload: 9,
         required: true,
-        any_terms: &["release.c_ast_traversal"],
-        all_terms: &["release.c_ast_traversal"],
-        bench_target_id: "release.workload.c_ast_traversal",
-        dispatch_policy: "specialized-parser-kernel",
+        any_terms: &["release.ast_motif_traversal"],
+        all_terms: &["release.ast_motif_traversal"],
+        bench_target_id: "release.workload.ast_motif_traversal",
+        dispatch_policy: "single-kernel-count",
         requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
-            "architectural: C AST traversal consumes parser-owned AST buffers with table/stream access patterns that remain outside the condition megakernel for this release",
+            "architectural: AST motif traversal evaluates node-kind, depth and motif predicates over table-shaped node columns, which is a single counting pass rather than a queued rule opcode stream",
         ),
     },
     ReleaseWorkloadFamily {
@@ -290,6 +290,20 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: grouped INT4 linear fuses packed weight decode, scale/zero-point sidecars, and accumulation in one inference kernel instead of queueing scalar condition opcodes",
+        ),
+    },
+    ReleaseWorkloadFamily {
+        id: "egraph-saturation",
+        title: "Rewrite-equivalence saturation predicates",
+        release_plan_workload: 17,
+        required: false,
+        any_terms: &["release.egraph_saturation", "egraph"],
+        all_terms: &["optimization", "rewrite"],
+        bench_target_id: "release.workload.egraph_saturation",
+        dispatch_policy: "single-kernel-count",
+        requires_cpu_sota_baseline: true,
+        non_megakernel_justification: Some(
+            "architectural: rewrite-equivalence saturation evaluates independent opcode and class-membership predicates in one counting pass rather than queueing a rule opcode stream",
         ),
     },
 ];

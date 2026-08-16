@@ -11,7 +11,7 @@ pub(super) const REQUIRED_CPU_SOTA_100X_CASES: &[&str] = &[
     "release.quantified_condition_loops.1m",
     "release.alias_reaching_def.1m",
     "release.ifds_witness.1m",
-    "release.c_ast_traversal.1m",
+    "release.ast_motif_traversal.1m",
     "release.megakernel_queue.1m",
     "sparse.compaction.count.1m",
 ];

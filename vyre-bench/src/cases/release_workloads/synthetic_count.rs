@@ -9,8 +9,8 @@ use super::run_assembly::{
 };
 use super::synthetic_oracle::{
     pattern_input_count, string_bitmap_scatter_expected_words, string_bitmap_scatter_inputs,
-    synthetic_cpu_count, synthetic_inputs, synthetic_logical_output_bytes,
-    synthetic_output_reset_bytes,
+    synthetic_baseline_label, synthetic_cpu_count_over_inputs, synthetic_inputs,
+    synthetic_logical_output_bytes, synthetic_output_reset_bytes,
 };
 use super::synthetic_programs::{
     build_synthetic_release_program, string_bitmap_scatter_release_program,
@@ -41,7 +41,6 @@ pub(super) struct SyntheticCountWorkload {
     pub(super) tags: &'static [&'static str],
     pub(super) owner_crate: &'static str,
     pub(super) primitive: &'static str,
-    pub(super) baseline: &'static str,
     pub(super) metric_name: &'static str,
     pub(super) family: ReleaseMacroFamily,
     pub(super) records: u32,
@@ -78,7 +77,7 @@ pub(super) enum SyntheticPattern {
     QuantifiedLoops,
     AliasReachingDef,
     IfdsWitness,
-    CAstTraversal,
+    AstMotifTraversal,
     MegakernelQueuedBatch,
     EgraphSaturation,
 }
@@ -165,7 +164,7 @@ impl BenchCase for SyntheticCountWorkload {
         Some(PerformanceContract::cpu_sota_min_speedup(
             self.primitive,
             self.owner_crate,
-            self.baseline,
+            synthetic_baseline_label(self.pattern),
             self.min_speedup_x,
         ))
     }
@@ -273,16 +272,15 @@ impl BenchCase for SyntheticCountWorkload {
             (None, None)
         };
         let baseline_start = std::time::Instant::now();
-        let baseline_outputs = match &prepared.baseline {
-            SyntheticBaseline::Count { expected } => {
-                let cpu_count = synthetic_cpu_count(self.pattern, self.records);
-                if cpu_count != *expected {
-                    return Err(BenchError::CorrectnessViolation(format!(
-                        "{} CPU baseline count disagreed with generator expectation",
-                        self.id
-                    )));
-                }
-                vec![cpu_count.to_le_bytes().to_vec()]
+        let (baseline_outputs, counted) = match &prepared.baseline {
+            SyntheticBaseline::Count { .. } => {
+                let cpu_count = synthetic_cpu_count_over_inputs(
+                    self.pattern,
+                    &prepared.inputs,
+                    self.records,
+                )
+                .map_err(BenchError::CorrectnessViolation)?;
+                (vec![cpu_count.to_le_bytes().to_vec()], Some(cpu_count))
             }
             SyntheticBaseline::StringBitmap {
                 pattern_bitmap,
@@ -293,10 +291,23 @@ impl BenchCase for SyntheticCountWorkload {
                     rule_bitmap,
                     self.records,
                 ));
-                vec![baseline_row.repeat(STRING_BITMAP_RESIDENT_BATCH_SIZE)]
+                (
+                    vec![baseline_row.repeat(STRING_BITMAP_RESIDENT_BATCH_SIZE)],
+                    None,
+                )
             }
         };
         let baseline_wall = elapsed_ns(baseline_start);
+        if let (SyntheticBaseline::Count { expected }, Some(cpu_count)) =
+            (&prepared.baseline, counted)
+        {
+            if cpu_count != *expected {
+                return Err(BenchError::CorrectnessViolation(format!(
+                    "{} CPU baseline counted {cpu_count} matching row(s) out of the uploaded inputs where the generator expected {expected}. Fix: regenerate the inputs for this pattern.",
+                    self.id
+                )));
+            }
+        }
         let output_bytes = timed
             .outputs
             .iter()

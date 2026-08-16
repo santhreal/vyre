@@ -40,7 +40,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     (KEY_COUNT as u64 + QUERY_COUNT as u64 * 2) * 4,
     Some(ContractDescription {
         primitive: "Divergent binary search",
-        baseline_crate: "std+rayon",
+        baseline_crate: "rayon",
         baseline_name: "Rust slice::binary_search with Rayon parallel query partitioning",
         min_speedup_x: 3.0,
     }),
