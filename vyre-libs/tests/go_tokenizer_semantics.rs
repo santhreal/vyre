@@ -19,9 +19,9 @@
 #![cfg(feature = "go-parser")]
 #![allow(deprecated)]
 
-mod common;
-use common::decode_u32_words;
-use common::go::{pack_source as pack, run, tokenize, zeroed_u32_words as zeroed};
+mod wire_words;
+use wire_words::decode_u32_words;
+use wire_words::go::{pack_source as pack, run, tokenize, zeroed_u32_words as zeroed};
 
 use vyre::ir::Expr;
 use vyre_libs::parsing::go::lex::{TOK_ARROW, TOK_ASSIGN, TOK_IDENTIFIER, TOK_NEWLINE, TOK_STRING};

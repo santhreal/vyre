@@ -1,12 +1,12 @@
 //! Provenance closure tracking up to W·32 source rules.
 //!
 //! Extends `#39 scallop_provenance` from a 32-rule (single u32) capacity to
-//! up to 256 rules (`W=8`). Uses the wide-lineage variant of `scallop_join`.
+//! up to 256 rules (`W=8`) by carrying `w` words per lineage cell.
 //!
-//! Dispatches the `crate::math::scallop_join_wide` primitive.
+//! Dispatches the `crate::math::scallop_join` primitive at `w > 1`.
 
 use vyre_foundation::ir::Program;
-use crate::math::scallop_join_wide::scallop_join_wide;
+use crate::math::scallop_join::scallop_join;
 
 /// Stable op identifier for the wide-lineage Scallop provenance closure.
 pub const OP_ID: &str = "vyre-libs::self_substrate::scallop_provenance_wide";
@@ -24,7 +24,7 @@ pub fn scallop_provenance_wide_program(
 ) -> Program {
     use crate::telemetry::{bump, scallop_provenance_wide_calls};
     bump(&scallop_provenance_wide_calls);
-    scallop_join_wide(state, next, join_rules, changed, n, w, max_iterations)
+    scallop_join(state, next, join_rules, changed, n, w, max_iterations)
 }
 
 #[cfg(test)]
@@ -44,7 +44,7 @@ mod tests {
         let p2 = scallop_provenance_wide_program("s2", "n2", "j2", "c2", 4, 1, 5);
         let p3 = scallop_provenance_wide_program("s3", "n3", "j3", "c3", 4, 1, 5);
 
-        let final_p = crate::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p = crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         let region_count = final_p
             .entry()
             .iter()
@@ -73,7 +73,7 @@ mod tests {
             Value::Bytes(Arc::from(bytes))
         };
 
-        // Buffer order matches `scallop_join_wide` `Program::wrapped`: state, next, changed, join_rules.
+        // Buffer order matches `scallop_join` `Program::wrapped`: state, next, changed, join_rules.
         let inputs = vec![
             to_value(&state_init),
             to_value(&[0_u32; 4]),

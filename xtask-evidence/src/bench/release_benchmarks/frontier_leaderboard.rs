@@ -12,7 +12,7 @@ use xtask::hash::sha256_hex;
 
 use crate::bench::benchmark_evidence_semantics::SCAN_THROUGHPUT_METRICS;
 
-use super::inspect_core::{first_metric_p50, read_text_bounded};
+use super::artifact_metrics::{first_metric_p50, read_text_bounded};
 use super::metrics::write_json;
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 use super::suite_inspect::backend_suite_output_path;

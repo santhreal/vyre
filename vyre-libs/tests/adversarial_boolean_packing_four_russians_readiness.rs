@@ -2,8 +2,8 @@
 //! Four-Russians readiness contracts.
 #![cfg(feature = "bitset")]
 
-mod common;
-use common::u32_bytes;
+mod gate_fixtures;
+use gate_fixtures::u32_bytes;
 
 // Coverage: bitset_words sizing, word-aligned packing invariants,
 // set-relation predicates (equal, subset_of, contains, test_bit),

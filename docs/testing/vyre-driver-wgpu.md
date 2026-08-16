@@ -28,7 +28,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `c-parser`, `default`, `matching-dfa`, `matching-nfa`, `matching-substring`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `wgpu`
+- Available manifest features: `default`, `matching-dfa`, `matching-nfa`, `matching-substring`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `wgpu`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -46,94 +46,16 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `async_dispatch_contract` | `vyre-driver-wgpu/tests/async_dispatch_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_dispatch_contract` |
 | `test` | `async_dispatch_non_blocking` | `vyre-driver-wgpu/tests/async_dispatch_non_blocking.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_dispatch_non_blocking` |
 | `test` | `binding_layout_drift` | `vyre-driver-wgpu/tests/binding_layout_drift.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binding_layout_drift` |
-| `test` | `binop_parity_support` | `vyre-driver-wgpu/tests/binop_parity_support.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binop_parity_support` |
+| `test` | `binop_parity_fixtures` | `vyre-driver-wgpu/tests/binop_parity_fixtures.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binop_parity_fixtures` |
 | `test` | `bitset_zero_gpu_parity` | `vyre-driver-wgpu/tests/bitset_zero_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test bitset_zero_gpu_parity` |
 | `test` | `blake3_compress_gpu_parity` | `vyre-driver-wgpu/tests/blake3_compress_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test blake3_compress_gpu_parity` |
 | `test` | `buf_len_array_length` | `vyre-driver-wgpu/tests/buf_len_array_length.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test buf_len_array_length` |
-| `test` | `c11_ast_corpus_complete_constructs` | `vyre-driver-wgpu/tests/c11_ast_corpus_complete_constructs.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c11_ast_corpus_complete_constructs` |
-| `test` | `c11_build_vast_nodes` | `vyre-driver-wgpu/tests/c11_build_vast_nodes.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c11_build_vast_nodes` |
-| `test` | `c11_parser_hostile_full_c` | `vyre-driver-wgpu/tests/c11_parser_hostile_full_c.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c11_parser_hostile_full_c` |
-| `test` | `c11_parser_integration` | `vyre-driver-wgpu/tests/c11_parser_integration.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c11_parser_integration` |
-| `test` | `c11_parser_typedef_contracts` | `vyre-driver-wgpu/tests/c11_parser_typedef_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c11_parser_typedef_contracts` |
-| `test` | `c11_sema_scope` | `vyre-driver-wgpu/tests/c11_sema_scope.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c11_sema_scope` |
-| `test` | `c11_typedef_annotations` | `vyre-driver-wgpu/tests/c11_typedef_annotations.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c11_typedef_annotations` |
-| `test` | `c_ast_asm_extended_operand_goto_label_pg_lowering_contracts` | `vyre-driver-wgpu/tests/c_ast_asm_extended_operand_goto_label_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_asm_extended_operand_goto_label_pg_lowering_contracts` |
-| `test` | `c_ast_bitfield_and_abstract_declarator_contracts` | `vyre-driver-wgpu/tests/c_ast_bitfield_and_abstract_declarator_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_bitfield_and_abstract_declarator_contracts` |
-| `test` | `c_ast_builtin_offsetof_object_size_prefetch_unreachable_contracts` | `vyre-driver-wgpu/tests/c_ast_builtin_offsetof_object_size_prefetch_unreachable_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_builtin_offsetof_object_size_prefetch_unreachable_contracts` |
-| `test` | `c_ast_c11_atomic_and_generic_e2e` | `vyre-driver-wgpu/tests/c_ast_c11_atomic_and_generic_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_c11_atomic_and_generic_e2e` |
-| `test` | `c_ast_compound_literal_designated_init_nested_pg_lowering_contracts` | `vyre-driver-wgpu/tests/c_ast_compound_literal_designated_init_nested_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_compound_literal_designated_init_nested_pg_lowering_contracts` |
-| `test` | `c_ast_control_flow_e2e` | `vyre-driver-wgpu/tests/c_ast_control_flow_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_control_flow_e2e` |
-| `test` | `c_ast_declaration_advanced_contracts` | `vyre-driver-wgpu/tests/c_ast_declaration_advanced_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_declaration_advanced_contracts` |
-| `test` | `c_ast_declaration_container_nodes` | `vyre-driver-wgpu/tests/c_ast_declaration_container_nodes.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_declaration_container_nodes` |
-| `test` | `c_ast_declaration_container_nodes_e2e` | `vyre-driver-wgpu/tests/c_ast_declaration_container_nodes_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_declaration_container_nodes_e2e` |
-| `test` | `c_ast_declarator_edge_cases` | `vyre-driver-wgpu/tests/c_ast_declarator_edge_cases.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_declarator_edge_cases` |
-| `test` | `c_ast_declarator_matrix_contracts` | `vyre-driver-wgpu/tests/c_ast_declarator_matrix_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_declarator_matrix_contracts` |
-| `test` | `c_ast_declarator_type_shape_contracts` | `vyre-driver-wgpu/tests/c_ast_declarator_type_shape_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_declarator_type_shape_contracts` |
-| `test` | `c_ast_expression_member_ptr_access_and_ambiguity_contracts` | `vyre-driver-wgpu/tests/c_ast_expression_member_ptr_access_and_ambiguity_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_member_ptr_access_and_ambiguity_contracts` |
-| `test` | `c_ast_expression_operator_ambiguity_contracts` | `vyre-driver-wgpu/tests/c_ast_expression_operator_ambiguity_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_operator_ambiguity_contracts` |
-| `test` | `c_ast_expression_operator_builtin_contracts` | `vyre-driver-wgpu/tests/c_ast_expression_operator_builtin_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_operator_builtin_contracts` |
-| `test` | `c_ast_expression_operator_initializer_contracts` | `vyre-driver-wgpu/tests/c_ast_expression_operator_initializer_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_operator_initializer_contracts` |
-| `test` | `c_ast_expression_operator_postfix_contracts` | `vyre-driver-wgpu/tests/c_ast_expression_operator_postfix_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_operator_postfix_contracts` |
-| `test` | `c_ast_expression_operator_precedence_contracts` | `vyre-driver-wgpu/tests/c_ast_expression_operator_precedence_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_operator_precedence_contracts` |
-| `test` | `c_ast_expression_precedence_e2e` | `vyre-driver-wgpu/tests/c_ast_expression_precedence_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_precedence_e2e` |
-| `test` | `c_ast_expression_shape_gaps_e2e` | `vyre-driver-wgpu/tests/c_ast_expression_shape_gaps_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_expression_shape_gaps_e2e` |
-| `test` | `c_ast_gnu_and_kernel_construct_integration` | `vyre-driver-wgpu/tests/c_ast_gnu_and_kernel_construct_integration.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_gnu_and_kernel_construct_integration` |
-| `test` | `c_ast_gnu_asm_and_attributes_e2e` | `vyre-driver-wgpu/tests/c_ast_gnu_asm_and_attributes_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_gnu_asm_and_attributes_e2e` |
-| `test` | `c_ast_gnu_asm_attribute_deep_contracts` | `vyre-driver-wgpu/tests/c_ast_gnu_asm_attribute_deep_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_gnu_asm_attribute_deep_contracts` |
-| `test` | `c_ast_gnu_attribute_statement_pg_lowering_contracts` | `vyre-driver-wgpu/tests/c_ast_gnu_attribute_statement_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_gnu_attribute_statement_pg_lowering_contracts` |
-| `test` | `c_ast_gnu_builtin_control_flow_pg_lowering_contracts` | `vyre-driver-wgpu/tests/c_ast_gnu_builtin_control_flow_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_gnu_builtin_control_flow_pg_lowering_contracts` |
-| `test` | `c_ast_gnu_computed_goto_and_c11_atomic_contracts` | `vyre-driver-wgpu/tests/c_ast_gnu_computed_goto_and_c11_atomic_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_gnu_computed_goto_and_c11_atomic_contracts` |
-| `test` | `c_ast_gnu_extensions_e2e` | `vyre-driver-wgpu/tests/c_ast_gnu_extensions_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_gnu_extensions_e2e` |
-| `test` | `c_ast_initializer_designator_deep_contracts` | `vyre-driver-wgpu/tests/c_ast_initializer_designator_deep_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_initializer_designator_deep_contracts` |
-| `test` | `c_ast_initializer_designator_e2e` | `vyre-driver-wgpu/tests/c_ast_initializer_designator_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_initializer_designator_e2e` |
-| `test` | `c_ast_kernel_grade_construct_shape` | `vyre-driver-wgpu/tests/c_ast_kernel_grade_construct_shape.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_kernel_grade_construct_shape` |
-| `test` | `c_ast_kernel_style_corpus` | `vyre-driver-wgpu/tests/c_ast_kernel_style_corpus.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_kernel_style_corpus` |
-| `test` | `c_ast_label_statement_expression_contracts` | `vyre-driver-wgpu/tests/c_ast_label_statement_expression_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_label_statement_expression_contracts` |
-| `test` | `c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts` | `vyre-driver-wgpu/tests/c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts` |
-| `test` | `c_ast_linux_corpus_macro_builtin_and_qualifier_contracts` | `vyre-driver-wgpu/tests/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_linux_corpus_macro_builtin_and_qualifier_contracts` |
-| `test` | `c_ast_linux_corpus_type_memory_and_init_contracts` | `vyre-driver-wgpu/tests/c_ast_linux_corpus_type_memory_and_init_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_linux_corpus_type_memory_and_init_contracts` |
-| `test` | `c_ast_linux_gnu_declarations_preprocessor_contracts` | `vyre-driver-wgpu/tests/c_ast_linux_gnu_declarations_preprocessor_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_linux_gnu_declarations_preprocessor_contracts` |
-| `test` | `c_ast_macro_call_trailing_comma_e2e` | `vyre-driver-wgpu/tests/c_ast_macro_call_trailing_comma_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_macro_call_trailing_comma_e2e` |
-| `test` | `c_ast_nested_initializer_lists_e2e` | `vyre-driver-wgpu/tests/c_ast_nested_initializer_lists_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_nested_initializer_lists_e2e` |
-| `test` | `c_ast_pg_expression_shape_e2e` | `vyre-driver-wgpu/tests/c_ast_pg_expression_shape_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_pg_expression_shape_e2e` |
-| `test` | `c_ast_pg_lowering_deep_contracts` | `vyre-driver-wgpu/tests/c_ast_pg_lowering_deep_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_pg_lowering_deep_contracts` |
-| `test` | `c_ast_pg_lowering_gnu_contracts` | `vyre-driver-wgpu/tests/c_ast_pg_lowering_gnu_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_pg_lowering_gnu_contracts` |
-| `test` | `c_ast_preprocessor_token_stream_e2e` | `vyre-driver-wgpu/tests/c_ast_preprocessor_token_stream_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_preprocessor_token_stream_e2e` |
-| `test` | `c_ast_property_graph_consistency_contracts` | `vyre-driver-wgpu/tests/c_ast_property_graph_consistency_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_property_graph_consistency_contracts` |
-| `test` | `c_ast_property_operator_stream_contracts` | `vyre-driver-wgpu/tests/c_ast_property_operator_stream_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_property_operator_stream_contracts` |
-| `test` | `c_ast_property_span_monotonicity_contracts` | `vyre-driver-wgpu/tests/c_ast_property_span_monotonicity_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_property_span_monotonicity_contracts` |
-| `test` | `c_ast_property_typedef_annotation_contracts` | `vyre-driver-wgpu/tests/c_ast_property_typedef_annotation_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_property_typedef_annotation_contracts` |
-| `test` | `c_ast_real_corpus_harness` | `vyre-driver-wgpu/tests/c_ast_real_corpus_harness.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_real_corpus_harness` |
-| `test` | `c_ast_sema_scope_cast_decl_redecl_field_contracts` | `vyre-driver-wgpu/tests/c_ast_sema_scope_cast_decl_redecl_field_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_sema_scope_cast_decl_redecl_field_contracts` |
-| `test` | `c_ast_sema_scope_deep_nesting_cpu_gpu_parity_contracts` | `vyre-driver-wgpu/tests/c_ast_sema_scope_deep_nesting_cpu_gpu_parity_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_sema_scope_deep_nesting_cpu_gpu_parity_contracts` |
-| `test` | `c_ast_sema_scope_function_parameter_prototype_contracts` | `vyre-driver-wgpu/tests/c_ast_sema_scope_function_parameter_prototype_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_sema_scope_function_parameter_prototype_contracts` |
-| `test` | `c_ast_sema_scope_tag_enum_label_contracts` | `vyre-driver-wgpu/tests/c_ast_sema_scope_tag_enum_label_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_sema_scope_tag_enum_label_contracts` |
-| `test` | `c_ast_sema_scope_typedef_shadow_restore_contracts` | `vyre-driver-wgpu/tests/c_ast_sema_scope_typedef_shadow_restore_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_sema_scope_typedef_shadow_restore_contracts` |
-| `test` | `c_ast_semantic_edge_expectations_gnu_and_control_flow` | `vyre-driver-wgpu/tests/c_ast_semantic_edge_expectations_gnu_and_control_flow.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_semantic_edge_expectations_gnu_and_control_flow` |
-| `test` | `c_ast_semantic_gaps_linux_grade` | `vyre-driver-wgpu/tests/c_ast_semantic_gaps_linux_grade.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_semantic_gaps_linux_grade` |
-| `test` | `c_ast_semantic_pg_no_host_edge_contracts` | `vyre-driver-wgpu/tests/c_ast_semantic_pg_no_host_edge_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_semantic_pg_no_host_edge_contracts` |
-| `test` | `c_ast_statement_construct_gaps_e2e` | `vyre-driver-wgpu/tests/c_ast_statement_construct_gaps_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_statement_construct_gaps_e2e` |
-| `test` | `c_ast_string_init_e2e` | `vyre-driver-wgpu/tests/c_ast_string_init_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_string_init_e2e` |
-| `test` | `c_ast_switch_case_complex_body_pg_lowering_contracts` | `vyre-driver-wgpu/tests/c_ast_switch_case_complex_body_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_switch_case_complex_body_pg_lowering_contracts` |
-| `test` | `c_ast_typedef_scope_restore_e2e` | `vyre-driver-wgpu/tests/c_ast_typedef_scope_restore_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_typedef_scope_restore_e2e` |
-| `test` | `c_ast_typeof_unqual_and_complex_declarators_e2e` | `vyre-driver-wgpu/tests/c_ast_typeof_unqual_and_complex_declarators_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_typeof_unqual_and_complex_declarators_e2e` |
-| `test` | `c_ast_typeof_unqual_real_declarator_contracts` | `vyre-driver-wgpu/tests/c_ast_typeof_unqual_real_declarator_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_ast_typeof_unqual_real_declarator_contracts` |
-| `test` | `c_lexer_parallelization_contract` | `vyre-driver-wgpu/tests/c_lexer_parallelization_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_lexer_parallelization_contract` |
-| `test` | `c_lower_ast_to_pg_nodes` | `vyre-driver-wgpu/tests/c_lower_ast_to_pg_nodes.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_lower_ast_to_pg_nodes` |
-| `test` | `c_lower_ast_to_pg_nodes_gpu_parity` | `vyre-driver-wgpu/tests/c_lower_ast_to_pg_nodes_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_lower_ast_to_pg_nodes_gpu_parity` |
-| `test` | `c_parser_pipeline_macro_boundary_contracts` | `vyre-driver-wgpu/tests/c_parser_pipeline_macro_boundary_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_parser_pipeline_macro_boundary_contracts` |
-| `test` | `c_parser_pipeline_vast_pg_parity_contracts` | `vyre-driver-wgpu/tests/c_parser_pipeline_vast_pg_parity_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_parser_pipeline_vast_pg_parity_contracts` |
-| `test` | `c_preprocess_gpu_comment_strip_mask` | `vyre-driver-wgpu/tests/c_preprocess_gpu_comment_strip_mask.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_preprocess_gpu_comment_strip_mask` |
-| `test` | `c_preprocess_gpu_if_expression` | `vyre-driver-wgpu/tests/c_preprocess_gpu_if_expression.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_preprocess_gpu_if_expression` |
-| `test` | `c_preprocess_macro_deep_contracts` | `vyre-driver-wgpu/tests/c_preprocess_macro_deep_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_preprocess_macro_deep_contracts` |
-| `test` | `c_type_specifier_propagation` | `vyre-driver-wgpu/tests/c_type_specifier_propagation.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test c_type_specifier_propagation` |
 | `test` | `capability_contract` | `vyre-driver-wgpu/tests/capability_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test capability_contract` |
 | `test` | `capability_drift` | `vyre-driver-wgpu/tests/capability_drift.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test capability_drift` |
 | `test` | `cat_a_conform` | `vyre-driver-wgpu/tests/cat_a_conform.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test cat_a_conform` |
 | `test` | `cat_a_gpu_differential` | `vyre-driver-wgpu/tests/cat_a_gpu_differential.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test cat_a_gpu_differential` |
 | `test` | `cli_contract` | `vyre-driver-wgpu/tests/cli_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test cli_contract` |
 | `test` | `crc32_gpu_parity` | `vyre-driver-wgpu/tests/crc32_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test crc32_gpu_parity` |
-| `test` | `debug_c11_annotate` | `vyre-driver-wgpu/tests/debug_c11_annotate.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test debug_c11_annotate` |
 | `test` | `decode_hex_gpu_parity` | `vyre-driver-wgpu/tests/decode_hex_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test decode_hex_gpu_parity` |
 | `test` | `default_workgroup_contract` | `vyre-driver-wgpu/tests/default_workgroup_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test default_workgroup_contract` |
 | `test` | `determinism_contract` | `vyre-driver-wgpu/tests/determinism_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test determinism_contract` |
@@ -154,7 +76,6 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `fnv1a32_gpu_parity` | `vyre-driver-wgpu/tests/fnv1a32_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test fnv1a32_gpu_parity` |
 | `test` | `fnv1a64_gpu_parity` | `vyre-driver-wgpu/tests/fnv1a64_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test fnv1a64_gpu_parity` |
 | `test` | `gap_transcendentals_parity` | `vyre-driver-wgpu/tests/gap_transcendentals_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test gap_transcendentals_parity` |
-| `test` | `gemini_c_ast_contracts` | `vyre-driver-wgpu/tests/gemini_c_ast_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test gemini_c_ast_contracts` |
 | `test` | `hit_buffer` | `vyre-driver-wgpu/tests/hit_buffer.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test hit_buffer` |
 | `test` | `lens_gpu_parity` | `vyre-driver-wgpu/tests/lens_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test lens_gpu_parity` |
 | `test` | `limits_from_adapter_device` | `vyre-driver-wgpu/tests/limits_from_adapter_device.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test limits_from_adapter_device` |

@@ -2,7 +2,7 @@
 
 use crate::ir_inner::model::expr::{ExprNode, GeneratorRef, Ident};
 use crate::ir_inner::model::node::NodeExtension;
-use crate::ir_inner::model::spec_types::{
+use crate::ir_inner::model::op_signature::{
     AtomicOp, BinOp, CollectiveOp, CommGroup, DataType, SubgroupReduceOp, UnOp,
 };
 use std::sync::Arc;

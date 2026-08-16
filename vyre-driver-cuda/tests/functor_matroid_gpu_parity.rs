@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::functorial::{functor_apply, functor_apply_cpu};
 use vyre_libs::graph::matroid::{matroid_exchange_bfs_step, matroid_exchange_bfs_step_cpu};

@@ -27,8 +27,8 @@
 //! (Signed `i32 / 0` and `i32::MIN / -1` are rejected upstream as undefined, so
 //! they are not emittable and not tested here; only the unsigned total cases.)
 
-mod common;
-use common::live_backend;
+mod harness;
+use harness::live_backend;
 
 use vyre_driver::parity_harness::u32_binop_parity;
 use vyre_driver::DispatchConfig;

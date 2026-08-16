@@ -20,7 +20,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 /// One cargo or shell name a workflow step passes, and where it came from.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

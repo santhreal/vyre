@@ -2,9 +2,9 @@
 
 extern crate self as vyre;
 
-mod support;
+mod expansion_fixtures;
 
-pub use support::{ir, optimizer};
+pub use expansion_fixtures::{ir, optimizer};
 
 use vyre_macros::{vyre_ast_registry, vyre_pass};
 
@@ -92,7 +92,7 @@ fn vyre_pass_analyze_always_skips_missing_analyze_impl_requirement() {
 #[test]
 fn vyre_pass_defaults_are_abi_preserving_unknown_metadata() {
     let metadata = optimizer::ProgramPass::metadata(&DefaultedPass);
-    support::assert_default_metadata(&metadata, "macro_defaulted_pass");
+    expansion_fixtures::assert_default_metadata(&metadata, "macro_defaulted_pass");
 }
 
 #[test]

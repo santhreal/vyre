@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::text::{
     classify_from_histogram, encoding_classify, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII,

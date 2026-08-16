@@ -2,9 +2,9 @@
 
 extern crate self as vyre;
 
-mod support;
+mod expansion_fixtures;
 
-pub use support::{ir, optimizer};
+pub use expansion_fixtures::{ir, optimizer};
 
 use vyre_macros::vyre_pass;
 
@@ -170,7 +170,7 @@ fn vyre_pass_emits_metadata_trait_impl_and_inventory_registration() {
 fn vyre_pass_default_metadata_is_a_stable_contract() {
     let pass = ReleaseSurfaceDefaultsPass;
     let metadata = optimizer::ProgramPass::metadata(&pass);
-    support::assert_default_metadata(&metadata, "release_surface_defaults");
+    expansion_fixtures::assert_default_metadata(&metadata, "release_surface_defaults");
 
     let program = ir::Program { id: 11 };
     assert_eq!(

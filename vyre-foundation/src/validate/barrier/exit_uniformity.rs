@@ -4,7 +4,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::spec_types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use crate::memory_model::MemoryOrdering;
 use crate::validate::binding::Binding;
 use crate::validate::uniformity::is_uniform_with_load_policy;

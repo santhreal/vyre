@@ -15,7 +15,7 @@ use crate::cases::queue_closure::{
 };
 use vyre_foundation::ir::Program;
 
-use super::support::{
+use super::fixture::{
     build_skewed_csr_fixture, skewed_csr_queue_closure_inputs, skewed_csr_queue_closure_oracle,
     SkewedCsrStats, CSR_ALLOW_MASK, CSR_NODE_COUNT, SUITES,
 };

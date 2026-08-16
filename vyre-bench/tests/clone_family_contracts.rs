@@ -30,8 +30,11 @@ use vyre_bench::api::case::BenchCase;
 ///
 /// The three `frontend.rust.*` cases went the same way in a2e24fcdf1, which
 /// moved the Rust front end to `software/frontend-rust` and took the case tree
-/// that existed to exercise it. `parser.c_lexer.small_state_transition.4k` and
-/// `release.c_ast_traversal.1m` are the parsing workloads that remain.
+/// that existed to exercise it. `parser.c_lexer.small_state_transition.4k`
+/// followed when the C frontend itself left `vyre-libs`: it measured that
+/// frontend's lexer state-transition pass and there is no builder left to
+/// build it. `release.c_ast_traversal.1m` is the parsing workload that remains,
+/// and it is a synthetic IR traversal with no frontend dependency.
 const EXPECTED_CASE_IDS: &[&str] = &[
     "adversarial.register_exhaustion.u32_1024",
     "bigint.modexp.4096",
@@ -60,7 +63,6 @@ const EXPECTED_CASE_IDS: &[&str] = &[
     "interpreter.bytecode.dispatch.10m",
     "metadata.condition.filesize_header.1m",
     "nn.linear_4bit_affine_grouped.1m",
-    "parser.c_lexer.small_state_transition.4k",
     "primitives.graph.csr_skewed_frontier.1m",
     "primitives.graph.csr_skewed_queue_closure.1m",
     "primitives.graph.csr_skewed_queue_materialize.1m",

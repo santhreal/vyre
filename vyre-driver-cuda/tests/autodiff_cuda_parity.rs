@@ -1,9 +1,9 @@
 //! Live CUDA/reference parity for autodiff-generated backward Programs.
 
-mod common;
+mod harness;
 
-use common::bytes_u32;
-use common::{bytes_f32, cuda_reference_outputs, f32_bytes, live_backend};
+use harness::bytes_u32;
+use harness::{bytes_f32, cuda_reference_outputs, f32_bytes, live_backend};
 use vyre_driver::BindingPlan;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::transform::autodiff::grad;

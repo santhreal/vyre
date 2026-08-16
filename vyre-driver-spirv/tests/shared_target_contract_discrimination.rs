@@ -14,9 +14,9 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use vyre_driver_spirv::SpirvBackend;
 
-mod support;
-use support::spirv as truthful;
-use support::target_compiler_contract::{assert_target_compiler_emits_bundle, TargetExpectation};
+mod target_artifacts;
+use target_artifacts::spirv as truthful;
+use target_artifacts::target_compiler_contract::{assert_target_compiler_emits_bundle, TargetExpectation};
 
 #[path = "../../tests/support/preferred_dispatch_backend_contract.rs"]
 mod preferred_dispatch_contract;

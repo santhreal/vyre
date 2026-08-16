@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::live_dispatcher;
+use harness::live_dispatcher;
 use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_libs::graph::dispatch::adaptive_traverse::{
     adaptive_traverse_resident_sparse_queue_step_with_scratch_into,

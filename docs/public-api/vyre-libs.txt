@@ -287,6 +287,10 @@ pub fn vyre_libs::nn::quant::q4_k_unpack(packed: &str, scales: &str, mins: &str,
 pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs::operation_catalog::ConvergenceContract>
 pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_libs::parsing::core::ast::binding::ast_binding_strength(tok_types: &str, out_depths: &str, out_strengths: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::parsing::core::ast::blocks::ast_cfg_blocks(tok_types: &str, _out_scope_parents: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_block_headers: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard_with_capacity(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str, token_capacity: u32, statement_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::lr_tables::LrTables::action_at(&self, state: u32, token: u32) -> vyre_libs::parsing::lr_tables::Action
 pub fn vyre_libs::parsing::lr_tables::LrTables::goto_at(&self, state: u32, nt: u32) -> u32
 pub fn vyre_libs::parsing::lr_tables::ParseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -396,7 +400,10 @@ pub mod vyre_libs::operation_catalog
 pub mod vyre_libs::parsing
 pub mod vyre_libs::parsing::core
 pub mod vyre_libs::parsing::core::ast
+pub mod vyre_libs::parsing::core::ast::binding
+pub mod vyre_libs::parsing::core::ast::blocks
 pub mod vyre_libs::parsing::core::ast::node
+pub mod vyre_libs::parsing::core::ast::shunting
 pub mod vyre_libs::parsing::lr_tables
 pub mod vyre_libs::parsing::parallel_parse
 pub mod vyre_libs::parsing::source_cache

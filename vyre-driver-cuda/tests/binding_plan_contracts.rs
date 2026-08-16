@@ -1,7 +1,7 @@
 //! Integration test for the CUDA backend.
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 use vyre_driver::{BindingPlan, BindingRole};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

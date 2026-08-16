@@ -3,9 +3,9 @@
 #![cfg(test)]
 
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::dispatch::csr_forward_or_changed::{
     forward_closure_via_change_flag_gpu, reference_forward_closure_via_change_flag,

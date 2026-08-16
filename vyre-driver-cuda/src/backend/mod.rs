@@ -49,7 +49,7 @@ pub(crate) mod resident;
 /// Resident-buffer dispatch path.
 pub(crate) mod resident_dispatch;
 /// Shared resident-dispatch contracts and checked accounting.
-pub(crate) mod resident_dispatch_support;
+pub(crate) mod resident_dispatch_accounting;
 /// Host and device copies for resident buffers.
 pub(crate) mod resident_io;
 /// Shared resident readback interval fusion.
@@ -109,7 +109,7 @@ pub(crate) use allocations::*;
 pub(crate) use module_cache::ModuleCacheKey;
 pub(crate) use plan::CudaDispatchPlan;
 pub(crate) use resident::{resident_bindings_from_handles, ResidentUseGuard};
-pub(crate) use resident_dispatch_support::CudaResidentDispatchStep;
+pub(crate) use resident_dispatch_accounting::CudaResidentDispatchStep;
 // Public surface  -  these names appear on the crate root.
 pub use cuda_graph::CachedCudaGraph;
 pub use dispatch::CudaBackend;

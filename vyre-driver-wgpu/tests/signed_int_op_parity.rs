@@ -9,8 +9,8 @@
 //!
 //! (Division and modulo have their own guard in `signed_modulo_parity`.)
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

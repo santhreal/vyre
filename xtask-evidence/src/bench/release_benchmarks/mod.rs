@@ -8,7 +8,7 @@ mod args;
 mod cpu_sota_proof;
 mod evidence_schema;
 mod frontier_leaderboard;
-mod inspect_core;
+mod artifact_metrics;
 mod metrics;
 mod optimization;
 mod release_thresholds;

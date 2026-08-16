@@ -26,7 +26,7 @@
 use vyre_libs::solvers::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_support::{
+use vyre_libs::test_parity_oracles::{
     fixed_matvec,
     fixed_mul as fixed_mul_16_16,
     signed_fixed_17 as signed_fisher,

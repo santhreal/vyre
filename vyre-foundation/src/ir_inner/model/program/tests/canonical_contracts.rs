@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use crate::ir_inner::model::node::node_op_id;
-use crate::ir_inner::model::spec_types::{BinOp, CollectiveOp, CommGroup};
+use crate::ir_inner::model::op_signature::{BinOp, CollectiveOp, CommGroup};
 use crate::memory_model::MemoryOrdering;
 use crate::optimizer::rewrite::{rewrite_node_slices, rewrite_nodes_cow};
 

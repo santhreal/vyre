@@ -1,6 +1,6 @@
 use super::ops::{binary, unary};
 use crate::ir_inner::model::expr::Expr;
-use crate::ir_inner::model::spec_types::{BinOp, UnOp};
+use crate::ir_inner::model::op_signature::{BinOp, UnOp};
 
 macro_rules! binary_builders {
     ($($(#[$meta:meta])* $name:ident => $op:expr;)*) => {

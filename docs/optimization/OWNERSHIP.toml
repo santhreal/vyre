@@ -421,7 +421,7 @@ write = [
 ]
 avoid = [
   "vyre-driver-cuda/src/backend/**",
-  "vyre-driver-wgpu/src/backend_impl.rs",
+  "vyre-driver-wgpu/src/backend_dispatch.rs",
   "vyre-libs/src/parsing/**",
   "vyre-libs/src/security/**",
 ]

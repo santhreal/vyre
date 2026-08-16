@@ -4,7 +4,7 @@
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
-mod graph_sweep_support;
+mod graph_sweep_fixtures;
 
 use std::collections::{HashSet, VecDeque};
 

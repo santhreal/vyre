@@ -4,7 +4,7 @@
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
-mod graph_sweep_support;
+mod graph_sweep_fixtures;
 
 use vyre_libs::graph::csr_forward_traverse;
 

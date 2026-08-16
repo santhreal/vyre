@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::path_reconstruct::{reconstruct_path_via, reconstruct_paths_via};
 use vyre_libs::graph::path_reconstruct::cpu_ref as path_reconstruct_cpu;
 

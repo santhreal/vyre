@@ -31,10 +31,8 @@ const CORE_ROOTS: &[&str] = &[
 /// Measured line counts for files under the core crates. The cap is this number
 /// plus five percent, rounded up.
 const CORE_MEASURED: &[(&str, usize)] = &[
-    ("vyre-libs/src/parsing/c/preprocess/mod.rs", 981),
-    ("vyre-driver-wgpu/src/backend_impl.rs", 1360),
+    ("vyre-driver-wgpu/src/backend_dispatch.rs", 1360),
     ("vyre-driver-wgpu/src/pipeline/mod.rs", 900),
-    ("vyre-libs/src/parsing/c/parse/structure/mod.rs", 844),
     ("vyre-driver-wgpu/src/buffer/handle/mod.rs", 674),
     ("vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs", 331),
     ("vyre-driver-wgpu/src/engine/record_and_readback/mod.rs", 829),
@@ -49,8 +47,6 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-driver-wgpu/src/buffer/pool.rs", 910),
     ("vyre-runtime/src/uring/stream.rs", 830),
     ("vyre-foundation/src/ir_inner/model/program/meta/mod.rs", 940),
-    ("vyre-libs/src/parsing/c/sema/registry/mod.rs", 660),
-    ("vyre-libs/src/parsing/c/lower/semantic_edges/mod.rs", 650),
     ("vyre-foundation/src/validate/expr_rules.rs", 646),
     (
         "vyre-foundation/src/ir_inner/model/program/buffer_decl/mod.rs",
@@ -75,7 +71,6 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-foundation/src/execution_plan/mod.rs", 740),
     ("vyre-runtime/src/uring/ring.rs", 685),
     ("vyre-foundation/src/execution_plan/policy.rs", 660),
-    ("vyre-libs/src/parsing/c/sema/lookup/mod.rs", 507),
     ("vyre-primitives/src/math/semiring_gemm/mod.rs", 535),
 ];
 

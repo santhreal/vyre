@@ -16,7 +16,7 @@ use crate::backend::resident_dispatch::host_uploads::{
 };
 use crate::backend::resident_dispatch::sequence_slots::prepare_resident_sequence_fills;
 use crate::backend::resident_dispatch::PreparedStep;
-use crate::backend::resident_dispatch_support::{
+use crate::backend::resident_dispatch_accounting::{
     checked_resident_dispatch_capacity_add, CudaResidentDispatchStep,
 };
 use crate::backend::resident_io::reserve_borrowed_resident_readback_outputs;

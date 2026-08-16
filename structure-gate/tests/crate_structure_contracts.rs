@@ -17,9 +17,10 @@
 #![forbid(unsafe_code)]
 
 use structure_gate::{
-    category_home_failures, frontend_owner_failures, operation_identity_failures,
+    category_home_failures, directory_stutter_failures, frontend_owner_failures,
+    generic_module_name_failures, numbered_sibling_failures, operation_identity_failures,
     registration_owner_failures, registry_link_failures, roster_failures, scan,
-    substrate_home_failures, workspace_root, Workspace,
+    sibling_module_failures, substrate_home_failures, workspace_root, Workspace,
 };
 
 fn workspace() -> Workspace {
@@ -173,4 +174,167 @@ fn the_registry_submitter_scan_is_not_vacuous() {
              discarding import naming it would be accepted. Found: {submitters:?}"
         );
     }
+}
+
+/// No `src/` module file sits beside a directory of its own name.
+///
+/// WHY: `foo.rs` next to `foo/` is one module written in two places, so a
+/// reader who opens either half sees a module that appears to be missing its
+/// other half, and a new child gets added to whichever half the author found.
+/// The workspace carried 110 such pairs at once. `tests/` is deliberately out
+/// of scope: an integration test binary is named by its own file, so a fixture
+/// directory beside it is not a second half of anything.
+#[test]
+fn no_module_file_sits_beside_its_own_directory() {
+    let failures = sibling_module_failures(&workspace().module_files);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("sibling-module", &failures)
+    );
+}
+
+/// Every file name states what the file holds.
+///
+/// WHY: `helpers`, `common`, `core`, `types`, `misc`, `support`, `utils` and the
+/// same words as a suffix answer no question a reader has, so the file becomes
+/// wherever an item went when nobody decided where it belonged, and it grows
+/// without limit. Judged over `tests/`, `benches/` and `examples/` as well as
+/// `src/`, because the prohibition was enforced against modules only and the
+/// population moved into test-adjacent files: 15 of the last 16 offenders were
+/// `tests/common/mod.rs` or `tests/support/mod.rs`. A module the committed
+/// public-API snapshot publishes is exempt while it stays published, because
+/// renaming it renames a path consumers import.
+///
+/// Red on this branch by 8 files: the C frontend's `sparse_impl`,
+/// `build_declaration_kind_inner` and the `c_ast_gpu_parity_support` and
+/// `c_token_support` test trees close by deletion with the frontend rather than
+/// by rename, and teaching the rule to skip them would name paths that stop
+/// existing.
+#[test]
+fn no_file_name_states_no_contract() {
+    let workspace = workspace();
+    let failures = generic_module_name_failures(
+        &workspace.source_files,
+        &workspace.crate_roots,
+        &workspace.published_modules,
+    );
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("generic-module-name", &failures)
+    );
+}
+
+/// No sibling files are told apart by a number.
+///
+/// WHY: ten files called `nodes_00` through `nodes_09` convey nothing about
+/// which one classifies a given node, so answering that question means opening
+/// all ten and a new case lands in whichever file was already open. A number
+/// inside a name that means something, `crc32` or `flash_attention_2`, has no
+/// numbered sibling, which is exactly what this rule keys on.
+///
+/// Red on this branch by the ten `vyre-libs/src/parsing/c/parse/vast/classify`
+/// files, which the C frontend removal deletes.
+#[test]
+fn no_siblings_are_told_apart_by_a_number() {
+    let failures = numbered_sibling_failures(&workspace().source_files);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("numbered-sibling", &failures)
+    );
+}
+
+/// No file repeats the directory that holds it.
+///
+/// WHY: `fma_f32/fma_f32.rs` states its contents once and its location twice,
+/// and a reader who opens the directory cannot tell whether the file is the
+/// module or one part of it. The module is the directory, so that file is
+/// `mod.rs`.
+#[test]
+fn no_file_repeats_the_directory_holding_it() {
+    let failures = directory_stutter_failures(&workspace().source_files);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("directory-stutter", &failures)
+    );
+}
+
+/// Every crate in the checkout is judged, and the published-module scan reads.
+///
+/// Guards the two rules above from both directions: an empty file list accepts
+/// every pair in the tree, and an empty published list instead reports every
+/// published module that carries a banned name. The crate roster comes from the
+/// scan itself rather than a list written here, so a crate added anywhere in
+/// the checkout has to appear in the judged file list or this fails.
+#[test]
+fn every_crate_in_the_checkout_is_judged() {
+    let workspace = workspace();
+
+    assert!(
+        workspace.crate_roots.len() > 20,
+        "expected far more than {} crate root(s) in the checkout; the layout rules above are \
+         passing vacuously. Found: {:?}",
+        workspace.crate_roots.len(),
+        workspace.crate_roots
+    );
+    for crate_root in &workspace.crate_roots {
+        let prefix = format!("{}/src/", crate_root.directory);
+        assert!(
+            workspace
+                .module_files
+                .iter()
+                .any(|file| file.starts_with(&prefix)),
+            "`{}` declares a package and holds a src/ directory, but the module-file scan read \
+             nothing under it, so its layout is unjudged",
+            crate_root.directory
+        );
+        assert!(
+            !crate_root.ident.contains('-'),
+            "`{}` resolved to crate identifier `{}`, which no consumer can write; the \
+             public-API exemption would never match it",
+            crate_root.directory,
+            crate_root.ident
+        );
+    }
+    assert!(
+        workspace.source_files.len() > workspace.module_files.len(),
+        "the name rules read the same {} file(s) as the src-only scan, so every fixture module in \
+         the checkout is unjudged",
+        workspace.source_files.len()
+    );
+    for tree in ["tests", "benches", "examples"] {
+        assert!(
+            workspace
+                .source_files
+                .iter()
+                .any(|file| file.contains(&format!("/{tree}/"))),
+            "no file under any crate's {tree}/ tree reached the name rules, so that whole tree is \
+             unjudged"
+        );
+    }
+    assert!(
+        workspace
+            .crate_roots
+            .iter()
+            .any(|crate_root| !workspace.members.contains(&crate_root.directory)),
+        "every judged crate root is a workspace member, so a crate outside the workspace would \
+         grow pairs unjudged. Roots: {:?}",
+        workspace.crate_roots
+    );
+    assert!(
+        workspace
+            .published_modules
+            .iter()
+            .any(|module| module == "vyre_libs::parsing"),
+        "expected docs/public-api to publish vyre_libs::parsing; the snapshot scan read nothing, \
+         so every published module would be reported as a banned name. Found {} module(s)",
+        workspace.published_modules.len()
+    );
 }

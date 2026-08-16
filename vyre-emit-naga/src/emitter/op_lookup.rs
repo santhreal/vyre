@@ -6,7 +6,7 @@ use crate::EmitError;
 use naga::{BinaryOperator, Literal, ScalarKind, UnaryOperator};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_foundation::ir::MemoryOrdering;
-use vyre_lower::LiteralValue;
+use vyre_lower::{KernelBody, KernelOpKind, LiteralValue};
 
 pub(super) fn naga_literal(literal: &LiteralValue) -> Result<Literal, EmitError> {
     match literal {
@@ -156,12 +156,71 @@ pub(super) fn scalar_cast_target(target: &DataType) -> Result<(ScalarKind, u8), 
     }
 }
 
-pub(super) fn barrier_flags(ordering: MemoryOrdering) -> Result<naga::Barrier, EmitError> {
+/// Address spaces one barrier orders, read off the body it sits in.
+///
+/// The first field is storage, the second workgroup scratch. Descent covers
+/// `child_bodies`, so a barrier whose fenced accesses live inside a sibling
+/// loop or conditional is measured from those accesses and not from the empty
+/// sibling list around it.
+///
+/// `LoadConstant` and `BufferLength` contribute nothing. A constant or uniform
+/// binding is read-only for the whole dispatch and a buffer length reads
+/// binding metadata rather than buffer contents, so no barrier can order a
+/// write against either of them.
+fn barrier_body_spaces(body: &KernelBody) -> (bool, bool) {
+    let mut storage = false;
+    let mut workgroup = false;
+    for op in &body.ops {
+        match op.kind {
+            KernelOpKind::LoadGlobal
+            | KernelOpKind::StoreGlobal
+            | KernelOpKind::Atomic { .. } => storage = true,
+            KernelOpKind::LoadShared | KernelOpKind::StoreShared => workgroup = true,
+            _ => {}
+        }
+    }
+    for child in &body.child_bodies {
+        let (child_storage, child_workgroup) = barrier_body_spaces(child);
+        storage |= child_storage;
+        workgroup |= child_workgroup;
+    }
+    (storage, workgroup)
+}
+
+/// Barrier flags for one IR memory ordering in the body that carries it.
+///
+/// The four strong orderings used to collapse onto `STORAGE | WORK_GROUP`, so a
+/// workgroup-scratch reduction round paid a storage fence it never needed and
+/// `SeqCst` was indistinguishable from `AcqRel` in the emitted shader.
+///
+/// `Acquire`, `Release` and `AcqRel` name global-memory visibility, so they
+/// lower to `STORAGE` alone. WGSL has no fence without convergence, so
+/// `storageBarrier()` also converges the workgroup; that is stronger than the
+/// ordering asks for and never weaker.
+///
+/// `SeqCst` is a full barrier within the issuing workgroup, so its flags are
+/// the address spaces the barrier actually orders. A body that touches only
+/// scratch emits `WORK_GROUP`, a body that touches only storage emits
+/// `STORAGE`, and a body that touches both, or neither, keeps the full fence.
+/// Narrowing only on a demonstrated single address space keeps every existing
+/// storage fence intact.
+///
+/// `GridSync` is device wide. WGSL has no whole-grid barrier and no cooperative
+/// launch, so it is a planner cut (`vyre_megakernel::grid_sync`) that splits the
+/// program into sequential dispatches before emission, never an instruction.
+pub(super) fn barrier_flags(
+    ordering: MemoryOrdering,
+    body: &KernelBody,
+) -> Result<naga::Barrier, EmitError> {
     match ordering {
-        MemoryOrdering::Acquire
-        | MemoryOrdering::Release
-        | MemoryOrdering::AcqRel
-        | MemoryOrdering::SeqCst => Ok(naga::Barrier::STORAGE | naga::Barrier::WORK_GROUP),
+        MemoryOrdering::Acquire | MemoryOrdering::Release | MemoryOrdering::AcqRel => {
+            Ok(naga::Barrier::STORAGE)
+        }
+        MemoryOrdering::SeqCst => Ok(match barrier_body_spaces(body) {
+            (false, true) => naga::Barrier::WORK_GROUP,
+            (true, false) => naga::Barrier::STORAGE,
+            _ => naga::Barrier::STORAGE | naga::Barrier::WORK_GROUP,
+        }),
         MemoryOrdering::Relaxed => Err(EmitError::InvalidDescriptor(
             "relaxed barrier has no synchronization semantics".to_owned(),
         )),

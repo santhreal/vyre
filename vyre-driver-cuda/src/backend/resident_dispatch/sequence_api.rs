@@ -5,7 +5,7 @@ use crate::backend::dispatch::CudaBackend;
 use crate::backend::output_range::CudaOutputReadback;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
 use crate::backend::resident_dispatch::sequence_slots::borrow_resident_sequence_output_slots;
-use crate::backend::resident_dispatch_support::CudaResidentDispatchStep;
+use crate::backend::resident_dispatch_accounting::CudaResidentDispatchStep;
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec};
 
 impl CudaBackend {

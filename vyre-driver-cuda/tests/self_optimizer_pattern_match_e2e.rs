@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{live_backend, CudaProgramDispatcher};
+use harness::{live_backend, CudaProgramDispatcher};
 use vyre::ir::{BinOp, Expr, Node, Program};
 use vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
 

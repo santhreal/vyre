@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::Program;
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::csr_frontier_degree_sum::{

@@ -7,7 +7,7 @@ fn skewed_csr_fixture_has_variable_degree_and_bitset_frontier() {
 
     assert_eq!(fixture.edge_offsets.len(), 4097);
     assert!(fixture.edge_targets.len() > 4096);
-    assert_eq!(fixture.stats.max_degree, support::UGLY_HUB_DEGREE);
+    assert_eq!(fixture.stats.max_degree, fixture::UGLY_HUB_DEGREE);
     assert!(fixture.stats.high_degree_sources > 0);
     assert!(fixture.stats.active_sources > 0);
     assert_eq!(fixture.frontier_in.len(), 128);
@@ -42,13 +42,13 @@ fn skewed_csr_prepare_builds_primitive_program_and_oracle() {
 #[test]
 fn skewed_csr_queue_inputs_preserve_frontier_and_device_scratch() {
     let fixture = build_skewed_csr_fixture(4096).unwrap();
-    let capacity = support::skewed_csr_queue_capacity(fixture.stats.active_sources).unwrap();
-    let high_capacity = support::skewed_csr_active_high_degree_sources(
+    let capacity = fixture::skewed_csr_queue_capacity(fixture.stats.active_sources).unwrap();
+    let high_capacity = fixture::skewed_csr_active_high_degree_sources(
         &fixture,
         queue_materialize::GRAPH_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
     )
     .unwrap();
-    let inputs = support::skewed_csr_queue_inputs(&fixture, capacity, high_capacity).unwrap();
+    let inputs = fixture::skewed_csr_queue_inputs(&fixture, capacity, high_capacity).unwrap();
 
     assert_eq!(inputs.len(), 9);
     assert_eq!(
@@ -77,7 +77,7 @@ fn skewed_csr_queue_inputs_preserve_frontier_and_device_scratch() {
     );
 
     let undersized = capacity.saturating_sub(1);
-    let err = support::skewed_csr_queue_inputs(&fixture, undersized, high_capacity).unwrap_err();
+    let err = fixture::skewed_csr_queue_inputs(&fixture, undersized, high_capacity).unwrap_err();
     assert!(
         err.to_string().contains("queue_capacity >= active_sources"),
         "queue capacity errors must name the invariant, got: {err}"
@@ -148,7 +148,7 @@ fn skewed_csr_graph_row_striding_requires_wide_rows() {
         "96-degree rows are not wide enough to justify a 32-lane team for every queued graph source"
     );
     assert!(queue_traverse_plan::should_use_row_strided(
-        support::UGLY_HUB_DEGREE
+        fixture::UGLY_HUB_DEGREE
     ));
     assert_eq!(
         queue_materialize::GRAPH_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
@@ -178,16 +178,16 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
         let fixture = build_skewed_csr_fixture(node_count).unwrap_or_else(|error| {
             panic!("generated skewed CSR fixture case {case} failed: {error}")
         });
-        let capacity = support::skewed_csr_queue_capacity(fixture.stats.active_sources)
+        let capacity = fixture::skewed_csr_queue_capacity(fixture.stats.active_sources)
             .unwrap_or_else(|error| panic!("generated queue capacity case {case} failed: {error}"));
-        let high_capacity = support::skewed_csr_active_high_degree_sources(
+        let high_capacity = fixture::skewed_csr_active_high_degree_sources(
             &fixture,
             queue_materialize::GRAPH_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
         )
         .unwrap_or_else(|error| {
             panic!("generated high-degree capacity case {case} failed: {error}")
         });
-        let inputs = support::skewed_csr_queue_inputs(&fixture, capacity, high_capacity)
+        let inputs = fixture::skewed_csr_queue_inputs(&fixture, capacity, high_capacity)
             .unwrap_or_else(|error| panic!("generated queue inputs case {case} failed: {error}"));
 
         assert_eq!(
@@ -206,7 +206,7 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
             "high queue byte length case {case}"
         );
         assert!(
-            support::skewed_csr_queue_inputs(&fixture, capacity.saturating_sub(1), high_capacity)
+            fixture::skewed_csr_queue_inputs(&fixture, capacity.saturating_sub(1), high_capacity)
                 .is_err(),
             "undersized queue should fail case {case}"
         );
@@ -234,8 +234,8 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
 #[test]
 fn skewed_csr_queue_closure_inputs_materialize_seed_queue_once() {
     let fixture = build_skewed_csr_fixture(4096).unwrap();
-    let capacity = support::skewed_csr_queue_capacity(fixture.stats.active_sources).unwrap();
-    let inputs = support::skewed_csr_queue_closure_inputs(&fixture, capacity).unwrap();
+    let capacity = fixture::skewed_csr_queue_capacity(fixture.stats.active_sources).unwrap();
+    let inputs = fixture::skewed_csr_queue_closure_inputs(&fixture, capacity).unwrap();
 
     assert_eq!(inputs.len(), 11);
     assert_eq!(
@@ -382,7 +382,7 @@ fn generated_skewed_csr_queue_closure_capacity_covers_every_wave() {
         let fixture = build_skewed_csr_fixture(node_count).unwrap_or_else(|error| {
             panic!("generated skewed CSR closure fixture case {case} failed: {error}")
         });
-        let oracle = support::skewed_csr_queue_closure_oracle(&fixture, node_count, node_count)
+        let oracle = fixture::skewed_csr_queue_closure_oracle(&fixture, node_count, node_count)
             .unwrap_or_else(|error| {
                 panic!("generated skewed CSR closure oracle case {case} failed: {error}")
             });
@@ -390,7 +390,7 @@ fn generated_skewed_csr_queue_closure_capacity_covers_every_wave() {
             .max_wave_queue_len
             .max(fixture.stats.active_sources as u32)
             .max(1);
-        let inputs = support::skewed_csr_queue_closure_inputs(&fixture, capacity)
+        let inputs = fixture::skewed_csr_queue_closure_inputs(&fixture, capacity)
             .unwrap_or_else(|error| panic!("generated closure inputs case {case} failed: {error}"));
 
         assert_eq!(oracle.output.len(), fixture.frontier_out_seed.len());
@@ -432,7 +432,7 @@ fn generated_skewed_csr_queue_closure_capacity_covers_every_wave() {
             "seed accumulator case {case}"
         );
         assert!(
-            support::skewed_csr_queue_closure_inputs(
+            fixture::skewed_csr_queue_closure_inputs(
                 &fixture,
                 (fixture.stats.active_sources as u32).saturating_sub(1),
             )

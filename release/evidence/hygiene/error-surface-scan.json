@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:a2850c7372a28a25b4ceca6b78d59e627f750dc4:dirty=true:worktree=685a384e4e572880364d73d680e6af6b5c132cade7242a8ad596dd0a02cc90ad",
+  "source_fingerprint": "git:1d28c2277fea9ef670ec31f3078009ade08303c8:dirty=true:worktree=f49c41626bd1dade0d57b2fa27466a8aefba9ee4d7adf36003d430c58b1a597d",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -170,48 +170,6 @@
       "line": 253,
       "pattern": "documented_panic_contract",
       "text": "self.inner.lock().expect("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/declarations.rs",
-      "line": 160,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 105,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 112,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 119,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure_statement.rs",
-      "line": 615,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 204,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"lazy scope table read lock was poisoned\"))"
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 214,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"lazy scope table write lock was poisoned\"))"
     },
     {
       "path": "vyre-libs/src/scratch.rs",

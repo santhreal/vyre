@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::math::bigint_add_carry::{
     bigint_add_carry, bigint_add_carry_cpu, bigint_add_carry_dispatch_grid, BINDING_A_IN,

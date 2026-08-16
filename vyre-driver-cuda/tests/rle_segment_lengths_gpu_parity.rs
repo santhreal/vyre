@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::decode::rle_segment_lengths::{
     rle_segment_lengths, rle_segment_lengths_cpu, rle_segment_lengths_dispatch_grid,

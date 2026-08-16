@@ -7,9 +7,9 @@
 use proptest::prelude::*;
 use vyre::ir::Program;
 
-#[path = "support/mod.rs"]
-mod support;
-use support::one_store_program;
+#[path = "program_fixtures/mod.rs"]
+mod program_fixtures;
+use program_fixtures::one_store_program;
 
 fn assert_decode_result_is_stable(bytes: &[u8]) -> Result<(), TestCaseError> {
     let outcome = std::panic::catch_unwind(|| Program::from_wire(bytes));

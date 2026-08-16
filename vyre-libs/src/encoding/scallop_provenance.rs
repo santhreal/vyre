@@ -116,6 +116,7 @@ pub fn build_provenance_program(n: u32, max_iterations: u32) -> Program {
         "provenance_join_rules",
         "provenance_changed",
         n,
+        1,
         max_iterations,
     )
 }
@@ -161,6 +162,7 @@ pub fn reference_provenance_closure_with_scratch(
         state,
         join_rules,
         n,
+        1,
         max_iterations,
         &mut scratch.closure,
         &mut scratch.join_scratch,
@@ -339,7 +341,7 @@ mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_support::StaticOutputs;
+    use crate::test_parity_oracles::StaticOutputs;
 
     #[test]
     fn build_program_declares_four_buffers() {

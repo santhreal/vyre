@@ -1,7 +1,7 @@
 //! CUDA runtime telemetry contracts.
 
-mod common;
-use common::{bytes_u32, u32_bytes};
+mod harness;
+use harness::{bytes_u32, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::{CudaBackend, CudaMegakernelScheduleSample};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};

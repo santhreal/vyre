@@ -4,11 +4,11 @@
 
 #![cfg(test)]
 
-mod common;
-#[path = "common/line_splice_generated_corpus.rs"]
+mod harness;
+#[path = "harness/line_splice_generated_corpus.rs"]
 mod line_splice_generated_corpus;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::parsing::line_splice_classify::{
     line_splice_classify, line_splice_classify_dispatch_grid, line_splice_classify_u8,

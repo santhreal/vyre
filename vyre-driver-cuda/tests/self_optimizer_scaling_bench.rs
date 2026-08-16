@@ -13,9 +13,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::CudaProgramDispatcher;
+use harness::CudaProgramDispatcher;
 use std::thread;
 
 use vyre::ir::Program;

@@ -1,5 +1,5 @@
 //! Regression for FINDING-OPT-IDEM-1: `pre_lowering::optimize` was non-idempotent
-//! for the Tier-2.5 `scallop_join_wide` primitive. The op's write-back `__sjw_chunk` loop has
+//! for the wide form of the Tier-2.5 `scallop_join` primitive. The op's write-back `__sjw_chunk` loop has
 //! a build-time-constant trip count of 1, but its body cost exceeded
 //! `loop_unroll`'s size cap, so the trip-1 Loop->Block promotion only fired on the
 //! *second* optimize() (after phase-3 CSE/DCE shrank the body). The fix lifts the
@@ -8,7 +8,7 @@
 
 use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::math::scallop_join_wide::scallop_join_wide;
+use vyre_libs::math::scallop_join::scallop_join;
 
 fn is_trip1(from: &Expr, to: &Expr) -> bool {
     matches!((from, to), (Expr::LitU32(0), Expr::LitU32(1)))
@@ -54,8 +54,8 @@ fn count_trip1_loops(nodes: &[Node], free: &mut u32, with_assign: &mut u32) {
 }
 
 #[test]
-fn scallop_join_wide_optimize_is_idempotent() {
-    let program = scallop_join_wide("state", "next", "join_rules", "changed", 2, 2, 4);
+fn wide_scallop_join_optimize_is_idempotent() {
+    let program = scallop_join("state", "next", "join_rules", "changed", 2, 2, 4);
 
     let once = optimize(program.clone()).expect("registered optimizer must converge");
     let twice = optimize(once.clone()).expect("registered optimizer must converge");
@@ -63,7 +63,7 @@ fn scallop_join_wide_optimize_is_idempotent() {
     // The harness invariant: a single optimize() must reach a fixpoint.
     assert_eq!(
         once, twice,
-        "optimize(optimize(p)) must equal optimize(p) for scallop_join_wide"
+        "optimize(optimize(p)) must equal optimize(p) for a wide scallop_join"
     );
 
     // Pin the fix's effect: after ONE optimize, the unroll-eligible (assign-free)

@@ -114,11 +114,11 @@ fn raw_guard_locations(source: &str) -> Result<Vec<LineColumn>, syn::Error> {
 /// formatting, and inspection matches cannot hide or fabricate a violation.
 #[test]
 fn workspace_sources_reject_raw_first_workgroup_predicates() {
-    let root = super::common::workspace_root();
+    let root = super::workspace_sources::workspace_root();
     let canonical_path = root.join(CANONICAL_BUILDER);
     let mut violations = Vec::new();
 
-    for path in super::common::workspace_member_sources(&root) {
+    for path in super::workspace_sources::workspace_member_sources(&root) {
         if path == canonical_path {
             continue;
         }
@@ -137,7 +137,7 @@ fn workspace_sources_reject_raw_first_workgroup_predicates() {
         violations.extend(
             locations
                 .into_iter()
-                .map(|location| super::common::violation_location(&root, &path, location)),
+                .map(|location| super::workspace_sources::violation_location(&root, &path, location)),
         );
     }
 

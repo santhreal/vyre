@@ -8,8 +8,8 @@
 
 #![allow(clippy::assertions_on_constants)]
 
-mod common;
-use common::{add_one_program, shared_live_backend as live_backend};
+mod harness;
+use harness::{add_one_program, shared_live_backend as live_backend};
 
 use std::time::Instant;
 use vyre_driver::{DispatchConfig, VyreBackend};

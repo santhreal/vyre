@@ -15,9 +15,9 @@
 //! generalizes the manual gather-class audit (ziftsieve/base64/sketch/simplicial).
 #![cfg(feature = "inventory-registry")]
 
-mod common;
+mod gate_fixtures;
 
-use common::overfire_grid;
+use gate_fixtures::overfire_grid;
 use vyre_reference::value::Value;
 
 #[test]

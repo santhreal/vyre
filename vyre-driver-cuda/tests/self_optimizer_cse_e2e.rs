@@ -7,9 +7,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::live_backend;
 use vyre::ir::{Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_pass_engine::optimizer::cse_via_encoded::gpu_cse_canonicals;

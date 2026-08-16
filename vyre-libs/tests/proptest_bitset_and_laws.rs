@@ -6,6 +6,6 @@ use proptest::prelude::*;
 use vyre_libs::bitset::and::cpu_ref;
 
 #[macro_use]
-mod bitset_law_support;
+mod bitset_law_properties;
 
 bitset_and_law_tests!(cpu_ref);

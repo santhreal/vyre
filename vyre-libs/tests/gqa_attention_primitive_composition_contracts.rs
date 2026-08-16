@@ -2,8 +2,8 @@
 
 #![cfg(feature = "nn-attention")]
 
-mod common;
-use common::{f32_bytes, f32_words as decode_f32};
+mod wire_words;
+use wire_words::{f32_bytes, f32_words as decode_f32};
 
 use std::collections::HashMap;
 

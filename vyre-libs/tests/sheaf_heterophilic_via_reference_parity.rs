@@ -18,7 +18,7 @@
 
 use vyre_libs::solvers::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via;
 
-use vyre_libs::test_support::fixed_mul;
+use vyre_libs::test_parity_oracles::fixed_mul;
 use vyre_driver_reference::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;

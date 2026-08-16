@@ -30,10 +30,10 @@
 //! `div_i32`/`rem_i32` return an error, so they are not emittable and not
 //! tested here; only the unsigned, total cases reach the GPU.)
 
-mod binop_parity_support;
-mod common;
+mod binop_parity_fixtures;
+mod harness;
 
-use binop_parity_support::program;
+use binop_parity_fixtures::program;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_test_support::binop_parity::{
     assert_covers_every_total_op, total_u32_reference_ops, total_u32_reference_values,
@@ -71,7 +71,7 @@ fn live_gpu() -> WgpuBackend {
 
 /// `out[i] = build(a[i], b[i])` over u32 buffers, dispatched on the case operands.
 fn dispatch(backend: &WgpuBackend, case: &TotalU32Case) -> Vec<u32> {
-    binop_parity_support::dispatch(
+    binop_parity_fixtures::dispatch(
         backend,
         &program(case.pairs.len() as u32, case.build),
         case.pairs,

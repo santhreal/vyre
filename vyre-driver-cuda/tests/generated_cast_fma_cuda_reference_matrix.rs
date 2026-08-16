@@ -1,8 +1,8 @@
 //! Generated live CUDA/reference differential matrix for cast and fused arithmetic semantics.
 
-mod common;
+mod harness;
 
-use common::{
+use harness::{
     assert_f32_matrix_sweep, assert_u32_matrix_sweep, bool_bytes, f32_bytes,
     generated_bool_cast_values, generated_f32_cast_values, generated_f32_fma_values,
     generated_i32_cast_values, generated_lane_program, generated_u32_cast_values,

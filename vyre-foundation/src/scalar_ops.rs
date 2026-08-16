@@ -24,7 +24,7 @@
 
 use crate::fp_parity::canonical_f32;
 use crate::ir_inner::model::node_kind::{EvalError, Value};
-use crate::ir_inner::model::spec_types::{BinOp, UnOp};
+use crate::ir_inner::model::op_signature::{BinOp, UnOp};
 
 fn unsupported_binary(op: BinOp, width: &str) -> EvalError {
     EvalError::new(format!(

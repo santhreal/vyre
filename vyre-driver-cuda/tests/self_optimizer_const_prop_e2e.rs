@@ -7,11 +7,11 @@
 
 #![cfg(test)]
 
-mod common;
-#[path = "common/self_optimizer_const_prop_bool.rs"]
+mod harness;
+#[path = "harness/self_optimizer_const_prop_bool.rs"]
 mod self_optimizer_const_prop_bool;
 
-use common::self_optimizer::{
+use harness::self_optimizer::{
     assert_cond_not_headed_by, assert_lit_i32, assert_lit_u32, assert_var, b_load_branch_program,
     binds_any_let, binds_let, binop, folded_store_value, is_lit_u32, run_pipeline, store_value,
     taken_branch_marker, unop,

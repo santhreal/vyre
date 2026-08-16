@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, live_backend, u32_bytes};
+use harness::{bytes_u32, live_backend, u32_bytes};
 use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_foundation::program_dispatch::{
     ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,

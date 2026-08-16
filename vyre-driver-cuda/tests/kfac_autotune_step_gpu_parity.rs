@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 use vyre_libs::math::kfac_block_inverse::cpu_ref;
 

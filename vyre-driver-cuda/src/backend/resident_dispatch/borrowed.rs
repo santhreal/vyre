@@ -16,7 +16,7 @@ use crate::backend::resident_dispatch::descriptor_cursor::{
     next_dispatch_binding, next_resident_handle,
 };
 use crate::backend::resident_dispatch::PreparedStep;
-use crate::backend::resident_dispatch_support::CudaResidentDispatchStep;
+use crate::backend::resident_dispatch_accounting::CudaResidentDispatchStep;
 use crate::backend::resident_upload_fusion::{
     fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy,
 };

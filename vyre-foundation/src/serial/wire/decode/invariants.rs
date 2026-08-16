@@ -1,7 +1,7 @@
 //! Semantic invariants enforced while decoding `VIR0` wire payloads.
 
 use super::from_wire::DecodedBuffer;
-use crate::ir_inner::model::spec_types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 
 pub(crate) fn validate_workgroup_size(workgroup_size: [u32; 3]) -> Result<(), String> {
     for (axis, size) in workgroup_size.into_iter().enumerate() {

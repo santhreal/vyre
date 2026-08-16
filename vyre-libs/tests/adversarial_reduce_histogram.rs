@@ -13,7 +13,7 @@
 )]
 
 #[macro_use]
-mod common;
+mod gate_fixtures;
 
 use vyre_libs::reduce::histogram::*;
 

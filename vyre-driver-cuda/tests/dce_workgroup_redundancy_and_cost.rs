@@ -24,11 +24,11 @@
 //! burn its whole `max_iters` budget: 183x on a star that converges in two
 //! iterations. The third test gates that it no longer does.
 
-mod common;
+mod harness;
 
 use std::time::Instant;
 
-use common::{live_backend, CudaProgramDispatcher};
+use harness::{live_backend, CudaProgramDispatcher};
 use vyre::ir::Program;
 use vyre_foundation::program_dispatch::ProgramDispatcher;
 use vyre_pass_engine::optimizer::dce_program::build_dce_bfs_program;

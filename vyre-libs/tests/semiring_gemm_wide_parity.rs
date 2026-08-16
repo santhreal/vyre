@@ -1,4 +1,4 @@
-//! GPU-IR parity for `math::scallop_join_wide::semiring_gemm_wide`.
+//! GPU-IR parity for `math::semiring_gemm::semiring_gemm_wide`.
 //!
 //! A W-word boolean-semiring GEMM for Datalog fixpoint lineage (had no parity
 //! test (the final genuine orphan from the registry-coverage closure gate)).
@@ -13,7 +13,7 @@
 //! hand-computed reference via `reference_eval` (Testing-Contract: real values).
 #![cfg(feature = "math")]
 
-use vyre_libs::math::scallop_join_wide::semiring_gemm_wide;
+use vyre_libs::math::semiring_gemm::semiring_gemm_wide;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
 

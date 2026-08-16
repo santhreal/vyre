@@ -20,6 +20,8 @@ pub mod cost;
 mod envelope;
 mod facts;
 mod frame;
+/// Whole-grid fence detection and the planner cut that removes it.
+pub mod grid_sync;
 /// Stable semantic legality decisions for whole-program fusion.
 pub mod legality;
 mod normalize;
@@ -255,25 +257,17 @@ impl CompileRequest {
                 "supply a structurally valid acyclic ProgramGraph",
             )
         })?;
-        for node in self.graph.nodes() {
-            let report = validate_with_options(
-                &node.program,
-                ValidationOptions::universal().with_backend_capabilities(COMPILER_IR_CAPABILITIES),
-            );
-            if let Some(issue) = report.errors.into_iter().next() {
-                let path = format!("request.graph.nodes[{}].program", node.id.0);
-                let mut diagnostic = issue.diagnostic();
-                if let Some(location) = diagnostic.location.as_mut() {
-                    location.path = Some(path);
-                    location.graph_node = Some(node.id.0);
-                }
-                return Err(CompileError { diagnostic });
-            }
-        }
-        validate_bindings(&self.graph, &self.facts.symbolic_bindings)?;
-        validate_constant_identities(&self.graph, &self.facts.constant_identities)?;
+        // The cut runs before every consumer of the graph: device admission,
+        // binding validation, IR validation, and schedule search all see a graph
+        // with no whole-grid fence left in a node body. A graph without a fence is
+        // returned untouched, so the artifact digest is unchanged. Validating
+        // after the cut validates exactly the programs compilation consumes.
+        let graph = grid_sync::split_graph(self.graph)?;
+        validate_node_programs(&graph, COMPILER_IR_CAPABILITIES)?;
+        validate_bindings(&graph, &self.facts.symbolic_bindings)?;
+        validate_constant_identities(&graph, &self.facts.constant_identities)?;
         Ok(ValidatedCompileRequest {
-            graph: self.graph,
+            graph,
             facts: self.facts,
             search_budget: self.search_budget,
             max_artifact_bytes: self.max_artifact_bytes,
@@ -882,6 +876,32 @@ impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
             search_budget: request.search_budget,
         }
     }
+}
+
+/// Validate every node program against the compiler's universal IR capabilities.
+///
+/// The first error wins and is relocated onto the graph node that carried it, so
+/// a diagnostic names the node rather than an anonymous program.
+fn validate_node_programs(
+    graph: &ProgramGraph,
+    capabilities: BackendCapabilities,
+) -> Result<(), CompileError> {
+    for node in graph.nodes() {
+        let report = validate_with_options(
+            &node.program,
+            ValidationOptions::universal().with_backend_capabilities(capabilities),
+        );
+        if let Some(issue) = report.errors.into_iter().next() {
+            let path = format!("request.graph.nodes[{}].program", node.id.0);
+            let mut diagnostic = issue.diagnostic();
+            if let Some(location) = diagnostic.location.as_mut() {
+                location.path = Some(path);
+                location.graph_node = Some(node.id.0);
+            }
+            return Err(CompileError { diagnostic });
+        }
+    }
+    Ok(())
 }
 
 fn validate_bindings(

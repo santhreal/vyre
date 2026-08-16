@@ -3,9 +3,9 @@
 #![cfg(test)]
 
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::csr_bidirectional::{
     bidirectional_closure_via, bidirectional_step_via, reference_bidirectional_closure,
     reference_bidirectional_step,

@@ -5,7 +5,7 @@
 
 #[path = "adaptive_traverse_vast_walk_gpu_parity/auto_selector_contracts.rs"]
 mod auto_selector_contracts;
-mod common;
+mod harness;
 #[path = "adaptive_traverse_vast_walk_gpu_parity/dense_sparse_contracts.rs"]
 mod dense_sparse_contracts;
 #[path = "adaptive_traverse_vast_walk_gpu_parity/resident_sparse_dense_contracts.rs"]
@@ -15,7 +15,7 @@ mod resident_sparse_queue_contracts;
 #[path = "adaptive_traverse_vast_walk_gpu_parity/vast_walk_contracts.rs"]
 mod vast_walk_contracts;
 
-use common::{bytes_u32, live_dispatcher, pack_nodes, u32_bytes};
+use harness::{bytes_u32, live_dispatcher, pack_nodes, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::vast::{walk_preorder_indices, VastNode, NODE_STRIDE_U32, SENTINEL};

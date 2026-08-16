@@ -19,7 +19,7 @@
 //! `vyre-foundation` the match is exhaustive, which is the only place a traversal
 //! of this IR cannot silently stop descending.
 
-mod common;
+mod harness;
 
 use vyre_foundation::visit::walk_exprs;
 
@@ -62,7 +62,7 @@ fn newton_schulz_ir_shape_stays_linear() {
 #[test]
 fn newton_schulz_lowers_through_the_wgpu_emitter() {
     let program = vyre_libs::nn::optim::newton_schulz_5step("mat", "output", 2, 2);
-    let wgsl = common::emit_validated_wgsl(&program);
+    let wgsl = harness::emit_validated_wgsl(&program);
     assert!(
         wgsl.contains("fn main"),
         "Fix: the emitted module must carry a compute entry point; got {} bytes of WGSL",

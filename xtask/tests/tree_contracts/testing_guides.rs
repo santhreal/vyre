@@ -4,10 +4,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 fn run_generator(root: &Path, mode: &str) -> Output {
-    super::common::run_generator("scripts/testing_guides.py", root, mode)
+    super::workspace_sources::run_generator("scripts/testing_guides.py", root, mode)
 }
 
 fn write_fixture(root: &Path, include_profile: bool) {

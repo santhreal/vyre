@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 fn inventory_script() -> PathBuf {
     workspace_root().join("scripts/public_api_snapshot_inventory.py")

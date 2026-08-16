@@ -3,8 +3,8 @@
 #![cfg(feature = "logical")]
 #![allow(deprecated)]
 
-mod common;
-use common::u32_bytes as bytes;
+mod wire_words;
+use wire_words::u32_bytes as bytes;
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 

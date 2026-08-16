@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{f32_bytes as bytes, f32_words_of as decode};
+mod wire_words;
+use wire_words::{f32_bytes as bytes, f32_words_of as decode};
 
 use vyre::ir::DataType;
 use vyre_libs::nn::linear::{linear_rows, linear_rows_no_bias_out_in_typed};

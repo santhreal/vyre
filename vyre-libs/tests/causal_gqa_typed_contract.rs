@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{bf16_bytes, bf16_word};
+mod wire_words;
+use wire_words::{bf16_bytes, bf16_word};
 
 use vyre::ir::DataType;
 use vyre_libs::nn::attention::gqa_attention_causal_typed;

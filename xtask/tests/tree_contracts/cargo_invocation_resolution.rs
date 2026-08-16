@@ -252,7 +252,7 @@ fn key_value(line: &str, key: &str) -> Option<String> {
 fn scan_invocations(root: &Path) -> Vec<Invocation> {
     let mut found = Vec::new();
     for directory in [root.join(".github/workflows"), root.join("scripts")] {
-        for file in crate::common::sources_under(&directory, &["yml", "yaml", "sh", "py"]) {
+        for file in crate::workspace_sources::sources_under(&directory, &["yml", "yaml", "sh", "py"]) {
             let Ok(text) = std::fs::read_to_string(&file) else {
                 continue;
             };

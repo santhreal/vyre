@@ -1,8 +1,8 @@
 //! Generated live CUDA/reference differential matrix for scalar IR semantics.
 
-mod common;
+mod harness;
 
-use common::{
+use harness::{
     assert_u32_matrix_sweep, bool_bytes, bool_word, compare_word, eq_word, ge_word,
     generated_lane_program, gt_word, guarded_generated_store, le_word, live_backend, lt_word,
     ne_word, u32_bytes, GeneratedMatrixCase, GENERATED_LANE_COUNT as LANE_COUNT,

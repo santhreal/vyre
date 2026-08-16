@@ -15,8 +15,8 @@
 //! reference (itself the proven contract, validated by
 //! `vyre-primitives/tests/adversarial_hash.rs`).
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

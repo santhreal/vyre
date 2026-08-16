@@ -515,7 +515,7 @@ mod tests {
         scc_components_via_substrate_with_scratch_into, semiring_gemm_via, semiring_gemm_via_into,
     };
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_support::StaticOutputs;
+    use crate::test_parity_oracles::StaticOutputs;
     use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
     struct SequenceDispatcher {

@@ -5,8 +5,8 @@
 //! oracle across generated graph shapes and frontier densities.
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
-mod common;
-use common::u32_bytes;
+mod gate_fixtures;
+use gate_fixtures::u32_bytes;
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::adaptive_traverse::{
     adaptive_four_russians_dense_step, cpu_dense_step, cpu_four_russians_dense_step,

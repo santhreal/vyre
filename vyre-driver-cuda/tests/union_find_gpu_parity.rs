@@ -6,9 +6,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::union_find_emit::{
     canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,
 };

@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{
+mod wire_words;
+use wire_words::{
     bf16_bytes, bf16_word, f32_bytes as bytes, f32_words, f32_words_of as decode, u16_words,
 };
 

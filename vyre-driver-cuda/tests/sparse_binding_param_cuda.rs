@@ -1,8 +1,8 @@
 //! Live CUDA parity for sparse binding-slot launch parameters.
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, cuda_reference_outputs, live_backend, u32_bytes};
+use harness::{bytes_u32, cuda_reference_outputs, live_backend, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 

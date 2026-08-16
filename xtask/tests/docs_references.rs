@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
+mod workspace_sources;
 
 use std::fs;
 use std::path::Path;
@@ -10,10 +10,10 @@ use std::process::{Command, Output};
 
 use tempfile::TempDir;
 
-use common::workspace_root;
+use workspace_sources::workspace_root;
 
 fn run_checker(root: &Path) -> Output {
-    common::run_python("scripts/check_docs_references.py", &[root.as_os_str()])
+    workspace_sources::run_python("scripts/check_docs_references.py", &[root.as_os_str()])
 }
 
 fn fixture() -> TempDir {

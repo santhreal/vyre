@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{u16_bytes as bytes, u16_words_of as words};
+mod wire_words;
+use wire_words::{u16_bytes as bytes, u16_words_of as words};
 
 use vyre::ir::DataType;
 use vyre_libs::nn::attention::{kv_cache_append_typed, KvCacheAppendError};

@@ -19,8 +19,8 @@
 //! its own proof against the reference, never a comparison against what naga
 //! produced.
 
-mod common;
-use common::live_backend;
+mod harness;
+use harness::live_backend;
 
 use vyre_driver::parity_harness::u32_binop_parity;
 use vyre_driver::DispatchConfig;

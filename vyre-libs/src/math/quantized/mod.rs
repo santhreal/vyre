@@ -6,7 +6,7 @@
 //! 4-bit values.
 
 mod cpu;
-mod program_helpers;
+mod i4_expressions;
 mod programs;
 #[cfg(test)]
 mod tests;

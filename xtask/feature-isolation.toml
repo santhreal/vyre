@@ -211,11 +211,6 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
-feature = "c-parser"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-driver-wgpu"
 feature = "matching-dfa"
 outcome = "compiles"
 
@@ -336,22 +331,12 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),analysis,c-parser,cpu-parity,full"
+feature = "(default),analysis,cpu-parity,full"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),c-parser"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-libs"
-feature = "(default),c-parser,cpu-parity,crypto-blake3,matching,nn-attention,parsing"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-libs"
-feature = "(default),c-parser,nn-linear-4bit"
+feature = "(default),cpu-parity,crypto-blake3,matching,nn-attention,parsing"
 outcome = "compiles"
 
 [[pair]]
@@ -376,6 +361,16 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "(default),nn-linear-4bit"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),python-parser"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "(default),reasoning"
 outcome = "compiles"
 
@@ -387,11 +382,6 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-libs"
 feature = "analysis"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-libs"
-feature = "c-parser"
 outcome = "compiles"
 
 [[pair]]

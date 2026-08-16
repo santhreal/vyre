@@ -4,9 +4,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::bitset::and_into::{bitset_and_into, cpu_ref as and_into_cpu};
 use vyre_libs::bitset::and_not_into::{bitset_and_not_into, cpu_ref as and_not_into_cpu};

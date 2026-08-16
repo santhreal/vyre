@@ -16,8 +16,8 @@ use crate::optimizer::{
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-mod rewrite_support;
-use rewrite_support::*;
+mod rewrite_passes;
+use rewrite_passes::*;
 
 fn trivial_program() -> Program {
     Program::wrapped(
@@ -546,6 +546,6 @@ mod cost_monotone;
 mod effect_handlers;
 mod gate_fact_cache;
 mod invalidation_metrics;
-mod linear_types;
+mod linear_type_enforcement;
 mod lookup_identity;
 mod shape_predicates;

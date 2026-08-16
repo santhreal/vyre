@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 ./cargo_full test -p structure-gate
 ```
 
-Enforce the crate roster, one operation identity per semantic operation, and one home per concept. Depends on no vyre crate so it keeps running while the workspace does not compile.
+Enforce the crate roster, one operation identity per semantic operation, one home per concept, and one place per module. Depends on no vyre crate so it keeps running while the workspace does not compile.
 
 The crate lives at `structure-gate`. The `release-tooling` owner maintains its
 `standalone-tooling` testing contract.

@@ -1,11 +1,11 @@
 //! Launcher source emission contract tests.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, TargetId};
 
 fn minimal_ptx_artifact() -> ArtifactEnvelope {
-    common::compiled_artifact()
+    fixture_target::compiled_artifact()
 }
 
 #[test]

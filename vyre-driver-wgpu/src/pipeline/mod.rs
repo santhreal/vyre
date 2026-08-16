@@ -812,12 +812,6 @@ pub(crate) mod output_readback;
 pub(crate) mod output_slots;
 /// Persistent `Resource` to GPU-handle resolution and trap sidecar allocation.
 pub(crate) mod persistent_resources;
-// Tests for `disk_cache.rs` are declared *inside* `disk_cache.rs`
-// itself (see `#[path = "disk_cache_tests.rs"] mod tests;` near the
-// bottom of that file). The original layout used #[cfg(test)] mod
-// tests inside the disk_cache.rs body so the test file's `super::*`
-// resolved to disk_cache.rs's items; declaring it from the parent
-// `pipeline` module instead breaks 55 unresolved-name references.
 /// Persistent dispatch-item lifecycle (`DispatchItem`)  -  multi-call
 /// reuse of bind groups, staging pools, and pipeline handles across
 /// the same program-graph topology.

@@ -674,7 +674,7 @@ pub fn reference_sinkhorn_clustering(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::StaticOutputs;
+    use crate::test_parity_oracles::StaticOutputs;
 
     /// Real-backend contract: 4 RO inputs + u/v plain-RW = 6 input-consuming
     /// buffers; out_assignments is a backend-allocated `BufferDecl::output`,

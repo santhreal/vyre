@@ -6,7 +6,7 @@ use crate::graph::dominator_frontier::cpu_ref as reference_dominator_frontier;
 
 mod dispatcher_doubles;
 
-use crate::test_support::StaticOutputs;
+use crate::test_parity_oracles::StaticOutputs;
 use dispatcher_doubles::{DominatorInputShapeDispatcher, RecordingDominatorDispatcher};
 
 const DOMINATOR_CONTRACT: &str = "dominance frontier dispatch";

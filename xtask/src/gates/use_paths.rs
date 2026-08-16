@@ -37,11 +37,7 @@ pub fn is_test_source_path(path: &std::path::Path) -> bool {
         || path
             .file_stem()
             .and_then(|stem| stem.to_str())
-            .is_some_and(|stem| {
-                stem == "test_support"
-                    || stem.starts_with("test_")
-                    || stem.ends_with("_test")
-            })
+            .is_some_and(|stem| stem.starts_with("test_") || stem.ends_with("_test"))
 }
 
 fn is_test_only(attrs: &[syn::Attribute]) -> bool {
@@ -179,7 +175,7 @@ mod tests {
     #[test]
     fn test_source_paths_are_excluded_without_hiding_production_modules() {
         assert!(is_test_source_path(std::path::Path::new(
-            "vyre-libs/src/test_support.rs"
+            "vyre-libs/src/test_parity_oracles.rs"
         )));
         assert!(is_test_source_path(std::path::Path::new(
             "vyre-libs/src/parsing/tests/contracts.rs"

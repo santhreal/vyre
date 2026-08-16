@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::spec_types::BinOp;
+use crate::ir_inner::model::op_signature::BinOp;
 use crate::transform::rewrite_walk::{self, NodeRewrite};
 
 use super::{meta::buffer_decl_canonical_key, BufferDecl, Program};

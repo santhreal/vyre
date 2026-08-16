@@ -1,6 +1,6 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::test_support::NeverDispatches;
+use crate::test_parity_oracles::NeverDispatches;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::union_find::{union_find_dispatch_grid, union_find_program};

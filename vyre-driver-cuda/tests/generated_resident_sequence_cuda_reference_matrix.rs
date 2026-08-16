@@ -2,11 +2,11 @@
 
 #[path = "generated_resident_sequence_cuda_reference_matrix/basic_sequence_contracts.rs"]
 mod basic_sequence_contracts;
-mod common;
+mod harness;
 #[path = "generated_resident_sequence_cuda_reference_matrix/repeated_sequence_contracts.rs"]
 mod repeated_sequence_contracts;
 
-use common::{
+use harness::{
     assert_compact_ranges_match, assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes,
     compact_word_ranges, f32_bytes, generated_mixed_bool_values as generated_bool_values,
     generated_mixed_u32_values as generated_u32_values, live_backend, overlapping_word_ranges,

@@ -9,9 +9,9 @@
 #![cfg(feature = "graph")]
 #![cfg(feature = "cpu-parity")]
 
-mod common;
+mod gate_fixtures;
 
-use common::reference_eval_idoms;
+use gate_fixtures::reference_eval_idoms;
 use vyre_libs::graph::dominator_frontier::cpu_ref as df_cpu_ref;
 use vyre_libs::graph::dominator_tree::*;
 

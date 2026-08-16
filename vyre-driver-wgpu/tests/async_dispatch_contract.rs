@@ -1,7 +1,7 @@
 //! Contract tests for the wgpu backend's non-blocking dispatch entrypoint.
 
-mod common;
-use common::add_one_program;
+mod harness;
+use harness::add_one_program;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

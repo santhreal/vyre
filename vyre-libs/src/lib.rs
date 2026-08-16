@@ -325,4 +325,4 @@ pub(crate) mod test_migration;
 
 /// Program composition helpers for parity suites, in-tree and downstream.
 #[cfg(any(test, feature = "test-fixtures"))]
-pub mod test_support;
+pub mod test_parity_oracles;
