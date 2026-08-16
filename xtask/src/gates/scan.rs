@@ -656,8 +656,8 @@ pub fn mask_literals(text: &str) -> String {
             continue;
         }
         match structure_gate::source_scan::opaque_span(text, at) {
-            Some(span) if span > 0 => {
-                let mut end = (at + span).min(text.len());
+            Some(span) => {
+                let mut end = (at + span.get()).min(text.len());
                 while end < text.len() && !text.is_char_boundary(end) {
                     end += 1;
                 }
@@ -678,7 +678,7 @@ pub fn mask_literals(text: &str) -> String {
                 }
                 at = end;
             }
-            _ => {
+            None => {
                 let character = text[at..].chars().next().unwrap_or(' ');
                 masked.push(character);
                 at += character.len_utf8();

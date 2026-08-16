@@ -566,18 +566,16 @@ fn tokenize(text: &str) -> Vec<Token> {
             continue;
         }
         if let Some(span) = structure_gate::source_scan::opaque_span(text, at) {
-            if span > 0 {
-                let mut end = (at + span).min(text.len());
-                while end < text.len() && !text.is_char_boundary(end) {
-                    end += 1;
-                }
-                let piece = &text[at..end];
-                if let Some(body) = literal_body(piece) {
-                    tokens.push(Token::Str(body));
-                }
-                at = end;
-                continue;
+            let mut end = (at + span.get()).min(text.len());
+            while end < text.len() && !text.is_char_boundary(end) {
+                end += 1;
             }
+            let piece = &text[at..end];
+            if let Some(body) = literal_body(piece) {
+                tokens.push(Token::Str(body));
+            }
+            at = end;
+            continue;
         }
         let byte = bytes[at];
         if byte == b'_' || byte.is_ascii_alphabetic() {

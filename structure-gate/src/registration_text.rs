@@ -102,7 +102,7 @@ fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str>
     let mut offset = 0usize;
     while offset < bytes.len() {
         if let Some(span) = opaque_span(rest, offset) {
-            offset += span;
+            offset += span.get();
             continue;
         }
         match bytes[offset] {
@@ -141,7 +141,7 @@ fn struct_literal_end(body: &str) -> usize {
     let mut offset = 0usize;
     while offset < bytes.len() {
         if let Some(span) = opaque_span(body, offset) {
-            offset += span;
+            offset += span.get();
             continue;
         }
         match bytes[offset] {

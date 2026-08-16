@@ -291,7 +291,7 @@ fn match_delimited(text: &str, open: usize, opener: u8, closer: u8) -> Option<us
     let mut index = open;
     while index < bytes.len() {
         if let Some(span) = opaque_span(text, index) {
-            index += span;
+            index += span.get();
             continue;
         }
         if bytes[index] == opener {
@@ -484,7 +484,7 @@ fn next_code_offset(text: &str, from: usize) -> Option<usize> {
     let mut index = from;
     while index < bytes.len() {
         if let Some(span) = opaque_span(text, index) {
-            index += span.max(1);
+            index += span.get();
             continue;
         }
         if !bytes[index].is_ascii_whitespace() {

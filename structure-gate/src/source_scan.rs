@@ -9,6 +9,7 @@
 
 use std::fs;
 use std::io::Read;
+use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 
 use walkdir::{DirEntry, WalkDir};
@@ -144,7 +145,7 @@ pub fn mask_comments_and_strings(text: &str) -> String {
     while at < text.len() {
         let rest = &text[at..];
         if let Some(span) = opaque_span(text, at) {
-            let mut end = (at + span.max(1)).min(text.len());
+            let mut end = (at + span.get()).min(text.len());
             while end < text.len() && !text.is_char_boundary(end) {
                 end += 1;
             }
@@ -176,21 +177,38 @@ pub fn mask_comments_and_strings(text: &str) -> String {
 ///
 /// The gate reads source text without compiling it, so nothing else
 /// distinguishes a comma inside `", "` from an argument separator.
-pub fn opaque_span(text: &str, at: usize) -> Option<usize> {
+///
+/// The length is non-zero by type. Every caller skips the span to keep
+/// scanning, so a zero-length answer would leave the cursor where it was and
+/// hang the scan. Each caller used to defend itself against that, or not, and
+/// the ones that did not were correct only because no arm here returns zero
+/// today.
+pub fn opaque_span(text: &str, at: usize) -> Option<NonZeroUsize> {
     let rest = &text[at..];
     if let Some(body) = rest.strip_prefix("//") {
-        return Some(2 + body.find('\n').map_or(body.len(), |end| end + 1));
+        return at_least_one_byte(2 + body.find('\n').map_or(body.len(), |end| end + 1));
     }
     if rest.starts_with("/*") {
-        return Some(block_comment_len(rest));
+        return at_least_one_byte(block_comment_len(rest));
     }
     if rest.starts_with('"') {
-        return Some(escaped_string_len(rest));
+        return at_least_one_byte(escaped_string_len(rest));
     }
     if rest.starts_with('\'') {
-        return char_literal_len(rest);
+        return char_literal_len(rest).and_then(at_least_one_byte);
     }
-    prefixed_literal_len(text, at)
+    prefixed_literal_len(text, at).and_then(at_least_one_byte)
+}
+
+/// The one place the non-zero guarantee is made.
+///
+/// Every arm of [`opaque_span`] measures at least one byte: a line comment is
+/// at least `//`, a block comment at least `/*`, a string at least its opening
+/// quote, a char literal at least three bytes, a prefixed literal at least its
+/// prefix. The clamp is what keeps a future arm that measures zero from
+/// turning every scan in the gate into a hang instead of a wrong answer.
+fn at_least_one_byte(length: usize) -> Option<NonZeroUsize> {
+    Some(NonZeroUsize::new(length).unwrap_or(NonZeroUsize::MIN))
 }
 
 /// Byte length of the block comment starting at `rest`, which nests in Rust.
@@ -311,7 +329,7 @@ pub fn code_offsets(text: &str) -> impl Iterator<Item = usize> + '_ {
             return None;
         }
         if let Some(span) = opaque_span(text, at) {
-            skip_to = at + span.max(1);
+            skip_to = at + span.get();
             return None;
         }
         Some(at)
