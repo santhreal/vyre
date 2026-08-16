@@ -664,6 +664,7 @@ fn project_output_buffers(program: &Program, state: &[Vec<u8>]) -> Result<Vec<Ve
         .collect()
 }
 
+// Inline: covers the private `cpu_convergence`, `infer_fixpoint_buffers` and `project_output_buffers`, which no integration test can reach.
 #[cfg(test)]
 mod convergence_tests {
     use super::*;
