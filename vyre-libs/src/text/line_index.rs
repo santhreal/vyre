@@ -433,19 +433,20 @@ mod tests {
             );
 
             // The top-level barrier between flag_pass and scan_pass is SeqCst (not GridSync).
-            let top_level_grid_sync = prog.entry().iter().any(|node| match node {
-                Node::Region { body, .. } => body.iter().any(|n| {
-                    matches!(
-                        n,
-                        Node::Barrier {
-                            ordering: vyre_foundation::ir::MemoryOrdering::GridSync
-                        }
-                    )
-                }),
-                Node::Barrier {
-                    ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
-                } => true,
-                _ => false,
+            let is_grid_sync = |node: &Node| {
+                matches!(
+                    node,
+                    Node::Barrier {
+                        ordering: vyre_foundation::ir::MemoryOrdering::GridSync
+                    }
+                )
+            };
+            let top_level_grid_sync = prog.entry().iter().any(|node| {
+                is_grid_sync(node)
+                    || vyre_foundation::visit::child_bodies(node)
+                        .into_iter()
+                        .flatten()
+                        .any(is_grid_sync)
             });
             assert!(
                 !top_level_grid_sync,
