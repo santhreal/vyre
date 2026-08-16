@@ -551,9 +551,12 @@ pub struct InstanceCore {
     pub retained: BTreeSet<ArtifactValueId>,
     /// Rejection text this backend ships.
     pub messages: InstanceMessages,
-    /// Input value identities per module entry in binding plan order.
+    /// Input value identities per module entry in target descriptor order.
+    ///
+    /// Program bindings resolve against this set by canonical identity; target
+    /// descriptor positions are not host ABI positions.
     pub module_inputs: Vec<Vec<ArtifactValueId>>,
-    /// Output value identities per module entry in binding plan order.
+    /// Output value identities per module entry in target descriptor order.
     pub module_outputs: Vec<Vec<ArtifactValueId>>,
     /// Transitive prior retained values that feed each successor retained value.
     pub retained_predecessors: BTreeMap<ArtifactValueId, Vec<ArtifactValueId>>,
@@ -596,26 +599,40 @@ impl InstanceCore {
             }
         }
 
+        let resource_lifetimes: BTreeMap<ArtifactValueId, ResourceLifetime> = artifact
+            .resources()
+            .iter()
+            .map(|r| (r.value, r.lifetime))
+            .collect();
+
         let mut module_inputs = Vec::with_capacity(payload.entries().len());
         let mut module_outputs = Vec::with_capacity(payload.entries().len());
         for entry in payload.entries() {
             let mut inputs = Vec::new();
             let mut outputs = Vec::new();
             for binding in &entry.resource_bindings {
+                let lifetime = resource_lifetimes.get(&binding.resource).copied();
+                let is_output_lifetime = matches!(lifetime, Some(ResourceLifetime::Output));
                 match binding.access {
                     vyre_megakernel::TargetResourceAccess::ReadOnly => {
-                        inputs.push(binding.resource);
+                        let input_val = direct_predecessors
+                            .get(&binding.resource)
+                            .copied()
+                            .unwrap_or(binding.resource);
+                        inputs.push(input_val);
                     }
                     vyre_megakernel::TargetResourceAccess::WriteOnly => {
                         outputs.push(binding.resource);
                     }
                     vyre_megakernel::TargetResourceAccess::ReadWrite => {
                         outputs.push(binding.resource);
-                        let input_val = direct_predecessors
-                            .get(&binding.resource)
-                            .copied()
-                            .unwrap_or(binding.resource);
-                        inputs.push(input_val);
+                        if !is_output_lifetime {
+                            let input_val = direct_predecessors
+                                .get(&binding.resource)
+                                .copied()
+                                .unwrap_or(binding.resource);
+                            inputs.push(input_val);
+                        }
                     }
                 }
             }
@@ -661,6 +678,36 @@ impl InstanceCore {
             .copied()
             .ok_or_else(|| (self.messages.unmapped_buffer)(name))
     }
+    /// Resolve one Program buffer by artifact identity inside a target module.
+    ///
+    /// Target compilers own descriptor order. It is not the Program's host ABI
+    /// order, so indexing a module's filtered resource list with
+    /// `Binding::input_index` or `output_index` can bind a different buffer of
+    /// the same role. Match the canonical value instead. Retained successors
+    /// may bind their predecessor as the module input, so accept the first
+    /// declared predecessor that this module carries.
+    fn value_for_module_buffer(
+        &self,
+        module_values: &[Vec<ArtifactValueId>],
+        module_index: usize,
+        name: &str,
+    ) -> Result<ArtifactValueId, BackendError> {
+        let canonical = self.value_for_buffer(name)?;
+        let Some(values) = module_values.get(module_index) else {
+            return Ok(canonical);
+        };
+        if values.contains(&canonical) {
+            return Ok(canonical);
+        }
+        if let Some(predecessor) = self
+            .retained_predecessors
+            .get(&canonical)
+            .and_then(|priors| priors.iter().copied().find(|prior| values.contains(prior)))
+        {
+            return Ok(predecessor);
+        }
+        Ok(canonical)
+    }
 
     /// Borrow bound host bytes into the input order the binding plan declares.
     ///
@@ -688,13 +735,8 @@ impl InstanceCore {
                 continue;
             };
             let buffer = &program.buffers()[binding.buffer_index];
-            let value = self
-                .module_inputs
-                .get(module_index)
-                .and_then(|in_vals| in_vals.get(input_index))
-                .copied()
-                .map(Ok)
-                .unwrap_or_else(|| self.value_for_buffer(buffer.name()))?;
+            let value =
+                self.value_for_module_buffer(&self.module_inputs, module_index, buffer.name())?;
             inputs[input_index] = state
                 .get(&value)
                 .map(Vec::as_slice)
@@ -741,13 +783,8 @@ impl InstanceCore {
                 continue;
             };
             let buffer = &program.buffers()[binding.buffer_index];
-            let value = self
-                .module_outputs
-                .get(module_index)
-                .and_then(|out_vals| out_vals.get(output_index))
-                .copied()
-                .map(Ok)
-                .unwrap_or_else(|| self.value_for_buffer(buffer.name()))?;
+            let value =
+                self.value_for_module_buffer(&self.module_outputs, module_index, buffer.name())?;
             let bytes = produced
                 .get_mut(output_index)
                 .and_then(Option::take)
@@ -2140,5 +2177,757 @@ mod tests {
             completion.outputs.get(&ArtifactValueId(out1.0)).unwrap(),
             &[40, 0, 0, 0]
         );
+    }
+
+    #[test]
+    fn read_write_output_lifetime_is_output_only_and_not_module_input() {
+        let mut graph = ProgramGraph::new();
+        let val_in = graph
+            .add_external_value(
+                "input_val",
+                contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            )
+            .unwrap();
+
+        let prog = Program::wrapped(
+            vec![
+                BufferDecl::storage("in_buf", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(32),
+                BufferDecl::output("out_buf", 1, DataType::U32).with_count(32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                "out_buf",
+                Expr::u32(0),
+                Expr::load("in_buf", Expr::u32(0)),
+            )],
+        );
+
+        let (_, outputs) = graph
+            .add_node(
+                "node0",
+                prog.clone(),
+                vec![GraphInput {
+                    buffer: "in_buf".into(),
+                    value: val_in,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_buf".into(),
+                    name: "output_val".into(),
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
+        let out_id = outputs[0];
+
+        let req = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .unwrap();
+
+        let artifact = compile(&req).expect("compilation must succeed");
+
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "entry0".into(),
+                node: ArtifactNodeId(0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(val_in.0),
+                        group: 0,
+                        slot: 0,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadOnly,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(out_id.0),
+                        group: 0,
+                        slot: 1,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                ],
+            }],
+            vec![1, 2, 3],
+        )
+        .unwrap();
+
+        let core = InstanceCore::new(&artifact, &payload, test_device(), NEUTRAL_MESSAGES);
+        assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_in.0)]);
+        assert_eq!(core.module_outputs[0], vec![ArtifactValueId(out_id.0)]);
+
+        let plan = BindingPlan::build(&prog).unwrap();
+        let mut state = BTreeMap::new();
+        state.insert(ArtifactValueId(val_in.0), vec![42, 0, 0, 0]);
+
+        let gathered = core
+            .gather_inputs_for_module(0, &plan, &prog, &state, unbound_input)
+            .unwrap();
+        assert_eq!(gathered.len(), 1);
+        assert_eq!(gathered[0], &[42, 0, 0, 0]);
+
+        core.absorb_outputs_for_module(
+            0,
+            &plan,
+            &prog,
+            vec![vec![42, 0, 0, 0]],
+            &mut state,
+            |idx, name| BackendError::InvalidProgram {
+                fix: format!("missing output {idx} {name}"),
+            },
+        )
+        .unwrap();
+
+        let completion = core.completion(&state, None).unwrap();
+        assert_eq!(
+            completion.outputs.get(&ArtifactValueId(out_id.0)).unwrap(),
+            &[42, 0, 0, 0]
+        );
+    }
+
+    #[test]
+    fn read_write_retained_preserves_input_output_and_order() {
+        let mut graph = ProgramGraph::new();
+        let state_in = graph
+            .add_external_value(
+                "state_in",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            )
+            .unwrap();
+
+        let prog = Program::wrapped(
+            vec![
+                BufferDecl::storage("s_in", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+                BufferDecl::storage("s_out", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                "s_out",
+                Expr::u32(0),
+                Expr::add(Expr::load("s_in", Expr::u32(0)), Expr::u32(1)),
+            )],
+        );
+
+        let (_, outputs) = graph
+            .add_node(
+                "node0",
+                prog.clone(),
+                vec![GraphInput {
+                    buffer: "s_in".into(),
+                    value: state_in,
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                }],
+                vec![GraphOutput {
+                    buffer: "s_out".into(),
+                    name: "state_out".into(),
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                    retained_successor_of: Some(state_in),
+                }],
+            )
+            .unwrap();
+        let state_out = outputs[0];
+
+        let req = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .unwrap();
+
+        let artifact = compile(&req).expect("compilation must succeed");
+
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "entry0".into(),
+                node: ArtifactNodeId(0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(state_in.0),
+                        group: 0,
+                        slot: 0,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(state_out.0),
+                        group: 0,
+                        slot: 1,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                ],
+            }],
+            vec![1, 2, 3],
+        )
+        .unwrap();
+
+        let core = InstanceCore::new(&artifact, &payload, test_device(), NEUTRAL_MESSAGES);
+        assert_eq!(
+            core.module_inputs[0],
+            vec![ArtifactValueId(state_in.0), ArtifactValueId(state_in.0)]
+        );
+        assert_eq!(
+            core.module_outputs[0],
+            vec![ArtifactValueId(state_in.0), ArtifactValueId(state_out.0)]
+        );
+    }
+
+    #[test]
+    fn write_only_output_and_read_only_input_separation() {
+        let mut graph = ProgramGraph::new();
+        let val_const = graph
+            .add_external_value(
+                "const_in",
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
+            )
+            .unwrap();
+
+        let prog = Program::wrapped(
+            vec![
+                BufferDecl::storage("c_in", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(32),
+                BufferDecl::storage("w_out", 1, BufferAccess::WriteOnly, DataType::U32)
+                    .with_count(32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                "w_out",
+                Expr::u32(0),
+                Expr::load("c_in", Expr::u32(0)),
+            )],
+        );
+
+        let (_, outputs) = graph
+            .add_node(
+                "node0",
+                prog,
+                vec![GraphInput {
+                    buffer: "c_in".into(),
+                    value: val_const,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
+                }],
+                vec![GraphOutput {
+                    buffer: "w_out".into(),
+                    name: "res_out".into(),
+                    contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
+        let res_out = outputs[0];
+
+        let mut facts = ExternalFacts::new(Digest([0; 32]), BTreeMap::new());
+        facts.constant_identities.insert(val_const, Digest([1; 32]));
+        let req = CompileRequest::new(
+            graph,
+            facts,
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .unwrap();
+
+        let artifact = compile(&req).expect("compilation must succeed");
+
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "entry0".into(),
+                node: ArtifactNodeId(0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(val_const.0),
+                        group: 0,
+                        slot: 0,
+                        memory: TargetResourceMemory::Constant,
+                        access: TargetResourceAccess::ReadOnly,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(res_out.0),
+                        group: 0,
+                        slot: 1,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::WriteOnly,
+                    },
+                ],
+            }],
+            vec![1, 2, 3],
+        )
+        .unwrap();
+
+        let core = InstanceCore::new(&artifact, &payload, test_device(), NEUTRAL_MESSAGES);
+        assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_const.0)]);
+        assert_eq!(core.module_outputs[0], vec![ArtifactValueId(res_out.0)]);
+    }
+
+    #[test]
+    fn read_write_invocation_lifetime_is_input_and_output() {
+        let mut graph = ProgramGraph::new();
+        let val_inv = graph
+            .add_external_value(
+                "inv_rw",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+            )
+            .unwrap();
+
+        let prog = Program::wrapped(
+            vec![
+                BufferDecl::storage("in_rw", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+                BufferDecl::storage("out_rw", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                "out_rw",
+                Expr::u32(0),
+                Expr::add(Expr::load("in_rw", Expr::u32(0)), Expr::u32(1)),
+            )],
+        );
+
+        let (_, outputs) = graph
+            .add_node(
+                "node0",
+                prog,
+                vec![GraphInput {
+                    buffer: "in_rw".into(),
+                    value: val_inv,
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_rw".into(),
+                    name: "inv_out".into(),
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
+        let out_id = outputs[0];
+
+        let req = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .unwrap();
+
+        let artifact = compile(&req).expect("compilation must succeed");
+
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "entry0".into(),
+                node: ArtifactNodeId(0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![TargetResourceBinding {
+                    resource: ArtifactValueId(val_inv.0),
+                    group: 0,
+                    slot: 0,
+                    memory: TargetResourceMemory::Global,
+                    access: TargetResourceAccess::ReadWrite,
+                }],
+            }],
+            vec![1, 2, 3],
+        )
+        .unwrap();
+
+        let core = InstanceCore::new(&artifact, &payload, test_device(), NEUTRAL_MESSAGES);
+        assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_inv.0)]);
+        assert_eq!(core.module_outputs[0], vec![ArtifactValueId(val_inv.0)]);
+    }
+
+    #[test]
+    fn read_write_constant_lifetime_is_input_and_output() {
+        let mut graph = ProgramGraph::new();
+        let val_const = graph
+            .add_external_value(
+                "const_rw",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Constant),
+            )
+            .unwrap();
+
+        let prog = Program::wrapped(
+            vec![
+                BufferDecl::storage("in_rw", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+                BufferDecl::storage("out_rw", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                "out_rw",
+                Expr::u32(0),
+                Expr::add(Expr::load("in_rw", Expr::u32(0)), Expr::u32(1)),
+            )],
+        );
+
+        let (_, outputs) = graph
+            .add_node(
+                "node0",
+                prog,
+                vec![GraphInput {
+                    buffer: "in_rw".into(),
+                    value: val_const,
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Constant),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_rw".into(),
+                    name: "const_out".into(),
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
+        let _out_id = outputs[0];
+
+        let mut facts = ExternalFacts::new(Digest([0; 32]), BTreeMap::new());
+        facts.constant_identities.insert(val_const, Digest([1; 32]));
+        let req = CompileRequest::new(
+            graph,
+            facts,
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .unwrap();
+
+        let artifact = compile(&req).expect("compilation must succeed");
+
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "entry0".into(),
+                node: ArtifactNodeId(0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![TargetResourceBinding {
+                    resource: ArtifactValueId(val_const.0),
+                    group: 0,
+                    slot: 0,
+                    memory: TargetResourceMemory::Global,
+                    access: TargetResourceAccess::ReadWrite,
+                }],
+            }],
+            vec![1, 2, 3],
+        )
+        .unwrap();
+
+        let core = InstanceCore::new(&artifact, &payload, test_device(), NEUTRAL_MESSAGES);
+        assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_const.0)]);
+        assert_eq!(core.module_outputs[0], vec![ArtifactValueId(val_const.0)]);
+    }
+
+    #[test]
+    fn fused_aliases_with_mixed_access_and_lifetimes_contract() {
+        let mut graph = ProgramGraph::new();
+        let val_in = graph
+            .add_external_value(
+                "in_inv",
+                contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            )
+            .unwrap();
+        let state_init = graph
+            .add_external_value(
+                "state_init",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            )
+            .unwrap();
+
+        let prog0 = Program::wrapped(
+            vec![
+                BufferDecl::storage("i0", 0, BufferAccess::ReadOnly, DataType::U32).with_count(32),
+                BufferDecl::output("o0", 1, DataType::U32).with_count(32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                "o0",
+                Expr::u32(0),
+                Expr::load("i0", Expr::u32(0)),
+            )],
+        );
+
+        let prog1 = Program::wrapped(
+            vec![
+                BufferDecl::storage("s_in", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+                BufferDecl::storage("s_out", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(32),
+                BufferDecl::storage("o1", 2, BufferAccess::WriteOnly, DataType::U32).with_count(32),
+            ],
+            [32, 1, 1],
+            vec![
+                Node::store(
+                    "s_out",
+                    Expr::u32(0),
+                    Expr::add(Expr::load("s_in", Expr::u32(0)), Expr::u32(1)),
+                ),
+                Node::store("o1", Expr::u32(0), Expr::load("s_in", Expr::u32(0))),
+            ],
+        );
+
+        let (node0, out0_vec) = graph
+            .add_node(
+                "node0",
+                prog0,
+                vec![GraphInput {
+                    buffer: "i0".into(),
+                    value: val_in,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                }],
+                vec![GraphOutput {
+                    buffer: "o0".into(),
+                    name: "out0".into(),
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
+        let out0 = out0_vec[0];
+
+        let (_node1, out1_vec) = graph
+            .add_node(
+                "node1",
+                prog1,
+                vec![GraphInput {
+                    buffer: "s_in".into(),
+                    value: state_init,
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                }],
+                vec![
+                    GraphOutput {
+                        buffer: "s_out".into(),
+                        name: "state_next".into(),
+                        contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                        retained_successor_of: Some(state_init),
+                    },
+                    GraphOutput {
+                        buffer: "o1".into(),
+                        name: "out1".into(),
+                        contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                        retained_successor_of: None,
+                    },
+                ],
+            )
+            .unwrap();
+        let state_next = out1_vec[0];
+        let out1 = out1_vec[1];
+
+        let req = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .unwrap();
+
+        let artifact = compile(&req).expect("compilation must succeed");
+
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "fused_entry".into(),
+                node: ArtifactNodeId(node0.0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(val_in.0),
+                        group: 0,
+                        slot: 0,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadOnly,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(out0.0),
+                        group: 0,
+                        slot: 1,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(state_init.0),
+                        group: 0,
+                        slot: 2,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(state_next.0),
+                        group: 0,
+                        slot: 3,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(out1.0),
+                        group: 0,
+                        slot: 4,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::WriteOnly,
+                    },
+                ],
+            }],
+            vec![1, 2, 3],
+        )
+        .unwrap();
+
+        let core = InstanceCore::new(&artifact, &payload, test_device(), NEUTRAL_MESSAGES);
+        assert_eq!(
+            core.module_inputs[0],
+            vec![
+                ArtifactValueId(val_in.0),
+                ArtifactValueId(state_init.0),
+                ArtifactValueId(state_init.0),
+            ]
+        );
+        assert_eq!(
+            core.module_outputs[0],
+            vec![
+                ArtifactValueId(out0.0),
+                ArtifactValueId(state_init.0),
+                ArtifactValueId(state_next.0),
+                ArtifactValueId(out1.0),
+            ]
+        );
+    }
+    /// WHY: closes the class "target descriptor order is mistaken for Program
+    /// host-input order". Target lowering may place read-write storage before
+    /// read-only storage even when the Program declares the read-only buffer
+    /// first. Positional lookup then uploads the output-sized bytes into the
+    /// input binding. Identity lookup must preserve each declaration's bytes.
+    ///
+    /// This does not cover an artifact whose canonical resource names no longer
+    /// match its Program buffer names; artifact validation owns that refusal.
+    #[test]
+    fn target_descriptor_order_does_not_reorder_program_inputs() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("nodes", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(60),
+                BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(8),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::load("nodes", Expr::u32(0)),
+            )],
+        );
+        let graph = ProgramGraph::from_program("walk", program.clone())
+            .expect("the two-buffer Program must lift to a graph");
+        let request = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .expect("the graph must validate");
+        let artifact = compile(&request).expect("the graph must compile");
+        let nodes = artifact
+            .resources()
+            .iter()
+            .find(|resource| resource.name == "nodes")
+            .expect("the artifact must carry `nodes`")
+            .value;
+        let out = artifact
+            .resources()
+            .iter()
+            .find(|resource| resource.name == "out")
+            .expect("the artifact must carry `out`")
+            .value;
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "walk".into(),
+                node: ArtifactNodeId(0),
+                workgroup_size: [1, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![
+                    TargetResourceBinding {
+                        resource: out,
+                        group: 0,
+                        slot: 0,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                    TargetResourceBinding {
+                        resource: nodes,
+                        group: 0,
+                        slot: 1,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadOnly,
+                    },
+                ],
+            }],
+            vec![1, 2, 3],
+        )
+        .expect("descriptor order is independent from Program declaration order");
+        let core = InstanceCore::new(&artifact, &payload, test_device(), NEUTRAL_MESSAGES);
+        assert_eq!(
+            core.module_inputs[0],
+            vec![out, nodes],
+            "the fixture must preserve the target descriptor order that triggered the defect"
+        );
+        let plan = BindingPlan::build(&program).expect("the Program binding plan must be valid");
+        let node_bytes = vec![0x11; 240];
+        let out_bytes = vec![0x22; 32];
+        let state = BTreeMap::from([(nodes, node_bytes.clone()), (out, out_bytes.clone())]);
+
+        let gathered = core
+            .gather_inputs_for_module(0, &plan, &program, &state, unbound_input)
+            .expect("identity lookup must gather both declared inputs");
+
+        assert_eq!(gathered, vec![node_bytes.as_slice(), out_bytes.as_slice()]);
     }
 }

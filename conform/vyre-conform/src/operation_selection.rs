@@ -151,11 +151,17 @@ fn prepare_reference_cases(
     convergence_max_iterations: Option<u32>,
 ) -> Result<FixtureCases, String> {
     let mut reference_cases = Vec::with_capacity(cases.len());
+    let mut planned_inputs: Vec<&[u8]> = Vec::with_capacity(input_plan.source_count());
     if let Some(max_iterations) = convergence_max_iterations {
         for (case_index, inputs) in cases.iter().enumerate() {
+            plan_witness_inputs_into(inputs, input_plan, &mut planned_inputs).map_err(|error| {
+                format!("{op_id}: fixture input validation failed for case {case_index}: {error}")
+            })?;
+            let planned_owned: Vec<Vec<u8>> =
+                planned_inputs.iter().map(|slice| slice.to_vec()).collect();
             let outputs = convergence_lens::run_cpu_fixpoint_to_convergence(
                 program,
-                inputs,
+                &planned_owned,
                 max_iterations,
             )
             .map_err(|error| {
@@ -169,11 +175,15 @@ fn prepare_reference_cases(
     }
 
     if let Some(expected_cases) = expected_cases {
+        for (case_index, inputs) in cases.iter().enumerate() {
+            plan_witness_inputs_into(inputs, input_plan, &mut planned_inputs).map_err(|error| {
+                format!("{op_id}: fixture input validation failed for case {case_index}: {error}")
+            })?;
+        }
         return Ok(expected_cases);
     }
 
     let mut reference_values = Vec::with_capacity(program.buffers().len());
-    let mut planned_inputs: Vec<&[u8]> = Vec::with_capacity(input_plan.source_count());
     for (case_index, inputs) in cases.iter().enumerate() {
         plan_witness_inputs_into(inputs, input_plan, &mut planned_inputs).map_err(
             |error| {
@@ -266,7 +276,7 @@ mod tests {
             &cases,
             &input_plan,
             None,
-            None,
+            Some(2),
         )
         .expect("Fix: reference preparation must use planned zeroed read-write inputs.");
 
@@ -274,6 +284,80 @@ mod tests {
             reference_cases,
             vec![vec![1u32.to_le_bytes().to_vec()]],
             "Fix: prove reference preparation must match the input stream used by backend dispatch."
+        );
+    }
+
+    #[test]
+    fn prepare_reference_cases_rejects_mismatched_fixture_byte_length() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(2),
+                BufferDecl::output("out", 1, DataType::U32).with_count(2),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "out",
+                vyre::ir::Expr::u32(0),
+                vyre::ir::Expr::load("input", vyre::ir::Expr::u32(0)),
+            )],
+        );
+        let input_plan = WitnessInputPlan::for_program(&program)
+            .expect("Fix: static input planning must succeed.");
+        // Declared 2 x u32 (8 bytes), fixture provides only 4 bytes
+        let cases = vec![vec![1u32.to_le_bytes().to_vec()]];
+
+        let error = prepare_reference_cases(
+            "test.byte_mismatch",
+            &program,
+            &cases,
+            &input_plan,
+            None,
+            None,
+        )
+        .expect_err("Fix: reference preparation must reject fixture with wrong byte length.");
+
+        assert!(
+            error.contains(
+                "expected 8 bytes from its static buffer declaration but received 4 bytes"
+            ),
+            "Fix: error must diagnose byte mismatch, got: {error}"
+        );
+    }
+
+    #[test]
+    fn prepare_reference_cases_with_expected_output_rejects_mismatched_fixture_byte_length() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(2),
+                BufferDecl::output("out", 1, DataType::U32).with_count(2),
+            ],
+            [1, 1, 1],
+            Vec::new(),
+        );
+        let input_plan = WitnessInputPlan::for_program(&program)
+            .expect("Fix: static input planning must succeed.");
+        let cases = vec![vec![1u32.to_le_bytes().to_vec()]];
+        let expected = vec![vec![1u32.to_le_bytes().to_vec()]];
+
+        let error = prepare_reference_cases(
+            "test.expected_byte_mismatch",
+            &program,
+            &cases,
+            &input_plan,
+            Some(expected),
+            None,
+        )
+        .expect_err(
+            "Fix: expected-output preparation must still validate input fixture byte lengths.",
+        );
+
+        assert!(
+            error.contains(
+                "expected 8 bytes from its static buffer declaration but received 4 bytes"
+            ),
+            "Fix: error must diagnose byte mismatch, got: {error}"
         );
     }
 }
