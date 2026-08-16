@@ -15,7 +15,6 @@ use crate::ir::{
     AtomicOp, BinOp, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, Node,
     NodeExtension, Program, UnOp,
 };
-use crate::ir_inner::model::expr::Ident;
 use crate::memory_model::MemoryOrdering;
 use proptest::prelude::*;
 use std::sync::Arc;

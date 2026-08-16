@@ -603,7 +603,7 @@ mod tests {
         assert_eq!(
             source_region
                 .expect("Fix: child Region must name parent.")
-                .name,
+                .as_str(),
             "vyre-libs::math::reduce_mean"
         );
         assert!(!body.is_empty());
