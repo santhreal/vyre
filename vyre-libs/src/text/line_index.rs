@@ -16,6 +16,7 @@
 //! dialects that need column offsets derive them from their own
 //! line-start representation.
 
+use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes;
@@ -151,12 +152,53 @@ fn try_line_index_with_source_type(
     }
 
     vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass])
+        .map(correct_flag_barrier)
         .map(|program| crate::plumbing::program::outputs::demote_intermediate_outputs(program, lines))
         .map_err(|error| {
             format!(
                 "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan fusion instead of falling back to a serial lane-0 loop."
             )
         })
+}
+
+/// Correct the fence between the flag pass and scan pass.
+///
+/// `flag_pass` writes `flags[t] = compute_flag(t)` for invocation `t`.
+/// The following scan pass reads `flags[t]` strictly within the same workgroup;
+/// no invocation in workgroup `b` ever reads `flags` written by any other
+/// workgroup `b'`. `fuse_programs` conservatively marks any arm with an
+/// invocation-gated store as requiring a grid-level fence, but source semantics
+/// prove that `flags` is block-local. A workgroup barrier (`SeqCst`) orders
+/// `flags` writes before the local scan within each workgroup, and any multi-block
+/// cross-workgroup synchronization is separately ordered on `block_totals` by
+/// `multi_block_prefix_scan`'s own internal `GridSync` barriers.
+fn correct_flag_barrier(program: Program) -> Program {
+    fn demote_boundary(node: &Node) -> Node {
+        match node {
+            Node::Barrier {
+                ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
+            } => Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::SeqCst),
+            other => other.clone(),
+        }
+    }
+
+    let entry = program
+        .entry()
+        .iter()
+        .map(|node| match node {
+            Node::Region {
+                generator,
+                source_region,
+                body,
+            } => Node::Region {
+                generator: generator.clone(),
+                source_region: source_region.clone(),
+                body: Arc::new(body.iter().map(demote_boundary).collect()),
+            },
+            other => demote_boundary(other),
+        })
+        .collect();
+    program.with_rewritten_entry(entry)
 }
 
 fn empty_line_index_program(source: &str, lines: &str, source_type: DataType) -> Program {
@@ -352,6 +394,64 @@ mod tests {
                 .count(),
             1
         );
+    }
+    /// WHY: `line_index` composes `flag_pass` and `scan_pass`. `flag_pass` writes
+    /// `flags[t] = compute_flag(t)` which is read strictly within the same workgroup by
+    /// the subsequent local prefix scan. Because the write is invocation-gated, generic
+    /// `fuse_programs` conservatively emitted a `MemoryOrdering::GridSync` whole-grid fence.
+    ///
+    /// On backends without cooperative launch (such as WGPU), whole-grid fences are cut at
+    /// launch boundaries and require a retained read-write graph input to chain state succession.
+    /// But `flags` is an intermediate pipeline output, not a retained input, causing WGPU
+    /// compilation to fail with `node main holds a whole-grid fence but binds no retained read-write value`.
+    ///
+    /// This test verifies that for `n <= block_lanes`, `line_index` carries NO `GridSync` barrier,
+    /// and for `n > block_lanes`, the top-level flag-to-scan boundary is `SeqCst` while the internal
+    /// multi-block prefix scan properly carries its own cross-block `GridSync` boundaries on `block_totals`.
+    #[test]
+    fn line_index_fence_classification_closes_unwanted_grid_sync_class() {
+        for &n in &[1u32, 5, 17, 64, 128, 256] {
+            let prog = line_index("source", "lines", n);
+            assert!(
+                !vyre_foundation::transform::grid_sync_split::contains_grid_sync(&prog),
+                "Fix: single-block line_index (n={n} <= 256) must contain no GridSync barriers"
+            );
+
+            let prog_u8 = line_index_u8("source", "lines", n);
+            assert!(
+                !vyre_foundation::transform::grid_sync_split::contains_grid_sync(&prog_u8),
+                "Fix: single-block packed-u8 line_index (n={n} <= 256) must contain no GridSync barriers"
+            );
+        }
+
+        // Multi-block line_index (n > block_lanes) carries GridSync ONLY inside the prefix scan pass.
+        for &n in &[512u32, 1024, 2048, 4096] {
+            let prog = line_index("source", "lines", n);
+            assert!(
+                vyre_foundation::transform::grid_sync_split::contains_grid_sync(&prog),
+                "Fix: multi-block line_index (n={n} > 256) must contain GridSync for block-total scan"
+            );
+
+            // The top-level barrier between flag_pass and scan_pass is SeqCst (not GridSync).
+            let top_level_grid_sync = prog.entry().iter().any(|node| match node {
+                Node::Region { body, .. } => body.iter().any(|n| {
+                    matches!(
+                        n,
+                        Node::Barrier {
+                            ordering: vyre_foundation::ir::MemoryOrdering::GridSync
+                        }
+                    )
+                }),
+                Node::Barrier {
+                    ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
+                } => true,
+                _ => false,
+            });
+            assert!(
+                !top_level_grid_sync,
+                "Fix: the barrier directly between flag_pass and scan_pass must be SeqCst, not GridSync"
+            );
+        }
     }
 
     #[test]
