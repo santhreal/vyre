@@ -469,7 +469,14 @@ pub(crate) fn previous_lane(lane: &Expr, stride: u32) -> Expr {
 /// instead of all of them.
 ///
 /// Barriers are workgroup-scoped: the sweep touches nothing but the two
-/// workgroup scratch buffers.
+/// workgroup scratch buffers. The sweep ends on a barrier, so every lane may
+/// read any lane's inclusive sum the moment it returns. That is part of the
+/// contract rather than a caller's responsibility:
+/// `frontier_word_block_offsets_single_workgroup` reads `scratch_a[lane - 1]`
+/// immediately after the call to turn the inclusive scan into an exclusive one,
+/// and without the trailing barrier lane `k` could read lane `k - 1` before that
+/// lane added its own staged value, producing a block offset short by exactly
+/// the previous block's count.
 ///
 /// Callers differ in how they stage `scratch_a` and how they write the result
 /// out; the sweep between those two steps does not, and was hand-written five
@@ -543,14 +550,18 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
         round += 1;
     }
 
-    nodes.push(Node::store(
-        scratch_a,
-        lane.clone(),
-        Expr::add(
-            Expr::load(scratch_a, lane.clone()),
-            Expr::load(scratch_b, lane.clone()),
-        ),
+    nodes.push(Node::if_then(
+        Expr::lt(lane.clone(), Expr::u32(lanes)),
+        vec![Node::store(
+            scratch_a,
+            lane.clone(),
+            Expr::add(
+                Expr::load(scratch_a, lane.clone()),
+                Expr::load(scratch_b, lane.clone()),
+            ),
+        )],
     ));
+    nodes.push(Node::barrier());
     nodes
 }
 
@@ -743,6 +754,54 @@ mod tests {
         assert_eq!(
             vyre_primitives::wire::decode_f32_le_bytes_all(&max_outputs[0].to_bytes())[0],
             9.0
+        );
+    }
+
+    /// Every caller of the sweep reads a slot it did not write.
+    ///
+    /// `frontier_word_block_offsets_single_workgroup` reads `scratch_a[lane - 1]`
+    /// on the statement after the call, so the sweep has to leave its result
+    /// readable by every lane rather than only by the lane that wrote it. Before
+    /// this was fixed the node list ended on the store that adds each lane's
+    /// staged value back in, with no barrier behind it, and lane `k` could read
+    /// lane `k - 1` one round early and take a block offset short by that
+    /// block's own count. The reference interpreter runs lanes in order, so no
+    /// value assertion can see this; the shape of the emitted program can.
+    #[test]
+    fn the_sweep_publishes_its_result_before_returning() {
+        let nodes = blelloch_inclusive_sum_nodes("scratch_a", "scratch_b", &Expr::var("lane"), 8);
+        assert!(
+            matches!(nodes.last(), Some(Node::Barrier { .. })),
+            "the sweep must end on a barrier so a cross-lane read is safe on the next statement, got {:?}",
+            nodes.last()
+        );
+        let stores_after_last_barrier = nodes
+            .iter()
+            .rev()
+            .take_while(|node| !matches!(node, Node::Barrier { .. }))
+            .count();
+        assert_eq!(
+            stores_after_last_barrier, 0,
+            "no node may write scratch after the sweep's final barrier"
+        );
+    }
+
+    /// The sweep runs under whatever dispatch its caller declared.
+    ///
+    /// Every write inside the sweep is bounded by the lane count it was given,
+    /// including the last one, so a dispatch wider than the scratch buffers
+    /// cannot store past their end.
+    #[test]
+    fn every_scratch_write_is_bounded_by_the_lane_count() {
+        let nodes = blelloch_inclusive_sum_nodes("scratch_a", "scratch_b", &Expr::var("lane"), 8);
+        let bare_stores = nodes
+            .iter()
+            .skip(1)
+            .filter(|node| matches!(node, Node::Store { .. }))
+            .count();
+        assert_eq!(
+            bare_stores, 0,
+            "every store after the staging write must sit inside a bounds guard"
         );
     }
 }
