@@ -13,6 +13,15 @@
 //! cliff rather than a slope: a group that needs twice the resident budget runs
 //! its traffic in two passes instead of one.
 //!
+//! A group's shared scratch is the union of its members' declarations, not the
+//! sum of their totals. Fusion keeps one declaration per buffer name and takes
+//! the larger count, so two ops fused over one tile hold one tile in the
+//! generated kernel. Summing per-member totals charged that tile once per
+//! member, which pushed the group over the device budget and ranked the
+//! tile-sharing fusion below the pair it beats. That is the shape a fused
+//! attention group has: the score is written to a tile and read from the same
+//! tile by the value matmul, and it never reaches memory.
+//!
 //! The launch width the search proposes is not priced. No recorded case varies
 //! width against a fixed program, so a width term would be a guess, and a guess
 //! that orders the widths is worse than no term: the analytic ranking would claim
@@ -21,6 +30,7 @@
 //! compilation decides between them on device time.
 
 use serde::{Deserialize, Serialize};
+use vyre_foundation::ir::Ident;
 
 use crate::{
     candidate::CandidatePlan, facts::PlanningFacts, DependencyEdge, DependencyEndpoint,
@@ -62,7 +72,8 @@ pub struct CostBreakdown {
     pub materialized_bytes: u64,
     /// Largest per-invocation live value count in any one fusion group.
     pub live_value_peak: u64,
-    /// Largest shared scratch byte count any one fusion group declares.
+    /// Largest shared scratch byte count any one fusion group declares, with
+    /// buffers of one name counted once because fusion unions them.
     pub shared_scratch_bytes: u64,
     /// Largest number of resident passes any one group needs, one meaning the
     /// group fits the device budgets.
@@ -116,21 +127,31 @@ pub(crate) fn evaluate(
     let mut occupancy_bytes = 0_u64;
     for group in 0..u32::try_from(candidate.group_count()).unwrap_or(u32::MAX) {
         let mut group_live = 0_u64;
-        let mut group_scratch = 0_u64;
+        let mut group_tiles: Vec<(&Ident, u64)> = Vec::new();
         let mut group_bytes = 0_u64;
         for node in candidate.group_members(group) {
             group_live =
                 group_live.saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
-            group_scratch = group_scratch.saturating_add(
-                facts
-                    .node_shared_scratch_bytes
-                    .get(node)
-                    .copied()
-                    .unwrap_or(0),
-            );
+            for (name, bytes) in facts
+                .node_workgroup_scratch
+                .get(node)
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+            {
+                let held = group_tiles.iter().position(|(name_held, _)| *name_held == name);
+                match held {
+                    // Fusion keeps one declaration per name and takes the
+                    // larger count, so the group holds the larger of the two.
+                    Some(index) => group_tiles[index].1 = group_tiles[index].1.max(*bytes),
+                    None => group_tiles.push((name, *bytes)),
+                }
+            }
             group_bytes = group_bytes
                 .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
         }
+        let group_scratch = group_tiles
+            .iter()
+            .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
         live_value_peak = live_value_peak.max(group_live);
         shared_scratch_bytes = shared_scratch_bytes.max(group_scratch);
         let passes = resident_passes(group_live, u64::from(device.registers_per_invocation())).max(
@@ -198,13 +219,19 @@ mod tests {
             .with_occupancy(registers_per_invocation, 0)
     }
 
+    /// A device with no register budget and the given workgroup scratch budget.
+    fn scratch_device(shared_scratch_bytes_per_workgroup: u32) -> DeviceFacts {
+        DeviceFacts::new(BackendCapabilities::default(), 256)
+            .with_occupancy(0, shared_scratch_bytes_per_workgroup)
+    }
+
     /// Two nodes, one value of `value_bytes` between them, each holding
     /// `live_values` live values and touching that value.
     fn two_node_facts(live_values: u64, value_bytes: u64) -> PlanningFacts {
         PlanningFacts {
             node_work: vec![1, 1],
             node_live_values: vec![live_values, live_values],
-            node_shared_scratch_bytes: vec![0, 0],
+            node_workgroup_scratch: vec![Vec::new(), Vec::new()],
             node_declared_invocations: vec![256, 256],
             node_declared_workgroup: vec![[256, 1, 1], [256, 1, 1]],
             node_accepts_width: vec![true, true],
@@ -301,5 +328,91 @@ mod tests {
         );
         assert_eq!(cost.occupancy_passes_peak, 1);
         assert_eq!(cost.occupancy_ns, 0);
+    }
+
+    /// Facts for two nodes whose scratch declarations are given, sharing one
+    /// value between them.
+    fn tiled_facts(first: &[(&str, u64)], second: &[(&str, u64)]) -> PlanningFacts {
+        let mut facts = two_node_facts(1, 4 * 1024 * 1024);
+        facts.node_workgroup_scratch = [first, second]
+            .into_iter()
+            .map(|declarations| {
+                declarations
+                    .iter()
+                    .map(|(name, bytes)| (Ident::from(*name), *bytes))
+                    .collect()
+            })
+            .collect();
+        facts
+    }
+
+    /// WHY: fusion unions buffers by name, so two ops fused over one tile hold
+    /// one tile. Charging the sum made a group that fits look like it needs two
+    /// resident passes, which ranked the tile-sharing fusion below the pair it
+    /// beats. That is the fused attention shape: the score tile is written by
+    /// one op and read by the next and never reaches memory.
+    #[test]
+    fn a_tile_two_members_share_is_charged_once() {
+        let facts = tiled_facts(&[("tile", 32 * 1024)], &[("tile", 32 * 1024)]);
+        let dependencies = dependencies();
+        let device = scratch_device(48 * 1024);
+        let fused = evaluate(
+            &CandidatePlan::from_edges(2, &facts.dataflow),
+            &facts,
+            &dependencies,
+            device,
+        );
+        assert_eq!(
+            fused.shared_scratch_bytes,
+            32 * 1024,
+            "one name is one tile in the generated kernel"
+        );
+        assert_eq!(
+            fused.occupancy_passes_peak, 1,
+            "32 KiB fits a 48 KiB workgroup budget"
+        );
+        assert_eq!(fused.occupancy_ns, 0);
+        let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, device);
+        assert!(
+            fused.total < unfused.total,
+            "a fusion that shares its tile keeps its launch and traffic saving: \
+             fused {fused:?} unfused {unfused:?}"
+        );
+    }
+
+    /// WHY: the union is by name, not a blanket discount. Two members that
+    /// declare different tiles need both at once, and a group that stops
+    /// charging for them would rank a fusion the device cannot hold first.
+    #[test]
+    fn two_tiles_of_different_names_are_charged_together() {
+        let facts = tiled_facts(&[("score", 32 * 1024)], &[("weights", 32 * 1024)]);
+        let dependencies = dependencies();
+        let device = scratch_device(48 * 1024);
+        let fused = evaluate(
+            &CandidatePlan::from_edges(2, &facts.dataflow),
+            &facts,
+            &dependencies,
+            device,
+        );
+        assert_eq!(fused.shared_scratch_bytes, 64 * 1024);
+        assert_eq!(
+            fused.occupancy_passes_peak, 2,
+            "64 KiB of distinct tiles exceeds a 48 KiB workgroup budget"
+        );
+        assert!(fused.occupancy_ns > 0);
+    }
+
+    /// WHY: fusion takes the larger count when two arms name one buffer, so the
+    /// group holds the larger tile and not the first one seen.
+    #[test]
+    fn a_shared_name_of_two_sizes_holds_the_larger() {
+        let facts = tiled_facts(&[("tile", 16 * 1024)], &[("tile", 32 * 1024)]);
+        let cost = evaluate(
+            &CandidatePlan::from_edges(2, &facts.dataflow),
+            &facts,
+            &dependencies(),
+            device(0),
+        );
+        assert_eq!(cost.shared_scratch_bytes, 32 * 1024);
     }
 }
