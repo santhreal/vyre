@@ -41,6 +41,7 @@ The crate lives at `vyre-aot`. The `aot-artifacts` owner maintains its
 | `test` | `generated_artifact_manifest_matrix` | `vyre-aot/tests/generated_artifact_manifest_matrix.rs` | None | `./cargo_full test -p vyre-aot --test generated_artifact_manifest_matrix` |
 | `test` | `generated_loader_contracts` | `vyre-aot/tests/generated_loader_contracts.rs` | None | `./cargo_full test -p vyre-aot --test generated_loader_contracts` |
 | `test` | `launcher_contracts` | `vyre-aot/tests/launcher_contracts.rs` | None | `./cargo_full test -p vyre-aot --test launcher_contracts` |
+| `test` | `launcher_registry_closure_contracts` | `vyre-aot/tests/launcher_registry_closure_contracts.rs` | None | `./cargo_full test -p vyre-aot --test launcher_registry_closure_contracts` |
 | `test` | `manifest_round_trip` | `vyre-aot/tests/manifest_round_trip.rs` | None | `./cargo_full test -p vyre-aot --test manifest_round_trip` |
 
 ## Test classes

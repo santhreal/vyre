@@ -157,10 +157,10 @@ Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-lower/tests/analysis_fixture_corpuses.rs`:
+Run the checked-in behavior from `vyre-lower/tests/affine_access_map_contracts.rs`:
 
 ```console
-./cargo_full test -p vyre-lower --test analysis_fixture_corpuses
+./cargo_full test -p vyre-lower --test affine_access_map_contracts
 ```
 
 ### Features

@@ -56,6 +56,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `production_route` | `conform/vyre-conform/tests/production_route.rs` | None | `./cargo_full test -p vyre-conform --test production_route` |
 | `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes.rs` | None | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
 | `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes.rs` | `gpu` | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
+| `test` | `replay_capsule_contract` | `conform/vyre-conform/tests/replay_capsule_contract.rs` | None | `./cargo_full test -p vyre-conform --test replay_capsule_contract` |
 | `test` | `schema_compatibility` | `conform/vyre-conform/tests/schema_compatibility.rs` | None | `./cargo_full test -p vyre-conform --test schema_compatibility` |
 | `test` | `ulp_audit` | `conform/vyre-conform/tests/ulp_audit.rs` | None | `./cargo_full test -p vyre-conform --test ulp_audit` |
 

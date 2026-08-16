@@ -106,6 +106,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `node_variant_traversal_closure` | `vyre-foundation/tests/node_variant_traversal_closure.rs` | None | `./cargo_full test -p vyre-foundation --test node_variant_traversal_closure` |
 | `test` | `opaque_payload_endian` | `vyre-foundation/tests/opaque_payload_endian.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_payload_endian` |
 | `test` | `opaque_wire_round_trip` | `vyre-foundation/tests/opaque_wire_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_wire_round_trip` |
+| `test` | `operation_call_graph_closure` | `vyre-foundation/tests/operation_call_graph_closure.rs` | None | `./cargo_full test -p vyre-foundation --test operation_call_graph_closure` |
 | `test` | `operation_namespace` | `vyre-foundation/tests/operation_namespace.rs` | None | `./cargo_full test -p vyre-foundation --test operation_namespace` |
 | `test` | `operation_registry` | `vyre-foundation/tests/operation_registry.rs` | None | `./cargo_full test -p vyre-foundation --test operation_registry` |
 | `test` | `optimizer_algebraic_rules_contracts` | `vyre-foundation/tests/optimizer_algebraic_rules_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_algebraic_rules_contracts` |
@@ -141,8 +142,10 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `resource_exhaustion_adversarial` | `vyre-foundation/tests/resource_exhaustion_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test resource_exhaustion_adversarial` |
 | `test` | `rewrite_driver_descends_into_async_offset` | `vyre-foundation/tests/rewrite_driver_descends_into_async_offset.rs` | None | `./cargo_full test -p vyre-foundation --test rewrite_driver_descends_into_async_offset` |
 | `test` | `scalar_operator_agreement` | `vyre-foundation/tests/scalar_operator_agreement.rs` | None | `./cargo_full test -p vyre-foundation --test scalar_operator_agreement` |
+| `test` | `scan_database_wire_contract` | `vyre-foundation/tests/scan_database_wire_contract.rs` | None | `./cargo_full test -p vyre-foundation --test scan_database_wire_contract` |
 | `test` | `scope_cow` | `vyre-foundation/tests/scope_cow.rs` | None | `./cargo_full test -p vyre-foundation --test scope_cow` |
 | `test` | `scope_rewrite_owner_contract` | `vyre-foundation/tests/scope_rewrite_owner_contract.rs` | None | `./cargo_full test -p vyre-foundation --test scope_rewrite_owner_contract` |
+| `test` | `section_190_compiler_bounds_determinism_autodiff_concurrency` | `vyre-foundation/tests/section_190_compiler_bounds_determinism_autodiff_concurrency.rs` | None | `./cargo_full test -p vyre-foundation --test section_190_compiler_bounds_determinism_autodiff_concurrency` |
 | `test` | `serial_envelope` | `vyre-foundation/tests/serial_envelope.rs` | None | `./cargo_full test -p vyre-foundation --test serial_envelope` |
 | `test` | `serial_envelope_boundary` | `vyre-foundation/tests/serial_envelope_boundary.rs` | None | `./cargo_full test -p vyre-foundation --test serial_envelope_boundary` |
 | `test` | `serial_envelope_corruption` | `vyre-foundation/tests/serial_envelope_corruption.rs` | None | `./cargo_full test -p vyre-foundation --test serial_envelope_corruption` |
@@ -156,6 +159,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `terminal_wire_round_trip` | `vyre-foundation/tests/terminal_wire_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test terminal_wire_round_trip` |
 | `test` | `text_format_boundary` | `vyre-foundation/tests/text_format_boundary.rs` | None | `./cargo_full test -p vyre-foundation --test text_format_boundary` |
 | `test` | `tile_nodes_contracts` | `vyre-foundation/tests/tile_nodes_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test tile_nodes_contracts` |
+| `test` | `transform_contract_classification` | `vyre-foundation/tests/transform_contract_classification.rs` | None | `./cargo_full test -p vyre-foundation --test transform_contract_classification` |
 | `test` | `transform_rewrites_still_fire` | `vyre-foundation/tests/transform_rewrites_still_fire.rs` | None | `./cargo_full test -p vyre-foundation --test transform_rewrites_still_fire` |
 | `test` | `type_boundary_adversarial` | `vyre-foundation/tests/type_boundary_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test type_boundary_adversarial` |
 | `test` | `v055_uniform_exit` | `vyre-foundation/tests/v055_uniform_exit.rs` | None | `./cargo_full test -p vyre-foundation --test v055_uniform_exit` |

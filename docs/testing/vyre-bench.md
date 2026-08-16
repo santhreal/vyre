@@ -77,6 +77,7 @@ The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
 | `test` | `result_schema` | `vyre-bench/tests/result_schema.rs` | None | `./cargo_full test -p vyre-bench --test result_schema` |
 | `test` | `roofline_counter_evidence` | `vyre-bench/tests/roofline_counter_evidence.rs` | None | `./cargo_full test -p vyre-bench --test roofline_counter_evidence` |
 | `test` | `scan_counter_evidence_registry` | `vyre-bench/tests/scan_counter_evidence_registry.rs` | None | `./cargo_full test -p vyre-bench --test scan_counter_evidence_registry` |
+| `test` | `section_189_hardware_regression_evidence_and_pmu_policy` | `vyre-bench/tests/section_189_hardware_regression_evidence_and_pmu_policy.rs` | None | `./cargo_full test -p vyre-bench --test section_189_hardware_regression_evidence_and_pmu_policy` |
 | `test` | `snapshot_persistence` | `vyre-bench/tests/snapshot_persistence.rs` | None | `./cargo_full test -p vyre-bench --test snapshot_persistence` |
 | `test` | `source_fingerprint_operator_files` | `vyre-bench/tests/source_fingerprint_operator_files.rs` | None | `./cargo_full test -p vyre-bench --test source_fingerprint_operator_files` |
 | `test` | `statistical_regression_gates` | `vyre-bench/tests/statistical_regression_gates.rs` | None | `./cargo_full test -p vyre-bench --test statistical_regression_gates` |

@@ -32,10 +32,22 @@ The crate lives at `vyre-test-support`. The `test-support` owner maintains its
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `./cargo_full test -p vyre-test-support` |
+| `test` | `adversarial_and_mutation_contracts` | `vyre-test-support/tests/adversarial_and_mutation_contracts.rs` | None | `./cargo_full test -p vyre-test-support --test adversarial_and_mutation_contracts` |
+| `test` | `adversarial_and_mutation_contracts` | `vyre-test-support/tests/adversarial_and_mutation_contracts.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test adversarial_and_mutation_contracts` |
 | `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | None | `./cargo_full test -p vyre-test-support --test binop_parity_tables` |
 | `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test binop_parity_tables` |
 | `test` | `cast_parity_tables` | `vyre-test-support/tests/cast_parity_tables.rs` | None | `./cargo_full test -p vyre-test-support --test cast_parity_tables` |
 | `test` | `cast_parity_tables` | `vyre-test-support/tests/cast_parity_tables.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test cast_parity_tables` |
+| `test` | `differential_matrix_contracts` | `vyre-test-support/tests/differential_matrix_contracts.rs` | None | `./cargo_full test -p vyre-test-support --test differential_matrix_contracts` |
+| `test` | `differential_matrix_contracts` | `vyre-test-support/tests/differential_matrix_contracts.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test differential_matrix_contracts` |
+| `test` | `expr_variant_coverage` | `vyre-test-support/tests/expr_variant_coverage.rs` | None | `./cargo_full test -p vyre-test-support --test expr_variant_coverage` |
+| `test` | `expr_variant_coverage` | `vyre-test-support/tests/expr_variant_coverage.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test expr_variant_coverage` |
+| `test` | `extension_variant_coverage` | `vyre-test-support/tests/extension_variant_coverage.rs` | None | `./cargo_full test -p vyre-test-support --test extension_variant_coverage` |
+| `test` | `extension_variant_coverage` | `vyre-test-support/tests/extension_variant_coverage.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test extension_variant_coverage` |
+| `test` | `memory_order_coverage` | `vyre-test-support/tests/memory_order_coverage.rs` | None | `./cargo_full test -p vyre-test-support --test memory_order_coverage` |
+| `test` | `memory_order_coverage` | `vyre-test-support/tests/memory_order_coverage.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test memory_order_coverage` |
+| `test` | `operation_registration_coverage` | `vyre-test-support/tests/operation_registration_coverage.rs` | None | `./cargo_full test -p vyre-test-support --test operation_registration_coverage` |
+| `test` | `operation_registration_coverage` | `vyre-test-support/tests/operation_registration_coverage.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test operation_registration_coverage` |
 | `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes

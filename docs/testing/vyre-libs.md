@@ -275,6 +275,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `matching_diagnostic_via_reference_parity` | `vyre-libs/tests/matching_diagnostic_via_reference_parity.rs` | `cpu-parity`, `encoding` | `./cargo_full test -p vyre-libs --test matching_diagnostic_via_reference_parity` |
 | `test` | `matching_nfa_scan_program_contracts` | `vyre-libs/tests/matching_nfa_scan_program_contracts.rs` | None | `./cargo_full test -p vyre-libs --test matching_nfa_scan_program_contracts` |
 | `test` | `matching_post_process_contracts` | `vyre-libs/tests/matching_post_process_contracts.rs` | None | `./cargo_full test -p vyre-libs --test matching_post_process_contracts` |
+| `test` | `matching_post_process_contracts` | `vyre-libs/tests/matching_post_process_contracts.rs` | `cpu-parity`, `matching` | `./cargo_full test -p vyre-libs --test matching_post_process_contracts` |
 | `test` | `math_algebra_branchless_contracts` | `vyre-libs/tests/math_algebra_branchless_contracts.rs` | None | `./cargo_full test -p vyre-libs --test math_algebra_branchless_contracts` |
 | `test` | `matroid_exact_subset_via_reference_parity` | `vyre-libs/tests/matroid_exact_subset_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test matroid_exact_subset_via_reference_parity` |
 | `test` | `matroid_exact_subset_via_reference_parity` | `vyre-libs/tests/matroid_exact_subset_via_reference_parity.rs` | `cpu-parity`, `encoding` | `./cargo_full test -p vyre-libs --test matroid_exact_subset_via_reference_parity` |
@@ -310,6 +311,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `overflow_guards` | `vyre-libs/tests/overflow_guards.rs` | None | `./cargo_full test -p vyre-libs --test overflow_guards` |
 | `test` | `overflow_guards` | `vyre-libs/tests/overflow_guards.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test overflow_guards` |
 | `test` | `padic_hensel_signed_parity` | `vyre-libs/tests/padic_hensel_signed_parity.rs` | None | `./cargo_full test -p vyre-libs --test padic_hensel_signed_parity` |
+| `test` | `paged_attention_eval` | `vyre-libs/tests/paged_attention_eval.rs` | None | `./cargo_full test -p vyre-libs --test paged_attention_eval` |
 | `test` | `parser_edit_delta_contracts` | `vyre-libs/tests/parser_edit_delta_contracts.rs` | None | `./cargo_full test -p vyre-libs --test parser_edit_delta_contracts` |
 | `test` | `parser_graph_navigation_contracts` | `vyre-libs/tests/parser_graph_navigation_contracts.rs` | None | `./cargo_full test -p vyre-libs --test parser_graph_navigation_contracts` |
 | `test` | `parser_recovery_corpus_registry` | `vyre-libs/tests/parser_recovery_corpus_registry.rs` | None | `./cargo_full test -p vyre-libs --test parser_recovery_corpus_registry` |
@@ -396,6 +398,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `quantized_linear_affine_fma` | `vyre-libs/tests/quantized_linear_affine_fma.rs` | None | `./cargo_full test -p vyre-libs --test quantized_linear_affine_fma` |
 | `test` | `quantized_linear_affine_fma` | `vyre-libs/tests/quantized_linear_affine_fma.rs` | `nn-linear` | `./cargo_full test -p vyre-libs --test quantized_linear_affine_fma` |
 | `test` | `quantized_packing_contracts` | `vyre-libs/tests/quantized_packing_contracts.rs` | None | `./cargo_full test -p vyre-libs --test quantized_packing_contracts` |
+| `test` | `quantized_packing_contracts` | `vyre-libs/tests/quantized_packing_contracts.rs` | `cpu-parity`, `math` | `./cargo_full test -p vyre-libs --test quantized_packing_contracts` |
 | `test` | `quantized_via_reference_parity` | `vyre-libs/tests/quantized_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test quantized_via_reference_parity` |
 | `test` | `quantized_via_reference_parity` | `vyre-libs/tests/quantized_via_reference_parity.rs` | `cpu-parity`, `solvers` | `./cargo_full test -p vyre-libs --test quantized_via_reference_parity` |
 | `test` | `randomized_svd_signed_parity` | `vyre-libs/tests/randomized_svd_signed_parity.rs` | None | `./cargo_full test -p vyre-libs --test randomized_svd_signed_parity` |

@@ -1,9 +1,11 @@
 {
-  "source_fingerprint": "git:0b11b7db89e1ba783f74ea8641e8532faa6df0bb:dirty=true:worktree=86a71632761ba0549a8c1afb5adcbc4b376893e34dc155b33faac1e6f0ca39d0",
+  "source_fingerprint": "git:3482b796b2877c7b5a2a7b5d79ad7e0058e764aa:dirty=true:worktree=b6a6de1a206d21a0801d95d469adcf307977fd2357ff8609f3d26abf375958e8",
   "schema_version": 2,
   "command": "cargo_full run --bin xtask -- release-conformance",
   "requested_backends": [
-    "reference"
+    "cuda",
+    "wgpu",
+    "cpu-ref"
   ],
   "required_artifacts": [
     "cuda-conformance.json",

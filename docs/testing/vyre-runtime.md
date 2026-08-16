@@ -37,7 +37,9 @@ The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 | `test` | `artifact_admission_contract` | `vyre-runtime/tests/artifact_admission_contract.rs` | None | `./cargo_full test -p vyre-runtime --test artifact_admission_contract` |
 | `test` | `cache_eviction_proptest` | `vyre-runtime/tests/cache_eviction_proptest.rs` | None | `./cargo_full test -p vyre-runtime --test cache_eviction_proptest` |
 | `test` | `concurrency_invariants` | `vyre-runtime/tests/concurrency_invariants.rs` | None | `./cargo_full test -p vyre-runtime --test concurrency_invariants` |
+| `test` | `driver_runtime_lifecycle_boundary` | `vyre-runtime/tests/driver_runtime_lifecycle_boundary.rs` | None | `./cargo_full test -p vyre-runtime --test driver_runtime_lifecycle_boundary` |
 | `test` | `multi_tenant_scheduler` | `vyre-runtime/tests/multi_tenant_scheduler.rs` | None | `./cargo_full test -p vyre-runtime --test multi_tenant_scheduler` |
+| `test` | `paged_prefix_mtp_contracts` | `vyre-runtime/tests/paged_prefix_mtp_contracts.rs` | None | `./cargo_full test -p vyre-runtime --test paged_prefix_mtp_contracts` |
 | `test` | `pipeline_fingerprint_surface` | `vyre-runtime/tests/pipeline_fingerprint_surface.rs` | None | `./cargo_full test -p vyre-runtime --test pipeline_fingerprint_surface` |
 | `test` | `registry_closure` | `vyre-runtime/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-runtime --test registry_closure` |
 | `test` | `replay_log` | `vyre-runtime/tests/replay_log.rs` | None | `./cargo_full test -p vyre-runtime --test replay_log` |
@@ -76,6 +78,7 @@ The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 | `test` | `resource_residency` | `vyre-runtime/tests/resource_residency.rs` | None | `./cargo_full test -p vyre-runtime --test resource_residency` |
 | `test` | `routing_policy` | `vyre-runtime/tests/routing_policy.rs` | None | `./cargo_full test -p vyre-runtime --test routing_policy` |
 | `test` | `routing_standard_policy_contracts` | `vyre-runtime/tests/routing_standard_policy_contracts.rs` | None | `./cargo_full test -p vyre-runtime --test routing_standard_policy_contracts` |
+| `test` | `safetensors_transfer_integrity_contracts` | `vyre-runtime/tests/safetensors_transfer_integrity_contracts.rs` | None | `./cargo_full test -p vyre-runtime --test safetensors_transfer_integrity_contracts` |
 | `test` | `scheduler_model_proptest` | `vyre-runtime/tests/scheduler_model_proptest.rs` | None | `./cargo_full test -p vyre-runtime --test scheduler_model_proptest` |
 | `test` | `socket_ingest` | `vyre-runtime/tests/socket_ingest.rs` | None | `./cargo_full test -p vyre-runtime --test socket_ingest` |
 | `test` | `sweep_ring_buffer_oracle_matrix` | `vyre-runtime/tests/sweep_ring_buffer_oracle_matrix.rs` | None | `./cargo_full test -p vyre-runtime --test sweep_ring_buffer_oracle_matrix` |

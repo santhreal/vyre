@@ -53,6 +53,7 @@ This crate declares no Cargo features.
 | `test` | `invariant_catalog_generated_matrix` | `vyre-spec/tests/invariant_catalog_generated_matrix.rs` | None | `./cargo_full test -p vyre-spec --test invariant_catalog_generated_matrix` |
 | `test` | `invariant_catalog_surface` | `vyre-spec/tests/invariant_catalog_surface.rs` | None | `./cargo_full test -p vyre-spec --test invariant_catalog_surface` |
 | `test` | `invariant_property_contracts` | `vyre-spec/tests/invariant_property_contracts.rs` | None | `./cargo_full test -p vyre-spec --test invariant_property_contracts` |
+| `test` | `numeric_semantics_contracts` | `vyre-spec/tests/numeric_semantics_contracts.rs` | None | `./cargo_full test -p vyre-spec --test numeric_semantics_contracts` |
 | `test` | `op_contract_surface` | `vyre-spec/tests/op_contract_surface.rs` | None | `./cargo_full test -p vyre-spec --test op_contract_surface` |
 | `test` | `op_signature_contract_generated` | `vyre-spec/tests/op_signature_contract_generated.rs` | None | `./cargo_full test -p vyre-spec --test op_signature_contract_generated` |
 | `test` | `op_signature_property_contracts` | `vyre-spec/tests/op_signature_property_contracts.rs` | None | `./cargo_full test -p vyre-spec --test op_signature_property_contracts` |
@@ -63,6 +64,7 @@ This crate declares no Cargo features.
 | `test` | `serde_contract_surface` | `vyre-spec/tests/serde_contract_surface.rs` | None | `./cargo_full test -p vyre-spec --test serde_contract_surface` |
 | `test` | `soundness_contracts` | `vyre-spec/tests/soundness_contracts.rs` | None | `./cargo_full test -p vyre-spec --test soundness_contracts` |
 | `test` | `spec_contract_errors` | `vyre-spec/tests/spec_contract_errors.rs` | None | `./cargo_full test -p vyre-spec --test spec_contract_errors` |
+| `test` | `spec_submodules_visibility_contract` | `vyre-spec/tests/spec_submodules_visibility_contract.rs` | None | `./cargo_full test -p vyre-spec --test spec_submodules_visibility_contract` |
 | `test` | `spec_variant_tables_cover_the_frozen_surface` | `vyre-spec/tests/spec_variant_tables_cover_the_frozen_surface.rs` | None | `./cargo_full test -p vyre-spec --test spec_variant_tables_cover_the_frozen_surface` |
 | `test` | `static_vector_identity_contracts` | `vyre-spec/tests/static_vector_identity_contracts.rs` | None | `./cargo_full test -p vyre-spec --test static_vector_identity_contracts` |
 | `test` | `sweep_wire_roundtrip_oracle_matrix` | `vyre-spec/tests/sweep_wire_roundtrip_oracle_matrix.rs` | None | `./cargo_full test -p vyre-spec --test sweep_wire_roundtrip_oracle_matrix` |

@@ -112,6 +112,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `strategy_contracts` | `vyre-driver/tests/strategy_contracts.rs` | None | `./cargo_full test -p vyre-driver --test strategy_contracts` |
 | `test` | `sweep_dispatch_shape_oracle_matrix` | `vyre-driver/tests/sweep_dispatch_shape_oracle_matrix.rs` | None | `./cargo_full test -p vyre-driver --test sweep_dispatch_shape_oracle_matrix` |
 | `test` | `sweep_numeric_oracle_matrix` | `vyre-driver/tests/sweep_numeric_oracle_matrix.rs` | None | `./cargo_full test -p vyre-driver --test sweep_numeric_oracle_matrix` |
+| `test` | `target_contract` | `vyre-driver/tests/target_contract.rs` | None | `./cargo_full test -p vyre-driver --test target_contract` |
 | `test` | `trace_context_telemetry_contracts` | `vyre-driver/tests/trace_context_telemetry_contracts.rs` | None | `./cargo_full test -p vyre-driver --test trace_context_telemetry_contracts` |
 | `test` | `trace_jit_policy_contracts` | `vyre-driver/tests/trace_jit_policy_contracts.rs` | None | `./cargo_full test -p vyre-driver --test trace_jit_policy_contracts` |
 | `test` | `transfer_accounting_contracts` | `vyre-driver/tests/transfer_accounting_contracts.rs` | None | `./cargo_full test -p vyre-driver --test transfer_accounting_contracts` |

@@ -31,6 +31,7 @@ This crate declares no Cargo features.
 | `test` | `checkout_provenance` | `structure-gate/tests/checkout_provenance.rs` | None | `./cargo_full test -p structure-gate --test checkout_provenance` |
 | `test` | `crate_ownership_registry_reader` | `structure-gate/tests/crate_ownership_registry_reader.rs` | None | `./cargo_full test -p structure-gate --test crate_ownership_registry_reader` |
 | `test` | `crate_structure_contracts` | `structure-gate/tests/crate_structure_contracts.rs` | None | `./cargo_full test -p structure-gate --test crate_structure_contracts` |
+| `test` | `deletion_evidence_and_pass_registry` | `structure-gate/tests/deletion_evidence_and_pass_registry.rs` | None | `./cargo_full test -p structure-gate --test deletion_evidence_and_pass_registry` |
 | `test` | `device_only_routing` | `structure-gate/tests/device_only_routing.rs` | None | `./cargo_full test -p structure-gate --test device_only_routing` |
 | `test` | `materializer_admission` | `structure-gate/tests/materializer_admission.rs` | None | `./cargo_full test -p structure-gate --test materializer_admission` |
 | `test` | `module_routes` | `structure-gate/tests/module_routes.rs` | None | `./cargo_full test -p structure-gate --test module_routes` |

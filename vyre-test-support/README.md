@@ -49,15 +49,15 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 ### Boundaries
 
 The `test-support` owner maintains this `test-tooling` crate at `vyre-test-support`.
-Its allowed internal production dependencies are: `structure-gate`, `vyre-foundation`, `vyre-spec`.
+Its allowed internal production dependencies are: `structure-gate`, `vyre-foundation`, `vyre-reference`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-test-support/tests/binop_parity_tables.rs`:
+Run the checked-in behavior from `vyre-test-support/tests/adversarial_and_mutation_contracts.rs`:
 
 ```console
-./cargo_full test -p vyre-test-support --test binop_parity_tables
+./cargo_full test -p vyre-test-support --test adversarial_and_mutation_contracts
 ```
 
 ### Features
