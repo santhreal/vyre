@@ -6,7 +6,6 @@
 //! compare different parts of one: check 1 scores the whole string, check 10
 //! fixes the first [`PREFIX_LEN`] bytes as a bucket key and scores the rest.
 
-#[allow(unused_imports)]
 use super::*;
 
 /// Build a compact byte sequence representing the node-kind tree

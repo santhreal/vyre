@@ -6,7 +6,6 @@
 //! that belongs is re-exported from `vyre_libs::prelude` and imported from
 //! there.
 
-#[allow(unused_imports)]
 use super::*;
 
 /// Walk `vyre-libs/src/<dialect>/**/*.rs` and report every `use` that reaches
@@ -191,12 +190,7 @@ pub(super) fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathB
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
-    use std::path::PathBuf;
 
     /// WHY: the shared-plumbing list is consumed by a directory filter, so a row
     /// naming a single-file module or a path that was removed is skipped by

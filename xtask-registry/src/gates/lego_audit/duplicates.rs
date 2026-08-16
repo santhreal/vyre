@@ -3,7 +3,6 @@
 //! The report is the machine-readable form of what checks 1 and 10 print, so a
 //! consumer reads one artifact rather than parsing gate output.
 
-#[allow(unused_imports)]
 use super::*;
 
 pub(super) fn lego_duplicate_report(ops: &[OpInfo], generator_command: &str) -> DuplicateFamilyReport {
@@ -75,11 +74,7 @@ pub(super) fn lego_duplicate_subject(op: &OpInfo) -> DuplicateSubject {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
     use std::path::PathBuf;
 
     /// WHY: this preserves the explicit duplicate-report output path contract.

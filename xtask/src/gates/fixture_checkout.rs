@@ -11,6 +11,8 @@ use std::process::Command;
 
 use tempfile::TempDir;
 
+use crate::gate::Report;
+
 /// A git checkout holding the given files, each path relative to its root.
 ///
 /// The returned directory owns the tree: dropping it deletes the checkout, so a
@@ -64,4 +66,23 @@ pub fn checkout_with_roots(roots: &[&str]) -> (TempDir, PathBuf) {
         .map(|(path, text)| (path.as_str(), *text))
         .collect();
     checkout(&borrowed)
+}
+
+/// The files a report names, in the order it named them.
+///
+/// A gate assertion states which files a rule reported, not how many, and two
+/// gate tests each spelled the same map over `Report::findings` to say it.
+#[must_use]
+pub fn reported_files(report: &Report) -> Vec<String> {
+    report
+        .findings
+        .iter()
+        .map(|finding| {
+            finding
+                .file
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_default()
+        })
+        .collect()
 }

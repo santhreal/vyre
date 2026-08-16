@@ -5,7 +5,6 @@
 //! reviewer records which it is, as a shared builder or as a reviewed-distinct
 //! row.
 
-#[allow(unused_imports)]
 use super::*;
 
 pub(super) const FINGERPRINT_SIM_THRESHOLD: f64 = 0.88;
@@ -81,12 +80,7 @@ pub(super) fn no_reinvention_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo
             if same_subdialect(&a.id, &b.id) {
                 continue;
             }
-            let key = if a.id < b.id {
-                (a.id.clone(), b.id.clone())
-            } else {
-                (b.id.clone(), a.id.clone())
-            };
-            if !reported.insert(key) {
+            if !first_report_of_pair(&mut reported, &a.id, &b.id) {
                 continue;
             }
             pairs.push((sim, a, b));
@@ -97,12 +91,7 @@ pub(super) fn no_reinvention_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
-    use std::path::PathBuf;
 
     /// IR duplicate analysis judges exactly the registrations that carry a
     /// program.

@@ -368,7 +368,7 @@ fn is_inner_allow_of(line: &str, lint: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gates::fixture_checkout::checkout;
+    use crate::gates::fixture_checkout::{checkout, reported_files};
 
     /// WHY: the floor is crate-wide, and the narrow module-scoped form on a
     /// generated module is deliberately allowed. A check that could not tell the
@@ -552,20 +552,5 @@ mod tests {
             "the note counts the surface: {:?}",
             report.notes
         );
-    }
-
-    /// The files a report names, in the order it named them.
-    fn reported_files(report: &Report) -> Vec<String> {
-        report
-            .findings
-            .iter()
-            .map(|finding| {
-                finding
-                    .file
-                    .as_ref()
-                    .map(|path| path.display().to_string())
-                    .unwrap_or_default()
-            })
-            .collect()
     }
 }

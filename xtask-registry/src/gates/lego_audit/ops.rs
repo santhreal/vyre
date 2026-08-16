@@ -6,7 +6,6 @@
 //! is what lets a check be a rule over `OpInfo` rather than a second traversal
 //! of the IR.
 
-#[allow(unused_imports)]
 use super::*;
 
 pub(super) const MAX_LEGO_AUDIT_SOURCE_BYTES: u64 = 2_097_152;
@@ -211,4 +210,40 @@ pub(super) fn read_text_bounded(path: &std::path::Path) -> io::Result<String> {
 
 pub(super) fn workspace_root() -> Option<std::path::PathBuf> {
     Some(xtask::checkout::checkout_root())
+}
+
+/// Node count below which an operation is allowed to be flat.
+///
+/// A handful of nodes cannot be decomposed into anything. Checks 2, 6 and 8 all
+/// measure that floor the same way and all three read it from here.
+pub(super) const COMPOSITION_FLOOR_NODES: usize = 20;
+
+/// Whether the composition rules judge `op` at all.
+///
+/// An internal phase generator is not a surface operation, a declared pure-IR
+/// leaf has already been reviewed, and an operation under the flat-size floor
+/// has nothing to decompose. A check that also narrows by tier does that itself,
+/// because the three checks disagree on which tiers they judge.
+pub(super) fn under_composition_rules(op: &OpInfo) -> bool {
+    !is_internal_phase_op(&op.id)
+        && !is_declared_tier3_leaf(&op.id)
+        && op.own_nodes + op.composed_nodes >= COMPOSITION_FLOOR_NODES
+}
+
+/// Whether the unordered pair `(a, b)` is reported here for the first time.
+///
+/// Checks 1 and 10 both pair operations off, and both owe one row per pair
+/// rather than one per direction, so the key is ordered by id before it is
+/// recorded.
+pub(super) fn first_report_of_pair(
+    reported: &mut BTreeSet<(String, String)>,
+    a: &str,
+    b: &str,
+) -> bool {
+    let key = if a < b {
+        (a.to_string(), b.to_string())
+    } else {
+        (b.to_string(), a.to_string())
+    };
+    reported.insert(key)
 }

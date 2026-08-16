@@ -58,34 +58,20 @@ mod ops;
 mod primitive_coverage;
 mod trend;
 
-#[allow(unused_imports)]
 use self::composability::*;
-#[allow(unused_imports)]
 use self::composition_chain::*;
-#[allow(unused_imports)]
 use self::cross_dialect::*;
-#[allow(unused_imports)]
 use self::depth_of_composition::*;
-#[allow(unused_imports)]
 use self::duplicates::*;
-#[allow(unused_imports)]
 use self::exemptions::*;
-#[allow(unused_imports)]
 use self::fingerprint::*;
-#[allow(unused_imports)]
 use self::god_files::*;
-#[allow(unused_imports)]
 use self::name_stem::*;
-#[allow(unused_imports)]
 use self::no_reinvention::*;
-#[allow(unused_imports)]
 use self::operand_shape::*;
-#[allow(unused_imports)]
 use self::ops::*;
 pub(crate) use self::ops::{collect_ops, OpInfo, Tier};
-#[allow(unused_imports)]
 use self::primitive_coverage::*;
-#[allow(unused_imports)]
 use self::trend::*;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};

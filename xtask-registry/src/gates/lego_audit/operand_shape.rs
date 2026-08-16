@@ -5,7 +5,6 @@
 //! `unreviewed` rather than `duplicate`, because a shape cannot tell a shared
 //! algorithm from a shared idiom.
 
-#[allow(unused_imports)]
 use super::*;
 
 pub(super) const OPERAND_DUP_MIN_COSINE: f64 = 0.55;
@@ -64,12 +63,7 @@ pub(super) fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo
                 if cos < OPERAND_DUP_MIN_COSINE {
                     continue;
                 }
-                let key = if a.id < b.id {
-                    (a.id.clone(), b.id.clone())
-                } else {
-                    (b.id.clone(), a.id.clone())
-                };
-                if !reported.insert(key) {
+                if !first_report_of_pair(&mut reported, &a.id, &b.id) {
                     continue;
                 }
                 pairs.push((cos, *a, *b));
@@ -81,12 +75,8 @@ pub(super) fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
-    use std::path::PathBuf;
+    use crate::gates::lego_audit::test_ops::op_with_fingerprint;
 
     /// WHY: the bucket key fixes the first `PREFIX_LEN` bytes identical for
     /// every pair in a bucket. Scoring those bytes again measures the key, so a
