@@ -24,7 +24,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 
 ## Lifecycle counts
 
-- current: 18.
+- current: 19.
 - generated: 37.
 - superseded: 0.
 - archived: 33.
