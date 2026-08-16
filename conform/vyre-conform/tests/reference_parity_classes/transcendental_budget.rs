@@ -1,10 +1,14 @@
 //! WHY: closes the class "the production artifact route refuses a transcendental
 //! for want of a parity window", which took 21 ops out of the conformance
 //! certificate on cuda with `CUDA PTX ``Exp``/``tanh`` lowering requires
-//! approximate transcendental instructions, but ulp_budget is not positive`. The
-//! window exists and is owned by `vyre_foundation::fp_parity`; the dialect
-//! emitter simply was not given it, so the refusal named a setting no caller on
-//! that route could reach.
+//! approximate transcendental instructions, but ulp_budget is not positive`.
+//!
+//! The owner turned out to be the PTX emitter, not the routes that call it. PTX
+//! has only an approximate `tanh`, `ex2`, `lg2`, `sin` and `cos`, so gating
+//! admission on a budget named a choice that does not exist and made every route
+//! compensate for it. The refusal is gone, and the budget now governs only the
+//! ops PTX offers in two forms. `vyre_foundation::fp_parity` still owns the
+//! window itself, which is what `prove` holds the numbers to.
 //!
 //! The roster is the operation registry crossed with the backend registry: every
 //! op whose program carries the transcendental window, compiled through every
@@ -71,7 +75,7 @@ fn every_transcendental_op_builds_a_payload_on_every_artifact_route_backend() {
     }
     assert!(
         refused.is_empty(),
-        "Fix: the production artifact route cannot build a payload for a transcendental op. The parity window is a property of the program, owned by vyre_foundation::fp_parity::f32_ulp_tolerance and reachable as SelectedLowering::f32_ulp_budget; pass it to the dialect emitter instead of refusing.\n{}",
+        "Fix: the production artifact route cannot build a payload for a transcendental op. A dialect emitter must not refuse a descriptor for want of a parity window: the window chooses between two instructions where the target offers both, and is never an admission gate. See vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs.\n{}",
         refused.join("\n")
     );
 }

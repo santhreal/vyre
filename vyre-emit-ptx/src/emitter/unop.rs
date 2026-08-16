@@ -102,12 +102,18 @@ impl BodyCtx<'_> {
                 }
                 out
             }
+            // `tanh`, `ex2`, `lg2`, `sin` and `cos` exist in PTX only as
+            // approximate instructions, so there is no exact lowering to prefer
+            // and no setting that produces one. Gating them on `ulp_budget` made
+            // the program unemittable for want of a value the caller could not
+            // usefully choose: every route that wanted the program at all had to
+            // pass a positive budget, and a route that forgot refused a program
+            // it could have emitted. The budget below still governs
+            // `InverseSqrt` and `Reciprocal`, where PTX offers both forms and a
+            // caller's choice means something. The parity window that grades the
+            // result is `vyre_foundation::fp_parity::f32_ulp_tolerance`, a
+            // property of the program, and it already admits these instructions.
             (UnOp::Tanh, PtxType::F32) => {
-                if !self.options.ulp_budget.is_some_and(|budget| budget > 0) {
-                    return Err(EmitError::PtxConstructionFailed(
-                        "CUDA PTX `tanh` lowering requires approximate transcendental instructions, but ulp_budget is not positive. Fix: set an explicit ULP budget for this dispatch or route to strict lowering.".into(),
-                    ));
-                }
                 let out = self.alloc(PtxType::F32);
                 let _ = writeln!(self.text, "    tanh.approx.f32    {out}, {operand};");
                 out
@@ -118,11 +124,6 @@ impl BodyCtx<'_> {
             | (UnOp::Log2, PtxType::F32)
             | (UnOp::Sin, PtxType::F32)
             | (UnOp::Cos, PtxType::F32) => {
-                if !self.options.ulp_budget.is_some_and(|budget| budget > 0) {
-                    return Err(EmitError::PtxConstructionFailed(format!(
-                        "CUDA PTX `{op:?}` lowering requires approximate transcendental instructions, but ulp_budget is not positive. Fix: set an explicit ULP budget for this dispatch or route to strict lowering."
-                    )));
-                }
                 let out = self.alloc(PtxType::F32);
                 match op {
                     UnOp::Exp => {
