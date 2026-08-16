@@ -3,11 +3,12 @@ use super::{
     find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words,
     write_words,
 };
-use crate::parsing::python::lex::{
-    TOK_AWAIT, TOK_DOT, TOK_EQ, TOK_IDENTIFIER, TOK_LPAREN, TOK_NUMBER, TOK_RPAREN,
-};
 use crate::parsing::python::{CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS};
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_spec::python_token::{
+    TOK_AWAIT, TOK_DOT, TOK_EQ, TOK_IDENTIFIER, TOK_LBRACKET, TOK_LPAREN, TOK_NUMBER, TOK_RBRACKET,
+    TOK_RPAREN,
+};
 
 const OP_ID: &str = "vyre-libs::parsing::python312_extract_calls";
 
@@ -110,20 +111,14 @@ pub fn python312_extract_calls(
                         )],
                     ),
                     Node::if_then(
-                        Expr::eq(
-                            Expr::var("scan_tok"),
-                            Expr::u32(crate::parsing::python::lex::TOK_LBRACKET),
-                        ),
+                        Expr::eq(Expr::var("scan_tok"), Expr::u32(TOK_LBRACKET)),
                         vec![Node::assign(
                             "bracket_depth",
                             Expr::add(Expr::var("bracket_depth"), Expr::u32(1)),
                         )],
                     ),
                     Node::if_then(
-                        Expr::eq(
-                            Expr::var("scan_tok"),
-                            Expr::u32(crate::parsing::python::lex::TOK_RBRACKET),
-                        ),
+                        Expr::eq(Expr::var("scan_tok"), Expr::u32(TOK_RBRACKET)),
                         vec![Node::if_then(
                             Expr::gt(Expr::var("bracket_depth"), Expr::u32(0)),
                             vec![Node::assign(

@@ -3,7 +3,7 @@
 //! The ids are the wire contract between the GPU lexer program that writes a
 //! sparse token row per byte and every host matcher that reads those rows, so
 //! they live in the foundation-layer contract crate rather than beside one
-//! consumer. `vyre_libs::parsing::go::lex` re-exports them.
+//! consumer. Every reader names this module.
 
 /// Sparse-token sentinel: non-token byte positions stay zeroed.
 pub const TOK_NONE: u32 = 0;

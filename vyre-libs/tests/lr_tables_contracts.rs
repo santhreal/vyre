@@ -2,9 +2,9 @@
 
 use std::thread;
 
-use vyre_libs::parsing::lr_tables::{
-    parse_lr, Action, ParseError, C11_EXPR, TOK_EOF, TOK_ID, TOK_LPAREN, TOK_MINUS, TOK_NUM,
-    TOK_PLUS, TOK_RPAREN, TOK_STAR,
+use vyre_libs::parsing::lr_tables::{parse_lr, Action, ParseError, C11_EXPR};
+use vyre_spec::c11_expr_token::{
+    TOK_EOF, TOK_ID, TOK_LPAREN, TOK_MINUS, TOK_NUM, TOK_PLUS, TOK_RPAREN, TOK_STAR,
 };
 
 #[test]

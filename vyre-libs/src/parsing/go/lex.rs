@@ -1,10 +1,11 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Go lexer token ids. `vyre_spec::go_token` owns the numbering; the ids are
-/// the wire contract between the GPU lexer program below and every host
-/// matcher that reads its sparse token rows.
-pub use vyre_spec::go_token::*;
+// `vyre_spec::go_token` owns the numbering of these ids. They are the wire
+// contract between the GPU lexer program below and every host matcher that
+// reads its sparse token rows, so a caller that reads a token kind names that
+// module rather than this one.
+use vyre_spec::go_token::*;
 
 fn byte_load(buffer: &str, index: Expr) -> Expr {
     Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))
