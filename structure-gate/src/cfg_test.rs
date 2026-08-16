@@ -7,8 +7,10 @@
 //! does not compile is still judged.
 
 use std::borrow::Cow;
+use std::collections::BTreeSet;
+use std::path::Path;
 
-use crate::source_scan::opaque_span;
+use crate::source_scan::{opaque_span, rust_sources_with_text};
 
 /// Remove every `#[cfg(test)]`-gated item before a production-code scan.
 ///
@@ -64,21 +66,20 @@ pub fn cfg_test_items(text: &str) -> String {
 /// not misread.
 #[must_use]
 pub fn cfg_test_module_declarations(text: &str) -> Vec<String> {
-    let mut names = Vec::new();
-    for (start, end) in cfg_test_spans(text) {
-        let span = text[start..end].trim_end();
-        let Some(body) = span.strip_suffix(';') else {
-            continue;
-        };
-        let Some(declaration) = body.rsplit_once("mod ") else {
-            continue;
-        };
-        let name = declaration.1.trim();
-        if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            names.push(name.to_string());
-        }
+    cfg_test_spans_detailed(text)
+        .into_iter()
+        .filter_map(|span| declared_module_name(&text[span.start..span.end]))
+        .collect()
+}
+
+/// Name of the module a gated declaration names, if the item is one.
+fn declared_module_name(span: &str) -> Option<String> {
+    let body = span.trim_end().strip_suffix(';')?;
+    let name = body.rsplit_once("mod ")?.1.trim();
+    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return None;
     }
-    names
+    Some(name.to_string())
 }
 
 /// For each line of `text`, whether it sits inside a `#[cfg(test)]`-gated item.
@@ -121,6 +122,25 @@ fn line_index(text: &str, offset: usize) -> usize {
 /// `const` an id resolved through, so a real registration became no registration
 /// and the rules below judged a registry they could not see.
 fn cfg_test_spans(text: &str) -> Vec<(usize, usize)> {
+    cfg_test_spans_detailed(text)
+        .into_iter()
+        .map(|span| (span.start, span.end))
+        .collect()
+}
+
+/// One test-gated item: its byte span and whether the gate needs `test` on.
+struct CfgTestSpan {
+    start: usize,
+    end: usize,
+    /// True when no configuration without `test` compiles the item.
+    ///
+    /// `#[cfg(any(test, feature = "test-fixtures"))]` mentions `test` and still
+    /// compiles into a build that turns the feature on, so a rule that judges
+    /// what a shipped binary can hold must keep reading it.
+    test_only: bool,
+}
+
+fn cfg_test_spans_detailed(text: &str) -> Vec<CfgTestSpan> {
     const ATTR: &str = "#[cfg(";
     let mut spans = Vec::new();
     let mut search = 0usize;
@@ -130,7 +150,8 @@ fn cfg_test_spans(text: &str) -> Vec<(usize, usize)> {
         let Some(predicate_end) = match_delimited(text, predicate_start, b'(', b')') else {
             break;
         };
-        if !mentions_test(&text[predicate_start + 1..predicate_end]) {
+        let predicate = &text[predicate_start + 1..predicate_end];
+        if !mentions_test(predicate) {
             search = predicate_end + 1;
             continue;
         }
@@ -140,10 +161,79 @@ fn cfg_test_spans(text: &str) -> Vec<(usize, usize)> {
         let Some(item_end) = end_of_item(text, attr_end + 1) else {
             break;
         };
-        spans.push((attr_start, item_end));
+        spans.push(CfgTestSpan {
+            start: attr_start,
+            end: item_end,
+            test_only: requires_test(predicate),
+        });
         search = item_end;
     }
     spans
+}
+
+/// True when every configuration the predicate admits has `test` on.
+///
+/// `test` and `all(test, unix)` are test-only; `any(test, feature = "x")`
+/// compiles without `test` and is not. A `not(..)` is read as satisfiable
+/// without `test`, so an exotic gate is judged production code rather than
+/// waved through.
+fn requires_test(predicate: &str) -> bool {
+    let predicate = predicate.trim();
+    if let Some(rest) = predicate.strip_prefix("all(") {
+        return arguments(rest).iter().any(|part| requires_test(part));
+    }
+    if let Some(rest) = predicate.strip_prefix("any(") {
+        let parts = arguments(rest);
+        return !parts.is_empty() && parts.iter().all(|part| requires_test(part));
+    }
+    predicate == "test"
+}
+
+/// Top-level comma-separated arguments of a predicate list, closing `)` dropped.
+fn arguments(rest: &str) -> Vec<&str> {
+    let Some(end) = closing_paren(rest) else {
+        return Vec::new();
+    };
+    let inner = &rest[..end];
+    let mut parts = Vec::new();
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut start = 0usize;
+    for (offset, character) in inner.char_indices() {
+        match character {
+            '"' => in_string = !in_string,
+            _ if in_string => {}
+            '(' => depth += 1,
+            ')' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                parts.push(inner[start..offset].trim());
+                start = offset + 1;
+            }
+            _ => {}
+        }
+    }
+    let tail = inner[start..].trim();
+    if !tail.is_empty() {
+        parts.push(tail);
+    }
+    parts
+}
+
+/// Byte index of the `)` closing the list `rest` starts inside.
+fn closing_paren(rest: &str) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut in_string = false;
+    for (offset, character) in rest.char_indices() {
+        match character {
+            '"' => in_string = !in_string,
+            _ if in_string => {}
+            '(' => depth += 1,
+            ')' if depth == 0 => return Some(offset),
+            ')' => depth -= 1,
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Byte index of the delimiter closing the one that opens at `open`.
@@ -208,4 +298,60 @@ fn end_of_item(text: &str, from: usize) -> Option<usize> {
         }
     }
     None
+}
+
+/// Every source file the tree reaches only through a `#[cfg(test)]` module
+/// declaration, checkout-relative and slash-separated.
+///
+/// A module gated in its parent carries no attribute of its own, so a rule that
+/// reads one file at a time sees test-only code as production code and holds it
+/// to a production contract. The set is derived from the declarations the tree
+/// writes, so a module gated tomorrow is covered without an edit here, and a
+/// module that stops being gated leaves the set the same way.
+///
+/// Both spellings of a gated module are covered: the sibling file `<name>.rs`
+/// and everything under the directory `<name>/`.
+///
+/// Only a gate that no configuration satisfies without `test` counts. A module
+/// declared `#[cfg(any(test, feature = "test-fixtures"))]` compiles into a build
+/// that turns the feature on, so it stays production code here.
+#[must_use]
+pub fn test_gated_module_files(root: &Path) -> BTreeSet<String> {
+    let mut directories = BTreeSet::new();
+    let mut files = BTreeSet::new();
+    for (file, text) in rust_sources_with_text(root) {
+        let Some((parent, _)) = file.rsplit_once('/') else {
+            continue;
+        };
+        for span in cfg_test_spans_detailed(&text) {
+            if !span.test_only {
+                continue;
+            }
+            let Some(name) = declared_module_name(&text[span.start..span.end]) else {
+                continue;
+            };
+            let home = module_home(parent, &file);
+            files.insert(format!("{home}/{name}.rs"));
+            directories.insert(format!("{home}/{name}/"));
+        }
+    }
+    for (file, _) in rust_sources_with_text(root) {
+        if directories.iter().any(|prefix| file.starts_with(prefix)) {
+            files.insert(file);
+        }
+    }
+    files
+}
+
+/// Directory a module declared in `file` looks for its children in.
+///
+/// A declaration in `foo/mod.rs`, `lib.rs` or `main.rs` names a child of that
+/// directory. A declaration in `foo/bar.rs` names a child of `foo/bar/`.
+fn module_home<'a>(parent: &'a str, file: &'a str) -> Cow<'a, str> {
+    let stem = file.rsplit_once('/').map_or(file, |(_, name)| name);
+    if matches!(stem, "mod.rs" | "lib.rs" | "main.rs") {
+        Cow::Borrowed(parent)
+    } else {
+        Cow::Owned(format!("{parent}/{}", stem.trim_end_matches(".rs")))
+    }
 }

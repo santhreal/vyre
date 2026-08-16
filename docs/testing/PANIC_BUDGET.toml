@@ -52,12 +52,22 @@ ceiling = 0
 
 [[crate_budget]]
 name = "vyre-runtime"
-ceiling = 4
+# 4 -> 0 measured 2026-08-15 by hygiene-matrix: the four sites are in
+# `pipeline_cache/test_artifact_fixtures.rs`, a module `pipeline_cache/mod.rs`
+# declares under `#[cfg(test)]`, so no build outside `cargo test` holds them.
+ceiling = 0
 
 [[crate_budget]]
 name = "xtask"
-ceiling = 12
+# 12 -> 8 measured 2026-08-15 by hygiene-matrix: the four sites are in
+# `release/package_readiness/archive_contracts.rs`, a module
+# `release/package_readiness/mod.rs` declares under `#[cfg(test)]`, so no build
+# outside `cargo test` holds them.
+ceiling = 8
 
 [[crate_budget]]
 name = "xtask-evidence"
-ceiling = 8
+# 8 -> 1 measured 2026-08-15 by hygiene-matrix: seven sites are in
+# `report_fixture.rs`, a module `lib.rs` declares under `#[cfg(test)]`, so no
+# build outside `cargo test` holds them.
+ceiling = 1

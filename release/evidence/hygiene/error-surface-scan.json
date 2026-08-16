@@ -1,35 +1,35 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=true:worktree=587be6a3b515782d4f5c2d438cfd280a4b2bfe2e4de21819ef31730913109ab1",
+  "source_fingerprint": "git:05fee828fb611fdb1273c3145af35136df94101f:dirty=false",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 268,
+      "line": 278,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 270,
+      "line": 280,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 952,
+      "line": 638,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 998,
+      "line": 684,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1000,
+      "line": 686,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -274,6 +274,24 @@
       "text": "panic!(\"vyre-primitives dense boolean-matvec LUT build failed: {error}\");"
     },
     {
+      "path": "vyre-libs/src/test_parity_oracles.rs",
+      "line": 44,
+      "pattern": "panic_macro",
+      "text": "panic!(\"{}\", self.0);"
+    },
+    {
+      "path": "vyre-libs/src/test_parity_oracles.rs",
+      "line": 118,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
+    },
+    {
+      "path": "vyre-libs/src/test_parity_oracles.rs",
+      "line": 163,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
+    },
+    {
       "path": "vyre-libs/src/parsing/source_cache.rs",
       "line": 253,
       "pattern": "documented_panic_contract",
@@ -467,25 +485,25 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 281,
+      "line": 282,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 324,
+      "line": 325,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 419,
+      "line": 420,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 427,
+      "line": 428,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
