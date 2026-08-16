@@ -206,8 +206,7 @@ pub const fn vyre_primitives::matching::region_dedup_dispatch_grid(count: u32) -
 pub const fn vyre_primitives::math::bigint_add_carry::bigint_add_carry_dispatch_grid(limb_count: u32) -> [u32; 3]
 pub const fn vyre_primitives::math::preconditioner::NewtonSchulzScratch::new() -> Self
 pub const fn vyre_primitives::math::quantized::i4_packed_words(lane_count: u32) -> u32
-pub const fn vyre_primitives::math::scallop_join::scallop_join_dispatch_grid(_n: u32) -> [u32; 3]
-pub const fn vyre_primitives::math::scallop_join_wide::scallop_join_wide_dispatch_grid(_n: u32, _w: u32) -> [u32; 3]
+pub const fn vyre_primitives::math::scallop_join::scallop_join_dispatch_grid(n: u32) -> [u32; 3]
 pub const fn vyre_primitives::math::sparse_selector::SparseKernelSelectedPath::as_str(self) -> &'static str
 pub const fn vyre_primitives::math::sparse_selector::SparseKernelWorkloadClass::as_str(self) -> &'static str
 pub const fn vyre_primitives::parsing::bytecode_dispatch_table_pack::packed_dispatch_table_len(entries_len: usize) -> usize
@@ -361,6 +360,8 @@ pub const vyre_primitives::graph::dominator_frontier::DOMINATOR_FRONTIER_PRED_TA
 pub const vyre_primitives::graph::dominator_frontier::DOMINATOR_FRONTIER_SEED_BUFFER: u32
 pub const vyre_primitives::graph::dominator_frontier::DOMINATOR_FRONTIER_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_primitives::graph::dominator_frontier::OP_ID: &str
+pub const vyre_primitives::graph::dominator_tree::DOMINATOR_TREE_DEPTH_OP_ID: &str
+pub const vyre_primitives::graph::dominator_tree::DOMINATOR_TREE_INTERSECT_STEP_OP_ID: &str
 pub const vyre_primitives::graph::dominator_tree::IDOM_NONE: u32
 pub const vyre_primitives::graph::dominator_tree::OP_ID: &str
 pub const vyre_primitives::graph::exploded::BLOCK_BITS: u32
@@ -585,10 +586,9 @@ pub const vyre_primitives::math::randomized_svd::OP_ID: &str
 pub const vyre_primitives::math::scallop_join::OP_ID: &str
 pub const vyre_primitives::math::scallop_join::PROVENANCE_SELF_CONSUMER: &str
 pub const vyre_primitives::math::scallop_join::SCALLOP_JOIN_WORKGROUP_SIZE: [u32; 3]
-pub const vyre_primitives::math::scallop_join_wide::OP_ID: &str
-pub const vyre_primitives::math::scallop_join_wide::SCALLOP_JOIN_WIDE_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_primitives::math::score_denoise::OP_ID: &str
 pub const vyre_primitives::math::semiring_gemm::OP_ID: &str
+pub const vyre_primitives::math::semiring_gemm::SEMIRING_GEMM_WIDE_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_primitives::math::sheaf_laplacian_eigenvalue::OP_ID: &str
 pub const vyre_primitives::math::sinkhorn::DIVISOR_FLOOR: u32
 pub const vyre_primitives::math::sinkhorn::OP_ID: &str
@@ -1112,6 +1112,12 @@ pub fn vyre_primitives::graph::dominator_frontier::validate_dominator_frontier_i
 pub fn vyre_primitives::graph::dominator_tree::DominatorTreeCpuScratch::new() -> Self
 pub fn vyre_primitives::graph::dominator_tree::cooper_harvey_kennedy_idoms(node_count: u32, entry: u32, edges: &[(u32, u32)]) -> alloc::vec::Vec<core::option::Option<u32>>
 pub fn vyre_primitives::graph::dominator_tree::cpu_ref(node_count: u32, entry: u32, edges: &[(u32, u32)]) -> alloc::vec::Vec<core::option::Option<u32>>
+pub fn vyre_primitives::graph::dominator_tree::dominator_tree_depth(node_count: u32, idom: &str, depth: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::graph::dominator_tree::dominator_tree_depth_body(node_count: u32, idom: &str, depth: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_primitives::graph::dominator_tree::dominator_tree_depth_child(parent_op_id: &str, node_count: u32, idom: &str, depth: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_primitives::graph::dominator_tree::dominator_tree_intersect_step(node_count: u32, pred_edge_count: u32, idom: &str, depth: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::graph::dominator_tree::dominator_tree_intersect_step_body(node_count: u32, idom: &str, depth: &str, changed: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_primitives::graph::dominator_tree::dominator_tree_intersect_step_child(parent_op_id: &str, node_count: u32, idom: &str, depth: &str, changed: &str) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_primitives::graph::dominator_tree::dominator_tree_program(node_count: u32, edge_count: u32, pred_edge_count: u32, idom_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_primitives::graph::dominator_tree::idoms_to_dominator_sets(idoms: &[core::option::Option<u32>], node_count: u32) -> alloc::vec::Vec<alloc::vec::Vec<u32>>
 pub fn vyre_primitives::graph::dominator_tree::lengauer_tarjan_idoms(node_count: u32, entry: u32, edges: &[(u32, u32)]) -> alloc::vec::Vec<core::option::Option<u32>>
@@ -1603,13 +1609,9 @@ pub fn vyre_primitives::math::randomized_svd::try_modified_gram_schmidt_cpu_into
 pub fn vyre_primitives::math::randomized_svd::try_randomized_projection_step(a: &str, omega: &str, y: &str, m: u32, n: u32, l: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_primitives::math::randomized_svd::try_randomized_projection_step_cpu(a: &[f64], omega: &[f64], m: u32, n: u32, l: u32) -> core::result::Result<alloc::vec::Vec<f64>, alloc::string::String>
 pub fn vyre_primitives::math::randomized_svd::try_randomized_projection_step_cpu_into(a: &[f64], omega: &[f64], m: u32, n: u32, l: u32, y: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_primitives::math::scallop_join::cpu_ref(state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, u32)
-pub fn vyre_primitives::math::scallop_join::cpu_ref_into(state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> u32
-pub fn vyre_primitives::math::scallop_join::scallop_join(state: &str, next: &str, join_rules: &str, changed: &str, n: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_primitives::math::scallop_join_wide::cpu_ref(state: &[u32], join_rules: &[u32], n: u32, w: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, u32)
-pub fn vyre_primitives::math::scallop_join_wide::cpu_ref_into(state: &[u32], join_rules: &[u32], n: u32, w: u32, max_iterations: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> u32
-pub fn vyre_primitives::math::scallop_join_wide::scallop_join_wide(state: &str, next: &str, join_rules: &str, changed: &str, n: u32, w: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_primitives::math::scallop_join_wide::semiring_gemm_wide(a: &str, b: &str, c: &str, seed: core::option::Option<&str>, m: u32, n: u32, k: u32, w: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::math::scallop_join::cpu_ref(state: &[u32], join_rules: &[u32], n: u32, w: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_primitives::math::scallop_join::cpu_ref_into(state: &[u32], join_rules: &[u32], n: u32, w: u32, max_iterations: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_primitives::math::scallop_join::scallop_join(state: &str, next: &str, join_rules: &str, changed: &str, n: u32, w: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_primitives::math::score_denoise::score_denoise_step(x: &str, score: &str, noise: &str, alpha: &str, beta: &str, sigma: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_primitives::math::score_denoise::score_denoise_step_cpu(x: &[f64], score: &[f64], noise: &[f64], alpha: f64, beta: f64, sigma: f64) -> alloc::vec::Vec<f64>
 pub fn vyre_primitives::math::score_denoise::score_denoise_step_cpu_into(x: &[f64], score: &[f64], noise: &[f64], alpha: f64, beta: f64, sigma: f64, out: &mut alloc::vec::Vec<f64>)
@@ -1617,6 +1619,7 @@ pub fn vyre_primitives::math::score_denoise::try_score_denoise_step_cpu_into(x: 
 pub fn vyre_primitives::math::semiring_gemm::semiring_gemm(a: &str, b: &str, c: &str, m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_primitives::math::semiring_gemm::semiring_gemm_cpu(a: &[u32], b: &[u32], m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring) -> alloc::vec::Vec<u32>
 pub fn vyre_primitives::math::semiring_gemm::semiring_gemm_cpu_into(a: &[u32], b: &[u32], m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring, c: &mut alloc::vec::Vec<u32>)
+pub fn vyre_primitives::math::semiring_gemm::semiring_gemm_wide(a: &str, b: &str, c: &str, seed: core::option::Option<&str>, m: u32, n: u32, k: u32, w: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_primitives::math::semiring_gemm::try_semiring_gemm_cpu(a: &[u32], b: &[u32], m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
 pub fn vyre_primitives::math::semiring_gemm::try_semiring_gemm_cpu_into(a: &[u32], b: &[u32], m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring, c: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::math::sheaf_laplacian_eigenvalue::cpu_ref(restriction_diag: &[f64], v_init: &[f64], iterations: u32) -> (f64, alloc::vec::Vec<f64>)
@@ -1708,8 +1711,6 @@ pub fn vyre_primitives::nn::attention_passes::attention_write_pass_with_bases(q:
 pub fn vyre_primitives::nn::attention_stability::bounded_exp_arg(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::nn::attention_stability::bounded_score(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::nn::attention_stability::direct_score_expr(q: &str, k: &str, row: u32, col: u32, dimension: u32, scale: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
-pub fn vyre_primitives::nn::attention_stability::finite_or(value: vyre_foundation::ir_inner::model::generated::Expr, replacement: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
-pub fn vyre_primitives::nn::attention_stability::flush_tiny(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::nn::attention_stability::positive_denominator(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::nn::f32_stability::finite_or(value: vyre_foundation::ir_inner::model::generated::Expr, replacement: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::nn::f32_stability::flush_tiny(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
@@ -2051,7 +2052,6 @@ pub mod vyre_primitives::math::qsvt
 pub mod vyre_primitives::math::quantized
 pub mod vyre_primitives::math::randomized_svd
 pub mod vyre_primitives::math::scallop_join
-pub mod vyre_primitives::math::scallop_join_wide
 pub mod vyre_primitives::math::score_denoise
 pub mod vyre_primitives::math::semiring_gemm
 pub mod vyre_primitives::math::sheaf_laplacian_eigenvalue

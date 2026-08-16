@@ -8,15 +8,12 @@
 #[non_exhaustive] pub struct vyre_libs::BuildOptions
 #[non_exhaustive] pub struct vyre_libs::ProgramDescriptor
 #[non_exhaustive] pub struct vyre_libs::TensorRef
-#[non_exhaustive] pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens
 impl core::cmp::Eq for vyre_libs::rule::RuleCondition
 impl core::cmp::PartialEq for vyre_libs::rule::RuleCondition
 impl core::convert::From<vyre_libs::scan::RegexCompileError> for vyre_libs::scan::RegexDfaError
 impl core::convert::From<vyre_libs::security::AnalysisFactError> for vyre_libs::security::SecurityRelationAnalyzerError
 impl core::convert::From<vyre_primitives::matching::nfa_to_dfa::NfaToDfaError> for vyre_libs::scan::RegexDfaError
-impl core::default::Default for vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher
 impl core::default::Default for vyre_libs::nn::inference_graph::Ds4FlashConfig
-impl core::default::Default for vyre_libs::parsing::c::sema::LazyScopeTable
 impl core::default::Default for vyre_libs::scan::RegexReplayPolicy
 impl core::error::Error for vyre_libs::analysis::diagnostic_aggregation::DiagnosticAggregationError
 impl core::error::Error for vyre_libs::analysis::incremental_invalidation::IncrementalInvalidationError
@@ -28,11 +25,6 @@ impl core::error::Error for vyre_libs::encoding::matroid_exact_megakernel::Exact
 impl core::error::Error for vyre_libs::encoding::matroid_megakernel_scheduler::MatroidScheduleError
 impl core::error::Error for vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlanError
 impl core::error::Error for vyre_libs::math::succinct::SuccinctBuildError
-impl core::error::Error for vyre_libs::parsing::c::lower::PgReferenceDecodeError
-impl core::error::Error for vyre_libs::parsing::c::parse::gnu_builtins::GnuBuiltinError
-impl core::error::Error for vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmError
-impl core::error::Error for vyre_libs::parsing::c::parse::vast::CReferenceDecodeError
-impl core::error::Error for vyre_libs::parsing::c::preprocess::CPreprocessorError
 impl core::error::Error for vyre_libs::parsing::lr_tables::ParseError
 impl core::error::Error for vyre_libs::scan::PostProcessError
 impl core::error::Error for vyre_libs::scan::RegexCompileError
@@ -45,7 +37,6 @@ impl core::error::Error for vyre_libs::scheduling::megakernel_schedule::Megakern
 impl core::error::Error for vyre_libs::scheduling::multi_corpus_batching::MultiCorpusBatchError
 impl core::error::Error for vyre_libs::security::SecurityRelationAnalyzerError
 impl core::error::Error for vyre_libs::visual::GaussianKernelError
-impl core::fmt::Debug for vyre_libs::parsing::c::sema::LazyScopeTable
 impl core::fmt::Display for vyre_libs::analysis::diagnostic_aggregation::DiagnosticAggregationError
 impl core::fmt::Display for vyre_libs::analysis::incremental_invalidation::IncrementalInvalidationError
 impl core::fmt::Display for vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
@@ -56,11 +47,6 @@ impl core::fmt::Display for vyre_libs::encoding::matroid_exact_megakernel::Exact
 impl core::fmt::Display for vyre_libs::encoding::matroid_megakernel_scheduler::MatroidScheduleError
 impl core::fmt::Display for vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlanError
 impl core::fmt::Display for vyre_libs::math::succinct::SuccinctBuildError
-impl core::fmt::Display for vyre_libs::parsing::c::lower::PgReferenceDecodeError
-impl core::fmt::Display for vyre_libs::parsing::c::parse::gnu_builtins::GnuBuiltinError
-impl core::fmt::Display for vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmError
-impl core::fmt::Display for vyre_libs::parsing::c::parse::vast::CReferenceDecodeError
-impl core::fmt::Display for vyre_libs::parsing::c::preprocess::CPreprocessorError
 impl core::fmt::Display for vyre_libs::parsing::lr_tables::ParseError
 impl core::fmt::Display for vyre_libs::scan::PostProcessError
 impl core::fmt::Display for vyre_libs::scan::RegexCompileError
@@ -74,8 +60,6 @@ impl core::fmt::Display for vyre_libs::scheduling::multi_corpus_batching::MultiC
 impl core::fmt::Display for vyre_libs::security::SecurityRelationAnalyzerError
 impl core::fmt::Display for vyre_libs::visual::GaussianKernelError
 impl inventory::Collect for vyre_libs::operation_catalog::ConvergenceContract
-impl vyre_foundation::program_dispatch::ProgramDispatcher for vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher
-impl vyre_foundation::program_dispatch::ProgramDispatcher for vyre_libs::test_support::ReferenceEvalDispatcher
 impl vyre_libs::BufferDescriptor
 impl vyre_libs::BuildOptions
 impl vyre_libs::ProgramDescriptor
@@ -92,7 +76,6 @@ impl vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalResidentScr
 impl vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveFourRussiansDenseGraph
 impl vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveSparseQueueGraph
 impl vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveTraversalGraph
-impl vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher
 impl vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::ResidentCsrQueueBatchScratch
 impl vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph
 impl vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueScratch
@@ -101,24 +84,17 @@ impl vyre_libs::graph::dispatch::persistent_bfs::ResidentBfsGraph
 impl vyre_libs::intern::PerfectHash
 impl vyre_libs::math::linalg::Dot
 impl vyre_libs::math::linalg::Matmul
-impl vyre_libs::math::linalg::MatmulBias
-impl vyre_libs::math::linalg::MatmulBiasTiled
 impl vyre_libs::math::linalg::MatmulTiled
 impl vyre_libs::nn::attention::Attention
 impl vyre_libs::nn::attention::Softmax
 impl vyre_libs::nn::linear::Linear
 impl vyre_libs::nn::linear::QuantizedLinear4BitSpec
 impl vyre_libs::nn::norm::LayerNorm
-impl vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind
-impl vyre_libs::parsing::c::preprocess::CLineSplicedSource
-impl vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind
-impl vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind
-impl vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens
-impl vyre_libs::parsing::c::preprocess::source::CIncludeRequest
-impl vyre_libs::parsing::c::sema::LazyScopeTable
 impl vyre_libs::parsing::lr_tables::Action
 impl vyre_libs::parsing::lr_tables::LrTables
 impl vyre_libs::parsing::source_cache::SourceHash
+impl vyre_libs::prelude::MatmulBias
+impl vyre_libs::prelude::MatmulBiasTiled
 impl vyre_libs::reasoning::dnnf::DnnfDag
 impl vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch
 impl vyre_libs::reasoning::finite_category::FiniteCategory
@@ -187,12 +163,6 @@ pub const fn vyre_libs::device::device_resident_token_fact_graph::TokenFactNode:
 pub const fn vyre_libs::encoding::bitset_transform_pipeline::dense_matvec_frontier_words(tile_count: u32) -> u32
 pub const fn vyre_libs::encoding::parsing_dispatch_pipeline::self_hosted_dispatch_table_words(entries_len: usize) -> usize
 pub const fn vyre_libs::graph::dispatch::vast_tree_walk::primitive_op_ids() -> [&'static str; 2]
-pub const fn vyre_libs::parsing::c::parse::structure_statement::c11_statement_bounds_scratch_words(num_tokens: u32) -> u32
-pub const fn vyre_libs::parsing::c::pipeline::stages::stringification_token_type() -> u32
-pub const fn vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::token_id(self) -> u32
-pub const fn vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::token_id(self) -> u32
-pub const fn vyre_libs::parsing::c::preprocess::source::CIncludeRequest::is_include_next(&self) -> bool
-pub const fn vyre_libs::parsing::c::preprocess::synthesis::stringification_token_type() -> u32
 pub const fn vyre_libs::parsing::lr_tables::Action::pack(self) -> u32
 pub const fn vyre_libs::parsing::lr_tables::Action::unpack(word: u32) -> Self
 pub const fn vyre_libs::reasoning::zx_diagram::ZxColor::flip(self) -> Self
@@ -252,308 +222,6 @@ pub const vyre_libs::nn::quant::Q2_K_SUPER_BLOCK_SIZE: u32
 pub const vyre_libs::nn::quant::Q4_K_BLOCKS_PER_SUPER: u32
 pub const vyre_libs::nn::quant::Q4_K_BLOCK_SIZE: u32
 pub const vyre_libs::nn::quant::Q4_K_SUPER_BLOCK_SIZE: u32
-pub const vyre_libs::parsing::c::lex::keyword::C_KEYWORDS: &[(&str, u32)]
-pub const vyre_libs::parsing::c::lower::C_AST_PG_CATEGORY_CONTROL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_CATEGORY_DECLARATION: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_CATEGORY_EXPRESSION: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_CATEGORY_GNU: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_CATEGORY_NONE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_CASE_VALUE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_FIRST_CHILD: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_GOTO_TARGET: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_NEXT_SIBLING: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_NONE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_PARENT: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_ROWS_PER_NODE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_STRIDE_U32: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_SWITCH_CASE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_SWITCH_DEFAULT: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_EDGE_SWITCH_SELECTOR: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_AGGREGATE_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ALIGNOF: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ARRAY_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ARRAY_DESIGNATOR_OR_SUBSCRIPT: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ASM_CLOBBER: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ASM_GOTO_LABEL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ASM_INPUT: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ASM_OUTPUT: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ASM_QUALIFIER: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ASM_TEMPLATE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ASSIGNMENT: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_BIT_FIELD_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_BREAK: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_CASE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_CONTINUE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_DECLARATION: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_DEFAULT: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_ENUMERATOR_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_EXPRESSION: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_FIELD_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_FIELD_DESIGNATOR_OR_MEMBER_ACCESS: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_FUNCTION_DECLARATOR: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_FUNCTION_DEFINITION: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_FUNCTION_POINTER_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_GNU_ATTRIBUTE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_GNU_ATTRIBUTE_DETAIL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_GOTO: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_INITIALIZER_LIST: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_INLINE_ASM: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_LABEL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_LOOP: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_NONE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_POINTER_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_RANGE_DESIGNATOR: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_RETURN: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_SELECTION: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_STATEMENT_EXPR: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_STATIC_ASSERT_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_SWITCH: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_TYPEDEF_DECL: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_ROLE_UNREACHABLE: u32
-pub const vyre_libs::parsing::c::lower::C_AST_PG_SEMANTIC_NODE_STRIDE_U32: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GNU_BUILTIN_EXPECT_OPCODE: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GNU_BUILTIN_OBJECT_SIZE_OPCODE: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GNU_BUILTIN_OFFSETOF_OPCODE: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GNU_BUILTIN_PREFETCH_OPCODE: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GNU_BUILTIN_RESERVED_PREFIX: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GNU_BUILTIN_UNREACHABLE_OPCODE: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GPU_BUILTIN_HASH_TABLE_SEED: u32
-pub const vyre_libs::parsing::c::parse::gnu_builtins::GPU_BUILTIN_HASH_TABLE_SIZE: usize
-pub const vyre_libs::parsing::c::parse::inline_asm::GNU_INLINE_ASM_OPCODE: u32
-pub const vyre_libs::parsing::c::parse::structure_statement::C11_STATEMENT_BOUNDS_SCRATCH: &str
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ALIGNOF_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ARRAY_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ARRAY_SUBSCRIPT_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ASM_CLOBBERS_LIST: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ASM_GOTO_LABELS: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ASM_INPUT_OPERAND: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ASM_OUTPUT_OPERAND: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ASM_QUALIFIER: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ASM_TEMPLATE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ASSIGN_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_ALIAS: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_ALIGNED: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_ALLOC_ALIGN: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_ALLOC_SIZE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_ALWAYS_INLINE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_ASSUME_ALIGNED: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_CLEANUP: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_COLD: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_CONST: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_CONSTRUCTOR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_DEPRECATED: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_DESTRUCTOR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_DLLEXPORT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_DLLIMPORT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_FALLTHROUGH: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_FLATTEN: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_FORMAT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_FORMAT_ARG: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_GNU_INLINE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_HOT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_IFUNC: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_INTERRUPT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_LEAF: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_MALLOC: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_MODE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_MS_ABI: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_NAKED: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_NOINLINE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_NONNULL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_NORETURN: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_NOTHROW: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_NO_INSTRUMENT_FUNCTION: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_NO_SANITIZE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_PACKED: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_PURE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_RETURNS_NONNULL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_RETURNS_TWICE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_SECTION: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_SELECTANY: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_SENTINEL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_SYSV_ABI: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_TARGET: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_TLS_MODEL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_UNUSED: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_USED: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_VECTOR_SIZE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_VISIBILITY: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_WARN_UNUSED_RESULT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_WEAK: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ATTRIBUTE_WEAKREF: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BIT_FIELD_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BREAK_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_BPF_CORE_INTRIN_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_CHOOSE_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_CLASSIFY_TYPE_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_CONSTANT_P_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_EXPECT_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_LIBC_INTRIN_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_OBJECT_SIZE_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_OFFSETOF_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_OVERFLOW_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_PREFETCH_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_TYPES_COMPATIBLE_P_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_BUILTIN_UNREACHABLE_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_CASE_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_CAST_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_COMPOUND_LITERAL_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_CONDITIONAL_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_CONTINUE_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_DEFAULT_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_DO_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ELSE_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ENUMERATOR_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_ENUM_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_FIELD_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_FOR_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_FUNCTION_DECLARATOR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_FUNCTION_DEFINITION: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_GENERIC_SELECTION_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_GNU_ATTRIBUTE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_GNU_LABEL_ADDRESS_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_GNU_LOCAL_LABEL_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_GNU_STATEMENT_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_GOTO_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_IF_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_INITIALIZER_LIST: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_INLINE_ASM: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_LABEL_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_MEMBER_ACCESS_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_POINTER_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_RANGE_DESIGNATOR_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_RETURN_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_SIZEOF_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_STATIC_ASSERT_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_STRUCT_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_SWITCH_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_TYPEDEF_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_UNARY_EXPR: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_UNION_DECL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_AST_KIND_WHILE_STMT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_EXPR_ASSOC_LEFT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_EXPR_ASSOC_NONE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_EXPR_ASSOC_RIGHT: u32
-pub const vyre_libs::parsing::c::parse::vast::C_EXPR_SHAPE_BINARY: u32
-pub const vyre_libs::parsing::c::parse::vast::C_EXPR_SHAPE_CONDITIONAL: u32
-pub const vyre_libs::parsing::c::parse::vast::C_EXPR_SHAPE_NONE: u32
-pub const vyre_libs::parsing::c::parse::vast::C_EXPR_SHAPE_STRIDE_U32: u32
-pub const vyre_libs::parsing::c::pipeline::stages::C11_AST_MAX_TOK_SCAN: u32
-pub const vyre_libs::parsing::c::pipeline::stages::C_MACRO_KIND_FUNCTION_LIKE: u32
-pub const vyre_libs::parsing::c::pipeline::stages::C_MACRO_KIND_OBJECT_LIKE: u32
-pub const vyre_libs::parsing::c::pipeline::stages::C_MACRO_REPLACEMENT_LITERAL: u32
-pub const vyre_libs::parsing::c::pipeline::stages::C_MACRO_SOURCE_COUNT_BYTES: u32
-pub const vyre_libs::parsing::c::pipeline::stages::C_TOKEN_PASTE_RULES: &[(u32, u32, u32)]
-pub const vyre_libs::parsing::c::preprocess::expansion::C_MACRO_KIND_FUNCTION_LIKE: u32
-pub const vyre_libs::parsing::c::preprocess::expansion::C_MACRO_KIND_OBJECT_LIKE: u32
-pub const vyre_libs::parsing::c::preprocess::expansion::C_MACRO_REPLACEMENT_LITERAL: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::BINDING_BYTES_CONSUMED_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::BINDING_OK_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::BINDING_START_POS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::BINDING_VALUE_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::MAX_CONTENT_BYTES: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::BINDING_BYTES_IN: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::BINDING_COMMENT_MASK_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_ARGS_LEN_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_ARGS_START_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_BODY_LEN_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_BODY_START_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_DIRECTIVE_KINDS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_IS_FUNCTION_LIKE_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_NAME_LEN_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_NAME_START_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_TOK_LENS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::BINDING_TOK_STARTS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_define_parse::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::BINDING_DIRECTIVE_KINDS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::BINDING_DIRECTIVE_VALUES: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::BINDING_TOK_LENS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::BINDING_TOK_STARTS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::BINDING_TOK_TYPES: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::MAX_KEYWORD_LEN: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_directive_metadata::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_DIRECTIVE_KINDS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_DIRECTIVE_VALUES: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_MACRO_NAMES_PACKED: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_MACRO_OFFSETS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_MACRO_VALUES: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_TOK_LENS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::BINDING_TOK_STARTS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::INVALID_EXPR_VALUE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::MAX_IDENT_LEN: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::MAX_PAYLOAD_BYTES: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_ADD: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_BAND: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_BOR: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_BXOR: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_DIV: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_EQ: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_GE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_GT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_LAND: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_LE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_LOR: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_LPAREN: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_LT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_MOD: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_MUL: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_NE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_SHL: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_SHR: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_SUB: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_TERNARY_Q: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_UN_BNOT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_UN_NEG: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_UN_NOT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::OP_UN_PLUS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_if_expression_abi::STACK_DEPTH: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::BINDING_DIRECTIVE_KINDS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::BINDING_DIRECTIVE_VALUES: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::BINDING_MACRO_NAMES_PACKED: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::BINDING_MACRO_OFFSETS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::BINDING_TOK_LENS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::BINDING_TOK_STARTS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_ifdef_value::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::BINDING_DIRECTIVE_KINDS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::BINDING_IS_SYSTEM_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::BINDING_PATH_LEN_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::BINDING_PATH_START_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::BINDING_TOK_LENS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::BINDING_TOK_STARTS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_include_parse::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::BINDING_BYTES_CONSUMED_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::BINDING_START_POS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::BINDING_VALUE_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::MAX_DIGITS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::MAX_SUFFIX: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::gpu_pipeline::MAX_INCLUDE_DEPTH: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_undef_parse::BINDING_DIRECTIVE_KINDS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_undef_parse::BINDING_NAME_LEN_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_undef_parse::BINDING_NAME_START_OUT: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_undef_parse::BINDING_SOURCE: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_undef_parse::BINDING_TOK_LENS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_undef_parse::BINDING_TOK_STARTS: u32
-pub const vyre_libs::parsing::c::preprocess::gpu_undef_parse::OP_ID: &str
-pub const vyre_libs::parsing::c::preprocess::materialization::C_MACRO_SOURCE_COUNT_BYTES: u32
-pub const vyre_libs::parsing::c::preprocess::synthesis::C_TOKEN_PASTE_RULES: &[(u32, u32, u32)]
-pub const vyre_libs::parsing::c::sema::lookup::DECL_KIND_ENUM_CONSTANT: u32
-pub const vyre_libs::parsing::c::sema::lookup::DECL_KIND_FUNCTION: u32
-pub const vyre_libs::parsing::c::sema::lookup::DECL_KIND_FUNCTION_DECL: u32
-pub const vyre_libs::parsing::c::sema::lookup::DECL_KIND_LABEL: u32
-pub const vyre_libs::parsing::c::sema::lookup::DECL_KIND_NONE: u32
-pub const vyre_libs::parsing::c::sema::lookup::DECL_KIND_TYPEDEF: u32
-pub const vyre_libs::parsing::c::sema::lookup::DECL_KIND_VARIABLE: u32
 pub const vyre_libs::parsing::core::ast::node::AST_ADD: u32
 pub const vyre_libs::parsing::core::ast::node::AST_ASSIGN: u32
 pub const vyre_libs::parsing::core::ast::node::AST_CALL: u32
@@ -694,22 +362,6 @@ pub enum vyre_libs::nn::conv::DepthwiseCausalConv1dError
 pub enum vyre_libs::nn::model::DenseGatedMlpError
 pub enum vyre_libs::nn::norm::GatedRmsNormError
 pub enum vyre_libs::nn::norm::LastDimL2NormError
-pub enum vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind
-pub enum vyre_libs::parsing::c::lower::PgReferenceDecodeError
-pub enum vyre_libs::parsing::c::parse::vast::CReferenceDecodeError
-pub enum vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnosticKind
-pub enum vyre_libs::parsing::c::pipeline::stages::CIncludeStyle
-pub enum vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind
-pub enum vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind
-pub enum vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind
-pub enum vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind
-pub enum vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventResidency
-pub enum vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload
-pub enum vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationKind
-pub enum vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency
-pub enum vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEventKind
-pub enum vyre_libs::parsing::c::preprocess::source::CIncludeStyle
-pub enum vyre_libs::parsing::c::sema::DeclKind
 pub enum vyre_libs::parsing::lr_tables::Action
 pub enum vyre_libs::parsing::lr_tables::ParseError
 pub enum vyre_libs::reasoning::dnnf::DnnfGate
@@ -1052,10 +704,6 @@ pub fn vyre_libs::graph::dispatch::adaptive_traverse::upload_resident_adaptive_t
 pub fn vyre_libs::graph::dispatch::alias_registry::alias_union_registered(registry: &vyre_primitives::graph::alias_registry::AliasRegistry) -> bool
 pub fn vyre_libs::graph::dispatch::alias_registry::build_default_registry() -> vyre_primitives::graph::alias_registry::AliasRegistry
 pub fn vyre_libs::graph::dispatch::alias_registry::lookup_alias_op<'a>(registry: &'a vyre_primitives::graph::alias_registry::AliasRegistry, op_id: &str) -> core::option::Option<&'a vyre_primitives::graph::alias_registry::AliasOpDescriptor>
-pub fn vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher::default() -> Self
-pub fn vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], _grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher::new() -> Self
-pub fn vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher::with_persistent_bfs_alias(self, generator: &'static str) -> Self
 pub fn vyre_libs::graph::dispatch::csr_bidirectional::bidirectional_closure_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, inputs: vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::graph::dispatch::csr_bidirectional::bidirectional_closure_via_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, inputs: vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32], current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::graph::dispatch::csr_bidirectional::bidirectional_closure_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, inputs: vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32], scratch: &mut vyre_libs::graph::dispatch::csr_bidirectional::BidirectionalGpuScratch, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
@@ -1208,17 +856,6 @@ pub fn vyre_libs::math::linalg::Matmul::new(a: vyre_libs::TensorRef, b: vyre_lib
 pub fn vyre_libs::math::linalg::Matmul::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::math::linalg::Matmul::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::math::linalg::Matmul::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::math::linalg::MatmulBias::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::math::linalg::MatmulTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
 pub fn vyre_libs::math::linalg::MatmulTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::math::linalg::MatmulTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
@@ -1391,187 +1028,6 @@ pub fn vyre_libs::nn::quant::q4_k_unpack(packed: &str, scales: &str, mins: &str,
 pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs::operation_catalog::ConvergenceContract>
 pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
-pub fn vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind::from_token(token: u32) -> core::option::Option<Self>
-pub fn vyre_libs::parsing::c::lex::diagnostics::first_c11_lexer_diagnostic(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32]) -> core::option::Option<vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnostic>
-pub fn vyre_libs::parsing::c::lex::keyword::c_keyword(tok_types: &str, tok_starts: &str, tok_lens: &str, counts: &str, haystack: &str, keyword_map: &str, max_tokens: u32, num_keywords: u32, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::keyword::c_keyword_map_words() -> alloc::vec::Vec<u32>
-pub fn vyre_libs::parsing::c::lex::keyword::c_keyword_packed_haystack(tok_types: &str, tok_starts: &str, tok_lens: &str, counts: &str, haystack: &str, keyword_map: &str, max_tokens: u32, num_keywords: u32, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32], haystack: &[u8]) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::parsing::c::lex::lexer::c11_compact_sparse_tokens(sparse_types: &str, sparse_starts: &str, sparse_lens: &str, inclusive_offsets: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_compact_sparse_tokens_output(sparse_types: &str, sparse_starts: &str, sparse_lens: &str, inclusive_offsets: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lex_digraphs(tok_types: &str, tok_starts: &str, tok_lens: &str, tok_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lex_regular_single_pass(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32, digraph_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lex_single_pass(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32, digraph_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_ranked(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_no_directives_no_backscan(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_packed_haystack_with_block_totals(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, scratch_counts: &str, block_totals: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_packed_haystack_with_flags(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_packed_haystack_with_flags_no_directives(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_packed_haystack_with_flags_no_directives_no_backscan(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_u8_haystack_with_flags(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lower::PgReferenceDecodeError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_libs::parsing::c::lower::c_lower_ast_to_pg_nodes(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_pg_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lower::c_lower_ast_to_pg_semantic_graph(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_pg_nodes: &str, out_pg_edges: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lower::c_lower_ast_to_pg_semantic_graph_with_pg(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_plain_pg_nodes: &str, out_pg_nodes: &str, out_pg_edges: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lower::c_lower_ast_to_pg_semantic_graph_with_pg_no_control_resolution(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_plain_pg_nodes: &str, out_pg_nodes: &str, out_pg_edges: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes(vast_node_bytes: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_libs::parsing::c::lower::reference_ast_to_pg_semantic_graph(vast_node_bytes: &[u8]) -> vyre_libs::parsing::c::lower::SemanticPgReference
-pub fn vyre_libs::parsing::c::lower::try_reference_ast_to_pg_nodes(vast_node_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<u8>, vyre_libs::parsing::c::lower::PgReferenceDecodeError>
-pub fn vyre_libs::parsing::c::lower::try_reference_ast_to_pg_semantic_graph(vast_node_bytes: &[u8]) -> core::result::Result<vyre_libs::parsing::c::lower::SemanticPgReference, vyre_libs::parsing::c::lower::PgReferenceDecodeError>
-pub fn vyre_libs::parsing::c::parse::declarations::opt_propagate_type_specifiers(tok_types: &str, tok_depths: &str, node_out: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::gnu_builtins::GnuBuiltinError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_libs::parsing::c::parse::gnu_builtins::c11_gnu_builtins_pass(ast_opcodes: &str, out_ast_opcodes: &str, num_ast_nodes: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::gnu_builtins::gpu_builtin_hash_table_words() -> alloc::vec::Vec<u32>
-pub fn vyre_libs::parsing::c::parse::gnu_builtins::try_classify_gnu_builtin_name(name: &[u8]) -> core::result::Result<core::option::Option<u32>, vyre_libs::parsing::c::parse::gnu_builtins::GnuBuiltinError>
-pub fn vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_libs::parsing::c::parse::inline_asm::c11_gnu_inline_asm_pass(ast_opcodes: &str, out_asm_blocks: &str, num_ast_nodes: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::inline_asm::try_classify_gnu_inline_asm_tokens(tok_types: &[u32], asm_token: usize) -> core::result::Result<vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary, vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmError>
-pub fn vyre_libs::parsing::c::parse::structure::c11_build_call_graph(calls: &str, fn_hashes: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_calls: vyre_foundation::ir_inner::model::generated::Expr, num_functions: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_edges: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::structure::c11_extract_calls(tok_types: &str, paren_pairs: &str, functions: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, num_functions: vyre_foundation::ir_inner::model::generated::Expr, out_calls: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::structure::c11_extract_functions(tok_types: &str, paren_pairs: &str, brace_pairs: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_functions: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::structure_statement::c11_statement_bounds(tok_types: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_statements: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_libs::parsing::c::parse::vast::c11_annotate_global_typedef_names_fast(vast_nodes: &str, global_typedef_hashes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, num_global_typedefs: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_annotate_typedef_names(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_annotate_typedef_names_packed_haystack(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_annotate_typedef_names_precomputed_context(vast_nodes: &str, haystack: &str, decl_contexts: &str, visible_type: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_annotate_typedef_names_precomputed_context_packed_haystack(vast_nodes: &str, haystack: &str, decl_contexts: &str, visible_type: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_annotate_typedef_names_precomputed_scope(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_annotate_typedef_names_precomputed_scope_packed_haystack(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_build_expression_shape_nodes(raw_vast_nodes: &str, typed_vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_expr_shape_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_build_expression_shape_nodes_no_conditional(raw_vast_nodes: &str, typed_vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_expr_shape_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_build_vast_nodes(tok_types: &str, tok_starts: &str, tok_lens: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_vast_nodes: &str, out_count: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_build_vast_nodes_uses_global_last_child(num_tokens: u32) -> bool
-pub fn vyre_libs::parsing::c::parse::vast::c11_classify_annotated_vast_node_kinds_precomputed_context(vast_nodes: &str, decl_contexts: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_typed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_classify_vast_node_kinds(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_typed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_classify_vast_node_kinds_precomputed_context(vast_nodes: &str, decl_contexts: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_typed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_link_vast_typedef_symbols(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_linked_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_precompute_vast_decl_contexts(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_decl_contexts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_precompute_vast_decl_prefix_starts(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_decl_contexts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_precompute_vast_scopes(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_scoped_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_precompute_vast_scopes_uses_global_stack(num_nodes: u32) -> bool
-pub fn vyre_libs::parsing::c::parse::vast::c11_precompute_vast_visible_type(vast_nodes: &str, haystack: &str, decl_contexts: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_visible_type: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_precompute_vast_visible_type_packed_haystack(vast_nodes: &str, haystack: &str, decl_contexts: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_visible_type: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_prehash_vast_identifiers(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_hashed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::c11_prehash_vast_identifiers_packed_haystack(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_hashed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::parse::vast::reference_c11_annotate_typedef_names(vast_node_bytes: &[u8], haystack: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_libs::parsing::c::parse::vast::reference_c11_build_expression_shape_nodes(raw_vast_node_bytes: &[u8], typed_vast_node_bytes: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_libs::parsing::c::parse::vast::reference_c11_build_vast_nodes(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32]) -> alloc::vec::Vec<u8>
-pub fn vyre_libs::parsing::c::parse::vast::reference_c11_classify_vast_node_kinds(vast_node_bytes: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_libs::parsing::c::parse::vast::try_reference_c11_annotate_typedef_names(vast_node_bytes: &[u8], haystack: &[u8]) -> core::result::Result<alloc::vec::Vec<u8>, vyre_libs::parsing::c::parse::vast::CReferenceDecodeError>
-pub fn vyre_libs::parsing::c::parse::vast::try_reference_c11_build_expression_shape_nodes(raw_vast_node_bytes: &[u8], typed_vast_node_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<u8>, vyre_libs::parsing::c::parse::vast::CReferenceDecodeError>
-pub fn vyre_libs::parsing::c::parse::vast::try_reference_c11_classify_vast_node_kinds(vast_node_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<u8>, vyre_libs::parsing::c::parse::vast::CReferenceDecodeError>
-pub fn vyre_libs::parsing::c::pipeline::source_cache::get_or_build_c11_pipeline(cache: &vyre_libs::parsing::c::pipeline::source_cache::C11PipelineCache, source: &[u8], extra: &[u8]) -> alloc::sync::Arc<vyre_libs::parsing::c::pipeline::source_cache::C11PipelinePrograms>
-pub fn vyre_libs::parsing::c::pipeline::stages::CPreprocessorSourceManager::load_include(&self, request: &vyre_libs::parsing::c::preprocess::source::CIncludeRequest) -> core::result::Result<vyre_libs::parsing::c::preprocess::source::CSourceFile, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::pipeline::stages::ast_shunting_yard(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_annotate_typedef_names(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_annotate_typedef_names_packed_haystack(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_annotate_typedef_names_precomputed_context(vast_nodes: &str, haystack: &str, decl_contexts: &str, visible_type: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_annotate_typedef_names_precomputed_context_packed_haystack(vast_nodes: &str, haystack: &str, decl_contexts: &str, visible_type: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_annotate_typedef_names_precomputed_scope(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_annotate_typedef_names_precomputed_scope_packed_haystack(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_annotated_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_build_expression_shape_nodes(raw_vast_nodes: &str, typed_vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_expr_shape_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_build_vast_nodes(tok_types: &str, tok_starts: &str, tok_lens: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_vast_nodes: &str, out_count: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_classify_vast_node_kinds(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_typed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_extract_calls(tok_types: &str, paren_pairs: &str, functions: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, num_functions: vyre_foundation::ir_inner::model::generated::Expr, out_calls: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_extract_functions(tok_types: &str, paren_pairs: &str, brace_pairs: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_functions: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_gnu_builtins_pass(ast_opcodes: &str, out_ast_opcodes: &str, num_ast_nodes: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_gnu_inline_asm_pass(ast_opcodes: &str, out_asm_blocks: &str, num_ast_nodes: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_lex_digraphs(tok_types: &str, tok_starts: &str, tok_lens: &str, tok_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_lexer(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_link_vast_typedef_symbols(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_linked_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_precompute_vast_decl_contexts(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_decl_contexts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_precompute_vast_scopes(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_scoped_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_prehash_vast_identifiers(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_hashed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c11_prehash_vast_identifiers_packed_haystack(vast_nodes: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_hashed_vast_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c_keyword(tok_types: &str, tok_starts: &str, tok_lens: &str, counts: &str, haystack: &str, keyword_map: &str, max_tokens: u32, num_keywords: u32, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c_keyword_packed_haystack(tok_types: &str, tok_starts: &str, tok_lens: &str, counts: &str, haystack: &str, keyword_map: &str, max_tokens: u32, num_keywords: u32, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c_lower_ast_to_pg_nodes(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_pg_nodes: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c_lower_ast_to_pg_semantic_graph(vast_nodes: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_pg_nodes: &str, out_pg_edges: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c_sema_scope(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_scope_tree: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c_sema_scope_packed_haystack(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_scope_tree: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::c_translation_phase_line_splice(source: &[u8]) -> vyre_libs::parsing::c::preprocess::CLineSplicedSource
-pub fn vyre_libs::parsing::c::pipeline::stages::classify_c_preprocessor_side_effect(row: &[u8], directive_offset: usize) -> core::result::Result<core::option::Option<vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect>, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::pipeline::stages::first_c11_lexer_diagnostic(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32]) -> core::option::Option<vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnostic>
-pub fn vyre_libs::parsing::c::pipeline::stages::opt_conditional_mask(tok_types: &str, out_mask: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::opt_conditional_mask_with_directives(tok_types: &str, directive_kinds: &str, directive_values: &str, out_mask: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::opt_dynamic_macro_expansion(in_tok_types: &str, macro_keys: &str, macro_vals: &str, macro_sizes: &str, out_tok_types: &str, out_tok_counts: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, max_out_tokens: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::opt_named_macro_expansion(in_tok_types: &str, in_tok_starts: &str, in_tok_lens: &str, source_words: &str, macro_name_hashes: &str, macro_name_starts: &str, macro_name_lens: &str, macro_name_words: &str, macro_vals: &str, macro_sizes: &str, macro_kinds: &str, macro_param_counts: &str, macro_replacement_params: &str, out_tok_types: &str, out_tok_counts: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, source_len: vyre_foundation::ir_inner::model::generated::Expr, max_out_tokens: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::opt_named_macro_expansion_materialized(in_tok_types: &str, in_tok_starts: &str, in_tok_lens: &str, source_words: &str, macro_name_hashes: &str, macro_name_starts: &str, macro_name_lens: &str, macro_name_words: &str, macro_vals: &str, macro_sizes: &str, macro_kinds: &str, macro_param_counts: &str, macro_replacement_params: &str, macro_replacement_starts: &str, macro_replacement_lens: &str, macro_replacement_words: &str, runtime_counts: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_source_words: &str, out_tok_counts: &str, out_source_counts: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, source_len: vyre_foundation::ir_inner::model::generated::Expr, macro_replacement_source_len: vyre_foundation::ir_inner::model::generated::Expr, max_input_tokens: u32, _max_source_bytes: u32, _max_replacement_source_bytes: u32, max_out_tokens: u32, max_out_source_bytes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::opt_propagate_type_specifiers(tok_types: &str, tok_depths: &str, node_out: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::pipeline::stages::parse_c_include_request(row: &[u8], directive_offset: usize) -> core::result::Result<core::option::Option<vyre_libs::parsing::c::preprocess::source::CIncludeRequest>, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::pipeline::stages::synthesize_token_paste_type(left: u32, right: u32) -> core::option::Option<u32>
-pub fn vyre_libs::parsing::c::preprocess::CLineSplicedSource::original_offset(&self, logical_offset: usize) -> usize
-pub fn vyre_libs::parsing::c::preprocess::CPreprocessorError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_libs::parsing::c::preprocess::c_logical_directive_len(source: &[u8], offset: usize) -> usize
-pub fn vyre_libs::parsing::c::preprocess::c_translation_phase_line_splice(source: &[u8]) -> vyre_libs::parsing::c::preprocess::CLineSplicedSource
-pub fn vyre_libs::parsing::c::preprocess::effects::classify_c_preprocessor_side_effect(row: &[u8], directive_offset: usize) -> core::result::Result<core::option::Option<vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect>, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::preprocess::effects::reference_c_preprocessor_side_effect_metadata(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32], source: &[u8]) -> core::result::Result<vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectMetadata, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask(tok_types: &str, out_mask: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask_with_directives(tok_types: &str, directive_kinds: &str, directive_values: &str, out_mask: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::expansion::opt_dynamic_macro_expansion(in_tok_types: &str, macro_keys: &str, macro_vals: &str, macro_sizes: &str, out_tok_types: &str, out_tok_counts: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, max_out_tokens: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::expansion::opt_named_macro_expansion(in_tok_types: &str, in_tok_starts: &str, in_tok_lens: &str, source_words: &str, macro_name_hashes: &str, macro_name_starts: &str, macro_name_lens: &str, macro_name_words: &str, macro_vals: &str, macro_sizes: &str, macro_kinds: &str, macro_param_counts: &str, macro_replacement_params: &str, out_tok_types: &str, out_tok_counts: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, source_len: vyre_foundation::ir_inner::model::generated::Expr, max_out_tokens: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::expansion::opt_named_macro_expansion_materialized(in_tok_types: &str, in_tok_starts: &str, in_tok_lens: &str, source_words: &str, macro_name_hashes: &str, macro_name_starts: &str, macro_name_lens: &str, macro_name_words: &str, macro_vals: &str, macro_sizes: &str, macro_kinds: &str, macro_param_counts: &str, macro_replacement_params: &str, macro_replacement_starts: &str, macro_replacement_lens: &str, macro_replacement_words: &str, runtime_counts: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_source_words: &str, out_tok_counts: &str, out_source_counts: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, source_len: vyre_foundation::ir_inner::model::generated::Expr, macro_replacement_source_len: vyre_foundation::ir_inner::model::generated::Expr, max_input_tokens: u32, _max_source_bytes: u32, _max_replacement_source_bytes: u32, max_out_tokens: u32, max_out_source_bytes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::gpu_char_constant_scan(source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask(byte_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask_u8(byte_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::reference_gpu_comment_strip_mask(source: &[u8]) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::parsing::c::preprocess::gpu_define_parse::gpu_define_parse(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_define_parse::gpu_define_parse_u8(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata_u8(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_if_expression::gpu_if_expression(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_if_expression::gpu_if_expression_u8(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value_u8(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_include_parse::gpu_include_parse(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_include_parse::gpu_include_parse_u8(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::gpu_int_literal_scan() -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::directive_rows(&self) -> impl core::iter::traits::iterator::Iterator<Item = (usize, u32)> + '_
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::from_parts(tok_types: alloc::vec::Vec<u32>, tok_starts: alloc::vec::Vec<u32>, tok_lens: alloc::vec::Vec<u32>, directive_kinds: alloc::vec::Vec<u32>, source: alloc::sync::Arc<[u8]>) -> Self
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::has_directives(&self) -> bool
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeLoader::load(&self, path: &[u8], is_system: bool, is_next: bool, from: &std::path::Path) -> core::result::Result<core::option::Option<(std::path::PathBuf, alloc::sync::Arc<[u8]>)>, alloc::string::String>
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle::dispatch_borrowed(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, alloc::string::String>
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle::dispatch_borrowed_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle::requires_output_inputs(&self) -> bool
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::bucket_pow2(value: usize, min: usize) -> usize
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::gpu_extract_directive_payloads(dispatcher: &dyn vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle, classified: &vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens, defined_macros: &[&[u8]]) -> core::result::Result<alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload>, alloc::string::String>
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::gpu_filter_source_bytes(dispatcher: &dyn vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle, raw: &[u8]) -> core::result::Result<vyre_libs::parsing::c::preprocess::gpu_pipeline::FilteredBytes, alloc::string::String>
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::gpu_preprocess_translation_unit(dispatcher: &dyn vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle, loader: &dyn vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeLoader, tu_path: &std::path::Path, source: &[u8], cli_macros: &[vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroDef]) -> core::result::Result<vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource, alloc::string::String>
-pub fn vyre_libs::parsing::c::preprocess::gpu_pipeline::gpu_tokenize_and_classify(dispatcher: &dyn vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle, raw: &[u8]) -> core::result::Result<vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens, alloc::string::String>
-pub fn vyre_libs::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse_u8(num_tokens: u32, source_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::preprocess::is_reserved_preprocessor_identifier(ident: &[u8]) -> bool
-pub fn vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32], source: &[u8], defined_macros: &[&[u8]]) -> core::result::Result<(alloc::vec::Vec<u32>, alloc::vec::Vec<u32>), vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::preprocess::source::CPreprocessorSourceManager::load_include(&self, request: &vyre_libs::parsing::c::preprocess::source::CIncludeRequest) -> core::result::Result<vyre_libs::parsing::c::preprocess::source::CSourceFile, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::preprocess::source::parse_c_include_request(row: &[u8], directive_offset: usize) -> core::result::Result<core::option::Option<vyre_libs::parsing::c::preprocess::source::CIncludeRequest>, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::preprocess::source::reference_c_preprocessor_load_includes<M: vyre_libs::parsing::c::preprocess::source::CPreprocessorSourceManager>(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32], source: &[u8], manager: &M) -> core::result::Result<alloc::vec::Vec<vyre_libs::parsing::c::preprocess::source::CResolvedInclude>, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::preprocess::synthesis::synthesize_token_paste_type(left: u32, right: u32) -> core::option::Option<u32>
-pub fn vyre_libs::parsing::c::preprocess::try_classify_preprocessor_directive(row: &[u8]) -> core::result::Result<vyre_libs::parsing::c::preprocess::CPreprocessorDirective, vyre_libs::parsing::c::preprocess::CPreprocessorError>
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::cache_size(&self) -> usize
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::declare(&self, frame: vyre_libs::parsing::c::sema::ScopeFrameId, name: &str, kind: vyre_libs::parsing::c::sema::DeclKind) -> bool
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::default() -> Self
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::frame_count(&self) -> usize
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::invalidate(&self)
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::lookup(&self, frame: vyre_libs::parsing::c::sema::ScopeFrameId, name: &str) -> vyre_libs::parsing::c::sema::DeclKind
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::new() -> Self
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::push_frame(&self, parent: vyre_libs::parsing::c::sema::ScopeFrameId) -> vyre_libs::parsing::c::sema::ScopeFrameId
-pub fn vyre_libs::parsing::c::sema::LazyScopeTable::root() -> vyre_libs::parsing::c::sema::ScopeFrameId
-pub fn vyre_libs::parsing::c::sema::c_sema_scope(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_scope_tree: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::sema::c_sema_scope_packed_haystack(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_scope_tree: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::sema::c_sema_scope_symbols_packed_haystack(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, haystack_len: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_scope_tree: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::c::sema::intern::emit_identifier_intern(tok_starts: &str, tok_lens: &str, haystack: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, packed_haystack: bool) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::parsing::c::sema::lookup::emit_declaration_lookup(node_idx: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: &vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::parsing::c::sema::reference_scope_tree(tok_types: &[u32], tok_starts: &[u32], tok_lens: &[u32], haystack: &[u32]) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::parsing::c::sema::walk::emit_brace_scope_resolution(tok_types: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, _num_tokens: &vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::parsing::c::sema::walk::emit_function_parameter_scope(tok_types: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, num_tokens: &vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::parsing::c::sema::walk::emit_scope_resolution(tok_types: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, _num_tokens: &vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::parsing::c::source_bytes::load_source_byte(haystack: &str, byte_index: vyre_foundation::ir_inner::model::generated::Expr, packed_haystack: bool) -> vyre_foundation::ir_inner::model::generated::Expr
-pub fn vyre_libs::parsing::c::source_bytes::source_haystack_words(source_len: u32, packed_haystack: bool) -> u32
 pub fn vyre_libs::parsing::core::ast::binding::ast_binding_strength(tok_types: &str, out_depths: &str, out_strengths: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::core::ast::blocks::ast_cfg_blocks(tok_types: &str, _out_scope_parents: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_block_headers: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -1608,6 +1064,18 @@ pub fn vyre_libs::parsing::source_cache::ParsedSourceLru<T>::len(&self) -> usize
 pub fn vyre_libs::parsing::source_cache::ParsedSourceLru<T>::with_capacity(capacity: usize) -> Self
 pub fn vyre_libs::parsing::source_cache::SourceHash::of(source: &[u8], extra: &[u8]) -> Self
 pub fn vyre_libs::parsing::source_cache::source_len_u32_nonzero(source: &[u8]) -> u32
+pub fn vyre_libs::prelude::MatmulBias::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::prelude::MatmulBias::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
+pub fn vyre_libs::prelude::MatmulBias::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::prelude::MatmulBias::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBias::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::prelude::MatmulBiasTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::prelude::reachability_closure_via_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, adj: &[u32], n: u32, _max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::range_ordering::match_order(left_id: vyre_foundation::ir_inner::model::generated::Expr, right_id: vyre_foundation::ir_inner::model::generated::Expr, res_name: &str) -> (alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_foundation::ir_inner::model::generated::Expr)
 pub fn vyre_libs::reasoning::adjustment_set_pass_dependency::ordering_is_safe(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bool
 pub fn vyre_libs::reasoning::adjustment_set_pass_dependency::pass_descendants(adj: &[u32], n: u32) -> alloc::vec::Vec<alloc::vec::Vec<u32>>
@@ -2131,14 +1599,13 @@ pub fn vyre_libs::solvers::tensor_train_compression::tt_storage_size(compressed:
 pub fn vyre_libs::telemetry::bump(c: &core::sync::atomic::AtomicU64)
 pub fn vyre_libs::telemetry::snapshot_counters() -> alloc::vec::Vec<(&'static str, u64)>
 pub fn vyre_libs::telemetry::total_calls() -> u64
-pub fn vyre_libs::test_support::ReferenceEvalDispatcher::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], _grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::test_support::fixed_matvec(matrix: &[u32], vector: &[u32], n: usize) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::test_support::fixed_mul(a: u32, b: u32) -> u32
-pub fn vyre_libs::test_support::fixed_sdiv_by_positive(numerator: u32, denominator: u32) -> u32
-pub fn vyre_libs::test_support::signed_fixed_17(state: &mut u32) -> u32
-pub fn vyre_libs::test_support::signed_fixed_19(state: &mut u32) -> u32
-pub fn vyre_libs::test_support::wrap_program_sequence(programs: &[&vyre_foundation::ir_inner::model::program::definition::Program], workgroup_size: [u32; 3]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::test_support::xorshift32(state: &mut u32) -> u32
+pub fn vyre_libs::test_parity_oracles::fixed_matvec(matrix: &[u32], vector: &[u32], n: usize) -> alloc::vec::Vec<u32>
+pub fn vyre_libs::test_parity_oracles::fixed_mul(a: u32, b: u32) -> u32
+pub fn vyre_libs::test_parity_oracles::fixed_sdiv_by_positive(numerator: u32, denominator: u32) -> u32
+pub fn vyre_libs::test_parity_oracles::signed_fixed_17(state: &mut u32) -> u32
+pub fn vyre_libs::test_parity_oracles::signed_fixed_19(state: &mut u32) -> u32
+pub fn vyre_libs::test_parity_oracles::wrap_program_sequence(programs: &[&vyre_foundation::ir_inner::model::program::definition::Program], workgroup_size: [u32; 3]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::test_parity_oracles::xorshift32(state: &mut u32) -> u32
 pub fn vyre_libs::visual::GaussianBlurStages::programs(&self) -> [&vyre_foundation::ir_inner::model::program::definition::Program; 2]
 pub fn vyre_libs::visual::GaussianKernel::from_weights(radius: u32, weights: alloc::vec::Vec<u32>) -> core::result::Result<Self, vyre_libs::visual::GaussianKernelError>
 pub fn vyre_libs::visual::GaussianKernel::new(radius: u32, sigma: f32) -> Self
@@ -2199,7 +1666,6 @@ pub mod vyre_libs::graph
 pub mod vyre_libs::graph::dispatch
 pub mod vyre_libs::graph::dispatch::adaptive_traverse
 pub mod vyre_libs::graph::dispatch::alias_registry
-pub mod vyre_libs::graph::dispatch::cpu_oracle
 pub mod vyre_libs::graph::dispatch::csr_bidirectional
 pub mod vyre_libs::graph::dispatch::csr_forward_or_changed
 pub mod vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory
@@ -2246,45 +1712,6 @@ pub mod vyre_libs::nn::optim
 pub mod vyre_libs::nn::quant
 pub mod vyre_libs::operation_catalog
 pub mod vyre_libs::parsing
-pub mod vyre_libs::parsing::c
-pub mod vyre_libs::parsing::c::lex
-pub mod vyre_libs::parsing::c::lex::diagnostics
-pub mod vyre_libs::parsing::c::lex::keyword
-pub mod vyre_libs::parsing::c::lex::lexer
-pub mod vyre_libs::parsing::c::lex::tokens
-pub mod vyre_libs::parsing::c::lower
-pub mod vyre_libs::parsing::c::parse
-pub mod vyre_libs::parsing::c::parse::declarations
-pub mod vyre_libs::parsing::c::parse::gnu_builtins
-pub mod vyre_libs::parsing::c::parse::inline_asm
-pub mod vyre_libs::parsing::c::parse::structure
-pub mod vyre_libs::parsing::c::parse::structure_statement
-pub mod vyre_libs::parsing::c::parse::vast
-pub mod vyre_libs::parsing::c::pipeline
-pub mod vyre_libs::parsing::c::pipeline::source_cache
-pub mod vyre_libs::parsing::c::pipeline::stages
-pub mod vyre_libs::parsing::c::preprocess
-pub mod vyre_libs::parsing::c::preprocess::effects
-pub mod vyre_libs::parsing::c::preprocess::expansion
-pub mod vyre_libs::parsing::c::preprocess::gpu_char_constant_scan
-pub mod vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask
-pub mod vyre_libs::parsing::c::preprocess::gpu_define_parse
-pub mod vyre_libs::parsing::c::preprocess::gpu_directive_metadata
-pub mod vyre_libs::parsing::c::preprocess::gpu_if_expression
-pub mod vyre_libs::parsing::c::preprocess::gpu_if_expression_abi
-pub mod vyre_libs::parsing::c::preprocess::gpu_ifdef_value
-pub mod vyre_libs::parsing::c::preprocess::gpu_include_parse
-pub mod vyre_libs::parsing::c::preprocess::gpu_int_literal_scan
-pub mod vyre_libs::parsing::c::preprocess::gpu_pipeline
-pub mod vyre_libs::parsing::c::preprocess::gpu_undef_parse
-pub mod vyre_libs::parsing::c::preprocess::materialization
-pub mod vyre_libs::parsing::c::preprocess::source
-pub mod vyre_libs::parsing::c::preprocess::synthesis
-pub mod vyre_libs::parsing::c::sema
-pub mod vyre_libs::parsing::c::sema::intern
-pub mod vyre_libs::parsing::c::sema::lookup
-pub mod vyre_libs::parsing::c::sema::walk
-pub mod vyre_libs::parsing::c::source_bytes
 pub mod vyre_libs::parsing::core
 pub mod vyre_libs::parsing::core::ast
 pub mod vyre_libs::parsing::core::ast::binding
@@ -2307,6 +1734,7 @@ pub mod vyre_libs::parsing::python::parse::structure
 pub mod vyre_libs::parsing::python::source_cache
 pub mod vyre_libs::parsing::source_cache
 pub mod vyre_libs::parsing::vast
+pub mod vyre_libs::prelude
 pub mod vyre_libs::range_ordering
 pub mod vyre_libs::reasoning
 pub mod vyre_libs::reasoning::adjustment_set_pass_dependency
@@ -2379,7 +1807,7 @@ pub mod vyre_libs::solvers::tensor_network_fusion_order
 pub mod vyre_libs::solvers::tensor_train_chain_fusion
 pub mod vyre_libs::solvers::tensor_train_compression
 pub mod vyre_libs::telemetry
-pub mod vyre_libs::test_support
+pub mod vyre_libs::test_parity_oracles
 pub mod vyre_libs::text
 pub mod vyre_libs::visual
 pub static vyre_libs::analysis::decision_telemetry::AUTOTUNE_DELTA_LARGE: core::sync::atomic::AtomicU64
@@ -2489,7 +1917,6 @@ pub struct vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalResid
 pub struct vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveFourRussiansDenseGraph
 pub struct vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveSparseQueueGraph
 pub struct vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveTraversalGraph
-pub struct vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher
 pub struct vyre_libs::graph::dispatch::csr_bidirectional::BidirectionalGpuScratch
 pub struct vyre_libs::graph::dispatch::csr_forward_or_changed::ForwardChangedGpuScratch
 pub struct vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan
@@ -2525,46 +1952,13 @@ pub struct vyre_libs::nn::linear::QuantizedLinear4BitSpec
 pub struct vyre_libs::nn::model::DenseGatedMlpSpec
 pub struct vyre_libs::nn::norm::LayerNorm
 pub struct vyre_libs::operation_catalog::ConvergenceContract
-pub struct vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnostic
-pub struct vyre_libs::parsing::c::lower::SemanticPgReference
-pub struct vyre_libs::parsing::c::parse::gnu_builtins::GnuBuiltinError
-pub struct vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmError
-pub struct vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary
-pub struct vyre_libs::parsing::c::pipeline::source_cache::C11PipelinePrograms
-pub struct vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnostic
-pub struct vyre_libs::parsing::c::pipeline::stages::CIncludeRequest
-pub struct vyre_libs::parsing::c::pipeline::stages::CLineSplicedSource
-pub struct vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffect
-pub struct vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectMetadata
-pub struct vyre_libs::parsing::c::pipeline::stages::CResolvedInclude
-pub struct vyre_libs::parsing::c::pipeline::stages::CSourceFile
-pub struct vyre_libs::parsing::c::preprocess::CLineSplicedSource
-pub struct vyre_libs::parsing::c::preprocess::CPreprocessorDirective
-pub struct vyre_libs::parsing::c::preprocess::CPreprocessorError
-pub struct vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect
-pub struct vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectMetadata
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::FilteredBytes
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseKey
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationEvent
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroDef
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource
-pub struct vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent
-pub struct vyre_libs::parsing::c::preprocess::source::CIncludeRequest
-pub struct vyre_libs::parsing::c::preprocess::source::CResolvedInclude
-pub struct vyre_libs::parsing::c::preprocess::source::CSourceFile
-pub struct vyre_libs::parsing::c::sema::LazyScopeTable
-pub struct vyre_libs::parsing::c::sema::ScopeFrameId(pub u32)
 pub struct vyre_libs::parsing::lr_tables::LrTables
 pub struct vyre_libs::parsing::lr_tables::Production
 pub struct vyre_libs::parsing::python::source_cache::Python312PipelinePrograms
 pub struct vyre_libs::parsing::source_cache::ParsedSourceLru<T>
 pub struct vyre_libs::parsing::source_cache::SourceHash(pub [u8; 32])
+pub struct vyre_libs::prelude::MatmulBias
+pub struct vyre_libs::prelude::MatmulBiasTiled
 pub struct vyre_libs::reasoning::dnnf::DnnfDag
 pub struct vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch
 pub struct vyre_libs::reasoning::finite_category::AdjointPair
@@ -2675,20 +2069,14 @@ pub struct vyre_libs::solvers::tensor_train_chain_fusion::TensorTrainFusionGpuSc
 pub struct vyre_libs::solvers::tensor_train_compression::CompressedCostTensor
 pub struct vyre_libs::solvers::tensor_train_compression::CompressedF32CostTensor
 pub struct vyre_libs::solvers::tensor_train_compression::TensorTrainCompressionGpuScratch
-pub struct vyre_libs::test_support::ReferenceEvalDispatcher
 pub struct vyre_libs::visual::ColorStop
 pub struct vyre_libs::visual::GaussianBlurStages
 pub struct vyre_libs::visual::GaussianKernel
 pub struct vyre_libs::visual::GaussianKernelError
 pub struct vyre_libs::visual::GlassParams
 pub struct vyre_libs::visual::GridShape
-pub trait vyre_libs::parsing::c::pipeline::stages::CPreprocessorSourceManager
-pub trait vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeLoader
-pub trait vyre_libs::parsing::c::preprocess::gpu_pipeline::ProgramOracle
-pub trait vyre_libs::parsing::c::preprocess::source::CPreprocessorSourceManager
 pub trait vyre_libs::rule::RuleEvaluationContext
 pub trait vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample
-pub type vyre_libs::parsing::c::pipeline::source_cache::C11PipelineCache = vyre_libs::parsing::source_cache::ParsedSourceLru<vyre_libs::parsing::c::pipeline::source_cache::C11PipelinePrograms>
 pub type vyre_libs::parsing::python::source_cache::Python312PipelineCache = vyre_libs::parsing::source_cache::ParsedSourceLru<vyre_libs::parsing::python::source_cache::Python312PipelinePrograms>
 pub use vyre_libs::analysis::dataflow_fixpoint::Semiring
 pub use vyre_libs::decode::ENC_ASCII
@@ -2710,9 +2098,6 @@ pub use vyre_libs::graph::dispatch::adaptive_traverse::DenseTraversalKernel
 pub use vyre_libs::graph::dispatch::adaptive_traverse::select_adaptive_traversal_mode
 pub use vyre_libs::graph::dispatch::adaptive_traverse::select_dense_traversal_kernel
 pub use vyre_libs::graph::dispatch::vast_tree_walk::VastTreeWalkPlan
-pub use vyre_libs::parsing::c::lex::keyword::fnv1a32
-pub use vyre_libs::parsing::c::lex::tokens::<<vyre_spec::c11_token::*>>
-pub use vyre_libs::parsing::c::pipeline::stages::is_c_lexer_error_token
 pub use vyre_libs::parsing::go::lex::<<vyre_spec::go_token::*>>
 pub use vyre_libs::parsing::lr_tables::TOK_EOF
 pub use vyre_libs::parsing::lr_tables::TOK_ID
@@ -2755,7 +2140,7 @@ pub use vyre_libs::solvers::numerical_kernel_pipeline::reference_sinkhorn_f64_in
 pub use vyre_libs::solvers::numerical_kernel_pipeline::reference_sinkhorn_quantized
 pub use vyre_libs::solvers::numerical_kernel_pipeline::reference_sinkhorn_quantized_into
 pub use vyre_libs::solvers::numerical_kernel_pipeline::reference_sinkhorn_row_residual
-pub use vyre_libs::test_support::u32_bytes
+pub use vyre_libs::test_parity_oracles::u32_bytes
 pub use vyre_libs::text::C_ALPHA
 pub use vyre_libs::text::C_AMP
 pub use vyre_libs::text::C_BACKSLASH
@@ -3165,312 +2550,6 @@ pub vyre_libs::nn::norm::LastDimL2NormError::UnsupportedDtype
 pub vyre_libs::nn::norm::LastDimL2NormError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
 pub vyre_libs::operation_catalog::ConvergenceContract::max_iterations: u32
 pub vyre_libs::operation_catalog::ConvergenceContract::op_id: &'static str
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnostic::byte_len: u32
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnostic::byte_start: u32
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnostic::kind: vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnostic::token_index: u32
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind::InvalidEscape
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind::UnterminatedBlockComment
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind::UnterminatedChar
-pub vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind::UnterminatedString
-pub vyre_libs::parsing::c::lower::PgReferenceDecodeError::MisalignedBytes
-pub vyre_libs::parsing::c::lower::PgReferenceDecodeError::MisalignedBytes::len: usize
-pub vyre_libs::parsing::c::lower::PgReferenceDecodeError::PartialVastRow
-pub vyre_libs::parsing::c::lower::PgReferenceDecodeError::PartialVastRow::stride: usize
-pub vyre_libs::parsing::c::lower::PgReferenceDecodeError::PartialVastRow::words: usize
-pub vyre_libs::parsing::c::lower::SemanticPgReference::edges: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::lower::SemanticPgReference::nodes: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::parse::gnu_builtins::GnuBuiltinError::len: usize
-pub vyre_libs::parsing::c::parse::gnu_builtins::GnuBuiltinError::message: &'static str
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmError::message: &'static str
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmError::token_index: usize
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary::asm_token: usize
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary::end_token: usize
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary::is_goto: bool
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary::is_volatile: bool
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary::template_token: usize
-pub vyre_libs::parsing::c::parse::inline_asm::GnuInlineAsmSummary::top_level_colons: u32
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::MisalignedBytes
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::MisalignedBytes::len: usize
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::MismatchedVastRows
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::MismatchedVastRows::raw_rows: usize
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::MismatchedVastRows::typed_rows: usize
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::PartialVastRow
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::PartialVastRow::stride: usize
-pub vyre_libs::parsing::c::parse::vast::CReferenceDecodeError::PartialVastRow::words: usize
-pub vyre_libs::parsing::c::pipeline::source_cache::C11PipelinePrograms::calls: vyre_foundation::ir_inner::model::program::definition::Program
-pub vyre_libs::parsing::c::pipeline::source_cache::C11PipelinePrograms::functions: vyre_foundation::ir_inner::model::program::definition::Program
-pub vyre_libs::parsing::c::pipeline::source_cache::C11PipelinePrograms::lex: vyre_foundation::ir_inner::model::program::definition::Program
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnostic::byte_len: u32
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnostic::byte_start: u32
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnostic::kind: vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnostic::token_index: u32
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnosticKind::InvalidEscape
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnosticKind::UnterminatedBlockComment
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnosticKind::UnterminatedChar
-pub vyre_libs::parsing::c::pipeline::stages::C11LexerDiagnosticKind::UnterminatedString
-pub vyre_libs::parsing::c::pipeline::stages::CIncludeRequest::directive: vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind
-pub vyre_libs::parsing::c::pipeline::stages::CIncludeRequest::directive_offset: usize
-pub vyre_libs::parsing::c::pipeline::stages::CIncludeRequest::payload_offset: usize
-pub vyre_libs::parsing::c::pipeline::stages::CIncludeRequest::spelling: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::pipeline::stages::CIncludeRequest::style: vyre_libs::parsing::c::preprocess::source::CIncludeStyle
-pub vyre_libs::parsing::c::pipeline::stages::CIncludeStyle::Angle
-pub vyre_libs::parsing::c::pipeline::stages::CIncludeStyle::Quote
-pub vyre_libs::parsing::c::pipeline::stages::CLineSplicedSource::bytes: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::pipeline::stages::CLineSplicedSource::original_offsets: alloc::vec::Vec<usize>
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffect::detail_len: usize
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffect::detail_start: usize
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffect::kind: vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffect::payload_len: usize
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffect::payload_start: usize
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::ErrorDiagnostic
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::Ident
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::Include
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::IncludeNext
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::Line
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::Pragma
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::PragmaDiagnosticError
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::PragmaDiagnosticIgnored
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::PragmaDiagnosticPop
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::PragmaDiagnosticPush
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::PragmaDiagnosticWarning
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::PragmaOnce
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::Sccs
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectKind::WarningDiagnostic
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectMetadata::detail_lens: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectMetadata::detail_starts: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectMetadata::kinds: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectMetadata::payload_lens: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::pipeline::stages::CPreprocessorSideEffectMetadata::payload_starts: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::pipeline::stages::CResolvedInclude::request: vyre_libs::parsing::c::preprocess::source::CIncludeRequest
-pub vyre_libs::parsing::c::pipeline::stages::CResolvedInclude::source: vyre_libs::parsing::c::preprocess::source::CSourceFile
-pub vyre_libs::parsing::c::pipeline::stages::CResolvedInclude::token_index: usize
-pub vyre_libs::parsing::c::pipeline::stages::CSourceFile::bytes: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::pipeline::stages::CSourceFile::display_name: alloc::string::String
-pub vyre_libs::parsing::c::pipeline::stages::CSourceFile::source_id: u32
-pub vyre_libs::parsing::c::preprocess::CLineSplicedSource::bytes: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::CLineSplicedSource::original_offsets: alloc::vec::Vec<usize>
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirective::keyword_len: usize
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirective::keyword_start: usize
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirective::kind: vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirective::logical_end: usize
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirective::payload_start: usize
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Define
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Elif
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Elifdef
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Elifndef
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Else
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Embed
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Endif
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Error
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Ident
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::If
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Ifdef
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Ifndef
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Import
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Include
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::IncludeNext
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Line
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Null
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Pragma
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Sccs
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Undef
-pub vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind::Warning
-pub vyre_libs::parsing::c::preprocess::CPreprocessorError::message: &'static str
-pub vyre_libs::parsing::c::preprocess::CPreprocessorError::offset: usize
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect::detail_len: usize
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect::detail_start: usize
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect::kind: vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect::payload_len: usize
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffect::payload_start: usize
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::ErrorDiagnostic
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::Ident
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::Include
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::IncludeNext
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::Line
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::Pragma
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::PragmaDiagnosticError
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::PragmaDiagnosticIgnored
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::PragmaDiagnosticPop
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::PragmaDiagnosticPush
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::PragmaDiagnosticWarning
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::PragmaOnce
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::Sccs
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectKind::WarningDiagnostic
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectMetadata::detail_lens: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectMetadata::detail_starts: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectMetadata::kinds: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectMetadata::payload_lens: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::effects::CPreprocessorSideEffectMetadata::payload_starts: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::directive_count: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::directive_kinds: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::source: alloc::sync::Arc<[u8]>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::tok_lens: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::tok_starts: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens::tok_types: alloc::vec::Vec<u32>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::branch_taken: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::current_active: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::depth_after: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::depth_before: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::directive_byte_offset: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::directive_residency: vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventResidency
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::directive_row: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::file: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::kind: vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::parent_active: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::state_residency: vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventResidency
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent::truth: core::option::Option<bool>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind::Elif
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind::Else
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind::Endif
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind::If
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind::Ifdef
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventKind::Ifndef
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventResidency::GpuResidentDirective
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventResidency::GpuResidentTruth
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventResidency::HostLiveMacroTable
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEventResidency::HostStackThreading
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::args: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::args_len: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::args_start: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::body: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::body_len: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::body_start: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::is_function_like: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::name: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::name_len: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Define::name_start: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Else
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Endif
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::IfExpr
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::IfExpr::is_elif: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::IfExpr::value: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Ifdef
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Ifdef::negated: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Ifdef::value: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Include
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Include::is_next: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Include::is_system: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Include::path: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::None
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Other
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Undef
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::DirectivePayload::Undef::name: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::FilteredBytes::bytes: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::defines_hash: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::flags_hash: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::gpu_analysis_reused: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::hit: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::path: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::source_hash: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::stored: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent::target_triple: alloc::string::String
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseKey::defines_hash: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseKey::flags_hash: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseKey::path: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseKey::source_hash: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseKey::target_triple: alloc::string::String
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationEvent::gpu_directive_derived: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationEvent::guard_macro: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationEvent::kind: vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationKind
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationEvent::path: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationEvent::skipped_include: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationKind::IncludeGuard
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationKind::PragmaOnce
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats::entries: usize
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats::evictions: u64
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats::hits: u64
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats::loaded_bytes: u64
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats::misses: u64
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats::retained_bytes: u64
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats::reused_bytes: u64
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::directive_byte_offset: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::directive_row: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::includer: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::is_next: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::is_system: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::request_residency: vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::requested_path: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::resolution_residency: vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent::resolved_path: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency::GpuResidentRequest
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency::HostFilesystemMetadata
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency::HostMemoryCache
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroDef::args: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroDef::body: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroDef::is_function_like: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroDef::name: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::args: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::args_range: core::option::Option<(u32, u32)>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::directive_byte_offset: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::directive_row: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::file: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::gpu_resident: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::is_function_like: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::is_variadic: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::kind: vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEventKind
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::name: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::name_range: core::option::Option<(u32, u32)>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::replacement: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::replacement_range: core::option::Option<(u32, u32)>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent::symbol_id: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEventKind::Define
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEventKind::Undef
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::file: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::gpu_resident: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::include_stack: alloc::vec::Vec<std::path::PathBuf>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::invocation_args: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::is_function_like: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::is_variadic: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::name: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::replacement: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::symbol_id: [u8; 16]
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::use_len: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent::use_start: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::bytes: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::conditional_events: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::ConditionalEvent>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::header_reuse_events: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::HeaderReuseEvent>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::include_acceleration_events: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeAccelerationEvent>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::include_byte_cache_stats: vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeByteCacheStats
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::include_events: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEvent>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::macro_events: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroEvent>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::macro_expansion_events: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroExpansionEvent>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::macros: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::MacroDef>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::PreprocessedSource::token_provenance_events: alloc::vec::Vec<vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::expansion_file: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::expansion_len: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::expansion_start: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::file: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::gpu_resident: bool
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::include_stack: alloc::vec::Vec<std::path::PathBuf>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::macro_name: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::macro_symbol_id: core::option::Option<[u8; 16]>
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::output_len: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::output_start: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::spelling_file: std::path::PathBuf
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::spelling_len: u32
-pub vyre_libs::parsing::c::preprocess::gpu_pipeline::TokenProvenanceEvent::spelling_start: u32
-pub vyre_libs::parsing::c::preprocess::source::CIncludeRequest::directive: vyre_libs::parsing::c::preprocess::CPreprocessorDirectiveKind
-pub vyre_libs::parsing::c::preprocess::source::CIncludeRequest::directive_offset: usize
-pub vyre_libs::parsing::c::preprocess::source::CIncludeRequest::payload_offset: usize
-pub vyre_libs::parsing::c::preprocess::source::CIncludeRequest::spelling: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::source::CIncludeRequest::style: vyre_libs::parsing::c::preprocess::source::CIncludeStyle
-pub vyre_libs::parsing::c::preprocess::source::CIncludeStyle::Angle
-pub vyre_libs::parsing::c::preprocess::source::CIncludeStyle::Quote
-pub vyre_libs::parsing::c::preprocess::source::CResolvedInclude::request: vyre_libs::parsing::c::preprocess::source::CIncludeRequest
-pub vyre_libs::parsing::c::preprocess::source::CResolvedInclude::source: vyre_libs::parsing::c::preprocess::source::CSourceFile
-pub vyre_libs::parsing::c::preprocess::source::CResolvedInclude::token_index: usize
-pub vyre_libs::parsing::c::preprocess::source::CSourceFile::bytes: alloc::vec::Vec<u8>
-pub vyre_libs::parsing::c::preprocess::source::CSourceFile::display_name: alloc::string::String
-pub vyre_libs::parsing::c::preprocess::source::CSourceFile::source_id: u32
-pub vyre_libs::parsing::c::sema::DeclKind::EnumConstant
-pub vyre_libs::parsing::c::sema::DeclKind::Function
-pub vyre_libs::parsing::c::sema::DeclKind::FunctionDecl
-pub vyre_libs::parsing::c::sema::DeclKind::Label
-pub vyre_libs::parsing::c::sema::DeclKind::Typedef
-pub vyre_libs::parsing::c::sema::DeclKind::Undeclared
-pub vyre_libs::parsing::c::sema::DeclKind::Variable
 pub vyre_libs::parsing::lr_tables::Action::Accept
 pub vyre_libs::parsing::lr_tables::Action::Error
 pub vyre_libs::parsing::lr_tables::Action::Reduce(u32)

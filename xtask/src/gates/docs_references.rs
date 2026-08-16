@@ -502,11 +502,25 @@ fn command_path_tokens(tree: &Tree, line: &str) -> Vec<String> {
 
 /// The path a raw token claims, with a fragment, a line selector and trailing
 /// punctuation removed.
+///
+/// A quoting glyph and trailing punctuation can nest either way round (`` `a.md`, ``
+/// ends in a comma outside the backtick), so the peel repeats until the token stops
+/// shrinking. A token carrying a scheme is a URL: its `:port` is not a line
+/// selector and its `#fragment` is not a path, so it is returned whole.
 fn path_token(raw: &str) -> String {
-    let trimmed = raw
-        .trim()
-        .trim_matches(|glyph| glyph == '\'' || glyph == '"')
-        .trim_end_matches(['.', ',', ';', ':']);
+    let mut trimmed = raw.trim();
+    loop {
+        let peeled = trimmed
+            .trim_matches(|glyph| glyph == '\'' || glyph == '"' || glyph == '`')
+            .trim_end_matches(['.', ',', ';', ':']);
+        if peeled.len() == trimmed.len() {
+            break;
+        }
+        trimmed = peeled;
+    }
+    if trimmed.contains("://") {
+        return trimmed.to_string();
+    }
     let without_fragment = trimmed.split('#').next().unwrap_or("");
     strip_line_selector(without_fragment).to_string()
 }
@@ -692,6 +706,9 @@ mod tests {
 
     #[test]
     fn a_parent_segment_is_resolved_lexically() {
-        assert_eq!(normalize(Path::new("/a/b/../c/./d")), PathBuf::from("/a/c/d"));
+        assert_eq!(
+            normalize(Path::new("/a/b/../c/./d")),
+            PathBuf::from("/a/c/d")
+        );
     }
 }

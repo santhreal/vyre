@@ -86,9 +86,11 @@ pub fn vyre_megakernel::TargetProfile::new(identity: impl core::convert::Into<al
 pub fn vyre_megakernel::attach_target(artifact: vyre_megakernel::Artifact, compiler: &dyn vyre_megakernel::TargetCompiler) -> core::result::Result<vyre_megakernel::ArtifactEnvelope, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::compile(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_selected_modules(artifact: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, profile: vyre_megakernel::TargetProfile, emit: impl core::ops::function::FnMut(&vyre_megakernel::SelectedLowering, &vyre_megakernel::TargetProfile) -> core::result::Result<vyre_megakernel::EmittedTargetModule, vyre_megakernel::TargetCompileError>) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
+pub fn vyre_megakernel::grid_sync::requires_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> bool
 pub fn vyre_megakernel::legality::analyze_fusion_pair(graph: &vyre_foundation::ir_inner::model::program_graph::ProgramGraph, from: vyre_megakernel::ArtifactNodeId, to: vyre_megakernel::ArtifactNodeId, value: vyre_megakernel::ArtifactValueId) -> vyre_megakernel::legality::FusionDecision
 pub mod vyre_megakernel
 pub mod vyre_megakernel::cost
+pub mod vyre_megakernel::grid_sync
 pub mod vyre_megakernel::legality
 pub struct vyre_megakernel::Artifact
 pub struct vyre_megakernel::ArtifactAbi

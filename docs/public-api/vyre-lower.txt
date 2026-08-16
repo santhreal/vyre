@@ -71,6 +71,7 @@ pub const vyre_lower::DESCRIPTOR_INTENT_SCHEMA_VERSION: u32
 pub const vyre_lower::SCAN_CONSTRUCT_INTENT_MAPPINGS: &[vyre_lower::ScanConstructIntentMapping]
 pub const vyre_lower::TRAP_SIDECAR_NAME: &str
 pub const vyre_lower::TRAP_SIDECAR_WORDS: u32
+pub const vyre_lower::WORKGROUP_SLOT_BASE: u32
 pub const vyre_lower::analyses::DEFAULT_BANK_COUNT: u32
 pub const vyre_lower::analyses::DEFAULT_CONST_BUFFER_BUDGET_BYTES: u32
 pub const vyre_lower::analyses::DEFAULT_SHARED_BUDGET_BYTES: u32
@@ -264,6 +265,7 @@ pub fn vyre_lower::descriptor_builder::if_then(cond: u32, then_body: u32) -> vyr
 pub fn vyre_lower::descriptor_builder::if_then_else(cond: u32, then_body: u32, otherwise_body: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::lit(pool_index: u32, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::load_global(slot: u32, index: u32, result: u32) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::mma_f16_m16n8k16() -> vyre_lower::KernelOpKind
 pub fn vyre_lower::descriptor_builder::op(kind: vyre_lower::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::permissive_workgroup_limits() -> vyre_lower::WorkgroupLimits
 pub fn vyre_lower::descriptor_builder::shared_rw(index: u32, element_type: vyre_spec::data_type::DataType, count: u32, name: &str) -> vyre_lower::BindingSlot

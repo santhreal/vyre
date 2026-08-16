@@ -32,6 +32,7 @@
 #[non_exhaustive] pub enum vyre_foundation::serial::EnvelopeError
 #[non_exhaustive] pub enum vyre_foundation::serial::text::TextParseError
 #[non_exhaustive] pub enum vyre_foundation::transform::autodiff::AutodiffError
+#[non_exhaustive] pub enum vyre_foundation::transform::grid_sync_split::GridSyncSplitError
 #[non_exhaustive] pub enum vyre_foundation::transform::parallelism::DispatchGroup
 #[non_exhaustive] pub enum vyre_foundation::validate::ValidationLocation
 #[non_exhaustive] pub enum vyre_foundation::validate::ValidationPhase
@@ -511,6 +512,7 @@ pub const vyre_foundation::serial::wire::framing::MIN_SUPPORTED_WIRE_FORMAT_VERS
 pub const vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::MAGIC: [u8; 4]
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::VERSION: u32
+pub const vyre_foundation::transform::HOST_REWRITES: &[vyre_foundation::transform::HostRewrite]
 pub const vyre_foundation::validate::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::validate::DEFAULT_MAX_EXPR_DEPTH: usize
 pub const vyre_foundation::validate::DEFAULT_MAX_NESTING_DEPTH: usize
@@ -2164,6 +2166,10 @@ pub fn vyre_foundation::transform::collectives::lower_single_rank_collectives(pr
 pub fn vyre_foundation::transform::collectives::requires_collective_transport(program: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::transform::const_prop::apply_const_prop(program: &vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::transform::dead_branch::apply_dead_branch(program: &vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::transform::grid_sync_split::contains_grid_sync(program: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::transform::grid_sync_split::entry_sequence(program: &vyre_foundation::ir::Program) -> &[vyre_foundation::ir::Node]
+pub fn vyre_foundation::transform::grid_sync_split::loop_nested_grid_sync(program: &vyre_foundation::ir::Program) -> core::option::Option<vyre_foundation::ir::Ident>
+pub fn vyre_foundation::transform::grid_sync_split::split_on_grid_sync(program: &vyre_foundation::ir::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::Program>, vyre_foundation::transform::grid_sync_split::GridSyncSplitError>
 pub fn vyre_foundation::transform::inline::default_resolver(op_id: &str) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::IrResult<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::IrResult<vyre_foundation::ir::Program>
@@ -2471,6 +2477,7 @@ pub mod vyre_foundation::transform::autodiff::rules
 pub mod vyre_foundation::transform::collectives
 pub mod vyre_foundation::transform::const_prop
 pub mod vyre_foundation::transform::dead_branch
+pub mod vyre_foundation::transform::grid_sync_split
 pub mod vyre_foundation::transform::inline
 pub mod vyre_foundation::transform::licm
 pub mod vyre_foundation::transform::parallelism
@@ -2668,6 +2675,7 @@ pub struct vyre_foundation::program_dispatch::ResidentStaticBufferSet
 pub struct vyre_foundation::serial::WireReader<'a>
 pub struct vyre_foundation::serial::WireWriter
 pub struct vyre_foundation::serial::output_set::OutputSet(_)
+pub struct vyre_foundation::transform::HostRewrite
 pub struct vyre_foundation::transform::autodiff::rules::AdjointContrib
 pub struct vyre_foundation::transform::collectives::CollectiveOpCounts
 pub struct vyre_foundation::transform::collectives::CollectiveTransportPlan
@@ -3917,6 +3925,8 @@ pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::BadMagic
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::SectionTooLarge
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::Truncated
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::VersionMismatch
+pub vyre_foundation::transform::HostRewrite::apply: fn(&vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
+pub vyre_foundation::transform::HostRewrite::name: &'static str
 pub vyre_foundation::transform::autodiff::AutodiffError::BufferNotFound
 pub vyre_foundation::transform::autodiff::AutodiffError::BufferNotFound::name: alloc::string::String
 pub vyre_foundation::transform::autodiff::AutodiffError::NotDifferentiable
@@ -3928,6 +3938,12 @@ pub vyre_foundation::transform::autodiff::rules::AdjointContrib::adjoint: vyre_f
 pub vyre_foundation::transform::autodiff::rules::AdjointContrib::child: vyre_foundation::ir::Expr
 pub vyre_foundation::transform::collectives::CollectiveTransportKind::LocalSingleRank
 pub vyre_foundation::transform::collectives::CollectiveTransportKind::MultiRankTransport
+pub vyre_foundation::transform::grid_sync_split::GridSyncSplitError::Accounting
+pub vyre_foundation::transform::grid_sync_split::GridSyncSplitError::Accounting::barriers: usize
+pub vyre_foundation::transform::grid_sync_split::GridSyncSplitError::Accounting::nodes: usize
+pub vyre_foundation::transform::grid_sync_split::GridSyncSplitError::Reservation
+pub vyre_foundation::transform::grid_sync_split::GridSyncSplitError::Reservation::capacity: usize
+pub vyre_foundation::transform::grid_sync_split::GridSyncSplitError::Reservation::field: &'static str
 pub vyre_foundation::transform::inline::UnresolvedCalls::Keep
 pub vyre_foundation::transform::inline::UnresolvedCalls::Reject
 pub vyre_foundation::transform::parallelism::DispatchGroup::Parallel
