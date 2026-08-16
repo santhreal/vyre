@@ -56,10 +56,23 @@ pub enum ScanKind {
 /// Lanes a single-workgroup scan dispatches at most.
 ///
 /// A scan reaches [`MAX_SINGLE_BLOCK_SCAN`] elements by giving each lane a run
-/// of elements, not by adding lanes. 256 is the workgroup size the fleet
-/// schedules at full occupancy; past it a scan spends lanes on a sweep whose
-/// active fraction halves every round.
-pub const SCAN_WORKGROUP_LANES: u32 = 256;
+/// of elements, not by adding lanes. Two facts set this width, and it is the
+/// smaller of them: 256 is the workgroup size the fleet schedules at full
+/// occupancy, and past it a scan spends lanes on a sweep whose active fraction
+/// halves every round; `PORTABLE_WORKGROUP_INVOCATIONS` is the extent every
+/// registered target profile admits, and an op declares its geometry with no
+/// device in hand. Writing the occupancy choice alone would leave a second
+/// copy of the portable ceiling here to drift.
+pub const SCAN_WORKGROUP_LANES: u32 = if SCAN_OCCUPANCY_LANES
+    < vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
+{
+    SCAN_OCCUPANCY_LANES
+} else {
+    vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
+};
+
+/// Workgroup width the fleet schedules at full occupancy for a sweep scan.
+const SCAN_OCCUPANCY_LANES: u32 = 256;
 
 /// Largest element count one workgroup scans.
 ///
