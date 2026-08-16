@@ -1,5 +1,7 @@
 //! Packed INT4 edge and oracle contracts.
 
+#![cfg(all(feature = "math", feature = "cpu-parity"))]
+
 #[cfg(all(feature = "math", feature = "cpu-parity"))]
 #[test]
 fn generated_i4_cpu_oracle_matrix_preserves_packing_and_top1_semantics() {
