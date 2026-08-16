@@ -19,7 +19,6 @@
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::validate::BackendCapabilities;
@@ -145,8 +144,8 @@ fn documented_fields(page: &str) -> Vec<String> {
 
 #[test]
 fn the_architecture_page_tabulates_every_cost_field() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../docs/architecture/compile-search.md")
+    let path = vyre_test_support::monorepo::vyre_workspace_root()
+        .join("docs/architecture/compile-search.md")
         .canonicalize()
         .expect("the architecture page must exist beside the workspace manifest");
     let page = std::fs::read_to_string(&path)

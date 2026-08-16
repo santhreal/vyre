@@ -1620,6 +1620,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   that only a plain global or shared store is maskable by a `@%p` instruction
   predicate. Adding a variant now fails to compile until both facts are stated
   for it, rather than defaulting to no child body and removable.
+- Launch geometry is a lowering decision produced by backend GeometryStrategy
+  from neutral GeometryRequirements rather than hardcoded in library
+  operations.
 - `scripts/check_layering.sh` discarded `cargo tree` stderr, so a cargo that
   could not resolve the workspace printed a green result and exited 0. It now
   derives every workspace member, requires a `docs/CRATE_OWNERSHIP.toml`
@@ -4195,6 +4198,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and the consumer boundary went through that compiled-in path and now ask the
   helper. `ConsumerBoundaryScan::for_crate` takes the crate directory as a
   path.
+- All remaining compile-time checkout root derivations in `vyre-foundation`,
+  `vyre-megakernel`, and `vyre-driver-cuda` resolve repository and fixture
+  paths at run time through `vyre_test_support::monorepo` delegations
+  (`vyre_workspace_root` and `vyre_crate_directory`). `structure-gate` checkout
+  provenance gates enforce runtime path derivation across all member sources
+  and test binaries, catching both `env!` and `option_env!` variants without
+  waivers.
 - The workspace cargo runner no longer exports a workstation-specific target
   directory, so hosted CI and new checkouts use their own writable Cargo
   configuration.

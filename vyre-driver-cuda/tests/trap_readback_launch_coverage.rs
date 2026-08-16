@@ -107,7 +107,7 @@ const LAUNCH_HELPERS: &[&str] = &[
 const PTX_CHECK_TARGET_SM: u32 = 120;
 
 fn crate_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    vyre_test_support::monorepo::vyre_crate_directory("vyre-driver-cuda")
 }
 
 /// Rust source files under `src`, walked at run time so a new module is covered
