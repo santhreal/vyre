@@ -177,6 +177,15 @@ pub struct WorkspaceRosters {
     pub excluded: std::collections::BTreeSet<String>,
 }
 
+fn cargo_target_ancestor(executable: &Path) -> Option<PathBuf> {
+    executable
+        .ancestors()
+        .find(|directory| {
+            directory.join("CACHEDIR.TAG").is_file() || directory.join(".rustc_info.json").is_file()
+        })
+        .map(Path::to_path_buf)
+}
+
 /// Directory cargo is writing this run's build artifacts into.
 ///
 /// A test that has to build a scratch crate of its own puts it under here
@@ -187,10 +196,10 @@ pub struct WorkspaceRosters {
 /// already points at a disk sized for them.
 ///
 /// Resolved from the running test binary, which cargo placed inside the target
-/// directory, by finding the ancestor cargo tagged as a cache directory. A test
-/// therefore never reads or sets `CARGO_TARGET_DIR`: the location is declared
-/// once, in the checkout's cargo configuration, and this reports where that
-/// declaration actually put the artifacts.
+/// directory, by finding the nearest ancestor carrying cargo's cache marker or
+/// rustc-info cache. A test therefore never reads or sets `CARGO_TARGET_DIR`:
+/// the location is declared once in host cargo configuration, and this reports
+/// where that declaration actually put the artifacts.
 ///
 /// # Panics
 ///
@@ -198,16 +207,12 @@ pub struct WorkspaceRosters {
 #[must_use]
 pub fn cargo_target_directory() -> PathBuf {
     let executable = std::env::current_exe().expect("Fix: the test binary path must be readable");
-    executable
-        .ancestors()
-        .find(|directory| directory.join("CACHEDIR.TAG").is_file())
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| {
-            panic!(
-                "Fix: no ancestor of `{}` is a cargo target directory; run this test through cargo",
-                executable.display()
-            )
-        })
+    cargo_target_ancestor(&executable).unwrap_or_else(|| {
+        panic!(
+            "Fix: no ancestor of `{}` is a cargo target directory; run this test through cargo",
+            executable.display()
+        )
+    })
 }
 
 /// Root of the monorepo hosting vyre and its sibling products, if there is one.
@@ -436,5 +441,77 @@ mod tests {
     #[should_panic(expected = "no source file in this workspace declares")]
     fn a_marker_no_file_declares_is_reported_rather_than_guessed() {
         let _ = declaring_source_file("pub fn no_such_declaration_exists_anywhere");
+    }
+
+    /// A cargo target remains discoverable when its optional cache tag is absent.
+    ///
+    /// Some host-owned target directories predate cargo's `CACHEDIR.TAG`; cargo
+    /// still writes `.rustc_info.json` at their root. This closes the class where
+    /// a valid cargo-run test cannot allocate a nested fixture solely because
+    /// that optional tag is missing. It does not accept an unmarked directory:
+    /// at least one cargo-owned marker must exist.
+    #[test]
+    fn rustc_info_identifies_a_markerless_cargo_target_directory() {
+        let root = std::env::temp_dir().join(format!(
+            "vyre-markerless-target-directory-{}",
+            std::process::id()
+        ));
+        let executable = root.join("debug").join("deps").join("contract");
+        std::fs::create_dir_all(executable.parent().expect("the fixture has a parent"))
+            .expect("the markerless target fixture must be creatable");
+        std::fs::write(root.join(".rustc_info.json"), b"{}")
+            .expect("the cargo rustc-info marker must be writable");
+
+        assert_eq!(cargo_target_ancestor(&executable), Some(root.clone()));
+
+        std::fs::remove_dir_all(root).expect("the markerless target fixture must be removable");
+    }
+
+    /// An unmarked directory is never guessed to be a cargo target.
+    ///
+    /// Executable layout alone is not proof because arbitrary tools also use
+    /// `debug/deps`. This negative case keeps the fallback tied to cargo-owned
+    /// state rather than widening it to a path-shape heuristic.
+    #[test]
+    fn an_unmarked_debug_deps_layout_is_not_a_cargo_target_directory() {
+        let root = std::env::temp_dir().join(format!(
+            "vyre-unmarked-target-directory-{}",
+            std::process::id()
+        ));
+        let executable = root.join("debug").join("deps").join("contract");
+        std::fs::create_dir_all(executable.parent().expect("the fixture has a parent"))
+            .expect("the unmarked target fixture must be creatable");
+
+        assert_ne!(cargo_target_ancestor(&executable), Some(root.clone()));
+
+        std::fs::remove_dir_all(root).expect("the unmarked target fixture must be removable");
+    }
+
+    /// The nearest cargo-owned marker wins across nested cache directories.
+    ///
+    /// Scratch builds can live below a larger target cache. Returning the outer
+    /// cache would make independent fixtures collide, so this adversarial shape
+    /// pins the nearest-ancestor boundary.
+    #[test]
+    fn the_nearest_cargo_target_marker_owns_the_executable() {
+        let outer = std::env::temp_dir().join(format!(
+            "vyre-nested-target-directory-{}",
+            std::process::id()
+        ));
+        let inner = outer.join("scratch");
+        let executable = inner.join("debug").join("deps").join("contract");
+        std::fs::create_dir_all(executable.parent().expect("the fixture has a parent"))
+            .expect("the nested target fixture must be creatable");
+        std::fs::write(outer.join(".rustc_info.json"), b"{}")
+            .expect("the outer cargo marker must be writable");
+        std::fs::write(
+            inner.join("CACHEDIR.TAG"),
+            b"Signature: 8a477f597d28d172789f06886806bc55",
+        )
+        .expect("the inner cargo marker must be writable");
+
+        assert_eq!(cargo_target_ancestor(&executable), Some(inner));
+
+        std::fs::remove_dir_all(outer).expect("the nested target fixture must be removable");
     }
 }
