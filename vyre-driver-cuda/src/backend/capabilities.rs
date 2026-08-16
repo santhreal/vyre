@@ -367,7 +367,14 @@ impl CudaBackend {
             supports_f16: self.hardware_supports_f16(),
             supports_bf16: self.hardware_supports_bf16(),
             supports_indirect_dispatch: false,
-            supports_trap_propagation: true,
+            // False while the PTX emitter lowers `KernelOpKind::Trap` to a source
+            // comment and a branch to the kernel exit and records nothing: the
+            // trapping lane leaves and the host is never told, so a program whose
+            // domain guard traps would return wrong data with no error. Reporting
+            // false makes `check_backend_capabilities` refuse such a program by
+            // name instead. Flip this and the device profile together with the
+            // trap sidecar record, never before it.
+            supports_trap_propagation: false,
             supports_distributed_collectives: false,
             max_workgroup_size: self.max_block_dim(),
         }

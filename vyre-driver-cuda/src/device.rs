@@ -649,7 +649,11 @@ impl CudaDeviceCaps {
             supports_specialization_constants: false,
             supports_f16: self.hardware_supports_f16(),
             supports_bf16: self.hardware_supports_bf16(),
-            supports_trap_propagation: true,
+            // False while the PTX emitter lowers `KernelOpKind::Trap` to a source
+            // comment and a branch to the kernel exit and records nothing. See
+            // `CudaDeviceCaps::program_validation_caps` for the whole reason; the
+            // two records must report the same answer.
+            supports_trap_propagation: false,
             supports_tensor_cores: self.hardware_supports_tensor_cores(),
             has_mul_high: true,
             has_dual_issue_fp32_int32: true,
