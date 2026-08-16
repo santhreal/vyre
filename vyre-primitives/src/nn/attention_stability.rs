@@ -1,6 +1,6 @@
 use vyre_foundation::ir::Expr;
 
-pub use super::f32_stability::{finite_or, flush_tiny};
+use super::f32_stability::finite_or;
 
 /// Bound an attention score before it enters a softmax recurrence.
 ///

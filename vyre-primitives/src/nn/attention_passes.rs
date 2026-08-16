@@ -6,8 +6,9 @@ use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node,
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
 use crate::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, direct_score_expr, finite_or, flush_tiny, positive_denominator,
+    bounded_exp_arg, bounded_score, direct_score_expr, positive_denominator,
 };
+use crate::nn::f32_stability::{finite_or, flush_tiny};
 
 /// Stable op id for the max-score pass.
 pub const ATTENTION_MAX_PASS_OP_ID: &str = "vyre-primitives::nn::attention_max_pass";
