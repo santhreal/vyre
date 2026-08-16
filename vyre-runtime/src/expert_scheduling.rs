@@ -8,7 +8,7 @@
 //!    progress. Ordinary workgroups are not pinned to one SM. Bounded queue capacity
 //!    and aging prevent starvation.
 //! 2. **Inter-Device All-To-All Exchange**: High-throughput collective token routing
-//!    across multiple distinct devices over an explicit [`vyre_driver::peer_transfer::PeerTopology`].
+//!    across multiple distinct devices over an explicit [`vyre_driver::PeerTopology`].
 //!
 //! NVLink and PCIe describe device-to-device routes, never SM-to-SM memory inside one device.
 

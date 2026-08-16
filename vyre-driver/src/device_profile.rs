@@ -5,7 +5,7 @@
 //! strategy code consume projections of this profile instead of carrying
 //! independent capability records that can drift.
 
-use vyre_foundation::geometry::{
+use vyre_foundation::{
     CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
 };
 use vyre_foundation::optimizer::AdapterCaps;

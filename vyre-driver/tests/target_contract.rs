@@ -110,11 +110,3 @@ fn target_deserialization_fails_closed_on_unknown() {
     assert!(msg.contains("unsupported target"));
     assert!(msg.contains("Fix:"));
 }
-
-#[test]
-fn target_re_exports_match() {
-    let t1: vyre_driver::Target = Target::Ptx;
-    let t2: vyre_driver::aot::Target = t1;
-    let t3: vyre_driver::registry::Target = t2;
-    assert_eq!(t1, t3);
-}

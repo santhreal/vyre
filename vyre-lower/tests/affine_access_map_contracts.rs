@@ -5,7 +5,7 @@
 //! - Bounds, alias, element-size, and alignment evidence preservation through lowering.
 //! - Zero-copy view admission only when consumer ABI accepts the resulting layout.
 
-use vyre_lower::analyses::affine_access_map::{
+use vyre_lower::analyses::{
     AffineAccessMap, AffineMapError, ConsumerAbiRequirement, DimExtent, SliceSpec, StrideExpr,
 };
 

@@ -12,7 +12,7 @@ pub mod accounting;
 /// Backend-neutral fallible allocation reservation helpers.
 pub mod allocation;
 /// Backend-neutral ahead-of-time emission registry.
-pub mod aot;
+pub(crate) mod aot;
 /// Independent-arm detection for queue-parallel dispatch (ROADMAP D2).
 /// Pure set arithmetic over (reads, writes) summaries; the dispatcher
 /// uses `can_dispatch_concurrently` to decide whether two megakernel
@@ -108,9 +108,9 @@ pub(crate) mod pipeline;
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
 /// Backend-neutral peer-transfer capability contracts and checked accounting.
-pub mod peer_transfer;
+pub(crate) mod peer_transfer;
 /// Read-only semantic operation projections, migrations, and policy.
-pub mod registry;
+pub(crate) mod registry;
 /// Backend-neutral reservation policy adapters.
 pub mod reservation_policy;
 /// Backend-neutral resident-resource reuse telemetry.
@@ -146,7 +146,7 @@ pub mod speculation_verdict;
 pub(crate) mod subgroup;
 /// Target-compiler shell shared by every backend's dialect.
 /// Stable compilation and emission target identifiers.
-pub mod target;
+pub(crate) mod target;
 pub mod target_dialect;
 /// Trace-based JIT specialization decision policy (ROADMAP I2).
 /// Decides whether the dispatcher should fire a speculative
@@ -295,8 +295,9 @@ pub use registry::{
 };
 pub use registry::{
     validate_intrinsic_lowering, Chain, EnforceGate, EnforceVerdict, IntrinsicRegistrationError,
-    MutationClass, Target,
+    MutationClass,
 };
+pub use target::Target;
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
 pub use routing::pgo;
 pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};
