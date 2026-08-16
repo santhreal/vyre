@@ -29,14 +29,12 @@ use std::path::Path;
 
 use toml::Value;
 
+use crate::crate_ownership::{REGISTRY as OWNERSHIP_REGISTRY, Registry};
 use crate::source_scan::mask_comments_and_strings;
 use crate::{cfg_test_line_mask, read_source_bounded, relative, source_tree_files};
 
 /// The contract data, inside the directory of the crate that owns the rule.
 const DATA_FILE: &str = "backend-vocabulary.toml";
-
-/// The registry every member's layer is declared in.
-const OWNERSHIP_REGISTRY: &str = "docs/CRATE_OWNERSHIP.toml";
 
 /// One concrete backend, vendor or dialect name a neutral crate may not write.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -322,41 +320,12 @@ fn string_field(row: &Value, key: &str, kind: &str, label: &str) -> Result<Strin
 fn read_registry(
     root: &Path,
 ) -> Result<(BTreeMap<String, String>, BTreeMap<String, String>), String> {
-    let path = root.join(OWNERSHIP_REGISTRY);
-    let text = read_source_bounded(&path)
-        .map_err(|error| format!("cannot read {OWNERSHIP_REGISTRY}: {error}"))?;
-    let table: toml::Table = toml::from_str(&text)
-        .map_err(|error| format!("{OWNERSHIP_REGISTRY} is not readable as TOML: {error}"))?;
-    let document = Value::Table(table);
-    let entries = document
-        .get("crate")
-        .and_then(Value::as_array)
-        .ok_or_else(|| format!("{OWNERSHIP_REGISTRY} declares no [[crate]] entries"))?;
+    let registry = Registry::read(root)?;
     let mut layers = BTreeMap::new();
     let mut directories = BTreeMap::new();
-    for entry in entries {
-        let Some(package) = entry.get("package").and_then(Value::as_str) else {
-            return Err(format!(
-                "{OWNERSHIP_REGISTRY} has a [[crate]] entry with no `package`"
-            ));
-        };
-        let Some(layer) = entry.get("layer").and_then(Value::as_str) else {
-            return Err(format!(
-                "{OWNERSHIP_REGISTRY} entry for `{package}` declares no `layer`"
-            ));
-        };
-        let Some(directory) = entry.get("path").and_then(Value::as_str) else {
-            return Err(format!(
-                "{OWNERSHIP_REGISTRY} entry for `{package}` declares no `path`"
-            ));
-        };
-        layers.insert(package.to_string(), layer.to_string());
-        directories.insert(package.to_string(), directory.to_string());
-    }
-    if layers.is_empty() {
-        return Err(format!(
-            "{OWNERSHIP_REGISTRY} carries no member, so the roster would be empty"
-        ));
+    for row in registry.rows() {
+        layers.insert(row.package.clone(), row.layer.clone());
+        directories.insert(row.package.clone(), row.path.clone());
     }
     Ok((layers, directories))
 }

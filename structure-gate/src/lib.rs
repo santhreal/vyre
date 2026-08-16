@@ -47,6 +47,7 @@ use toml::Value;
 use walkdir::WalkDir;
 
 pub mod backend_vocabulary;
+pub mod crate_ownership;
 pub mod source_scan;
 
 /// Category A owner: every composition, meaning anything that returns a

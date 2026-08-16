@@ -52,9 +52,9 @@
 //! [`WAIVERS`] is a closed roster: a reported site absent from it fails, and a
 //! roster entry that matches nothing fails as stale. So a new hand-written descent
 //! fails without anyone remembering this file exists, and a descent that is fixed
-//! cannot leave its waiver behind to cover the next one. The roster is the debt
 //! ledger, not a suppression list: each entry names the subsystem that owns the
-//! file, because the file's owner is the only agent permitted to edit it.
+//! file, as `docs/CRATE_OWNERSHIP.toml` declares it, because only that subsystem
+//! converts the file.
 //!
 //! # What it does not catch
 //!
@@ -70,6 +70,7 @@ use std::path::Path;
 use structure_gate::source_scan::{
     is_word_byte, mask_comments_and_strings, matching_brace, rust_sources_with_text,
 };
+use structure_gate::crate_ownership::Registry;
 use structure_gate::workspace_root;
 
 /// Where `Node` is declared, relative to the workspace root.
@@ -101,260 +102,263 @@ const OWNER_CALLS: [&str; 5] = [
 const WAIVERS: &[Waiver] = &[
     Waiver {
         path: "conform/vyre-conform/tests/contract_cases/composition_discipline__every_op_is_under_complexity_budget.rs",
-        owner: "ToolingFrontend",
+        owner: "conformance",
         reason: "conform harness walk, converted with the rest of the conform contract cases",
     },
     Waiver {
         path: "conform/vyre-conform/tests/contract_cases/composition_discipline__measure_program.rs",
-        owner: "ToolingFrontend",
+        owner: "conformance",
         reason: "conform harness walk, converted with the rest of the conform contract cases",
     },
     Waiver {
         path: "conform/vyre-conform/tests/contract_cases/parity_matrix__synthetic_entries.rs",
-        owner: "ToolingFrontend",
+        owner: "conformance",
         reason: "conform harness walk, converted with the rest of the conform contract cases",
     },
     Waiver {
         path: "vyre-driver-wgpu/tests/op_pairwise/all_entries_vec.rs",
-        owner: "Backends",
+        owner: "portable-driver",
         reason: "driver test walk, converted with the driver walker lane",
     },
     Waiver {
         path: "vyre-libs/src/nn/linear/layer/linear_4bit/affine_grouped.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain op builder walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/src/security/aliases_dataflow.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain dataflow walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/blake3_kat.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/indexed_map_composition_contracts.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/loop_unroll_trip1_idempotence.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/math_algebra_branchless_contracts.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/nn_attention_clone_family_ir_invariance.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/optimized_programs.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/parsing_walker_clone_family.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/region_chain_invariant.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/workgroup_cooperative_tiling.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-reference/src/execution/hashmap/step/node_step.rs",
-        owner: "Backends",
+        owner: "reference-semantics",
         reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
     },
     Waiver {
         path: "vyre-reference/src/execution/node.rs",
-        owner: "Backends",
+        owner: "reference-semantics",
         reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
     },
     Waiver {
         path: "xtask-registry/src/docs/operation_schema/composition.rs",
-        owner: "ToolingFrontend",
+        owner: "release-tooling",
         reason: "tooling walk over IR for documentation generation",
     },
     Waiver {
         path: "xtask-registry/src/gates/lego_audit/fingerprint.rs",
-        owner: "ToolingFrontend",
+        owner: "release-tooling",
         reason: "tooling walk over IR for a gate, emitting one fingerprint byte per node kind, so the arm set is the measurement",
     },
     Waiver {
         path: "xtask-registry/src/gates/lego_audit/ops.rs",
-        owner: "ToolingFrontend",
+        owner: "release-tooling",
         reason: "tooling walk over IR for a gate, counting nodes per variant, so the arm set is the measurement",
     },
     Waiver {
         path: "xtask-registry/src/print_composition.rs",
-        owner: "ToolingFrontend",
+        owner: "release-tooling",
         reason: "tooling walk over IR for a report",
     },
     Waiver {
         path: "vyre-debug/src/source_assignments.rs",
-        owner: "CompilerCore",
+        owner: "debugging",
         reason: "lexical scope stack pushed per child body; the owner walk carries no scope frame",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/algebraic/const_fold/binop_identities.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "rebuild threading a local literal environment through each child in order",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/cleanup/branch_value_hoist.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test helper searching for one structural shape, deliberately independent of the walker under test",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/cleanup/empty_block_collapse.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle counting empty blocks independently of the pass it checks",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/cleanup/region_fusion_hint.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "reads sibling windows inside each body, which is position information the owner walk drops",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/fusion_cse/fusion/mod.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "rebuild constructing each variant with its own builder; belongs on rewrite_node, conversion in flight",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/loops/loop_redundant_bound_check_elide.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "two remaining blocks are test oracles counting guards and stores independently of the pass",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/loops/loop_unroll.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "catch-all encodes the scope claim that other variants open their own scope, documented at the site",
     },
     Waiver {
         path: "vyre-foundation/src/validate/rule_pipeline/mod.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "explicit work stack assigning per child body a divergence flag and a depth the owner walk has no slot for",
     },
     Waiver {
         path: "vyre-foundation/tests/adversarial_loop_induction_rebind.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/canonical_determinism.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/collective_ir_contracts.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/contract_cases/autodiff_transform_contracts_programs.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/contract_cases/program_stats_proptest__arb_node.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "generator building arbitrary nodes; routing it through the owner would compare the walker against itself",
     },
     Waiver {
         path: "vyre-foundation/tests/fusion_substitute_into_subgroup_operand.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the substitution walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/inline_buffer_reference_arguments.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the inliner walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/inline_callee_local_rename_in_trap_and_async.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the inliner walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/rewrite_driver_descends_into_async_offset.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle whose whole point is checking the rewrite driver against a separate descent",
     },
     Waiver {
         path: "vyre-foundation/tests/subst_preserves_subgroup_reduce_op.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the substitution walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/wire_buffer_ref_round_trip.rs",
-        owner: "CompilerCore",
+        owner: "foundation-ir",
         reason: "test oracle deliberately independent of the wire round trip it audits",
     },
     Waiver {
         path: "vyre-libs/src/graph/dominator_tree/tests/mod.rs",
-        owner: "CompilerCore",
+        owner: "product-libraries",
         reason: "test oracle deliberately independent of the dominator construction it audits",
     },
     Waiver {
         path: "vyre-libs/src/graph/persistent_bfs/tests/behavior_contracts/program_sync_contracts.rs",
-        owner: "CompilerCore",
+        owner: "product-libraries",
         reason: "test oracle deliberately independent of the traversal it audits",
     },
     Waiver {
         path: "vyre-libs/src/graph/persistent_bfs/tests/validation_and_builders.rs",
-        owner: "CompilerCore",
+        owner: "product-libraries",
         reason: "test oracle deliberately independent of the traversal it audits",
     },
     Waiver {
         path: "vyre-libs/tests/adversarial_math.rs",
-        owner: "CompilerCore",
+        owner: "product-libraries",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-libs/tests/ir_shape/mod.rs",
-        owner: "CompilerCore",
+        owner: "product-libraries",
         reason: "shape oracle for the graph tests, independent of the production walker by design",
     },
     Waiver {
         path: "vyre-libs/tests/loop_back_edge_audit.rs",
-        owner: "CompilerCore",
+        owner: "product-libraries",
         reason: "back edge audit oracle, independent of the production walker by design",
     },
     Waiver {
         path: "vyre-libs/tests/prefix_scan_contract.rs",
-        owner: "CompilerCore",
+        owner: "product-libraries",
         reason: "per-lane store counter that folds each condition to decide whether a branch runs for that lane, so it must not descend into a body the lane never takes",
     },
     Waiver {
         path: "vyre-libs/tests/surface_contracts.rs",
-        owner: "Backends",
+        owner: "product-libraries",
         reason: "library surface contract walk owned by the libs lane, not converted in this lane",
     },
     Waiver {
         path: "vyre-pass-engine/tests/dce_program_back_edge_contract.rs",
-        owner: "CompilerCore",
+        owner: "pass-engine",
         reason: "test oracle deliberately independent of the dead code walker it audits",
     },
 ];
 
 /// One recorded hand-written descent.
 struct Waiver {
+    /// Checkout-relative file the descent sits in.
     path: &'static str,
+    /// Owner that `docs/CRATE_OWNERSHIP.toml` declares for the crate holding it.
     owner: &'static str,
+    /// What makes the hand-written descent acceptable here.
     reason: &'static str,
 }
 
@@ -435,19 +439,31 @@ fn every_waiver_still_describes_a_real_walk() {
     );
 }
 
-/// Every waiver names an owning subsystem and a reason that says something.
+/// Every waiver names the subsystem that owns the file, and a reason that says
+/// something.
+///
+/// The roster is not written here. It is the `owner` each `[[crate]]` row of
+/// `docs/CRATE_OWNERSHIP.toml` declares, crossed with the crate whose directory
+/// contains the waived file. A crate added without a row owns nothing, so the
+/// first waiver under it fails until the row exists, and a waiver retargeted at
+/// a file in another crate fails until the row it names is corrected.
 #[test]
-fn every_waiver_names_an_owner_and_a_reason() {
+fn every_waiver_names_the_owner_of_the_crate_holding_the_file() {
+    let registry = Registry::read(&workspace_root())
+        .expect("Fix: docs/CRATE_OWNERSHIP.toml must be readable to judge waiver owners");
     for waiver in WAIVERS {
-        assert!(
-            matches!(
-                waiver.owner,
-                "CompilerCore" | "Backends" | "ToolingFrontend"
-            ),
-            "Fix: waiver for {} names owner `{}`, which is not a subsystem. Only the subsystem \
-             that owns the file may convert it, so the row has to say which one.",
-            waiver.path,
-            waiver.owner
+        let Some(owning) = registry.owning_crate(waiver.path) else {
+            panic!(
+                "Fix: waiver for {} sits under no crate declared in docs/CRATE_OWNERSHIP.toml. \
+                 Declare the crate that holds the file, because only its owner may convert it.",
+                waiver.path
+            );
+        };
+        assert_eq!(
+            waiver.owner, owning.owner,
+            "Fix: waiver for {} names owner `{}` and `{}` declares owner `{}` in \
+             docs/CRATE_OWNERSHIP.toml. Only the subsystem that owns the file may convert it.",
+            waiver.path, waiver.owner, owning.package, owning.owner
         );
         assert!(
             waiver.reason.split_whitespace().count() >= 5,
