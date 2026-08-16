@@ -478,17 +478,6 @@ impl RingTelemetry {
         }
     }
 
-    /// Aggregate queue, idle, fairness, and drain counters into one cheap
-    /// runtime snapshot for SRE dashboards and launch-policy feedback.
-    #[must_use]
-    #[cfg(test)]
-    pub fn runtime_counters(&self) -> ResidentRuntimeCounters {
-        match self.try_runtime_counters() {
-            Ok(counters) => counters,
-            Err(_) => zero_runtime_counters(),
-        }
-    }
-
     /// Fallibly aggregate queue, idle, fairness, and drain counters.
     ///
     /// # Errors
@@ -534,17 +523,6 @@ impl RingTelemetry {
             requeue_slots: self.occupancy.requeue,
             fault_slots: self.occupancy.fault,
         })
-    }
-
-    /// Derive persistent-kernel health from two snapshots without polling the
-    /// device or synchronizing with the GPU.
-    #[must_use]
-    #[cfg(test)]
-    pub fn health_since(&self, previous: &RingTelemetry) -> ResidentWatchdogSnapshot {
-        match self.try_health_since(previous) {
-            Ok(snapshot) => snapshot,
-            Err(_) => zero_watchdog_snapshot(),
-        }
     }
 
     /// Fallibly derive persistent-kernel health from two snapshots.
@@ -626,41 +604,6 @@ impl RingTelemetry {
             .checked_add(u64::from(self.occupancy.requeue))
             .ok_or_else(errors::requeue_count_overflow)?;
         ResidentLaunchPolicy::standard().recommend(request)
-    }
-}
-
-/// All-zero runtime counters, returned by the infallible `runtime_counters`
-/// accessor when the fallible decode path reports an error.
-#[cfg(test)]
-fn zero_runtime_counters() -> ResidentRuntimeCounters {
-    ResidentRuntimeCounters {
-        total_slots: 0,
-        queue_depth: 0,
-        gpu_idle_slots: 0,
-        gpu_idle_ppm: 0,
-        frontier_density_bps: 0,
-        occupancy_proxy_bps: 0,
-        drained_slots: 0,
-        unreclaimed_done_slots: 0,
-        tenant_fairness_total: 0,
-        tenant_fairness_skew: 0,
-        priority_fairness_total: 0,
-        requeue_slots: 0,
-        fault_slots: 0,
-    }
-}
-
-/// All-zero watchdog snapshot, returned by the infallible `health_since`
-/// accessor when the fallible derivation path reports an error.
-#[cfg(test)]
-fn zero_watchdog_snapshot() -> ResidentWatchdogSnapshot {
-    ResidentWatchdogSnapshot {
-        done_delta: 0,
-        queue_depth: 0,
-        fault_slots: 0,
-        requeue_slots: 0,
-        gpu_idle_ppm: 0,
-        suspected_stall: false,
     }
 }
 

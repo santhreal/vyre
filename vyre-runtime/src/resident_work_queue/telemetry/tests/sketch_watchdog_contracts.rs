@@ -40,13 +40,17 @@ fn watchdog_health_flags_active_queue_without_drain_progress() {
     let mut current_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     ResidentWorkQueue::publish_slot(&mut current_ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
         .unwrap();
-    let stalled = RingTelemetry::decode(&current_control, &current_ring).health_since(&previous);
+    let stalled = RingTelemetry::decode(&current_control, &current_ring)
+        .try_health_since(&previous)
+        .expect("Fix: two well-formed snapshots must derive health without overflow");
     assert_eq!(stalled.done_delta, 0);
     assert_eq!(stalled.queue_depth, 1);
     assert!(stalled.suspected_stall);
 
     current_control[done_count..done_count + 4].copy_from_slice(&9u32.to_le_bytes());
-    let progressed = RingTelemetry::decode(&current_control, &current_ring).health_since(&previous);
+    let progressed = RingTelemetry::decode(&current_control, &current_ring)
+        .try_health_since(&previous)
+        .expect("Fix: two well-formed snapshots must derive health without overflow");
     assert_eq!(progressed.done_delta, 2);
     assert!(!progressed.suspected_stall);
 }

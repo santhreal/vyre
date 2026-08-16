@@ -41,7 +41,9 @@ fn runtime_counters_report_queue_idle_fairness_and_drain() {
     let done = slot_status(1);
     ring[done..done + 4].copy_from_slice(&slot::DONE.to_le_bytes());
 
-    let counters = RingTelemetry::decode(&control, &ring).runtime_counters();
+    let counters = RingTelemetry::decode(&control, &ring)
+        .try_runtime_counters()
+        .expect("Fix: a four-slot ring must aggregate without overflow");
     assert_eq!(counters.total_slots, 4);
     assert_eq!(counters.queue_depth, 2);
     assert_eq!(counters.gpu_idle_slots, 1);
@@ -70,7 +72,13 @@ fn telemetry_launch_recommendation_uses_frontier_density_for_topology() {
         .recommend_launch(ResidentLaunchRequest::direct(8, 64, 256))
         .expect("Fix: telemetry launch recommendation must accept valid limits");
 
-    assert_eq!(telemetry.runtime_counters().frontier_density_bps, 5_000);
+    assert_eq!(
+        telemetry
+            .try_runtime_counters()
+            .expect("Fix: an eight-slot ring must aggregate without overflow")
+            .frontier_density_bps,
+        5_000
+    );
     assert_eq!(rec.topology, ResidentQueueTopology::DenseFrontier);
 }
 
