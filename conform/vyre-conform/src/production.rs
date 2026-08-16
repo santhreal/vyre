@@ -1,6 +1,7 @@
 //! Production compiler, target payload, materialization, and submission route.
 
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::Arc;
 use std::thread;
@@ -35,6 +36,7 @@ const UNNAMED_OP_ID: &str = "<program with no entry op id>";
 
 /// Failure in the production conformance route.
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum ProductionError {
     /// Program-to-graph adaptation or compiler validation failed.
     #[error("production conformance compilation failed: {0}")]
@@ -72,6 +74,18 @@ pub enum ProductionError {
         /// Operation the step was running.
         op_id: String,
         /// Backend the step was running on.
+        backend: &'static str,
+    },
+    /// A bounded step was abandoned on expiry and the session refuses more work.
+    #[error(
+        "`{op_id}` on backend `{backend}` abandoned a step that exceeded its deadline. \
+         Fix: the abandoned step may still be inside a driver call against this \
+         artifact; compile a fresh session instead of reusing this one."
+    )]
+    Abandoned {
+        /// Operation whose step was abandoned.
+        op_id: String,
+        /// Backend the abandoned step was running on.
         backend: &'static str,
     },
 }
@@ -130,6 +144,13 @@ pub struct ProductionSession {
     session: Arc<ArtifactSession>,
     op_id: String,
     backend: &'static str,
+    /// Set once a bounded step was abandoned on expiry.
+    ///
+    /// The abandoned thread still holds this session and may still be inside a
+    /// driver call against the same materialized artifact and the same bindings,
+    /// so a second submission would run concurrently with work the caller can
+    /// neither see nor stop. The session refuses instead.
+    abandoned: AtomicBool,
 }
 
 impl ProductionSession {
@@ -161,6 +182,7 @@ impl ProductionSession {
             session: Arc::new(session),
             op_id,
             backend,
+            abandoned: AtomicBool::new(false),
         })
     }
 
@@ -207,11 +229,17 @@ impl ProductionSession {
         inputs: &[&[u8]],
         grid: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, ProductionError> {
+        if self.abandoned.load(Ordering::Acquire) {
+            return Err(ProductionError::Abandoned {
+                op_id: self.op_id.clone(),
+                backend: self.backend,
+            });
+        }
         // The bounded step outlives this call when it exceeds its deadline, so it
         // cannot borrow the caller's input slices.
         let owned = inputs.iter().map(|bytes| bytes.to_vec()).collect::<Vec<_>>();
         let session = Arc::clone(&self.session);
-        run_bounded_step(
+        let outcome = run_bounded_step(
             step,
             &self.op_id,
             self.backend,
@@ -230,7 +258,11 @@ impl ProductionSession {
                 };
                 Ok(session.ordered_outputs(&completion)?)
             },
-        )
+        );
+        if matches!(outcome, Err(ProductionError::Deadline { .. })) {
+            self.abandoned.store(true, Ordering::Release);
+        }
+        outcome
     }
 }
 
@@ -269,10 +301,12 @@ fn compile_artifact_session(
 /// Demanding a facet a registration declares absent measures the registration
 /// rather than the operation, so the route follows what the registration says it
 /// has.
+#[non_exhaustive]
 pub enum ExecutionRoute {
     /// Compiled, authenticated and materialized target artifact.
     Artifact(ProductionSession),
     /// The backend's own dispatch entry point, for a backend with no artifact.
+    #[non_exhaustive]
     Dispatch {
         /// Acquired backend, shared so a bounded dispatch can own a reference.
         backend: Arc<dyn VyreBackend>,

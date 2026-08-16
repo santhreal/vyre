@@ -136,13 +136,13 @@ fn wait_for_device(
     deadline: Duration,
     mut ready: impl FnMut() -> Result<bool, BackendError>,
 ) -> Result<(), BackendError> {
+    let started = Instant::now();
     for _ in 0..DEVICE_WAIT_SPIN_QUERIES {
         if ready()? {
             return Ok(());
         }
         std::hint::spin_loop();
     }
-    let started = Instant::now();
     let mut sleep = DEVICE_WAIT_FIRST_SLEEP;
     loop {
         if ready()? {
