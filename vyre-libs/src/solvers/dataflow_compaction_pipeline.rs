@@ -16,10 +16,6 @@ use crate::{
         dot_partial::{dot_partial, dot_partial_program},
         dp_clip::dp_clip_per_sample,
         interval::{interval_merge_body, interval_merge_program},
-        prefix_scan::{
-            prefix_scan, prefix_scan_large, prefix_scan_large_with_op_id, prefix_scan_with_op_id,
-            ScanKind,
-        },
         sparse_recovery::iht_threshold,
         stream_compact::stream_compact,
     },
@@ -64,41 +60,6 @@ pub fn reference_bitset_fixpoint_warm_start(
     seed: &[u32],
 ) -> (Vec<u32>, u32) {
     reference_eval_warm_start(current, next, seed)
-}
-
-/// Build a single-workgroup prefix scan dispatch.
-#[must_use]
-pub fn dispatch_prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Program {
-    prefix_scan(in_buf, out_buf, n, kind)
-}
-
-/// Build a single-workgroup prefix scan dispatch with an explicit op id.
-#[must_use]
-pub fn dispatch_prefix_scan_with_op_id(
-    in_buf: &str,
-    out_buf: &str,
-    n: u32,
-    kind: ScanKind,
-    op_id: &'static str,
-) -> Program {
-    prefix_scan_with_op_id(in_buf, out_buf, n, kind, op_id)
-}
-
-/// Build a large parallel prefix scan dispatch.
-#[must_use]
-pub fn dispatch_prefix_scan_large(in_buf: &str, out_buf: &str, n: u32) -> Program {
-    prefix_scan_large(in_buf, out_buf, n)
-}
-
-/// Build a large parallel prefix scan dispatch with an explicit op id.
-#[must_use]
-pub fn dispatch_prefix_scan_large_with_op_id(
-    in_buf: &str,
-    out_buf: &str,
-    n: u32,
-    op_id: &'static str,
-) -> Program {
-    prefix_scan_large_with_op_id(in_buf, out_buf, n, op_id)
 }
 
 /// Build a stream-compaction dispatch consuming exclusive prefix offsets.
@@ -270,7 +231,6 @@ pub fn stochastic_decode(bs: &[u32], len_bits: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math::prefix_scan::OP_ID_INCLUSIVE_SUM;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-8 * (1.0 + a.abs() + b.abs())
@@ -294,38 +254,6 @@ mod tests {
                 "cur", "next", "changed", "seed", 4
             )),
             "vyre-primitives::fixpoint::bitset_fixpoint_warm_start"
-        );
-        assert_eq!(
-            program_generator(&dispatch_prefix_scan(
-                "input",
-                "output",
-                8,
-                ScanKind::InclusiveSum
-            )),
-            "vyre-primitives::math::prefix_scan_inclusive_sum"
-        );
-        assert_eq!(
-            program_generator(&dispatch_prefix_scan_with_op_id(
-                "input",
-                "output",
-                8,
-                ScanKind::InclusiveSum,
-                OP_ID_INCLUSIVE_SUM
-            )),
-            "vyre-primitives::math::prefix_scan_inclusive_sum"
-        );
-        assert_eq!(
-            program_generator(&dispatch_prefix_scan_large("input", "output", 2048)),
-            "vyre-primitives::math::prefix_scan_inclusive_sum"
-        );
-        assert_eq!(
-            program_generator(&dispatch_prefix_scan_large_with_op_id(
-                "input",
-                "output",
-                2048,
-                OP_ID_INCLUSIVE_SUM
-            )),
-            "vyre-primitives::math::prefix_scan_inclusive_sum"
         );
         assert_eq!(
             program_generator(&dispatch_stream_compact(

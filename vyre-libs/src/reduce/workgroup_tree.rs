@@ -111,49 +111,43 @@ pub fn min_u32_child(
 /// Build a standalone f32 workgroup sum Program.
 #[must_use]
 pub fn workgroup_sum_f32(values: &str, out: &str, count: u32, tile: u32) -> Program {
-    reduction_program(
-        SUM_F32_OP_ID,
+    reduction_program(WorkgroupReduction {
+        op_id: SUM_F32_OP_ID,
         values,
         out,
         count,
         tile,
-        DataType::F32,
-        Expr::f32(0.0),
-        Expr::add,
-        |tile, scratch| sum_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
-    )
+        dtype: DataType::F32,
+        fold: WorkgroupFold::Sum,
+    })
 }
 
 /// Build a standalone u32 workgroup sum Program.
 #[must_use]
 pub fn workgroup_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
-    reduction_program(
-        SUM_U32_OP_ID,
+    reduction_program(WorkgroupReduction {
+        op_id: SUM_U32_OP_ID,
         values,
         out,
         count,
         tile,
-        DataType::U32,
-        Expr::u32(0),
-        Expr::add,
-        |tile, scratch| sum_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
-    )
+        dtype: DataType::U32,
+        fold: WorkgroupFold::Sum,
+    })
 }
 
 /// Build a standalone f32 workgroup maximum Program.
 #[must_use]
 pub fn workgroup_max_f32(values: &str, out: &str, count: u32, tile: u32) -> Program {
-    reduction_program(
-        MAX_F32_OP_ID,
+    reduction_program(WorkgroupReduction {
+        op_id: MAX_F32_OP_ID,
         values,
         out,
         count,
         tile,
-        DataType::F32,
-        Expr::f32(f32::MIN),
-        Expr::max,
-        |tile, scratch| max_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
-    )
+        dtype: DataType::F32,
+        fold: WorkgroupFold::Max,
+    })
 }
 
 /// Build a standalone u32 workgroup maximum Program.
@@ -165,17 +159,15 @@ pub fn workgroup_max_f32(values: &str, out: &str, count: u32, tile: u32) -> Prog
 /// the fast warp-reduction path on subgroup-capable backends for free.
 #[must_use]
 pub fn workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
-    reduction_program(
-        MAX_U32_OP_ID,
+    reduction_program(WorkgroupReduction {
+        op_id: MAX_U32_OP_ID,
         values,
         out,
         count,
         tile,
-        DataType::U32,
-        Expr::u32(u32::MIN),
-        Expr::max,
-        |tile, scratch| max_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
-    )
+        dtype: DataType::U32,
+        fold: WorkgroupFold::Max,
+    })
 }
 
 /// Build a standalone f32 workgroup minimum Program.
@@ -185,17 +177,15 @@ pub fn workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> Prog
 /// the native warp `subgroupMin` / `redux.sync.min` path on capable backends.
 #[must_use]
 pub fn workgroup_min_f32(values: &str, out: &str, count: u32, tile: u32) -> Program {
-    reduction_program(
-        MIN_F32_OP_ID,
+    reduction_program(WorkgroupReduction {
+        op_id: MIN_F32_OP_ID,
         values,
         out,
         count,
         tile,
-        DataType::F32,
-        Expr::f32(f32::MAX),
-        Expr::min,
-        |tile, scratch| min_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
-    )
+        dtype: DataType::F32,
+        fold: WorkgroupFold::Min,
+    })
 }
 
 /// Build a standalone u32 workgroup minimum Program.
@@ -203,35 +193,96 @@ pub fn workgroup_min_f32(values: &str, out: &str, count: u32, tile: u32) -> Prog
 /// `u32::MAX` is the neutral for an unsigned minimum.
 #[must_use]
 pub fn workgroup_min_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
-    reduction_program(
-        MIN_U32_OP_ID,
+    reduction_program(WorkgroupReduction {
+        op_id: MIN_U32_OP_ID,
         values,
         out,
         count,
         tile,
-        DataType::U32,
-        Expr::u32(u32::MAX),
-        Expr::min,
-        |tile, scratch| min_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
-    )
+        dtype: DataType::U32,
+        fold: WorkgroupFold::Min,
+    })
 }
 
-#[allow(clippy::too_many_arguments)]
-fn reduction_program<F, R>(
+/// Which value a workgroup reduction folds its lanes down to.
+///
+/// The fold decides three things at once - the identity a lane starts from, how
+/// two lanes combine, and which tree body the sweep emits - and the three must
+/// agree. Passed as three separate arguments they could disagree, and a `max`
+/// combine over a `sum` tree is a silently wrong reduction; naming the fold
+/// once makes that unstateable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WorkgroupFold {
+    /// Add the lanes.
+    Sum,
+    /// Keep the largest lane.
+    Max,
+    /// Keep the smallest lane.
+    Min,
+}
+
+impl WorkgroupFold {
+    /// Value a lane accumulates from before it reads anything.
+    fn identity(self, dtype: &DataType) -> Expr {
+        match (self, dtype) {
+            (Self::Sum, DataType::F32) => Expr::f32(0.0),
+            (Self::Sum, _) => Expr::u32(0),
+            (Self::Max, DataType::F32) => Expr::f32(f32::MIN),
+            (Self::Max, _) => Expr::u32(u32::MIN),
+            (Self::Min, DataType::F32) => Expr::f32(f32::MAX),
+            (Self::Min, _) => Expr::u32(u32::MAX),
+        }
+    }
+
+    /// Combine two lane values.
+    fn combine(self, left: Expr, right: Expr) -> Expr {
+        match self {
+            Self::Sum => Expr::add(left, right),
+            Self::Max => Expr::max(left, right),
+            Self::Min => Expr::min(left, right),
+        }
+    }
+
+    /// Tree sweep over the staged scratch buffer.
+    fn tree(self, tile: u32, scratch: &'static str) -> Vec<Node> {
+        let scope = WorkgroupReductionScope::FirstWorkgroup;
+        match self {
+            Self::Sum => sum_body(tile, scratch, scope),
+            Self::Max => max_body(tile, scratch, scope),
+            Self::Min => min_body(tile, scratch, scope),
+        }
+    }
+}
+
+/// One standalone workgroup reduction: what to fold, over which buffer, into
+/// which output, at which launch geometry.
+struct WorkgroupReduction<'a> {
+    /// Region generator id the emitted Program carries.
     op_id: &'static str,
-    values: &str,
-    out: &str,
+    /// Input buffer the lanes read.
+    values: &'a str,
+    /// Single-slot output buffer the reduction writes.
+    out: &'a str,
+    /// Elements in `values`.
     count: u32,
+    /// Lanes in the workgroup, and slots in the scratch buffer.
     tile: u32,
+    /// Element type of both buffers.
     dtype: DataType,
-    init: Expr,
-    accumulate: F,
-    reduce: R,
-) -> Program
-where
-    F: Fn(Expr, Expr) -> Expr,
-    R: Fn(u32, &'static str) -> Vec<Node>,
-{
+    /// Which reduction to emit.
+    fold: WorkgroupFold,
+}
+
+fn reduction_program(spec: WorkgroupReduction<'_>) -> Program {
+    let WorkgroupReduction {
+        op_id,
+        values,
+        out,
+        count,
+        tile,
+        dtype,
+        fold,
+    } = spec;
     let tile = tile.max(1);
     let chunks = count.div_ceil(tile);
     let scratch = "__workgroup_reduce_scratch";
@@ -242,7 +293,7 @@ where
         Node::if_then(
             Expr::is_first_workgroup(),
             vec![
-                Node::let_bind("acc", init),
+                Node::let_bind("acc", fold.identity(&dtype)),
                 Node::loop_for(
                     "chunk",
                     Expr::u32(0),
@@ -259,7 +310,7 @@ where
                             Expr::lt(idx.clone(), Expr::u32(count)),
                             vec![Node::assign(
                                 "acc",
-                                accumulate(Expr::var("acc"), Expr::load(values, idx.clone())),
+                                fold.combine(Expr::var("acc"), Expr::load(values, idx.clone())),
                             )],
                         ),
                     ],
@@ -269,7 +320,7 @@ where
         ),
         Node::barrier(),
     ];
-    body.extend(reduce(tile, scratch));
+    body.extend(fold.tree(tile, scratch));
     body.push(Node::if_then(
         Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
         vec![Node::store(
@@ -387,65 +438,136 @@ inventory::submit! {
     )
 }
 
-/// Emit the double-buffered Hillis-Steele inclusive-sum sweep over `lanes`
-/// workgroup lanes, reading the staged per-lane values from `scratch_a` and
-/// leaving the inclusive prefix sums there.
+/// Index of the lane `stride` positions before `lane`.
 ///
-/// Each round of the sweep copies `scratch_a` into `scratch_b` unconditionally,
-/// so a lane below the current stride keeps its running value, then lanes at or
-/// above the stride add the value `stride` positions back, then `scratch_b` is
-/// copied into `scratch_a` so the next round reads a settled buffer. Barriers
-/// separate the two halves of each round and the rounds from one another.
+/// One owner for "previous lane" addressing. The two spellings this replaces
+/// (`lane + (0u32).wrapping_sub(stride)` here and `lane + u32::MAX` in the
+/// exclusive scan) both reached the answer through `BinOp::Add` on a
+/// pre-negated constant, so every consumer of the IR - the optimizer's identity
+/// rules, the value-range analysis, a reader - saw an addition where the
+/// program means a subtraction. `BinOp::WrappingSub` says it once.
+pub(crate) fn previous_lane(lane: &Expr, stride: u32) -> Expr {
+    lane.clone().wrapping_sub(Expr::u32(stride))
+}
+
+/// Emit the work-efficient Blelloch inclusive-sum sweep over `lanes` workgroup
+/// lanes, reading the staged per-lane values from `scratch_a` and leaving the
+/// inclusive prefix sums there.
 ///
-/// The stride sequence is a compile-time `1, 2, 4, ...` under `lanes`, so the
-/// sweep unrolls in the emitted IR and the guard constants are folded. The
-/// `lane - stride` index is spelled as a wrapping add of the negated stride and
-/// is only read inside the `stride - 1 < lane` guard, which is where the
-/// subtraction is in range.
+/// `scratch_b` keeps each lane's staged value across the sweep. The sweep
+/// itself produces an EXCLUSIVE scan in `scratch_a`, and the inclusive result
+/// is that prefix plus the lane's own staged value, so the second scratch
+/// buffer every caller already declares carries the addend instead of being a
+/// ping-pong target.
+///
+/// Reduce phase: at stride `s` the lane owning slot `(k+1)*2s-1` folds the slot
+/// `s` positions back into it, so slot `lanes-1` ends holding the total after
+/// `log2(lanes)` rounds and `lanes-1` additions. Downsweep phase: that total is
+/// cleared and the same slot pairs are walked in reverse, each handing its left
+/// child the running prefix and taking the sum, another `lanes-1` additions.
+/// Total work is `2*lanes-2` additions against the `lanes*log2(lanes)` a
+/// Hillis-Steele sweep performs, because round `s` activates `lanes/(2s)` lanes
+/// instead of all of them.
+///
+/// Barriers are workgroup-scoped: the sweep touches nothing but the two
+/// workgroup scratch buffers.
 ///
 /// Callers differ in how they stage `scratch_a` and how they write the result
 /// out; the sweep between those two steps does not, and was hand-written five
 /// times before this became its owner.
-pub(crate) fn hillis_steele_inclusive_sum_nodes(
+///
+/// # Panics
+///
+/// Panics when `lanes` is not a power of two. The slot pairing walks a balanced
+/// binary tree over the scratch buffers, and a partial top level would leave
+/// slots the downsweep never reaches.
+pub(crate) fn blelloch_inclusive_sum_nodes(
     scratch_a: &str,
     scratch_b: &str,
     lane: &Expr,
     lanes: u32,
 ) -> Vec<Node> {
-    let mut nodes = Vec::new();
+    assert!(
+        lanes.is_power_of_two(),
+        "Fix: blelloch_inclusive_sum_nodes needs a power-of-two lane count, got {lanes}; round the scratch buffers up to the next power of two before staging into them."
+    );
+
+    let mut nodes = vec![
+        Node::store(scratch_b, lane.clone(), Expr::load(scratch_a, lane.clone())),
+        Node::barrier(),
+    ];
+
     let mut stride = 1_u32;
     while stride < lanes {
-        nodes.push(Node::store(
-            scratch_b,
-            lane.clone(),
-            Expr::load(scratch_a, lane.clone()),
-        ));
-        let previous_lane = Expr::add(lane.clone(), Expr::u32(0_u32.wrapping_sub(stride)));
+        let slot = sweep_slot(lane, stride);
         nodes.push(Node::if_then(
-            Expr::lt(Expr::u32(stride - 1), lane.clone()),
+            Expr::lt(slot.clone(), Expr::u32(lanes)),
             vec![Node::store(
-                scratch_b,
-                lane.clone(),
+                scratch_a,
+                slot.clone(),
                 Expr::add(
-                    Expr::load(scratch_a, lane.clone()),
-                    Expr::load(scratch_a, previous_lane),
+                    Expr::load(scratch_a, slot.clone()),
+                    Expr::load(scratch_a, previous_lane(&slot, stride)),
                 ),
             )],
         ));
-        nodes.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        nodes.push(Node::store(
-            scratch_a,
-            lane.clone(),
-            Expr::load(scratch_b, lane.clone()),
-        ));
-        nodes.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
+        nodes.push(Node::barrier());
         stride *= 2;
     }
+
+    nodes.push(Node::if_then(
+        Expr::eq(lane.clone(), Expr::u32(0)),
+        vec![Node::store(scratch_a, Expr::u32(lanes - 1), Expr::u32(0))],
+    ));
+    nodes.push(Node::barrier());
+
+    let mut stride = lanes / 2;
+    let mut round = 0_u32;
+    while stride >= 1 {
+        let slot = sweep_slot(lane, stride);
+        let left = previous_lane(&slot, stride);
+        let held = format!("{scratch_a}_downsweep_{round}");
+        nodes.push(Node::if_then(
+            Expr::lt(slot.clone(), Expr::u32(lanes)),
+            vec![
+                Node::let_bind(held.as_str(), Expr::load(scratch_a, left.clone())),
+                Node::store(scratch_a, left, Expr::load(scratch_a, slot.clone())),
+                Node::store(
+                    scratch_a,
+                    slot.clone(),
+                    Expr::add(Expr::load(scratch_a, slot), Expr::var(held.as_str())),
+                ),
+            ],
+        ));
+        nodes.push(Node::barrier());
+        stride /= 2;
+        round += 1;
+    }
+
+    nodes.push(Node::store(
+        scratch_a,
+        lane.clone(),
+        Expr::add(
+            Expr::load(scratch_a, lane.clone()),
+            Expr::load(scratch_b, lane.clone()),
+        ),
+    ));
     nodes
+}
+
+/// Scratch slot lane `lane` owns in a sweep round of stride `s`: `(lane+1)*2s-1`.
+///
+/// Active lanes are the contiguous prefix `0..lanes/(2s)`, so the divergence
+/// sits at one subgroup boundary instead of splitting every subgroup in the
+/// workgroup the way a `lane >= stride` predicate does.
+fn sweep_slot(lane: &Expr, stride: u32) -> Expr {
+    previous_lane(
+        &Expr::mul(
+            Expr::add(lane.clone(), Expr::u32(1)),
+            Expr::u32(stride.saturating_mul(2)),
+        ),
+        1,
+    )
 }
 
 #[cfg(test)]
