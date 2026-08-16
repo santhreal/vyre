@@ -48,15 +48,21 @@ impl TypeEnv for TypeFactCtx {
 
 impl TypeFactCtx {
     fn infer_nodes_types(&mut self, nodes: &[Node]) {
-        let mut stack = Vec::with_capacity(nodes.len());
-        stack.extend(nodes.iter().rev());
-        while let Some(node) = stack.pop() {
+        for node in nodes {
             match node {
-                Node::Let { name, value } | Node::Assign { name, value } => {
+                Node::Let { name, value } => {
                     if let Some(ty) = expr_type(value, self) {
                         self.facts.var_types.insert(name.clone(), ty);
                     }
                 }
+                Node::Assign { name, value } => match expr_type(value, self) {
+                    Some(ty) => {
+                        self.facts.var_types.insert(name.clone(), ty);
+                    }
+                    None => {
+                        self.facts.var_types.remove(name);
+                    }
+                },
                 Node::Store { index, value, .. } => {
                     self.record_expr_type(index);
                     self.record_expr_type(value);
@@ -67,22 +73,36 @@ impl TypeFactCtx {
                     otherwise,
                 } => {
                     self.record_expr_type(cond);
-                    stack.extend(otherwise.iter().rev());
-                    stack.extend(then.iter().rev());
+                    self.infer_nodes_types(then);
+                    self.infer_nodes_types(otherwise);
                 }
-                Node::Loop { from, to, body, .. } => {
+                Node::Loop {
+                    var,
+                    from,
+                    to,
+                    body,
+                } => {
                     self.record_expr_type(from);
                     self.record_expr_type(to);
-                    stack.extend(body.iter().rev());
+                    let prior = self.facts.var_types.insert(var.clone(), DataType::U32);
+                    self.infer_nodes_types(body);
+                    match prior {
+                        Some(old_ty) => {
+                            self.facts.var_types.insert(var.clone(), old_ty);
+                        }
+                        None => {
+                            self.facts.var_types.remove(var);
+                        }
+                    }
                 }
                 Node::Block(nodes) => {
-                    stack.extend(nodes.iter().rev());
+                    self.infer_nodes_types(nodes);
                 }
                 Node::Region { body, .. } => {
-                    stack.extend(body.iter().rev());
+                    self.infer_nodes_types(body);
                 }
                 Node::TileElementwise { body, .. } => {
-                    stack.extend(body.iter().rev());
+                    self.infer_nodes_types(body);
                 }
                 Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
                     self.record_expr_type(offset);
