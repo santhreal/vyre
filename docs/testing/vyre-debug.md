@@ -36,6 +36,7 @@ This crate declares no Cargo features.
 | `test` | `descriptor_dump_contracts` | `vyre-debug/tests/descriptor_dump_contracts.rs` | None | `./cargo_full test -p vyre-debug --test descriptor_dump_contracts` |
 | `test` | `generated_descriptor_diff_matrix` | `vyre-debug/tests/generated_descriptor_diff_matrix.rs` | None | `./cargo_full test -p vyre-debug --test generated_descriptor_diff_matrix` |
 | `test` | `loop_carrier_contracts` | `vyre-debug/tests/loop_carrier_contracts.rs` | None | `./cargo_full test -p vyre-debug --test loop_carrier_contracts` |
+| `test` | `naga_trace_contracts` | `vyre-debug/tests/naga_trace_contracts.rs` | None | `./cargo_full test -p vyre-debug --test naga_trace_contracts` |
 | `test` | `registry_closure` | `vyre-debug/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-debug --test registry_closure` |
 | `test` | `well_formed_lowering_contracts` | `vyre-debug/tests/well_formed_lowering_contracts.rs` | None | `./cargo_full test -p vyre-debug --test well_formed_lowering_contracts` |
 | `test` | `wgsl_dump_contracts` | `vyre-debug/tests/wgsl_dump_contracts.rs` | None | `./cargo_full test -p vyre-debug --test wgsl_dump_contracts` |

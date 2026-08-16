@@ -35,6 +35,7 @@ The crate lives at `vyre-aot`. The `aot-artifacts` owner maintains its
 | `lib` | `vyre_aot` | `vyre-aot/src/lib.rs` | None | `./cargo_full test -p vyre-aot` |
 | `test` | `artifact_contracts` | `vyre-aot/tests/artifact_contracts.rs` | None | `./cargo_full test -p vyre-aot --test artifact_contracts` |
 | `test` | `bundle_contracts` | `vyre-aot/tests/bundle_contracts.rs` | None | `./cargo_full test -p vyre-aot --test bundle_contracts` |
+| `test` | `cache_contracts` | `vyre-aot/tests/cache_contracts.rs` | None | `./cargo_full test -p vyre-aot --test cache_contracts` |
 | `test` | `canonical_package` | `vyre-aot/tests/canonical_package.rs` | None | `./cargo_full test -p vyre-aot --test canonical_package` |
 | `test` | `compile_smoke` | `vyre-aot/tests/compile_smoke.rs` | None | `./cargo_full test -p vyre-aot --test compile_smoke` |
 | `test` | `generated_artifact_manifest_matrix` | `vyre-aot/tests/generated_artifact_manifest_matrix.rs` | None | `./cargo_full test -p vyre-aot --test generated_artifact_manifest_matrix` |
