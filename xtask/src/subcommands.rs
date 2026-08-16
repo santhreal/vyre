@@ -479,6 +479,7 @@ pub fn help_text() -> String {
     }
     text.push_str("\nEvery subcommand is a gate. A gate that owns a generated artifact\n");
     text.push_str("checks it against the tree and rewrites it when passed --write.\n");
+    text.push_str("Run a subcommand with --help for the options it reads.\n");
     text
 }
 
@@ -495,6 +496,20 @@ mod tests {
         names.sort_unstable();
         names.dedup();
         assert_eq!(before, names.len(), "duplicate gate name in the registry");
+    }
+
+    /// WHY: `--help` is a question about a gate, and a gate that reads the tree
+    /// to answer it has run the check the caller asked it not to run. Every
+    /// option a gate names in its help line is answered from what the gate
+    /// declares, and the roster is the registry, so a gate registered later is
+    /// judged without being listed here. A gate implemented in another package
+    /// declares its usage there and is judged by that package's own table.
+    #[test]
+    fn every_gate_answers_help_with_the_options_it_names() {
+        assert_eq!(
+            crate::gate::usage_gaps(&registry()),
+            Vec::<String>::new()
+        );
     }
 
     /// WHY: a subset that names an unregistered gate silently runs fewer gates

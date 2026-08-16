@@ -107,6 +107,10 @@ impl Gate for FileSize {
         "source files over their per-file line cap, and ratchet rows that name nothing"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &["--report prints every file over the cap instead of the ratchet rows alone"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();

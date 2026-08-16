@@ -288,6 +288,85 @@ impl Gate for Delegated {
     }
 }
 
+/// Whether the leading argument asks the gate for its usage.
+///
+/// Only the leading one does, so `--only --help` names a family called `--help`
+/// and is the gate's to refuse.
+#[must_use]
+pub fn help_requested(args: &[String]) -> bool {
+    matches!(args.first().map(String::as_str), Some("--help" | "-h"))
+}
+
+/// The report a gate answers `--help` with.
+///
+/// Usage is an answer, not an exit. A gate that printed its options on stdout
+/// broke the report protocol its parent reads, and `bench-crossback --help`
+/// read 35 measurements and reported a clean gate, which is the check running
+/// on the caller who asked what the check takes.
+#[must_use]
+pub fn usage_report(gate: &dyn Gate) -> Report {
+    let mut report = Report::clean();
+    let write = if gate.generates() { " [--write]" } else { "" };
+    report.note(format!(
+        "usage: ./cargo_full run -p xtask --bin xtask -- {}{write}",
+        gate.name()
+    ));
+    report.note(gate.help());
+    if gate.generates() {
+        report.note("--write regenerates the artifact this gate owns; without it the gate only judges");
+    }
+    for line in gate.usage() {
+        report.note(*line);
+    }
+    report
+}
+
+/// Every option a gate names in its help line and does not answer `--help` with.
+///
+/// The roster is the caller's gate table, so a gate added to it is judged
+/// without anyone listing it here. A gate whose implementation lives in another
+/// package is skipped: its usage lives with the implementation and is judged in
+/// that package's own table.
+#[must_use]
+pub fn usage_gaps(gates: &[&dyn Gate]) -> Vec<String> {
+    let mut gaps = Vec::new();
+    for gate in gates {
+        if gate.package().is_some() {
+            continue;
+        }
+        let answered = gate.usage().join(" ");
+        for flag in named_flags(gate.help()) {
+            if flag == "--write" || answered.contains(&flag) {
+                continue;
+            }
+            gaps.push(format!(
+                "gate `{}` names `{flag}` in its help line and does not answer `--help` with it",
+                gate.name()
+            ));
+        }
+    }
+    gaps
+}
+
+/// Every `--flag` token a line of prose names as this gate's own.
+///
+/// A backticked span is a command, and the flags in it belong to whatever the
+/// span names: `launch-state` points the reader at
+/// `vyre-release-gate --launch-complete`, which is another gate's option and
+/// not one this gate reads.
+fn named_flags(text: &str) -> Vec<String> {
+    text.split('`')
+        .step_by(2)
+        .flat_map(str::split_whitespace)
+        .filter(|token| token.starts_with("--") && token.len() > 2)
+        .map(|token| {
+            token
+                .trim_end_matches(|character: char| !character.is_ascii_alphanumeric())
+                .to_string()
+        })
+        .collect()
+}
+
 /// Human rendering of one gate's report, in one place, so every gate reports
 /// identically whatever crate implements it.
 #[must_use]
@@ -315,6 +394,91 @@ pub fn render(name: &str, report: &Report) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct Fixture;
+
+    impl Gate for Fixture {
+        fn name(&self) -> &'static str {
+            "fixture"
+        }
+
+        fn help(&self) -> &'static str {
+            "Judge the fixture; --only NAME narrows it, --write records it"
+        }
+
+        fn generates(&self) -> bool {
+            true
+        }
+
+        fn usage(&self) -> &'static [&'static str] {
+            &["--only NAME narrows the fixture to one case"]
+        }
+
+        fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+            panic!("Fix: a gate asked for its usage must not read the tree.");
+        }
+    }
+
+    struct Silent;
+
+    impl Gate for Silent {
+        fn name(&self) -> &'static str {
+            "silent"
+        }
+
+        fn help(&self) -> &'static str {
+            "Judge the fixture; --only NAME narrows it"
+        }
+
+        fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+            Ok(Report::clean())
+        }
+    }
+
+    /// WHY: usage is an answer, not an exit and not a run. A gate asked for its
+    /// options printed a table and reported clean, so the caller who asked what
+    /// the check takes got the check instead. The answer names the command, what
+    /// the gate judges, and every option it reads, and it counts nothing.
+    #[test]
+    fn a_gate_answers_help_without_reading_the_tree() {
+        let gate = Fixture;
+        let report = usage_report(&gate);
+        assert!(report.findings.is_empty());
+        assert_eq!(
+            report.notes[0],
+            "usage: ./cargo_full run -p xtask --bin xtask -- fixture [--write]"
+        );
+        assert!(report.notes.iter().any(|note| note.contains("--write regenerates")));
+        assert!(usage_gaps(&[&gate]).is_empty(), "{:?}", usage_gaps(&[&gate]));
+    }
+
+    /// WHY: only the leading flag is a usage request. `--only --help` names a
+    /// case called `--help`, which is the gate's to refuse, and a gate that read
+    /// the flag anywhere would answer usage instead of reporting the bad value.
+    #[test]
+    fn only_a_leading_flag_asks_for_usage() {
+        let leading: Vec<String> = vec!["--help".to_string(), "--only".to_string()];
+        let trailing: Vec<String> = vec!["--only".to_string(), "--help".to_string()];
+        assert!(help_requested(&leading));
+        assert!(help_requested(&["-h".to_string()]));
+        assert!(!help_requested(&trailing));
+        assert!(!help_requested(&[]));
+    }
+
+    /// WHY: an option a gate reads and never names is an option nobody can find.
+    /// The rule reads the gate's own help line, so a gate that grows a flag and
+    /// no usage entry goes red without anyone maintaining a list of gates.
+    #[test]
+    fn an_option_named_in_help_and_answered_nowhere_is_a_gap() {
+        let gaps = usage_gaps(&[&Silent]);
+        assert_eq!(
+            gaps,
+            vec![
+                "gate `silent` names `--only` in its help line and does not answer `--help` with it"
+                    .to_string()
+            ]
+        );
+    }
 
     /// WHY: notes exist so a gate can report what it walked without inflating
     /// the pinned number. A composition audit enumerates thousands of registered

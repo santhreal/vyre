@@ -37,6 +37,13 @@ impl Gate for VyreReleaseGate {
          judges another manifest."
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--launch-complete additionally requires completed publication, repository verification and pushes",
+            "--manifest PATH judges another release evidence manifest",
+        ]
+    }
+
     fn generates(&self) -> bool {
         false
     }

@@ -29,13 +29,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     check_backend_gpu_probe("wgpu-fallback", &matrix, failures);
     check_preferred_backend_gpu_only("wgpu-fallback", &matrix, failures);
     check_backend_acquire_entry("wgpu-fallback", &matrix, "wgpu", failures);
-    check_backend_feature_markers(
-        "wgpu-fallback",
-        &matrix,
-        "wgpu_feature_markers",
-        7,
-        failures,
-    );
+    check_backend_feature_markers("wgpu-fallback", &matrix, "wgpu_feature_markers", failures);
     check_json_evidence_has_no_blockers(
         requirement,
         base_dir,

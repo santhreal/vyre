@@ -3314,6 +3314,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   script the checkout does not carry is reported, and a parked file still
   credits no check. The registry names `ci-registry --write` as the writer of
   the declaration it reads.
+- A gate asked for `--help` answers with its usage and reads nothing.
+  `bench-crossback --help` read 35 measurements across 18 cases and reported a
+  clean gate, which is the check running on the caller who asked what the check
+  takes. The dispatcher answers a leading `--help` from what the gate declares,
+  a delegated gate answers from the package that implements it, and the answer
+  travels back as report notes so the report protocol holds. Every option a
+  gate names in its help line is declared as a usage line, and the rule reads
+  the gate table at run time, so a gate registered later with an option it
+  never names goes red.
 - The lego-quick gate answers from source text and no longer links the
   operation registry: it moved to xtask, which is where both crates already say
   a source-text gate belongs, so a pre-commit run stops building the registry

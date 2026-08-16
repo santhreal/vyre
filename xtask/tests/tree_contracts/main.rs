@@ -23,6 +23,7 @@ mod cargo_invocation_resolution;
 mod ci_required_contexts;
 mod ci_workflow_references;
 mod cli_surface;
+mod codeowners_paths;
 mod crate_ownership_registry;
 mod crate_readmes;
 mod docs_manifest_completeness;

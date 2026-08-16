@@ -42,6 +42,12 @@ impl Gate for OperationSchemaGate {
         "Hold the canonical live operation contract schema to the registry; --write regenerates it, --validate PATH judges one document"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--validate PATH judges one schema document instead of the committed one",
+        ]
+    }
+
     fn generates(&self) -> bool {
         true
     }
