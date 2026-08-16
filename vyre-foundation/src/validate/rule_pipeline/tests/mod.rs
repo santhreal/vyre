@@ -338,6 +338,40 @@ fn fma_f32_violations_empty_for_all_f32_operands() {
 }
 
 #[test]
+fn fma_location_reflects_actual_node_index() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("v0", Expr::LitF32(1.0)),
+            Node::let_bind("v1", Expr::LitF32(2.0)),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::Fma {
+                    a: Box::new(Expr::LitU32(1)),
+                    b: Box::new(Expr::LitF32(2.0)),
+                    c: Box::new(Expr::LitF32(3.0)),
+                },
+            ),
+        ],
+    );
+    let errors = validate(&program);
+    let v028_errors: Vec<_> = errors
+        .into_iter()
+        .filter(|e| e.code().as_str() == "V028")
+        .collect();
+    assert_eq!(v028_errors.len(), 1);
+    match v028_errors[0].location() {
+        ValidationLocation::Operand { node, operand } => {
+            assert_eq!(*node, 2, "V028 on node 2 must report node 2, got: {node}");
+            assert_eq!(*operand, 0, "V028 on operand 'a' must report operand 0");
+        }
+        other => panic!("expected ValidationLocation::Operand, got: {other:?}"),
+    }
+}
+
+#[test]
 fn fma_f32_violations_ignores_unrelated_validation_errors() {
     // A program with NO Fma but a genuine validation error (zero workgroup
     // dimension). `validate` reports it; `fma_f32_violations` must NOT, so

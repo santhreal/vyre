@@ -574,11 +574,29 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
             depth_level,
         );
         for issue in &mut self.expr_report_scratch.errors {
-            if matches!(issue.location(), ValidationLocation::Program) {
-                issue.set_location(ValidationLocation::Expression {
-                    node: self.current_node,
-                    depth: u32::try_from(depth_level).unwrap_or(u32::MAX),
-                });
+            match issue.location() {
+                ValidationLocation::Program => {
+                    issue.set_location(ValidationLocation::Expression {
+                        node: self.current_node,
+                        depth: u32::try_from(depth_level).unwrap_or(u32::MAX),
+                    });
+                }
+                ValidationLocation::Expression { depth, .. } => {
+                    issue.set_location(ValidationLocation::Expression {
+                        node: self.current_node,
+                        depth: *depth,
+                    });
+                }
+                ValidationLocation::Operand { operand, .. } => {
+                    issue.set_location(ValidationLocation::Operand {
+                        node: self.current_node,
+                        operand: *operand,
+                    });
+                }
+                ValidationLocation::Node(_) => {
+                    issue.set_location(ValidationLocation::Node(self.current_node));
+                }
+                _ => {}
             }
         }
         self.errors.append(&mut self.expr_report_scratch.errors);

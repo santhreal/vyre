@@ -120,3 +120,75 @@ fn a_nested_exit_after_the_last_barrier_emits_v055() {
         "a nested lane-dependent exit still leaves the outer loop's barriers"
     );
 }
+
+/// A nested loop whose return guard becomes lane-dependent in a later iteration must emit V055.
+#[test]
+fn nested_loop_loop_carried_divergence_emits_v055() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            barrier(),
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(0),
+            },
+            Node::Loop {
+                var: "inner".into(),
+                from: Expr::u32(0),
+                to: Expr::u32(4),
+                body: vec![
+                    Node::If {
+                        cond: Expr::eq(Expr::var("x"), Expr::u32(0)),
+                        then: vec![Node::Return],
+                        otherwise: Vec::new(),
+                    },
+                    Node::Assign {
+                        name: "x".into(),
+                        value: Expr::InvocationId { axis: 0 },
+                    },
+                ],
+            },
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.iter().any(|error| error.code().as_str() == "V055"),
+        "loop-carried lane-dependent state reaching return guard on later iteration must trigger V055: {errors:?}"
+    );
+}
+
+/// A nested loop where the return guard stays uniform across all iterations is accepted.
+#[test]
+fn nested_loop_purely_uniform_exit_is_accepted() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            barrier(),
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(0),
+            },
+            Node::Loop {
+                var: "inner".into(),
+                from: Expr::u32(0),
+                to: Expr::u32(4),
+                body: vec![
+                    Node::If {
+                        cond: Expr::eq(Expr::var("x"), Expr::u32(10)),
+                        then: vec![Node::Return],
+                        otherwise: Vec::new(),
+                    },
+                    Node::Assign {
+                        name: "x".into(),
+                        value: Expr::add(Expr::var("x"), Expr::u32(1)),
+                    },
+                ],
+            },
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.is_empty(),
+        "purely uniform nested loop exit must be accepted without V055: {errors:?}"
+    );
+}

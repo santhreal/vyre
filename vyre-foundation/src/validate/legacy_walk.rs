@@ -103,7 +103,7 @@ fn validate_node_inner(
             let duplicate_sibling = check_sibling_duplicate(
                 name,
                 region_bindings,
-                options.allow_shadowing,
+                false,
                 &mut report.errors,
             );
             if !duplicate_sibling {
@@ -409,4 +409,86 @@ fn validate_scoped_nested_nodes(
         Some(&mut scope_log),
     );
     restore_scope(scope, scope_log);
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir_inner::model::expr::Expr;
+    use rustc_hash::FxHashMap;
+
+    #[test]
+    fn same_scope_duplicate_lets_rejected_even_with_allow_shadowing() {
+        let nodes = vec![
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(1),
+            },
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(2),
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_allow_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        assert!(
+            report.errors.iter().any(|e| e.code().as_str() == "V032"),
+            "same-scope duplicate let must be rejected with V032 even when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
+
+    #[test]
+    fn nested_scope_shadowing_accepted_with_allow_shadowing() {
+        let nodes = vec![
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(1),
+            },
+            Node::If {
+                cond: Expr::bool(true),
+                then: vec![Node::Let {
+                    name: "x".into(),
+                    value: Expr::u32(2),
+                }],
+                otherwise: Vec::new(),
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_allow_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        assert!(
+            report.errors.is_empty(),
+            "nested-scope shadowing must be accepted when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
 }
