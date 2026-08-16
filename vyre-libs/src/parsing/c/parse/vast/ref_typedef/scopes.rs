@@ -20,7 +20,10 @@ pub(in crate::parsing::c::parse::vast) fn scope_open_before(
     SENTINEL
 }
 
-pub(super) fn enclosing_function_lparen(vast_nodes: &[u32], node_idx: usize) -> u32 {
+pub(in crate::parsing::c::parse::vast) fn enclosing_function_lparen(
+    vast_nodes: &[u32],
+    node_idx: usize,
+) -> u32 {
     let node_count = vast_nodes.len() / VAST_NODE_STRIDE_U32 as usize;
     let mut parent = parent_at(vast_nodes, node_idx);
     for _ in 0..node_count {

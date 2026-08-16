@@ -14,6 +14,7 @@ pub(in crate::parsing::c::parse::vast) const VISIBLE_NAME_FOR_ROW_PACKED_OP_ID: 
     "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack";
 
 pub(crate) fn emit_visible_typedef_name_for_index(
+    parent_op_id: &str,
     vast_nodes: &str,
     haystack: &str,
     decl_contexts: Option<&str>,
@@ -80,6 +81,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
     ];
     let mut lookup_body = Vec::new();
     lookup_body.extend(emit_identifier_hash_for_row(
+        parent_op_id,
         vast_nodes,
         haystack,
         haystack_len,
@@ -91,16 +93,18 @@ pub(crate) fn emit_visible_typedef_name_for_index(
         &target_scope,
         chain::vast_scope_from_base(vast_nodes, &target_base),
     ));
-    let mut target_scope_fallback = emit_scope_open_scan_assign_for_index(
-        vast_nodes,
-        idx.clone(),
-        &target_scope,
-        &format!("{prefix}_scope"),
-    );
-    target_scope_fallback.insert(0, Node::assign(&target_scope, Expr::u32(SENTINEL)));
     lookup_body.push(Node::if_then(
         Expr::not(Expr::var(&target_prepared)),
-        target_scope_fallback,
+        vec![
+            Node::assign(&target_scope, Expr::u32(SENTINEL)),
+            emit_scope_open_scan_phase(
+                parent_op_id,
+                vast_nodes,
+                idx.clone(),
+                &target_scope,
+                &format!("{prefix}_scope"),
+            ),
+        ],
     ));
     nodes.push(Node::let_bind(&last_decl_kind, Expr::u32(0)));
     nodes.push(Node::let_bind(
@@ -163,6 +167,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                             let scan_possible_declarator =
                                 format!("{prefix}_scan_possible_declarator");
                             let mut body = emit_identifier_hash_for_row(
+                                parent_op_id,
                                 vast_nodes,
                                 haystack,
                                 haystack_len,
@@ -188,19 +193,21 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                                 &scan_scope,
                                 chain::vast_scope_from_base(vast_nodes, &scan_base),
                             ));
-                            let mut scan_scope_fallback = emit_scope_open_scan_assign_for_index(
-                                vast_nodes,
-                                Expr::var(&scan),
-                                &scan_scope,
-                                &format!("{prefix}_scan_scope"),
-                            );
-                            scan_scope_fallback
-                                .insert(0, Node::assign(&scan_scope, Expr::u32(SENTINEL)));
                             same_name_body.push(Node::if_then(
                                 Expr::not(Expr::var(&target_prepared)),
-                                scan_scope_fallback,
+                                vec![
+                                    Node::assign(&scan_scope, Expr::u32(SENTINEL)),
+                                    emit_scope_open_scan_phase(
+                                        parent_op_id,
+                                        vast_nodes,
+                                        Expr::var(&scan),
+                                        &scan_scope,
+                                        &format!("{prefix}_scan_scope"),
+                                    ),
+                                ],
                             ));
                             same_name_body.extend(emit_builtin_declaration_kind_for_index(
+                                parent_op_id,
                                 vast_nodes,
                                 Expr::var(&scan),
                                 &scan_decl_kind,
@@ -210,6 +217,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                             same_name_body
                                 .push(Node::let_bind(&visible_function, Expr::bool(true)));
                             same_name_body.push(visibility_match::emit_function_visibility_gate(
+                                parent_op_id,
                                 vast_nodes,
                                 idx.clone(),
                                 Expr::var(&scan),
@@ -292,49 +300,25 @@ pub(crate) fn emit_visible_typedef_name_for_index(
 }
 
 fn visible_name_phase_program(op_id: &str, packed_haystack: bool) -> Program {
-    const NODES: &str = "phase_vast_nodes";
-    const HAYSTACK: &str = "phase_haystack";
-    const ROW: &str = "phase_row";
-    const HAYSTACK_LEN: &str = "phase_haystack_len";
-    const NUM_NODES: &str = "phase_num_nodes";
-    const RESULT: &str = "phase_result";
+    const VISIBLE: &str = "phase_visible_typedef_name";
 
-    let row = Expr::load(ROW, Expr::u32(0));
-    let haystack_len = Expr::load(HAYSTACK_LEN, Expr::u32(0));
-    let mut body = vec![Node::let_bind(
-        "annot_num_nodes",
-        Expr::load(NUM_NODES, Expr::u32(0)),
-    )];
-    body.extend(emit_visible_typedef_name_for_index(
-        NODES,
-        HAYSTACK,
-        None,
-        &haystack_len,
-        row,
-        RESULT,
-        "phase_visible_typedef",
-        packed_haystack,
-    ));
-    body.push(Node::store(RESULT, Expr::u32(0), Expr::var(RESULT)));
-
-    let buffers = vec![
-        BufferDecl::storage(NODES, 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(PHASE_WITNESS_ROWS.saturating_mul(VAST_NODE_STRIDE_U32)),
-        BufferDecl::storage(HAYSTACK, 1, BufferAccess::ReadOnly, DataType::U32).with_count(
-            source_haystack_words(PHASE_WITNESS_SOURCE_LEN, packed_haystack),
+    let haystack_len = phase_haystack_len();
+    phase_program(
+        op_id,
+        PhaseInputs::RowWithHaystack { packed_haystack },
+        VISIBLE,
+        emit_visible_typedef_name_for_index(
+            op_id,
+            phase_program::NODES,
+            phase_program::HAYSTACK,
+            None,
+            &haystack_len,
+            phase_row(),
+            VISIBLE,
+            "phase_visible_typedef",
+            packed_haystack,
         ),
-        BufferDecl::storage(ROW, 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        BufferDecl::storage(HAYSTACK_LEN, 3, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        BufferDecl::storage(NUM_NODES, 4, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        BufferDecl::output(RESULT, 5, DataType::U32).with_count(1),
-    ];
-    let implementation = child_phase(op_id, "anonymous::typedef_visibility_scan", body);
-    Program::wrapped(
-        buffers,
-        [256, 1, 1],
-        vec![wrap_anonymous_region(op_id, vec![implementation])],
     )
-    .with_entry_op_id(op_id)
 }
 
 pub(in crate::parsing::c::parse::vast) fn c11_typedef_visible_name_for_row() -> Program {

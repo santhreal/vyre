@@ -169,11 +169,13 @@ pub(super) fn c11_annotate_typedef_names_impl(
         "raw_kind",
         Expr::load(vast_nodes, base.clone()),
     )];
-    loop_body.extend(row.bindings());
-    loop_body.push(row.update(Expr::and(
-        Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER)),
-        row.hash_is_unset(),
-    )));
+    loop_body.extend(row.composed(
+        ANNOTATE_TYPEDEF_OP_ID,
+        Expr::and(
+            Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER)),
+            row.hash_is_unset(),
+        ),
+    ));
     loop_body.push(Node::let_bind(
         "scope_open",
         if precomputed_scope {
@@ -232,6 +234,7 @@ pub(super) fn c11_annotate_typedef_names_impl(
     // diverged from the CPU contract on every tag spot.
     if let Some(precomputed) = precomputed {
         identifier_annotation.extend(emit_typedef_visibility_scan_precomputed_context(
+            ANNOTATE_TYPEDEF_OP_ID,
             vast_nodes,
             precomputed.decl_contexts,
             precomputed.visible_type,

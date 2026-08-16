@@ -1,6 +1,7 @@
 use super::*;
 
 pub(super) fn emit_function_visibility_gate(
+    parent_op_id: &str,
     vast_nodes: &str,
     target_idx: Expr,
     scan_idx: Expr,
@@ -12,12 +13,14 @@ pub(super) fn emit_function_visibility_gate(
     scan_prefix: &str,
 ) -> Node {
     let mut body = emit_enclosing_function_lparen_for_index(
+        parent_op_id,
         vast_nodes,
         target_idx,
         target_function,
         target_prefix,
     );
     body.extend(emit_enclosing_function_lparen_for_index(
+        parent_op_id,
         vast_nodes,
         scan_idx,
         scan_function,

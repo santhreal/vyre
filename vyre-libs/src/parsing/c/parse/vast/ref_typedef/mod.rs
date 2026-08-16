@@ -27,12 +27,13 @@ use expressions::*;
 use identifiers::*;
 use scopes::*;
 
-// The three phase oracles the registered row-phase fixtures compute their
-// expected outputs from. Nothing outside the VAST module tree may reach them.
+// The phase oracles the registered row-phase fixtures compute their expected
+// outputs from. Nothing outside the VAST module tree may reach them.
 pub(in crate::parsing::c::parse::vast) use declarations::{
     declaration_kind_at, visible_declaration_kind,
 };
-pub(in crate::parsing::c::parse::vast) use scopes::scope_open_before;
+pub(in crate::parsing::c::parse::vast) use identifiers::identifier_row_hash;
+pub(in crate::parsing::c::parse::vast) use scopes::{enclosing_function_lparen, scope_open_before};
 
 pub(super) fn vast_field_at(vast_nodes: &[u32], node_idx: usize, field_idx: usize) -> u32 {
     c_vast_word_at(vast_nodes, node_idx, field_idx)

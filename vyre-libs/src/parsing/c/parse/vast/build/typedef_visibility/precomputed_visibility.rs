@@ -3,6 +3,7 @@ use super::chain;
 use super::*;
 
 pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
+    parent_op_id: &str,
     vast_nodes: &str,
     decl_contexts: &str,
     visible_type: &str,
@@ -87,6 +88,7 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
     ));
     same_candidate_body.push(Node::let_bind(&visible_function, Expr::bool(true)));
     same_candidate_body.push(super::visibility_match::emit_function_visibility_gate(
+        parent_op_id,
         vast_nodes,
         t.clone(),
         Expr::var(&chain_cursor),

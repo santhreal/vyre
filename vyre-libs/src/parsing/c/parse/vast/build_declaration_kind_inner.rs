@@ -31,6 +31,7 @@ use super::token_grammar::*;
 use super::*;
 
 pub(super) fn emit_declaration_kind_for_index_inner(
+    parent_op_id: &str,
     vast_nodes: &str,
     decl_contexts: Option<&str>,
     idx: Expr,
@@ -75,6 +76,7 @@ pub(super) fn emit_declaration_kind_for_index_inner(
                 Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_IDENTIFIER)),
                 {
                     let mut body = emit_identifier_source_hash_for_index(
+                        parent_op_id,
                         vast_nodes,
                         haystack,
                         haystack_len,
@@ -88,6 +90,7 @@ pub(super) fn emit_declaration_kind_for_index_inner(
                         vec![Node::assign(&prefix_has_type, Expr::u32(1))],
                     ));
                     body.extend(emit_visible_typedef_name_for_index(
+                        parent_op_id,
                         vast_nodes,
                         haystack,
                         decl_contexts,
@@ -109,7 +112,6 @@ pub(super) fn emit_declaration_kind_for_index_inner(
         };
 
     let mut nodes = vec![
-        Node::let_bind(out_name, Expr::u32(0)),
         Node::let_bind(&base, vast_row_base_expr(idx.clone())),
         Node::let_bind(
             &kind,

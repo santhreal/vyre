@@ -5,7 +5,15 @@ pub(in crate::parsing::c::parse::vast) const DECL_KIND_FOR_ROW_OP_ID: &str =
 pub(in crate::parsing::c::parse::vast) const DECL_KIND_FOR_ROW_PACKED_OP_ID: &str =
     "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack";
 
+/// The builtin declaration kind of one row, as an operation of its own.
+pub(crate) const BUILTIN_DECL_KIND_FOR_ROW_OP_ID: &str =
+    "vyre-libs::parsing::c11_builtin_declaration_kind_for_row";
+
+/// The declaration kind of row `idx`, including the typedef-name lookup the
+/// prefix scan needs the source text for.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn emit_declaration_kind_for_index(
+    parent_op_id: &str,
     vast_nodes: &str,
     haystack: &str,
     haystack_len: &Expr,
@@ -15,70 +23,102 @@ pub(crate) fn emit_declaration_kind_for_index(
     packed_haystack: bool,
     decl_contexts: Option<&str>,
 ) -> Vec<Node> {
-    emit_declaration_kind_for_index_inner(
+    let mut nodes = vec![Node::let_bind(out_name, Expr::u32(0))];
+    nodes.extend(emit_declaration_kind_for_index_inner(
+        parent_op_id,
         vast_nodes,
         decl_contexts,
         idx,
         out_name,
         prefix,
         Some((haystack, haystack_len, packed_haystack)),
-    )
+    ));
+    nodes
 }
 
+/// The declaration kind of row `idx` from structure alone.
+///
+/// Without a precomputed context table this is the registered
+/// [`BUILTIN_DECL_KIND_FOR_ROW_OP_ID`] operation, so the emission names it as a
+/// block of `parent_op_id`. With one, the scan reads a table the operation does
+/// not declare, so it stays an inline part of its caller.
 pub(crate) fn emit_builtin_declaration_kind_for_index(
+    parent_op_id: &str,
     vast_nodes: &str,
     idx: Expr,
     out_name: &str,
     prefix: &str,
     decl_contexts: Option<&str>,
 ) -> Vec<Node> {
-    emit_declaration_kind_for_index_inner(vast_nodes, decl_contexts, idx, out_name, prefix, None)
+    let owner = if decl_contexts.is_some() {
+        parent_op_id
+    } else {
+        BUILTIN_DECL_KIND_FOR_ROW_OP_ID
+    };
+    let scan = emit_declaration_kind_for_index_inner(
+        owner,
+        vast_nodes,
+        decl_contexts,
+        idx,
+        out_name,
+        prefix,
+        None,
+    );
+    let mut nodes = vec![Node::let_bind(out_name, Expr::u32(0))];
+    if decl_contexts.is_some() {
+        nodes.extend(scan);
+    } else {
+        nodes.push(child_phase(
+            parent_op_id,
+            BUILTIN_DECL_KIND_FOR_ROW_OP_ID,
+            scan,
+        ));
+    }
+    nodes
+}
+
+/// The registered operation: the builtin declaration kind of one row.
+pub(in crate::parsing::c::parse::vast) fn c11_builtin_declaration_kind_for_row() -> Program {
+    const KIND: &str = "phase_declaration_kind";
+
+    let mut body = vec![Node::let_bind(KIND, Expr::u32(0))];
+    body.extend(emit_declaration_kind_for_index_inner(
+        BUILTIN_DECL_KIND_FOR_ROW_OP_ID,
+        phase_program::NODES,
+        None,
+        phase_row(),
+        KIND,
+        "phase_builtin_decl",
+        None,
+    ));
+    phase_program(
+        BUILTIN_DECL_KIND_FOR_ROW_OP_ID,
+        PhaseInputs::RowAndNumNodes,
+        KIND,
+        body,
+    )
 }
 
 fn decl_kind_phase_program(op_id: &str, packed_haystack: bool) -> Program {
-    const NODES: &str = "phase_vast_nodes";
-    const HAYSTACK: &str = "phase_haystack";
-    const ROW: &str = "phase_row";
-    const HAYSTACK_LEN: &str = "phase_haystack_len";
-    const NUM_NODES: &str = "phase_num_nodes";
-    const RESULT: &str = "phase_result";
+    const KIND: &str = "phase_declaration_kind";
 
-    let row = Expr::load(ROW, Expr::u32(0));
-    let haystack_len = Expr::load(HAYSTACK_LEN, Expr::u32(0));
-    let mut body = vec![Node::let_bind(
-        "annot_num_nodes",
-        Expr::load(NUM_NODES, Expr::u32(0)),
-    )];
-    body.extend(emit_declaration_kind_for_index(
-        NODES,
-        HAYSTACK,
-        &haystack_len,
-        row,
-        RESULT,
-        "phase_decl",
-        packed_haystack,
-        None,
-    ));
-    body.push(Node::store(RESULT, Expr::u32(0), Expr::var(RESULT)));
-
-    let buffers = vec![
-        BufferDecl::storage(NODES, 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(PHASE_WITNESS_ROWS.saturating_mul(VAST_NODE_STRIDE_U32)),
-        BufferDecl::storage(HAYSTACK, 1, BufferAccess::ReadOnly, DataType::U32).with_count(
-            source_haystack_words(PHASE_WITNESS_SOURCE_LEN, packed_haystack),
+    let haystack_len = phase_haystack_len();
+    phase_program(
+        op_id,
+        PhaseInputs::RowWithHaystack { packed_haystack },
+        KIND,
+        emit_declaration_kind_for_index(
+            op_id,
+            phase_program::NODES,
+            phase_program::HAYSTACK,
+            &haystack_len,
+            phase_row(),
+            KIND,
+            "phase_decl",
+            packed_haystack,
+            None,
         ),
-        BufferDecl::storage(ROW, 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        BufferDecl::storage(HAYSTACK_LEN, 3, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        BufferDecl::storage(NUM_NODES, 4, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        BufferDecl::output(RESULT, 5, DataType::U32).with_count(1),
-    ];
-    let implementation = child_phase(op_id, "anonymous::typedef_declaration_scan", body);
-    Program::wrapped(
-        buffers,
-        [256, 1, 1],
-        vec![wrap_anonymous_region(op_id, vec![implementation])],
     )
-    .with_entry_op_id(op_id)
 }
 
 pub(in crate::parsing::c::parse::vast) fn c11_typedef_decl_kind_for_row() -> Program {

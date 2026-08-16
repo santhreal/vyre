@@ -4338,10 +4338,40 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
+family = "vyre-libs::parsing::c11_builtin_declaration_kind_for_row"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_builtin_declaration_kind_for_row"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
 family = "vyre-libs::parsing::c11_classify_vast_node_kinds"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
 ops = ["vyre-libs::parsing::c11_classify_vast_node_kinds"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_enclosing_function_lparen_for_row"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_enclosing_function_lparen_for_row"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
 foundation_ir = "supported"
@@ -4402,6 +4432,36 @@ family = "vyre-libs::parsing::c11_gnu_inline_asm_pass"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
 ops = ["vyre-libs::parsing::c11_gnu_inline_asm_pass"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_identifier_row_hash"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_identifier_row_hash"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_identifier_row_hash_packed_haystack"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
 foundation_ir = "supported"

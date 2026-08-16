@@ -85,6 +85,7 @@ fn c11_precompute_vast_visible_type_impl(
     // mirrors the `prefix_kind == TOK_IDENTIFIER` gate the base prefix scan applies
     // before it runs the GNU-typeof / visible-typedef lookups.
     let mut ident_body = emit_identifier_source_hash_for_index(
+        PRECOMPUTE_VAST_VISIBLE_TYPE_OP_ID,
         vast_nodes,
         haystack,
         &haystack_len,
@@ -98,6 +99,7 @@ fn c11_precompute_vast_visible_type_impl(
         vec![Node::assign("vt_result", Expr::u32(1))],
     ));
     ident_body.extend(emit_visible_typedef_name_for_index(
+        PRECOMPUTE_VAST_VISIBLE_TYPE_OP_ID,
         vast_nodes,
         haystack,
         Some(decl_contexts),

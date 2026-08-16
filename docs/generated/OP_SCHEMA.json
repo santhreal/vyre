@@ -1,10 +1,10 @@
 {
   "schema_version": 4,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 359,
+  "operation_count": 363,
   "tier_counts": {
     "intrinsic": 165,
-    "libs": 194
+    "libs": 198
   },
   "category_counts": {
     "bitset": 23,
@@ -21,7 +21,7 @@
     "math": 82,
     "nn": 71,
     "opt": 1,
-    "parsing": 45,
+    "parsing": 49,
     "predicate": 10,
     "reduce": 18,
     "representation": 1,
@@ -10969,6 +10969,11 @@
           "depth": 0,
           "operation": "vyre-libs::parsing::c11_annotate_typedef_names",
           "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash",
+          "registered": true
         }
       ]
     },
@@ -11316,6 +11321,102 @@
       ]
     },
     {
+      "id": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 140,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+          "registered": true
+        }
+      ]
+    },
+    {
       "id": "vyre-libs::parsing::c11_classify_vast_node_kinds",
       "tier": "libs",
       "category": "parsing",
@@ -11395,6 +11496,107 @@
           "depth": 1,
           "operation": "anonymous::vast_node_classification_pass",
           "registered": false
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 140,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
         }
       ]
     },
@@ -11774,6 +11976,234 @@
       ]
     },
     {
+      "id": "vyre-libs::parsing::c11_identifier_row_hash",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 140,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 41,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 140,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 11,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+          "registered": true
+        }
+      ]
+    },
+    {
       "id": "vyre-libs::parsing::c11_lex_digraphs",
       "tier": "libs",
       "category": "parsing",
@@ -12104,8 +12534,53 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::typedef_declaration_scan",
-          "registered": false
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
         }
       ]
     },
@@ -12223,8 +12698,53 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::typedef_declaration_scan",
-          "registered": false
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
         }
       ]
     },
@@ -12429,8 +12949,48 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::typedef_visibility_scan",
-          "registered": false
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
         }
       ]
     },
@@ -12548,8 +13108,48 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::typedef_visibility_scan",
-          "registered": false
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
         }
       ]
     },

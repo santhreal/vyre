@@ -64,7 +64,10 @@ pub(super) fn c11_prehash_vast_identifiers_impl(
         "raw_kind",
         Expr::load(vast_nodes, base.clone()),
     )];
-    loop_body.extend(row.nodes(Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER))));
+    loop_body.extend(row.composed(
+        PREHASH_VAST_IDENTIFIERS_OP_ID,
+        Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER)),
+    ));
 
     loop_body.extend(store_row_with_overrides(
         out_hashed_vast_nodes,

@@ -1,6 +1,33 @@
 use super::*;
 
+/// The `(` of the function enclosing one row, as an operation of its own.
+pub(crate) const ENCLOSING_FUNCTION_LPAREN_FOR_ROW_OP_ID: &str =
+    "vyre-libs::parsing::c11_enclosing_function_lparen_for_row";
+
+/// Declare `out_name` and fill it with the row index of the `(` opening the
+/// parameter list of the function enclosing `idx`, as a block of
+/// `parent_op_id`.
 pub(crate) fn emit_enclosing_function_lparen_for_index(
+    parent_op_id: &str,
+    vast_nodes: &str,
+    idx: Expr,
+    out_name: &str,
+    prefix: &str,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind(out_name, Expr::u32(SENTINEL)),
+        child_phase(
+            parent_op_id,
+            ENCLOSING_FUNCTION_LPAREN_FOR_ROW_OP_ID,
+            enclosing_function_lparen_scan(vast_nodes, idx, out_name, prefix),
+        ),
+    ]
+}
+
+/// The two walks that find the enclosing function: up the parent chain, then
+/// out through the enclosing scopes. Both assign into the declared `out_name`
+/// and stop once it holds a row.
+fn enclosing_function_lparen_scan(
     vast_nodes: &str,
     idx: Expr,
     out_name: &str,
@@ -24,7 +51,6 @@ pub(crate) fn emit_enclosing_function_lparen_for_index(
     let scan_prev_kind = format!("{prefix}_scan_prev_kind");
 
     let mut nodes = vec![
-        Node::let_bind(out_name, Expr::u32(SENTINEL)),
         Node::let_bind(&base, vast_row_base_expr(idx.clone())),
         Node::let_bind(
             &parent,
@@ -66,6 +92,7 @@ pub(crate) fn emit_enclosing_function_lparen_for_index(
     ];
 
     nodes.extend(emit_scope_open_for_index(
+        ENCLOSING_FUNCTION_LPAREN_FOR_ROW_OP_ID,
         vast_nodes,
         idx,
         &scope,
@@ -174,4 +201,23 @@ pub(crate) fn emit_enclosing_function_lparen_for_index(
         )],
     ));
     nodes
+}
+
+/// The registered operation: the enclosing function's `(` for one row.
+pub(in crate::parsing::c::parse::vast) fn c11_enclosing_function_lparen_for_row() -> Program {
+    const LPAREN: &str = "phase_function_lparen";
+
+    let mut body = vec![Node::let_bind(LPAREN, Expr::u32(SENTINEL))];
+    body.extend(enclosing_function_lparen_scan(
+        phase_program::NODES,
+        phase_row(),
+        LPAREN,
+        "phase_function",
+    ));
+    phase_program(
+        ENCLOSING_FUNCTION_LPAREN_FOR_ROW_OP_ID,
+        PhaseInputs::RowAndNumNodes,
+        LPAREN,
+        body,
+    )
 }
