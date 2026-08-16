@@ -336,7 +336,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),cpu-parity,graph-dispatch,test-fixtures"
+feature = "(default),cpu-parity,graph-dispatch"
 outcome = "compiles"
 
 [[pair]]
@@ -642,11 +642,6 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-libs"
 feature = "telemetry"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-libs"
-feature = "test-fixtures"
 outcome = "compiles"
 
 [[pair]]
