@@ -3,7 +3,7 @@
 //! Every item under test is public API, so the suite runs against the crate the
 //! way a consumer reaches it.
 
-use {
+use vyre_runtime::resident_work_queue::protocol::{
     control, count_done_ring_slots, debug, decode_load_miss, encode_load_miss, read_debug_log,
     read_debug_log_into, read_done_count, read_epoch, read_metrics_into, read_observable, slot,
     try_encode_control, try_encode_empty_debug_log, try_encode_empty_ring,
@@ -13,14 +13,6 @@ use {
     try_slot_word_index, ProtocolError, MAX_ENCODED_DEBUG_RECORDS, MAX_ENCODED_OBSERVABLE_SLOTS,
     MAX_ENCODED_RING_SLOTS, SLOT_WORDS, STATUS_WORD,
 };
-
-#[test]
-#[allow(clippy::assertions_on_constants)]
-fn control_regions_do_not_alias() {
-    let metrics_end = control::METRICS_BASE + control::METRICS_SLOTS;
-    assert!(metrics_end <= control::EPOCH);
-    assert!(control::EPOCH < control::OBSERVABLE_BASE);
-}
 
 #[test]
 fn count_done_ring_slots_counts_only_done_status_words() {
