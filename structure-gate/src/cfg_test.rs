@@ -10,7 +10,7 @@ use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::source_scan::{opaque_span, rust_sources_with_text};
+use crate::source_scan::{code_offsets, opaque_span, rust_sources_with_text};
 
 /// Remove every `#[cfg(test)]`-gated item before a production-code scan.
 ///
@@ -380,16 +380,20 @@ struct InlineModule<'a> {
 /// not of the file's. Reading the file name alone recorded `crate/src/tests` for
 /// a `mod tests;` written inside `pub mod foo { .. }`, so the real file was
 /// never matched and nothing said so.
+///
+/// Comments and literals are skipped: a `mod name {` quoted in a doc comment or
+/// a gate fixture string is text, and a phantom block spanning a real
+/// declaration prefixes it with a module that does not exist, which drops the
+/// file from the set with nothing reporting it.
 fn inline_module_blocks(text: &str) -> Vec<InlineModule<'_>> {
     let mut blocks = Vec::new();
-    let mut search = 0usize;
-    while let Some(offset) = text[search..].find("mod ") {
-        let keyword = search + offset;
-        search = keyword + "mod ".len();
-        if !is_keyword_start(text, keyword) {
+    let mut offsets = code_offsets(text).peekable();
+    while let Some(keyword) = offsets.next() {
+        if !text[keyword..].starts_with("mod ") || !is_keyword_start(text, keyword) {
             continue;
         }
-        let rest = &text[search..];
+        let after_keyword = keyword + "mod ".len();
+        let rest = &text[after_keyword..];
         let name_len = rest
             .find(|c: char| !c.is_alphanumeric() && c != '_')
             .unwrap_or(rest.len());
@@ -397,12 +401,12 @@ fn inline_module_blocks(text: &str) -> Vec<InlineModule<'_>> {
         if name.is_empty() {
             continue;
         }
-        let after = &text[search + name_len..];
+        let after = &text[after_keyword + name_len..];
         let brace = after.len() - after.trim_start().len();
         if !after[brace..].starts_with('{') {
             continue;
         }
-        let open = search + name_len + brace;
+        let open = after_keyword + name_len + brace;
         let Some(close) = match_delimited(text, open, b'{', b'}') else {
             continue;
         };
@@ -411,7 +415,9 @@ fn inline_module_blocks(text: &str) -> Vec<InlineModule<'_>> {
             start: open,
             end: close,
         });
-        search = open + 1;
+        while offsets.peek().is_some_and(|at| *at <= open) {
+            offsets.next();
+        }
     }
     blocks
 }

@@ -118,6 +118,35 @@ fn a_declaration_inside_an_inline_module_resolves_under_it() {
     );
 }
 
+/// An inline block written in a comment or a literal is text, not a module.
+///
+/// A commented `mod outer {` has no closing brace of its own, so reading it as
+/// real code borrows the closer of the block around it and spans every
+/// declaration between the two. The derived path then carries a module the tree
+/// does not hold, the real file matches nothing, and it keeps counting as
+/// production code with nothing reporting it.
+#[test]
+fn a_quoted_inline_module_does_not_move_a_declaration() {
+    let tree = tempfile::tempdir().expect("Fix: the fixture root must be creatable.");
+    let source = tree.path().join("demo/src");
+    std::fs::create_dir_all(source.join("real")).expect("Fix: the tree must be creatable.");
+    std::fs::write(
+        source.join("lib.rs"),
+        "pub mod real {\n    // pub mod outer {\n    #[cfg(test)]\n    mod checks;\n}\n",
+    )
+    .expect("Fix: the fixture crate root must be writable.");
+    std::fs::write(source.join("real/checks.rs"), "")
+        .expect("Fix: the fixture module must be writable.");
+
+    let gated = test_gated_module_files(tree.path());
+
+    assert_eq!(
+        gated.into_iter().collect::<Vec<_>>(),
+        vec!["demo/src/real/checks.rs".to_string()],
+        "Fix: a quoted or commented block must not move the declaration under it"
+    );
+}
+
 /// Which gate spellings the set accepts, on a tree written for the case.
 ///
 /// `#[cfg(test)]` and `#[cfg(all(test, unix))]` name a module no build without
