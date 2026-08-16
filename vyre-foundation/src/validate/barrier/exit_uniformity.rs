@@ -203,6 +203,21 @@ fn analyze_exit_node(
         }
         Node::Block(nodes) => analyze_exit_sequence(nodes, state, path_uniform),
         Node::Region { body, .. } => analyze_exit_sequence(body, state, path_uniform),
+        Node::TileLoad { origin, .. } => {
+            for off in origin {
+                invalidate_expr_atomics(off, state);
+            }
+            ExitProof::NONE
+        }
+        Node::TileStore { buffer, origin, .. } => {
+            state.dirty_buffers.insert(buffer.clone());
+            for off in origin {
+                invalidate_expr_atomics(off, state);
+            }
+            ExitProof::NONE
+        }
+        Node::TileElementwise { body, .. } => analyze_exit_sequence(body, state, path_uniform),
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => ExitProof::NONE,
         Node::Opaque(_) => {
             state.unknown_write = true;
             ExitProof::NONE

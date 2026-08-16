@@ -173,7 +173,13 @@ fn nested_bodies(node: &Node) -> Vec<&[Node]> {
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => Vec::new(),
+        Node::TileElementwise { body, .. } => vec![body.as_slice()],
     }
 }
 
@@ -305,7 +311,17 @@ fn wrap_in_transparent_blocks(program: &Program) -> Program {
                 | Node::Broadcast { .. }
                 | Node::Return
                 | Node::Barrier { .. }
+                | Node::TileLoad { .. }
+                | Node::TileStore { .. }
+                | Node::TileMatmul { .. }
+                | Node::TileReduce { .. }
+                | Node::TileDecl { .. }
                 | Node::Opaque(_) => node.clone(),
+                Node::TileElementwise { out, inputs, body } => Node::TileElementwise {
+                    out: out.clone(),
+                    inputs: inputs.clone(),
+                    body: wrap(body).into_owned(),
+                },
             };
             Cow::Owned(vec![Node::block(vec![inner])])
         })

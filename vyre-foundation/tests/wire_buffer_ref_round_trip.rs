@@ -165,10 +165,10 @@ fn the_encoder_stamps_the_current_schema_version() {
         "encoded programs must carry the current schema version"
     );
     assert_eq!(
-        WIRE_FORMAT_VERSION, 6,
-        "Fix: rev 6 added linear_type, bytes_extraction and shape_predicate INSIDE each buffer \
-         record. If the version moved again, decide what the new revision does to that layout \
-         before touching this number, because the relabel test below depends on it."
+        WIRE_FORMAT_VERSION, 7,
+        "Fix: rev 7 added Tile values and tile operation node variants. If the version moved again, \
+         decide what the new revision does to that layout before touching this number, because the \
+         relabel test below depends on it."
     );
 }
 

@@ -348,6 +348,100 @@ impl Node {
         Self::Resume { tag: tag.into() }
     }
 
+    /// Load a tile from a buffer: `tile = load_tile(buffer, origin, layout);`
+    #[must_use]
+    #[inline]
+    pub fn tile_load(
+        tile: impl Into<Ident>,
+        tile_type: crate::ir_inner::model::tile::Tile,
+        buffer: impl Into<Ident>,
+        origin: Vec<Expr>,
+        layout: crate::ir_inner::model::tile::Layout,
+    ) -> Self {
+        Self::TileLoad {
+            tile: tile.into(),
+            tile_type,
+            buffer: buffer.into(),
+            origin,
+            layout,
+        }
+    }
+
+    /// Store a tile to a buffer: `store_tile(buffer, origin, tile);`
+    #[must_use]
+    #[inline]
+    pub fn tile_store(
+        buffer: impl Into<Ident>,
+        origin: Vec<Expr>,
+        tile: impl Into<Ident>,
+    ) -> Self {
+        Self::TileStore {
+            buffer: buffer.into(),
+            origin,
+            tile: tile.into(),
+        }
+    }
+
+    /// Accumulate matrix product: `acc += a x b;`
+    #[must_use]
+    #[inline]
+    pub fn tile_matmul(
+        acc: impl Into<Ident>,
+        a: impl Into<Ident>,
+        b: impl Into<Ident>,
+    ) -> Self {
+        Self::TileMatmul {
+            acc: acc.into(),
+            a: a.into(),
+            b: b.into(),
+        }
+    }
+
+    /// Reduce tile along axis: `out = reduce_tile(tile, op, axis);`
+    #[must_use]
+    #[inline]
+    pub fn tile_reduce(
+        out: impl Into<Ident>,
+        tile: impl Into<Ident>,
+        op: crate::ir_inner::model::op_signature::SubgroupReduceOp,
+        axis: u32,
+    ) -> Self {
+        Self::TileReduce {
+            out: out.into(),
+            tile: tile.into(),
+            op,
+            axis,
+        }
+    }
+
+    /// Apply elementwise body: `out = elementwise(inputs, body);`
+    #[must_use]
+    #[inline]
+    pub fn tile_elementwise(
+        out: impl Into<Ident>,
+        inputs: Vec<Ident>,
+        body: Vec<Node>,
+    ) -> Self {
+        Self::TileElementwise {
+            out: out.into(),
+            inputs,
+            body,
+        }
+    }
+
+    /// Declare a tile binding: `tile name: Tile;`
+    #[must_use]
+    #[inline]
+    pub fn tile_decl(
+        name: impl Into<Ident>,
+        tile: crate::ir_inner::model::tile::Tile,
+    ) -> Self {
+        Self::TileDecl {
+            name: name.into(),
+            tile,
+        }
+    }
+
     /// Wrap a downstream extension statement node.
     #[must_use]
     #[inline]

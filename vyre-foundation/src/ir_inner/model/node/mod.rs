@@ -84,6 +84,12 @@ pub fn node_op_id(node: &Node) -> &'static str {
         Node::AllGather { .. } => "vyre.node.all_gather",
         Node::ReduceScatter { .. } => "vyre.node.reduce_scatter",
         Node::Broadcast { .. } => "vyre.node.broadcast",
+        Node::TileLoad { .. } => "vyre.node.tile_load",
+        Node::TileStore { .. } => "vyre.node.tile_store",
+        Node::TileMatmul { .. } => "vyre.node.tile_matmul",
+        Node::TileReduce { .. } => "vyre.node.tile_reduce",
+        Node::TileElementwise { .. } => "vyre.node.tile_elementwise",
+        Node::TileDecl { .. } => "vyre.node.tile_decl",
         Node::Opaque(extension) => extension.extension_kind(),
     }
 }

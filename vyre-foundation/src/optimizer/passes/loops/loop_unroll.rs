@@ -264,6 +264,12 @@ fn node_unroll_cost(node: &Node) -> Option<u32> {
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => None,
     }
 }

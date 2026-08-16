@@ -155,6 +155,12 @@ fn node_reads_any(node: &Node, names: &FxHashSet<Ident>) -> bool {
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => true,
     }
 }
@@ -215,6 +221,12 @@ fn node_is_observably_free(node: &Node) -> bool {
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => false,
     }
 }

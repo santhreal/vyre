@@ -151,6 +151,30 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
                 kept.push(Node::Trap { address, tag });
             }
             Node::Resume { tag } => kept.push(Node::Resume { tag }),
+            Node::TileLoad { ref origin, .. } => {
+                for off in origin {
+                    collect_expr_refs(off, &mut live);
+                }
+                kept.push(node);
+            }
+            Node::TileStore { ref origin, .. } => {
+                for off in origin {
+                    collect_expr_refs(off, &mut live);
+                }
+                kept.push(node);
+            }
+            Node::TileElementwise { out, inputs, body } => {
+                let body_result = eliminate_dead_lets(body, live.clone());
+                live.extend(body_result.live_in);
+                kept.push(Node::TileElementwise {
+                    out,
+                    inputs,
+                    body: body_result.nodes,
+                });
+            }
+            Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {
+                kept.push(node);
+            }
             Node::Opaque(extension) => kept.push(Node::Opaque(extension)),
         }
     }

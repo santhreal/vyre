@@ -305,6 +305,76 @@ fn validate_node_inner(
                 |_, _| {},
             );
         }
+        Node::TileLoad {
+            tile,
+            tile_type,
+            buffer,
+            origin,
+            ..
+        } => {
+            for expr in origin {
+                validate_expr(expr, buffers, scope, options, report, 0);
+            }
+            node_rules::check_tile_load(
+                tile,
+                tile_type,
+                buffer,
+                origin,
+                buffers,
+                options,
+                &mut report.errors,
+            );
+        }
+        Node::TileStore {
+            buffer,
+            origin,
+            tile,
+        } => {
+            for expr in origin {
+                validate_expr(expr, buffers, scope, options, report, 0);
+            }
+            node_rules::check_tile_store(
+                buffer,
+                origin,
+                tile,
+                buffers,
+                &mut report.errors,
+            );
+        }
+        Node::TileMatmul { acc, a, b } => {
+            node_rules::check_tile_matmul(acc, a, b, options, &mut report.errors);
+        }
+        Node::TileReduce { .. } => {}
+        Node::TileElementwise { inputs, body, .. } => {
+            validate_scoped_nested_nodes(
+                body,
+                buffers,
+                scope,
+                divergent,
+                depth,
+                limits,
+                options,
+                report,
+                |nested_scope, scope_log| {
+                    for input in inputs {
+                        insert_binding(
+                            nested_scope,
+                            input.clone(),
+                            Binding {
+                                ty: DataType::F32,
+                                ty_known: true,
+                                mutable: false,
+                                uniform: false,
+                            },
+                            Some(scope_log),
+                        );
+                    }
+                },
+            );
+        }
+        Node::TileDecl { name, tile } => {
+            node_rules::check_tile_residency(name, tile, options, &mut report.errors);
+        }
         Node::Opaque(extension) => {
             node_rules::check_opaque_node_extension(extension.as_ref(), &mut report.errors);
         }

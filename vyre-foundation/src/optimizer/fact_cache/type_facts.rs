@@ -103,6 +103,9 @@ impl TypeFactCtx {
                 Node::Region { body, .. } => {
                     self.infer_nodes_types(body);
                 }
+                Node::TileElementwise { body, .. } => {
+                    stack.extend(body.iter().rev());
+                }
                 Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
                     self.record_expr_type(offset);
                     self.record_expr_type(size);
@@ -119,6 +122,11 @@ impl TypeFactCtx {
                 | Node::Broadcast { .. }
                 | Node::AsyncWait { .. }
                 | Node::Resume { .. }
+                | Node::TileLoad { .. }
+                | Node::TileStore { .. }
+                | Node::TileMatmul { .. }
+                | Node::TileReduce { .. }
+                | Node::TileDecl { .. }
                 | Node::Opaque(_) => {}
             }
         }

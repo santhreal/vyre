@@ -131,6 +131,22 @@ fn collect_node_access(root: &Node, access: &mut AccessSet) {
                 collect_expr_reads(address, access);
                 access.serial_boundary = true;
             }
+            Node::TileLoad { buffer, origin, .. } => {
+                access.reads.insert(buffer.clone());
+                for e in origin {
+                    collect_expr_reads(e, access);
+                }
+            }
+            Node::TileStore { buffer, origin, .. } => {
+                access.writes.insert(buffer.clone());
+                for e in origin {
+                    collect_expr_reads(e, access);
+                }
+            }
+            Node::TileElementwise { body, .. } => {
+                stack.extend(body);
+            }
+            Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
             Node::Resume { .. }
             | Node::AllReduce { .. }
             | Node::AllGather { .. }

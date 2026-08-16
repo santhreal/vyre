@@ -303,6 +303,8 @@ enum Frame<'p> {
     /// count with the same counter value, so the loop var is itself
     /// uniform.
     InsertLoopVar { var: Ident, uniform: bool },
+    /// Inject tile input scalar bindings into the current scope.
+    InsertTileInputs { inputs: Vec<Ident> },
 }
 
 /// Single-pass validator that performs all node-tree checks in one
@@ -433,6 +435,19 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                                 }),
                             );
                         }
+                        Node::TileElementwise { inputs, body, .. } => {
+                            let depth = self.current_depth();
+                            let divergent = self.current_divergent();
+                            push_nested_sequence(
+                                &mut stack,
+                                body,
+                                divergent,
+                                depth + 1,
+                                Some(Frame::InsertTileInputs {
+                                    inputs: inputs.clone(),
+                                }),
+                            );
+                        }
                         // Every other variant descends through the one owner
                         // of which variants nest bodies. A body scopes its
                         // bindings like a block: a `let` inside one does not
@@ -500,6 +515,24 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                         node_rules::loop_var_binding(uniform),
                         Some(&mut frame.scope_log),
                     );
+                }
+                Frame::InsertTileInputs { inputs } => {
+                    let Some(frame) = self.scope_stack.last_mut() else {
+                        continue;
+                    };
+                    for input in inputs {
+                        node_rules::insert_binding(
+                            &mut self.scope,
+                            input.clone(),
+                            Binding {
+                                ty: DataType::F32,
+                                ty_known: true,
+                                mutable: false,
+                                uniform: false,
+                            },
+                            Some(&mut frame.scope_log),
+                        );
+                    }
                 }
             }
         }
@@ -873,6 +906,56 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         node_rules::check_collective(node, self.options, &self.buffers, &mut self.errors);
+        ControlFlow::Continue(())
+    }
+    fn visit_tile(&mut self, node: &Node) -> ControlFlow<Self::Break> {
+        let depth = self.current_depth();
+        depth::check_limits(&mut self.limits, depth, &mut self.errors);
+        match node {
+            Node::TileLoad {
+                tile,
+                tile_type,
+                buffer,
+                origin,
+                ..
+            } => {
+                for expr in origin {
+                    self.validate_expr(expr, 0);
+                }
+                node_rules::check_tile_load(
+                    tile,
+                    tile_type,
+                    buffer,
+                    origin,
+                    &self.buffers,
+                    self.options,
+                    &mut self.errors,
+                );
+            }
+            Node::TileStore {
+                buffer,
+                origin,
+                tile,
+            } => {
+                for expr in origin {
+                    self.validate_expr(expr, 0);
+                }
+                node_rules::check_tile_store(
+                    buffer,
+                    origin,
+                    tile,
+                    &self.buffers,
+                    &mut self.errors,
+                );
+            }
+            Node::TileMatmul { acc, a, b } => {
+                node_rules::check_tile_matmul(acc, a, b, self.options, &mut self.errors);
+            }
+            Node::TileDecl { name, tile } => {
+                node_rules::check_tile_residency(name, tile, self.options, &mut self.errors);
+            }
+            _ => {}
+        }
         ControlFlow::Continue(())
     }
 

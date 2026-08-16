@@ -5,6 +5,7 @@ use crate::ir_inner::model::node::NodeExtension;
 use crate::ir_inner::model::op_signature::{
     AtomicOp, BinOp, CollectiveOp, CommGroup, DataType, SubgroupReduceOp, UnOp,
 };
+use crate::ir_inner::model::tile::{Layout, Tile};
 use std::sync::Arc;
 
 vyre_macros::vyre_ast_registry! {
@@ -29,6 +30,12 @@ vyre_macros::vyre_ast_registry! {
         Barrier { ordering: crate::memory_model::MemoryOrdering },
         Block(Vec<Node>),
         Region { generator: Ident, source_region: Option<Ident>, body: Arc<Vec<Node>> },
+        TileLoad { tile: Ident, tile_type: Tile, buffer: Ident, origin: Vec<Expr>, layout: Layout },
+        TileStore { buffer: Ident, origin: Vec<Expr>, tile: Ident },
+        TileMatmul { acc: Ident, a: Ident, b: Ident },
+        TileReduce { out: Ident, tile: Ident, op: SubgroupReduceOp, axis: u32 },
+        TileElementwise { out: Ident, inputs: Vec<Ident>, body: Vec<Node> },
+        TileDecl { name: Ident, tile: Tile },
         Opaque(Arc<dyn NodeExtension>),
     }
 

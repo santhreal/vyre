@@ -146,6 +146,11 @@ fn node_unsummarisable_effect(node: &Node) -> bool {
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => false,
+        Node::TileElementwise { body, .. } => unsummarisable_effect(body),
+        Node::TileLoad { origin, .. } | Node::TileStore { origin, .. } => {
+            origin.iter().any(expr_contains_opaque)
+        }
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => false,
     }
 }
 
