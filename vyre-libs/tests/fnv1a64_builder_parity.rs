@@ -19,10 +19,14 @@ use vyre_libs::hash::fnv1a::{
 };
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
-use vyre_test_support::monorepo::vyre_crate_directory;
+use vyre_test_support::monorepo::declaring_source_file;
 
-/// The file that declares the builder family, read to derive the member set.
-const FAMILY_SOURCE: &str = "src/hash/fnv1a.rs";
+/// The declaration that identifies the file publishing the builder family.
+///
+/// The file is located by searching for this text, not by a path: the family
+/// has already moved crates once, and a literal path turns every rehome into a
+/// missing-file failure that says nothing about the roster.
+const FAMILY_DECLARATION: &str = "pub fn fnv1a64_program";
 
 /// Source element layout a builder declares for its input buffer.
 #[derive(PartialEq, Eq)]
@@ -165,12 +169,12 @@ fn canonical_fnv1a64_vectors_are_pinned() {
 
 #[test]
 fn the_rows_are_every_builder_the_source_publishes() {
-    let source =
-        std::fs::read_to_string(vyre_crate_directory("vyre-primitives").join(FAMILY_SOURCE))
-            .expect("the FNV-1a source file must be readable");
+    let path = declaring_source_file(FAMILY_DECLARATION);
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("{} must be readable: {error}", path.display()));
     let declared: BTreeSet<String> = source
         .lines()
-        .filter_map(|line| line.trim().strip_prefix("pub fn fnv1a64_program"))
+        .filter_map(|line| line.trim().strip_prefix(FAMILY_DECLARATION))
         .filter_map(|rest| rest.split('(').next())
         .map(|suffix| format!("fnv1a64_program{suffix}"))
         .collect();
@@ -178,7 +182,8 @@ fn the_rows_are_every_builder_the_source_publishes() {
 
     assert!(
         !declared.is_empty(),
-        "the declaration scan found no `pub fn fnv1a64_program*` in {FAMILY_SOURCE}, so it proves nothing"
+        "the declaration scan found no `{FAMILY_DECLARATION}*` in {}, so it proves nothing",
+        path.display()
     );
     assert_eq!(
         declared, covered,
