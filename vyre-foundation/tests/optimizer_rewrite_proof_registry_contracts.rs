@@ -35,10 +35,12 @@ fn every_obligation_has_unique_name() {
 fn every_obligation_emits_well_formed_smt2() {
     for obligation in shipped_obligations() {
         let smt = obligation.to_smt2();
+        let expected_logic = format!("(set-logic {})", obligation.domain.smt_logic());
         assert!(
-            smt.contains("(set-logic QF_BV)"),
-            "{} missing QF_BV header",
-            obligation.rewrite
+            smt.contains(&expected_logic),
+            "{} missing logic header {}",
+            obligation.rewrite,
+            expected_logic
         );
         assert!(
             smt.contains("(check-sat)"),
@@ -75,14 +77,37 @@ fn every_registered_arithmetic_rewrite_has_a_solver_artifact() {
         .iter()
         .map(|contract| contract.rewrite_id.to_string())
         .collect::<BTreeSet<_>>();
-    let shipped = shipped_obligations()
+    let shipped_bv = shipped_obligations()
         .into_iter()
+        .filter(|obligation| obligation.domain == vyre_foundation::optimizer::rewrite_proof::ProofDomain::IntegerBitVector)
         .map(|obligation| obligation.rewrite.to_string())
         .collect::<BTreeSet<_>>();
     assert_eq!(
-        shipped, registered,
-        "shipped SMT obligations must match registered arithmetic rewrite proof ids"
+        shipped_bv, registered,
+        "shipped BV SMT obligations must match registered arithmetic rewrite proof ids"
     );
+}
+
+#[test]
+fn all_domains_generate_certified_evidence_records() {
+    use vyre_foundation::optimizer::rewrite_proof::{ProofDomain, ProofStatus};
+    use vyre_foundation::optimizer::rewrite_proof_registry::shipped_proof_evidence;
+
+    let evidence = shipped_proof_evidence();
+    assert!(!evidence.is_empty());
+
+    let mut domains = BTreeSet::new();
+    for record in &evidence {
+        assert_eq!(record.status, ProofStatus::Certified);
+        assert_ne!(record.formula_digest, [0u8; 32]);
+        assert!(record.solver_target.contains("z3"));
+        domains.insert(record.domain);
+    }
+
+    assert!(domains.contains(&ProofDomain::IntegerBitVector));
+    assert!(domains.contains(&ProofDomain::FloatingPoint));
+    assert!(domains.contains(&ProofDomain::LoopTransform));
+    assert!(domains.contains(&ProofDomain::MemoryAlias));
 }
 
 #[test]

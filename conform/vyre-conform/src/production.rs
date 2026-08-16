@@ -546,3 +546,61 @@ impl ExecutionRoute {
         }
     }
 }
+
+/// Retained failure reproduction capsule that replays through the shipped product path.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ReplayCapsule {
+    /// Wire-encoded Program bytes.
+    pub wire_bytes: Vec<u8>,
+    /// Workload host input byte buffers.
+    pub inputs: Vec<Vec<u8>>,
+    /// Expected diagnostic code or error identity.
+    pub expected_diagnostic_code: Option<String>,
+    /// Optional expected output digest when verifying divergent values.
+    pub expected_output_digest: Option<u64>,
+}
+
+impl ReplayCapsule {
+    /// Construct a capsule from a Program and inputs.
+    pub fn from_program(
+        program: &Program,
+        inputs: &[&[u8]],
+        expected_diagnostic_code: Option<String>,
+    ) -> Result<Self, String> {
+        let wire_bytes = program.to_wire().map_err(|e| e.to_string())?;
+        Ok(Self {
+            wire_bytes,
+            inputs: inputs.iter().map(|b| b.to_vec()).collect(),
+            expected_diagnostic_code,
+            expected_output_digest: None,
+        })
+    }
+
+    /// Replay this failure capsule through the shipped product path:
+    /// wire decode -> optimization -> megakernel compilation -> materialization -> device dispatch.
+    pub fn replay_shipped_path(
+        &self,
+        registration: &'static BackendRegistration,
+    ) -> Result<Vec<Vec<u8>>, ProductionError> {
+        // 1. Wire decode
+        let decoded_program = Program::from_wire(&self.wire_bytes)
+            .map_err(|err| ProductionError::Compile(format!("wire decode failed: {err}")))?;
+
+        // 2. Optimization / Host rewrites
+        let mut optimized = decoded_program;
+        for rewrite in vyre_foundation::transform::HOST_REWRITES {
+            optimized = (rewrite.apply)(&optimized);
+        }
+
+        // 3. Megakernel selection and target compilation + materialization
+        let input_slices = self.inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        let session = ProductionSession::compile_with_representative_inputs(
+            &optimized,
+            &input_slices,
+            registration,
+        )?;
+
+        // 4. Device submission & execution
+        session.submit(&input_slices)
+    }
+}
