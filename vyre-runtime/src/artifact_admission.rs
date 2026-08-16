@@ -504,10 +504,12 @@ impl ArtifactSession {
         let canonical = state
             .admitted
             .neutral()
-            .resources()
-            .iter()
-            .map(|resource| (resource.name.as_str(), resource.value))
-            .collect::<BTreeMap<_, _>>();
+            .canonical_value_by_name()
+            .map_err(|collision| {
+                ArtifactSessionError::from(BackendError::InvalidProgram {
+                    fix: collision.to_string(),
+                })
+            })?;
         let buffers = program.buffers();
         program
             .output_buffer_indices()
