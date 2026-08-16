@@ -2655,7 +2655,53 @@ fn line_contains_raw_workspace_cargo(line: &str) -> bool {
     else {
         return trimmed.starts_with("cargo +");
     };
+    if is_emitted_sentence(trimmed, offset) {
+        return comment_instructs_a_run(&trimmed[..offset]);
+    }
     !is_comment_line(trimmed) || comment_instructs_a_run(&trimmed[..offset])
+}
+
+/// Whether the command at `offset` is inside a sentence the code emits.
+///
+/// A gate that spawns cargo through the one resolver still has to say which
+/// command failed, and that sentence names `cargo test`. Reading it as an
+/// invocation reported three gates that call the wrapper correctly. An emitted
+/// sentence is then judged by [`comment_instructs_a_run`], the same question
+/// asked of a comment: a message telling a maintainer to run something must
+/// name the wrapper, and one saying what failed is a description.
+///
+/// A spawn names its program to `Command::new`, so a line that does stays
+/// reported however it is quoted, and text printed for a reader to copy is not
+/// one of the message shapes.
+fn is_emitted_sentence(trimmed: &str, offset: usize) -> bool {
+    if trimmed.contains("Command::new") {
+        return false;
+    }
+    let bytes = trimmed.as_bytes();
+    let mut quotes = 0usize;
+    let mut at = 0usize;
+    while at < offset {
+        match bytes[at] {
+            b'\\' => at += 1,
+            b'"' => quotes += 1,
+            _ => {}
+        }
+        at += 1;
+    }
+    if quotes % 2 == 0 {
+        return false;
+    }
+    let before = &trimmed[..offset];
+    [
+        "format!(",
+        "panic!(",
+        "expect(",
+        "unwrap_or_else(",
+        "GateError::new(",
+        "assert",
+    ]
+    .iter()
+    .any(|shape| before.contains(shape))
 }
 
 fn line_contains_invalid_cargo_full_xtask(line: &str) -> bool {
@@ -2907,6 +2953,10 @@ mod tests {
     /// sentence describing what a build does was a finding a reader could only
     /// clear by describing the build less precisely. An instruction is what the
     /// rule is about, and the verb that makes it one comes before the command.
+    /// A sentence the code emits is judged by the same question: three gates
+    /// that spawn through the one resolver were reported for the diagnostic
+    /// naming the command that failed to start, while a message printed for a
+    /// reader to type still names the wrapper.
     #[test]
     fn a_cargo_command_is_a_finding_when_a_comment_tells_a_reader_to_run_it() {
         for instruction in [
@@ -2915,6 +2965,8 @@ mod tests {
             "// rebuild it with `cargo build -p xtask`",
             "let usage = \"cargo xtask gate1\";",
             "println!(\"  cargo run -p {package} -- <subcommand>\");",
+            "panic!(\"rerun with `cargo test -p xtask --lib`\");",
+            "Command::new(\"bash\").arg(\"-c\").arg(\"cargo test -p xtask\");",
         ] {
             assert!(
                 line_contains_raw_workspace_cargo(instruction),
@@ -2926,6 +2978,9 @@ mod tests {
             "//! `cargo check -p <member>` is what the plain default build gets.",
             "// A cargo test target that does not exist fails before it runs.",
             "//! `cargo check -p <member>` is what the plain default build gets.",
+            "format!(\"`cargo test --test {suite}` could not be started: {error}\"),",
+            "format!(\"cannot run cargo test for `{package}`: {error}\"),",
+            "GateError::new(format!(\"`cargo build` produced no binary\"), advice),",
         ] {
             assert!(
                 !line_contains_raw_workspace_cargo(description),
