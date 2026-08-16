@@ -4,11 +4,11 @@
 //! way a consumer reaches it.
 
 use vyre_foundation::execution_plan::SchedulingPolicy;
-use vyre_runtime::resident_work_queue::task::TaskPriority;
 use vyre_runtime::resident_work_queue::planner::*;
 use vyre_runtime::resident_work_queue::policy::{
-    diffuse_priority_across_siblings, ResidentLaunchPolicy,
+    try_diffuse_priority_across_siblings, ResidentLaunchPolicy,
 };
+use vyre_runtime::resident_work_queue::task::{TaskPriority, TaskWorkItem};
 
 #[test]
 fn launch_geometry_pads_slots_and_caps_grid_by_workers() {
@@ -84,8 +84,12 @@ fn config_builds_launch_policy_from_continuation_task_queue() {
         param: 13,
     };
     let ready = TaskWorkItem::from_work_item(1, 0, TaskPriority::Normal, item);
-    let paused = ready.paused(20, 30, 40);
-    let requeued = ready.requeued(50, 60, TaskPriority::High);
+    let paused = ready
+        .try_paused(20, 30, 40)
+        .expect("Fix: a ready task must accept a pause transition");
+    let requeued = ready
+        .try_requeued(50, 60, TaskPriority::High)
+        .expect("Fix: a ready task must accept a requeue transition");
 
     let request = config
         .launch_request_for_tasks(&[ready, paused, requeued], 256, 65_536, 1_024)
@@ -117,15 +121,17 @@ fn launch_policy_autotune_uses_local_min_cost_selection() {
 
 #[test]
 fn priority_diffusion_and_natural_gradient_are_runtime_local() {
-    let diffused = diffuse_priority_across_siblings(&[10.0, 20.0], &[0.5, 0.25], 0.2, 1);
+    let diffused = try_diffuse_priority_across_siblings(&[10.0, 20.0], &[0.5, 0.25], 0.2, 1)
+        .expect("Fix: two-sibling priority diffusion must stage its output vector");
     assert_eq!(diffused, vec![9.0, 19.0]);
 
-    let delta = ResidentLaunchPolicy::natural_gradient_autotune_step(
+    let delta = ResidentLaunchPolicy::try_natural_gradient_autotune_step(
         &[1.0, 0.0, 0.0, 1.0],
         &[3.0, -2.0],
         2,
         0.5,
-    );
+    )
+    .expect("Fix: a 2x2 natural-gradient step must stage its delta vector");
     assert_eq!(delta, vec![-1.5, 1.0]);
 }
 
@@ -135,13 +141,14 @@ fn natural_gradient_rejects_invalid_shape_before_output_growth() {
     out.extend_from_slice(&[99.0, 100.0]);
     let ptr = out.as_ptr();
 
-    ResidentLaunchPolicy::natural_gradient_autotune_step_into(
+    ResidentLaunchPolicy::try_natural_gradient_autotune_step_into(
         &[1.0, 0.0],
         &[3.0],
         2,
         0.5,
         &mut out,
-    );
+    )
+    .expect("Fix: a shape rejection must return Ok without growing the output");
 
     assert!(out.is_empty());
     assert_eq!(out.capacity(), 2);

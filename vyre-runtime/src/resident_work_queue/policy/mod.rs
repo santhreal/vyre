@@ -463,24 +463,6 @@ impl PriorityRequeueAccounting {
 /// 0.0 = isolated). `damping` controls the diffusion rate in [0, 1].
 ///
 /// Returns the post-diffusion priority vector, same shape as input.
-#[must_use]
-#[cfg(test)]
-pub fn diffuse_priority_across_siblings(
-    priority_stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-    iterations: u32,
-) -> Vec<f64> {
-    try_diffuse_priority_across_siblings(priority_stalks, restriction_diag, damping, iterations)
-        .unwrap_or_else(|source| {
-            panic!(
-                "megakernel priority diffusion allocation failed: {source}. Fix: shard the priority sibling set before diffusion."
-            )
-        })
-}
-
-/// Diffuse priority signals across priority-class siblings with fallible
-/// output staging.
 ///
 /// # Errors
 ///
@@ -506,31 +488,6 @@ pub fn try_diffuse_priority_across_siblings(
 }
 
 /// Diffuse priority signals into caller-owned storage.
-#[cfg(test)]
-pub fn diffuse_priority_across_siblings_into(
-    priority_stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-    iterations: u32,
-    out: &mut Vec<f64>,
-    scratch: &mut Vec<f64>,
-) {
-    try_diffuse_priority_across_siblings_into(
-        priority_stalks,
-        restriction_diag,
-        damping,
-        iterations,
-        out,
-        scratch,
-    )
-    .unwrap_or_else(|source| {
-        panic!(
-            "megakernel priority diffusion allocation failed: {source}. Fix: shard the priority sibling set before diffusion."
-        )
-    });
-}
-
-/// Diffuse priority signals into caller-owned storage with fallible staging.
 ///
 /// # Errors
 ///
@@ -1229,23 +1186,6 @@ impl ResidentLaunchPolicy {
     /// natural-gradient direction by default  -  Fisher-preconditioned
     /// descent converges 5-10× faster than plain gradient on the
     /// elongated-valley latency surfaces typical of GPU autotuning.
-    #[must_use]
-    #[cfg(test)]
-    pub fn natural_gradient_autotune_step(
-        m_inv_sqrt: &[f64],
-        grad: &[f64],
-        n: u32,
-        learning_rate: f64,
-    ) -> Vec<f64> {
-        Self::try_natural_gradient_autotune_step(m_inv_sqrt, grad, n, learning_rate)
-            .unwrap_or_else(|source| {
-                panic!(
-                    "megakernel natural-gradient autotune allocation failed: {source}. Fix: shard the autotune surface."
-                )
-            })
-    }
-
-    /// Compute the next-step parameter delta with fallible output staging.
     ///
     /// # Errors
     ///
@@ -1269,24 +1209,6 @@ impl ResidentLaunchPolicy {
     }
 
     /// Compute the natural-gradient autotune step into caller-owned storage.
-    #[cfg(test)]
-    pub fn natural_gradient_autotune_step_into(
-        m_inv_sqrt: &[f64],
-        grad: &[f64],
-        n: u32,
-        learning_rate: f64,
-        out: &mut Vec<f64>,
-    ) {
-        Self::try_natural_gradient_autotune_step_into(m_inv_sqrt, grad, n, learning_rate, out)
-            .unwrap_or_else(|source| {
-                panic!(
-                    "megakernel natural-gradient autotune allocation failed: {source}. Fix: shard the autotune surface."
-                )
-            });
-    }
-
-    /// Compute the natural-gradient autotune step into caller-owned storage
-    /// with fallible host staging.
     ///
     /// # Errors
     ///
@@ -1733,7 +1655,15 @@ mod tests {
             let mut out = Vec::with_capacity(input.len());
             let mut scratch = Vec::with_capacity(input.len());
 
-            diffuse_priority_across_siblings_into(&input, &restrictions, 0.5, 4, &mut out, &mut scratch);
+            try_diffuse_priority_across_siblings_into(
+                &input,
+                &restrictions,
+                0.5,
+                4,
+                &mut out,
+                &mut scratch,
+            )
+            .expect("Fix: diffusion staging must succeed for three siblings");
 
             assert_eq!(out, input);
             assert!(scratch.is_empty());
@@ -1749,7 +1679,15 @@ mod tests {
             let out_ptr = out.as_ptr();
             let scratch_ptr = scratch.as_ptr();
 
-            diffuse_priority_across_siblings_into(&input, &restrictions, 0.25, 2, &mut out, &mut scratch);
+            try_diffuse_priority_across_siblings_into(
+                &input,
+                &restrictions,
+                0.25,
+                2,
+                &mut out,
+                &mut scratch,
+            )
+            .expect("Fix: diffusion staging must succeed for three siblings");
 
             assert_eq!(out.len(), input.len());
             assert_eq!(scratch.len(), input.len());
