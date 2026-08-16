@@ -12,6 +12,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   red. The rule lived in a test in an unrelated crate and shelled out to git;
   it now reads the tracked source set through the scanner, reports the file and
   line, and is exercised on 4511 files.
+- The `ci-required` gate holds the required status contexts to the workflows
+  that define them: every context resolves to a job by display name or job id,
+  every workflow carrying one runs on pull requests and on pushes to the
+  protected branch without a path filter, and a fan-in job that always runs
+  reads a dependency result and exits nonzero. Those six assertions used to run
+  only when an operator applied branch protection by hand, so they ran on no
+  schedule at all. The fail-closed rule now reads the job that opted into
+  always running rather than searching the whole file, where an unrelated build
+  step that exits nonzero satisfied it. The operator script keeps the API
+  mutation and runs the gate before it applies anything.
 - The `frozen-contracts` gate reads the snapshot directory and reports a
   snapshot no frozen contract claims. The frozen set is a table in the gate and
   the snapshots are files on disk, so deleting a row left its snapshot behind,
@@ -354,6 +364,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   workspace does not ship, and the worked example names the primitive that
   survived it. `gate1` states the countable half and points at the policy for
   the rest, instead of recording that the policy was deleted.
+- The `ci-matrix` gate reports a hosted CI matrix that has lost a platform or a
+  toolchain, and a device escape hatch inside it. The rule it replaces asked
+  whether the workflow file contained the word `stable` anywhere, which a step
+  name satisfies, and whether it contained `macos-latest`, which a
+  commented-out axis satisfies, so an axis could be deleted and the check
+  stayed green. The gate reads the axis values out of the matrix block, which
+  is what expands into jobs.
 - `scripts/check_branch_accounting.py` derives the campaign's own branch and
   worktree state from git at run time and fails when it is inconsistent: a
   branch no owner branch holds and no worktree carries is work nobody is doing
@@ -1562,6 +1579,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   plus a private copy in the readback and timestamp recorders, one of which
   imported the public alias in the same file it redefined. Both recorders use
   the published alias.
+- The `hot-path-nested-rows` gate reads the trait that returns nested byte rows
+  rather than counting the text of the type in one crate. A dispatch trait that
+  returns `Vec<Vec<u8>>` must also declare a form that fills slots the caller
+  keeps, and such a form must fill them rather than assign fresh rows through
+  the parameter. The counted spelling condemned the shared dispatch ABI at one
+  backend while the caller-owned slot machinery that answers it read as a
+  finding too, so the pin could only be met by rewording.
 - Every registered xtask subcommand is now a gate answering one contract: it
   returns findings and notes instead of printing, and the runner decides what
   that means. The `Kind` enum is gone, so no check is exempt from the sweep by

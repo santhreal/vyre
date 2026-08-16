@@ -9,10 +9,11 @@
 //! into a vector of its own. Batched rows now live in one buffer behind
 //! `vyre_driver::BatchOutputs`.
 //!
-//! The `hot-path-nested-rows` gate ratchets a count of the two-level
-//! `Vec<Vec<u8>>` in ONE crate. That level is the legitimate per-slot output of
-//! a single dispatch and cannot be driven to zero, and the count covered no
-//! other crate, so a three-deep copy in another backend was unobserved.
+//! The `hot-path-nested-rows` gate reads the two-level `Vec<Vec<u8>>` on the
+//! trait that returns it: rows returned by a dispatch trait are legitimate as
+//! long as the trait also offers a form that fills slots the caller keeps. That
+//! rule says nothing about a third level appearing inside a backend, so this
+//! contract covers the depth.
 //!
 //! Scope is every crate that implements the backend trait, decided by parsing
 //! each workspace member's own sources rather than from a list typed here, so a

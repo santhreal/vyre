@@ -17,39 +17,6 @@ use std::path::Path;
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Rule, Tree};
 
-/// `Vec<Vec<u8>>` byte rows on the dispatch surface.
-pub struct NestedRows;
-
-impl Gate for NestedRows {
-    fn name(&self) -> &'static str {
-        "hot-path-nested-rows"
-    }
-
-    fn help(&self) -> &'static str {
-        "nested Vec<Vec<u8>> byte rows in driver production sources"
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let tree = Tree::open(&ctx.root)?;
-        scan::ratchet(
-            &tree,
-            &Rule {
-                roots: &["vyre-driver-wgpu/src"],
-                skip: &is_test_path,
-                line: &|line| line.contains("Vec<Vec<u8>>"),
-                reviewed: &[],
-                reviewed_line: Some(&scan::is_comment),
-                statement: None,
-                message: "nested byte rows on the dispatch surface",
-                fix: "migrate to borrowed row handles, one flat buffer plus offsets, \
-                      or arena-backed rows, then lower the pin",
-                unreviewed_message: "nested byte rows in live code rather than in a doc comment",
-                unreviewed_fix: "build the rows as &[&[u8]] over one contiguous buffer",
-            },
-        )
-    }
-}
-
 /// Blocking waits, busy waits and polled maintenance on throughput paths.
 pub struct BlockingWait;
 
