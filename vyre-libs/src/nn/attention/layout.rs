@@ -80,7 +80,7 @@ impl RowMajor {
 /// The rejection is shared; the reported error type is not, because the cache
 /// append answers with a typed error and the conversions answer with a message
 /// naming the entry point.
-pub(super) enum LayoutReject {
+pub(crate) enum LayoutReject {
     /// At least one dimension is zero, so the dispatch would write nothing and
     /// report success.
     EmptyShape,
@@ -89,7 +89,7 @@ pub(super) enum LayoutReject {
 }
 
 /// Reject the shape and dtype inputs no attention layout move can serve.
-pub(super) fn check_layout_dims(dims: &[u32], dtype: &DataType) -> Result<(), LayoutReject> {
+pub(crate) fn check_layout_dims(dims: &[u32], dtype: &DataType) -> Result<(), LayoutReject> {
     if dims.iter().any(|dimension| *dimension == 0) {
         return Err(LayoutReject::EmptyShape);
     }
@@ -101,13 +101,13 @@ pub(super) fn check_layout_dims(dims: &[u32], dtype: &DataType) -> Result<(), La
 
 /// Flattened element count of `dims`, or `None` when it overflows `u32`
 /// indexing.
-pub(super) fn checked_elements(dims: &[u32]) -> Option<u32> {
+pub(crate) fn checked_elements(dims: &[u32]) -> Option<u32> {
     dims.iter()
         .try_fold(1_u32, |product, value| product.checked_mul(*value))
 }
 
 /// Where the value of one output element comes from.
-enum IndexMap {
+pub(crate) enum IndexMap {
     /// `write[index] = read[source]`.
     Gather {
         /// Buffer the value is read from.
@@ -130,29 +130,48 @@ enum IndexMap {
         /// Flat index into `patch`, derived from the `index` binding.
         patch_index: Expr,
     },
+    /// `write[destination] = read[index]`.
+    ///
+    /// The inverse direction of [`IndexMap::Gather`], and the only map whose
+    /// guard bounds the INPUT. A paged cache write touches one block slot out
+    /// of a cache that is deliberately much larger, so bounding the output
+    /// would dispatch the whole cache to move one token, which is the cost
+    /// paging exists to avoid. The map has to be injective for the move to
+    /// write each destination once; every caller here derives the destination
+    /// from distinct source coordinates through one block table lookup.
+    Scatter {
+        /// Buffer the value is read from, indexed by the guarded index.
+        read: String,
+        /// Flat index into the written buffer, derived from the `index`
+        /// binding.
+        destination: Expr,
+    },
 }
 
 /// One guarded element move: `buffers` in binding order, one invocation per
-/// element of `write`, and `map` producing the stored value.
-struct LayoutMove<'a> {
+/// element of the dispatch domain, and `map` producing the stored value.
+pub(crate) struct LayoutMove<'a> {
     /// Op id of the emitted region.
-    op_id: &'static str,
+    pub(crate) op_id: &'static str,
     /// Every storage binding, in binding order, the output included.
-    buffers: Vec<BufferDecl>,
-    /// Output buffer name.
-    write: &'a str,
-    /// Guarded element count of the output buffer.
-    count: u32,
-    /// Value source for one output element.
-    map: IndexMap,
+    pub(crate) buffers: Vec<BufferDecl>,
+    /// Written buffer name.
+    pub(crate) write: &'a str,
+    /// Guarded element count of the dispatch domain: the output for a gather
+    /// or a patch, the input for a scatter.
+    pub(crate) count: u32,
+    /// Value source for one moved element.
+    pub(crate) map: IndexMap,
 }
 
 /// Emit a layout move.
 ///
-/// The guard bounds the OUTPUT index, which is the invocation id, so every
-/// output element is written exactly once and a move cannot leave a hole. A
-/// scatter would bound the input index instead and could not make that promise.
-fn layout_move_program(spec: LayoutMove<'_>) -> Program {
+/// The guard bounds the OUTPUT index for a gather and a patch, which is the
+/// invocation id, so every output element is written exactly once and a move
+/// cannot leave a hole. A scatter bounds the input index instead and promises
+/// the same coverage through an injective destination map rather than through
+/// the guard.
+pub(crate) fn layout_move_program(spec: LayoutMove<'_>) -> Program {
     let index = Expr::var("index");
     let store = |value: Expr| Node::Store {
         buffer: spec.write.into(),
@@ -171,6 +190,11 @@ fn layout_move_program(spec: LayoutMove<'_>) -> Program {
             vec![store(Expr::load(&patch, patch_index))],
             vec![store(Expr::load(&base, index.clone()))],
         )],
+        IndexMap::Scatter { read, destination } => vec![Node::Store {
+            buffer: spec.write.into(),
+            index: destination,
+            value: Expr::load(&read, index.clone()),
+        }],
     };
     let body = vec![
         Node::let_bind("index", Expr::InvocationId { axis: 0 }),

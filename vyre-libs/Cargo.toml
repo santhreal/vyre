@@ -40,6 +40,7 @@ full = [
     "math-kernels",
     "nn-activation", "nn-linear", "nn-linear-4bit", "nn-norm", "nn-attention", "nn-moe", "nn-inference",
     "nn-kernels",
+    "llm",
     "matching-substring", "matching-dfa", "matching-nfa",
     "matching-kernels", "nfa",
     "hash",
@@ -146,6 +147,10 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
 "nn-attention" = ["cat-a-builder-options", "nn-norm", "math-linalg", "nn-kernels"]
 "nn-moe" = ["nn-attention"]
 "nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
+# `llm` names `nn-moe` because `llm/sampling.rs` composes
+# `nn::moe::softmax_top_k` and `llm/paged_kv.rs` builds on
+# `nn::attention::layout`, which `nn-moe` already names.
+"llm" = ["nn-moe"]
 # Neither matching domain names `cpu-parity`, for the same reason `decode` does
 # not: it compiled the host oracles into every default build and masked the
 # edges the sweep is for.

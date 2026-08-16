@@ -111,6 +111,11 @@ pub mod logical;
 ))]
 pub mod nn;
 
+/// Language-model decode layer  -  paged key-value cache addressing and token
+/// sampling, composed from the neural-net and math dialects.
+#[cfg(feature = "llm")]
+pub mod llm;
+
 /// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
 /// program builders plus immutable compilation artifacts.
 #[cfg(any(
