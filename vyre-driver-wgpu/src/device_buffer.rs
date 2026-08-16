@@ -184,6 +184,8 @@ impl WgpuBackend {
     }
 }
 
+// Inline: `vyre_driver_wgpu::device_buffer` is `private`, so no integration test can reach what
+// this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

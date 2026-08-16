@@ -20,6 +20,9 @@ pub struct EnvironmentData {
     #[serde(default)]
     pub nvidia_cuda_version: Option<String>,
     pub features: Vec<String>,
+    /// `release` or `debug`, naming the build that took the measurements.
+    #[serde(default)]
+    pub build_profile: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,6 +36,30 @@ pub struct GpuDeviceInfo {
     pub compute_capability_minor: Option<u32>,
 }
 
+/// The optimization level cargo compiled this harness with.
+const OPT_LEVEL: &str = env!("VYRE_BENCH_OPT_LEVEL");
+
+/// The build profile this harness was compiled with.
+///
+/// A debug build measures the CPU baseline of a release case tens of times
+/// slower than a release build while device time barely moves, so a report that
+/// does not name its profile cannot be told apart from evidence. Measured
+/// 2026-08-15 for `release.condition_eval.1m` on one CUDA host: 215874264 ns of
+/// CPU baseline under debug against 4422427 ns under release.
+///
+/// The profile is read from the optimization level the build script exports and
+/// the assertion cfg of this compilation, not from the assertion cfg alone. A
+/// profile that turns assertions off without optimizing produces the numbers of
+/// a debug build and reported itself as release.
+#[must_use]
+pub fn build_profile() -> &'static str {
+    if matches!(OPT_LEVEL, "2" | "3" | "s" | "z") && !cfg!(debug_assertions) {
+        "release"
+    } else {
+        "debug"
+    }
+}
+
 pub fn capture_environment() -> std::io::Result<EnvironmentData> {
     // Collect host information
     let os = std::env::consts::OS.to_string();
@@ -43,7 +70,10 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
         .map(|p| p.get())
         .unwrap_or(1);
 
-    let mut features = vec!["vyre-bench".to_string()];
+    let mut features = vec![
+        "vyre-bench".to_string(),
+        format!("build.opt_level:{OPT_LEVEL}"),
+    ];
     let gpu_devices = match nvidia_smi_gpu_devices() {
         Ok(devices) => devices,
         Err(error) => {
@@ -122,6 +152,7 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
         nvidia_cuda_version: nvidia_versions.cuda_version,
         gpu_devices,
         features,
+        build_profile: build_profile().to_string(),
     })
 }
 

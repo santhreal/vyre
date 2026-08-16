@@ -1,18 +1,8 @@
-use std::path::Path;
-
-use serde::Serialize;
 use serde_json::Value;
 
 use crate::bench::benchmark_evidence_semantics::{
     COLD_PIPELINE_BUILD_METRICS, SCAN_THROUGHPUT_METRICS,
 };
-
-pub(super) fn write_json(path: &Path, value: &impl Serialize) {
-    if let Err(error) = xtask::json_document::write(path, value) {
-        eprintln!("Fix: {error}");
-        std::process::exit(1);
-    }
-}
 
 pub(super) fn release_axis_blockers(reports: &[Value]) -> Vec<String> {
     let mut blockers = Vec::new();

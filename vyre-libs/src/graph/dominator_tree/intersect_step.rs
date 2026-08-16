@@ -24,7 +24,7 @@
 //! runs that one first.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::program::IDOM_NONE;
@@ -141,9 +141,7 @@ pub fn dominator_tree_intersect_step_child(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         dominator_tree_intersect_step_body(node_count, idom, depth, changed),
     )
 }

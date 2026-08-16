@@ -20,7 +20,6 @@ mutants.out.old/
 *.rlib
 
 # proptest regression corpus  -  regenerated deterministically from seeds.
-# See scripts/fetch-regressions.sh.
 conform/regressions/
 
 # Profiling / flamegraph artifacts.

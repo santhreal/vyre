@@ -30,6 +30,15 @@ assert_eq!(artifact.digest(), compile(&request)?.digest());
 The whole runnable version is
 [compile a graph to an artifact](docs/guide/first-program.md).
 
+## How the tree is laid out
+
+One crate owns one boundary. Each crate carries a `SPEC.md` stating what it
+owns, what it must never contain, what crosses its edges, and the gates that
+enforce that, and a `README.md` describing its modules and how to run its
+tests. `docs/CRATE_OWNERSHIP.toml` is the machine-readable form of the same
+facts, and every dependency edge is declared there before a manifest may carry
+it.
+
 ## Documentation
 
 The book starts at [the summary](docs/SUMMARY.md).

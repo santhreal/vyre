@@ -124,6 +124,8 @@ where
     Some(to_remove)
 }
 
+// Inline: `vyre_driver_cuda::backend` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::Ordering;

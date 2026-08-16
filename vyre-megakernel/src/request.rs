@@ -165,10 +165,17 @@ impl CompileRequest {
         })?;
         // The cut runs before every consumer of the graph: device admission,
         // binding validation, IR validation, and schedule search all see a graph
-        // with no whole-grid fence left in a node body. A graph without a fence is
-        // returned untouched, so the artifact digest is unchanged. Validating
-        // after the cut validates exactly the programs compilation consumes, and
-        // against the live device rather than a compiler-wide capability floor.
+        // with no hoistable whole-grid fence left in a node body. A graph without
+        // a fence is returned untouched, so the artifact digest is unchanged.
+        //
+        // Device admission reads the cut graph on purpose. A fence the cut
+        // removes becomes one node per segment ordered through retained state, so
+        // the launch boundary satisfies it and no cooperative launch is needed;
+        // judging the submitted graph instead would refuse work the compiler
+        // completes. A fence under conditional control flow is copied verbatim
+        // because hoisting it would change which invocations reach it, and that
+        // is the fence still present in what compilation consumes, so that is the
+        // one admission refuses on a device with no cooperative launch.
         let graph = grid_sync::split_graph(self.graph)?;
         validate_node_programs(&graph, self.device.capabilities)?;
         validate_device_support(&graph, self.device)?;

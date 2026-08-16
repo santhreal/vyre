@@ -6,7 +6,9 @@
 
 use vyre_foundation::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
+};
 
 /// Supported per-word bitwise binary operators.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -51,7 +53,7 @@ pub(crate) fn binary_word_program(
             BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(words),
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(words),
         ],
-        [256, 1, 1],
+        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
         vec![wrap_anonymous_region(
             op_id,
             vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
@@ -111,7 +113,7 @@ where
             BufferDecl::storage(operand, 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(words),
         ],
-        [256, 1, 1],
+        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
         vec![wrap_anonymous_region(
             op_id,
             vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
@@ -187,7 +189,7 @@ macro_rules! define_bitwise_binary_op {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::primitive(
+            vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("lhs", "rhs", "out", $inventory_words),
                 Some(|| {
@@ -380,7 +382,7 @@ macro_rules! define_bitwise_in_place_op {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::primitive(
+            vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("target", "operand", $inventory_words),
                 Some(|| {

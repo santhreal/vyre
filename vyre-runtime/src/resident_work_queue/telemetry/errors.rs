@@ -140,6 +140,12 @@ pub(super) fn counter_sum_overflow(label: &'static str, fix: &'static str) -> Pi
     PipelineError::Backend(format!("megakernel {label} overflowed u64. Fix: {fix}."))
 }
 
+pub(super) fn status_sum_overflow(label: &'static str) -> PipelineError {
+    PipelineError::Backend(format!(
+        "megakernel {label} overflowed u32, so the decoded ring holds more slots than a slot index can address. Fix: reject the ring snapshot instead of reporting a clamped total."
+    ))
+}
+
 pub(super) fn fairness_skew_invalid(max: u32, min_nonzero: u32) -> PipelineError {
     PipelineError::Backend(format!(
         "megakernel fairness skew saw max {max} below min_nonzero {min_nonzero}. Fix: reject malformed fairness counters before telemetry aggregation."

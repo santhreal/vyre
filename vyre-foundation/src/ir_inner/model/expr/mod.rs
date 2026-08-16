@@ -5,16 +5,7 @@
 
 use crate::ir_inner::model::op_signature::{DataType, SubgroupReduceOp};
 use std::fmt;
-use std::hash::Hash;
 use std::sync::Arc;
-
-/// Reference to the generator/macro that produced an AST region.
-/// Used for source-mapping and DWARF-like debugging context.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct GeneratorRef {
-    /// The name of the generator (e.g., `vyre-nn::flash_attention`).
-    pub name: String,
-}
 
 mod ident;
 

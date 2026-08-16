@@ -153,6 +153,7 @@ impl PipelineCacheStore for LayeredPipelineCache {
     }
 }
 
+// Inline: covers `metrics`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

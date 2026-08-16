@@ -38,6 +38,8 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `adversarial_loop_induction_rebind` | `vyre-foundation/tests/adversarial_loop_induction_rebind.rs` | None | `./cargo_full test -p vyre-foundation --test adversarial_loop_induction_rebind` |
 | `test` | `adversarial_loop_peel_first_iter` | `vyre-foundation/tests/adversarial_loop_peel_first_iter.rs` | None | `./cargo_full test -p vyre-foundation --test adversarial_loop_peel_first_iter` |
 | `test` | `adversarial_program_canonical_laws` | `vyre-foundation/tests/adversarial_program_canonical_laws.rs` | None | `./cargo_full test -p vyre-foundation --test adversarial_program_canonical_laws` |
+| `test` | `async_destination_writability` | `vyre-foundation/tests/async_destination_writability.rs` | None | `./cargo_full test -p vyre-foundation --test async_destination_writability` |
+| `test` | `async_tag_discipline` | `vyre-foundation/tests/async_tag_discipline.rs` | None | `./cargo_full test -p vyre-foundation --test async_tag_discipline` |
 | `test` | `atomic_linear_type_gap` | `vyre-foundation/tests/atomic_linear_type_gap.rs` | None | `./cargo_full test -p vyre-foundation --test atomic_linear_type_gap` |
 | `test` | `atomic_minimize_operand_positions` | `vyre-foundation/tests/atomic_minimize_operand_positions.rs` | None | `./cargo_full test -p vyre-foundation --test atomic_minimize_operand_positions` |
 | `test` | `autodiff_forward_local_fail_closed` | `vyre-foundation/tests/autodiff_forward_local_fail_closed.rs` | None | `./cargo_full test -p vyre-foundation --test autodiff_forward_local_fail_closed` |
@@ -79,10 +81,13 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `inline_nested_call_argument_rebinding` | `vyre-foundation/tests/inline_nested_call_argument_rebinding.rs` | None | `./cargo_full test -p vyre-foundation --test inline_nested_call_argument_rebinding` |
 | `test` | `inline_per_invocation_builtin_rejection` | `vyre-foundation/tests/inline_per_invocation_builtin_rejection.rs` | None | `./cargo_full test -p vyre-foundation --test inline_per_invocation_builtin_rejection` |
 | `test` | `ir_variant_shape_owner_closure` | `vyre-foundation/tests/ir_variant_shape_owner_closure.rs` | None | `./cargo_full test -p vyre-foundation --test ir_variant_shape_owner_closure` |
+| `test` | `licm_hoist_scope_safety` | `vyre-foundation/tests/licm_hoist_scope_safety.rs` | None | `./cargo_full test -p vyre-foundation --test licm_hoist_scope_safety` |
+| `test` | `licm_speculation_bounds` | `vyre-foundation/tests/licm_speculation_bounds.rs` | None | `./cargo_full test -p vyre-foundation --test licm_speculation_bounds` |
 | `test` | `linear_type_validation` | `vyre-foundation/tests/linear_type_validation.rs` | None | `./cargo_full test -p vyre-foundation --test linear_type_validation` |
 | `test` | `loop_fusion_atomic_expected_scalar_dependency` | `vyre-foundation/tests/loop_fusion_atomic_expected_scalar_dependency.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_atomic_expected_scalar_dependency` |
 | `test` | `loop_fusion_binding_collision` | `vyre-foundation/tests/loop_fusion_binding_collision.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_binding_collision` |
 | `test` | `loop_fusion_pair_after_a_refusal` | `vyre-foundation/tests/loop_fusion_pair_after_a_refusal.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_pair_after_a_refusal` |
+| `test` | `loop_fusion_rename_reaches_every_operand` | `vyre-foundation/tests/loop_fusion_rename_reaches_every_operand.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_rename_reaches_every_operand` |
 | `test` | `loop_fusion_scalar_dependency` | `vyre-foundation/tests/loop_fusion_scalar_dependency.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_scalar_dependency` |
 | `test` | `loop_induction_var_guards` | `vyre-foundation/tests/loop_induction_var_guards.rs` | None | `./cargo_full test -p vyre-foundation --test loop_induction_var_guards` |
 | `test` | `loop_legality_collector_closure` | `vyre-foundation/tests/loop_legality_collector_closure.rs` | None | `./cargo_full test -p vyre-foundation --test loop_legality_collector_closure` |
@@ -99,8 +104,8 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `node_variant_traversal_closure` | `vyre-foundation/tests/node_variant_traversal_closure.rs` | None | `./cargo_full test -p vyre-foundation --test node_variant_traversal_closure` |
 | `test` | `opaque_payload_endian` | `vyre-foundation/tests/opaque_payload_endian.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_payload_endian` |
 | `test` | `opaque_wire_round_trip` | `vyre-foundation/tests/opaque_wire_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_wire_round_trip` |
+| `test` | `operation_namespace` | `vyre-foundation/tests/operation_namespace.rs` | None | `./cargo_full test -p vyre-foundation --test operation_namespace` |
 | `test` | `operation_registry` | `vyre-foundation/tests/operation_registry.rs` | None | `./cargo_full test -p vyre-foundation --test operation_registry` |
-| `test` | `operation_tier_classification` | `vyre-foundation/tests/operation_tier_classification.rs` | None | `./cargo_full test -p vyre-foundation --test operation_tier_classification` |
 | `test` | `optimizer_algebraic_rules_contracts` | `vyre-foundation/tests/optimizer_algebraic_rules_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_algebraic_rules_contracts` |
 | `test` | `optimizer_dataflow_value_differential` | `vyre-foundation/tests/optimizer_dataflow_value_differential.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_dataflow_value_differential` |
 | `test` | `optimizer_idempotence_proptest` | `vyre-foundation/tests/optimizer_idempotence_proptest.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_idempotence_proptest` |

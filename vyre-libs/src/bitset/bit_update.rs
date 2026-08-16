@@ -97,7 +97,7 @@ macro_rules! define_bit_update_op {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::primitive(
+            vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("target", 0, 2),
                 Some(|| {

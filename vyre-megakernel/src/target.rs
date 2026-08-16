@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use thiserror::Error;
 use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
 use vyre_lower::{KernelDescriptor, MemoryClass};
@@ -47,7 +47,13 @@ pub struct SelectedLowering {
 }
 
 /// Canonical target-module bundle schema carried inside one target payload.
-pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 2;
+///
+/// Version 3 encodes an f32 literal by its IEEE-754 bits. Version 2 wrote the
+/// number, which JSON cannot spell for a non-finite value: a bundle carrying an
+/// infinity was written with `null` in its place and refused on decode. A stored
+/// version 2 bundle is refused by version rather than reinterpreted, because the
+/// two encodings read the same field differently.
+pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 3;
 
 /// One generated target module corresponding to one selected fusion group.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -112,6 +118,15 @@ impl TargetModuleBundle {
         }
         let bundle: Self = serde_json::from_slice(body)
             .map_err(|error| TargetCompileError::ModuleBundle(error.to_string()))?;
+        // Before any module content: the version says which encoding the fields
+        // were written in, so a stale bundle is refused by version rather than
+        // reported as a malformed descriptor it is not.
+        if bundle.schema_version != TARGET_MODULE_BUNDLE_SCHEMA_VERSION {
+            return Err(TargetCompileError::ModuleBundle(format!(
+                "schema {} is unsupported; expected {}",
+                bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
+            )));
+        }
         for module in &bundle.modules {
             if module.nodes.is_empty() {
                 return Err(TargetCompileError::ModuleBundle(format!(
@@ -131,12 +146,6 @@ impl TargetModuleBundle {
                     module.group.0
                 ))
             })?;
-        }
-        if bundle.schema_version != TARGET_MODULE_BUNDLE_SCHEMA_VERSION {
-            return Err(TargetCompileError::ModuleBundle(format!(
-                "schema {} is unsupported; expected {}",
-                bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
-            )));
         }
         if bundle.modules.windows(2).any(|modules| {
             (modules[0].stage, modules[0].group) >= (modules[1].stage, modules[1].group)
@@ -327,25 +336,14 @@ fn selected_resource_bindings(
     module: &SelectedModule,
     descriptor: &KernelDescriptor,
 ) -> Result<Vec<TargetResourceBinding>, TargetCompileError> {
-    let canonical_by_name = module
-        .nodes
-        .iter()
-        .filter_map(|node| {
-            artifact
-                .abi()
-                .entries
-                .iter()
-                .find(|entry| entry.node == *node)
-        })
-        .flat_map(|entry| entry.inputs.iter().chain(entry.outputs.iter()).copied())
-        .filter_map(|value| {
-            artifact
-                .resources()
-                .iter()
-                .find(|resource| resource.value == value)
-                .map(|resource| (resource.name.as_str(), value))
-        })
-        .collect::<HashMap<_, _>>();
+    // The artifact resource set is the owner of value identity, so the lookup is
+    // built from it rather than from the entry ABI. The entry ABI lists what the
+    // host binds, which excludes a value produced by one fusion group and consumed
+    // by another: every fused op that passes an intermediate between groups had a
+    // descriptor binding no lookup could resolve.
+    let canonical_by_name = artifact
+        .canonical_value_by_name()
+        .map_err(|collision| TargetCompileError::InvalidArtifact(collision.to_string()))?;
     let constant_values = artifact
         .resources()
         .iter()

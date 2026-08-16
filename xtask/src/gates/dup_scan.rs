@@ -485,6 +485,13 @@ impl Gate for DupScan {
         "Hold cross-file duplicate source blocks to the pinned per-crate baseline; --write pins a newly measured crate, --lower-pin CRATE lowers one row, --report [CRATE] lists the files"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--lower-pin CRATE lowers one pinned row to what the crate measures now",
+            "--report [CRATE] lists the duplicated files instead of the pinned counts",
+        ]
+    }
+
     fn generates(&self) -> bool {
         true
     }

@@ -7,10 +7,10 @@
 //! buffer with the rotated diagonal form) and `V` must be orthonormal (`VᵀV ≈ I`). These hold for
 //! any valid eigenbasis, so near-degenerate spectra (which admit different-but-valid bases) do not
 //! make the test flaky. A stub or a broken rotation fails the residual by orders of magnitude.
-#![cfg(all(feature = "math", feature = "test-fixtures"))]
+#![cfg(feature = "math")]
 
 use vyre_libs::math::symmetric_eigen_jacobi::symmetric_eigen_jacobi;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 use vyre_primitives::wire::{decode_f32_le_bytes_all as unpack_f32, pack_f32_slice as pack_f32};
 use vyre_reference::value::Value;
 

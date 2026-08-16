@@ -17,19 +17,32 @@ use std::fs;
 use std::path::Path;
 
 use xtask::gates::feature_isolation::{
-    agreement_failures, derive_pairs, first_error, load_rows, render, Observation, Pair, Row,
-    BASELINE, DEFAULTS,
+    agreement_failures, check_args, derive_pairs, first_error, host_oracle_reach_failures,
+    load_rows, parse_rows, render, unmeasured_failures, workspace_manifests, Observation, Pair,
+    Row, BASELINE, DEFAULTS,
 };
 
 use super::workspace_sources::workspace_root;
 
-fn row(member: &str, feature: &str, outcome: &str, reason: Option<&str>) -> Row {
+/// A row spelling whatever outcome and reason the case is about.
+fn row(member: &str, feature: &str, outcome: Option<&str>, reason: Option<&str>) -> Row {
     Row {
         member: member.to_string(),
         feature: feature.to_string(),
-        outcome: outcome.to_string(),
+        outcome: outcome.map(str::to_string),
         reason: reason.map(str::to_string),
     }
+}
+
+/// A selection declared with no exemption: the shape of every row for a pair
+/// that is expected to compile.
+fn declared(member: &str, feature: &str) -> Row {
+    row(member, feature, None, None)
+}
+
+/// A selection exempted from compiling, with the constraint that exempts it.
+fn exempt(member: &str, feature: &str, reason: &str) -> Row {
+    row(member, feature, Some("blocked"), Some(reason))
 }
 
 fn pair(member: &str, feature: &str) -> Pair {
@@ -198,7 +211,7 @@ fn an_optional_dependency_with_no_dep_prefix_joins_the_axis() {
 #[test]
 fn a_pair_with_no_recorded_decision_names_itself_and_fails() {
     let pairs = vec![pair("crate-a", BASELINE), pair("crate-a", "fresh")];
-    let rows = vec![row("crate-a", BASELINE, "compiles", None)];
+    let rows = vec![declared("crate-a", BASELINE)];
 
     let failures = agreement_failures(&pairs, &rows);
 
@@ -277,11 +290,10 @@ fn an_unjudged_selection_names_which_kind_it_is() {
 }
 
 /// WHY: recording one new selection used to mean re-observing every other, so
-/// the data went stale rather than pay a multi-hour sweep, which is how a row
-/// recorded `compiles` outlived the code that made it true. A write that merges
-/// must keep a reviewed decision it did not re-observe, must drop a row for a
-/// selection the manifests no longer declare, and must never invent a `compiles`
-/// for a selection nobody observed.
+/// the data went stale rather than pay a multi-hour sweep. A write that merges
+/// must keep a reviewed exemption it did not re-observe, must drop a row for a
+/// selection the manifests no longer declare, and must write a selection it
+/// watched compile as the bare declaration it is.
 #[test]
 fn a_write_merges_observations_over_recorded_rows_and_drops_stale_ones() {
     let axis = vec![
@@ -297,33 +309,175 @@ fn a_write_merges_observations_over_recorded_rows_and_drops_stale_ones() {
         },
     )];
     let previous = vec![
-        row("crate-a", DEFAULTS, "blocked", Some("stale explanation")),
-        row(
+        exempt("crate-a", DEFAULTS, "stale explanation"),
+        exempt(
             "crate-a",
             "gpu",
-            "blocked",
-            Some("the CUDA driver API is not linkable on this runner"),
+            "the CUDA driver API is not linkable on this runner",
         ),
-        row("crate-a", "renamed-away", "compiles", None),
+        declared("crate-a", "renamed-away"),
     ];
 
     let rendered = render(&axis, &observed, &previous);
 
     assert!(
         rendered.contains("feature = \"gpu\"\noutcome = \"blocked\"\nreason = \"the CUDA driver API is not linkable on this runner\""),
-        "an unobserved row keeps its reviewed decision verbatim: {rendered}"
+        "an unobserved exemption keeps its reviewed decision verbatim: {rendered}"
     );
     assert!(
         !rendered.contains("stale explanation"),
-        "an observation that now compiles must replace the recorded reason: {rendered}"
+        "an observation that now compiles must drop the recorded exemption: {rendered}"
     );
     assert!(
         !rendered.contains("renamed-away"),
         "a row for a selection off the axis must not survive a write: {rendered}"
     );
+    let fresh = rendered
+        .split("\n[[pair]]\n")
+        .find(|block| block.contains("feature = \"fresh\""))
+        .expect("Fix: the axis selection must be rendered");
+    assert_eq!(
+        fresh, "member = \"crate-a\"\nfeature = \"fresh\"\n",
+        "a selection with neither an observation nor an exemption is written as the bare declaration it is"
+    );
+}
+
+/// WHY: the record used to carry a `measured` column and an `outcome` column,
+/// so a compile result lived in a tracked file. A stored measurement is stale
+/// the moment a feature edge moves and nothing in the file can tell one from an
+/// outcome someone typed, which is how a hand-written `compiles` exempted a
+/// selection from the axis for good. The column moved into the run, and a copy
+/// of the file that still carries either half is rejected rather than read
+/// past, because two records of one fact is how the stale one survives.
+#[test]
+fn a_data_file_that_still_stores_a_compile_outcome_is_rejected() {
+    let path = Path::new("xtask/feature-isolation.toml");
+
+    let clean = parse_rows(
+        path,
+        "[[pair]]\nmember = \"crate-a\"\nfeature = \"gpu\"\noutcome = \"blocked\"\nreason = \"the CUDA driver API is not linkable on this runner\"\n",
+    )
+    .expect("Fix: a declaration with an exemption must load");
+    assert_eq!(clean.len(), 1);
+    assert!(clean[0].blocked());
+
+    let measured = parse_rows(
+        path,
+        "[[pair]]\nmember = \"crate-a\"\nfeature = \"gpu\"\nmeasured = true\n",
+    )
+    .expect_err("Fix: a stored measurement must be rejected");
     assert!(
-        rendered.contains("feature = \"fresh\"\noutcome = \"blocked\"\nreason = \"UNREVIEWED: never observed\""),
-        "a selection with neither an observation nor a row must be written as unreviewed, not as passing: {rendered}"
+        measured.contains("crate-a gpu") && measured.contains("moved into the run"),
+        "the rejection must name the row and where the column went: {measured}"
+    );
+
+    let compiles = parse_rows(
+        path,
+        "[[pair]]\nmember = \"crate-a\"\nfeature = \"gpu\"\noutcome = \"compiles\"\n",
+    )
+    .expect_err("Fix: a stored `compiles` outcome must be rejected");
+    assert!(
+        compiles.contains("crate-a gpu") && compiles.contains("moved into the run"),
+        "the rejection must name the row and where the column went: {compiles}"
+    );
+}
+
+/// WHY: a sweep narrowed by `--member` or `--only-unrecorded` compiles a
+/// handful of selections and used to report itself green, which reads as the
+/// whole axis holding when nothing observed all but those few. An absent
+/// measurement is not an agreement, so the unobserved remainder is a finding
+/// that names its own count and the gate exits non-zero. The bound on how many
+/// it names is what keeps the report readable when almost nothing was measured.
+#[test]
+fn a_sweep_that_leaves_the_axis_uncompiled_fails_and_counts_what_it_missed() {
+    let axis = (0..12)
+        .map(|index| pair("crate-a", &format!("feature-{index}")))
+        .collect::<Vec<_>>();
+    let observed = vec![(
+        axis[0].clone(),
+        Observation {
+            compiles: true,
+            first_error: None,
+        },
+    )];
+
+    let failures = unmeasured_failures(&axis, &observed);
+
+    assert_eq!(failures.len(), 1, "{failures:?}");
+    assert!(
+        failures[0].starts_with("unmeasured: 11 of 12 selection(s)"),
+        "the finding must count what this run did not compile: {}",
+        failures[0]
+    );
+    assert!(
+        failures[0].contains("crate-a --no-default-features --features feature-1")
+            && failures[0].ends_with(", and 3 more"),
+        "the finding must name a bounded sample and account for the rest: {}",
+        failures[0]
+    );
+    assert!(
+        !failures[0].contains("features feature-0"),
+        "a selection this run compiled must not be reported as unmeasured: {}",
+        failures[0]
+    );
+
+    let whole = axis
+        .iter()
+        .map(|selection| {
+            (
+                selection.clone(),
+                Observation {
+                    compiles: true,
+                    first_error: None,
+                },
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        unmeasured_failures(&axis, &whole),
+        Vec::<String>::new(),
+        "a run that compiled the whole axis has nothing unmeasured"
+    );
+}
+
+/// WHY: the sweep compiled `--all-targets`, which builds the test and bench
+/// targets and therefore the dev-dependency graph. Cargo unifies features
+/// across that graph, so a dev-dependency depending on the crate under test
+/// with its full feature set switches on the feature the probe just removed,
+/// and the missing edge compiles. Every break the axis exists to catch was
+/// invisible. The probe asks about the crate's own source, so it compiles the
+/// library target and nothing else.
+#[test]
+fn the_sweep_compiles_the_library_target_and_not_the_dev_dependency_graph() {
+    for feature in [BASELINE, DEFAULTS, "gpu"] {
+        let args = check_args(&pair("crate-a", feature));
+        assert!(
+            args.contains(&"--lib".to_string()),
+            "the probe must compile the library target for `{feature}`: {args:?}"
+        );
+        assert!(
+            !args.iter().any(|arg| arg == "--all-targets"),
+            "compiling all targets pulls in dev-dependencies, which unify the feature away: {args:?}"
+        );
+        assert!(
+            args.contains(&"--locked".to_string()),
+            "the probe must resolve the committed lockfile: {args:?}"
+        );
+    }
+    assert_eq!(
+        check_args(&pair("crate-a", "gpu")),
+        vec![
+            "check",
+            "--locked",
+            "-p",
+            "crate-a",
+            "--no-default-features",
+            "--features",
+            "gpu",
+            "--lib",
+            "--message-format=json",
+        ],
+        "the probe must ask for exactly the selection and nothing more"
     );
 }
 
@@ -334,8 +488,8 @@ fn a_write_merges_observations_over_recorded_rows_and_drops_stale_ones() {
 fn a_row_for_a_pair_no_manifest_declares_fails_as_stale() {
     let pairs = vec![pair("crate-a", BASELINE)];
     let rows = vec![
-        row("crate-a", BASELINE, "compiles", None),
-        row("crate-a", "renamed-away", "compiles", None),
+        declared("crate-a", BASELINE),
+        declared("crate-a", "renamed-away"),
     ];
 
     let failures = agreement_failures(&pairs, &rows);
@@ -355,8 +509,8 @@ fn a_row_for_a_pair_no_manifest_declares_fails_as_stale() {
 fn a_duplicated_pair_fails_rather_than_shadowing_its_second_row() {
     let pairs = vec![pair("crate-a", BASELINE)];
     let rows = vec![
-        row("crate-a", BASELINE, "compiles", None),
-        row("crate-a", BASELINE, "blocked", Some("something")),
+        declared("crate-a", BASELINE),
+        exempt("crate-a", BASELINE, "something"),
     ];
 
     let failures = agreement_failures(&pairs, &rows);
@@ -385,7 +539,8 @@ fn a_blocked_row_needs_a_constraint_and_not_a_schedule() {
         Some("temporarily broken while the driver split lands upstream"),
         Some("too short"),
     ] {
-        let failures = agreement_failures(&pairs, &[row("crate-a", "gpu", "blocked", excuse)]);
+        let failures =
+            agreement_failures(&pairs, &[row("crate-a", "gpu", Some("blocked"), excuse)]);
         assert!(
             failures
                 .iter()
@@ -396,20 +551,20 @@ fn a_blocked_row_needs_a_constraint_and_not_a_schedule() {
 
     let real = "the feature selects a vendor driver whose headers are not in this workspace";
     assert_eq!(
-        agreement_failures(&pairs, &[row("crate-a", "gpu", "blocked", Some(real))]),
+        agreement_failures(&pairs, &[exempt("crate-a", "gpu", real)]),
         Vec::<String>::new(),
         "a stated technical constraint must be accepted"
     );
 }
 
-/// WHY: an outcome outside the two words is a row nothing can compare against,
-/// and a reason left behind on a pair that now compiles is a stale explanation
-/// that outlives the problem it described.
+/// WHY: an outcome outside the one word a row may state is a declaration
+/// nothing can act on, and a reason left behind on a pair with no exemption is
+/// a stale explanation that outlives the problem it described.
 #[test]
-fn an_unknown_outcome_and_a_reason_on_a_passing_row_both_fail() {
+fn an_unknown_outcome_and_a_reason_on_an_unexempted_row_both_fail() {
     let pairs = vec![pair("crate-a", "gpu")];
 
-    let unknown = agreement_failures(&pairs, &[row("crate-a", "gpu", "probably", None)]);
+    let unknown = agreement_failures(&pairs, &[row("crate-a", "gpu", Some("probably"), None)]);
     assert!(
         unknown
             .iter()
@@ -417,12 +572,20 @@ fn an_unknown_outcome_and_a_reason_on_a_passing_row_both_fail() {
         "{unknown:?}"
     );
 
+    let compiles = agreement_failures(&pairs, &[row("crate-a", "gpu", Some("compiles"), None)]);
+    assert!(
+        compiles
+            .iter()
+            .any(|failure| failure.contains("records outcome `compiles`")),
+        "a row may not state that a selection compiles; the run measures that: {compiles:?}"
+    );
+
     let leftover = agreement_failures(
         &pairs,
         &[row(
             "crate-a",
             "gpu",
-            "compiles",
+            None,
             Some("was broken before the manifest edge landed"),
         )],
     );
@@ -483,6 +646,184 @@ fn the_checked_in_declaration_agrees_with_the_tracked_manifests() {
     assert_eq!(
         agreement_failures(&pairs, &rows),
         Vec::<String>::new(),
-        "run `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write --only-unrecorded` and record a decision for each new selection"
+        "run `cargo run -p xtask --bin xtask -- feature-isolation --write` and record a decision for each new selection"
+    );
+}
+
+/// WHY: three vyre-libs domain features named `cpu-parity` in the default set,
+/// so every `cargo add vyre-libs` compiled the CPU host oracles into the
+/// shipped library, and the oracle symbols stood in for the domain edges this
+/// gate exists to find. A default build reaching an oracle is therefore both a
+/// shipping defect and the reason the sweep could not see the breaks. The
+/// closure is walked, not the one hop: the edge that hid the oracle was two
+/// levels down, and the failure names the whole path so the entry to delete is
+/// identified rather than searched for.
+#[test]
+fn a_default_build_that_reaches_the_oracle_feature_fails_and_names_the_path() {
+    let workspace = fixture_workspace(&["lib"]);
+    let root = workspace.path();
+    fixture(
+        root,
+        "lib",
+        "lib-crate",
+        "[features]\ndefault = [\"decode\"]\ndecode = [\"cpu-parity\"]\ncpu-parity = []\n",
+    );
+
+    let manifests = workspace_manifests(root).expect("Fix: the fixture manifests must parse");
+
+    assert_eq!(
+        host_oracle_reach_failures(&manifests),
+        vec![
+            "the default build of `lib-crate` turns on `lib-crate/cpu-parity` through \
+             lib-crate:default -> lib-crate:decode -> lib-crate:cpu-parity"
+                .to_string()
+        ]
+    );
+}
+
+/// WHY: the oracle does not have to be declared by the crate that ships it. A
+/// member whose own features are clean still compiles the oracle when a
+/// dependency edge turns it on, and that edge is invisible in the consuming
+/// manifest. The walk crosses the edge, including the dependency's own
+/// defaults, which is what `default-features` left unset means.
+#[test]
+fn an_oracle_a_dependency_edge_turns_on_is_reached_across_the_edge() {
+    let workspace = fixture_workspace(&["host", "dep"]);
+    let root = workspace.path();
+    fixture(
+        root,
+        "dep",
+        "dep-crate",
+        "[features]\ndefault = [\"cpu-parity\"]\ncpu-parity = []\n",
+    );
+    fixture(
+        root,
+        "host",
+        "host-crate",
+        "[dependencies]\ndep-crate = { path = \"../dep\" }\n",
+    );
+
+    let manifests = workspace_manifests(root).expect("Fix: the fixture manifests must parse");
+
+    assert_eq!(
+        host_oracle_reach_failures(&manifests),
+        vec![
+            "the default build of `dep-crate` turns on `dep-crate/cpu-parity` through \
+             dep-crate:default -> dep-crate:cpu-parity"
+                .to_string(),
+            "the default build of `host-crate` turns on `dep-crate/cpu-parity` through \
+             host-crate:default -> dep-crate:default -> dep-crate:cpu-parity"
+                .to_string(),
+        ]
+    );
+}
+
+/// WHY: an oracle feature a default build cannot reach is the state this check
+/// asks for, and a check that cannot pass is as useless as one that cannot
+/// fail. A non-default feature naming the oracle is allowed, and so is a weak
+/// `dep?/cpu-parity` entry whose dependency nothing activates, because cargo
+/// turns neither of them on.
+#[test]
+fn an_oracle_no_default_build_reaches_is_not_a_failure() {
+    let workspace = fixture_workspace(&["host", "dep"]);
+    let root = workspace.path();
+    fixture(
+        root,
+        "dep",
+        "dep-crate",
+        "[features]\ndefault = []\ncpu-parity = []\n",
+    );
+    fixture(
+        root,
+        "host",
+        "host-crate",
+        "[features]\n\
+         default = [\"quiet\"]\n\
+         quiet = [\"dep-crate?/cpu-parity\"]\n\
+         parity = [\"dep-crate/cpu-parity\"]\n\
+         [dependencies]\n\
+         dep-crate = { path = \"../dep\", optional = true }\n",
+    );
+
+    let manifests = workspace_manifests(root).expect("Fix: the fixture manifests must parse");
+
+    assert_eq!(host_oracle_reach_failures(&manifests), Vec::<String>::new());
+}
+
+/// WHY: a guard whose subject stops existing turns into a passing test that
+/// checks nothing, and the next crate to add the feature inherits a green
+/// gate. Deleting the oracle feature everywhere is a decision, so it is
+/// reported rather than assumed.
+#[test]
+fn a_workspace_with_no_oracle_feature_reports_that_the_check_judges_nothing() {
+    let workspace = fixture_workspace(&["lib"]);
+    let root = workspace.path();
+    fixture(root, "lib", "lib-crate", "[features]\ndefault = []\n");
+
+    let manifests = workspace_manifests(root).expect("Fix: the fixture manifests must parse");
+    let failures = host_oracle_reach_failures(&manifests);
+
+    assert_eq!(failures.len(), 1, "{failures:?}");
+    assert!(
+        failures[0].contains("judges nothing"),
+        "a vacuous check must say so: {}",
+        failures[0]
+    );
+}
+
+/// WHY: the fixtures above prove the walk; this proves the tree. `cpu-parity`
+/// is out of every default-reachable closure in this workspace right now, and
+/// this test goes red on the commit that puts it back.
+#[test]
+fn no_default_build_in_this_workspace_compiles_a_host_oracle() {
+    let manifests =
+        workspace_manifests(&workspace_root()).expect("Fix: the workspace manifests must parse");
+
+    assert_eq!(
+        host_oracle_reach_failures(&manifests),
+        Vec::<String>::new(),
+        "a default build must not compile a CPU reference implementation into the library"
+    );
+}
+
+/// WHY: the parity harness links the oracle on purpose, because measuring the
+/// GPU path against the CPU one is what it is for. It is not a crate anyone
+/// can add, so it is not judged as one. The distinction is `publish`, read
+/// from the manifest, and a member that becomes publishable is judged on the
+/// commit that publishes it: the harness here is unjudged and the library that
+/// depends on it is not.
+#[test]
+fn an_unpublished_member_may_reach_the_oracle_and_a_published_one_may_not() {
+    let oracle = "[features]\ndefault = []\ncpu-parity = []\n";
+    let harness = "publish = false\n\
+                   [dependencies]\n\
+                   oracle-crate = { path = \"../oracle\", features = [\"cpu-parity\"] }\n";
+
+    let unjudged = fixture_workspace(&["harness", "oracle"]);
+    fixture(unjudged.path(), "oracle", "oracle-crate", oracle);
+    fixture(unjudged.path(), "harness", "harness-crate", harness);
+    let manifests =
+        workspace_manifests(unjudged.path()).expect("Fix: the fixture manifests must parse");
+    assert_eq!(host_oracle_reach_failures(&manifests), Vec::<String>::new());
+
+    let judged = fixture_workspace(&["harness", "oracle", "shipped"]);
+    fixture(judged.path(), "oracle", "oracle-crate", oracle);
+    fixture(judged.path(), "harness", "harness-crate", harness);
+    fixture(
+        judged.path(),
+        "shipped",
+        "shipped-crate",
+        "[dependencies]\nharness-crate = { path = \"../harness\" }\n",
+    );
+    let manifests =
+        workspace_manifests(judged.path()).expect("Fix: the fixture manifests must parse");
+
+    assert_eq!(
+        host_oracle_reach_failures(&manifests),
+        vec![
+            "the default build of `shipped-crate` turns on `oracle-crate/cpu-parity` through \
+             shipped-crate:default -> harness-crate:default -> oracle-crate:cpu-parity"
+                .to_string()
+        ]
     );
 }

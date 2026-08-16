@@ -31,13 +31,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     check_backend_gpu_probe("cuda-first-path", &matrix, failures);
     check_preferred_backend_gpu_only("cuda-first-path", &matrix, failures);
     check_backend_acquire_entry("cuda-first-path", &matrix, "cuda", failures);
-    check_backend_feature_markers(
-        "cuda-first-path",
-        &matrix,
-        "cuda_feature_markers",
-        12,
-        failures,
-    );
+    check_backend_feature_markers("cuda-first-path", &matrix, "cuda_feature_markers", failures);
     check_json_evidence_has_no_blockers(requirement, base_dir, "cuda-release-suite.json", failures);
     check_backend_suite_report(requirement, base_dir, "cuda-release-suite.json", failures);
     check_benchmark_report_has_cases(requirement, base_dir, "cuda-ptx-patterns.json", failures);

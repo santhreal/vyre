@@ -523,6 +523,8 @@ fn vsa_words_hash(words: &[u32]) -> blake3::Hash {
     hasher.finalize()
 }
 
+// Inline: the cache cases read `ValidationCache::vsa_hashes`, a private field, so
+// no integration test can observe what the cache actually remembered.
 #[cfg(test)]
 mod tests {
     use super::*;

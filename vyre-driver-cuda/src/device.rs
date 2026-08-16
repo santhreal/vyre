@@ -12,6 +12,7 @@ fn format_cuda_context_init_error(ordinal: usize, error: impl fmt::Display) -> S
     )
 }
 
+// Inline: the suite drives the `#[cfg(test)]` `tests`, which an integration test does not compile.
 #[cfg(test)]
 mod context_init_error_tests {
     use super::format_cuda_context_init_error;
@@ -649,6 +650,10 @@ impl CudaDeviceCaps {
             supports_specialization_constants: false,
             supports_f16: self.hardware_supports_f16(),
             supports_bf16: self.hardware_supports_bf16(),
+            // True because the emitter writes a trap record into the module-scope
+            // sidecar and every launch path reads it back after synchronizing. See
+            // `CudaDeviceCaps::program_validation_caps`; the two records must
+            // report the same answer.
             supports_trap_propagation: true,
             supports_tensor_cores: self.hardware_supports_tensor_cores(),
             has_mul_high: true,
@@ -687,6 +692,8 @@ impl CudaDeviceCaps {
     }
 }
 
+// Inline: `vyre_driver_cuda::device` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use crate::synthetic_device_caps::synthetic_sm120_envelope_default;

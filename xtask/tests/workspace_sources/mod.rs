@@ -6,11 +6,11 @@
 //! target is not dead code.
 #![allow(dead_code)]
 
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Command;
 
 use proc_macro2::LineColumn;
+use xtask::gate::{Gate, GateCtx, Report};
 
 /// The checkout root, resolved from the working directory at run time.
 ///
@@ -73,18 +73,38 @@ pub(crate) fn workspace_member_sources(root: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Run a repository script under `python3` and capture its output.
-pub(crate) fn run_python(script: &str, args: &[&OsStr]) -> Output {
-    Command::new("python3")
-        .arg(workspace_root().join(script))
-        .args(args)
-        .output()
-        .unwrap_or_else(|error| panic!("Fix: {script} must launch with python3: {error}"))
+/// Run one gate over a fixture checkout, in check or write mode.
+///
+/// The fixture has to be a real checkout: every gate here reads the tree
+/// through `git ls-files`, so a directory of untracked files reads as an empty
+/// workspace and the gate would report nothing at all.
+pub(crate) fn run_gate(gate: &dyn Gate, root: &Path, write: bool) -> Report {
+    let args = if write {
+        vec!["--write".to_string()]
+    } else {
+        Vec::new()
+    };
+    gate.run(&GateCtx::new(root.to_path_buf(), args))
+        .unwrap_or_else(|error| panic!("Fix: {} must run: {error:?}", gate.name()))
 }
 
-/// Run a generator over a fixture `root` in `mode`, the shape four gates share.
-pub(crate) fn run_generator(script: &str, root: &Path, mode: &str) -> Output {
-    run_python(script, &[root.as_os_str(), OsStr::new(mode)])
+/// Track everything currently in a fixture directory, making it a checkout the
+/// gates can read.
+pub(crate) fn track_fixture(root: &Path) {
+    for arguments in [
+        vec!["init", "--quiet"],
+        vec!["config", "user.email", "gate@example.invalid"],
+        vec!["config", "user.name", "gate"],
+        vec!["add", "--all", "--"],
+        vec!["commit", "--quiet", "-m", "fixture"],
+    ] {
+        let status = Command::new("git")
+            .args(&arguments)
+            .current_dir(root)
+            .status()
+            .expect("Fix: git must launch to build the fixture checkout");
+        assert!(status.success(), "Fix: git {arguments:?} failed in the fixture");
+    }
 }
 
 /// A `path:line:column` violation, with the path relative to `root`.

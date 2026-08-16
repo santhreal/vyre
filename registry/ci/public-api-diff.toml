@@ -1,0 +1,11 @@
+lane = "public-api-diff"
+workflow = ".github/workflows/public-api.yml"
+job = "diff"
+state = "live"
+required_status = "public-api-diff / diff"
+triggers = ["pull_request", "push"]
+steps = [
+  { command = "cargo +nightly install cargo-public-api --locked" },
+  { gate = "public-api-snapshot" },
+  { gate = "public-api-paths" },
+]

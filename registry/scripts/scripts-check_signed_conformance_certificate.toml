@@ -1,0 +1,3 @@
+path = "scripts/check_signed_conformance_certificate.sh"
+state = "operator"
+reason = "produces the sharded all-backend signed certificate; conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs holds it to the merged certificate it must emit"

@@ -226,6 +226,7 @@ fn record_policy_audit_events_with(
     }
 }
 
+// Inline: covers `record_policy_audit_events_with`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

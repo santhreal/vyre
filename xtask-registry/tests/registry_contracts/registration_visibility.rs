@@ -164,10 +164,15 @@ fn submitting_files(crate_dir: &Path) -> BTreeMap<String, Vec<BTreeSet<String>>>
     let files = rust_sources(&src);
     let mut out = BTreeMap::new();
     for file in files {
-        let Ok(text) = fs::read_to_string(&file) else {
+        let Ok(raw) = fs::read_to_string(&file) else {
             continue;
         };
-        if !text.contains("inventory::submit!") {
+        // A fixture inside a `#[cfg(test)]` module is not a registration this
+        // walker has to link, and neither is one quoted in a string. Both
+        // questions are `structure_gate`'s, which is where the scan that reads
+        // the same files answers them.
+        let text = structure_gate::cfg_test::strip_cfg_test_items(&raw);
+        if !structure_gate::submits_registrations(&text) {
             continue;
         }
         let relative = file

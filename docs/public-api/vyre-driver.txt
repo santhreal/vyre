@@ -173,6 +173,7 @@ impl vyre_driver::shadow::ReferenceExecutor
 impl vyre_driver::shape_prediction::ShapeHistory
 impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
+impl vyre_driver::trap_record::TrapRecord
 impl vyre_driver::tuner::DefaultPolicy
 impl vyre_driver::tuner::Mode
 impl vyre_driver::tuner::NaturalGradientPolicy
@@ -298,6 +299,8 @@ pub const vyre_driver::speculation_verdict::MIN_ADOPT_SAVINGS_BPS: u64
 pub const vyre_driver::speculation_verdict::MIN_DISPATCHES_FOR_VERDICT: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_HOT_SHAPE_THRESHOLD: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_MIN_CONFIDENCE_BPS: u32
+pub const vyre_driver::trap_record::TRAP_RECORD_BYTES: usize
+pub const vyre_driver::trap_record::UNKNOWN_TRAP_TAG: &str
 pub const vyre_driver::tuner::Q16_ONE: u32
 pub const vyre_driver::tuner::WORKGROUP_CANDIDATES: &[u32]
 pub const vyre_driver::validation::DEFAULT_VALIDATION_HASH_ENTRIES: usize
@@ -662,6 +665,7 @@ pub fn vyre_driver::accounting::repair_atomic_sub_usize_fetch_with_order(counter
 pub fn vyre_driver::accounting::repair_atomic_sub_usize_with_order(counter: &core::sync::atomic::AtomicUsize, value: usize, load_order: core::sync::atomic::Ordering, success_order: core::sync::atomic::Ordering, failure_order: core::sync::atomic::Ordering, on_repair: impl core::ops::function::FnMut(usize, usize))
 pub fn vyre_driver::acquire(id: &str) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub fn vyre_driver::acquire_preferred_dispatch_backend() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
+pub fn vyre_driver::admit_dispatch_grid(grid: [u32; 3], max_per_axis: u32, backend_id: &str) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::allocation::reserve_hash_map_to_capacity<K, V, S>(map: &mut std::collections::hash::map::HashMap<K, V, S>, target_capacity: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where K: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
 pub fn vyre_driver::allocation::reserve_hash_set_to_capacity<T, S>(set: &mut std::collections::hash::set::HashSet<T, S>, target_capacity: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where T: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
 pub fn vyre_driver::allocation::reserve_smallvec_additional<A>(vec: &mut smallvec::SmallVec<A>, additional: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where A: smallvec::Array
@@ -1116,6 +1120,8 @@ pub fn vyre_driver::transfer_accounting::TransferAccountingPolicy::add_usize_cap
 pub fn vyre_driver::transfer_accounting::TransferAccountingPolicy::add_usize_counter(self, total: &mut usize, value: usize, label: &str, counter: &str) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::transfer_accounting::TransferAccountingPolicy::bytes_to_u64(self, bytes: usize, label: &str) -> core::result::Result<u64, vyre_driver::BackendError>
 pub fn vyre_driver::transfer_accounting::TransferAccountingPolicy::mul_usize_capacity(self, lhs: usize, rhs: usize, label: &str) -> core::result::Result<usize, vyre_driver::BackendError>
+pub fn vyre_driver::trap_record::TrapRecord::describe(&self, tag_for_code: impl core::ops::function::FnOnce(u32) -> core::option::Option<alloc::string::String>) -> alloc::string::String
+pub fn vyre_driver::trap_record::decode_trap_record(bytes: &[u8]) -> core::result::Result<core::option::Option<vyre_driver::trap_record::TrapRecord>, vyre_driver::BackendError>
 pub fn vyre_driver::try_coerce_to_pow2_with_tail_mask(element_count: u32) -> core::result::Result<vyre_driver::TailMaskPolicy, vyre_driver::BackendError>
 pub fn vyre_driver::try_dispatch_param_words(bindings: &[vyre_driver::Binding], element_count: u32) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
 pub fn vyre_driver::try_dispatch_param_words_into(bindings: &[vyre_driver::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
@@ -1235,6 +1241,7 @@ pub mod vyre_driver::strategy
 pub mod vyre_driver::target_dialect
 pub mod vyre_driver::trace_jit_policy
 pub mod vyre_driver::transfer_accounting
+pub mod vyre_driver::trap_record
 pub mod vyre_driver::tuner
 pub mod vyre_driver::validation
 pub struct vyre_driver::AdaptiveSpeculator
@@ -1404,6 +1411,7 @@ pub struct vyre_driver::target_dialect::EmittedDialectModule
 pub struct vyre_driver::target_dialect::TargetDialect
 pub struct vyre_driver::trace_jit_policy::TraceJitInputs
 pub struct vyre_driver::transfer_accounting::TransferAccountingPolicy
+pub struct vyre_driver::trap_record::TrapRecord
 pub struct vyre_driver::tuner::DefaultPolicy
 pub struct vyre_driver::tuner::NaturalGradientPolicy
 pub struct vyre_driver::tuner::NaturalGradientTuningStep
@@ -2452,6 +2460,9 @@ pub vyre_driver::trace_jit_policy::TraceJitInputs::miss_cost_ns: u64
 pub vyre_driver::trace_jit_policy::TraceJitInputs::prediction_confidence_bps: u32
 pub vyre_driver::trace_jit_policy::TraceJitInputs::shader_hit_count: u32
 pub vyre_driver::trace_jit_policy::TraceJitInputs::speculative_spec_cost_ns: u64
+pub vyre_driver::trap_record::TrapRecord::address: u32
+pub vyre_driver::trap_record::TrapRecord::lane: u32
+pub vyre_driver::trap_record::TrapRecord::tag_code: u32
 pub vyre_driver::tuner::DefaultPolicy::adapter_max_workgroup_size_x: u32
 pub vyre_driver::tuner::DefaultPolicy::idle_shrink_us: u64
 pub vyre_driver::tuner::DefaultPolicy::minimum_workgroup_size_x: u32

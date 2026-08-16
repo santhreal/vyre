@@ -20,6 +20,8 @@ pub const vyre_emit_ptx::ComputeCapability::SM_80: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_86: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_89: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_90: Self
+pub const vyre_emit_ptx::TRAP_SIDECAR_SYMBOL: &str
+pub const vyre_emit_ptx::TRAP_TAG_PTX_MARKER: &str
 pub const vyre_emit_ptx::patterns::PtxAuditReport::FINDING_NOUN: &'static str
 pub const vyre_emit_ptx::patterns::instruction_scheduling::LONG_CHAIN_THRESHOLD: u32
 pub const vyre_emit_ptx::patterns::predicated_execution::PREDICATION_OP_THRESHOLD: u32

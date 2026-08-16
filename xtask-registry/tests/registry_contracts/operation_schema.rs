@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::{Command, Output};
 
 use serde_json::Value;
-use vyre_foundation::operation::{classify_operation_id, OperationTier};
+use vyre_foundation::operation::{operation_id_namespace, IdNamespace};
 
 fn workspace_root() -> PathBuf {
     structure_gate::workspace_root()
@@ -206,25 +206,26 @@ fn schema_rows_cover_every_required_operation_contract() {
         assert!(operation["composition_chain"].is_array());
     }
 }
-/// Every operation id namespaces the crate that owns the registration.
+/// Every operation id names a crate that exists.
 ///
 /// WHY: `vyre-driver` registered `core.indirect_dispatch`, `io.dma_from_nvme`,
 /// `io.write_back_to_nvme`, `mem.zerocopy_map` and `mem.unmap` as operations
 /// carrying a signature and no program. A host-side runtime capability has no
 /// program to lower and no fixture to compare against, so those five ids were a
 /// second identity for capabilities that already live on the backend capability
-/// surface and in `vyre-runtime`. `classify_operation_id` now returns `Unknown`
-/// for a dotted id and `OperationRegistry` refuses it, so re-adding one turns
-/// this red at registry construction.
+/// surface and in `vyre-runtime`. `operation_id_namespace` returns `Unknown` for
+/// a dotted id and `OperationRegistry` refuses it, so re-adding one turns this
+/// red at registry construction.
 ///
 /// The member list is the live registry, not a literal, so a newly registered
 /// violation is judged without editing this test.
 ///
-/// What it does not catch: an id that names a real crate other than the one it
-/// is registered in. `structure-gate`'s `op-id-namespace` rule owns that case,
-/// because it reads the file each registration lives in.
+/// What it does not catch: where the definition lives. The namespace is frozen
+/// at mint time and 130 operations moved crate while keeping theirs, so
+/// `crate-structure` owns placement by reading the file each registration lives
+/// in.
 #[test]
-fn every_registered_operation_id_namespaces_its_owning_crate() {
+fn every_registered_operation_id_names_a_workspace_crate() {
     let members = workspace_members();
     let registry = vyre_registry_link::operation::live_operation_registry();
 
@@ -253,9 +254,9 @@ fn every_registered_operation_id_namespaces_its_owning_crate() {
                 operation.id
             ));
         }
-        if classify_operation_id(operation.id) == OperationTier::Unknown {
+        if operation_id_namespace(operation.id) == IdNamespace::Unknown {
             findings.push(format!(
-                "`{}` classifies as Unknown; its namespace names no operation-owning crate",
+                "`{}` names no minting crate; an id is `<crate>::<path>`",
                 operation.id
             ));
         }

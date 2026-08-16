@@ -72,7 +72,7 @@ pub fn core_delimiter_match(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || core_delimiter_match("tok_types", "tok_depths", 8, 12, 13),
         Some(|| {

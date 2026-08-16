@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The cross-dialect reach-through audit asks whether the library source root carries Rust source instead of whether its directory exists, because a directory outlives the deletion of every file in it."

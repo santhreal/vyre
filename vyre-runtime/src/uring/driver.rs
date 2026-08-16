@@ -724,6 +724,8 @@ fn partition_slot_bytes(total_len: usize, slot_count: usize) -> Result<usize, Pi
     Ok(slot_bytes)
 }
 
+// Inline: covers `checked_telemetry_add`, `partition_slot_bytes`, `reserve_ingest_vec_capacity`,
+// which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

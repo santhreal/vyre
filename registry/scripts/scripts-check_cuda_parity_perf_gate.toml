@@ -1,0 +1,4 @@
+path = "scripts/check_cuda_parity_perf_gate.sh"
+state = "holds_logic"
+destination = "a parity gate parameterized by backend, which does not exist yet"
+reason = "derives the vyre-driver-cuda test roster from tracked targets, requires a live device and at least one gpu_parity target, then runs the crate suite"

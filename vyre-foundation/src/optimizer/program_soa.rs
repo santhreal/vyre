@@ -40,7 +40,6 @@
 //!   host memory; a future GPU mirror is a separate module.
 
 use crate::ir::{AtomicOp, Expr, Ident, Node, Program};
-use crate::ir_inner::model::expr::GeneratorRef;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::OnceLock;
 
@@ -151,7 +150,7 @@ pub struct RegionMeta {
     pub generator: Ident,
     /// `Region.source_region`  -  the optional generator ref that
     /// links a derived region back to the original source span.
-    pub source_region: Option<GeneratorRef>,
+    pub source_region: Option<Ident>,
 }
 
 /// Columnar fact view of a `Program`. Construct via
@@ -797,7 +796,7 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
             facts.regions.push(RegionMeta {
                 node: idx,
                 generator: generator.duplicate_handle(),
-                source_region: source_region.clone(),
+                source_region: source_region.as_ref().map(Ident::duplicate_handle),
             });
             for n in body.iter() {
                 walk_node(n, Some(idx), facts);

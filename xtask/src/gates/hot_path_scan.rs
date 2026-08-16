@@ -22,11 +22,12 @@
 //! when the scan is informational (passed `--report` or default), exit
 //! 1 when `--strict` is set and any finding fires.
 //!
-//! The scanner is line-oriented + regex-free to keep it deterministic
-//! across rust-fmt rewrites; no AST parsing. It does NOT short-circuit
-//! on test modules  -  hot-path files often have inline `#[cfg(test)]`
-//! blocks that legitimately allocate; the audit ignores `#[cfg(test)]`
-//! lines but does NOT skip the rest of the file.
+//! The scanner is line-oriented and regex-free to keep it deterministic across
+//! rust-fmt rewrites; no AST parsing. A `#[cfg(test)]` item's whole body is
+//! masked, because a hot-path file's own suite allocates on purpose and a
+//! budget that counts those lines reports the test rather than the path. A
+//! pattern matches only at a path boundary, so `SmallVec::new()` is not a
+//! `Vec::new()` and `FxHashMap::new()` is one finding rather than two.
 
 use std::collections::BTreeMap;
 use std::io;
@@ -262,6 +263,10 @@ impl Gate for HotPathScan {
         "Hold every file listed in docs/optimization/HOT_PATHS.toml to its allocation, clone, lock, sleep and panic budget; --budget-vx-json PATH writes the overage candidates"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &["--budget-vx-json PATH writes the overage candidates as JSON to that path"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
         let mut report = Report::clean();
@@ -468,6 +473,34 @@ fn write_budget_vx_candidates(path: &Path, candidates: &[BudgetVxCandidate]) -> 
     std::fs::write(path, format!("{text}\n"))
 }
 
+/// Whether `text` occurs in `line` as its own path segment.
+///
+/// `contains` alone reads `SmallVec::new()` as `Vec::new()`, so a stack
+/// allocation entered a heap-allocation budget, and it reads
+/// `FxHashMap::new()` as both `FxHashMap::new` and `HashMap::new`, so one map
+/// construction spent two findings out of the file's ceiling. A pattern that
+/// begins with an identifier byte therefore has to begin at a boundary. `:` is
+/// not an identifier byte, so `crate::Vec::new()` still matches, and a pattern
+/// that begins with `.` is unaffected because the receiver before it is the
+/// whole point.
+fn occurs_as_path(line: &str, text: &str) -> bool {
+    let anchored = text
+        .as_bytes()
+        .first()
+        .is_some_and(|byte| is_identifier_byte(*byte));
+    if !anchored {
+        return line.contains(text);
+    }
+    let bytes = line.as_bytes();
+    line.match_indices(text)
+        .any(|(at, _)| at == 0 || !is_identifier_byte(bytes[at - 1]))
+}
+
+/// Bytes that can spell part of a Rust identifier.
+fn is_identifier_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
+}
+
 /// Record every measured-path pattern hit in `text`, and return how many hits
 /// were left out because they build an error rather than a result.
 fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) -> usize {
@@ -484,7 +517,7 @@ fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) -> usize {
             continue;
         }
         for spec in PATTERNS {
-            if !scan_line.contains(spec.text) {
+            if !occurs_as_path(scan_line, spec.text) {
                 continue;
             }
             if on_error_path[line_no] {
@@ -1081,6 +1114,35 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
 
         assert!(out.is_empty(), "got {out:?}");
         assert_eq!(excluded, 1);
+    }
+
+    /// WHY: `contains` matching made `SmallVec::new()` a `Vec::new()` finding
+    /// and `FxHashMap::new()` two findings, so a file's ceiling was spent on a
+    /// stack allocation and on one construction counted twice. That is the whole
+    /// distance between a budget that measures heap traffic and one that
+    /// measures spelling. A qualified path still matches, because a `Vec` reached
+    /// through `alloc::vec::Vec` is the same allocation.
+    #[test]
+    fn a_pattern_matches_a_whole_path_segment_and_not_a_longer_name() {
+        let text = concat!(
+            "pub fn f() {\n",
+            "    let a: SmallVec<[u8; 4]> = SmallVec::new();\n",
+            "    let b = FxHashMap::new();\n",
+            "    let c = alloc::vec::Vec::new();\n",
+            "}\n",
+        );
+        let mut out = Vec::new();
+        let _ = collect_findings("x.rs", text, &mut out);
+
+        let reported: Vec<(&str, u32)> = out
+            .iter()
+            .map(|hit| (hit.pattern, hit.line))
+            .collect();
+        assert_eq!(
+            reported,
+            vec![("FxHashMap::new", 3), ("Vec::new", 4)],
+            "SmallVec is not a Vec and FxHashMap is one finding: {out:?}"
+        );
     }
 
     /// WHY: the exclusion must end where the error expression ends, or the first

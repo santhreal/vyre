@@ -1,0 +1,12 @@
+lane = "miri-miri"
+workflow = ".github/workflows/miri.yml"
+job = "miri"
+state = "live"
+required_status = "miri / miri"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = '''./cargo_full +nightly miri setup
+./cargo_full +nightly miri test -p vyre-spec --lib
+./cargo_full +nightly miri test -p vyre-foundation --lib
+./cargo_full +nightly miri test -p vyre -p vyre-reference --lib --no-default-features''' },
+]

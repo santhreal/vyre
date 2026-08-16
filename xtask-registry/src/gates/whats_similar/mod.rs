@@ -68,6 +68,12 @@ impl Gate for WhatsSimilar {
         "Report duplicate operations by IR shape across the whole registry; --op-id ID narrows to one"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--op-id ID narrows the comparison to one registered operation",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut argv = vec![String::from("xtask"), String::from("whats-similar")];
         argv.extend(ctx.args.iter().cloned());

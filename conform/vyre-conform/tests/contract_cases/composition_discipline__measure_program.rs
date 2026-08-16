@@ -94,7 +94,7 @@ fn measure_node(node: &Node, depth: usize, stats: &mut Complexity) {
             body,
             ..
         } => {
-            if is_child_composition(source_region.as_ref().map(|r| r.name.as_str())) {
+            if is_child_composition(source_region.as_ref().map(|r| r.as_str())) {
                 return;
             }
             for n in body.iter() {
@@ -260,7 +260,7 @@ fn hash_node(node: &Node, h: &mut u64) {
             body,
         } => {
             mix(h, 7);
-            if is_child_composition(source_region.as_ref().map(|r| r.name.as_str())) {
+            if is_child_composition(source_region.as_ref().map(|r| r.as_str())) {
                 hash_str(generator.as_str(), h);
             }
             for n in body.iter() {

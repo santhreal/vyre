@@ -15,6 +15,14 @@ use std::collections::BTreeSet;
 // because those are not what the property compares: the two arms differ in
 // how they walk the node tree, and a program-header diagnostic corrected in
 // one copy and not the other would fail the property for the wrong reason.
+//
+// The whole-program passes are shared for the same reason. A relation
+// between two nodes on a path is not something either node walk can carry,
+// so `validate_with_options` runs it beside the walk and this arm runs the
+// same pass in the same place. A pass reachable from the corpus that only
+// one arm runs fails the property on every program holding the shape it
+// reads: the async tag pass sees every `AsyncLoad`, `AsyncStore` and
+// `AsyncWait` `arb_program` generates.
 // ------------------------------------------------------------------
 fn validate_with_options_legacy(
     program: &Program,
@@ -36,6 +44,12 @@ fn validate_with_options_legacy(
     );
     validate_fusion_alias_hazards(program.entry(), &mut report.errors);
     validate_self_composition(program.entry(), &mut report.errors);
+
+    report
+        .errors
+        .extend(crate::validate::async_pipeline::check_async_pipeline(
+            program,
+        ));
 
     report
 }
@@ -822,13 +836,20 @@ fn sibling_regions_may_each_bind_the_same_name() {
 
 #[test]
 fn an_async_transfer_endpoint_is_not_resolved_against_the_buffer_table() {
-    let program = alias_hazard_program(vec![Node::AsyncLoad {
-        source: "ssd".into(),
-        destination: "vram".into(),
-        offset: Box::new(Expr::u32(0)),
-        size: Box::new(Expr::u32(1)),
-        tag: "stream0".into(),
-    }]);
+    let program = alias_hazard_program(vec![
+        Node::AsyncLoad {
+            source: "ssd".into(),
+            destination: "vram".into(),
+            offset: Box::new(Expr::u32(0)),
+            size: Box::new(Expr::u32(1)),
+            tag: "stream0".into(),
+        },
+        // The wait keeps the tag paired, so the only thing left for a
+        // diagnostic to name is an endpoint.
+        Node::AsyncWait {
+            tag: "stream0".into(),
+        },
+    ]);
 
     assert!(
         unknown_variable_errors(&program).is_empty(),

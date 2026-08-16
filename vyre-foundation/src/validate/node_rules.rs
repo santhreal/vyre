@@ -271,11 +271,31 @@ pub(crate) fn check_async_tag(tag: &Ident, errors: &mut Vec<ValidationError>) {
     }
 }
 
+/// Every per-node rule an `AsyncLoad` or an `AsyncStore` carries.
+///
+/// One entry point, because both the preorder validator and the differential
+/// walk apply it and a rule reached from only one of them is a rule the
+/// property test reports as a traversal disagreement.
+pub(crate) fn check_async_transfer(
+    destination: &Ident,
+    tag: &Ident,
+    buffers: &BufferTable<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    check_async_tag(tag, errors);
+    bytes_rejection::check_async_destination(destination.as_str(), buffers, errors);
+}
+
 /// The buffers a collective node names, in operand order.
 ///
 /// One match over the collective variants, so a rule that reads a collective's
 /// buffers and a walk that records them as accesses cannot disagree about which
 /// buffers a variant has. A non-collective node names none.
+///
+/// Exhaustive with no catch-all arm: a new collective variant would answer
+/// "names no buffers" under one, and the access walk would then let a program
+/// write a buffer the alias rules never saw. Adding a variant fails to compile
+/// here instead.
 #[must_use]
 pub(crate) fn collective_buffers(node: &Node) -> [Option<&Ident>; 2] {
     match node {
@@ -283,7 +303,28 @@ pub(crate) fn collective_buffers(node: &Node) -> [Option<&Ident>; 2] {
         Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
             [Some(input), Some(output)]
         }
-        _ => [None, None],
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Return
+        | Node::Block(_)
+        | Node::Barrier { .. }
+        | Node::Region { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
+        | Node::Opaque(_) => [None, None],
     }
 }
 
@@ -566,7 +607,7 @@ pub(crate) fn store_value_targets(element: &DataType) -> String {
         .join(", ")
 }
 
-/// V134: Tile load validation and residency limit checks.
+/// V138: Tile load validation and residency limit checks.
 pub(crate) fn check_tile_load(
     tile_name: &Ident,
     tile_type: &crate::ir::Tile,
@@ -579,7 +620,7 @@ pub(crate) fn check_tile_load(
     if let Some(buf) = buffers.get(buffer_name.as_str()) {
         if buf.access() == BufferAccess::WriteOnly {
             errors.push(err(
-                "V134",
+                "V138",
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!("tile load from write-only buffer `{buffer_name}`"),
@@ -588,7 +629,7 @@ pub(crate) fn check_tile_load(
         }
     } else {
         errors.push(err(
-            "V134",
+            "V138",
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("tile load from unknown buffer `{buffer_name}`"),
@@ -597,7 +638,7 @@ pub(crate) fn check_tile_load(
     }
     if origin.len() != tile_type.extents.len() {
         errors.push(err(
-            "V134",
+            "V138",
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!(
@@ -611,7 +652,7 @@ pub(crate) fn check_tile_load(
     check_tile_residency(tile_name, tile_type, options, errors);
 }
 
-/// V131: Check tile residency against target capabilities.
+/// V135: Check tile residency against target capabilities.
 pub(crate) fn check_tile_residency(
     tile_name: &Ident,
     tile_type: &crate::ir::Tile,
@@ -624,7 +665,7 @@ pub(crate) fn check_tile_residency(
             crate::ir::Residency::Workgroup => {
                 if caps.max_shared_memory_bytes > 0 && bytes > caps.max_shared_memory_bytes as u64 {
                     errors.push(err(
-                        "V131",
+                        "V135",
                         ValidationPhase::Node,
                         ValidationLocation::Program,
                         format!(
@@ -640,7 +681,7 @@ pub(crate) fn check_tile_residency(
                     let words = (bytes + 3) / 4;
                     if words > caps.regs_per_thread_max as u64 {
                         errors.push(err(
-                            "V131",
+                            "V135",
                             ValidationPhase::Node,
                             ValidationLocation::Program,
                             format!(
@@ -659,7 +700,7 @@ pub(crate) fn check_tile_residency(
                         && (caps.subgroup_size as usize) % total_elements != 0
                     {
                         errors.push(err(
-                            "V131",
+                            "V135",
                             ValidationPhase::Node,
                             ValidationLocation::Program,
                             format!(
@@ -676,7 +717,7 @@ pub(crate) fn check_tile_residency(
     }
 }
 
-/// V132: Tile store validation.
+/// V136: Tile store validation.
 pub(crate) fn check_tile_store(
     buffer_name: &Ident,
     _origin: &[Expr],
@@ -687,7 +728,7 @@ pub(crate) fn check_tile_store(
     if let Some(buf) = buffers.get(buffer_name.as_str()) {
         if buf.access() == BufferAccess::ReadOnly {
             errors.push(err(
-                "V132",
+                "V136",
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!("tile store to read-only buffer `{buffer_name}`"),
@@ -696,7 +737,7 @@ pub(crate) fn check_tile_store(
         }
     } else {
         errors.push(err(
-            "V132",
+            "V136",
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("tile store to unknown buffer `{buffer_name}`"),
@@ -705,7 +746,7 @@ pub(crate) fn check_tile_store(
     }
 }
 
-/// V133: Tile matmul validation.
+/// V137: Tile matmul validation.
 pub(crate) fn check_tile_matmul(
     acc: &Ident,
     a: &Ident,
@@ -716,7 +757,7 @@ pub(crate) fn check_tile_matmul(
     if let Some(caps) = options.backend_capabilities {
         if !caps.supports_tensor_cores {
             errors.push(err(
-                "V133",
+                "V137",
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!(

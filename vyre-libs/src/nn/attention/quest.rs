@@ -10,7 +10,7 @@
 //! tells the scheduler which pages to fetch.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use crate::nn::quest_paging_passes::{
     quest_score_pages_body, quest_select_top_k_body, quest_zero_fill_body, QUEST_SCORE_PAGES_OP_ID,
@@ -48,9 +48,7 @@ pub fn quest_paging(
     // regardless of backend. `num_pages` is small (typically ≤ 512 in
     // the KV-paging regime) so the O(num_pages · k) top-k is fine.
     let t = Expr::InvocationId { axis: 0 };
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
     let body = vec![
         wrap_child_region(
             QUEST_ZERO_FILL_OP_ID,

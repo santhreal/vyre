@@ -3,7 +3,7 @@
 //! Every core variant is an explicit method, so a new `Node` variant makes
 //! every implementor decide rather than silently skipping it.
 
-use crate::ir_inner::model::expr::{Expr, GeneratorRef, Ident};
+use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::generated::Node;
 use crate::ir_inner::model::node::NodeExtension;
 use crate::visit::node_parts::child_bodies;
@@ -114,7 +114,7 @@ pub trait NodeVisitor {
         &mut self,
         node: &Node,
         generator: &Ident,
-        source_region: &Option<GeneratorRef>,
+        source_region: &Option<Ident>,
         body: &[Node],
     ) -> ControlFlow<Self::Break>;
     /// Downstream opaque node extension.

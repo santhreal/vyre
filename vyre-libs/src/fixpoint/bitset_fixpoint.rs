@@ -203,7 +203,7 @@ pub fn reference_eval_warm_start(current: &[u32], next: &[u32], seed: &[u32]) ->
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_fixpoint("current", "next", NAME_CHANGED_FLAG, 1),
         Some(|| {

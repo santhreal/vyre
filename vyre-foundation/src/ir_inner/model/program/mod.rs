@@ -41,7 +41,7 @@ fn record_digest_computation() {}
 
 pub use self::buffer_decl::{BufferDecl, LinearType, ShapePredicate};
 pub use self::cache_digest::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION;
-pub use self::definition::Program;
+pub use self::definition::{Program, PORTABLE_WORKGROUP_INVOCATIONS};
 pub use self::scope::Scope;
 pub use self::stats::ProgramStats;
 pub use self::stats::{

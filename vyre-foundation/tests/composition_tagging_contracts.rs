@@ -48,7 +48,7 @@ fn tag_program_preserves_program_metadata_and_child_generator() {
         panic!("expected one reparented primitive child region");
     };
     assert_eq!(generator.as_ref(), "vyre-primitives::test::primitive");
-    assert_eq!(parent.name, "vyre-libs::test::consumer");
+    assert_eq!(parent.as_str(), "vyre-libs::test::consumer");
 }
 
 /// This test prevents tagging from losing the self-composition exclusion that protects stateful bodies during fusion.
@@ -87,5 +87,49 @@ fn tag_program_reparents_generated_root_region_to_inline_child() {
         panic!("expected one inline child region");
     };
     assert_eq!(generator.as_ref(), "inline::vyre-libs::test::inline_parent");
-    assert_eq!(parent.name, "vyre-libs::test::inline_parent");
+    assert_eq!(parent.as_str(), "vyre-libs::test::inline_parent");
+}
+
+/// This test keeps composition from allocating one copy of the parent name per
+/// reparented child. The name is interned, so every child cites the same
+/// allocation; a wrapper that owns its own `String` reads identical under
+/// equality while costing an allocation per child and per pass that rebuilds
+/// the region, which equality assertions cannot see.
+#[test]
+fn every_reparented_child_shares_one_parent_name_allocation() {
+    let primitive = primitive_program(
+        (0..3u32)
+            .map(|slot| Node::Region {
+                generator: "vyre-primitives::test::primitive".into(),
+                source_region: None,
+                body: vec![Node::store("out", Expr::u32(slot), Expr::u32(slot + 1))].into(),
+            })
+            .collect(),
+    );
+
+    let tagged = tag_program("vyre-libs::test::shared_parent", primitive);
+
+    let [Node::Region { body, .. }] = tagged.entry() else {
+        panic!("expected one tagged parent region");
+    };
+    let parents: Vec<_> = body
+        .iter()
+        .map(|node| {
+            let Node::Region {
+                source_region: Some(parent),
+                ..
+            } = node
+            else {
+                panic!("expected every child to cite the composing parent");
+            };
+            parent.shared_text()
+        })
+        .collect();
+    assert_eq!(parents.len(), 3);
+    for parent in &parents[1..] {
+        assert!(
+            std::sync::Arc::ptr_eq(&parents[0], parent),
+            "Fix: reparenting must share the interned parent name, not copy it"
+        );
+    }
 }

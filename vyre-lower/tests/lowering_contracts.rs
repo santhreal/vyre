@@ -12,6 +12,8 @@ mod candidate_plan;
 mod descent_contract;
 #[path = "lowering_contracts/descriptor_builder.rs"]
 mod descriptor_builder;
+#[path = "lowering_contracts/literal_serde.rs"]
+mod literal_serde;
 #[path = "lowering_contracts/operand_class.rs"]
 mod operand_class;
 #[path = "lowering_contracts/pattern_audit.rs"]

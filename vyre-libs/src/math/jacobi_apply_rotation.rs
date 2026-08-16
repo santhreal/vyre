@@ -14,7 +14,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::givens_rotate_pair::givens_rotate_pair_region;
@@ -121,9 +121,7 @@ pub fn jacobi_apply_rotation_region(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         jacobi_apply_rotation_body(a, eigenvectors, n, p, q),
     )
 }
@@ -175,7 +173,7 @@ pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32
 // fixture is exact and no tolerance is needed. The two off-diagonal cells are
 // the forced zeros.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || jacobi_apply_rotation("a", "evec", 2, 0, 1),
         Some(|| {

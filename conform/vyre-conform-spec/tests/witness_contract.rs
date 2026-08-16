@@ -21,6 +21,16 @@ fn u32_witness_uses_the_stable_semantic_data_type() {
 }
 
 #[test]
+fn u32_witness_canonical_fingerprint_is_stable_across_calls() {
+    let a = U32Witness::fingerprint_canonical();
+    let b = U32Witness::fingerprint_canonical();
+    assert_eq!(
+        a, b,
+        "U32Witness::fingerprint_canonical must be stable across calls"
+    );
+}
+
+#[test]
 fn u32_witness_contains_critical_edge_cases() {
     let w = U32Witness::enumerate();
     assert!(w.contains(&0), "witness set must contain 0");
@@ -29,6 +39,10 @@ fn u32_witness_contains_critical_edge_cases() {
     assert!(
         w.contains(&(u32::MAX - 1)),
         "witness set must contain u32::MAX - 1"
+    );
+    assert!(
+        w.contains(&0x8000_0000),
+        "witness set must contain the sign-bit boundary 0x8000_0000"
     );
 }
 

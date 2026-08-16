@@ -2,12 +2,13 @@
 //! and the lane-predicated lowering used when weight-tile reuse does not apply.
 
 use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::affine_grouped_weight_reuse::linear_4bit_affine_grouped_weight_reuse;
 use super::grouped_layout::{
     affine_grouped_buffers, affine_grouped_output_extent, broadcast_from_lane0,
-    push_group_affine_terms, push_lane0_sidecar_loads, push_packed_word_fetch,
+    dequantized_weight, lane_decomposition, packed_column_index, push_group_affine_terms,
+    push_lane0_sidecar_loads, push_packed_word_fetch, push_warp_reduction_store,
     AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP,
     AFFINE_GROUPED_WARPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
 };
@@ -166,22 +167,10 @@ fn linear_4bit_affine_grouped_batch_impl(
         Expr::mul(Expr::var("batch_idx"), Expr::u32(in_dim)),
         k.clone(),
     );
-    let packed_idx = Expr::add(
-        Expr::mul(
-            Expr::div(Expr::var("word_leader_k"), Expr::u32(8)),
-            Expr::u32(out_dim),
-        ),
-        out_idx.clone(),
-    );
-    let shift = Expr::mul(Expr::var("lane_in_word"), Expr::u32(4));
-    let nibble = Expr::bitand(Expr::shr(Expr::var("packed_word"), shift), Expr::u32(0xF));
+    let packed_idx = packed_column_index(out_dim, out_idx.clone());
     let group = Expr::div(k.clone(), Expr::u32(group_size));
     let chunk_sidecar_idx = Expr::add(Expr::mul(group, Expr::u32(out_dim)), out_idx.clone());
-    let weight_f32 = Expr::fma(
-        Expr::cast(DataType::F32, nibble),
-        Expr::var("group_scale"),
-        Expr::var("group_zero_offset"),
-    );
+    let weight_f32 = dequantized_weight();
 
     let mut per_output = vec![Node::let_bind("local_acc", Expr::f32(0.0))];
     if group_size > tile && group_size % tile == 0 {
@@ -297,29 +286,10 @@ fn linear_4bit_affine_grouped_batch_impl(
             chunk,
         ));
     }
-    per_output.push(Node::let_bind(
-        "warp_sum",
-        Expr::subgroup_add(Expr::var("local_acc")),
-    ));
-    per_output.push(Node::if_then(
-        Expr::eq(lane.clone(), Expr::u32(0)),
-        vec![Node::Store {
-            buffer: out.into(),
-            index: Expr::var("linear_out_idx"),
-            value: Expr::add(Expr::load(b, out_idx.clone()), Expr::var("warp_sum")),
-        }],
-    ));
+    push_warp_reduction_store(&mut per_output, lane.clone(), b, out, out_idx.clone());
 
-    let body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        Node::let_bind(
-            "warp",
-            Expr::div(local.clone(), Expr::u32(AFFINE_GROUPED_LANES_PER_OUTPUT)),
-        ),
-        Node::let_bind(
-            "lane",
-            Expr::rem(local.clone(), Expr::u32(AFFINE_GROUPED_LANES_PER_OUTPUT)),
-        ),
+    let mut body = lane_decomposition();
+    body.extend([
         Node::let_bind(
             "linear_out_idx",
             Expr::add(
@@ -342,7 +312,7 @@ fn linear_4bit_affine_grouped_batch_impl(
             Expr::lt(Expr::var("linear_out_idx"), Expr::u32(logical_output_count)),
             per_output,
         ),
-    ];
+    ]);
     let output_workgroups = logical_output_count.div_ceil(AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP);
     let (padded_output_count, output_byte_len) =
         affine_grouped_output_extent(output_workgroups, logical_output_count)?;

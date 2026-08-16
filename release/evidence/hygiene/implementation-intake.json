@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=true:worktree=587be6a3b515782d4f5c2d438cfd280a4b2bfe2e4de21819ef31730913109ab1",
+  "source_fingerprint": "git:6f3d6a963ac241593362782370a2b48231e6c94c:dirty=true:worktree=cb57bef57092b22c55320809b4e96b362f08e2a427acd08410730b862c0a004a",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -64,7 +64,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 19
+      "count": 21
     },
     {
       "owner_lane": "coordination",
@@ -81,6 +81,15 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unbounded_read",
       "release_blocker": false,
       "count": 1
     },
@@ -361,7 +370,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 14
+      "count": 15
     },
     {
       "owner_lane": "testing_evidence",

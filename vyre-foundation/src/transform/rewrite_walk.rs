@@ -52,14 +52,34 @@ pub trait NodeRewrite {
     /// the expression arena assigns identifiers in.
     fn operand(&mut self, expr: &Expr) -> Option<Expr>;
 
-    /// Rewrite one binding or tag identifier.
+    /// Rewrite one name a node binds in the value namespace.
     ///
-    /// Covers the value namespace: `Let`/`Assign` targets, the `Loop`
-    /// induction variable, and the async copy, trap, and resume tags. Buffer
-    /// names are a separate namespace declared in the program's buffer table,
-    /// not bound by a node, and are carried through unchanged; a pass that
-    /// renames a buffer rewrites that table with `Program::with_rewritten_buffers`.
-    fn ident(&mut self, name: &Ident) -> Option<Ident> {
+    /// Covers the `Let` and `Assign` targets and the `Loop` induction
+    /// variable, which is exactly what
+    /// [`visit::node_scalars`](crate::visit::node_scalars) reports as a
+    /// binding. Buffer names are a separate namespace declared in the
+    /// program's buffer table, not bound by a node, and are carried through
+    /// unchanged; a pass that renames a buffer rewrites that table with
+    /// `Program::with_rewritten_buffers`.
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        let _ = name;
+        None
+    }
+
+    /// Rewrite one stream tag.
+    ///
+    /// Covers the async copy, wait, trap, and resume tags, which is exactly
+    /// what [`visit::node_tag`](crate::visit::node_tag) reports. A tag names an
+    /// in-flight transfer rather than a value, and the start that opens it and
+    /// the wait that closes it must carry the same name, so a policy that
+    /// renames values leaves this hook alone.
+    ///
+    /// One hook used to be offered both namespaces, and a value renamer then
+    /// had to re-derive which position it had been called for:
+    /// `transform::inline` carried a per-node copy of the binding
+    /// `node_scalars` reports for no other purpose, and a renamer that skipped
+    /// that step renamed a tag that happened to share a variable's name.
+    fn tag(&mut self, name: &Ident) -> Option<Ident> {
         let _ = name;
         None
     }
@@ -119,7 +139,7 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
     rewrite.enter(node);
     match node {
         Node::Let { name, value } => {
-            let new_name = rewrite.ident(name);
+            let new_name = rewrite.binding(name);
             let new_value = rewrite.operand(value);
             (new_name.is_some() || new_value.is_some()).then(|| Node::Let {
                 name: keep(new_name, name),
@@ -127,7 +147,7 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
             })
         }
         Node::Assign { name, value } => {
-            let new_name = rewrite.ident(name);
+            let new_name = rewrite.binding(name);
             let new_value = rewrite.operand(value);
             (new_name.is_some() || new_value.is_some()).then(|| Node::Assign {
                 name: keep(new_name, name),
@@ -169,7 +189,7 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
             to,
             body,
         } => {
-            let new_var = rewrite.ident(var);
+            let new_var = rewrite.binding(var);
             let new_from = rewrite.operand(from);
             let new_to = rewrite.operand(to);
             let new_body = rewrite.body(node, body);
@@ -225,24 +245,31 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
         }
         Node::Trap { address, tag } => {
             let new_address = rewrite.operand(address);
-            let new_tag = rewrite.ident(tag);
+            let new_tag = rewrite.tag(tag);
             (new_address.is_some() || new_tag.is_some()).then(|| Node::Trap {
                 address: Box::new(keep(new_address, address.as_ref())),
                 tag: keep(new_tag, tag),
             })
         }
-        Node::AsyncWait { tag } => rewrite.ident(tag).map(|tag| Node::AsyncWait { tag }),
-        Node::Resume { tag } => rewrite.ident(tag).map(|tag| Node::Resume { tag }),
-        Node::TileLoad { tile, tile_type, buffer, origin, layout } => {
+        Node::TileLoad {
+            tile,
+            tile_type,
+            buffer,
+            origin,
+            layout,
+        } => {
             let mut changed = false;
-            let new_origin: Vec<Expr> = origin.iter().map(|e| {
-                if let Some(ne) = rewrite.operand(e) {
-                    changed = true;
-                    ne
-                } else {
-                    e.clone()
-                }
-            }).collect();
+            let new_origin: Vec<Expr> = origin
+                .iter()
+                .map(|e| {
+                    if let Some(ne) = rewrite.operand(e) {
+                        changed = true;
+                        ne
+                    } else {
+                        e.clone()
+                    }
+                })
+                .collect();
             changed.then(|| Node::TileLoad {
                 tile: tile.clone(),
                 tile_type: tile_type.clone(),
@@ -251,16 +278,23 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
                 layout: layout.clone(),
             })
         }
-        Node::TileStore { buffer, origin, tile } => {
+        Node::TileStore {
+            buffer,
+            origin,
+            tile,
+        } => {
             let mut changed = false;
-            let new_origin: Vec<Expr> = origin.iter().map(|e| {
-                if let Some(ne) = rewrite.operand(e) {
-                    changed = true;
-                    ne
-                } else {
-                    e.clone()
-                }
-            }).collect();
+            let new_origin: Vec<Expr> = origin
+                .iter()
+                .map(|e| {
+                    if let Some(ne) = rewrite.operand(e) {
+                        changed = true;
+                        ne
+                    } else {
+                        e.clone()
+                    }
+                })
+                .collect();
             changed.then(|| Node::TileStore {
                 buffer: buffer.clone(),
                 origin: new_origin,
@@ -275,6 +309,8 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
                 body,
             })
         }
+        Node::AsyncWait { tag } => rewrite.tag(tag).map(|tag| Node::AsyncWait { tag }),
+        Node::Resume { tag } => rewrite.tag(tag).map(|tag| Node::Resume { tag }),
         Node::TileMatmul { .. }
         | Node::TileReduce { .. }
         | Node::TileDecl { .. }
@@ -299,7 +335,7 @@ fn rewrite_async_copy<R: NodeRewrite>(
 ) -> Option<(Box<Expr>, Box<Expr>, Ident)> {
     let new_offset = rewrite.operand(offset);
     let new_size = rewrite.operand(size);
-    let new_tag = rewrite.ident(tag);
+    let new_tag = rewrite.tag(tag);
     (new_offset.is_some() || new_size.is_some() || new_tag.is_some()).then(|| {
         (
             Box::new(keep(new_offset, offset)),

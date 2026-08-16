@@ -1,7 +1,9 @@
 //! Live device facts a plan is selected against, and the admission gate that
 //! refuses a graph the device cannot execute.
 
-use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph};
+use std::sync::Arc;
+
+use vyre_foundation::ir::{BufferAccess, Ident, Program, ProgramGraph};
 use vyre_foundation::program_caps;
 use vyre_foundation::validate::BackendCapabilities;
 
@@ -270,13 +272,21 @@ pub(crate) fn validate_device_support(
     Ok(())
 }
 
-/// Workgroup-scoped scratch bytes one program declares.
-pub(crate) fn workgroup_scratch_bytes(program: &Program) -> u64 {
+/// Workgroup-scoped scratch one program declares, one entry per buffer.
+///
+/// Fusion unions buffers by name: `merge_programs_shared` keeps one
+/// declaration per name and takes the larger count, so two fused arms that
+/// name the same tile share it. A group's scratch is therefore the union of
+/// its members' declarations, and summing per-member totals charges a shared
+/// tile once per member.
+pub(crate) fn workgroup_scratch_declarations(
+    program: &Program,
+) -> impl Iterator<Item = (Ident, u64)> + '_ {
     program
         .buffers()
         .iter()
         .filter(|buffer| buffer.access == BufferAccess::Workgroup)
-        .fold(0_u64, |total, buffer| {
+        .map(|buffer| {
             let count = usize::try_from(buffer.count).unwrap_or(usize::MAX);
             let bytes = buffer
                 .element
@@ -285,6 +295,14 @@ pub(crate) fn workgroup_scratch_bytes(program: &Program) -> u64 {
                 .flatten()
                 .and_then(|bytes| u64::try_from(bytes).ok())
                 .unwrap_or(0);
-            total.saturating_add(bytes)
+            (Ident::new(Arc::clone(&buffer.name)), bytes)
         })
+}
+
+/// Workgroup-scoped scratch bytes one program declares.
+///
+/// One program declares each name once, so its own total is the sum.
+pub(crate) fn workgroup_scratch_bytes(program: &Program) -> u64 {
+    workgroup_scratch_declarations(program)
+        .fold(0_u64, |total, (_, bytes)| total.saturating_add(bytes))
 }

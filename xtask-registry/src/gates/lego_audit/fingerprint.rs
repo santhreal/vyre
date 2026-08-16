@@ -5,14 +5,28 @@
 //! same bucket agree. Checks 1 and 10 both compare fingerprints, and they
 //! compare different parts of one: check 1 scores the whole string, check 10
 //! fixes the first [`PREFIX_LEN`] bytes as a bucket key and scores the rest.
+//!
+//! Attribution is part of the encoding, not a separate join. A region that
+//! names the composition behind it collapses to a hash of the operation it
+//! selects, and a region that names none inlines the body it holds. So a
+//! composed operation and a rebuilt one do not agree, which is the difference
+//! every reader of this fingerprint is looking for.
 
 use super::*;
+
+/// Fingerprint length below which two programs are not worth comparing.
+///
+/// A byte run this short describes one or two nodes. Scoring it against
+/// another operation reports the shape of a single store, and finding it
+/// inside a larger program is coincidence more often than reuse. Every reader
+/// of these fingerprints applies the same floor, so it is stated once here.
+pub const MIN_COMPARABLE_FINGERPRINT_BYTES: usize = 10;
 
 /// Build a compact byte sequence representing the node-kind tree
 /// structure of a Program's body. Two programs with identical
 /// structural shape produce identical fingerprints; one-byte edits
 /// produce minor differences. Used for check 1 similarity scoring.
-pub(super) fn fingerprint_program(program: &Program) -> Vec<u8> {
+pub fn fingerprint_program(program: &Program) -> Vec<u8> {
     let mut out = Vec::with_capacity(256);
     for node in program.entry() {
         fingerprint_node(node, &mut out);

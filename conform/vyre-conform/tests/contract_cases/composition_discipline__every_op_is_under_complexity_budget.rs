@@ -145,7 +145,7 @@ fn collect_region_generators<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
                 source_region,
                 body,
             } => {
-                if is_child_composition(source_region.as_ref().map(|r| r.name.as_str())) {
+                if is_child_composition(source_region.as_ref().map(|r| r.as_str())) {
                     out.push(generator.as_str());
                 }
                 collect_region_generators(body, out);

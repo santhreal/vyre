@@ -37,7 +37,7 @@ pub fn cpu_ref(target: &mut [u32]) {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_zero("target", 3),
         Some(|| {

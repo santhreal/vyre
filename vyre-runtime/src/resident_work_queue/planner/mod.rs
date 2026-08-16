@@ -26,9 +26,3 @@ pub use programs::{
     build_sinkhorn_clustering_program, build_sinkhorn_full_clustering_program,
 };
 pub use sizing::ResidentSizingPolicy;
-
-#[cfg(test)]
-use super::task::TaskWorkItem;
-
-#[cfg(test)]
-mod tests;

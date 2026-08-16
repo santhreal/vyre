@@ -18,6 +18,8 @@ pub mod encodex;
 pub mod hex;
 /// DEFLATE stored-block inflate.
 pub mod inflate;
+#[cfg(test)]
+mod inflate_tests;
 /// RLE-segment-length scan and start-position prefix sum.
 ///
 /// Foundational stage for block-oriented compression decoders: LZ4 literal and
@@ -34,4 +36,3 @@ pub mod ziftsieve;
 /// Program so decoded bytes hand off through workgroup-shared memory instead of
 /// a DRAM round trip.
 pub mod streaming;
-

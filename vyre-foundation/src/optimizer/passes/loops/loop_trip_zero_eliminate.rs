@@ -29,7 +29,7 @@
 //!     downstream pass that sees `Loop` may emit a barrier/sync conservatively;
 //!     dropping the loop first lets the downstream pass take a faster path.
 
-use crate::ir::{Expr, Node, Program};
+use crate::ir::{Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
@@ -65,15 +65,16 @@ impl LoopTripZeroEliminatePass {
 }
 
 /// True iff `node` is a `Loop` whose `from..to` range is empty at compile time.
+///
+/// [`loop_entry`](super::loop_entry) is the one reader of what a loop header
+/// proves; `loop_licm` reads the other half of the same answer.
 fn is_empty_loop(node: &Node) -> bool {
-    if let Node::Loop { from, to, .. } = node {
-        match (from, to) {
-            (Expr::LitU32(a), Expr::LitU32(b)) => return *a >= *b,
-            (Expr::LitI32(a), Expr::LitI32(b)) => return *a >= *b,
-            _ => {}
+    match node {
+        Node::Loop { from, to, .. } => {
+            super::loop_entry(from, to) == super::LoopEntry::Never
         }
+        _ => false,
     }
-    false
 }
 
 #[cfg(test)]

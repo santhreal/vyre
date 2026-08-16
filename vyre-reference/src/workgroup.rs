@@ -9,12 +9,12 @@ use std::convert::Infallible;
 use std::ops::ControlFlow::{self, Continue};
 use std::sync::Arc;
 
-use crate::execution::async_transfer::AsyncTransfer;
+use crate::execution::async_transfer::{AsyncTransfer, PendingAsyncTransfers};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 #[cfg(test)]
 use vyre_foundation::ir::BufferAccess;
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
 
@@ -391,7 +391,7 @@ impl NodeVisitor for LocalSlots {
         &mut self,
         _: &Node,
         _: &vyre_foundation::ir::Ident,
-        _: &Option<GeneratorRef>,
+        _: &Option<Ident>,
         _: &[Node],
     ) -> ControlFlow<Self::Break> {
         Continue(())
@@ -423,7 +423,7 @@ pub struct Invocation<'a> {
     pub uniform_checks: Vec<(usize, bool)>,
     /// Async transfers started by `AsyncLoad`/`AsyncStore` and pending
     /// observation by `AsyncWait`.
-    pub(crate) pending_async: FxHashMap<Arc<str>, AsyncTransfer>,
+    pub(crate) pending_async: PendingAsyncTransfers,
     pub(crate) op_cache: crate::execution::call::OpCache,
 }
 
@@ -479,7 +479,7 @@ impl<'a> Invocation<'a> {
             returned: false,
             waiting_at_barrier: false,
             uniform_checks: Vec::new(),
-            pending_async: FxHashMap::default(),
+            pending_async: PendingAsyncTransfers::new(),
             op_cache: FxHashMap::default(),
         }
     }
@@ -523,21 +523,18 @@ impl<'a> Invocation<'a> {
         tag: &str,
         transfer: AsyncTransfer,
     ) -> Result<(), ReferenceError> {
-        let tag: Arc<str> = Arc::from(tag);
-        if self.pending_async.insert(tag.clone(), transfer).is_some() {
-            return Err(ReferenceError::new(format!(
-                "async tag `{}` was started more than once before a matching wait. \
-                 Fix: reuse the tag only after AsyncWait completes.",
-                tag
-            )));
-        }
-        Ok(())
+        self.pending_async.begin(tag, transfer)
     }
 
     pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
-        self.pending_async.remove(tag).ok_or_else(|| ReferenceError::new(format!(
-            "async wait for tag `{tag}` has no matching async load. Fix: emit AsyncLoad before AsyncWait."
-        )))
+        self.pending_async.finish(tag)
+    }
+
+    /// Refuse this invocation if it reached its end with a transfer still
+    /// queued. See
+    /// [`PendingAsyncTransfers::assert_drained`](crate::execution::async_transfer::PendingAsyncTransfers::assert_drained).
+    pub(crate) fn assert_async_drained(&self) -> Result<(), ReferenceError> {
+        self.pending_async.assert_drained(self.ids)
     }
 
     /// Look up an active local by name.

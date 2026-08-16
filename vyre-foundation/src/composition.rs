@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use crate::ir::{BufferDecl, DataType, Node, Program};
-use crate::ir::{Expr, GeneratorRef, Ident};
+use crate::ir::{Expr, Ident};
 use rustc_hash::FxHashMap;
 
 /// Generator suffix marking a region as non-composable with itself.
@@ -51,7 +51,7 @@ pub fn is_anonymous_generator(generator: &str) -> bool {
 
 /// Wrap nodes in a named, substrate-neutral composition region.
 #[must_use]
-pub fn wrap_region(generator: &str, body: Vec<Node>, source_region: Option<GeneratorRef>) -> Node {
+pub fn wrap_region(generator: &str, body: Vec<Node>, source_region: Option<Ident>) -> Node {
     Node::Region {
         generator: Ident::from(generator),
         source_region,
@@ -67,7 +67,7 @@ pub fn wrap_anonymous_region(generator: &str, body: Vec<Node>) -> Node {
 
 /// Wrap nodes in a composition region attributed to a parent generator.
 #[must_use]
-pub fn wrap_child_region(generator: &str, parent: GeneratorRef, body: Vec<Node>) -> Node {
+pub fn wrap_child_region(generator: &str, parent: Ident, body: Vec<Node>) -> Node {
     wrap_region(generator, body, Some(parent))
 }
 
@@ -115,9 +115,7 @@ pub fn trap_program(
 /// Clone a program's entry regions and attach them to a composing parent.
 #[must_use]
 pub fn reparent_program_children(program: &Program, parent_op_id: &str) -> Vec<Node> {
-    let parent = GeneratorRef {
-        name: parent_op_id.to_string(),
-    };
+    let parent = Ident::from(parent_op_id);
     program
         .entry()
         .iter()
@@ -134,9 +132,7 @@ pub fn tag_program(parent_op_id: &str, program: Program) -> Program {
     } else {
         parent_op_id.to_string()
     };
-    let parent = GeneratorRef {
-        name: parent_op_id.to_string(),
-    };
+    let parent = Ident::from(parent_op_id);
     program.map_entry(|entry| {
         let children = entry
             .into_iter()
@@ -151,14 +147,15 @@ pub fn tag_program(parent_op_id: &str, program: Program) -> Program {
 }
 
 /// `inline::<parent>`, the generator for a body with no region of its own.
-fn inline_generator(parent: &GeneratorRef) -> Ident {
+fn inline_generator(parent: &Ident) -> Ident {
     Ident::from(format!(
         "{}{}",
-        ANONYMOUS_GENERATOR_PREFIXES[0], parent.name
+        ANONYMOUS_GENERATOR_PREFIXES[0],
+        parent.as_str()
     ))
 }
 
-fn reparent_entry_node(node: Node, parent: &GeneratorRef) -> Node {
+fn reparent_entry_node(node: Node, parent: &Ident) -> Node {
     match node {
         Node::Region {
             generator, body, ..
@@ -168,12 +165,12 @@ fn reparent_entry_node(node: Node, parent: &GeneratorRef) -> Node {
             } else {
                 generator
             },
-            source_region: Some(parent.clone()),
+            source_region: Some(parent.duplicate_handle()),
             body,
         },
         other => Node::Region {
             generator: inline_generator(parent),
-            source_region: Some(parent.clone()),
+            source_region: Some(parent.duplicate_handle()),
             body: Arc::new(vec![other]),
         },
     }

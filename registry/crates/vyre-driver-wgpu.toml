@@ -1,0 +1,5 @@
+name = "vyre-driver-wgpu"
+concern = "Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence."
+pages = { spec = "vyre-driver-wgpu/SPEC.md", readme = "vyre-driver-wgpu/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-emit-naga", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-megakernel", "vyre-pass-engine", "vyre-spec"]

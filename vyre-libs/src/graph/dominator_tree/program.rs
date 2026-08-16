@@ -29,7 +29,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::depth::dominator_tree_depth_child;
@@ -206,9 +206,7 @@ pub fn try_dominator_tree_program(
 fn child_phase(generator: &'static str, body: Vec<Node>) -> Node {
     wrap_child_region(
         generator,
-        GeneratorRef {
-            name: OP_ID.to_string(),
-        },
+        Ident::from(OP_ID),
         body,
     )
 }

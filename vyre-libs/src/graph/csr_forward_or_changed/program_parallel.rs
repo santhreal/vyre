@@ -1,6 +1,6 @@
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{Expr, Node, Program};
 
@@ -252,9 +252,7 @@ pub fn csr_forward_or_changed_parallel_child_prefixed(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         csr_forward_or_changed_parallel_body_prefixed(
             shape,
             frontier_out,
@@ -277,9 +275,7 @@ pub fn csr_forward_or_changed_parallel_snapshot_child_prefixed(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         csr_forward_or_changed_parallel_snapshot_body_prefixed(
             shape,
             frontier_out,
@@ -304,9 +300,7 @@ pub fn csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         csr_forward_or_changed_parallel_snapshot_body_prefixed_with_active(
             shape,
             frontier_out,

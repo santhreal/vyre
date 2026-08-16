@@ -1,0 +1,5 @@
+name = "xtask-registry"
+concern = "Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver."
+pages = { spec = "xtask-registry/SPEC.md", readme = "xtask-registry/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre", "vyre-driver", "vyre-foundation", "vyre-libs", "vyre-megakernel", "vyre-primitives", "vyre-reference", "vyre-registry-link", "vyre-spec", "xtask"]

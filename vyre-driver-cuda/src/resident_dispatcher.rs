@@ -393,6 +393,8 @@ impl<'a> CudaProgramDispatcher<'a> {
     }
 }
 
+// Inline: `vyre_driver_cuda::resident_dispatcher` is `pub(crate)`, so no integration test can reach
+// what this suite exercises.
 #[cfg(test)]
 #[allow(clippy::items_after_test_module)]
 mod tests {

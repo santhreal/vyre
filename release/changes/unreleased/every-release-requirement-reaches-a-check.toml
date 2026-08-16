@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release gate reports a requirement that reaches no semantic evidence check instead of passing it, and judges the documentation authority the docs evidence map requires."

@@ -2,10 +2,20 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_foundation::operation::classify_operation_id as classify_op_id;
+use vyre_foundation::operation::OperationTier;
 
-use super::routing::feature_route;
 use super::schema::{OperationSchema, SCHEMA_VERSION};
+
+/// Most registrations the defining crate may link whatever features are
+/// selected.
+///
+/// Measured at 9 over the 327 registrations in the checkout: the `vyre-libs`
+/// modules that carry them are declared with no `cfg`, so nothing selects them
+/// out. A registration above this cap is one nobody can compile away. The name
+/// ends in `_CAP` so the ratchet gate reads it as a limit: it may be lowered
+/// when a registration gains a gate or leaves the tree, and raising it needs a
+/// measurement recorded here.
+const UNCONDITIONAL_REGISTRATION_CAP: usize = 9;
 
 pub(crate) fn validate_schema(
     schema: &OperationSchema,
@@ -34,11 +44,16 @@ pub(crate) fn validate_schema(
             errors.push(format!("operation id `{}` is empty or duplicated", op.id));
         }
     }
+    let accepted_tiers: BTreeSet<&str> = OperationTier::ALL
+        .iter()
+        .map(|tier| tier.matrix_value())
+        .filter(|spelling| *spelling != OperationTier::Unknown.matrix_value())
+        .collect();
     for op in &schema.operations {
-        let expected_tier = classify_op_id(&op.id).matrix_value();
-        if op.tier != expected_tier || op.tier == "unknown" {
+        if !accepted_tiers.contains(op.tier.as_str()) {
+            let named = accepted_tiers.iter().copied().collect::<Vec<_>>().join(", ");
             errors.push(format!(
-                "operation `{}` tier `{}` does not match `{expected_tier}`",
+                "operation `{}` records tier `{}`; the accepted spellings are {named}",
                 op.id, op.tier
             ));
         }
@@ -77,13 +92,7 @@ pub(crate) fn validate_schema(
                 op.id
             ));
         }
-        let (_, expected_features) = feature_route(&op.id, &op.category);
-        if op.features != expected_features {
-            errors.push(format!(
-                "operation `{}` feature route {:?} does not match {:?}",
-                op.id, op.features, expected_features
-            ));
-        }
+
         let reference_status = op
             .backend_support
             .get("reference")
@@ -149,6 +158,19 @@ pub(crate) fn validate_schema(
         *tiers.entry(op.tier.clone()).or_insert(0) += 1;
         *categories.entry(op.category.clone()).or_insert(0) += 1;
     }
+    let unconditional: Vec<&str> = schema
+        .operations
+        .iter()
+        .filter(|op| op.features.is_empty())
+        .map(|op| op.id.as_str())
+        .collect();
+    if unconditional.len() > UNCONDITIONAL_REGISTRATION_CAP {
+        errors.push(format!(
+            "{} operation(s) record no enabling feature where at most {UNCONDITIONAL_REGISTRATION_CAP} may; a registration that always links cannot be selected out: {}",
+            unconditional.len(),
+            unconditional.join(", ")
+        ));
+    }
     if tiers != schema.tier_counts {
         errors.push("tier_counts do not match operation records".to_string());
     }
@@ -156,13 +178,211 @@ pub(crate) fn validate_schema(
         errors.push("category_counts do not match operation records".to_string());
     }
     if let Some(expected) = expected {
-        if schema != expected {
-            errors.push("candidate operation schema differs from live registrations".to_string());
-        }
+        errors.extend(divergences(schema, expected));
     }
     if errors.is_empty() {
         Ok(())
     } else {
         Err(errors)
+    }
+}
+
+/// Every way `schema` disagrees with the live registry, named field by field.
+///
+/// One sentence saying the document differs told a reader to regenerate and
+/// nothing else, and a mutated feature route reported the same sentence as a
+/// mutated tier. The route in particular is read from the checkout rather than
+/// declared in the document, so naming it is the only way the message points at
+/// the module declaration that decides it.
+fn divergences(schema: &OperationSchema, expected: &OperationSchema) -> Vec<String> {
+    let mut errors = Vec::new();
+    if schema.schema_version != expected.schema_version {
+        errors.push(format!(
+            "the document records schema version {} where the registry generates {}",
+            schema.schema_version, expected.schema_version
+        ));
+    }
+    if schema.authority != expected.authority {
+        errors.push(format!(
+            "the document records authority `{}` where the registry generates `{}`",
+            schema.authority, expected.authority
+        ));
+    }
+    let live: BTreeMap<&str, &super::schema::OperationRecord> = expected
+        .operations
+        .iter()
+        .map(|op| (op.id.as_str(), op))
+        .collect();
+    let documented: BTreeSet<&str> = schema.operations.iter().map(|op| op.id.as_str()).collect();
+    for id in live.keys() {
+        if !documented.contains(id) {
+            errors.push(format!(
+                "operation `{id}` is registered and the document omits it"
+            ));
+        }
+    }
+    for op in &schema.operations {
+        let Some(current) = live.get(op.id.as_str()) else {
+            errors.push(format!(
+                "the document records operation `{}`, which no registration mints",
+                op.id
+            ));
+            continue;
+        };
+        if op.features != current.features {
+            errors.push(format!(
+                "operation `{}` records the feature route [{}] where the registry links it behind [{}]",
+                op.id,
+                op.features.join(", "),
+                current.features.join(", ")
+            ));
+        }
+        if op.tier != current.tier {
+            errors.push(format!(
+                "operation `{}` records tier `{}` where the registration declares `{}`",
+                op.id, op.tier, current.tier
+            ));
+        }
+        if op.category != current.category {
+            errors.push(format!(
+                "operation `{}` records category `{}` where the registry reads `{}`",
+                op.id, op.category, current.category
+            ));
+        }
+        for (field, differs) in [
+            ("signature", op.signature != current.signature),
+            ("oracle contract", op.oracle != current.oracle),
+            ("backend support", op.backend_support != current.backend_support),
+            ("target facets", op.target_facets != current.target_facets),
+            ("laws", op.laws != current.laws),
+            (
+                "composition chain",
+                op.composition_chain != current.composition_chain,
+            ),
+        ] {
+            if differs {
+                errors.push(format!(
+                    "the {field} of operation `{}` is not the one the registry produces",
+                    op.id
+                ));
+            }
+        }
+    }
+    errors
+}
+
+/// `validate_schema` and `divergences` are crate-private, so no integration
+/// test can hand them a document and a registry to compare. What the gate
+/// reports over the live checkout is asserted in
+/// `tests/registry_contracts/operation_schema.rs`.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::docs::operation_schema::schema::{
+        OperationRecord, OperationSignature, OracleContract,
+    };
+
+    fn record(id: &str) -> OperationRecord {
+        OperationRecord {
+            id: id.to_string(),
+            tier: "library".to_string(),
+            category: "math".to_string(),
+            signature: OperationSignature {
+                kind: "dialect_parameters".to_string(),
+                buffers: Vec::new(),
+                inputs: Vec::new(),
+                outputs: Vec::new(),
+                attributes: Vec::new(),
+                bytes_extraction: false,
+            },
+            features: vec!["math-linalg".to_string()],
+            oracle: OracleContract {
+                reference_eval: false,
+                flat_reference_facet: false,
+                fixture_inputs: false,
+                expected_output: false,
+                tolerance_ulp: 0,
+            },
+            backend_support: BTreeMap::new(),
+            target_facets: Vec::new(),
+            laws: Vec::new(),
+            composition_chain: Vec::new(),
+        }
+    }
+
+    fn document(operations: Vec<OperationRecord>) -> OperationSchema {
+        let mut tier_counts = BTreeMap::new();
+        let mut category_counts = BTreeMap::new();
+        for op in &operations {
+            *tier_counts.entry(op.tier.clone()).or_insert(0) += 1;
+            *category_counts.entry(op.category.clone()).or_insert(0) += 1;
+        }
+        OperationSchema {
+            schema_version: SCHEMA_VERSION,
+            authority: "live registry".to_string(),
+            operation_count: operations.len(),
+            tier_counts,
+            category_counts,
+            operations,
+        }
+    }
+
+    /// The route is read from the checkout, so the message has to name it.
+    #[test]
+    fn a_changed_feature_route_is_named_as_a_route() {
+        let live = document(vec![record("libs::math::matmul")]);
+        let mut candidate = live.clone();
+        candidate.operations[0].features = Vec::new();
+
+        assert_eq!(
+            divergences(&candidate, &live),
+            vec![
+                "operation `libs::math::matmul` records the feature route [] where the registry links it behind [math-linalg]"
+                    .to_string()
+            ]
+        );
+    }
+
+    /// A document may not drop a registration, nor invent one.
+    #[test]
+    fn a_roster_difference_names_the_operation_on_either_side() {
+        let live = document(vec![record("libs::math::matmul")]);
+        let candidate = document(vec![record("libs::math::gemv")]);
+
+        assert_eq!(
+            divergences(&candidate, &live),
+            vec![
+                "operation `libs::math::matmul` is registered and the document omits it"
+                    .to_string(),
+                "the document records operation `libs::math::gemv`, which no registration mints"
+                    .to_string(),
+            ]
+        );
+    }
+
+    /// Each field is reported as itself, not as one sentence about the document.
+    #[test]
+    fn each_differing_field_is_named() {
+        let live = document(vec![record("libs::math::matmul")]);
+        let mut candidate = live.clone();
+        candidate.operations[0].tier = "intrinsic".to_string();
+        candidate.operations[0].laws = vec!["associative".to_string()];
+
+        assert_eq!(
+            divergences(&candidate, &live),
+            vec![
+                "operation `libs::math::matmul` records tier `intrinsic` where the registration declares `library`".to_string(),
+                "the laws of operation `libs::math::matmul` is not the one the registry produces"
+                    .to_string(),
+            ]
+        );
+    }
+
+    /// A document that matches the registry reports nothing.
+    #[test]
+    fn an_identical_document_diverges_in_nothing() {
+        let live = document(vec![record("libs::math::matmul")]);
+
+        assert_eq!(divergences(&live.clone(), &live), Vec::<String>::new());
     }
 }

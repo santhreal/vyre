@@ -27,6 +27,8 @@ This crate declares no Cargo features.
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_megakernel` | `vyre-megakernel/src/lib.rs` | None | `./cargo_full test -p vyre-megakernel` |
 | `test` | `artifact_contract` | `vyre-megakernel/tests/artifact_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test artifact_contract` |
+| `test` | `selection_cost_contract` | `vyre-megakernel/tests/selection_cost_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test selection_cost_contract` |
+| `test` | `shared_tile_cost` | `vyre-megakernel/tests/shared_tile_cost.rs` | None | `./cargo_full test -p vyre-megakernel --test shared_tile_cost` |
 | `test` | `target_payload_contract` | `vyre-megakernel/tests/target_payload_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test target_payload_contract` |
 
 ## Test classes

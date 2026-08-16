@@ -288,7 +288,7 @@ fn reserve_bigint_output(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bigint_add_carry(4),
         Some(|| {

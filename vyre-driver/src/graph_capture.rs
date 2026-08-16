@@ -355,6 +355,7 @@ fn graph_capture_capacity_add(lhs: usize, rhs: usize, label: &str) -> Result<usi
     GRAPH_CAPTURE_BINDING_ACCOUNTING.add_usize_capacity(lhs, rhs, label)
 }
 
+// Inline: covers `graph_capture_capacity_add`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{

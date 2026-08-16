@@ -53,6 +53,7 @@ pub(crate) mod report;
 /// where in the program it occurred, and how to fix it.
 pub(crate) mod validation_error;
 
+mod async_pipeline;
 mod atomic_rules;
 mod barrier;
 mod bytes_rejection;

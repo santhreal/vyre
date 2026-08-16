@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use crate::ir_inner::model::expr::{ExprNode, GeneratorRef, Ident};
+use crate::ir_inner::model::expr::{ExprNode, Ident};
 use crate::ir_inner::model::node::NodeExtension;
 use crate::ir_inner::model::op_signature::{
     AtomicOp, BinOp, CollectiveOp, CommGroup, DataType, SubgroupReduceOp, UnOp,
@@ -29,7 +29,7 @@ vyre_macros::vyre_ast_registry! {
         Return,
         Barrier { ordering: crate::memory_model::MemoryOrdering },
         Block(Vec<Node>),
-        Region { generator: Ident, source_region: Option<GeneratorRef>, body: Arc<Vec<Node>> },
+        Region { generator: Ident, source_region: Option<Ident>, body: Arc<Vec<Node>> },
         TileLoad { tile: Ident, tile_type: Tile, buffer: Ident, origin: Vec<Expr>, layout: Layout },
         TileStore { buffer: Ident, origin: Vec<Expr>, tile: Ident },
         TileMatmul { acc: Ident, a: Ident, b: Ident },

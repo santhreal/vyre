@@ -88,6 +88,7 @@ where
     })
 }
 
+// Inline: covers `with_dispatch_scratch`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

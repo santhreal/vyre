@@ -71,7 +71,7 @@ use vyre_foundation::optimizer::{registered_pass_registrations, ProgramPass};
 use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
 use vyre_foundation::visit::node_map::map_body;
 use vyre_foundation::visit::{
-    child_bodies, child_bodies_mut, for_each_expr, node_scalars, node_shape,
+    child_bodies, child_bodies_mut, for_each_expr, node_scalars, node_shape, node_tag,
     node_variadic_operands, walk_nodes_mut,
 };
 use vyre_test_support::ir_variants::{
@@ -103,7 +103,8 @@ fn every_fixture() -> Vec<NodeSample> {
 struct ObserveShallow {
     bodies: Vec<Vec<Node>>,
     operands: Vec<Expr>,
-    idents: Vec<Ident>,
+    bindings: Vec<Ident>,
+    tags: Vec<Ident>,
 }
 
 impl NodeRewrite for ObserveShallow {
@@ -112,8 +113,13 @@ impl NodeRewrite for ObserveShallow {
         None
     }
 
-    fn ident(&mut self, name: &Ident) -> Option<Ident> {
-        self.idents.push(name.clone());
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        self.bindings.push(name.clone());
+        None
+    }
+
+    fn tag(&mut self, name: &Ident) -> Option<Ident> {
+        self.tags.push(name.clone());
         None
     }
 
@@ -123,7 +129,7 @@ impl NodeRewrite for ObserveShallow {
     }
 }
 
-/// A policy that renames one identifier wherever it is offered.
+/// A policy that renames one identifier wherever a value position offers it.
 struct RenameIdent {
     from: Ident,
     to: Ident,
@@ -134,7 +140,23 @@ impl NodeRewrite for RenameIdent {
         None
     }
 
-    fn ident(&mut self, name: &Ident) -> Option<Ident> {
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        (name == &self.from).then(|| self.to.clone())
+    }
+}
+
+/// A policy that renames one identifier wherever a tag position offers it.
+struct RenameTag {
+    from: Ident,
+    to: Ident,
+}
+
+impl NodeRewrite for RenameTag {
+    fn operand(&mut self, _expr: &Expr) -> Option<Expr> {
+        None
+    }
+
+    fn tag(&mut self, name: &Ident) -> Option<Ident> {
         (name == &self.from).then(|| self.to.clone())
     }
 }
@@ -389,7 +411,7 @@ fn node_scalars_reports_every_operand_the_rewriting_walk_offers() {
 }
 
 /// The name `node_scalars` reports as bound is the one the rewriting walk
-/// renames.
+/// offers to its VALUE hook, and never to its tag hook.
 ///
 /// The scope passes read the binding through `node_scalars` and the renaming
 /// passes write it through `rewrite_node`. If the two point at different
@@ -406,9 +428,16 @@ fn the_reported_binding_is_the_ident_the_rewriting_walk_renames() {
         let mut observed = ObserveShallow::default();
         rewrite_walk::rewrite_node(&sample.node, &mut observed);
         assert!(
-            observed.idents.contains(name),
+            observed.bindings.contains(name),
             "Fix: {} binds `{name}` as {binding:?}, but the rewriting walk \
              never offers that identifier for renaming",
+            sample.label()
+        );
+        assert!(
+            !observed.tags.contains(name),
+            "Fix: {} binds `{name}` as {binding:?} in the value namespace, and \
+             the rewriting walk offers it to the tag hook. A value renamer \
+             would then rename a transfer tag.",
             sample.label()
         );
 
@@ -429,6 +458,60 @@ fn the_reported_binding_is_the_ident_the_rewriting_walk_renames() {
             Some(&renamed),
             "Fix: the rewriting walk and node_scalars name different fields of \
              {} as its binding",
+            sample.label()
+        );
+    }
+}
+
+/// The tag `node_tag` reports is the one the rewriting walk offers to its TAG
+/// hook, and never to its value hook.
+///
+/// WHY: a tag names an in-flight transfer, and `validate::async_pipeline`
+/// pairs a start with the wait carrying the same tag. One hook used to be
+/// offered both namespaces, so a pass renaming an induction variable renamed
+/// any tag that spelled the same name and separated a start from its wait,
+/// while `transform::inline` avoided that only by re-deriving which position
+/// it had been called for. This fails for a tag-bearing variant wired to the
+/// wrong hook, and for one `node_tag` has been told about that the walk has
+/// not.
+#[test]
+fn the_reported_tag_is_the_ident_the_rewriting_walk_renames() {
+    let renamed = Ident::new("vyre_shape_owner_retagged".into());
+    for sample in every_fixture() {
+        let Some(tag) = node_tag(&sample.node) else {
+            continue;
+        };
+
+        let mut observed = ObserveShallow::default();
+        rewrite_walk::rewrite_node(&sample.node, &mut observed);
+        assert!(
+            observed.tags.contains(tag),
+            "Fix: {} carries tag `{tag}`, but the rewriting walk never offers \
+             it for renaming",
+            sample.label()
+        );
+        assert!(
+            !observed.bindings.contains(tag),
+            "Fix: {} carries `{tag}` as a stream tag, and the rewriting walk \
+             offers it to the value hook. A pass renaming a variable would \
+             then rename one end of a transfer pair.",
+            sample.label()
+        );
+
+        let mut rename = RenameTag {
+            from: tag.clone(),
+            to: renamed.clone(),
+        };
+        let rewritten =
+            rewrite_walk::rewrite_node(&sample.node, &mut rename).unwrap_or_else(|| {
+                panic!("Fix: renaming the tag of {} changed nothing", sample.label())
+            });
+
+        assert_eq!(
+            node_tag(&rewritten),
+            Some(&renamed),
+            "Fix: the rewriting walk and node_tag name different fields of {} \
+             as its tag",
             sample.label()
         );
     }

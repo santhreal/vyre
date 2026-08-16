@@ -16,11 +16,14 @@
 
 #![forbid(unsafe_code)]
 
+use structure_gate::module_layout::{
+    directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
+    sibling_module_failures,
+};
 use structure_gate::{
-    category_home_failures, directory_stutter_failures, frontend_owner_failures,
-    generic_module_name_failures, numbered_sibling_failures, operation_identity_failures,
+    category_home_failures, frontend_owner_failures, operation_identity_failures,
     registration_owner_failures, registry_link_failures, roster_failures, scan,
-    sibling_module_failures, substrate_home_failures, workspace_root, Workspace,
+    substrate_home_failures, workspace_root, Workspace,
 };
 
 fn workspace() -> Workspace {
@@ -52,7 +55,8 @@ fn only_the_two_category_crates_register_operations() {
 /// One kernel carries exactly one operation identity.
 #[test]
 fn no_operation_is_registered_under_two_identities() {
-    let failures = operation_identity_failures(&workspace().registrations);
+    let workspace = workspace();
+    let failures = operation_identity_failures(&workspace.registrations, &workspace.members);
 
     assert!(
         failures.is_empty(),

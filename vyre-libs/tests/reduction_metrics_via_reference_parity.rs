@@ -22,7 +22,7 @@ use vyre_libs::encoding::reduction_metrics::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn scalar_reduces_via_match_independent_oracles() {

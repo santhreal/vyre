@@ -339,6 +339,7 @@ fn decode_f32_batch(
     Ok(values)
 }
 
+// Inline: covers `F32_BYTES`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

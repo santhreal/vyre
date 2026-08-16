@@ -14,19 +14,20 @@ pub(crate) mod qk_gain;
 pub(crate) mod quest;
 mod scaled_dot_product;
 mod softmax;
-mod tiled_online_softmax;
+pub mod tiled_online_softmax;
 pub(crate) mod turboquant;
 
 pub use flash_attention::flash_attention;
-pub use flash_attention_2::{flash_attention_2, flash_attention_2_reference};
+pub use flash_attention_2::flash_attention_2;
 pub use fused_tile_attention::fused_tile_attention;
 pub use gated_delta::{recurrent_gated_delta, RecurrentGatedDeltaError};
 pub use gated_delta_chunked::chunked_gated_delta;
 pub use gated_delta_spec::GatedDeltaSpec;
 pub use gqa_attention::{gqa_attention, gqa_attention_causal, gqa_attention_causal_typed};
 pub use layout::{
-    attention_head_to_token, attention_token_to_head, kv_cache_append, AttentionPermuteSpec,
-    KvCacheAppendError, KvCacheAppendSpec,
+    attention_head_to_token, attention_layout_dispatch_grid, attention_token_to_head,
+    kv_cache_append, AttentionPermuteSpec, KvCacheAppendError, KvCacheAppendSpec,
+    ATTENTION_LAYOUT_WORKGROUP_SIZE,
 };
 pub use mla::{mla_compress_kv, mla_decode};
 pub use partial_rope::{partial_rope, partial_rope_at_offset, partial_rope_at_offset_typed};

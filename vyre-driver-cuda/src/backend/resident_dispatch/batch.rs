@@ -291,26 +291,30 @@ impl CudaBackend {
             Some(resident_use),
         );
         let stream_raw = guards.stream_raw()?;
-        let pending = (|| {
+        let enqueue_result = (|| {
             enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
 
             // One lease covers every batch element: they all enqueue on this one
-            // stream, so stream order already separates their barrier counts.
-            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
+            // stream, so stream order already separates their barrier counts, and
+            // the trap record is claimed by the first element that traps.
+            let module_globals =
+                self.lease_module_globals(program, prepared, ptx_src, module_key)?;
             let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();
-            // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream before freeing
-            // the gate, so a launch failure cannot leave a grid spinning while the
-            // next sequence resets the counter underneath it.
-            grid_barrier.launch_then_release(
+            // `launch_then_defer_release` runs the launches and hands the lease
+            // back instead of ending it. The module-scope globals are live for the
+            // kernel's whole EXECUTION, and this path returns before that, so
+            // ending the lease here would synchronize the stream: the one thing an
+            // asynchronous submission must not do. The pending handle owns the
+            // completion event, so it is what ends the lease.
+            let (_, deferred_module_globals) = module_globals.launch_then_defer_release(
                 stream_raw,
-                "resident batch grid-sync launch",
-                |grid_barrier| {
+                "resident batch launch",
+                |module_globals| {
                     for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
                         let mut params_ref = params_ptr;
                         Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
                         self.replay_fixpoint_launches(
-                            grid_barrier,
+                            module_globals,
                             func,
                             &mut kernel_args,
                             prepared,
@@ -320,7 +324,25 @@ impl CudaBackend {
                     Ok(())
                 },
             )?;
-
+            Ok(deferred_module_globals)
+        })();
+        // Every fallible step that runs under the lease is inside the closure
+        // above, so an error here means the lease was already ended: either it was
+        // never taken, or `launch_then_defer_release` released it with the
+        // synchronize a failed launch needs.
+        let deferred_module_globals = match enqueue_result {
+            Ok(lease) => lease,
+            Err(error) => {
+                return Err(guards.abandon(
+                    error,
+                    &self.telemetry,
+                    stream_raw,
+                    "cuStreamSynchronize (resident batch error cleanup)",
+                    "enqueue",
+                ));
+            }
+        };
+        let pending = (|| {
             let event = self.launch_resources.acquire_event()?;
             if let Err(error) = event.record(stream_raw) {
                 self.launch_resources.release_event(event);
@@ -344,15 +366,21 @@ impl CudaBackend {
             )
         })();
         let pending = match pending {
-            Ok(pending) => pending,
+            Ok(pending) => pending.holding_module_globals(deferred_module_globals),
             Err(error) => {
-                return Err(guards.abandon(
+                let abandoned = guards.abandon(
                     error,
                     &self.telemetry,
                     stream_raw,
-                    "cuStreamSynchronize (resident batch error cleanup)",
-                    "enqueue",
-                ));
+                    "cuStreamSynchronize (resident batch handle cleanup)",
+                    "pending handle",
+                );
+                // Dropped AFTER the abandon synchronized the stream, so the gate is
+                // freed only once the grid cannot still be running. The trap record
+                // is not read: this dispatch produced no answer, and the failure
+                // worth reporting is the one that stopped the handoff.
+                drop(deferred_module_globals);
+                return Err(abandoned);
             }
         };
         Ok(CudaResidentBatchDispatch {

@@ -33,7 +33,6 @@
 //!     dispatch_grid.rs    # lane count to dispatch grid, always on
 //!     ir_safe.rs          # guarded IR construction
 //!     hardware/           # feature = "hardware"
-//!     vfs/                # feature = "vyre-foundation"
 //! ```
 //!
 //! The path is the interface. A domain `mod.rs` exposes its sub-modules rather
@@ -73,8 +72,3 @@ pub mod operation_catalog;
 /// memory fences, bit instructions, fused multiply-add, inverse square root.
 #[cfg(feature = "hardware")]
 pub mod hardware;
-
-/// Virtual File System DMA primitives. Uses `vyre_foundation::ir`, so it is
-/// gated behind the feature that pulls vyre-foundation in as an optional dep.
-#[cfg(feature = "vyre-foundation")]
-pub mod vfs;

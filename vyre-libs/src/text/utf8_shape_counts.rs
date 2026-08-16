@@ -2,7 +2,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for UTF-8 histogram shape counting.
@@ -99,9 +99,7 @@ pub fn utf8_shape_counts_child(
 ) -> Node {
     wrap_child_region(
         UTF8_SHAPE_COUNTS_OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         utf8_shape_counts_body(histogram, continuation_var, expected_var),
     )
 }
@@ -159,7 +157,7 @@ pub fn reference_utf8_shape_counts(histogram: &[u32; 256]) -> (u32, u32) {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         UTF8_SHAPE_COUNTS_OP_ID,
         || utf8_shape_counts("histogram", "out"),
         Some(|| {

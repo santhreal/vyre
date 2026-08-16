@@ -9,10 +9,10 @@
 //!     magnitude;
 //!   * rank-1 input truncated to `r_next == 1`: the dominant component is kept exactly;
 //!   * a hand-checked diagonal case.
-#![cfg(all(feature = "math", feature = "test-fixtures"))]
+#![cfg(feature = "math")]
 
 use vyre_libs::math::tensor_train_decompose::tensor_train_decompose_step;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 use vyre_primitives::wire::{decode_f32_le_bytes_all as unpack_f32, pack_f32_slice as pack_f32};
 use vyre_reference::value::Value;
 

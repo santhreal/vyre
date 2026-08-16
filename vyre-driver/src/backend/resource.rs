@@ -151,6 +151,8 @@ impl From<ResidentHandle> for Resource {
     }
 }
 
+// Inline: `vyre_driver::backend` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

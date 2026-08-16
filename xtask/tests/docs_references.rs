@@ -346,3 +346,88 @@ fn a_reference_above_the_checkout_is_reported_as_leaving_it() {
     assert_eq!(report.count(), 1, "{text}");
     assert!(text.contains("outside this repository"), "{text}");
 }
+
+/// A crate document names a module the way the crate's own source tree does,
+/// relative to `src/`, so `builder/range_ordering.rs` in a member's
+/// `ARCHITECTURE.md` is that member's `src/builder/range_ordering.rs`. Reading
+/// it against the member directory alone reported every module heading of every
+/// crate architecture document as a path the checkout does not carry.
+#[test]
+fn a_crate_document_resolves_a_module_against_its_own_src() {
+    let root = fixture();
+    fs::create_dir_all(root.path().join("vyre-thing/src/builder")).unwrap();
+    fs::write(
+        root.path().join("vyre-thing/Cargo.toml"),
+        "[package]\nname = \"vyre-thing\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    fs::write(
+        root.path().join("vyre-thing/src/builder/range_ordering.rs"),
+        "pub fn ordered() {}\n",
+    )
+    .unwrap();
+    fs::write(
+        root.path().join("vyre-thing/ARCHITECTURE.md"),
+        "### `builder/range_ordering.rs`\nSorted-range helpers.\n",
+    )
+    .unwrap();
+
+    let report = judge(root.path());
+    assert_eq!(report.count(), 0, "{}", rendered(&report));
+}
+
+/// The `src/` reading is a reading, not an exemption: a module heading naming a
+/// file no crate carries is still reported, and the report names the path the
+/// crate's own layout makes of it.
+#[test]
+fn a_crate_document_naming_an_absent_module_is_reported() {
+    let root = fixture();
+    fs::create_dir_all(root.path().join("vyre-thing/src")).unwrap();
+    fs::write(
+        root.path().join("vyre-thing/Cargo.toml"),
+        "[package]\nname = \"vyre-thing\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    fs::write(
+        root.path().join("vyre-thing/ARCHITECTURE.md"),
+        "### `builder/absent.rs`\nSorted-range helpers.\n",
+    )
+    .unwrap();
+
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(
+        text.contains("resolves to `vyre-thing/src/builder/absent.rs`"),
+        "{text}"
+    );
+}
+
+/// A crate document naming a workspace path that no longer exists is reported
+/// at the path it wrote. Reading a crate document against the member's `src/`
+/// found modules named by module path, and it also turned every deleted
+/// workspace path in a crate document into a finding at a path no document
+/// carries, which sends the reader looking for a file nobody ever wrote.
+#[test]
+fn a_crate_document_naming_an_absent_root_path_is_reported_where_it_wrote_it() {
+    let root = fixture();
+    fs::create_dir_all(root.path().join("vyre-thing/src")).unwrap();
+    fs::write(
+        root.path().join("vyre-thing/Cargo.toml"),
+        "[package]\nname = \"vyre-thing\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    fs::write(
+        root.path().join("vyre-thing/ARCHITECTURE.md"),
+        "The table lives in `docs/absent-table.json`.\n",
+    )
+    .unwrap();
+
+    let report = judge(root.path());
+    let text = rendered(&report);
+    assert_eq!(report.count(), 1, "{text}");
+    assert!(
+        text.contains("resolves to `docs/absent-table.json`"),
+        "{text}"
+    );
+}

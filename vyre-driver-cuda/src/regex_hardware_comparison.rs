@@ -107,6 +107,8 @@ pub fn cuda_regex_software_fallback_comparison_evidence(
     )
 }
 
+// Inline: `vyre_driver_cuda::regex_hardware_comparison` is `pub(crate)`, so no integration test can
+// reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

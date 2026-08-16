@@ -15,7 +15,7 @@ pub const OP_ID: &str = "vyre-primitives::bitset::not";
 /// # Example
 ///
 /// ```
-/// use crate::bitset::not::bitset_not;
+/// use vyre_libs::bitset::not::bitset_not;
 ///
 /// let program = bitset_not("input", "out", 4);
 /// assert_eq!(program.entry.len(), 1);
@@ -60,7 +60,7 @@ pub fn try_cpu_ref_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String>
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_not("input", "out", 1),
         Some(|| {

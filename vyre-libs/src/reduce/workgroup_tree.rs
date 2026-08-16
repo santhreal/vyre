@@ -7,7 +7,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for an f32 workgroup sum over a scratch buffer.
@@ -342,9 +342,7 @@ fn reduction_program(spec: WorkgroupReduction<'_>) -> Program {
 fn child_region(generator: &'static str, parent_op_id: &str, body: Vec<Node>) -> Node {
     wrap_child_region(
         generator,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         body,
     )
 }
@@ -402,7 +400,7 @@ fn fixture_u32(values: &[u32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         SUM_F32_OP_ID,
         || workgroup_sum_f32("values", "out", 4, 4),
         Some(|| vec![vec![
@@ -414,7 +412,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         SUM_U32_OP_ID,
         || workgroup_sum_u32("values", "out", 4, 4),
         Some(|| vec![vec![
@@ -426,7 +424,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         MAX_F32_OP_ID,
         || workgroup_max_f32("values", "out", 4, 4),
         Some(|| vec![vec![
@@ -605,7 +603,7 @@ mod tests {
         assert_eq!(
             source_region
                 .expect("Fix: child Region must name parent.")
-                .name,
+                .as_str(),
             "vyre-libs::math::reduce_mean"
         );
         assert!(!body.is_empty());

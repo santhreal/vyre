@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use vyre_driver::materialize::{
-    self, DeviceSpec, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
-    MaterializerDevice, ResidentInstance,
+    self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
+    ResidentInstance,
 };
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, CompiledPipeline,
@@ -14,18 +14,6 @@ use vyre_megakernel::{Artifact, TargetPayload};
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
 use crate::{CudaBackendRegistration, CUDA_BACKEND_ID};
-
-/// CUDA rejection text. One string differs from the neutral wording: this
-/// backend reports an unpreserved retained value as an unproduced output.
-const MESSAGES: InstanceMessages = InstanceMessages {
-    missing_retained_value: |value| {
-        materialize::invalid_module(&format!(
-            "selected execution did not produce canonical output value {}",
-            value.0
-        ))
-    },
-    ..materialize::NEUTRAL_MESSAGES
-};
 
 pub(crate) struct CudaMaterializer {
     backend: CudaBackend,
@@ -74,8 +62,15 @@ impl ArtifactMaterializer for CudaMaterializer {
                         config: module.config,
                     })
                 })?;
+        // The neutral rejection record, in full. This backend used to reword an
+        // unpreserved retained value as "did not produce canonical output
+        // value", which is the neutral text for an unproduced OUTPUT, so one
+        // sentence stood for two contract violations and a retained-preservation
+        // failure could not be read as anything but an output failure.
         Ok(Box::new(CudaArtifactInstance {
-            core: self.descriptor.instance(artifact, payload, MESSAGES),
+            core: self
+                .descriptor
+                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
             modules,
         }))
     }

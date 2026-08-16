@@ -13,7 +13,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::blur";
@@ -208,9 +208,7 @@ fn gaussian_blur_pass(
     } else {
         height.max(1)
     };
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
 
     // The per-pixel blur body: for each channel, run a weighted sum
     // over the kernel window, reading neighbors along the given axis.

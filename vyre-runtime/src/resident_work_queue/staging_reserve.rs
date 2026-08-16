@@ -51,6 +51,8 @@ where
         })
 }
 
+// Inline: covers `reserve_hash_map_capacity`, `reserve_vec_capacity`, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
     use super::*;

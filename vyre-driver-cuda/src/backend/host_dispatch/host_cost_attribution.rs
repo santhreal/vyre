@@ -681,6 +681,8 @@ fn digest_bytes(bytes: &[u8]) -> u64 {
     acc
 }
 
+// Inline: covers `MIN_PAIRED_ROUNDS`, `attribution_program`, `compare_cells`, `digest_bytes` and 4
+// more items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

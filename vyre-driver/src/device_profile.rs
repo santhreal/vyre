@@ -298,6 +298,8 @@ impl From<DeviceProfile> for validate::BackendCapabilities {
     }
 }
 
+// Inline: `vyre_driver::device_profile` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{DeviceProfile, DeviceTimingQuality};

@@ -72,7 +72,7 @@ mod non_panic_wrapper_tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_popcount("input", "count", 2),
         Some(|| {

@@ -411,6 +411,53 @@ pub fn node_bound_name(node: &Node) -> Option<&Ident> {
     node_scalars(node).binding.map(|(_, name)| name)
 }
 
+/// The stream tag a node names, or `None` when it names none.
+///
+/// The ONE owner of the tag namespace, which is neither the value namespace
+/// [`node_scalars`] answers nor the buffer namespace [`node_buffer_refs`]
+/// answers. A tag names an in-flight asynchronous transfer: the start that
+/// opens it and the wait that closes it carry the same tag, and that pairing
+/// is what `validate::async_pipeline` reads. A pass that renames a value must
+/// therefore leave tags alone, and a pass that renames a tag must rewrite both
+/// ends of the pair.
+///
+/// Exhaustive with no catch-all arm, deliberately, for the same reason
+/// [`node_scalars`] is: a variant that gains a tag position cannot be left out
+/// of a rename in silence, which would separate a start from its wait and make
+/// the pipeline analysis read a transfer nothing waits for.
+#[inline]
+#[must_use]
+pub fn node_tag(node: &Node) -> Option<&Ident> {
+    match node {
+        Node::AsyncLoad { tag, .. }
+        | Node::AsyncStore { tag, .. }
+        | Node::AsyncWait { tag }
+        | Node::Trap { tag, .. }
+        | Node::Resume { tag } => Some(tag),
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
+        | Node::Opaque(_) => None,
+    }
+}
+
 /// The buffers a node names directly, split by direction.
 #[derive(Debug, Clone, Copy)]
 pub struct BufferRefs<'a> {

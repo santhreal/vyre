@@ -63,6 +63,14 @@ name = "ci-matrix"
 findings = 0
 
 [[gate]]
+name = "ci-registry"
+findings = 0
+
+[[gate]]
+name = "ci-steps"
+findings = 0
+
+[[gate]]
 name = "ci-required"
 findings = 0
 
@@ -79,11 +87,47 @@ name = "conformance-matrix"
 findings = 0
 
 [[gate]]
+name = "crate-pages"
+findings = 0
+
+[[gate]]
 name = "cross-target"
 findings = 0
 
 [[gate]]
+name = "crate-ownership"
+findings = 0
+
+[[gate]]
+name = "crate-readmes"
+findings = 0
+
+[[gate]]
+name = "testing-guides"
+findings = 0
+
+[[gate]]
+name = "test-material-placement"
+findings = 0
+
+[[gate]]
 name = "dep-drift"
+findings = 0
+
+[[gate]]
+name = "cuda-parity"
+findings = 0
+
+[[gate]]
+name = "metal-parity"
+findings = 0
+
+[[gate]]
+name = "spirv-parity"
+findings = 0
+
+[[gate]]
+name = "wire-determinism"
 findings = 0
 
 [[gate]]
@@ -127,6 +171,10 @@ name = "feature-isolation"
 findings = 0
 
 [[gate]]
+name = "feature-msrv"
+findings = 0
+
+[[gate]]
 name = "feature-matrix"
 findings = 0
 
@@ -140,6 +188,10 @@ findings = 0
 
 [[gate]]
 name = "gate1"
+findings = 0
+
+[[gate]]
+name = "gate-canon"
 findings = 0
 
 [[gate]]
@@ -267,6 +319,10 @@ name = "optimization-matrix"
 findings = 0
 
 [[gate]]
+name = "oracle-sweeps"
+findings = 0
+
+[[gate]]
 name = "package-readiness"
 findings = 0
 
@@ -276,6 +332,10 @@ findings = 0
 
 [[gate]]
 name = "path-deps-resolve"
+findings = 0
+
+[[gate]]
+name = "placement-predicates"
 findings = 0
 
 [[gate]]
@@ -336,6 +396,10 @@ findings = 0
 
 [[gate]]
 name = "repo-hygiene"
+findings = 0
+
+[[gate]]
+name = "script-ledger"
 findings = 0
 
 [[gate]]

@@ -1,17 +1,35 @@
 //! MoE Gating: softmax(scores) + top-k selection.
 //!
-//! Category-A composition over `nn::softmax` and `nn::top_k`.
+//! Category-A composition over the tiled reduce skeleton `nn::softmax` uses and
+//! the repeated-argmax top-k body `nn::quest_select_top_k` publishes. The gate
+//! is a softmax denominator with a duplicate-suppressed top-k on the end, so it
+//! reduces the score vector across the lanes of one workgroup exactly as
+//! softmax does rather than walking it in lane zero.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::builder::cooperative::chunks;
+use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
+use crate::builder::{strided_accumulate_child, strided_writeback_child};
 use crate::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
+use crate::reduce::workgroup_tree::{max_f32_child, sum_f32_child, WorkgroupReductionScope};
+use vyre_foundation::composition::wrap_child_region;
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp, PORTABLE_WORKGROUP_INVOCATIONS,
+};
 
 const OP_ID: &str = "vyre-libs::nn::moe_gate";
 const SCORES_SCRATCH: &str = "__moe_gate_scores_scratch";
 const STATS_SCRATCH: &str = "__moe_gate_stats";
+const LANE_SCRATCH: &str = "__moe_gate_lane_scratch";
 const SOFTMAX_STATS_OP_ID: &str = "vyre-libs::nn::moe_gate::softmax_stats";
 const WEIGHT_WRITE_OP_ID: &str = "vyre-libs::nn::moe_gate::weight_write";
+
+/// Lanes the gate reduces over.
+///
+/// `nn::softmax` tiles the same score vector at this width and gating is that
+/// softmax with a top-k on the end, so the two arms state one geometry: a plan
+/// that fuses them keeps the workgroup shape both were built for.
+const GATE_TILE: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
 
 /// Build a Program that computes MoE gating.
 /// `input_scores`: `num_experts`, `output_indices`: `k`, `output_weights`: `k`.
@@ -23,38 +41,48 @@ pub fn moe_gate(
     num_experts: u32,
     k: u32,
 ) -> Program {
-    // Lane-0 deterministic gate: stable softmax denominator followed
-    // by duplicate-suppressed top-k selection.
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
-    let body = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-        vec![
-            wrap_child_region(
-                SOFTMAX_STATS_OP_ID,
-                parent.clone(),
-                softmax_stats_body(input_scores, num_experts),
+    let expert_chunks = chunks(num_experts, GATE_TILE);
+    // The top-k pass suppresses a chosen expert by overwriting its score, so it
+    // reads a workgroup copy rather than the caller's read-only input.
+    let mut phases = vec![ReducePhase {
+        accumulate: strided_writeback_child(
+            OP_ID,
+            GATE_TILE,
+            expert_chunks,
+            num_experts,
+            SCORES_SCRATCH,
+            Vec::new(),
+            |idx| Expr::load(input_scores, idx),
+        ),
+        reductions: Vec::new(),
+        publish: Vec::new(),
+    }];
+    phases.extend(softmax_stats_phases(OP_ID, input_scores, num_experts));
+    // Selection pass `j` reads the expert pass `j - 1` suppressed, so the scan
+    // is sequential in the selection index and stays in one lane.
+    phases.push(ReducePhase {
+        accumulate: Node::if_then(
+            Expr::and(
+                Expr::is_first_workgroup(),
+                Expr::eq(Expr::var("local"), Expr::u32(0)),
             ),
-            wrap_child_region(
+            vec![wrap_child_region(
                 QUEST_SELECT_TOP_K_OP_ID,
-                parent.clone(),
+                Ident::from(OP_ID),
                 quest_select_top_k_body(SCORES_SCRATCH, output_indices, num_experts, k, f32::MIN),
-            ),
-            wrap_child_region(
-                WEIGHT_WRITE_OP_ID,
-                parent,
-                weight_write_body(input_scores, output_indices, output_weights, k),
-            ),
-        ],
-    )];
+            )],
+        ),
+        reductions: Vec::new(),
+        publish: Vec::new(),
+    });
 
     // V022: a Program may declare at most one ::output buffer.
     // `output_weights` is the scalar gating result the reference
     // interpreter compares against; `output_indices` is a read-write
     // storage buffer the caller consumes alongside.
-    Program::wrapped(
-        vec![
+    tiled_reduce_program(TiledReduceProgram {
+        generator: OP_ID,
+        buffers: vec![
             BufferDecl::storage(input_scores, 0, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(num_experts),
             BufferDecl::storage(output_indices, 1, BufferAccess::ReadWrite, DataType::U32)
@@ -62,88 +90,124 @@ pub fn moe_gate(
             BufferDecl::output(output_weights, 2, DataType::F32).with_count(k),
             BufferDecl::workgroup(SCORES_SCRATCH, num_experts, DataType::F32),
             BufferDecl::workgroup(STATS_SCRATCH, 2, DataType::F32),
+            BufferDecl::workgroup(LANE_SCRATCH, GATE_TILE, DataType::F32),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+        workgroup: [GATE_TILE, 1, 1],
+        phases,
+        writeback: Some(weight_write_child(
+            OP_ID,
+            input_scores,
+            output_indices,
+            output_weights,
+            k,
+        )),
+    })
 }
 
-fn softmax_stats_body(input_scores: &str, num_experts: u32) -> Vec<Node> {
+/// The two reduce passes that leave `STATS_SCRATCH` holding the stable-softmax
+/// statistics `[max(scores), sum(exp(scores - max))]`.
+///
+/// Both passes reduce through the same lane scratch, so the maximum has to be
+/// published before the sum pass overwrites the slot it was reduced in.
+fn softmax_stats_phases(
+    parent: &'static str,
+    input_scores: &str,
+    num_experts: u32,
+) -> Vec<ReducePhase> {
+    let expert_chunks = chunks(num_experts, GATE_TILE);
     vec![
-        Node::let_bind("max_score", Expr::f32(f32::MIN)),
-        Node::loop_for(
-            "i",
-            Expr::u32(0),
-            Expr::u32(num_experts),
-            vec![
-                Node::let_bind("score", Expr::load(input_scores, Expr::var("i"))),
-                Node::store(SCORES_SCRATCH, Expr::var("i"), Expr::var("score")),
-                Node::assign(
-                    "max_score",
-                    Expr::max(Expr::var("max_score"), Expr::var("score")),
-                ),
-            ],
-        ),
-        Node::let_bind("sum_exp", Expr::f32(0.0)),
-        Node::loop_for(
-            "i",
-            Expr::u32(0),
-            Expr::u32(num_experts),
-            vec![Node::assign(
-                "sum_exp",
-                Expr::add(
-                    Expr::var("sum_exp"),
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(Expr::sub(
-                            Expr::load(input_scores, Expr::var("i")),
-                            Expr::var("max_score"),
-                        )),
-                    },
-                ),
+        ReducePhase {
+            accumulate: strided_accumulate_child(
+                parent,
+                GATE_TILE,
+                expert_chunks,
+                num_experts,
+                "lane_max",
+                Expr::f32(f32::MIN),
+                LANE_SCRATCH,
+                |idx, acc| Expr::max(acc, Expr::load(input_scores, idx)),
+            ),
+            reductions: vec![max_f32_child(
+                parent,
+                GATE_TILE,
+                LANE_SCRATCH,
+                WorkgroupReductionScope::FirstWorkgroup,
             )],
-        ),
-        Node::store(STATS_SCRATCH, Expr::u32(0), Expr::var("max_score")),
-        Node::store(STATS_SCRATCH, Expr::u32(1), Expr::var("sum_exp")),
+            publish: vec![Node::store(
+                STATS_SCRATCH,
+                Expr::u32(0),
+                Expr::load(LANE_SCRATCH, Expr::u32(0)),
+            )],
+        },
+        ReducePhase {
+            accumulate: strided_accumulate_child(
+                parent,
+                GATE_TILE,
+                expert_chunks,
+                num_experts,
+                "lane_sum_exp",
+                Expr::f32(0.0),
+                LANE_SCRATCH,
+                |idx, acc| {
+                    Expr::add(
+                        acc,
+                        exp_expr(Expr::sub(
+                            Expr::load(input_scores, idx),
+                            Expr::load(STATS_SCRATCH, Expr::u32(0)),
+                        )),
+                    )
+                },
+            ),
+            reductions: vec![sum_f32_child(
+                parent,
+                GATE_TILE,
+                LANE_SCRATCH,
+                WorkgroupReductionScope::FirstWorkgroup,
+            )],
+            publish: vec![Node::store(
+                STATS_SCRATCH,
+                Expr::u32(1),
+                Expr::load(LANE_SCRATCH, Expr::u32(0)),
+            )],
+        },
     ]
 }
 
-fn weight_write_body(
+/// The writeback that turns `k` selected expert indices into gating weights.
+fn weight_write_child(
+    parent: &'static str,
     input_scores: &str,
     output_indices: &str,
     output_weights: &str,
     k: u32,
-) -> Vec<Node> {
-    vec![
-        Node::let_bind("weight_max_score", Expr::load(STATS_SCRATCH, Expr::u32(0))),
-        Node::let_bind("weight_sum_exp", Expr::load(STATS_SCRATCH, Expr::u32(1))),
-        Node::loop_for(
-            "j",
-            Expr::u32(0),
-            Expr::u32(k),
-            vec![
-                Node::let_bind("best_idx", Expr::load(output_indices, Expr::var("j"))),
-                Node::let_bind(
-                    "best_score",
-                    Expr::load(input_scores, Expr::var("best_idx")),
-                ),
-                Node::store(
-                    output_weights,
-                    Expr::var("j"),
-                    Expr::div(
-                        Expr::UnOp {
-                            op: UnOp::Exp,
-                            operand: Box::new(Expr::sub(
-                                Expr::var("best_score"),
-                                Expr::var("weight_max_score"),
-                            )),
-                        },
-                        Expr::var("weight_sum_exp"),
-                    ),
-                ),
-            ],
-        ),
-    ]
+) -> Node {
+    strided_writeback_child(
+        parent,
+        GATE_TILE,
+        chunks(k, GATE_TILE),
+        k,
+        output_weights,
+        vec![
+            Node::let_bind("weight_max_score", Expr::load(STATS_SCRATCH, Expr::u32(0))),
+            Node::let_bind("weight_sum_exp", Expr::load(STATS_SCRATCH, Expr::u32(1))),
+        ],
+        |j| {
+            Expr::div(
+                exp_expr(Expr::sub(
+                    Expr::load(input_scores, Expr::load(output_indices, j)),
+                    Expr::var("weight_max_score"),
+                )),
+                Expr::var("weight_sum_exp"),
+            )
+        },
+    )
+}
+
+fn exp_expr(operand: Expr) -> Expr {
+    Expr::UnOp {
+        op: UnOp::Exp,
+        operand: Box::new(operand),
+    }
 }
 
 inventory::submit! {
@@ -186,43 +250,40 @@ fn u32_fixture(values: &[u32]) -> Vec<u8> {
 }
 
 fn softmax_stats_program() -> Program {
-    Program::wrapped(
-        vec![
+    tiled_reduce_program(TiledReduceProgram {
+        generator: SOFTMAX_STATS_OP_ID,
+        buffers: vec![
             BufferDecl::storage("scores", 0, BufferAccess::ReadOnly, DataType::F32).with_count(8),
-            BufferDecl::storage(SCORES_SCRATCH, 1, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(8),
-            BufferDecl::storage(STATS_SCRATCH, 2, BufferAccess::ReadWrite, DataType::F32)
+            BufferDecl::storage(STATS_SCRATCH, 1, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(2),
+            BufferDecl::workgroup(LANE_SCRATCH, GATE_TILE, DataType::F32),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(
-            SOFTMAX_STATS_OP_ID,
-            vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                softmax_stats_body("scores", 8),
-            )],
-        )],
-    )
+        workgroup: [GATE_TILE, 1, 1],
+        phases: softmax_stats_phases(SOFTMAX_STATS_OP_ID, "scores", 8),
+        writeback: None,
+    })
 }
 
 fn weight_write_program() -> Program {
-    Program::wrapped(
-        vec![
+    tiled_reduce_program(TiledReduceProgram {
+        generator: WEIGHT_WRITE_OP_ID,
+        buffers: vec![
             BufferDecl::storage("scores", 0, BufferAccess::ReadOnly, DataType::F32).with_count(8),
             BufferDecl::storage("indices", 1, BufferAccess::ReadOnly, DataType::U32).with_count(2),
             BufferDecl::storage(STATS_SCRATCH, 2, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(2),
             BufferDecl::output("weights", 3, DataType::F32).with_count(2),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(
+        workgroup: [GATE_TILE, 1, 1],
+        phases: Vec::new(),
+        writeback: Some(weight_write_child(
             WEIGHT_WRITE_OP_ID,
-            vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                weight_write_body("scores", "indices", "weights", 2),
-            )],
-        )],
-    )
+            "scores",
+            "indices",
+            "weights",
+            2,
+        )),
+    })
 }
 
 inventory::submit! {
@@ -231,11 +292,7 @@ inventory::submit! {
         softmax_stats_program,
         Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
-            vec![vec![
-                f32_fixture(&scores),
-                f32_fixture(&[0.0; 8]),
-                f32_fixture(&[0.0; 2]),
-            ]]
+            vec![vec![f32_fixture(&scores), f32_fixture(&[0.0; 2])]]
         }),
         Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
@@ -244,7 +301,7 @@ inventory::submit! {
                 .iter()
                 .map(|score| libm::expf(*score - max_score))
                 .sum::<f32>();
-            vec![vec![f32_fixture(&scores), f32_fixture(&[max_score, sum_exp])]]
+            vec![vec![f32_fixture(&[max_score, sum_exp])]]
         }),
     )
     .with_category("nn")
@@ -325,6 +382,42 @@ mod tests {
         ];
         for (actual, expected) in weights.iter().zip(expected.iter()) {
             assert!((actual - expected).abs() <= 1.0e-6);
+        }
+    }
+
+    #[test]
+    fn moe_gate_covers_an_expert_count_past_one_lane_pass() {
+        // 300 experts over `GATE_TILE` lanes needs two chunks, so the last
+        // chunk overshoots the space and the walk's bounds guard is what keeps
+        // the reduction exact. A ceiling that dropped the tail would miss the
+        // maximum at 299 and a guard that let the tail run would fold garbage
+        // into the denominator.
+        let mut scores: Vec<f32> = (0..300).map(|i| 0.001 * i as f32).collect();
+        scores[150] = 5.0;
+        scores[299] = 9.0;
+        let program = moe_gate("scores", "indices", "weights", 300, 2);
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(f32_bytes(&scores)),
+                Value::from(vec![0u8; 8]),
+                Value::from(vec![0u8; 8]),
+            ],
+        )
+        .expect("Fix: moe_gate must execute in the reference interpreter.");
+
+        assert_eq!(u32_words(&outputs[0].to_bytes()), vec![299, 150]);
+        let sum_exp = scores
+            .iter()
+            .map(|score| libm::expf(*score - 9.0))
+            .sum::<f32>();
+        let expected = [1.0 / sum_exp, libm::expf(5.0 - 9.0) / sum_exp];
+        let weights = f32_words(&outputs[1].to_bytes());
+        for (actual, expected) in weights.iter().zip(expected.iter()) {
+            assert!(
+                (actual - expected).abs() <= 1.0e-6,
+                "got {actual}, want {expected}"
+            );
         }
     }
 }

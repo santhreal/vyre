@@ -2,7 +2,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for workgroup-local u32 any reduction.
@@ -59,9 +59,7 @@ pub fn workgroup_any_u32_child_prefixed(
 ) -> Node {
     wrap_child_region(
         WORKGROUP_ANY_U32_OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         workgroup_any_u32_body_prefixed(values, out_var, count, iter_var),
     )
 }
@@ -93,7 +91,7 @@ pub fn cpu_ref(values: &[u32]) -> u32 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         WORKGROUP_ANY_U32_OP_ID,
         || workgroup_any_u32("values", "out", 4),
         Some(|| vec![vec![

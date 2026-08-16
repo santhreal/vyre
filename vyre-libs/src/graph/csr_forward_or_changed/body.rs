@@ -1,6 +1,6 @@
 use vyre_foundation::composition::wrap_child_region;
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{Expr, Node};
 
 use super::layout::OP_ID;
@@ -94,9 +94,7 @@ pub fn csr_forward_or_changed_child_prefixed(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         csr_forward_or_changed_body_prefixed(
             shape,
             frontier_out,

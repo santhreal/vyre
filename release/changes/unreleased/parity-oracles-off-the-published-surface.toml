@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The vyre-libs published surface no longer carries the parity fixed-point oracles. FIXED_ONE, to_fixed, from_fixed, fixed_mul, fixed_matvec, fixed_sdiv_by_positive, signed_fixed_17, signed_fixed_18, signed_fixed_19, xorshift32, u32_bytes and wrap_program_sequence were test scaffolding shipped as library API; a consumer reaches the same oracles at vyre_test_support::fixed_point, which is a dev-dependency and not part of any shipped binary."

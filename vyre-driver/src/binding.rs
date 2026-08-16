@@ -558,6 +558,8 @@ fn validate_input_len(
     Ok(())
 }
 
+// Inline: `vyre_driver::binding` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod exact_length_tests {
     use super::*;
@@ -713,6 +715,8 @@ impl BackendLayoutFingerprint {
     }
 }
 
+// Inline: `vyre_driver::binding` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod n7_tests {
     use super::*;
@@ -835,6 +839,7 @@ mod n7_tests {
     }
 }
 
+// Inline: covers `preferred_alignment`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

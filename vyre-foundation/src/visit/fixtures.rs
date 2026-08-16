@@ -16,7 +16,6 @@ use crate::ir::{
     NodeExtension, Program, SubgroupReduceOp, UnOp,
 };
 use crate::ir_inner::model::tile::{Layout, Residency, Tile};
-use crate::ir_inner::model::expr::GeneratorRef;
 use crate::memory_model::MemoryOrdering;
 use proptest::prelude::*;
 use std::sync::Arc;
@@ -338,7 +337,7 @@ pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
             )
                 .prop_map(|(generator, source_region, body)| Node::Region {
                     generator: Ident::from(generator),
-                    source_region: source_region.map(|name| GeneratorRef { name }),
+                    source_region: source_region.map(Ident::from),
                     body: Arc::new(body),
                 }),
             (

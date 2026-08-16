@@ -704,7 +704,7 @@ fn validate_sum_product_evaluate_inputs(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || sum_product_evaluate(
             "kinds",
@@ -746,7 +746,7 @@ inventory::submit! {
 // child_counts, children, weights, leaf_values, out (seeded zero). reference_eval
 // returns the sole RW buffer `out` = [2.0, 3.0, 5.0, 10.0] in 16.16.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID_LEVELED,
         || sum_product_evaluate_leveled(
             "depths",

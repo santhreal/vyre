@@ -21,6 +21,7 @@ where
     )
 }
 
+// Inline: covers `resize_vec_with`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::resize_vec_with;

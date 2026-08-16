@@ -156,7 +156,7 @@ pub fn reference_planar_rewrite_schedule(candidates: &[u32], h: u32, w: u32, k: 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || planar_rewrite_schedule("candidates", "chosen", 4, 4, 2),
         Some(|| {

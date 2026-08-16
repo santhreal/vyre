@@ -233,6 +233,7 @@ fn decode_pod_output_into<T: Pod>(
     Ok(())
 }
 
+// Inline: covers `decode_pod_outputs`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;

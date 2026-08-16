@@ -114,6 +114,8 @@ pub fn emit_aot_launcher_target(
     })
 }
 
+// Inline: `vyre_driver::aot` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

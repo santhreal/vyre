@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::ir::{GeneratorRef, Ident};
+use vyre_foundation::ir::Ident;
 
 /// Stable Tier 2.5 op id for the BLAKE3 `G` mixing function.
 pub const BLAKE3_G_OP_ID: &str = "vyre-primitives::hash::blake3_g";
@@ -89,9 +89,7 @@ pub fn blake3_round(round_idx: usize, perm: &[usize; 16]) -> Vec<Node> {
         ));
     }
 
-    let parent = GeneratorRef {
-        name: BLAKE3_ROUND_OP_ID.to_string(),
-    };
+    let parent = Ident::from(BLAKE3_ROUND_OP_ID);
     let quartets: [(usize, usize, usize, usize, usize, usize); 8] = [
         (0, 4, 8, 12, 0, 1),
         (1, 5, 9, 13, 2, 3),
@@ -183,7 +181,7 @@ fn store_state_nodes(out: &str) -> Vec<Node> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         BLAKE3_G_OP_ID,
         || blake3_g_program("state", "message", "out"),
         Some(|| {
@@ -202,7 +200,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         BLAKE3_ROUND_OP_ID,
         || blake3_round_program("state", "message", "out"),
         Some(|| {

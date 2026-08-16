@@ -8,11 +8,26 @@
 use core::fmt;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
+};
+
+use crate::builder::cooperative::chunks;
+use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
 const RANK_QUERY_OP_ID: &str = "vyre-libs::math::succinct::rank1_query";
+/// Phase boundary naming the per-block popcount each lane stages for the scan.
+/// It is a phase of this operation and not an operation of its own, so it
+/// carries the anonymous prefix instead of borrowing an unrelated op id.
+const BLOCK_POPCOUNT_OP_ID: &str = "anonymous::vyre-libs::math::succinct::rank1_block_popcount";
+/// Per-lane superblock popcount, and the inclusive scan over it.
+const RANK_BLOCK_SCRATCH: &str = "__rank1_block_scratch";
+/// The staged addend the Blelloch sweep keeps so its result reads inclusive.
+const RANK_SCAN_SCRATCH: &str = "__rank1_scan_scratch";
+/// Set bits in every chunk of blocks the workgroup has already scanned.
+const RANK_CARRY: &str = "__rank1_carry";
 
 /// Build-time errors for succinct bitvector Programs.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -85,60 +100,142 @@ pub fn try_rank1_superblocks(
     block_words: u32,
 ) -> Result<Program, SuccinctBuildError> {
     let out_count = superblock_count(word_count, block_words)?;
-    let body = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-        vec![
-            Node::store(superblocks, Expr::u32(0), Expr::u32(0)),
-            Node::let_bind("rank_acc", Expr::u32(0)),
-            Node::loop_for(
-                "rank_word",
-                Expr::u32(0),
-                Expr::u32(word_count),
-                vec![
-                    Node::if_then(
-                        Expr::and(
-                            Expr::gt(Expr::var("rank_word"), Expr::u32(0)),
-                            Expr::eq(
-                                Expr::rem(Expr::var("rank_word"), Expr::u32(block_words)),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        vec![Node::store(
-                            superblocks,
-                            Expr::div(Expr::var("rank_word"), Expr::u32(block_words)),
-                            Expr::var("rank_acc"),
-                        )],
-                    ),
-                    Node::assign(
-                        "rank_acc",
-                        Expr::add(
-                            Expr::var("rank_acc"),
-                            Expr::popcount(Expr::load(bits, Expr::var("rank_word"))),
-                        ),
-                    ),
-                ],
+    // One lane per superblock, so the prefix scan this metadata is runs across
+    // the workgroup. The block count decides the width because the scan is over
+    // blocks: a bitvector with four of them has no work for 252 more lanes, and
+    // the Blelloch sweep needs a power of two to walk a balanced tree.
+    let tile = block_count(out_count)
+        .max(1)
+        .next_power_of_two()
+        .min(PORTABLE_WORKGROUP_INVOCATIONS);
+    let blocks = block_count(out_count);
+    let local = Expr::var("local");
+    let block = Expr::var("rank_block");
+    let carry = Expr::load(RANK_CARRY, Expr::u32(0));
+    let inclusive = Expr::load(RANK_BLOCK_SCRATCH, local.clone());
+    let staged = Expr::load(RANK_SCAN_SCRATCH, local.clone());
+
+    let mut chunk = vec![
+        Node::let_bind(
+            "rank_block",
+            Expr::add(
+                Expr::mul(Expr::var("rank_chunk"), Expr::u32(tile)),
+                local.clone(),
             ),
-            Node::store(superblocks, Expr::u32(out_count - 1), Expr::var("rank_acc")),
-        ],
-    )];
+        ),
+        wrap_child_region(
+            BLOCK_POPCOUNT_OP_ID,
+            Ident::from(RANK_SUPERBLOCKS_OP_ID),
+            vec![
+                Node::let_bind("rank_block_pop", Expr::u32(0)),
+                Node::if_then(
+                    Expr::lt(block.clone(), Expr::u32(blocks)),
+                    vec![Node::loop_for(
+                        "rank_block_word",
+                        Expr::u32(0),
+                        Expr::u32(block_words),
+                        vec![
+                            Node::let_bind(
+                                "rank_word",
+                                Expr::add(
+                                    Expr::mul(block.clone(), Expr::u32(block_words)),
+                                    Expr::var("rank_block_word"),
+                                ),
+                            ),
+                            // The last block is partial whenever `block_words`
+                            // does not divide the word count.
+                            Node::if_then(
+                                Expr::lt(Expr::var("rank_word"), Expr::u32(word_count)),
+                                vec![Node::assign(
+                                    "rank_block_pop",
+                                    Expr::add(
+                                        Expr::var("rank_block_pop"),
+                                        Expr::popcount(Expr::load(bits, Expr::var("rank_word"))),
+                                    ),
+                                )],
+                            ),
+                        ],
+                    )],
+                ),
+                Node::store(
+                    RANK_BLOCK_SCRATCH,
+                    local.clone(),
+                    Expr::var("rank_block_pop"),
+                ),
+            ],
+        ),
+        Node::barrier(),
+    ];
+    chunk.extend(blelloch_inclusive_sum_nodes(
+        RANK_BLOCK_SCRATCH,
+        RANK_SCAN_SCRATCH,
+        &local,
+        tile,
+    ));
+    // A superblock holds the count before its own block, which is the inclusive
+    // scan less this lane's own staged popcount, offset by every earlier chunk.
+    chunk.push(Node::if_then(
+        Expr::and(
+            Expr::is_first_workgroup(),
+            Expr::lt(block.clone(), Expr::u32(blocks)),
+        ),
+        vec![Node::store(
+            superblocks,
+            block.clone(),
+            Expr::add(carry.clone(), Expr::sub(inclusive.clone(), staged)),
+        )],
+    ));
+    // The carry advances only once every lane has read it, and the next chunk
+    // stages over the scan scratch only once the carry has read it.
+    chunk.push(Node::barrier());
+    chunk.push(Node::if_then(
+        Expr::eq(local.clone(), Expr::u32(tile - 1)),
+        vec![Node::store(
+            RANK_CARRY,
+            Expr::u32(0),
+            Expr::add(carry.clone(), inclusive),
+        )],
+    ));
+    chunk.push(Node::barrier());
+
+    let body = vec![
+        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::if_then(
+            Expr::eq(local.clone(), Expr::u32(0)),
+            vec![Node::store(RANK_CARRY, Expr::u32(0), Expr::u32(0))],
+        ),
+        Node::barrier(),
+        Node::loop_for(
+            "rank_chunk",
+            Expr::u32(0),
+            Expr::u32(chunks(blocks, tile)),
+            chunk,
+        ),
+        Node::if_then(
+            Expr::and(
+                Expr::is_first_workgroup(),
+                Expr::eq(local.clone(), Expr::u32(0)),
+            ),
+            vec![Node::store(superblocks, Expr::u32(out_count - 1), carry)],
+        ),
+    ];
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(bits, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(word_count.max(1)),
             BufferDecl::output(superblocks, 1, DataType::U32).with_count(out_count),
+            BufferDecl::workgroup(RANK_BLOCK_SCRATCH, tile, DataType::U32),
+            BufferDecl::workgroup(RANK_SCAN_SCRATCH, tile, DataType::U32),
+            BufferDecl::workgroup(RANK_CARRY, 1, DataType::U32),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(
-            RANK_SUPERBLOCKS_OP_ID,
-            vec![wrap_child_region(
-                crate::graph::path_reconstruct::OP_ID,
-                GeneratorRef {
-                    name: RANK_SUPERBLOCKS_OP_ID.to_string(),
-                },
-                body,
-            )],
-        )],
+        [tile, 1, 1],
+        vec![wrap_anonymous_region(RANK_SUPERBLOCKS_OP_ID, body)],
     ))
+}
+
+/// Superblocks a bitvector has, from the metadata length its sentinel closes.
+const fn block_count(out_count: u32) -> u32 {
+    out_count.saturating_sub(1)
 }
 
 /// Answer rank1-before-position queries from sparse superblocks.

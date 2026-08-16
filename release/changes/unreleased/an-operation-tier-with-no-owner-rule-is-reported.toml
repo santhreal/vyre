@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "An operation tier that reaches no owner rule is reported as the id that carries it, so a tier added to the registry cannot take the empty owner list a foundation operation gets."

@@ -207,7 +207,7 @@ fn radix_pass(src: &[u32], dst: &mut [u32], bits: u32, pass: usize) {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || radix_sort("input", "output", 4, 8),
         Some(|| {

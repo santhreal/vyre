@@ -621,6 +621,8 @@ pub(crate) fn validate_resident_allocation_budget(
     Ok(())
 }
 
+// Inline: covers `CudaResidentStore`, `ResidentBuffer`, `ResidentViewCache`, `resident` and 2 more
+// items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{

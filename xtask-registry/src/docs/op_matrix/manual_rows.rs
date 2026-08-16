@@ -1,11 +1,10 @@
 //! The scan construct rows the matrix carries by hand.
 //!
-//! These are owned outside the registry, so the generator preserves them
-//! verbatim and merges them with the rows it derives.
-
-use vyre_foundation::operation::OperationTier as OpTier;
-
-use super::record::OpRecord;
+//! Scan constructs are a tier vocabulary, not operations, and no registry
+//! declares them, so the generator preserves this section verbatim and appends
+//! the `[[op]]` rows it derives. Nothing else in the matrix is hand-written: an
+//! `[[op]]` row that named something the registry never registered published a
+//! surface the tree did not have.
 
 /// The manual header every rendered matrix opens with.
 pub(super) const SCAN_CONSTRUCT_MATRIX: &str = r#"# Manual scan construct tier data owned by VX-621/VX-622. Generated `[[op]]`
@@ -39,7 +38,6 @@ verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "native", wgpu = "native", metal = "native", hyperscan = "native", vectorscan = "native", rust_regex = "native", dpu = "unsupported", fpga = "unsupported" }
 proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
-bench_targets = []
 
 [[scan_construct]]
 id = "unsupported_backtracking_constructs"
@@ -53,7 +51,6 @@ verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "unsupported", fpga = "unsupported" }
 proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
-bench_targets = []
 
 [[scan_construct]]
 id = "lookaround_prefilter_constructs"
@@ -67,7 +64,6 @@ verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "host-reference", cuda = "prefilter", wgpu = "prefilter", metal = "prefilter", hyperscan = "prefilter", vectorscan = "prefilter", rust_regex = "unsupported", dpu = "unsupported", fpga = "prefilter" }
 proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
-bench_targets = []
 
 [[scan_construct]]
 id = "hardware_rule_database_constructs"
@@ -81,7 +77,6 @@ verifier_required = false
 accelerator_only = true
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "external-accelerator", fpga = "external-accelerator" }
 proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
-bench_targets = []
 
 [[scan_construct]]
 id = "capture_extraction_constructs"
@@ -95,56 +90,5 @@ verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "verifier", wgpu = "verifier", metal = "verifier", hyperscan = "verifier", vectorscan = "verifier", rust_regex = "native", dpu = "unsupported", fpga = "verifier" }
 proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
-bench_targets = []
 
 "#;
-
-pub(super) fn manual_records() -> Vec<OpRecord> {
-    vec![
-        OpRecord {
-            family: "integer_strength_reduction".to_string(),
-            tier: OpTier::Foundation,
-            owners: vec!["vyre-foundation/src/optimizer/passes/algebraic/strength_reduce".to_string()],
-            ops: vec![
-                "mul_power_of_two_to_shift".to_string(),
-                "div_power_of_two_to_shift".to_string(),
-                "mod_power_of_two_to_and".to_string(),
-                "shift_add_decomposition".to_string(),
-                "constant_division".to_string(),
-            ],
-            registry_sources: vec!["manual.foundation_ir".to_string()],
-            duplicate_ok: false,
-            reference: "not_applicable",
-            foundation_ir: "supported",
-            cuda: "not_applicable",
-            wgpu: "not_applicable",
-            spirv: "not_applicable",
-            release_blocking_notes:
-                "Backend rows are not applicable because the original IR should be rewritten before lowering."
-                    .to_string(),
-            tests: vec![
-                "vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests/mod.rs"
-                    .to_string(),
-            ],
-            bench_targets: vec!["integer_arithmetic_micro".to_string()],
-        },
-        OpRecord {
-            family: "elementwise_add".to_string(),
-            tier: OpTier::Foundation,
-            owners: vec!["vyre-bench/src/cases/elementwise.rs".to_string()],
-            ops: vec!["f32_add".to_string()],
-            registry_sources: vec!["manual.bench".to_string()],
-            duplicate_ok: false,
-            reference: "supported",
-            foundation_ir: "supported",
-            cuda: "supported",
-            wgpu: "supported",
-            spirv: "experimental",
-            release_blocking_notes:
-                "CUDA is the canonical performance backend for this release; active-time benchmark target is in BENCH_TARGETS.toml."
-                    .to_string(),
-            tests: vec!["vyre-driver-cuda/tests/resident_dispatch_contracts.rs".to_string()],
-            bench_targets: vec!["foundation.elementwise.add.1m".to_string()],
-        },
-    ]
-}

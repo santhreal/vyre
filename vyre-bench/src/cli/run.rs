@@ -1,12 +1,13 @@
 use crate::api::suite::SuiteKind;
 use crate::report::json::ReportSchema;
-use crate::runner::{execute_suite, RunConfig};
+use crate::runner::{execute_suite, refuse_unoptimized_release_measurement, RunConfig};
 
 pub(super) fn execute_run_matrix(
     registry: &crate::registry::BenchRegistry,
     suite: &SuiteKind,
     config: &RunConfig,
 ) -> anyhow::Result<Vec<ReportSchema>> {
+    refuse_unoptimized_release_measurement(suite)?;
     match suite {
         SuiteKind::CrossBackend if config.backend_id.is_none() => {
             let mut reports = Vec::new();

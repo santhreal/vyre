@@ -98,6 +98,8 @@ impl CudaDispatchPlan {
     }
 }
 
+// Inline: covers `CudaDispatchPlan`, `compute_ordered_output_indices`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;

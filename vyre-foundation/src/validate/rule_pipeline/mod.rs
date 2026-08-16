@@ -18,6 +18,7 @@ use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::visit::child_bodies;
 use crate::visit::node_visitor::{dispatch_node, NodeVisitor};
 use hashbrown::hash_map::RawEntryMut;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -110,6 +111,18 @@ pub fn validate_with_options(
     report
         .errors
         .extend(crate::validate::shape_predicate::check_shape_predicates(
+            program,
+        ));
+
+    // V131/V132/V133: async copy tag discipline. Reports a tag started while
+    // it is already in flight, a wait with nothing to wait for, and a transfer
+    // left in flight where the invocation ends. All three are relations
+    // between nodes on a path, which the node walk cannot see. The
+    // differential property in `tests` runs this pass on its legacy arm too,
+    // because a pass only one arm runs makes every async program a mismatch.
+    report
+        .errors
+        .extend(crate::validate::async_pipeline::check_async_pipeline(
             program,
         ));
 
@@ -422,21 +435,6 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                                 }),
                             );
                         }
-                        Node::Block(body) => {
-                            let depth = self.current_depth();
-                            let divergent = self.current_divergent();
-                            push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
-                        }
-                        // A region scopes its body like a block: a `let` inside
-                        // one does not outlive the region. `region_inline_scope`
-                        // pins that, because `region_inline` flattening a Region
-                        // into its parent is only sound while the parent cannot
-                        // already see the flattened bindings.
-                        Node::Region { body, .. } => {
-                            let depth = self.current_depth();
-                            let divergent = self.current_divergent();
-                            push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
-                        }
                         Node::TileElementwise { inputs, body, .. } => {
                             let depth = self.current_depth();
                             let divergent = self.current_divergent();
@@ -450,7 +448,32 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                                 }),
                             );
                         }
-                        _ => {}
+                        // Every other variant descends through the one owner
+                        // of which variants nest bodies. A body scopes its
+                        // bindings like a block: a `let` inside one does not
+                        // outlive it. `region_inline_scope` pins that, because
+                        // `region_inline` flattening a Region into its parent
+                        // is only sound while the parent cannot already see the
+                        // flattened bindings. A leaf yields no body and pushes
+                        // nothing, and a body-bearing variant added tomorrow
+                        // descends here instead of having its children skipped
+                        // by every rule in the pipeline.
+                        other => {
+                            let depth = self.current_depth();
+                            let divergent = self.current_divergent();
+                            for body in child_bodies(other).into_iter().rev() {
+                                if body.is_empty() {
+                                    continue;
+                                }
+                                push_nested_sequence(
+                                    &mut stack,
+                                    body,
+                                    divergent,
+                                    depth + 1,
+                                    None,
+                                );
+                            }
+                        }
                     }
                     for issue in &mut self.errors[first_new_error..] {
                         if matches!(issue.location(), ValidationLocation::Program) {
@@ -590,23 +613,26 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
     /// the per-node rule family this belongs to; `V117` sat in the
     /// malformed-frame-stream range and is gone.
     ///
-    /// `source` and `destination` are storage-tier tags, not buffer-table
-    /// entries: a transfer names an endpoint outside the dispatch's buffers, so
-    /// neither is resolved. `extension_adversarial::async_extension_tags_remain_structural`
-    /// pins that.
+    /// `source` and `destination` are storage-tier tags first: a transfer may
+    /// name an endpoint outside the dispatch's buffers, so neither is required
+    /// to resolve. `extension_adversarial::async_extension_tags_remain_structural`
+    /// pins that. A destination that DOES resolve is a buffer the target
+    /// compilers store through, so it carries the writability rule every other
+    /// write carries; `bytes_rejection::check_async_destination` owns it.
     ///
     /// What this does NOT do is record alias accesses. `V116` is owned by
     /// `super::fusion_safety`, which records all four operands; recording two of
     /// them here as well is what produced two answers for one rule.
     fn validate_async_transfer(
         &mut self,
+        destination: &Ident,
         offset: &Expr,
         size: &Expr,
         tag: &Ident,
     ) -> ControlFlow<Infallible> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
-        node_rules::check_async_tag(tag, &mut self.errors);
+        node_rules::check_async_transfer(destination, tag, &self.buffers, &mut self.errors);
         // The offset and size operands are expressions like any other, and
         // going unvalidated meant a load from an undeclared buffer inside a
         // transfer size was accepted while the same load in a store index was
@@ -646,24 +672,24 @@ macro_rules! async_transfer_visitors {
             &mut self,
             _node: &Node,
             _source: &Ident,
-            _destination: &Ident,
+            destination: &Ident,
             offset: &Expr,
             size: &Expr,
             tag: &Ident,
         ) -> ControlFlow<Self::Break> {
-            self.validate_async_transfer(offset, size, tag)
+            self.validate_async_transfer(destination, offset, size, tag)
         }
 
         fn visit_async_store(
             &mut self,
             _node: &Node,
             _source: &Ident,
-            _destination: &Ident,
+            destination: &Ident,
             offset: &Expr,
             size: &Expr,
             tag: &Ident,
         ) -> ControlFlow<Self::Break> {
-            self.validate_async_transfer(offset, size, tag)
+            self.validate_async_transfer(destination, offset, size, tag)
         }
     };
 }
@@ -943,7 +969,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         &mut self,
         _node: &Node,
         generator: &Ident,
-        _source_region: &Option<crate::ir_inner::model::expr::GeneratorRef>,
+        _source_region: &Option<crate::ir_inner::model::expr::Ident>,
         _body: &[Node],
     ) -> ControlFlow<Self::Break> {
         let depth = self.current_depth();

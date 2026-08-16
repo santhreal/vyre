@@ -121,3 +121,45 @@ impl ReadbackRingSet {
         self.slots_per_ring
     }
 }
+
+// Inline: covers the crate-private `capacity_class_for` and
+// `existing_ring_for_capacity`, which no integration test can reach.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capacity_class_classifies_by_alignment_and_granularity() {
+        assert_eq!(
+            ReadbackRingSet::capacity_class_for(16)
+                .expect("Fix: a 16-byte request must have a slot class"),
+            4096,
+            "Fix: a 16-byte request must promote to the 4096-byte slot class"
+        );
+        assert_eq!(
+            ReadbackRingSet::capacity_class_for(1)
+                .expect("Fix: a 1-byte request must have a slot class"),
+            4096,
+            "Fix: a 1-byte request must promote to the minimum aligned 4096-byte class"
+        );
+        assert_eq!(
+            ReadbackRingSet::capacity_class_for(4097)
+                .expect("Fix: a 4097-byte request must have a slot class"),
+            8192,
+            "Fix: crossing the 4KB boundary must promote to the next class"
+        );
+    }
+
+    #[test]
+    fn existing_ring_for_and_capacity_variant_agree_on_lookup_key() {
+        let ring_set = ReadbackRingSet::new();
+        let from_raw = ring_set
+            .existing_ring_for(16)
+            .expect("Fix: a lookup by raw byte length must not fail");
+        let from_class = ring_set.existing_ring_for_capacity(4096);
+        assert!(
+            from_raw.is_none() && from_class.is_none(),
+            "Fix: the raw and capacity-keyed lookups must agree on an empty set"
+        );
+    }
+}

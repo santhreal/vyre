@@ -1,0 +1,4 @@
+path = "scripts/publish-release.sh"
+state = "operator"
+gate = "package-readiness"
+reason = "publishes each crate in the audited dependency order from release/evidence/package/publish-readiness.json"

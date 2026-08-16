@@ -15,9 +15,7 @@ fn deep_region_wrapped_buf_len_program() -> Program {
     };
     let outer = Node::Region {
         generator: Ident::from("vyre-primitives::test::buf_len_mid"),
-        source_region: Some(GeneratorRef {
-            name: "vyre-libs::test::buf_len_outer".to_string(),
-        }),
+        source_region: Some(Ident::from("vyre-libs::test::buf_len_outer")),
         body: Arc::new(vec![mid]),
     };
     let body = Node::Region {

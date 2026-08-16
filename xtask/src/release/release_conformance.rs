@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 // The op matrix and everything derived from it have one owner, so a second
@@ -360,7 +360,7 @@ fn measure_backend(workspace_root: &Path, backend_id: &str) -> BackendConformanc
         "--ops".to_string(),
         "all".to_string(),
     ]);
-    let runner = cargo_runner(workspace_root);
+    let runner = crate::cargo_runner::binary(workspace_root);
     let command = format!("{} {}", runner.display(), args.join(" "));
     let output = Command::new(&runner)
         .args(&args)
@@ -622,10 +622,6 @@ fn recorded_summary_divergences(
 struct ParsedPairs {
     pairs: Vec<PairResult>,
     diagnostics: Vec<String>,
-}
-
-fn cargo_runner(workspace_root: &Path) -> PathBuf {
-    crate::output_arg::cargo_runner(workspace_root)
 }
 
 fn parse_pairs(stdout: &[u8]) -> Result<ParsedPairs, String> {

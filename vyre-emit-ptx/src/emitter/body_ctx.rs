@@ -74,6 +74,20 @@ pub(super) struct BodyCtx<'a> {
     /// [`Self::emit_grid_sync_barrier`]); the indices must be assigned in
     /// emission order so every CTA agrees on each barrier's release target.
     pub(super) grid_barrier_index: u32,
+    /// Total cooperative grid barriers this kernel will emit, so a point in the
+    /// body can tell whether any arrival is still ahead of it: exactly
+    /// `grid_barrier_index < grid_sync_barrier_total`.
+    ///
+    /// Zero when the consumer did not enable `cooperative_grid_sync`, because a
+    /// `MemoryOrdering::GridSync` barrier is then refused rather than lowered, so
+    /// no arrival counter exists for a departing lane to strand.
+    ///
+    /// This exists for [`Self::emit_trap`]. A trap leaves the kernel, and the
+    /// monotonic-counter barrier is arrived at by one leader lane per CTA, so a
+    /// leader that traps under divergent control flow never bumps the counter and
+    /// every other CTA spins on a target it can no longer reach. A CTA-scope
+    /// `bar.sync` is unaffected: it waits only on non-exited threads.
+    pub(super) grid_sync_barrier_total: u32,
     /// Nesting depth of enclosing `StructuredForLoop` bodies during emission.
     ///
     /// A `MemoryOrdering::GridSync` barrier is ONLY correct at a static position
@@ -110,4 +124,11 @@ pub(super) struct BodyCtx<'a> {
     /// Tracked so [`Self::emit_return`] can refuse instead of emitting a branch
     /// that can hang the kernel.
     pub(super) nonuniform_cond_depth: u32,
+    /// Stable numeric code per distinct trap tag, from
+    /// `vyre_lower::descriptor_trap_tags`. A trap writes its code into sidecar
+    /// word 2, and the host decodes that word through the same table, so the
+    /// numbering must come from the shared owner rather than emission order
+    /// here: a code minted locally would decode to a different tag on a host
+    /// that walked the descriptor instead.
+    pub(super) trap_tag_codes: FxHashMap<Name, u32>,
 }

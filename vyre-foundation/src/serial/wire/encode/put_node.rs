@@ -254,7 +254,7 @@ pub fn put_node(out: &mut Vec<u8>, node: &Node) -> Result<(), WireEncodeErr> {
             match source_region {
                 Some(region) => {
                     put_u8(out, 1);
-                    put_string(out, region.name.as_str())?;
+                    put_string(out, region.as_str())?;
                 }
                 None => put_u8(out, 0),
             }

@@ -2,12 +2,25 @@
 
 use std::fs;
 use std::path::Path;
-use std::process::{Command, Output};
 
-use super::workspace_sources::workspace_root;
+use xtask::gate::Report;
+use xtask::gates::crate_readmes::CrateReadmes;
 
-fn run_generator(root: &Path, mode: &str) -> Output {
-    super::workspace_sources::run_generator("scripts/crate_readmes.py", root, mode)
+use super::workspace_sources::{run_gate, track_fixture, workspace_root};
+
+/// Run the gate over a fixture checkout.
+fn run(root: &Path, write: bool) -> Report {
+    run_gate(&CrateReadmes, root, write)
+}
+
+/// Every message the gate reported, joined for a failure diagnostic.
+fn messages(report: &Report) -> String {
+    report
+        .findings
+        .iter()
+        .map(|finding| finding.message.clone())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn write_fixture(root: &Path, readme: Option<&str>, include_profile: bool) {
@@ -63,11 +76,11 @@ fn write_fixture(root: &Path, readme: Option<&str>, include_profile: bool) {
 /// lists, and obsolete dependency versions from returning independently.
 #[test]
 fn workspace_crate_readme_contracts_are_current() {
-    let output = run_generator(&workspace_root(), "--check");
+    let report = run(&workspace_root(), false);
     assert!(
-        output.status.success(),
-        "Fix: regenerate or repair crate README contracts: {}",
-        String::from_utf8_lossy(&output.stderr)
+        report.findings.is_empty(),
+        "Fix: regenerate or repair crate README contracts:\n{}",
+        messages(&report)
     );
 }
 
@@ -83,12 +96,13 @@ fn generated_contract_contains_every_crate_guide_surface() {
         Some("# A crate\n\nThis human-authored introduction must stay.\n"),
         true,
     );
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--write");
+    let report = run(temp.path(), true);
     assert!(
-        output.status.success(),
-        "Fix: valid crate guide must generate: {}",
-        String::from_utf8_lossy(&output.stderr)
+        report.findings.is_empty(),
+        "Fix: valid crate guide must generate:\n{}",
+        messages(&report)
     );
     let readme = fs::read_to_string(temp.path().join("a/README.md"))
         .expect("Fix: generated crate README must be readable");
@@ -127,8 +141,9 @@ fn generated_contract_contains_every_crate_guide_surface() {
 fn missing_readme_is_created_with_a_real_example() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), None, true);
+    track_fixture(temp.path());
 
-    assert!(run_generator(temp.path(), "--write").status.success());
+    assert!(run(temp.path(), true).findings.is_empty());
     let readme = fs::read_to_string(temp.path().join("a/README.md"))
         .expect("Fix: missing README must be created");
     assert!(readme.starts_with("# `a`\n"));
@@ -144,19 +159,25 @@ fn missing_readme_is_created_with_a_real_example() {
 fn manifest_feature_change_invalidates_readme_contract() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), Some("# A\n"), true);
-    assert!(run_generator(temp.path(), "--write").status.success());
+    track_fixture(temp.path());
+    assert!(run(temp.path(), true).findings.is_empty());
     fs::write(
         temp.path().join("a/Cargo.toml"),
         "[package]\nname = \"a\"\nversion = \"0.7.9\"\nedition = \"2021\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\nnew_route = []\n",
     )
     .expect("Fix: changed fixture manifest must be writable");
 
-    let output = run_generator(temp.path(), "--check");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
-    assert!(
-        error.contains("missing or stale crate README contracts: ['a/README.md']"),
-        "Fix: feature drift must name the stale crate README; error={error}"
+    let report = run(temp.path(), false);
+    assert_eq!(
+        report.findings.len(),
+        1,
+        "Fix: feature drift must be one finding; got\n{}",
+        messages(&report)
+    );
+    assert_eq!(
+        report.findings[0].file.as_deref(),
+        Some(Path::new("a/README.md")),
+        "Fix: feature drift must name the stale crate README"
     );
 }
 
@@ -168,13 +189,135 @@ fn manifest_feature_change_invalidates_readme_contract() {
 fn retired_release_claim_outside_generated_block_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), Some("# A\n\nInstall a = \"0.4.2\".\n"), true);
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--write");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
+    let report = run(temp.path(), true);
     assert!(
-        error.contains("retired 0.4.x release claims: ['a/README.md']"),
-        "Fix: retired claim diagnostic must name the README; error={error}"
+        messages(&report).contains("retired release `0.4.2`"),
+        "Fix: retired claim diagnostic must name the version; got\n{}",
+        messages(&report)
+    );
+    assert_eq!(
+        report.findings[0].file.as_deref(),
+        Some(Path::new("a/README.md"))
+    );
+    let readme = fs::read_to_string(temp.path().join("a/README.md"))
+        .expect("Fix: the README must stay readable");
+    assert!(
+        readme.contains("### Release status"),
+        "Fix: a retired claim in the crate's own prose must not stop the generated \
+         region from being written, or --write can never converge"
+    );
+    assert!(
+        readme.contains("Install a = \"0.4.2\"."),
+        "Fix: the crate's own text must survive the write that reported it"
+    );
+}
+
+/// A retired claim inside the generated region blocks the write.
+///
+/// WHY: the generated region is rendered from the manifests and the release
+/// train. A retired version there means one of those authorities is stale, and
+/// writing it publishes the break instead of reporting it, which is the failure
+/// direction the ownership pair already refuses.
+#[test]
+fn a_retired_claim_in_the_generated_region_is_not_written() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), Some("# A\n"), true);
+    track_fixture(temp.path());
+    fs::write(
+        temp.path().join("a/Cargo.toml"),
+        "[package]\nname = \"a\"\nversion = \"0.4.2\"\nedition = \"2021\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\n",
+    )
+    .expect("Fix: retired fixture manifest must be writable");
+
+    let report = run(temp.path(), true);
+    assert!(
+        messages(&report).contains("the generated contract claims retired release `0.4.2`"),
+        "Fix: a retired version in the generated region must be named as generated; got\n{}",
+        messages(&report)
+    );
+    let readme = fs::read_to_string(temp.path().join("a/README.md"))
+        .expect("Fix: the README must stay readable");
+    assert_eq!(
+        readme, "# A\n",
+        "Fix: a stale authority must not be published into the README"
+    );
+}
+
+/// A registry that does not describe the workspace renders nothing.
+///
+/// WHY: every README is rendered from the ownership registry, so a registry that
+/// disagrees with the manifests renders prose from rows that were never read.
+/// `crate-ownership` already refuses to write its pair under the same condition.
+#[test]
+fn a_broken_registry_renders_no_readme() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), None, true);
+    fs::write(
+        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
+        "schema_version = 2\n\n[[crate]]\npackage = \"a\"\npath = \"a\"\nowner = \"fixture-owner\"\nlayer = \"foundation\"\nresponsibility = \"\"\n",
+    )
+    .expect("Fix: fixture ownership registry must be writable");
+    track_fixture(temp.path());
+
+    let report = run(temp.path(), true);
+    assert!(
+        !report.findings.is_empty(),
+        "Fix: an empty responsibility must be a registry finding"
+    );
+    assert!(
+        !temp.path().join("a/README.md").exists(),
+        "Fix: a README must not be rendered from a registry that does not hold"
+    );
+}
+
+/// An empty package override is a finding, not an empty published section.
+///
+/// WHY: the override supplies the "Errors and unsupported behavior" prose. An
+/// empty string rendered a heading with nothing under it, which reads as a crate
+/// that documented its error behavior.
+#[test]
+fn an_empty_error_behavior_override_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), Some("# A\n"), true);
+    fs::write(
+        temp.path().join("docs/CRATE_GUIDES.toml"),
+        "schema_version = 1\n\n[profile.foundation]\nerror_behavior = \"Invalid fixture input returns a structured error.\"\n\n[package.a]\nerror_behavior = \"\"\n",
+    )
+    .expect("Fix: fixture crate guide metadata must be writable");
+    track_fixture(temp.path());
+
+    let report = run(temp.path(), false);
+    assert!(
+        messages(&report).contains("the override for `a` declares an empty `error_behavior`"),
+        "Fix: an empty override must be named; got\n{}",
+        messages(&report)
+    );
+}
+
+/// An override does not stand in for the layer profile.
+///
+/// WHY: the profile is what every crate in a layer renders and the override is
+/// prose for one of them. Accepting an override for a layer that declares no
+/// profile left the next crate in that layer with nothing to render, and the
+/// missing profile went unreported for as long as one crate carried an override.
+#[test]
+fn a_package_override_does_not_replace_a_missing_layer_profile() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), Some("# A\n"), false);
+    fs::write(
+        temp.path().join("docs/CRATE_GUIDES.toml"),
+        "schema_version = 1\n\n[package.a]\nerror_behavior = \"The fixture crate returns a structured error.\"\n",
+    )
+    .expect("Fix: fixture crate guide metadata must be writable");
+    track_fixture(temp.path());
+
+    let report = run(temp.path(), false);
+    assert!(
+        messages(&report).contains("no error profile for layer `foundation`, which `a` occupies"),
+        "Fix: a missing layer profile must be reported even when the package overrides it; got\n{}",
+        messages(&report)
     );
 }
 
@@ -186,35 +329,30 @@ fn retired_release_claim_outside_generated_block_fails_closed() {
 fn missing_layer_error_profile_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), Some("# A\n"), false);
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--write");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
+    let report = run(temp.path(), true);
     assert!(
-        error.contains("no error profile for layer `foundation` used by `a`"),
-        "Fix: missing error profile must name layer and crate; error={error}"
+        messages(&report).contains("no error profile for layer `foundation`, which `a` occupies"),
+        "Fix: missing error profile must name layer and crate; got\n{}",
+        messages(&report)
     );
 }
 
 /// Prevents a local ignored example from becoming the documented minimal example in a clean checkout.
 #[test]
-fn gitignored_examples_are_excluded_from_generated_contracts() {
+fn untracked_examples_are_excluded_from_generated_contracts() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), None, true);
-    let status = Command::new("git")
-        .args(["init", "-q"])
-        .current_dir(temp.path())
-        .status()
-        .expect("Fix: git must launch for ignored example semantics");
-    assert!(status.success());
     fs::write(temp.path().join(".gitignore"), "a/examples/demo.rs\n")
         .expect("Fix: ignored example rule must be writable");
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--write");
+    let report = run(temp.path(), true);
     assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
+        report.findings.is_empty(),
+        "Fix: an ignored example must not stop generation:\n{}",
+        messages(&report)
     );
     let readme = fs::read_to_string(temp.path().join("a/README.md"))
         .expect("Fix: generated README must be readable");
