@@ -18,12 +18,23 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
-use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes;
+use vyre_foundation::geometry::GeometryRequirements;
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
+};
 
 /// Stable op id for the registered Tier 3 wrapper.
 pub const LINE_INDEX_OP_ID: &str = "vyre-primitives::text::line_index";
 const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
+
+/// Return the execution geometry requirements for line indexing.
+#[must_use]
+pub const fn line_index_requirements() -> GeometryRequirements {
+    GeometryRequirements::cooperative(vyre_foundation::geometry::CooperativeWidth::Exactly(
+        PORTABLE_WORKGROUP_INVOCATIONS,
+    ))
+}
 
 /// Build a Program that writes `lines[i] = line_number_of(source[i])`.
 ///
@@ -38,10 +49,27 @@ const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
 /// when the source is packed as one byte per element.
 #[must_use]
 pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
-    match try_line_index(source, lines, n) {
+    line_index_with_block_lanes(source, lines, n, PORTABLE_WORKGROUP_INVOCATIONS)
+}
+
+/// Build a line-index Program with explicit lowered block lanes.
+#[must_use]
+pub fn line_index_with_block_lanes(source: &str, lines: &str, n: u32, block_lanes: u32) -> Program {
+    match try_line_index_with_block_lanes(source, lines, n, block_lanes) {
         Ok(program) => program,
         Err(error) => trap_program(LINE_INDEX_OP_ID, Some((lines, DataType::U32)), error),
     }
+}
+
+/// Build a line-index Program with lowered launch geometry.
+#[must_use]
+pub fn line_index_with_geometry(
+    source: &str,
+    lines: &str,
+    n: u32,
+    geometry: &vyre_foundation::geometry::LaunchGeometry,
+) -> Program {
+    line_index_with_block_lanes(source, lines, n, geometry.workgroup[0])
 }
 
 /// Build a line-index Program over a packed `DataType::U8` source buffer.
@@ -50,18 +78,50 @@ pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
 /// source input bandwidth from four bytes per logical byte to one.
 #[must_use]
 pub fn line_index_u8(source: &str, lines: &str, n: u32) -> Program {
-    match try_line_index_u8(source, lines, n) {
+    line_index_u8_with_block_lanes(source, lines, n, PORTABLE_WORKGROUP_INVOCATIONS)
+}
+
+/// Build a packed `DataType::U8` line-index Program with explicit lowered block lanes.
+#[must_use]
+pub fn line_index_u8_with_block_lanes(
+    source: &str,
+    lines: &str,
+    n: u32,
+    block_lanes: u32,
+) -> Program {
+    match try_line_index_u8_with_block_lanes(source, lines, n, block_lanes) {
         Ok(program) => program,
         Err(error) => trap_program(LINE_INDEX_OP_ID, Some((lines, DataType::U32)), error),
     }
 }
 
-fn try_line_index(source: &str, lines: &str, n: u32) -> Result<Program, String> {
-    try_line_index_with_source_type(source, lines, n, DataType::U32)
+/// Build a packed `DataType::U8` line-index Program with lowered launch geometry.
+#[must_use]
+pub fn line_index_u8_with_geometry(
+    source: &str,
+    lines: &str,
+    n: u32,
+    geometry: &vyre_foundation::geometry::LaunchGeometry,
+) -> Program {
+    line_index_u8_with_block_lanes(source, lines, n, geometry.workgroup[0])
 }
 
-fn try_line_index_u8(source: &str, lines: &str, n: u32) -> Result<Program, String> {
-    try_line_index_with_source_type(source, lines, n, DataType::U8)
+fn try_line_index_with_block_lanes(
+    source: &str,
+    lines: &str,
+    n: u32,
+    block_lanes: u32,
+) -> Result<Program, String> {
+    try_line_index_with_source_type(source, lines, n, DataType::U32, block_lanes)
+}
+
+fn try_line_index_u8_with_block_lanes(
+    source: &str,
+    lines: &str,
+    n: u32,
+    block_lanes: u32,
+) -> Result<Program, String> {
+    try_line_index_with_source_type(source, lines, n, DataType::U8, block_lanes)
 }
 
 fn try_line_index_with_source_type(
@@ -69,15 +129,21 @@ fn try_line_index_with_source_type(
     lines: &str,
     n: u32,
     source_type: DataType,
+    block_lanes: u32,
 ) -> Result<Program, String> {
     if n == 0 {
         return Ok(empty_line_index_program(source, lines, source_type));
     }
-
+    if !block_lanes.is_power_of_two() || block_lanes < 2 {
+        return Err(format!(
+            "line_index block_lanes={block_lanes} must be a power of two >= 2. Fix: pass an explicit valid workgroup width."
+        ));
+    }
+    let lanes = block_lanes;
     let flags = format!("__{lines}_line_start_flags");
 
-    let flag_pass = line_start_flags_program(source, &flags, n, source_type)?;
-    let scan_pass = multi_block_prefix_scan_sum_u32(&flags, lines, n);
+    let flag_pass = line_start_flags_program(source, &flags, n, source_type, lanes)?;
+    let scan_pass = multi_block_prefix_scan_sum_u32_with_block_lanes(&flags, lines, n, lanes);
     if scan_pass.stats().trap() {
         return Err(format!(
             "line_index n={n} could not build its prefix-scan pass. Fix: shard the source before line indexing or repair reduce::multi_block_prefix_scan sizing."
@@ -122,6 +188,7 @@ fn line_start_flags_program(
     flags: &str,
     n: u32,
     source_type: DataType,
+    block_lanes: u32,
 ) -> Result<Program, String> {
     let t = Expr::InvocationId { axis: 0 };
     let prev_idx = Expr::add(t.clone(), Expr::u32(u32::MAX));
@@ -169,7 +236,7 @@ fn line_start_flags_program(
                 .with_pipeline_live_out(true)
                 .with_output_byte_range(0..output_bytes),
         ],
-        [1024, 1, 1],
+        [block_lanes, 1, 1],
         vec![wrap_anonymous_region(
             FLAG_OP_ID,
             vec![Node::if_then(Expr::lt(t, Expr::u32(n)), lane_body)],
@@ -218,6 +285,8 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_category("text")
+    .with_geometry_requirements(line_index_requirements())
 }
 
 #[cfg(test)]
@@ -261,8 +330,11 @@ mod tests {
 
     #[test]
     fn builder_uses_parallel_scan_pipeline() {
-        let program = line_index("source", "lines", 1024 + 17);
-        assert_eq!(program.workgroup_size(), [1024, 1, 1]);
+        let program = line_index("source", "lines", PORTABLE_WORKGROUP_INVOCATIONS + 17);
+        assert_eq!(
+            program.workgroup_size(),
+            [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1]
+        );
         assert!(program
             .buffers()
             .iter()
@@ -280,5 +352,79 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[test]
+    fn default_builder_uses_portable_workgroup_width() {
+        let program = line_index("source", "lines", 17);
+        assert!(!program.stats().trap());
+        assert_eq!(
+            program.workgroup_size(),
+            [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1]
+        );
+
+        let program_u8 = line_index_u8("source", "lines", 17);
+        assert!(!program_u8.stats().trap());
+        assert_eq!(
+            program_u8.workgroup_size(),
+            [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1]
+        );
+    }
+
+    #[test]
+    fn invalid_block_lanes_rejects_and_traps() {
+        for invalid_width in [0u32, 1, 3, 5, 7, 100, 300] {
+            let program = line_index_with_block_lanes("source", "lines", 17, invalid_width);
+            assert!(
+                program.stats().trap(),
+                "Fix: invalid non-power-of-two or < 2 block_lanes ({invalid_width}) must trap"
+            );
+
+            let program_u8 = line_index_u8_with_block_lanes("source", "lines", 17, invalid_width);
+            assert!(
+                program_u8.stats().trap(),
+                "Fix: invalid non-power-of-two or < 2 block_lanes ({invalid_width}) for u8 must trap"
+            );
+        }
+    }
+
+    #[test]
+    fn candidate_selection_for_composed_line_index_succeeds_across_all_geometry_widths() {
+        for width in [32u32, 64, 128, 256, 512, 1024] {
+            let program = line_index_with_block_lanes("source", "lines", 5, width);
+            assert!(
+                !program.stats().trap(),
+                "Fix: line_index must not trap under candidate geometry width {width}"
+            );
+            assert_eq!(program.workgroup_size(), [width, 1, 1]);
+
+            let program_u8 = line_index_u8_with_block_lanes("source", "lines", 5, width);
+            assert!(
+                !program_u8.stats().trap(),
+                "Fix: line_index_u8 must not trap under candidate geometry width {width}"
+            );
+            assert_eq!(program_u8.workgroup_size(), [width, 1, 1]);
+        }
+    }
+
+    #[test]
+    fn geometry_lowering_produces_valid_non_trapping_programs() {
+        use vyre_foundation::geometry::LaunchGeometry;
+
+        for width in [256u32, 512, 1024] {
+            let geo = LaunchGeometry {
+                workgroup: [width, 1, 1],
+                grid: [1, 1, 1],
+                elements_per_invocation: 1,
+                pipeline_stages: 1,
+                shared_bytes: 0,
+            };
+            let program = line_index_with_geometry("source", "lines", 17, &geo);
+            assert!(
+                !program.stats().trap(),
+                "Fix: line_index_with_geometry must succeed for width {width}"
+            );
+            assert_eq!(program.workgroup_size(), [width, 1, 1]);
+        }
     }
 }

@@ -19,7 +19,7 @@ use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec, resize_vec
 use crate::backend::CachedCudaGraph;
 use crate::numeric::CUDA_NUMERIC;
 use crate::pipeline::{
-    cuda_graph_lane_count_for_batch, cuda_graph_replay_enabled, CudaCompiledPipeline,
+    cuda_graph_lane_count_for_batch, CudaCompiledPipeline, CudaPipelineExecutionStrategy,
     MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
     MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE,
 };
@@ -153,16 +153,9 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
-        if !dispatch_configs_share_launch_shape(&self.compiled_config, config) {
-            return self.backend.dispatch_borrowed_timed_with_ptx_key(
-                &self.program,
-                inputs,
-                config,
-                &self.ptx_src,
-                self.module_key,
-            );
-        }
-        if !cuda_graph_replay_enabled() || self.prepared.cooperative {
+        if !dispatch_configs_share_launch_shape(&self.compiled_config, config)
+            || self.execution_strategy() == CudaPipelineExecutionStrategy::DirectDispatch
+        {
             return self.backend.dispatch_borrowed_timed_with_ptx_key(
                 &self.program,
                 inputs,
@@ -244,19 +237,9 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<(), BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
-        if !dispatch_configs_share_launch_shape(&self.compiled_config, config) {
-            self.backend
-                .dispatch_borrowed_async_with_ptx_key(
-                    &self.program,
-                    inputs,
-                    config,
-                    &self.ptx_src,
-                    self.module_key,
-                )?
-                .await_result_into(outputs)?;
-            return Ok(());
-        }
-        if !cuda_graph_replay_enabled() || self.prepared.cooperative {
+        if !dispatch_configs_share_launch_shape(&self.compiled_config, config)
+            || self.execution_strategy() == CudaPipelineExecutionStrategy::DirectDispatch
+        {
             self.backend
                 .dispatch_borrowed_async_with_ptx_key(
                     &self.program,
@@ -314,8 +297,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
             outputs.clear();
             return Ok(());
         }
-        if cuda_graph_replay_enabled()
-            && !self.prepared.cooperative
+        if self.execution_strategy() == CudaPipelineExecutionStrategy::GraphReplay
             && dispatch_configs_share_launch_shape(&self.compiled_config, config)
             && borrowed_input_batch_shapes_match(batches)
         {

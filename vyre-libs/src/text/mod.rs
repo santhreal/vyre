@@ -42,7 +42,11 @@ pub use encoding_classify::{
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use line_index::reference_line_index;
-pub use line_index::{line_index, line_index_u8, LINE_INDEX_OP_ID};
+pub use line_index::{
+    line_index, line_index_requirements, line_index_u8, line_index_u8_with_block_lanes,
+    line_index_u8_with_geometry, line_index_with_block_lanes, line_index_with_geometry,
+    LINE_INDEX_OP_ID,
+};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use utf8_shape_counts::reference_utf8_shape_counts;
 pub use utf8_shape_counts::{
