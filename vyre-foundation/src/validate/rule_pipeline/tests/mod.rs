@@ -820,13 +820,20 @@ fn sibling_regions_may_each_bind_the_same_name() {
 
 #[test]
 fn an_async_transfer_endpoint_is_not_resolved_against_the_buffer_table() {
-    let program = alias_hazard_program(vec![Node::AsyncLoad {
-        source: "ssd".into(),
-        destination: "vram".into(),
-        offset: Box::new(Expr::u32(0)),
-        size: Box::new(Expr::u32(1)),
-        tag: "stream0".into(),
-    }]);
+    let program = alias_hazard_program(vec![
+        Node::AsyncLoad {
+            source: "ssd".into(),
+            destination: "vram".into(),
+            offset: Box::new(Expr::u32(0)),
+            size: Box::new(Expr::u32(1)),
+            tag: "stream0".into(),
+        },
+        // The wait keeps the tag paired, so the only thing left for a
+        // diagnostic to name is an endpoint.
+        Node::AsyncWait {
+            tag: "stream0".into(),
+        },
+    ]);
 
     assert!(
         unknown_variable_errors(&program).is_empty(),

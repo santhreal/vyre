@@ -21,19 +21,20 @@
 //!
 //! ## What is reported and what is not
 //!
-//! Reported only when the defect happens on EVERY path, so a branch that starts
-//! a copy and a join that waits for it is not a finding:
+//! Three rules:
 //!
 //! * a start of a tag that is in flight on every path reaching it,
-//! * a wait on a tag that is in flight on no path reaching it.
+//! * a wait on a tag that is in flight on no path reaching it,
+//! * a tag that may still be in flight where the invocation ends.
 //!
-//! A copy started and never waited is NOT reported, because the two reference
-//! executors disagree about it. The hashmap interpreter fails the invocation
-//! (`run_invocations` reports the tag still pending); the statement executor
-//! drops the transfer and completes. A static rule needs one oracle to be right
-//! against, and rejecting on a disagreement would refuse programs an
-//! authoritative executor accepts. The two starts-and-waits rules above hold in
-//! both.
+//! The first two are reported only when the defect holds on every path, so a
+//! branch that starts a copy and a join that waits for it is not a finding. The
+//! third is reported when it may hold on any path, because a copy left pending
+//! is a copy whose destination nothing synchronized: the result depends on
+//! bytes no wait ordered, so it fails closed. The hashmap interpreter already
+//! refuses it at run time (`run_invocations` names the tag still pending); the
+//! statement executor drops the transfer, which is a defect in that executor
+//! and not a second reading of the rule.
 //!
 //! A `Loop` body is analysed twice when its literal bounds prove at least two
 //! iterations, so a tag started in the body and left in flight across the back
@@ -90,7 +91,9 @@ pub(crate) fn check_async_pipeline(program: &Program) -> Vec<ValidationError> {
 
     let mut found = Vec::new();
     let mut state = InFlight::default();
-    walk_sequence(program.entry(), &mut state, &mut found);
+    if walk_sequence(program.entry(), &mut state, &mut found) == SequenceOutcome::Continues {
+        report_exit(&state, &mut found);
+    }
 
     let mut seen = FxHashSet::default();
     found
@@ -107,6 +110,8 @@ enum Finding {
     DuplicateStart(Ident),
     /// A wait on a tag no transfer started.
     UnmatchedWait(Ident),
+    /// A tag that may still be in flight where the invocation ends.
+    UnwaitedAtExit(Ident),
 }
 
 impl Finding {
@@ -134,6 +139,17 @@ impl Finding {
                 "start the copy with AsyncLoad or AsyncStore under that tag before waiting, or \
                  drop the wait.",
             ),
+            Self::UnwaitedAtExit(tag) => err(
+                "V133",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                format!(
+                    "async transfer tag `{tag}` may still be in flight where the invocation ends, \
+                     so the copy it names lands in a destination nothing synchronized"
+                ),
+                "wait the tag with AsyncWait on every path that starts it, before the Return that \
+                 ends the invocation.",
+            ),
         }
     }
 }
@@ -143,6 +159,24 @@ impl Finding {
 enum SequenceOutcome {
     Continues,
     Diverged,
+}
+
+/// Report every tag that may still be in flight where the invocation ends.
+///
+/// A copy nobody waited for is a copy whose destination nothing synchronized,
+/// so the tags that could still be pending are reported and not only the ones
+/// that must be. Deduplication upstream collapses a tag reported at a `Return`
+/// inside a loop body walked twice.
+///
+/// Tags are reported in name order. Every other finding is pushed in program
+/// order, and a set has none, so ordering them here is what keeps one program's
+/// diagnostics identical across runs.
+fn report_exit(state: &InFlight, found: &mut Vec<Finding>) {
+    let mut pending: Vec<&Ident> = state.may.iter().collect();
+    pending.sort_unstable_by(|left, right| left.as_str().cmp(right.as_str()));
+    for tag in pending {
+        found.push(Finding::UnwaitedAtExit(tag.duplicate_handle()));
+    }
 }
 
 /// Walk `nodes` in program order, stopping where the sequence leaves the
@@ -176,7 +210,10 @@ fn walk_node(node: &Node, state: &mut InFlight, found: &mut Vec<Finding>) -> Seq
             state.finish(tag);
             SequenceOutcome::Continues
         }
-        Node::Return => SequenceOutcome::Diverged,
+        Node::Return => {
+            report_exit(state, found);
+            SequenceOutcome::Diverged
+        }
         Node::If {
             then, otherwise, ..
         } => {

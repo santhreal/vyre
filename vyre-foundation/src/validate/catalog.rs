@@ -614,6 +614,12 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         invariant: "async wait on tag `…` has no transfer to wait for on any path reaching it",
         corrective_action: "Start the copy with AsyncLoad or AsyncStore under that tag before waiting, or drop the wait.",
     },
+    ValidationRule {
+        code: "V133",
+        phase: ValidationPhase::Memory,
+        invariant: "async transfer tag `…` may still be in flight where the invocation ends",
+        corrective_action: "Wait the tag with AsyncWait on every path that starts it, before the Return that ends the invocation.",
+    },
 ];
 
 /// Every registered validation rule, ordered by code.
