@@ -13,7 +13,7 @@
 //!    sibling module fed the scalar where the array belonged.
 //!
 //! Both members are discovered from the tree at run time: the file set is the
-//! directory walk of `vyre-primitives/src/graph`, and the function set is every
+//! directory walk of `vyre-libs/src/graph`, and the function set is every
 //! `fn` those files declare. Nothing here is a checked-in list of names, so a
 //! CSR entry point added tomorrow is gated on the day it lands, not on the day
 //! someone remembers to extend a table.
@@ -79,11 +79,11 @@ impl Function {
     }
 }
 
-/// Every `.rs` file under `vyre-primitives/src/graph`, minus test subtrees.
+/// Every `.rs` file under `vyre-libs/src/graph`, minus test subtrees.
 /// Production signatures are the contract; a test may spell a fixture helper
 /// however it likes.
 fn graph_source_files() -> Vec<PathBuf> {
-    let root = vyre_crate_directory("vyre-primitives").join("src/graph");
+    let root = vyre_crate_directory("vyre-libs").join("src/graph");
     assert!(
         root.is_dir(),
         "Fix: CSR closure gate could not find {} - the graph module moved, so point this gate at its new home.",
@@ -275,9 +275,9 @@ fn parse_functions(file: &Path, display: &str) -> Vec<Function> {
     out
 }
 
-/// Every production function declared under `vyre-primitives/src/graph`.
+/// Every production function declared under `vyre-libs/src/graph`.
 fn graph_functions() -> Vec<Function> {
-    let crate_dir = vyre_crate_directory("vyre-primitives");
+    let crate_dir = vyre_crate_directory("vyre-libs");
     graph_source_files()
         .iter()
         .flat_map(|path| {
