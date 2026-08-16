@@ -24,9 +24,6 @@ if ! nvidia-smi >/dev/null 2>&1; then
     exit 1
 fi
 
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
-
 # Tracked files only, and only the crate's own test directory: a stray .rs left
 # in the working tree is not a target, and a nested support module is not one
 # either.
@@ -60,6 +57,6 @@ nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
 
 # The crate's documented test command, so the gate and docs/testing cannot
 # disagree about what proving this backend means.
-"$CARGO_RUNNER" test -p vyre-driver-cuda -- --nocapture
+./cargo_full test -p vyre-driver-cuda -- --nocapture
 
 echo "CUDA gate: all ${#TARGETS[@]} vyre-driver-cuda test targets passed on the live device."

@@ -5,9 +5,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 export RUSTC_WRAPPER=""
 
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
-
 export VYRE_RELEASE_BACKEND="${VYRE_RELEASE_BACKEND:-all}"
 export VYRE_RELEASE_SHARDS="${VYRE_RELEASE_SHARDS:-64}"
 export VYRE_RELEASE_FEATURES="${VYRE_RELEASE_FEATURES:-gpu}"

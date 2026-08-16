@@ -25,7 +25,4 @@ fi
 
 spirv-val --version
 
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
-
-"$CARGO_RUNNER" test -p vyre-driver-spirv --features spirv-val --test spirv_parity -- --nocapture
+./cargo_full test -p vyre-driver-spirv --features spirv-val --test spirv_parity -- --nocapture

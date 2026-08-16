@@ -604,18 +604,26 @@ pub fn first_error(stdout: &str) -> Option<String> {
     None
 }
 
-/// Compile one pair once.
-fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, GateError> {
+/// Compile one pair once, on `toolchain` when one is named.
+fn check_once(
+    root: &Path,
+    cargo: &str,
+    toolchain: &str,
+    pair: &Pair,
+) -> Result<Observation, GateError> {
     let mut command = Command::new(cargo);
+    command.current_dir(root);
+    if !toolchain.is_empty() {
+        command.arg(format!("+{toolchain}"));
+    }
     command
-        .current_dir(root)
         .args(["check", "--locked", "-p", &pair.member])
         .args(pair.cargo_flags())
         .args(["--all-targets", "--message-format=json"]);
     let output = command.output().map_err(|error| {
         GateError::new(
             format!("cannot run `{cargo} check` for `{}`: {error}", pair.label()),
-            "install a cargo the sweep can run, or set CARGO to one",
+            "install a cargo the sweep can run, or restore the cargo_full wrapper at the workspace root",
         )
     })?;
     let compiles = output.status.success();
@@ -638,12 +646,17 @@ fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, Gate
 /// blocked pairs, and a gate that publishes false reds gets ignored, which is
 /// the outcome this whole axis exists to prevent. Only a failure is retried, so
 /// a green sweep pays nothing.
-fn compile(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, GateError> {
-    let first = check_once(root, cargo, pair)?;
+fn compile(
+    root: &Path,
+    cargo: &str,
+    toolchain: &str,
+    pair: &Pair,
+) -> Result<Observation, GateError> {
+    let first = check_once(root, cargo, toolchain, pair)?;
     if first.compiles {
         return Ok(first);
     }
-    check_once(root, cargo, pair)
+    check_once(root, cargo, toolchain, pair)
 }
 
 /// Render the data file for the whole axis, from observations where this run has
@@ -733,8 +746,83 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
     text
 }
 
-fn cargo_binary() -> String {
-    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string())
+/// The version `[workspace.package].rust-version` advertises.
+///
+/// The manifest is the single owner of the MSRV. A second copy in a workflow,
+/// a script or a toolchain file disagrees with it on the commit that bumps one
+/// of them, and the sweep then measures a compiler nobody publishes.
+fn advertised_msrv(root: &Path) -> Result<String, GateError> {
+    let manifest = root.join("Cargo.toml");
+    let text = read_manifest(&manifest)
+        .map_err(|error| GateError::new(error, "repair the workspace manifest"))?;
+    let parsed: toml::Value = toml::from_str(&text).map_err(|error| {
+        GateError::new(
+            format!("cannot parse {}: {error}", manifest.display()),
+            "repair the workspace manifest",
+        )
+    })?;
+    let version = parsed
+        .get("workspace")
+        .and_then(|workspace| workspace.get("package"))
+        .and_then(|package| package.get("rust-version"))
+        .and_then(toml::Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if version.is_empty() {
+        return Err(GateError::new(
+            format!(
+                "{} declares no [workspace.package].rust-version, and the MSRV sweep measures that version",
+                manifest.display()
+            ),
+            "declare the minimum supported Rust version in the workspace manifest",
+        ));
+    }
+    Ok(version)
+}
+
+/// Install the advertised MSRV toolchain unless rustup already carries it.
+///
+/// The sweep runs `cargo +<msrv>`, which needs the toolchain present. This ran
+/// as a workflow step that read the manifest with a second reader; doing it
+/// here keeps one owner of both the version and the sweep, and a developer gets
+/// the same setup CI gets.
+fn ensure_msrv_toolchain(version: &str, report: &mut Report) -> Result<(), GateError> {
+    let listed = Command::new("rustup")
+        .args(["toolchain", "list"])
+        .output()
+        .map_err(|error| {
+            GateError::new(
+                format!("cannot run `rustup toolchain list`: {error}"),
+                "install rustup, or run the sweep on a host that has the MSRV toolchain",
+            )
+        })?;
+    let installed = String::from_utf8_lossy(&listed.stdout)
+        .lines()
+        .any(|line| line.starts_with(version));
+    if installed {
+        return Ok(());
+    }
+    let install = Command::new("rustup")
+        .args(["toolchain", "install", "--profile", "minimal", version])
+        .output()
+        .map_err(|error| {
+            GateError::new(
+                format!("cannot install the `{version}` toolchain: {error}"),
+                format!("run `rustup toolchain install --profile minimal {version}`"),
+            )
+        })?;
+    if !install.status.success() {
+        return Err(GateError::new(
+            format!(
+                "`rustup toolchain install --profile minimal {version}` failed: {}",
+                String::from_utf8_lossy(&install.stderr).trim()
+            ),
+            "install the advertised MSRV toolchain, or correct [workspace.package].rust-version",
+        ));
+    }
+    report.note(format!("installed the advertised MSRV toolchain {version}"));
+    Ok(())
 }
 
 /// Turn one half's disagreements into findings under the fix that closes them.
@@ -748,15 +836,19 @@ fn record(report: &mut Report, failures: Vec<String>, fix: &str) {
 ///
 /// Both the sweep and `--write` need exactly this. The per-pair line is a note
 /// rather than a print, because a gate returns everything it has to say.
+/// `toolchain` names the rustup toolchain the MSRV mode measures, and is empty
+/// for the default one.
 fn observe(
     root: &Path,
     pairs: &[Pair],
+    toolchain: &str,
     report: &mut Report,
 ) -> Result<Vec<(Pair, Observation)>, GateError> {
-    let cargo = cargo_binary();
+    let cargo = crate::cargo_runner::runner(root);
+    let cargo = cargo.to_string_lossy().into_owned();
     let mut observed = Vec::with_capacity(pairs.len());
     for (index, pair) in pairs.iter().enumerate() {
-        let observation = compile(root, &cargo, pair)?;
+        let observation = compile(root, &cargo, toolchain, pair)?;
         report.note(format!(
             "[{}/{}] {}: {}",
             index + 1,
@@ -788,7 +880,11 @@ impl Gate for FeatureIsolation {
     }
 
     fn help(&self) -> &'static str {
-        "Hold every feature selection the manifests declare to its recorded compile outcome; --sweep also compiles each pair, --write records what it observed, --member NAME narrows the sweep, --list prints the axis"
+        "Hold every feature selection the manifests declare to its recorded compile outcome; --sweep also compiles each pair, --msrv compiles it on the advertised minimum supported Rust version, --write records what it observed, --member NAME narrows the sweep, --list prints the axis"
+    }
+
+    fn usage(&self) -> &'static [&'static str] {
+        &["--list", "--sweep", "--msrv", "--only-unrecorded", "--member NAME"]
     }
 
     fn generates(&self) -> bool {
@@ -800,12 +896,13 @@ impl Gate for FeatureIsolation {
         let mut report = Report::clean();
         let list = ctx.has("--list");
         let sweep = ctx.has("--sweep");
+        let msrv = ctx.has("--msrv");
         let only_unrecorded = ctx.has("--only-unrecorded");
         let mut member = None;
         let mut rest = ctx.args.iter();
         while let Some(argument) = rest.next() {
             match argument.as_str() {
-                "--list" | "--sweep" | "--write" | "--only-unrecorded" => {}
+                "--list" | "--sweep" | "--msrv" | "--write" | "--only-unrecorded" => {}
                 "--member" => {
                     member = rest.next().map(String::as_str);
                     if member.is_none() {
@@ -818,7 +915,7 @@ impl Gate for FeatureIsolation {
                 other => {
                     return Err(GateError::new(
                         format!("`{other}` is not an argument this gate takes"),
-                        "pass [--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]",
+                        "pass [--list] [--sweep [--msrv] [--write] [--only-unrecorded]] [--member NAME]",
                     ));
                 }
             }
@@ -833,6 +930,18 @@ impl Gate for FeatureIsolation {
             return Err(GateError::new(
                 "`--only-unrecorded` narrows what the sweep compiles and no sweep was asked for",
                 "pass `--sweep`",
+            ));
+        }
+        if msrv && !sweep {
+            return Err(GateError::new(
+                "`--msrv` names the compiler the sweep measures and no sweep was asked for",
+                "pass `--sweep`",
+            ));
+        }
+        if msrv && ctx.write {
+            return Err(GateError::new(
+                "the record holds outcomes measured on the default toolchain, and `--msrv` measures another one",
+                "record the axis with `--sweep --write`, and judge the MSRV with `--sweep --msrv`",
             ));
         }
 
@@ -885,7 +994,7 @@ impl Gate for FeatureIsolation {
 
         if ctx.write {
             let previous = load_rows(root).unwrap_or_default();
-            let observed = observe(root, &selected, &mut report)?;
+            let observed = observe(root, &selected, "", &mut report)?;
             let path = data_path(root);
             fs::write(&path, render(&pairs, &observed, &previous)).map_err(|error| {
                 GateError::new(
@@ -913,10 +1022,20 @@ impl Gate for FeatureIsolation {
             return Ok(report);
         }
 
-        let observed = observe(root, &selected, &mut report)?;
+        let toolchain = if msrv {
+            let version = advertised_msrv(root)?;
+            ensure_msrv_toolchain(&version, &mut report)?;
+            version
+        } else {
+            String::new()
+        };
+        let observed = observe(root, &selected, &toolchain, &mut report)?;
         let failures = sweep_failures(&rows, &observed);
         record(&mut report, failures, COMPILE_FIX);
-        report.note(format!("{} pair(s) compiled", selected.len()));
+        report.note(match toolchain.is_empty() {
+            true => format!("{} pair(s) compiled", selected.len()),
+            false => format!("{} pair(s) compiled on {toolchain}", selected.len()),
+        });
         Ok(report)
     }
 }

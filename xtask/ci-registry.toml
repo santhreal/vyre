@@ -542,15 +542,7 @@ run = "scripts/check_external_ir_extension_ci.sh"
 workflows = ["gates.yml"]
 
 [[external]]
-run = "scripts/check_feature_msrv.sh"
-workflows = ["gates.yml"]
-
-[[external]]
 run = "scripts/check_spirv_parity_perf_gate.sh"
-workflows = ["gates.yml"]
-
-[[external]]
-run = "scripts/lib/read_toml_values.py"
 workflows = ["gates.yml"]
 
 [[external]]

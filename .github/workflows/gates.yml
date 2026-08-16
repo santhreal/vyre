@@ -130,24 +130,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      # [workspace.package].rust-version is the single owner of the MSRV, so the
-      # toolchain is installed from that value instead of pinned a second time
-      # here, where a bump would leave the two disagreeing.
-      - name: Install the advertised MSRV toolchain
-        run: |
-          rustup toolchain install --profile minimal \
-            "$(python3 scripts/lib/read_toml_values.py Cargo.toml MSRV workspace.package.rust-version)"
-
       # Two classes, neither reachable from another workflow. Feature isolation:
       # strict.yml builds --all-features, a union in which a feature whose
       # prerequisites some other feature happens to enable compiles anyway, and
       # ci.yml builds default features only, so a granular feature is never
       # built alone. MSRV: ci.yml's toolchain matrix is stable and nightly, so
-      # nothing compiled this workspace on the version it publishes. The matrix
-      # is derived from tracked manifests, so a new feature or member joins it
-      # and fails here until it compiles.
+      # nothing compiled this workspace on the version it publishes. The axis is
+      # derived from tracked manifests, so a new feature or member joins it and
+      # fails here until it compiles. `--msrv` reads
+      # [workspace.package].rust-version, installs that toolchain when rustup
+      # does not carry it, and compiles the axis on it, so the manifest stays
+      # the single owner of the version.
       - name: Feature-isolated MSRV sweep
-        run: bash scripts/check_feature_msrv.sh
+        run: ./cargo_full run -p xtask --bin xtask -- feature-isolation --sweep --msrv
 
   feature-isolation:
     name: Every feature compiles alone or records why it cannot
