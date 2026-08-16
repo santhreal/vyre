@@ -306,6 +306,6 @@ pub(crate) mod fixture_bytes;
 /// downstream dialects do not submit through this path.
 pub(crate) mod test_migration;
 
-/// Program composition helpers for parity suites, in-tree and downstream.
-#[cfg(any(test, feature = "test-fixtures"))]
-pub mod test_parity_oracles;
+/// Dispatcher doubles and program sequencing for this crate's own unit tests.
+#[cfg(test)]
+mod test_parity_oracles;

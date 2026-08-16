@@ -157,6 +157,7 @@ pub mod data_type_elements;
 #[cfg(feature = "ir-fixtures")]
 pub mod data_type_variants;
 pub mod exploded_ifds_cases;
+pub mod fixed_point;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]

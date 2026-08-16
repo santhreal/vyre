@@ -17,7 +17,7 @@ use vyre_libs::parsing::planar_rewrite::reference_planar_rewrite_schedule;
 use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn schedule_via_matches_cpu_greedy_disjoint_selection_over_generated_grids() {

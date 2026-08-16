@@ -14,7 +14,7 @@
 use vyre_libs::encoding::bitset_summary::{per_word_popcount_via, total_set_bits_via};
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn popcount_via_matches_inline_count_ones_oracle() {

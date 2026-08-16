@@ -34,7 +34,7 @@ use vyre_libs::matching::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A random brace-token stream: `BRACKET_KIND_OPEN` / `BRACKET_KIND_CLOSE` / `BRACKET_KIND_OTHER(0)` in balanced-ish mix.
 fn random_kinds(state: &mut u32, len: usize) -> Vec<u32> {

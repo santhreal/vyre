@@ -23,7 +23,7 @@ use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
 use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A small SIGNED integer in `-lo..=hi`, returned as a two's-complement u32.
 fn signed(state: &mut u32, span: i32) -> u32 {

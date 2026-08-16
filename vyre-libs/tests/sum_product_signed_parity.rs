@@ -29,13 +29,13 @@
 //! BIT-EXACT: SUM = `Σ fixed_mul(leaf, weight)` with wrapping add, PRODUCT = fold from `1.0` via
 //! `fixed_mul`. `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`. Any
 //! divergence is a real IR/dispatch defect, not a rounding artifact.
-#![cfg(all(feature = "graph", feature = "test-fixtures"))]
+#![cfg(feature = "graph")]
 
 use vyre_libs::graph::sum_product_circuit::{
     sum_product_depths, sum_product_evaluate, sum_product_evaluate_leveled, KIND_LEAF,
     KIND_PRODUCT, KIND_SUM,
 };
-use vyre_libs::test_parity_oracles::{
+use vyre_test_support::fixed_point::{
     fixed_mul, signed_fixed_18 as signed_fixed, to_fixed, FIXED_ONE,
 };
 use vyre_primitives::wire::pack_u32_slice as pack_u32;

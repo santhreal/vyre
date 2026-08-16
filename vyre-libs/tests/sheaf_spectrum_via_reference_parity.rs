@@ -14,7 +14,7 @@
 use vyre_libs::solvers::sheaf_spectral_clustering::dominant_spectrum_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 const ONE_FP: u32 = 1 << 16;
 

@@ -1,44 +1,19 @@
-//! Shared parity-suite helpers: fixed-point oracles and program sequencing.
+//! Dispatcher doubles and program sequencing for this crate's own unit tests.
 //!
-//! Compiled in two contexts, matching `scan::test_fixtures`:
-//!
-//! 1. `#[cfg(test)]` - always available to in-tree tests.
-//! 2. `feature = "test-fixtures"` - exported to crates whose own parity
-//!    suites dispatch programs built from this crate.
-//!
-//! ONE PLACE: every `_via` end-to-end parity test in the workspace uses these
-//! rather than re-deriving the fixed-point contract or the buffer-bridging
-//! rule. Seven per-file copies of the 16.16 multiply drifted before this was
-//! consolidated, and six of them silently kept an unsigned form after the
-//! kernel was corrected to signed.
+//! The 16.16 oracles that used to live here are arithmetic with no dependency
+//! on this crate, and their only callers are integration suites. They are owned
+//! by `vyre_test_support::fixed_point`, a dev-dependency, so a library consumer
+//! no longer sees test tooling in this crate's published surface.
 
 use vyre_foundation::ir::Program;
-#[cfg(test)]
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub use vyre_primitives::wire::pack_u32_slice as u32_bytes;
-
-/// The 16.16 fixed-point unit, `1.0`.
-pub const FIXED_ONE: u32 = 1 << 16;
-
-/// Encode `v` as a two's-complement 16.16 word, rounded to nearest.
-#[must_use]
-pub fn to_fixed(v: f64) -> u32 {
-    (v * f64::from(FIXED_ONE)).round() as i64 as u32
-}
-
-/// Decode a two's-complement 16.16 word to the signed value it encodes.
-#[must_use]
-pub fn from_fixed(v: u32) -> f64 {
-    f64::from(v as i32) / f64::from(FIXED_ONE)
-}
 
 /// Concatenate `programs` into one program with a shared workgroup size.
 ///
 /// Buffers and entry nodes are appended in argument order, which is the
 /// order a multi-stage parity suite dispatches them in.
 #[must_use]
-pub fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32; 3]) -> Program {
+pub(crate) fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32; 3]) -> Program {
     let buffer_count = programs.iter().map(|program| program.buffers().len()).sum();
     let entry_count = programs.iter().map(|program| program.entry().len()).sum();
     let mut buffers = Vec::with_capacity(buffer_count);
@@ -52,84 +27,13 @@ pub fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32; 3]) ->
     Program::wrapped(buffers, workgroup_size, entry)
 }
 
-/// Signed 16.16 fixed-point multiply: bits `[16..48]` of the signed 64-bit
-/// product, identical to the IR's `crate::math::fixed::fixed_mul_16_16_expr`.
-///
-/// Operands are two's-complement `i32` carried in a `u32`. A weighted-Jacobi
-/// residual, a sheaf coupling, and a gradient are all routinely negative, so
-/// the multiply must be signed; the unsigned form silently corrupts negative
-/// operands. For non-negative operands it is bit-identical to the unsigned
-/// form.
-#[must_use]
-pub fn fixed_mul(a: u32, b: u32) -> u32 {
-    ((i64::from(a as i32) * i64::from(b as i32)) >> 16) as i32 as u32
-}
-
-/// Multiply a square 16.16 matrix by a 16.16 vector with wrapping accumulation.
-#[must_use]
-pub fn fixed_matvec(matrix: &[u32], vector: &[u32], n: usize) -> Vec<u32> {
-    (0..n)
-        .map(|row| {
-            let mut acc = 0u32;
-            for column in 0..n {
-                acc = acc.wrapping_add(fixed_mul(matrix[row * n + column], vector[column]));
-            }
-            acc
-        })
-        .collect()
-}
-
-/// Advance the deterministic xorshift32 generator used by parity sweeps.
-pub fn xorshift32(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
-
-fn signed_fixed_with_mask(state: &mut u32, magnitude_mask: u32) -> u32 {
-    let magnitude = (xorshift32(state) & magnitude_mask) as i32;
-    if xorshift32(state) & 1 == 0 {
-        magnitude as u32
-    } else {
-        (-magnitude) as u32
-    }
-}
-
-/// Generate a signed 16.16 sample in approximately `[-8, 8)`.
-pub fn signed_fixed_19(state: &mut u32) -> u32 {
-    signed_fixed_with_mask(state, 0x0007_FFFF)
-}
-
-/// Generate a signed 16.16 sample in approximately `[-4, 4)`.
-pub fn signed_fixed_18(state: &mut u32) -> u32 {
-    signed_fixed_with_mask(state, 0x0003_FFFF)
-}
-
-/// Generate a signed 16.16 sample in approximately `[-2, 2)`.
-pub fn signed_fixed_17(state: &mut u32) -> u32 {
-    signed_fixed_with_mask(state, 0x0001_FFFF)
-}
-
-/// Signed integer division by a known-positive divisor, truncating toward
-/// zero, identical to the IR's `crate::math::fixed::fixed_sdiv_by_positive_expr`.
-///
-/// Mirrors the fixed weighted-Jacobi `delta` divide, whose numerator is
-/// negative whenever the residual is negative.
-#[must_use]
-pub fn fixed_sdiv_by_positive(numerator: u32, denominator: u32) -> u32 {
-    ((numerator as i32) / (denominator as i32)) as u32
-}
-
 /// A dispatcher whose being called is the test failure.
 ///
 /// Reaching the backend at all is what a reject-before-dispatch, short-circuit, or cache-hit
 /// contract forbids, so the assertion has to live in `dispatch` rather than after the call. The
 /// message names the contract that was supposed to stop first.
-#[cfg(test)]
 pub(crate) struct NeverDispatches(pub(crate) &'static str);
 
-#[cfg(test)]
 impl ProgramDispatcher for NeverDispatches {
     fn dispatch(
         &self,
@@ -155,7 +59,6 @@ impl ProgramDispatcher for NeverDispatches {
 ///
 /// `contract` names what the dispatcher stands in for, so a failure reads as
 /// the contract that was violated rather than as an anonymous double.
-#[cfg(test)]
 pub(crate) struct StaticOutputs {
     contract: &'static str,
     outputs: Vec<Vec<u8>>,
@@ -166,7 +69,6 @@ pub(crate) struct StaticOutputs {
     recorded: std::sync::Mutex<Vec<Vec<u32>>>,
 }
 
-#[cfg(test)]
 impl StaticOutputs {
     /// Returns `outputs` from every dispatch, checking nothing.
     pub(crate) fn new(contract: &'static str, outputs: Vec<Vec<u8>>) -> Self {
@@ -218,7 +120,6 @@ impl StaticOutputs {
     }
 }
 
-#[cfg(test)]
 impl ProgramDispatcher for StaticOutputs {
     fn dispatch(
         &self,

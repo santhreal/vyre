@@ -19,7 +19,7 @@
 use vyre_libs::solvers::mori_zwanzig_region_coarsen::coarsen_region_state_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{
+use vyre_test_support::fixed_point::{
     fixed_matvec as mz_project_fixed, signed_fixed_19 as signed_fixed, to_fixed,
     xorshift32 as xorshift,
 };

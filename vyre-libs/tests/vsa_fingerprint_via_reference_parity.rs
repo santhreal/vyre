@@ -17,7 +17,7 @@
 use vyre_libs::encoding::vsa_fingerprint::{fingerprint_via, reference_fingerprint};
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn fingerprint_via_matches_host_over_generated_hypervectors() {

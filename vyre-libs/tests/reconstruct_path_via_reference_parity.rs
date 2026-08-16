@@ -17,7 +17,7 @@ use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
 use vyre_libs::graph::path_reconstruct::cpu_ref;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn reconstruct_path_via_matches_cpu_ref_over_random_forests() {

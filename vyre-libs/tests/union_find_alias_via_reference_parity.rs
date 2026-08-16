@@ -25,7 +25,7 @@ use vyre_libs::graph::dispatch::union_find_emit::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// Number of distinct components in a root-canonicalized parent vector.
 fn component_count(roots: &[u32]) -> usize {

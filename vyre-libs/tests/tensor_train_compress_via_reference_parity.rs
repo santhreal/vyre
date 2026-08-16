@@ -13,7 +13,7 @@
 use vyre_libs::solvers::tensor_train_compression::compress_cost_tensor_f32_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// Contract a TT-core chain to the scalar tensor value at multi-index `idx`.
 ///
