@@ -1,5 +1,5 @@
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
+use std::sync::{Arc, OnceLock};
 
 use vyre_spec::OpIntensity;
 
@@ -189,10 +189,36 @@ impl Program {
     #[must_use]
     #[inline]
     pub fn with_launch_geometry(&self, geometry: &crate::geometry::LaunchGeometry) -> Self {
-        self.with_rewritten_workgroup_size_and_entry(
-            geometry.workgroup,
-            self.entry.as_ref().clone(),
-        )
+        Self {
+            entry_op_id: self.entry_op_id.as_deref().map(Into::into),
+            buffers: Arc::clone(&self.buffers),
+            buffer_index: Arc::clone(&self.buffer_index),
+            workgroup_size: geometry.workgroup,
+            entry: Arc::clone(&self.entry),
+            hash: OnceLock::new(),
+            validation_set: OnceLock::new(),
+            structural_validated: AtomicBool::new(false),
+            structural_validation_fingerprint: AtomicU64::new(0),
+            mutation_provenance: AtomicU8::new(0),
+            fingerprint: OnceLock::new(),
+            normalized_cache_digest: OnceLock::new(),
+            output_buffer_index: OnceLock::new(),
+            has_indirect_dispatch: OnceLock::new(),
+            stats: OnceLock::new(),
+            non_composable_with_self: self.non_composable_with_self,
+        }
+    }
+
+    /// Return a clone of this program with lowered launch geometry applied.
+    ///
+    /// Alias for [`with_launch_geometry`](Self::with_launch_geometry).
+    #[must_use]
+    #[inline]
+    pub fn with_rewritten_launch_geometry(
+        &self,
+        geometry: &crate::geometry::LaunchGeometry,
+    ) -> Self {
+        self.with_launch_geometry(geometry)
     }
 
     /// Entry-point nodes.
