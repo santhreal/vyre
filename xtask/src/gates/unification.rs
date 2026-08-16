@@ -165,7 +165,10 @@ mod tests {
     /// The roots have to exist, because a row over a missing path is itself a
     /// finding, which is the whole point of the second fixture below.
     fn checkout() -> (TempDir, PathBuf) {
-        let roots: Vec<&str> = ROWS.iter().flat_map(|row| row.roots.iter().copied()).collect();
+        let roots: Vec<&str> = ROWS
+            .iter()
+            .flat_map(|row| row.roots.iter().copied())
+            .collect();
         fixture_checkout::checkout_with_roots(&roots)
     }
 
@@ -227,7 +230,10 @@ mod tests {
             "the unmeasurable row is reported: {reported}"
         );
         assert!(
-            !report.notes.iter().any(|note| note.contains("pipeline-cache-in-backend")),
+            !report
+                .notes
+                .iter()
+                .any(|note| note.contains("pipeline-cache-in-backend")),
             "and it is not also counted as clean: {:?}",
             report.notes
         );

@@ -78,7 +78,10 @@ impl Gate for PlatformConsumerDocs {
                 report.find(Finding::at(
                     hit.file,
                     hit.line,
-                    format!("a platform comment names a downstream consumer: {}", hit.text),
+                    format!(
+                        "a platform comment names a downstream consumer: {}",
+                        hit.text
+                    ),
                     "describe the capability generically; a consumer name belongs in the \
                      consumer crate or in release integration evidence",
                 ));
@@ -131,7 +134,10 @@ fn scan_document(
             report.find(Finding::at(
                 path,
                 number,
-                format!("platform documentation names a downstream consumer: {}", line.trim()),
+                format!(
+                    "platform documentation names a downstream consumer: {}",
+                    line.trim()
+                ),
                 "describe the capability generically, or move the passage into the consumer \
                  documentation that owns the integration",
             ));

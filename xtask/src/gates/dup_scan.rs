@@ -448,7 +448,10 @@ fn lower_pin(
         return Ok(());
     }
     if count.duplicate_lines == pin.duplicate_lines {
-        report.note(format!("`{name}` is already pinned at {}", pin.duplicate_lines));
+        report.note(format!(
+            "`{name}` is already pinned at {}",
+            pin.duplicate_lines
+        ));
         return Ok(());
     }
     let Some(updated) = rewrite_pin(&text, name, count) else {
@@ -517,7 +520,11 @@ impl Gate for DupScan {
 
         let counts = measure(root)?;
 
-        if let Some(position) = ctx.args.iter().position(|argument| argument == "--lower-pin") {
+        if let Some(position) = ctx
+            .args
+            .iter()
+            .position(|argument| argument == "--lower-pin")
+        {
             let Some(name) = ctx
                 .args
                 .get(position + 1)
@@ -570,7 +577,10 @@ impl Gate for DupScan {
         for (name, count) in &counts {
             if count.duplicate_lines > 0 && !baseline.crates.iter().any(|pin| &pin.name == name) {
                 report.find(Finding::new(
-                    format!("`{name}` has {} duplicated lines and no pin", count.duplicate_lines),
+                    format!(
+                        "`{name}` has {} duplicated lines and no pin",
+                        count.duplicate_lines
+                    ),
                     "record it with `xtask dup-scan --write`",
                 ));
             }
@@ -664,7 +674,8 @@ mod tests {
         fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &block).expect("write");
 
-        let reports = report_for(&dir, Some("crate-a")).expect("the fixture checkout is reportable");
+        let reports =
+            report_for(&dir, Some("crate-a")).expect("the fixture checkout is reportable");
         assert_eq!(reports.len(), 1, "only the filtered crate is reported");
         assert_eq!(reports[0].path, "crate-a/src/lib.rs");
         assert_eq!(reports[0].duplicate_lines, SHINGLE);
@@ -692,7 +703,8 @@ mod tests {
         fs::write(dir.join("crate-a/src/two.rs"), format!("{unique}{shared}")).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &shared).expect("write");
 
-        let measured = measure(&dir).expect("the fixture checkout is measurable")["crate-a"].duplicate_lines;
+        let measured =
+            measure(&dir).expect("the fixture checkout is measurable")["crate-a"].duplicate_lines;
         let reported: usize = report_for(&dir, Some("crate-a"))
             .expect("the fixture checkout is measurable")
             .iter()
@@ -712,7 +724,8 @@ mod tests {
     /// ignored `.rs` files that were counted into their crates' totals.
     #[test]
     fn a_file_the_repository_ignores_is_not_measured() {
-        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-ignored-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("vyre-dup-scan-ignored-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         crate::fixture_checkout::empty(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
@@ -814,15 +827,14 @@ mod tests {
         let alpha = updated.find("name = \"alpha\"").expect("alpha row");
         let beta = updated.find("name = \"beta\"").expect("beta row");
         let gamma = updated.find("name = \"gamma\"").expect("gamma row");
-        assert!(alpha < beta && beta < gamma, "rows stay name-ordered: {updated}");
+        assert!(
+            alpha < beta && beta < gamma,
+            "rows stay name-ordered: {updated}"
+        );
         assert!(updated.starts_with("# Duplicated source lines per crate."));
         let parsed: BaselineFile =
             toml::from_str(&updated).expect("the written file must still parse");
-        assert_eq!(
-            parsed.crates.len(),
-            3,
-            "insertion adds exactly one row"
-        );
+        assert_eq!(parsed.crates.len(), 3, "insertion adds exactly one row");
     }
 
     /// WHY: a crate sorting after every pinned name has no row to insert before,

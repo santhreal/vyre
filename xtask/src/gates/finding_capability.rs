@@ -176,21 +176,17 @@ fn gate_roots(tree: &Tree) -> Result<Vec<String>, GateError> {
 }
 
 /// One verdict per gate found in the source: whether a finding is reachable.
-fn capability_by_gate(
-    tree: &Tree,
-    roots: &[String],
-) -> Result<BTreeMap<String, bool>, GateError> {
+fn capability_by_gate(tree: &Tree, roots: &[String]) -> Result<BTreeMap<String, bool>, GateError> {
     let scope: Vec<&str> = roots.iter().map(String::as_str).collect();
     let mut sources = Vec::new();
     for path in tree.rust(&scope)? {
         let text = tree.read(&path)?;
         sources.push(without_test_modules(&without_comments(&text)));
     }
-    let functions: Vec<(String, String)> = sources.iter().flat_map(|text| functions(text)).collect();
-    let macros: Vec<(String, String)> = sources
-        .iter()
-        .flat_map(|text| macro_bodies(text))
-        .collect();
+    let functions: Vec<(String, String)> =
+        sources.iter().flat_map(|text| functions(text)).collect();
+    let macros: Vec<(String, String)> =
+        sources.iter().flat_map(|text| macro_bodies(text)).collect();
     let mut verdicts = BTreeMap::new();
     for text in &sources {
         for (gate, body) in gate_sites(text, &macros) {
@@ -685,10 +681,7 @@ impl Gate for Judges {
 
         assert_eq!(
             verdicts,
-            vec![
-                ("reports".to_string(), false),
-                ("judges".to_string(), true)
-            ]
+            vec![("reports".to_string(), false), ("judges".to_string(), true)]
         );
     }
 
@@ -925,9 +918,8 @@ impl Gate for Real {
     #[test]
     fn the_scanned_roots_are_derived_from_the_members_that_depend_on_this_crate() {
         let owner = env!("CARGO_PKG_NAME");
-        let workspace = format!(
-            "[workspace]\nmembers = [\"{owner}\", \"nested/consumer\", \"stranger\"]\n"
-        );
+        let workspace =
+            format!("[workspace]\nmembers = [\"{owner}\", \"nested/consumer\", \"stranger\"]\n");
         let owner_manifest = format!("[package]\nname = \"{owner}\"\n");
         let consumer_manifest =
             format!("[package]\nname = \"consumer\"\n\n[dependencies]\n{owner} = {{ path = \"../../{owner}\" }}\n");
@@ -947,10 +939,7 @@ impl Gate for Real {
 
         assert_eq!(
             roots,
-            vec![
-                "nested/consumer/src".to_string(),
-                format!("{owner}/src")
-            ],
+            vec!["nested/consumer/src".to_string(), format!("{owner}/src")],
             "the crate that owns the trait and the member that depends on it, and nothing else"
         );
     }
@@ -963,10 +952,8 @@ impl Gate for Real {
     #[test]
     fn every_disagreement_between_the_registry_and_the_source_is_reported() {
         let roots = vec!["xtask/src".to_string()];
-        let capability = BTreeMap::from([
-            ("finds".to_string(), true),
-            ("notes".to_string(), false),
-        ]);
+        let capability =
+            BTreeMap::from([("finds".to_string(), true), ("notes".to_string(), false)]);
         let excuses_finds: &[(&str, &str)] = &[("finds", "another gate")];
         let excuses_notes: &[(&str, &str)] = &[("notes", "another gate")];
         let excuses_nobody: &[(&str, &str)] = &[("retired", "another gate")];

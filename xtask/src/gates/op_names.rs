@@ -34,7 +34,8 @@ const EXEMPT_FILE_NAMES: &[&str] = &[
 ];
 
 /// The corrective action for every name this gate rejects.
-const FIX: &str = "name the function for the operation it performs, in snake_case, with no implementation suffix";
+const FIX: &str =
+    "name the function for the operation it performs, in snake_case, with no implementation suffix";
 
 /// Largest source file this gate will read.
 const MAX_SOURCE_BYTES: u64 = 2_097_152;
@@ -122,14 +123,13 @@ impl Gate for OpNames {
             if !entry.file_type().is_file() || !is_op_source(path) {
                 continue;
             }
-            let text =
-                crate::output_arg::read_text_bounded(path, MAX_SOURCE_BYTES, "op-name scan")
-                    .map_err(|error| {
-                        GateError::new(
-                            format!("cannot read {}: {error}", path.display()),
-                            "make the file readable, or split it under the scan bound",
-                        )
-                    })?;
+            let text = crate::output_arg::read_text_bounded(path, MAX_SOURCE_BYTES, "op-name scan")
+                .map_err(|error| {
+                    GateError::new(
+                        format!("cannot read {}: {error}", path.display()),
+                        "make the file readable, or split it under the scan bound",
+                    )
+                })?;
             scanned += 1;
             for (index, line) in text.lines().enumerate() {
                 // The script matched `^pub fn`, so an inherent method stays out
@@ -189,7 +189,9 @@ mod tests {
     fn scopes_the_scan_to_op_sources() {
         assert!(is_op_source(Path::new("vyre-libs/src/geom/rotate.rs")));
         assert!(!is_op_source(Path::new("vyre-libs/src/geom/mod.rs")));
-        assert!(!is_op_source(Path::new("vyre-libs/src/geom/tests/rotate.rs")));
+        assert!(!is_op_source(Path::new(
+            "vyre-libs/src/geom/tests/rotate.rs"
+        )));
         assert!(is_op_source(Path::new("vyre-libs/src/geom/testable.rs")));
         assert!(!is_op_source(Path::new("vyre-libs/src/geom/rotate.md")));
     }

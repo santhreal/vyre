@@ -74,14 +74,17 @@ impl Gate for ParityTestingIsolated {
         let mut report = Report::clean();
         let paths = manifests(&ctx.root)?;
         for path in &paths {
-            let text =
-                crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "parity-testing scan")
-                    .map_err(|error| {
-                        GateError::new(
-                            format!("cannot read {}: {error}", path.display()),
-                            "make every manifest in the checkout readable",
-                        )
-                    })?;
+            let text = crate::output_arg::read_text_bounded(
+                path,
+                MAX_MANIFEST_BYTES,
+                "parity-testing scan",
+            )
+            .map_err(|error| {
+                GateError::new(
+                    format!("cannot read {}: {error}", path.display()),
+                    "make every manifest in the checkout readable",
+                )
+            })?;
             let crate_directory = path
                 .parent()
                 .and_then(Path::file_name)

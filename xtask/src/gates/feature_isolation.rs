@@ -739,9 +739,9 @@ fn cargo_binary() -> String {
 
 /// Turn one half's disagreements into findings under the fix that closes them.
 fn record(report: &mut Report, failures: Vec<String>, fix: &str) {
-    report.findings.extend(
-        Report::from_messages(failures, fix).findings,
-    );
+    report
+        .findings
+        .extend(Report::from_messages(failures, fix).findings);
 }
 
 /// Compile each pair in turn, recording the outcome as it goes.
@@ -919,7 +919,6 @@ impl Gate for FeatureIsolation {
         report.note(format!("{} pair(s) compiled", selected.len()));
         Ok(report)
     }
-
 }
 
 #[cfg(test)]
@@ -945,7 +944,8 @@ mod tests {
             member: member.to_string(),
             feature: feature.to_string(),
             outcome: outcome.to_string(),
-            reason: (outcome == BLOCKED).then(|| "the vendored driver has no Linux build".to_string()),
+            reason: (outcome == BLOCKED)
+                .then(|| "the vendored driver has no Linux build".to_string()),
         };
         let rows = vec![
             row("vyre-pass-engine", "all-solvers", COMPILES),
@@ -965,17 +965,26 @@ mod tests {
             ),
             (
                 pair("vyre-libs", "matching-regex"),
-                Observation { compiles: true, first_error: None },
+                Observation {
+                    compiles: true,
+                    first_error: None,
+                },
             ),
             (
                 pair("vyre-libs", "visual"),
-                Observation { compiles: true, first_error: None },
+                Observation {
+                    compiles: true,
+                    first_error: None,
+                },
             ),
             // No row at all: the agreement half owns that, and counting it here
             // too would report one omission as two unrelated failures.
             (
                 pair("vyre-libs", "unrecorded"),
-                Observation { compiles: true, first_error: None },
+                Observation {
+                    compiles: true,
+                    first_error: None,
+                },
             ),
         ];
 

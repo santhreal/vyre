@@ -218,7 +218,10 @@ fn template_findings(
             ));
         }
         let mut relative = PathBuf::from(path.trim_start_matches(&format!("{directory}/")));
-        if relative.file_name().is_some_and(|name| name == TEMPLATE_MANIFEST) {
+        if relative
+            .file_name()
+            .is_some_and(|name| name == TEMPLATE_MANIFEST)
+        {
             relative.set_file_name("Cargo.toml");
         }
         rendered.insert(relative, render(&text));
@@ -379,9 +382,7 @@ fn unknown_placeholders(text: &str) -> Vec<String> {
             break;
         };
         let placeholder = &after[..close + 2];
-        if !PLACEHOLDERS
-            .iter()
-            .any(|(known, _)| *known == placeholder)
+        if !PLACEHOLDERS.iter().any(|(known, _)| *known == placeholder)
             && !unknown.iter().any(|found| found == placeholder)
         {
             unknown.push(placeholder.to_string());
@@ -475,10 +476,7 @@ mod tests {
         let tracked = tracked_example_paths(&root).expect("the checkout tracks its examples");
         let mut unknown = Vec::new();
         for paths in tracked.values() {
-            if !paths
-                .iter()
-                .any(|path| path.ends_with(TEMPLATE_MANIFEST))
-            {
+            if !paths.iter().any(|path| path.ends_with(TEMPLATE_MANIFEST)) {
                 continue;
             }
             for path in paths {
@@ -525,7 +523,8 @@ mod tests {
             .expect("xtask sits in the workspace root")
             .to_path_buf();
 
-        let isolated = workspace_isolation_findings(&root, "examples/libs-template/Cargo.toml.liquid");
+        let isolated =
+            workspace_isolation_findings(&root, "examples/libs-template/Cargo.toml.liquid");
         let missing = workspace_isolation_findings(&root, "xtask/Cargo.toml");
 
         assert!(isolated.is_empty(), "{isolated:?}");

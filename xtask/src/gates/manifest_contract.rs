@@ -285,8 +285,7 @@ impl Resolver<'_> {
         if member.contains('*') || member.contains('?') || member.contains('[') {
             let prefix = member.trim_end_matches('*').trim_end_matches('/');
             let matched = manifests.iter().any(|candidate| {
-                manifest_directory(candidate)
-                    .is_some_and(|directory| directory.starts_with(prefix))
+                manifest_directory(candidate).is_some_and(|directory| directory.starts_with(prefix))
             });
             if !matched {
                 report.find(Finding::in_file(
@@ -358,9 +357,7 @@ impl Gate for InternalDepVersions {
         let unpublished = roster.len() - published;
         if published == 0 || unpublished == 0 {
             return Err(GateError::new(
-                format!(
-                    "derived {published} publishable and {unpublished} unpublishable members"
-                ),
+                format!("derived {published} publishable and {unpublished} unpublishable members"),
                 "one half of this rule would scan nothing; check that member manifests \
                  declare package.publish as they mean it",
             ));
@@ -386,9 +383,7 @@ impl Gate for InternalDepVersions {
                             continue;
                         };
                         edges += 1;
-                        let line = lines
-                            .get(&(table_name.clone(), key.clone()))
-                            .copied();
+                        let line = lines.get(&(table_name.clone(), key.clone())).copied();
                         let named = if package == key {
                             key.clone()
                         } else {
@@ -470,7 +465,9 @@ impl Gate for InternalDepVersions {
                 report.find(finding(
                     Path::new("Cargo.toml"),
                     line,
-                    format!("[workspace.dependencies] {named} is path-only, but {package} is published"),
+                    format!(
+                        "[workspace.dependencies] {named} is path-only, but {package} is published"
+                    ),
                     "add `version`; every member inheriting this entry would publish \
                      unresolvable",
                 ));
@@ -557,10 +554,7 @@ pub(crate) fn entries(table: &toml::Table, name: &str) -> Vec<(String, toml::Tab
                 toml::Value::Table(spec) => spec.clone(),
                 toml::Value::String(version) => {
                     let mut spec = toml::Table::new();
-                    spec.insert(
-                        "version".to_string(),
-                        toml::Value::String(version.clone()),
-                    );
+                    spec.insert("version".to_string(), toml::Value::String(version.clone()));
                     spec
                 }
                 _ => toml::Table::new(),
@@ -609,7 +603,11 @@ fn resolved_manifest(manifest: &Path, raw: &str) -> Option<PathBuf> {
 
 /// The package a dependency key names, following a `package =` rename through
 /// workspace inheritance.
-pub(crate) fn target_package(key: &str, spec: &toml::Table, workspace_deps: &toml::Table) -> String {
+pub(crate) fn target_package(
+    key: &str,
+    spec: &toml::Table,
+    workspace_deps: &toml::Table,
+) -> String {
     if let Some(renamed) = spec.get("package").and_then(toml::Value::as_str) {
         return renamed.to_string();
     }

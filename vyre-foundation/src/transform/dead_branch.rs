@@ -55,7 +55,8 @@ fn rewrite_scope(body: &[Node]) -> Vec<Node> {
                     // side effects → drop the entire If. `cond` Loads
                     // are read-only in vyre, so the only side-effect
                     // gate is `Atomic`.
-                    if new_then.is_empty() && new_otherwise.is_empty() && expr_is_atomic_free(cond) {
+                    if new_then.is_empty() && new_otherwise.is_empty() && expr_is_atomic_free(cond)
+                    {
                         continue;
                     }
                     // Both arms structurally equal + cond has no

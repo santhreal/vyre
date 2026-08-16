@@ -35,7 +35,10 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-driver-wgpu/src/pipeline/mod.rs", 900),
     ("vyre-driver-wgpu/src/buffer/handle/mod.rs", 674),
     ("vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs", 331),
-    ("vyre-driver-wgpu/src/engine/record_and_readback/mod.rs", 829),
+    (
+        "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs",
+        829,
+    ),
     ("vyre-reference/src/workgroup.rs", 810),
     ("vyre-driver-wgpu/src/engine/multi_gpu/mod.rs", 808),
     ("vyre-foundation/src/optimizer/fact_cache/mod.rs", 570),
@@ -46,13 +49,19 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-foundation/src/optimizer/rewrite.rs", 754),
     ("vyre-driver-wgpu/src/buffer/pool.rs", 910),
     ("vyre-runtime/src/uring/stream.rs", 830),
-    ("vyre-foundation/src/ir_inner/model/program/meta/mod.rs", 940),
+    (
+        "vyre-foundation/src/ir_inner/model/program/meta/mod.rs",
+        940,
+    ),
     ("vyre-foundation/src/validate/expr_rules.rs", 646),
     (
         "vyre-foundation/src/ir_inner/model/program/buffer_decl/mod.rs",
         725,
     ),
-    ("vyre-foundation/src/serial/wire/decode/from_wire/mod.rs", 606),
+    (
+        "vyre-foundation/src/serial/wire/decode/from_wire/mod.rs",
+        606,
+    ),
     ("vyre-foundation/src/transform/autodiff/grad/mod.rs", 702),
     ("vyre-libs/src/nn/attention/softmax.rs", 592),
     ("vyre-libs/src/parsing/python/parse/structure.rs", 700),

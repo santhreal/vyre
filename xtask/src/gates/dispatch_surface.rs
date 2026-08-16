@@ -475,7 +475,8 @@ mod tests {
 
     /// The gate's report for a tree holding one driver source file.
     fn run(text: &str) -> Report {
-        let (_temporary, root) = fixture_checkout::checkout(&[("vyre-driver/src/backend.rs", text)]);
+        let (_temporary, root) =
+            fixture_checkout::checkout(&[("vyre-driver/src/backend.rs", text)]);
         OwnedDispatch
             .run(&GateCtx::new(root, Vec::new()))
             .expect("the gate reads a fixture tree")
@@ -483,7 +484,8 @@ mod tests {
 
     /// The row-returning gate's report for a tree holding one driver source file.
     fn rows(text: &str) -> Report {
-        let (_temporary, root) = fixture_checkout::checkout(&[("vyre-driver/src/backend.rs", text)]);
+        let (_temporary, root) =
+            fixture_checkout::checkout(&[("vyre-driver/src/backend.rs", text)]);
         NestedRows
             .run(&GateCtx::new(root, Vec::new()))
             .expect("the gate reads a fixture tree")
@@ -546,7 +548,9 @@ pub trait Backend {
         );
         assert!(
             report.findings[0].message.contains("`dispatch_borrowed`")
-                && report.findings[0].message.contains("no form that fills slots"),
+                && report.findings[0]
+                    .message
+                    .contains("no form that fills slots"),
             "the returning method must be named: {:?}",
             report.findings[0]
         );
@@ -720,8 +724,7 @@ pub trait Backend {
 
     #[test]
     fn a_trait_that_requires_the_owned_form_reports_the_requirement_and_the_copy() {
-        let report = run(
-            r"
+        let report = run(r"
 pub trait Backend {
     fn dispatch(
         &self,
@@ -736,8 +739,7 @@ pub trait Backend {
         self.dispatch(&owned)
     }
 }
-",
-        );
+");
 
         let messages: Vec<&str> = report
             .findings
@@ -763,8 +765,7 @@ pub trait Backend {
     /// it would be to force every implementor to write an async path.
     #[test]
     fn an_optional_pair_where_both_forms_default_is_clean() {
-        let report = run(
-            r"
+        let report = run(r"
 pub trait Backend {
     fn dispatch_async(
         &self,
@@ -780,8 +781,7 @@ pub trait Backend {
         ready(self.dispatch_borrowed(inputs)?)
     }
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),
@@ -792,8 +792,7 @@ pub trait Backend {
 
     #[test]
     fn a_borrowing_default_that_copies_rows_is_reported_at_the_copy() {
-        let report = run(
-            r"
+        let report = run(r"
 pub trait Backend {
     fn dispatch(
         &self,
@@ -808,8 +807,7 @@ pub trait Backend {
         inputs: &[&[u8]],
     ) -> Result<Vec<Vec<u8>>, Error>;
 }
-",
-        );
+");
 
         assert_eq!(
             report.findings.len(),
@@ -828,8 +826,7 @@ pub trait Backend {
 
     #[test]
     fn an_owned_only_dispatch_trait_is_left_alone() {
-        let report = run(
-            r"
+        let report = run(r"
 pub trait ProgramDispatcher {
     fn dispatch(
         &self,
@@ -840,8 +837,7 @@ pub trait ProgramDispatcher {
 fn borrow(rows: &[Vec<u8>]) -> Vec<&[u8]> {
     rows.iter().map(Vec::as_slice).collect()
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),
@@ -857,8 +853,7 @@ fn borrow(rows: &[Vec<u8>]) -> Vec<&[u8]> {
 
     #[test]
     fn an_impl_block_is_not_read_as_a_trait_declaration() {
-        let report = run(
-            r"
+        let report = run(r"
 impl Backend for Cuda {
     fn dispatch(
         &self,
@@ -867,8 +862,7 @@ impl Backend for Cuda {
         self.dispatch_borrowed(&borrow(inputs))
     }
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),

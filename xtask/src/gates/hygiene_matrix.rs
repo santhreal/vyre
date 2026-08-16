@@ -351,10 +351,7 @@ fn crate_of_path(path: &str) -> String {
 ///
 /// Every failure path returns a blocker rather than an empty budget, because a
 /// budget that could not be read must not read as a tree that owes nothing.
-fn collect_panic_budget(
-    vyre_root: &Path,
-    classes: &[HygieneFindingClass],
-) -> PanicBudgetArtifact {
+fn collect_panic_budget(vyre_root: &Path, classes: &[HygieneFindingClass]) -> PanicBudgetArtifact {
     let mut measured = BTreeMap::<String, usize>::new();
     for class in classes.iter().filter(|class| is_unbounded_panic(class)) {
         let relative = relative_to_vyre(vyre_root, Path::new(&class.path));
@@ -384,9 +381,9 @@ fn collect_panic_budget(
     let document = match toml::from_str::<PanicBudgetDocument>(&text) {
         Ok(document) => document,
         Err(error) => {
-            artifact
-                .blockers
-                .push(format!("{PANIC_BUDGET_SOURCE} is not readable as a panic budget: {error}"));
+            artifact.blockers.push(format!(
+                "{PANIC_BUDGET_SOURCE} is not readable as a panic budget: {error}"
+            ));
             return artifact;
         }
     };
@@ -4087,7 +4084,11 @@ pub fn undocumented() {
                 pattern,
                 owner_lane: "testing_evidence",
                 surface,
-                risk: if blocker { "release_blocker" } else { "informational" },
+                risk: if blocker {
+                    "release_blocker"
+                } else {
+                    "informational"
+                },
                 hot_path: blocker,
                 release_blocker: blocker,
             }
@@ -4099,7 +4100,12 @@ pub fn undocumented() {
             class("unrecorded/src/a.rs", "expect_call", "production", false),
             // Neither of these is this ratchet's population: one is documented,
             // the other is already a release blocker and counted as one.
-            class("over/src/c.rs", "documented_panic_contract", "production", false),
+            class(
+                "over/src/c.rs",
+                "documented_panic_contract",
+                "production",
+                false,
+            ),
             class("over/src/d.rs", "panic_macro", "production", true),
         ];
 

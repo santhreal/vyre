@@ -203,7 +203,10 @@ mod tests {
             1,
             "a cfg that compiles a test out without a device is a skip"
         );
-        assert_eq!(skips("#[cfg_attr(not(feature = \"gpu\"), ignore)]").len(), 1);
+        assert_eq!(
+            skips("#[cfg_attr(not(feature = \"gpu\"), ignore)]").len(),
+            1
+        );
         assert_eq!(
             skips("#[cfg_attr(not(any(feature = \"gpu\", feature = \"cuda\")), ignore)]").len(),
             1

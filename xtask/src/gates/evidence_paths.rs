@@ -76,7 +76,13 @@ impl Gate for EvidencePaths {
                     "regenerate the artifact with its owning release-evidence command",
                 )
             })?;
-            collect(&document, &mut Vec::new(), artifact, &extensions, &mut citations);
+            collect(
+                &document,
+                &mut Vec::new(),
+                artifact,
+                &extensions,
+                &mut citations,
+            );
         }
         report.note(format!(
             "{} citation(s) across {} artifact(s)",
@@ -266,7 +272,11 @@ fn looks_like_path(text: &str, key: &str, extensions: &BTreeSet<String>) -> bool
     if !(text.contains('/') || key == "path") {
         return false;
     }
-    let last = text.trim_end_matches('/').rsplit('/').next().unwrap_or(text);
+    let last = text
+        .trim_end_matches('/')
+        .rsplit('/')
+        .next()
+        .unwrap_or(text);
     let Some((_, extension)) = last.rsplit_once('.') else {
         return false;
     };
@@ -327,7 +337,10 @@ fn ignored_paths(present: &BTreeSet<PathBuf>) -> Result<Vec<PathBuf>, GateError>
             .spawn()
             .map_err(|error| {
                 GateError::new(
-                    format!("cannot run git check-ignore in {}: {error}", repository.display()),
+                    format!(
+                        "cannot run git check-ignore in {}: {error}",
+                        repository.display()
+                    ),
                     "install git, or run the gate inside a checkout",
                 )
             })?;
@@ -349,7 +362,10 @@ fn ignored_paths(present: &BTreeSet<PathBuf>) -> Result<Vec<PathBuf>, GateError>
         }
         let output = child.wait_with_output().map_err(|error| {
             GateError::new(
-                format!("git check-ignore failed in {}: {error}", repository.display()),
+                format!(
+                    "git check-ignore failed in {}: {error}",
+                    repository.display()
+                ),
                 "run the gate inside a checkout",
             )
         })?;
@@ -470,7 +486,11 @@ mod tests {
     #[test]
     fn both_citation_forms_are_read() {
         let extensions = vocabulary();
-        assert!(looks_like_path("vyre-foundation/src/lib.rs", "source", &extensions));
+        assert!(looks_like_path(
+            "vyre-foundation/src/lib.rs",
+            "source",
+            &extensions
+        ));
         assert!(looks_like_path("backend-matrix.json", "path", &extensions));
         assert!(!looks_like_path("backend-matrix.json", "name", &extensions));
     }
@@ -559,9 +579,8 @@ mod tests {
     /// citation nobody can locate is not actionable.
     #[test]
     fn a_citation_that_does_not_resolve_is_reported() {
-        let (_temporary, root) = checkout(
-            r#"{"findings":[{"path":"definitely/not/on/disk/anywhere.rs"}]}"#,
-        );
+        let (_temporary, root) =
+            checkout(r#"{"findings":[{"path":"definitely/not/on/disk/anywhere.rs"}]}"#);
 
         let report = EvidencePaths
             .run(&GateCtx::new(root, Vec::new()))
@@ -591,8 +610,7 @@ mod tests {
     #[test]
     fn a_cited_path_that_is_gitignored_is_reported() {
         let (_temporary, root) = checkout("{}");
-        fs::write(root.join(".gitignore"), "generated.rs\ntracked.rs\n")
-            .expect("an ignore rule");
+        fs::write(root.join(".gitignore"), "generated.rs\ntracked.rs\n").expect("an ignore rule");
         fs::write(root.join("generated.rs"), "fn generated() {}\n").expect("an ignored file");
         fs::write(root.join("tracked.rs"), "fn tracked() {}\n").expect("a tracked file");
         git(&root, &["add", "-f", ".gitignore", "tracked.rs", "keep.rs"]);
@@ -645,15 +663,13 @@ mod tests {
     /// asserted so a filter that reads the first and stops is red.
     #[test]
     fn a_citation_is_read_at_every_placement() {
-        let (_temporary, root) = checkout(
-            concat!(
-                r#"{"path":"absent/on/the/root/object.rs","#,
-                r#""subject":{"path":"absent/under/an/object.rs"},"#,
-                r#""groups":[{"rows":[{"path":"absent/in/a/nested/array.rs"}]}],"#,
-                r#""crate":{"manifest":"absent/crate/Cargo.toml"},"#,
-                r#""sources":["absent/array/member.rs"]}"#
-            ),
-        );
+        let (_temporary, root) = checkout(concat!(
+            r#"{"path":"absent/on/the/root/object.rs","#,
+            r#""subject":{"path":"absent/under/an/object.rs"},"#,
+            r#""groups":[{"rows":[{"path":"absent/in/a/nested/array.rs"}]}],"#,
+            r#""crate":{"manifest":"absent/crate/Cargo.toml"},"#,
+            r#""sources":["absent/array/member.rs"]}"#
+        ));
 
         let report = EvidencePaths
             .run(&GateCtx::new(root, Vec::new()))
@@ -673,7 +689,10 @@ mod tests {
         }
         assert_eq!(report.count(), 5, "every placement counts: {reported}");
         assert!(
-            report.notes.iter().any(|note| note.contains("5 citation(s)")),
+            report
+                .notes
+                .iter()
+                .any(|note| note.contains("5 citation(s)")),
             "and the note states what was read: {:?}",
             report.notes
         );
@@ -688,16 +707,14 @@ mod tests {
     /// turns this red.
     #[test]
     fn a_string_that_names_no_file_is_not_a_citation() {
-        let (_temporary, root) = checkout(
-            concat!(
-                r#"{"version":"1.2.0","#,
-                r#""schema_id":"vyre-conform-input-envelope-v1","#,
-                r#""op":"vyre-primitives::hardware::subgroup_shuffle","#,
-                r#""fingerprint":"source-tree-v1:f42685f0","#,
-                r#""command":"git grep -nE \"trait CpuOp\" -- absent/crate/src","#,
-                r#""ratio":"0.0/1.0"}"#
-            ),
-        );
+        let (_temporary, root) = checkout(concat!(
+            r#"{"version":"1.2.0","#,
+            r#""schema_id":"vyre-conform-input-envelope-v1","#,
+            r#""op":"vyre-primitives::hardware::subgroup_shuffle","#,
+            r#""fingerprint":"source-tree-v1:f42685f0","#,
+            r#""command":"git grep -nE \"trait CpuOp\" -- absent/crate/src","#,
+            r#""ratio":"0.0/1.0"}"#
+        ));
 
         let report = EvidencePaths
             .run(&GateCtx::new(root, Vec::new()))
@@ -709,7 +726,10 @@ mod tests {
             messages(&report)
         );
         assert!(
-            report.notes.iter().any(|note| note.contains("0 citation(s)")),
+            report
+                .notes
+                .iter()
+                .any(|note| note.contains("0 citation(s)")),
             "and none was read as one: {:?}",
             report.notes
         );

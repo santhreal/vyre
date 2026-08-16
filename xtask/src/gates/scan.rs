@@ -77,7 +77,10 @@ impl Tree {
             })?;
         if !listing.status.success() {
             return Err(GateError::new(
-                format!("cannot list the tree: git ls-files exited {}", listing.status),
+                format!(
+                    "cannot list the tree: git ls-files exited {}",
+                    listing.status
+                ),
                 "run this gate inside a git checkout of the repository",
             ));
         }
@@ -135,8 +138,7 @@ impl Tree {
         Some(format!(
             "{} tracked file(s) absent from the working tree, not scanned: {}",
             self.absent.len(),
-            self
-                .absent
+            self.absent
                 .iter()
                 .map(|path| path.display().to_string())
                 .collect::<Vec<_>>()
@@ -972,7 +974,10 @@ mod tests {
         assert!(glob_match("docs/**", "docs/a.md"));
         assert!(glob_match("a?c.rs", "abc.rs"));
         assert!(!glob_match("a?c.rs", "ac.rs"));
-        assert!(glob_match("vyre-*/src/**/*.rs", "vyre-libs/src/graph/mod.rs"));
+        assert!(glob_match(
+            "vyre-*/src/**/*.rs",
+            "vyre-libs/src/graph/mod.rs"
+        ));
         assert!(!glob_match("vyre-*/src/**/*.rs", "vyre-libs/tests/a.rs"));
     }
 
@@ -1024,9 +1029,7 @@ mod tests {
         let flags = cfg_test_lines(&lines);
         assert_eq!(
             flags,
-            vec![
-                false, true, true, true, true, true, true, true, true, true, false
-            ],
+            vec![false, true, true, true, true, true, true, true, true, true, false],
             "the extent is the attribute through the item's closing brace"
         );
     }
@@ -1123,8 +1126,7 @@ mod tests {
         )
         .expect("rule runs");
 
-        let lines: Vec<Option<u32>> =
-            report.findings.iter().map(|finding| finding.line).collect();
+        let lines: Vec<Option<u32>> = report.findings.iter().map(|finding| finding.line).collect();
         assert_eq!(
             lines,
             vec![Some(7), Some(7)],

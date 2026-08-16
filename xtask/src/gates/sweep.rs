@@ -679,7 +679,10 @@ mod tests {
             referenced_script("        run: bash \"scripts/check_public_api.sh\";"),
             Some("check_public_api.sh")
         );
-        assert_eq!(referenced_script("      # all on scripts/cargo_runner.sh."), None);
+        assert_eq!(
+            referenced_script("      # all on scripts/cargo_runner.sh."),
+            None
+        );
         assert_eq!(
             referenced_script("        run: bash scripts/gate.sh # see scripts/other.sh."),
             Some("gate.sh")
@@ -716,10 +719,7 @@ mod tests {
         assert_eq!(accepted, Vec::<String>::new());
         assert_eq!(missing.len(), 1, "got {missing:?}");
         assert!(missing[0].contains("gates.yml:9"), "got {missing:?}");
-        assert!(
-            missing[0].contains("scripts/retired.sh"),
-            "got {missing:?}"
-        );
+        assert!(missing[0].contains("scripts/retired.sh"), "got {missing:?}");
         assert_eq!(rejected.len(), 1, "got {rejected:?}");
         assert!(rejected[0].contains("run_*.sh"), "got {rejected:?}");
     }

@@ -344,10 +344,7 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::nn::rms_norm",
         "vyre-libs::builder::tiled_reduce",
     ),
-    (
-        "vyre-libs::nn::softmax",
-        "vyre-libs::builder::tiled_reduce",
-    ),
+    ("vyre-libs::nn::softmax", "vyre-libs::builder::tiled_reduce"),
 ];
 
 /// Family pairs that emit the same shape from deliberately separate builders.

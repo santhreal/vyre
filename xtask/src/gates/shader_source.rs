@@ -110,10 +110,7 @@ impl Gate for ShaderSource {
             if file.starts_with("vyre-driver-wgpu/src") {
                 let appends = text.matches("push_str").count();
                 if appends > 0
-                    && scan::contains_any(
-                        &text,
-                        &["@compute", "var<storage", "@workgroup_size"],
-                    )
+                    && scan::contains_any(&text, &["@compute", "var<storage", "@workgroup_size"])
                 {
                     report.find(Finding::in_file(
                         file.clone(),

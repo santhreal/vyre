@@ -141,7 +141,10 @@ fn judge_members(
             )),
         }
     }
-    if !members.iter().any(|member| member.path == "vyre-megakernel") {
+    if !members
+        .iter()
+        .any(|member| member.path == "vyre-megakernel")
+    {
         findings.push(Finding::in_file(
             "Cargo.toml",
             "workspace.members does not include vyre-megakernel, which the architecture names as the compiler crate",
@@ -152,10 +155,7 @@ fn judge_members(
 }
 
 /// The released version the document has to be verified against.
-fn release_version(
-    tree: &Tree,
-    findings: &mut Vec<Finding>,
-) -> Result<Option<String>, GateError> {
+fn release_version(tree: &Tree, findings: &mut Vec<Finding>) -> Result<Option<String>, GateError> {
     let train = tree.read_toml("release/release-train.toml")?;
     let version = train
         .get("versions")
@@ -183,8 +183,12 @@ fn judge_operation_schema(tree: &Tree, findings: &mut Vec<Finding>) -> Result<()
             "regenerate the schema with `xtask operation-schema --write`",
         )
     })?;
-    let operations = value.get("operations").and_then(serde_json::Value::as_array);
-    let tier_counts = value.get("tier_counts").and_then(serde_json::Value::as_object);
+    let operations = value
+        .get("operations")
+        .and_then(serde_json::Value::as_array);
+    let tier_counts = value
+        .get("tier_counts")
+        .and_then(serde_json::Value::as_object);
     let schema_version = value
         .get("schema_version")
         .and_then(serde_json::Value::as_i64);
@@ -430,9 +434,8 @@ fn stale_phrases(text: &str) -> Vec<String> {
 
 /// Whether `needle` appears in `text` with no word character on either side.
 fn word_bounded(text: &str, needle: &str) -> bool {
-    occurrences(text, needle).any(|at| {
-        !preceded_by_word(text, at) && !followed_by_word(text, at + needle.len())
-    })
+    occurrences(text, needle)
+        .any(|at| !preceded_by_word(text, at) && !followed_by_word(text, at + needle.len()))
 }
 
 /// A claim that one backend is the primary production path.
@@ -604,7 +607,9 @@ fn judge_lanes(
                 if !matched {
                     findings.push(Finding::in_file(
                         LANES,
-                        format!("lane `{lane}` {key} entry `{pattern}` matches nothing in the tree"),
+                        format!(
+                            "lane `{lane}` {key} entry `{pattern}` matches nothing in the tree"
+                        ),
                         LANE_FIX,
                     ));
                 }

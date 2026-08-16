@@ -137,7 +137,13 @@ impl Gate for PublicApiSnapshot {
                 }
             };
             if ctx.write {
-                install(&absolute, &snapshot, committed.as_deref(), &current, &mut report)?;
+                install(
+                    &absolute,
+                    &snapshot,
+                    committed.as_deref(),
+                    &current,
+                    &mut report,
+                )?;
                 continue;
             }
             let Some(committed) = committed else {
@@ -314,7 +320,9 @@ fn extract(root: &Path, package: &str) -> Result<String, GateError> {
         // zero-byte .rmeta, and skipping it silently is how a crate drops out
         // of the gate unnoticed.
         return Err(GateError::new(
-            format!("`{package}` extracted no public item, and a publishable crate exports something"),
+            format!(
+                "`{package}` extracted no public item, and a publishable crate exports something"
+            ),
             format!("build `{package}` alone and rerun"),
         ));
     }
@@ -426,10 +434,8 @@ mod tests {
     /// tree. Both directions are the contract of the refresh path.
     #[test]
     fn a_refresh_reports_what_it_installed_and_leaves_an_identical_file_alone() {
-        let (_temporary, root) = fixture_checkout::checkout(&[(
-            "docs/public-api/alpha.txt",
-            "pub fn a()\n",
-        )]);
+        let (_temporary, root) =
+            fixture_checkout::checkout(&[("docs/public-api/alpha.txt", "pub fn a()\n")]);
         let absolute = root.join("docs/public-api/alpha.txt");
         let relative = Path::new("docs/public-api/alpha.txt");
 
@@ -454,7 +460,11 @@ mod tests {
         )
         .unwrap();
         assert_eq!(report.notes.len(), 1);
-        assert!(report.notes[0].contains("1 added, 0 removed"), "{:?}", report.notes);
+        assert!(
+            report.notes[0].contains("1 added, 0 removed"),
+            "{:?}",
+            report.notes
+        );
         assert_eq!(
             fs::read_to_string(&absolute).unwrap(),
             "pub fn a()\npub fn b()\n"
@@ -470,7 +480,11 @@ mod tests {
             &mut report,
         )
         .unwrap();
-        assert!(report.notes[0].contains("new snapshot, 1 items"), "{:?}", report.notes);
+        assert!(
+            report.notes[0].contains("new snapshot, 1 items"),
+            "{:?}",
+            report.notes
+        );
     }
 
     /// WHY: a missing source root under a publishable package means the gate is

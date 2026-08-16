@@ -254,7 +254,10 @@ mod tests {
     /// Every root has to exist: the rule refuses to scan a path that does not,
     /// which is what keeps a moved directory from reading as a clean run.
     fn run(text: &str) -> Report {
-        let owners: Vec<String> = ROOTS.iter().map(|root| format!("{root}/owner.rs")).collect();
+        let owners: Vec<String> = ROOTS
+            .iter()
+            .map(|root| format!("{root}/owner.rs"))
+            .collect();
         let mut files: Vec<(&str, &str)> = owners
             .iter()
             .map(|path| (path.as_str(), "fn owner() {}\n"))
@@ -276,8 +279,7 @@ mod tests {
 
     #[test]
     fn a_walk_inside_a_lazy_static_initializer_is_clean() {
-        let report = run(
-            r"
+        let report = run(r"
 static INDEX: LazyLock<BTreeMap<&str, &Row>> = LazyLock::new(|| {
     let mut index = BTreeMap::new();
     for row in inventory::iter::<Row> {
@@ -289,8 +291,7 @@ static INDEX: LazyLock<BTreeMap<&str, &Row>> = LazyLock::new(|| {
 pub fn row(id: &str) -> Option<&'static Row> {
     INDEX.get(id).copied()
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),
@@ -302,8 +303,7 @@ pub fn row(id: &str) -> Option<&'static Row> {
 
     #[test]
     fn a_walk_in_a_function_a_once_lock_names_is_clean() {
-        let report = run(
-            r"
+        let report = run(r"
 static REGISTRY: LazyLock<Registry> = LazyLock::new(Registry::build);
 
 impl Registry {
@@ -312,8 +312,7 @@ impl Registry {
         Self { rows }
     }
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),
@@ -328,8 +327,7 @@ impl Registry {
     /// initializer names reported every one of those helpers.
     #[test]
     fn a_helper_the_builder_calls_is_frozen_with_it() {
-        let report = run(
-            r"
+        let report = run(r"
 static REGISTRY: LazyLock<Registry> = LazyLock::new(|| Registry::build());
 
 impl Registry {
@@ -341,8 +339,7 @@ impl Registry {
 fn freeze_rows() -> Vec<&'static Row> {
     inventory::iter::<Row>.into_iter().collect()
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),
@@ -357,8 +354,7 @@ fn freeze_rows() -> Vec<&'static Row> {
     /// path. Both real registry freezers in this workspace are written that way.
     #[test]
     fn a_builder_whose_signature_wraps_still_covers_its_body() {
-        let report = run(
-            r"
+        let report = run(r"
 static REGISTRY: LazyLock<Registry> = LazyLock::new(Registry::build);
 
 impl Registry {
@@ -377,8 +373,7 @@ fn freeze_rows(
     let _ = ignored;
     inventory::iter::<Row>.into_iter().collect()
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),
@@ -392,8 +387,7 @@ fn freeze_rows(
     /// scan can be hidden one call deep.
     #[test]
     fn a_helper_a_lookup_calls_is_still_a_lookup_path() {
-        let report = run(
-            r"
+        let report = run(r"
 pub fn row(id: &str) -> Option<&'static Row> {
     scan_rows().into_iter().find(|row| row.id == id)
 }
@@ -401,8 +395,7 @@ pub fn row(id: &str) -> Option<&'static Row> {
 fn scan_rows() -> Vec<&'static Row> {
     inventory::iter::<Row>.into_iter().collect()
 }
-",
-        );
+");
 
         assert_eq!(
             report.findings.len(),
@@ -418,13 +411,11 @@ fn scan_rows() -> Vec<&'static Row> {
     /// exactly when nobody is looking at it.
     #[test]
     fn a_walk_on_a_lookup_path_is_reported_with_its_statement() {
-        let report = run(
-            r"
+        let report = run(r"
 pub fn row(id: &str) -> Option<&'static Row> {
     inventory::iter::<Row>().find(|row| row.id == id)
 }
-",
-        );
+");
 
         assert_eq!(
             report.findings.len(),
@@ -442,8 +433,7 @@ pub fn row(id: &str) -> Option<&'static Row> {
 
     #[test]
     fn a_walk_in_a_test_module_is_not_a_lookup_path() {
-        let report = run(
-            r"
+        let report = run(r"
 #[cfg(test)]
 mod tests {
     #[test]
@@ -451,8 +441,7 @@ mod tests {
         assert!(inventory::iter::<Row>.into_iter().count() > 0);
     }
 }
-",
-        );
+");
 
         assert!(
             report.findings.is_empty(),

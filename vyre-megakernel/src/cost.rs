@@ -128,16 +128,17 @@ pub(crate) fn evaluate(
                     .copied()
                     .unwrap_or(0),
             );
-            group_bytes =
-                group_bytes.saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
+            group_bytes = group_bytes
+                .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
         }
         live_value_peak = live_value_peak.max(group_live);
         shared_scratch_bytes = shared_scratch_bytes.max(group_scratch);
-        let passes = resident_passes(group_live, u64::from(device.registers_per_invocation()))
-            .max(resident_passes(
+        let passes = resident_passes(group_live, u64::from(device.registers_per_invocation())).max(
+            resident_passes(
                 group_scratch,
                 u64::from(device.shared_scratch_bytes_per_workgroup()),
-            ));
+            ),
+        );
         occupancy_passes_peak = occupancy_passes_peak.max(passes);
         occupancy_bytes =
             occupancy_bytes.saturating_add(group_bytes.saturating_mul(passes.saturating_sub(1)));
@@ -248,7 +249,10 @@ mod tests {
             fused_cost.live_value_peak, 192,
             "the fused group holds both members' live values"
         );
-        assert_eq!(fused_cost.occupancy_passes_peak, 2, "192 live values exceed a 128-register invocation");
+        assert_eq!(
+            fused_cost.occupancy_passes_peak, 2,
+            "192 live values exceed a 128-register invocation"
+        );
         assert_eq!(unfused_cost.occupancy_passes_peak, 1);
         assert!(
             unfused_cost.total < fused_cost.total,
@@ -272,9 +276,15 @@ mod tests {
             device,
         );
         let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, device);
-        assert_eq!(fused.occupancy_passes_peak, 1, "128 live values fit a 128-register invocation");
+        assert_eq!(
+            fused.occupancy_passes_peak, 1,
+            "128 live values fit a 128-register invocation"
+        );
         assert_eq!(fused.occupancy_ns, 0);
-        assert!(fused.total < unfused.total, "fused {fused:?} unfused {unfused:?}");
+        assert!(
+            fused.total < unfused.total,
+            "fused {fused:?} unfused {unfused:?}"
+        );
     }
 
     /// WHY: an unknown budget is not a budget of zero. A backend that reports no
