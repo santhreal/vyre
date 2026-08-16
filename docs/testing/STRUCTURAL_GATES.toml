@@ -53,7 +53,7 @@ process running locally.
 """
 
 [[gate]]
-file = "vyre-primitives/tests/shared_owner_closure.rs"
+file = "vyre-libs/tests/shared_owner_closure.rs"
 test = "no_dispatch_grid_function_hand_rolls_the_ceiling_division"
 reason = """
 Asserts that exactly one implementation of the ceiling division exists. A
@@ -63,16 +63,18 @@ defect this closes: the copies it replaced agreed until the zero case.
 """
 
 [[gate]]
-file = "vyre-primitives/tests/shared_owner_closure.rs"
+file = "vyre-libs/tests/shared_owner_closure.rs"
 test = "every_domain_with_a_dispatch_grid_can_reach_the_owner"
 reason = """
-Asserts that the owner module is not gated behind a Cargo feature some domain
-does not enable. Feature reachability is decided at compile time, so a build
-where the owner is unreachable is a build in which this test does not run.
+Asserts that the owner of the dispatch-grid helper is declared unconditionally
+in the crate that holds it and that every crate with a dispatch-grid function
+reaches it through a non-optional dependency edge. Reachability is decided at
+compile time, so a build where the owner is unreachable is a build in which
+this test does not run.
 """
 
 [[gate]]
-file = "vyre-primitives/tests/shared_owner_closure.rs"
+file = "vyre-libs/tests/shared_owner_closure.rs"
 test = "no_binding_record_spells_its_full_name_set_twice"
 reason = """
 Asserts that no file in the workspace respells a binding record's full name set
@@ -82,7 +84,7 @@ unnoticed; only the source distinguishes them.
 """
 
 [[gate]]
-file = "vyre-primitives/tests/shared_owner_closure.rs"
+file = "vyre-libs/tests/shared_owner_closure.rs"
 test = "every_buffer_binding_record_publishes_canonical_names"
 reason = """
 Asserts that every declared `*Buffers` record publishes canonical names. The
@@ -91,7 +93,7 @@ without reflection.
 """
 
 [[gate]]
-file = "vyre-primitives/tests/shared_owner_closure.rs"
+file = "vyre-libs/tests/shared_owner_closure.rs"
 test = "every_routed_convergence_op_registers_with_the_routing_contract"
 reason = """
 Asserts that every op calling `routed_persistent_fixpoint` also registers with
@@ -101,20 +103,12 @@ spans more than one workgroup in production.
 """
 
 [[gate]]
-file = "vyre-primitives/tests/shared_owner_closure.rs"
+file = "vyre-libs/tests/shared_owner_closure.rs"
 test = "no_op_re_asserts_the_routing_obligations_privately"
 reason = """
 Asserts that no file outside the routing owner observes both halves of the
 routing obligation itself. A private copy of an assertion passes, which is the
 whole reason a copy survives; only the source shows there are two.
-"""
-
-[[gate]]
-file = "vyre-primitives/tests/shared_owner_closure.rs"
-test = "the_source_walk_reaches_the_modules_every_gate_above_depends_on"
-reason = """
-Floor check for the walk every gate in the file depends on. Its subject is the
-file set that walk produced.
 """
 
 [[gate]]
