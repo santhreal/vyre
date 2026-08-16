@@ -24,7 +24,7 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `all-lego`, `cpu-parity`, `default`, `gpu`, `hardware`, `inventory-registry`, `vyre-foundation`
+- Available manifest features: `cpu-parity`, `default`, `gpu`, `hardware`, `inventory-registry`, `vyre-foundation`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
