@@ -1,4 +1,8 @@
 //! Whole-program request, identity, ABI, artifact, and corruption contracts.
+//!
+//! A whole-grid fence under a divergent guard never reaches device admission: IR
+//! validation refuses it first as V010, because a barrier only part of a
+//! workgroup reaches is invalid on any device.
 
 #![forbid(unsafe_code)]
 
@@ -584,26 +588,50 @@ fn device_without_a_needed_capability_rejects_the_program() {
     );
 }
 
-/// WHY: 150.11. A whole-grid fence runs in one kernel only under a cooperative
-/// launch. Without one the plan is unrunnable, so the compiler rejects it instead
-/// of leaving the target emitter to fail later.
+/// A fence the planner can cut needs no cooperative launch.
+///
+/// The cut turns the fenced node into one node per segment ordered through
+/// retained state, so the segments run as separate launches and the whole-grid
+/// fence is satisfied by the launch boundary. Refusing the submitted graph would
+/// refuse work the compiler completes, so admission is judged on the graph the
+/// planner produces and this case has to compile.
 #[test]
-fn grid_sync_without_cooperative_launch_fails_at_compile() {
-    let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32).with_count(1)],
-        [32, 1, 1],
-        vec![
-            Node::store("out", Expr::u32(0), Expr::u32(1)),
-            Node::Barrier {
-                ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
-            },
-        ],
+fn a_cuttable_grid_fence_compiles_without_cooperative_launch() {
+    let graph = ProgramGraph::from_program("fence", fenced_program(false)).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("Fix: a fence the planner cuts must compile on a device without cooperative launch");
+    let nodes = validated.graph().nodes();
+    assert_eq!(
+        nodes.len(),
+        2,
+        "Fix: the fence must become one node per segment"
     );
-    assert!(
-        vyre_megakernel::grid_sync::requires_grid_sync(&program),
-        "fixture must carry a whole-grid fence"
-    );
-    let graph = ProgramGraph::from_program("fence", program).unwrap();
+    for node in nodes {
+        assert!(
+            !vyre_megakernel::grid_sync::requires_grid_sync(&node.program),
+            "Fix: no segment may carry the fence it was split at"
+        );
+    }
+}
+
+/// WHY: 150.11. A whole-grid fence runs in one kernel only under a cooperative
+/// launch. A fence the planner cannot cut is still in the graph compilation
+/// consumes, so the compiler rejects it instead of leaving the target emitter to
+/// fail later.
+///
+/// A conditional fence is the uncuttable case: hoisting it out of the branch
+/// would change which invocations reach it, so the planner copies it verbatim
+/// and it survives into a segment.
+#[test]
+fn an_uncuttable_grid_fence_fails_without_cooperative_launch() {
+    let graph = ProgramGraph::from_program("fence", fenced_program(true)).unwrap();
     let error = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
@@ -615,6 +643,59 @@ fn grid_sync_without_cooperative_launch_fails_at_compile() {
     .err()
     .expect("a device without cooperative launch must reject a whole-grid fence");
     assert_eq!(error.diagnostic.code.as_str(), "MKC001_INVALID_PROGRAM");
+    assert!(
+        error
+            .diagnostic
+            .message
+            .contains("cannot launch a cooperative grid"),
+        "Fix: the refusal must name the device fact it read: {}",
+        error.diagnostic.message
+    );
+}
+
+/// The same uncuttable fence compiles once the device reports the launch it
+/// needs, so the refusal reads the device fact and not the fence alone.
+#[test]
+fn an_uncuttable_grid_fence_compiles_with_cooperative_launch() {
+    let graph = ProgramGraph::from_program("fence", fenced_program(true)).unwrap();
+    CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()).with_cooperative_launch(true),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("Fix: a cooperative device must accept a whole-grid fence");
+}
+
+/// A program carrying a whole-grid fence, conditional when `guarded`.
+///
+/// An unconditional fence at the top of the entry sequence is a cut point. A
+/// fence inside a branch is not, because the branch decides which invocations
+/// reach it.
+fn fenced_program(guarded: bool) -> Program {
+    let fence = Node::Barrier {
+        ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
+    };
+    let body = if guarded {
+        vec![
+            Node::store("out", Expr::u32(0), Expr::u32(1)),
+            Node::if_then(Expr::bool(true), vec![fence]),
+        ]
+    } else {
+        vec![Node::store("out", Expr::u32(0), Expr::u32(1)), fence]
+    };
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32).with_count(1)],
+        [32, 1, 1],
+        body,
+    );
+    assert!(
+        vyre_megakernel::grid_sync::requires_grid_sync(&program),
+        "fixture must carry a whole-grid fence"
+    );
+    program
 }
 
 /// Device facts stating one capability decision, with every other capability
