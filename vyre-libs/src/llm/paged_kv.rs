@@ -221,6 +221,15 @@ pub fn paged_kv_gather(
 /// which a paged cache does not need because a block is claimed rather than
 /// reserved.
 ///
+/// The block table this move reads must be injective over the chunk: the slot
+/// one invocation computes belongs to that invocation alone. A paged cache
+/// that maps two sequences onto one physical block, which is how a shared
+/// prompt prefix is stored, has to copy that block before either sequence
+/// appends into it, because both would otherwise store to the same address in
+/// one dispatch. The emitted program cannot check this: the table is data, the
+/// guard bounds the chunk rather than the cache, and there is no read of the
+/// destination to compare against.
+///
 /// # Errors
 ///
 /// Returns `Err` for a zero dimension, a non-float dtype, a chunk that ends
