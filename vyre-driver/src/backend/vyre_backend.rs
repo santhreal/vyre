@@ -1082,6 +1082,7 @@ fn elapsed_resident_sequence_wall_ns(started: std::time::Instant) -> Result<u64,
     })
 }
 
+// Inline: covers `dispatch`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

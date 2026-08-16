@@ -148,6 +148,8 @@ impl ResidentRuntimeEvidence {
     }
 }
 
+// Inline: `vyre_runtime::resident_work_queue::telemetry::evidence` is `private`, so no integration
+// test can reach what this suite exercises.
 #[cfg(test)]
 mod evidence_tests {
     use super::*;

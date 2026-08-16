@@ -673,6 +673,9 @@ fn cuda_usize_bytes_to_u64(byte_len: usize, field: &str) -> Result<u64, BackendE
 })
 }
 
+// Inline: covers `cache_identity_program`, `cuda_transient_dispatch_budget_bytes`,
+// `cuda_transient_dispatch_live_available_budget_bytes`, `cuda_transient_dispatch_required_bytes`
+// and 1 more item this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;

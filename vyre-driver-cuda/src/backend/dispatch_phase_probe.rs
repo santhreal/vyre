@@ -442,6 +442,8 @@ fn push_field(line: &mut String, name: &str, value: u64) {
     let _ = write!(line, " {name}={value}");
 }
 
+// Inline: covers `CURRENT`, `DispatchPhases`, `Phase`, `add_host_ns` and 5 more items this module
+// keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

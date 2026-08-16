@@ -301,6 +301,8 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
     materializer_for_backend(WgpuBackend::acquire()?)
 }
 
+// Inline: covers `WgpuArtifactInstance`, `core`, `materialize`, `modules`, which no integration
+// test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

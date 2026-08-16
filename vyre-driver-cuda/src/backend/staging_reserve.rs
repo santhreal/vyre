@@ -198,6 +198,9 @@ where
     )
 }
 
+// Inline: covers `CudaReusableIndexScratch`, `CudaStorageReserveFailure`, `reserve_index_scratch`,
+// `reserve_smallvec` and 6 more items this module keeps private, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
     use std::cell::Cell;

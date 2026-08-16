@@ -147,6 +147,8 @@ fn compose_scale_basis_points(left_bps: u32, right_bps: u32) -> u32 {
     )
 }
 
+// Inline: covers `compose_scale_basis_points`, `scale_cost_basis_points`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use super::*;

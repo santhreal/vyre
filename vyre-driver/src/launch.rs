@@ -778,6 +778,8 @@ pub fn program_vsa_fingerprint_words(program: &Program) -> [u32; 8] {
     words
 }
 
+// Inline: the suite drives the `#[cfg(test)]` `natural_launch_cache_remove`, which an integration
+// test does not compile.
 #[cfg(test)]
 mod tests {
     use super::*;

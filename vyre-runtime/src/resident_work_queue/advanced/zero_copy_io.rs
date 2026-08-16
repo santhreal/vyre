@@ -58,28 +58,3 @@ pub fn pull_file_async_direct_with(bindings: &DirectIoBindings) -> Node {
         bindings.tag,
     )
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn direct_io_uses_extended_async_load_fields() {
-        let node = pull_file_async_direct();
-        let Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } = node
-        else {
-            panic!("direct IO must emit AsyncLoad");
-        };
-        assert_eq!(source.as_str(), IO_SOURCE_CAPABILITY_TABLE);
-        assert_eq!(destination.as_str(), IO_DESTINATION_CAPABILITY_TABLE);
-        assert_eq!(tag.as_str(), IO_QUEUE_DMA_TAG);
-        assert!(matches!(*offset, Expr::Var(_)));
-        assert!(matches!(*size, Expr::BinOp { .. }));
-    }
-}

@@ -531,6 +531,7 @@ impl CudaBackend {
     }
 }
 
+// Inline: covers `kernel_args_into`, `launch_cuda_function`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{launch_cuda_function, CudaBackend};

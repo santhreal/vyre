@@ -497,6 +497,7 @@ fn empty_device_work_queue_plan() -> DeviceWorkQueuePlan {
     }
 }
 
+// Inline: covers `estimated_queue_expansion_items`, `from`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -383,6 +383,8 @@ fn load_module(ptx_src: &str, ptx_target_sm: u32) -> Result<CachedModule, Backen
     })
 }
 
+// Inline: `vyre_driver_cuda::backend` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;

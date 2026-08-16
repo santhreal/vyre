@@ -138,6 +138,7 @@ fn gpu_convergence(
     Err(LoopError::DidNotConverge)
 }
 
+// Inline: covers `cpu_convergence`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -674,6 +674,8 @@ impl CompiledPipeline for WgpuPipeline {
     }
 }
 
+// Inline: `vyre_driver_wgpu::pipeline::compiled_dispatch` is `pub(crate)`, so no integration test
+// can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use vyre_driver::{resolve_fixpoint_iterations_usize, DispatchConfig};

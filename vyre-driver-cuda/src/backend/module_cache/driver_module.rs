@@ -110,6 +110,8 @@ pub(super) fn unload_cuda_module_or_log(module: CUmodule, label: &str) {
     }
 }
 
+// Inline: `vyre_driver_cuda::backend` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod module_lifecycle_tests {
     use cudarc::driver::sys::CUresult;

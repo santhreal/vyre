@@ -676,6 +676,7 @@ fn validate_consumed_counts(
     Ok(())
 }
 
+// Inline: covers `binding_padded_size`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

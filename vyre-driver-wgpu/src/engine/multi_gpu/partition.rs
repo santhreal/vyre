@@ -198,6 +198,8 @@ fn ensure_vec_spare<T>(vec: &mut Vec<T>, additional: usize, label: &str) -> Resu
     })
 }
 
+// Inline: `vyre_driver_wgpu::engine::multi_gpu::partition` is `private`, so no integration test can
+// reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

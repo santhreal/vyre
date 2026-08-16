@@ -816,6 +816,8 @@ fn u32_to_usize(value: u32, label: &'static str) -> Result<usize, PipelineError>
     })
 }
 
+// Inline: `vyre_runtime::uring::stream` is `private`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

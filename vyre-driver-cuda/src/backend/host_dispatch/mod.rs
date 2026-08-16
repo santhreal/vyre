@@ -1044,6 +1044,8 @@ fn enqueue_device_clears_async(
     Ok(())
 }
 
+// Inline: covers `host_transfer_capacities`, `host_upload_batch_capacity`, which no integration
+// test can name.
 #[cfg(test)]
 mod tests {
     use super::{host_transfer_capacities, host_upload_batch_capacity};

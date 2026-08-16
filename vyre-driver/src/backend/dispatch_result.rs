@@ -223,6 +223,8 @@ pub struct TimedDispatchResult {
     pub wait_ns: Option<u64>,
 }
 
+// Inline: `vyre_driver::backend` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

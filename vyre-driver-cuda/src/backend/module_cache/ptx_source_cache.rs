@@ -227,6 +227,7 @@ impl CudaPtxSourceCache {
     }
 }
 
+// Inline: covers `CudaPtxSourceCache`, `snapshot`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;

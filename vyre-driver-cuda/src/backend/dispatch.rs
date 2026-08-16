@@ -32,6 +32,7 @@ const TRANSIENT_ALLOCATION_POOL_BYTES: usize = 256 * 1024 * 1024;
 const PINNED_HOST_POOL_BYTES: usize = 128 * 1024 * 1024;
 const CUDA_LAUNCH_RESOURCE_CACHE: usize = 128;
 
+// Inline: covers `acquire`, `drop`, `enqueue_barrier_reset`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     /// A counter at exactly TWICE the ceiling is the missed-reset signature, and

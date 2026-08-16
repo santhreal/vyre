@@ -590,6 +590,8 @@ pub(super) fn wait_for_gpu<T>(future: impl Future<Output = T>) -> T {
     }
 }
 
+// Inline: the suite drives the `#[cfg(test)]` `cached_enabled_features`, `is_cached_device`, which
+// an integration test does not compile.
 #[cfg(test)]
 mod tests {
     use super::*;

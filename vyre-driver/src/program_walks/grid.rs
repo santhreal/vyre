@@ -285,6 +285,7 @@ fn next_pow2_u32_checked(value: u32) -> Result<u32, BackendError> {
     Ok(value.next_power_of_two())
 }
 
+// Inline: covers `ceil_cuberoot_u64`, `ceil_sqrt_u64`, which no integration test can name.
 #[cfg(test)]
 mod n6_tests {
     use super::*;

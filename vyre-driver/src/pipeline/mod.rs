@@ -765,6 +765,8 @@ mod tests {
             },
         }
 
+        // Inline: covers `cache_path`, `compute_cache_key`, `load`, `store`, which no integration
+        // test can name.
         #[cfg(test)]
         mod tests {
             use super::*;

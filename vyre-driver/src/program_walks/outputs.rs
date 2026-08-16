@@ -277,6 +277,7 @@ pub fn element_size_bytes(data_type: &DataType) -> Result<usize, BackendError> {
     })
 }
 
+// Inline: covers `align_up_to_u32_word`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

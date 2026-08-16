@@ -192,6 +192,7 @@ pub(super) fn push_decimal_u32(out: &mut String, value: u32) {
     }
 }
 
+// Inline: covers `push_decimal_u32`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{
