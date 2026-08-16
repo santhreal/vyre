@@ -31,6 +31,12 @@ const REQUIRED: &[&str] = &[
 ];
 
 /// Instruction files that redirect to `AGENTS.md` instead of holding policy.
+///
+/// A redirect is required only when the checkout carries `AGENTS.md`. A published
+/// tree that tracks no instruction file has nothing to redirect to, and demanding
+/// one there reported every clean checkout, including CI, as broken. Present but
+/// holding policy is still a finding whether or not `AGENTS.md` is tracked: that
+/// is the second policy surface the rule exists to catch.
 const REDIRECTS: &[&str] = &["CLAUDE.md", "GEMINI.md"];
 
 /// Directory names that are developer cache or build output.
@@ -50,10 +56,7 @@ const FORBIDDEN_SUFFIXES: &[&str] = &[".tar.gz"];
 const GPU_ESCAPES: &[&str] = &["no-gpu", "gpu-feature"];
 
 /// Language that describes skipping a test because no device was found.
-const SILENT_SKIPS: &[(&str, &str)] = &[
-    ("no GPU", "skipp"),
-    ("adapter missing", "skipp"),
-];
+const SILENT_SKIPS: &[(&str, &str)] = &[("no GPU", "skipp"), ("adapter missing", "skipp")];
 
 /// The files that own a silent-skip rule and therefore spell what it forbids.
 ///
@@ -110,13 +113,22 @@ impl Gate for RepoHygiene {
             ));
         }
 
+        let policy_is_tracked = tree.exists("AGENTS.md");
+        report.note(if policy_is_tracked {
+            "AGENTS.md is in the checkout, so each instruction redirect is required".to_string()
+        } else {
+            "no AGENTS.md in the checkout, so a redirect is judged only where one exists"
+                .to_string()
+        });
         for redirect in REDIRECTS {
             if !tree.exists(redirect) {
-                report.find(Finding::in_file(
-                    *redirect,
-                    "instruction redirect is missing",
-                    "restore the file as a short redirect to AGENTS.md",
-                ));
+                if policy_is_tracked {
+                    report.find(Finding::in_file(
+                        *redirect,
+                        "instruction redirect is missing",
+                        "restore the file as a short redirect to AGENTS.md",
+                    ));
+                }
                 continue;
             }
             let text = tree.read(redirect)?;
@@ -131,7 +143,10 @@ impl Gate for RepoHygiene {
             } else if text.lines().count() > 8 {
                 report.find(Finding::in_file(
                     *redirect,
-                    format!("redirect is {} lines, above the eight-line bound", text.lines().count()),
+                    format!(
+                        "redirect is {} lines, above the eight-line bound",
+                        text.lines().count()
+                    ),
                     "cut the file back to a redirect; policy belongs in AGENTS.md",
                 ));
             }
@@ -360,7 +375,9 @@ mod tests {
     /// through as a `.gz`.
     #[test]
     fn a_double_extension_archive_is_still_an_artifact() {
-        assert!(FORBIDDEN_SUFFIXES.iter().any(|suffix| "release/x.tar.gz".ends_with(suffix)));
+        assert!(FORBIDDEN_SUFFIXES
+            .iter()
+            .any(|suffix| "release/x.tar.gz".ends_with(suffix)));
         assert!(FORBIDDEN_EXTENSIONS.contains(&"zip"));
         assert!(!FORBIDDEN_EXTENSIONS.contains(&"rs"));
     }
@@ -385,5 +402,60 @@ mod tests {
                  rule; delete the row"
             );
         }
+    }
+
+    /// WHY: the rule required CLAUDE.md and GEMINI.md in every checkout, and this
+    /// repository tracks no instruction file at all, so the gate was red on a clean
+    /// tree and in CI for a defect no commit could fix. It stays red for the defect
+    /// it exists for: a second instruction file holding policy of its own.
+    #[test]
+    fn a_redirect_is_required_only_where_policy_is_tracked_and_a_policy_copy_is_always_reported() {
+        let judge = |files: &[(&str, &str)]| {
+            let (_directory, root) = crate::gates::fixture_checkout::checkout(files);
+            let tree = Tree::open(&root).expect("Fix: the fixture checkout must list");
+            let mut report = Report::clean();
+            let policy_is_tracked = tree.exists("AGENTS.md");
+            for redirect in REDIRECTS {
+                if !tree.exists(redirect) {
+                    if policy_is_tracked {
+                        report.find(Finding::in_file(*redirect, "missing", "restore it"));
+                    }
+                    continue;
+                }
+                let text = tree
+                    .read(redirect)
+                    .expect("Fix: the fixture file must read");
+                if !text.to_ascii_lowercase().contains("compatibility redirect")
+                    || !text.contains("AGENTS.md")
+                {
+                    report.find(Finding::in_file(*redirect, "holds policy", "redirect it"));
+                }
+            }
+            report.count()
+        };
+
+        assert_eq!(
+            judge(&[("README.md", "# vyre\n")]),
+            0,
+            "no tracked policy, no redirect to demand"
+        );
+        assert_eq!(
+            judge(&[("AGENTS.md", "# policy\n")]),
+            REDIRECTS.len(),
+            "tracked policy with no redirect beside it is the finding"
+        );
+        assert_eq!(
+            judge(&[("CLAUDE.md", "# rules of my own\n")]),
+            1,
+            "a second policy surface is reported with no AGENTS.md in sight"
+        );
+        assert_eq!(
+            judge(&[(
+                "CLAUDE.md",
+                "This is a compatibility redirect. Read AGENTS.md.\n"
+            )]),
+            0,
+            "a real redirect is clean on its own"
+        );
     }
 }
