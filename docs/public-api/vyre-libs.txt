@@ -2308,8 +2308,8 @@ pub fn vyre_libs::math::dp_clip::dp_clip_per_sample_cpu_into(grads: &[f64], norm
 pub fn vyre_libs::math::dp_clip::try_dp_clip_per_sample_cpu(grads: &[f64], norms: &[f64], clip_norm: f64, b: u32, d: u32) -> core::result::Result<alloc::vec::Vec<f64>, alloc::string::String>
 pub fn vyre_libs::math::dp_clip::try_dp_clip_per_sample_cpu_into(grads: &[f64], norms: &[f64], clip_norm: f64, b: u32, d: u32, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_libs::math::eigenvector_column_sign::eigenvector_column_sign(eigenvectors: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::eigenvector_column_sign::eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::math::eigenvector_column_sign::eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::math::eigenvector_column_sign::eigenvector_column_sign_body(eigenvectors: &str, n: u32, lanes: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::math::eigenvector_column_sign::eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n: u32, lanes: u32) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::math::fft::fft4_complex(input: &str, output: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::fft::fft_convolve_circular_complex(signal: &str, kernel: &str, signal_freq: &str, kernel_freq: &str, product_freq: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::math::fft::fft_radix2_complex(input: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -2369,11 +2369,11 @@ pub fn vyre_libs::math::linalg::matmul_strassen_one_level(a: &str, b: &str, c: &
 pub fn vyre_libs::math::linalg::matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::lzcnt_u32(input: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::matrix_diagonal_extract::matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::matrix_diagonal_extract::matrix_diagonal_extract_body(matrix: &str, diagonal: &str, n: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::math::matrix_diagonal_extract::matrix_diagonal_extract_region(parent_op_id: &str, matrix: &str, diagonal: &str, n: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::math::matrix_diagonal_extract::matrix_diagonal_extract_body(matrix: &str, diagonal: &str, n: u32, lanes: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::math::matrix_diagonal_extract::matrix_diagonal_extract_region(parent_op_id: &str, matrix: &str, diagonal: &str, n: u32, lanes: u32) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::math::matrix_identity_fill::matrix_identity_fill(matrix: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::matrix_identity_fill::matrix_identity_fill_body(matrix: &str, n: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::math::matrix_identity_fill::matrix_identity_fill_region(parent_op_id: &str, matrix: &str, n: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::math::matrix_identity_fill::matrix_identity_fill_body(matrix: &str, n: u32, lanes: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::math::matrix_identity_fill::matrix_identity_fill_region(parent_op_id: &str, matrix: &str, n: u32, lanes: u32) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::math::matroid_intersection_full::cpu_ref(exchange_adj: &[u32], sources: &[u32], sinks: &[u32], set_x: &[u32], n: usize) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::math::matroid_intersection_full::cpu_ref_into(exchange_adj: &[u32], sources: &[u32], sinks: &[u32], set_x: &[u32], n: usize, out: &mut alloc::vec::Vec<u32>, parent: &mut alloc::vec::Vec<u32>, visited: &mut alloc::vec::Vec<u32>, queue: &mut alloc::vec::Vec<usize>)
 pub fn vyre_libs::math::matroid_intersection_full::matroid_intersection_full(exchange_adj: &str, sources: &str, sinks: &str, set_x: &str, parent: &str, frontier: &str, next_frontier: &str, visited: &str, any_change: &str, path_out: &str, path_len: &str, n: u32, max_augmentations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2520,7 +2520,9 @@ pub fn vyre_libs::math::succinct::try_rank1_query(bits: &str, superblocks: &str,
 pub fn vyre_libs::math::succinct::try_rank1_superblocks(bits: &str, superblocks: &str, word_count: u32, block_words: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::math::succinct::SuccinctBuildError>
 pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_eigen_region(parent_op_id: &str, a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_scratch_buffers() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>
 pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_sweeps(n: u32) -> u32
+pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_workgroup() -> [u32; 3]
 pub fn vyre_libs::math::symmetric_eigen_jacobi::symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::tensor_network::greedy_contract_order_cpu(dims: &[u32]) -> alloc::vec::Vec<usize>
 pub fn vyre_libs::math::tensor_network::tn_pair_contract(a: &str, b: &str, c: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program

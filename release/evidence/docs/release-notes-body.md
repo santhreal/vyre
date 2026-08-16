@@ -1597,6 +1597,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   named its kernel matrix `u_curr` and its convergence flag `kv`; a record
   forces each name to be spelled at the call. `bellman_tn_order_program` and
   `sinkhorn_full_clustering_program` forward the same records.
+- The Jacobi eigensolver (`symmetric_eigen_jacobi`) distributes independent
+  identity seeding (`matrix_identity_fill`), eigenvector sign canonicalization
+  (`eigenvector_column_sign`), and diagonal extraction
+  (`matrix_diagonal_extract`) across declared workgroup lanes (`LANES = 64`),
+  preserving sequential Givens rotation on lane 0 behind workgroup barriers.
 - `reasoning::finite_category` states each construction once. Left and right
   Kan extension were four functions differing in whether the fold summed or
   multiplied and whether it ran per object or over a table; they are now

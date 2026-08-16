@@ -106,6 +106,7 @@ fn every_cargo_fuzz_job_selects_nightly() {
     let mut job = "<none>";
     let mut toolchain = None;
     let mut installs = 0usize;
+    let mut runs = 0usize;
 
     for line in workflow.lines() {
         if line.starts_with("  ") && !line.starts_with("    ") && line.trim_end().ends_with(':') {
@@ -117,24 +118,42 @@ fn every_cargo_fuzz_job_selects_nightly() {
         if let Some(selected) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
             toolchain = Some(selected);
         }
-        if !trimmed.contains("install --locked cargo-fuzz") {
-            continue;
+        if trimmed.contains("install --locked cargo-fuzz") {
+            installs += 1;
+            assert_eq!(
+                toolchain,
+                Some("nightly"),
+                "Fix: fuzz job `{job}` must select nightly before installing cargo-fuzz"
+            );
+            assert_eq!(
+                trimmed,
+                "run: cargo +nightly install --locked cargo-fuzz",
+                "Fix: fuzz job `{job}` must install cargo-fuzz with the selected nightly toolchain"
+            );
         }
 
-        installs += 1;
-        assert_eq!(
-            toolchain,
-            Some("nightly"),
-            "Fix: fuzz job `{job}` must select nightly before installing cargo-fuzz"
-        );
-        assert_eq!(
-            trimmed, "run: cargo +nightly install --locked cargo-fuzz",
-            "Fix: fuzz job `{job}` must install cargo-fuzz with the selected nightly toolchain"
-        );
+        if trimmed.contains("cargo_full") && trimmed.contains("fuzz run") {
+            runs += 1;
+            assert_eq!(
+                toolchain,
+                Some("nightly"),
+                "Fix: fuzz job `{job}` must select nightly before running cargo-fuzz"
+            );
+            assert!(
+                trimmed.starts_with("../../cargo_full +nightly fuzz run "),
+                "Fix: fuzz job `{job}` must invoke cargo-fuzz through the nightly toolchain: {trimmed}"
+            );
+        }
+
+
     }
 
     assert!(
         installs > 0,
         "Fix: the fuzz workflow contains no cargo-fuzz install, so this contract guards nothing"
+    );
+    assert_eq!(
+        runs, installs,
+        "Fix: every cargo-fuzz install must have one nightly cargo-fuzz run"
     );
 }
