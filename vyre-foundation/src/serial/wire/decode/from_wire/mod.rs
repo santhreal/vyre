@@ -479,7 +479,7 @@ impl LebReader for Reader<'_> {
     }
 
     fn leb_string(&mut self) -> Result<String, String> {
-        // VYRE_NAGA_LOWER MEDIUM (from_wire.rs:567-571): previous
+        // Bounded string decode (from_wire.rs:567-571): previous
         // code did `bytes.to_vec()` then `String::from_utf8(vec)`.
         // `std::str::from_utf8` validates the borrowed slice, then
         // we own-copy once via `to_owned()`. Same cost as before for

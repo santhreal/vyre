@@ -820,8 +820,7 @@ pub fn build_ac_bounded_ranges_program(
 /// Variant of [`build_ac_bounded_ranges_program`] that exposes the
 /// `use_subgroup_coalesce` selector. Pass `false` when the program
 /// is going to be dispatched on a backend that cannot lower
-/// `subgroup_ballot` + `subgroup_shuffle` yet (currently
-/// `vyre-driver-cuda`).
+/// `subgroup_ballot` + `subgroup_shuffle` yet.
 ///
 /// # Panics
 /// Panics when the automaton exceeds the GPU ABI limits, through the crate's

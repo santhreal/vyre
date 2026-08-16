@@ -56,8 +56,8 @@ impl LowerCtx {
             Expr::BinOp { op, left, right } => {
                 // Subgroup/wave ops are spelled as binary ops at the Program
                 // level but have dedicated subgroup KernelOps (and emit to
-                // `subgroup*` WGSL statements, not a BinaryOperator). Route them
-                // before the generic `BinOpKind` path, which has no Naga operator
+                // `subgroup*` dialect statements, not a BinaryOperator). Route
+                // them before the generic `BinOpKind` path, which has no emitter
                 // and would fail closed at emit. Operand contract mirrors the
                 // canonical `Expr::Subgroup*` lowering below.
                 match op {

@@ -1,6 +1,6 @@
 //! Backend-neutral dispatch shape comparison helpers.
 //!
-//! CUDA graph replay, pipeline cache reuse, and future backend command replay
+//! Native graph replay, pipeline cache reuse, and future backend command replay
 //! all need the same answer to two questions: do these borrowed input batches
 //! have the same byte shape, and does a runtime [`DispatchConfig`] preserve the
 //! launch-relevant shape captured at compile time?

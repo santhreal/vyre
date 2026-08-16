@@ -125,8 +125,8 @@ impl From<NfaToDfaError> for RegexDfaError {
 ///
 /// The match-append strategy is the default `append_match_subgroup`
 /// (I.17 - one atomic per subgroup leader). On backends that can't
-/// lower `subgroup_ballot` / `subgroup_shuffle` yet (currently
-/// `vyre-driver-cuda`) use [`build_regex_dfa_pipeline_with_subgroup_coalesce`] with
+/// lower `subgroup_ballot` / `subgroup_shuffle` yet, use
+/// [`build_regex_dfa_pipeline_with_subgroup_coalesce`] with
 /// `use_subgroup_coalesce = false`.
 ///
 /// # Errors
@@ -181,8 +181,8 @@ pub fn build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce(
 
 /// [`build_regex_dfa_pipeline`] with explicit `use_subgroup_coalesce`
 /// control. Pass `false` on backends whose IR lowering cannot yet emit
-/// `subgroup_ballot` + `subgroup_shuffle` - currently `vyre-driver-cuda`
-/// rejects the subgroup form during canonical pre-emit lowering. Either
+/// `subgroup_ballot` + `subgroup_shuffle`, which a backend without them
+/// rejects during canonical pre-emit lowering. Either
 /// flag produces bit-identical match output; the difference is purely
 /// the atomic-coalescing strategy at hit-buffer append time.
 ///

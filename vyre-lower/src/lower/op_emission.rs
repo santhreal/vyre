@@ -54,7 +54,7 @@ impl LowerCtx {
         // Only consider host-visible slots when picking the next trap sidecar
         // slot. Shared/Scratch slots live in the WORKGROUP_SLOT_BASE (1<<24)
         // range and are not host-bound; mixing them in here would push the
-        // trap sidecar  -  which IS host-bound  -  past the wgpu max binding
+        // trap sidecar  -  which IS host-bound  -  past the max binding
         // index (1000) and the layout validator would reject it.
         let next_slot = self
             .bindings

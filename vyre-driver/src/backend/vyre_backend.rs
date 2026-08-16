@@ -19,7 +19,7 @@ pub struct ResidentDispatchStep<'a> {
     pub program: &'a Program,
     /// Resident resources in binding order.
     pub resources: &'a [Resource],
-    /// Optional CUDA/grid-style launch override.
+    /// Optional grid-style launch override.
     pub grid_override: Option<[u32; 3]>,
     /// Optional workgroup override. MUST be carried alongside `grid_override`:
     /// a caller that sizes its grid for a specific workgroup (grid =
@@ -468,9 +468,10 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     ///
     /// The default preserves correctness by dispatching each step through
     /// [`VyreBackend::dispatch_resident_timed`] and then calling
-    /// [`VyreBackend::download_resident_ranges_into`]. CUDA overrides this to
-    /// enqueue the whole dependent chain plus D2H readbacks on one stream and
-    /// pay one host synchronization point.
+    /// [`VyreBackend::download_resident_ranges_into`]. A backend with an ordered
+    /// command queue overrides this to enqueue the whole dependent chain plus
+    /// device-to-host readbacks on one queue and pay one host synchronization
+    /// point.
     ///
     /// # Errors
     ///
@@ -786,7 +787,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// This exists separately from [`VyreBackend::supports_grid_sync`]
     /// because a backend can intentionally reject hidden host
     /// orchestration while native cooperative-grid lowering is absent.
-    /// CUDA uses that policy in the release path so missing native
+    /// A native backend uses that policy in the release path so missing
     /// grid-barrier lowering is surfaced as an unsupported feature
     /// instead of silently becoming a slower multi-launch path.
     ///
@@ -994,9 +995,9 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// `DEVICE_BUFFER_FEATURE` name; production callers that require
     /// resident-buffer performance must treat that as a hard capability
     /// failure rather than silently routing through host `Vec<u8>`
-    /// dispatch. Real device backends (cuda/wgpu/spirv) override this to
-    /// wrap their concrete handle (for example, a vendor device allocation,
-    /// vulkan buffer) in a `DeviceBuffer` impl.
+    /// dispatch. Real device backends override this to wrap their concrete
+    /// handle, a vendor device allocation or a native buffer object, in a
+    /// `DeviceBuffer` impl.
     ///
     /// See `crate::backend::device_buffer` for the substrate.
     ///

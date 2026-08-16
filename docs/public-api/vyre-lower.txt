@@ -69,7 +69,6 @@ pub const vyre_lower::TRAP_SIDECAR_WORDS: u32
 pub const vyre_lower::analyses::DEFAULT_BANK_COUNT: u32
 pub const vyre_lower::analyses::DEFAULT_CONST_BUFFER_BUDGET_BYTES: u32
 pub const vyre_lower::analyses::DEFAULT_SHARED_BUDGET_BYTES: u32
-pub const vyre_lower::emit_adversarial_corpus::REQUIRED_BACKENDS: [vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend; 6]
 pub const vyre_lower::pattern_audit::PatternAudit::FINDING_NOUN: &'static str
 pub const vyre_lower::pattern_audit::UNNAMED_KERNEL: &str
 pub enum vyre_lower::BindingVisibility
@@ -97,7 +96,6 @@ pub enum vyre_lower::analyses::CoalescenceRewrite
 pub enum vyre_lower::analyses::ConflictSeverity
 pub enum vyre_lower::analyses::structured_walk::ArmDescent
 pub enum vyre_lower::analyses::structured_walk::BranchForm
-pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend
 pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
 pub enum vyre_lower::emit_adversarial_corpus::EmitOutcome
 pub enum vyre_lower::operand_class::OperandClass
@@ -225,7 +223,6 @@ pub fn vyre_lower::audit_with_histogram(desc: &vyre_lower::KernelDescriptor) -> 
 pub fn vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::corpus() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
-pub fn vyre_lower::emit_adversarial_corpus::required_backends() -> &'static [vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend]
 pub fn vyre_lower::emit_adversarial_corpus::success_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::facts_for(kind: &vyre_lower::KernelOpKind) -> vyre_lower::OpFacts
 pub fn vyre_lower::format_verify_errors(errors: &[vyre_lower::VerifyError]) -> alloc::string::String
@@ -684,12 +681,6 @@ pub vyre_lower::analyses::vec_pack::VecPackChain::slot: u32
 pub vyre_lower::analyses::vec_pack::VecPackChain::start_index: u32
 pub vyre_lower::analyses::vec_pack::VecPackReport::chains: alloc::vec::Vec<vyre_lower::analyses::vec_pack::VecPackChain>
 pub vyre_lower::analyses::vec_pack::VecPackReport::total_ops_eliminated: u32
-pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Cuda
-pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Metal
-pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Naga
-pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Ptx
-pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Spirv
-pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Wgpu
 pub vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::descriptor: vyre_lower::KernelDescriptor
 pub vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::family: vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
 pub vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::id: &'static str

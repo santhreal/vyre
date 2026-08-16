@@ -5,8 +5,8 @@
 //! the profile, walks the selected modules, infers the dispatch grid and copies
 //! the canonical bindings through. Only the first is per-backend. The shell was
 //! written once per backend and drifted only in the dialect name inside its
-//! error strings, so `dup-scan` counted twenty-nine of spirv's seventy-six
-//! target-compiler lines as duplicated against cuda, metal and wgpu.
+//! error strings, so `dup-scan` counted twenty-nine of one backend's
+//! seventy-six target-compiler lines as duplicated against the other three.
 //!
 //! A backend now declares a [`TargetDialect`](crate::target_dialect::TargetDialect)
 //! and gets the shell. What it still
@@ -44,9 +44,9 @@ pub type EmitSelected =
 pub struct TargetDialect {
     /// Backend identity reported in a compile failure.
     pub backend_id: &'static str,
-    /// Dialect name as it appears in operator-facing messages, such as `PTX`.
+    /// Dialect name as it appears in operator-facing messages.
     pub dialect: &'static str,
-    /// Stable payload format identity, such as `ptx`.
+    /// Stable payload format identity.
     pub format: &'static str,
     /// Payload format version.
     pub format_version: u16,

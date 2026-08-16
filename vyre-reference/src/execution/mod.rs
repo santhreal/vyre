@@ -91,7 +91,7 @@ pub fn reference_eval(
 /// The interpreter DEFINES OOB loads as zero-fill and OOB stores as a no-op so
 /// its output stays deterministic, but that silent absorption is exactly what
 /// masks a GPU/CPU parity hazard: an IR program with an ungated data-derived index
-/// "works" here yet a real GPU (CUDA does no bounds-checking) reads garbage or
+/// "works" here yet a real GPU, which does no bounds-checking, reads garbage or
 /// corrupts memory. Use this to assert a program NEVER relies on that masking: a
 /// correctly bounds-gated program handles an out-of-contract index with explicit
 /// control flow, so it records `OobReport::total() == 0` even on hostile input. A

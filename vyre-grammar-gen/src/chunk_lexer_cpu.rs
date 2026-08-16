@@ -1,5 +1,5 @@
 //! CPU reference for the **chunk-parallel** lexer algorithm used by
-//! `vyre-libs::parsing::c::lex::lexer::c11_lexer` (see that module’s
+//! the GPU chunked lexer this crate emits blobs for (see that module’s
 //! `chunk_size` / lane walk). This is **not** a standards-complete
 //! max-munch lexer; it matches the GPU kernel’s per-lane “longest
 //! accept within this chunk” behaviour for differential tests.

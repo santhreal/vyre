@@ -1176,7 +1176,7 @@ pub trait ResidentInstance: MaterializedInstance {
 /// impl:
 ///
 /// ```ignore
-/// impl ArtifactInstance for CudaArtifactInstance {
+/// impl ArtifactInstance for TargetArtifactInstance {
 ///     vyre_driver::artifact_instance_identity!();
 ///
 ///     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
@@ -1213,7 +1213,7 @@ macro_rules! artifact_instance_identity {
 /// path passes no field and keeps the trait's refusals.
 ///
 /// ```ignore
-/// impl ArtifactMaterializer for CudaMaterializer {
+/// impl ArtifactMaterializer for TargetMaterializer {
 ///     vyre_driver::materializer_passthrough!(resident);
 ///
 ///     fn materialize(&self, artifact: &Artifact, payload: &TargetPayload)
@@ -1272,7 +1272,7 @@ macro_rules! materializer_passthrough {
 /// something else writes the method by hand.
 ///
 /// ```ignore
-/// impl ResidentInstance for CudaArtifactInstance {
+/// impl ResidentInstance for TargetArtifactInstance {
 ///     vyre_driver::resident_pipeline_launch!();
 ///
 ///     fn multi_module_feature(&self) -> &str { /* per backend */ }

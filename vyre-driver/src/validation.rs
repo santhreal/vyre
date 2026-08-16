@@ -300,9 +300,9 @@ pub struct LaunchGeometryLimits {
     pub max_block_dim: [u32; 3],
     /// Maximum workgroup count per grid dimension.
     pub max_grid_dim: [u32; 3],
-    /// Maximum threads the device keeps resident on one compute unit (a CUDA
-    /// streaming multiprocessor, a Metal threadgroup-hosting core, and so on),
-    /// or `0` when the backend does not probe this number.
+    /// Maximum threads the device keeps resident on one compute unit, the
+    /// hardware block a workgroup is resident on, or `0` when the backend does
+    /// not probe this number.
     ///
     /// This is the budget that decides how many whole workgroups fit on one
     /// unit, and the division is integral: a workgroup width that does not
@@ -334,14 +334,14 @@ impl LaunchGeometryLimits {
 /// budget.
 ///
 /// This is the single definition of the residency division in the workspace.
-/// CUDA's cooperative launch preflight and cold-start launch-width selection
-/// both route through it, because two independent copies of this arithmetic
+/// Cooperative launch preflight and cold-start launch-width selection both
+/// route through it, because two independent copies of this arithmetic
 /// had already drifted apart once. The division is integral by hardware: a
 /// unit hosts whole workgroups only.
 ///
 /// Threads are the only ceiling modelled here. Hardware also caps blocks per
-/// unit independently (CUDA reports it as
-/// `CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR`), so at narrow widths
+/// unit independently, and a backend reports that cap separately, so at narrow
+/// widths
 /// the real block count is lower than this returns and the shortfall can be
 /// large: where the device caps blocks at 24, a 32-wide group against a
 /// 1536-thread budget measures 24 blocks and 768 resident threads, half what

@@ -639,8 +639,8 @@ impl Tuner {
 
     /// Convert measured candidates into a Fisher-preconditioned next probe.
     ///
-    /// This keeps the best-of-N timing hook compatible while giving CUDA and
-    /// other GPU backends a richer update rule than "pick the current fastest
+    /// This keeps the best-of-N timing hook compatible while giving device
+    /// backends a richer update rule than "pick the current fastest
     /// sample forever." Backends can feed `fisher_inv_sqrt_q16` from the
     /// primitive-backed natural-gradient path.
     ///

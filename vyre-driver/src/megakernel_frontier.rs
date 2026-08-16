@@ -6,7 +6,7 @@
 //! splitting under an explicit byte budget, peak byte accounting, and readback
 //! pressure amortization, and then drives topology selection from it.
 //!
-//! Composing those two halves used to live in the CUDA driver, which is why the
+//! Composing those two halves used to live in one concrete driver, which is why the
 //! device-wide-barrier rule in [`crate::megakernel_execution`] could sit on one
 //! backend without the neutral policy knowing it. The composition is decided
 //! entirely by graph shape, wave bytes, and budgets, so it belongs here; a

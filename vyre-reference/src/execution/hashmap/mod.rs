@@ -245,7 +245,7 @@ pub(crate) fn run_hashmap_reference(
         // The oracle must refuse exactly what the device backends refuse. A
         // backend-allocated output with no static count has no size source on any
         // path: answering it with an empty buffer here certified programs that
-        // CUDA and WGPU both reject, which is a certification hole rather than a
+        // both device backends reject, which is a certification hole rather than a
         // cosmetic inconsistency.
         decl.require_static_readback_size()
             .map_err(|message| ReferenceError::new(message))?;

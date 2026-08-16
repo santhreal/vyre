@@ -271,7 +271,7 @@ pub fn dispatch_with_grid_sync_split_into(
 ///
 /// This is the entry a host-loop fixpoint solver (an IFDS or dataflow solve)
 /// uses to move its convergence loop onto the device without taking a backend
-/// handle: it plugs any backend (CPU reference, CUDA, wgpu) as a
+/// handle: it plugs any backend, reference or device, as a
 /// `Fn(&Program, &[&[u8]], Option<[u32; 3]>, &mut Vec<Vec<u8>>) -> Result<(),
 /// String>` closure. The closure receives each segment's program, its rotated
 /// inputs, the whole-grid workgroup count (`config.grid_override`), and a
