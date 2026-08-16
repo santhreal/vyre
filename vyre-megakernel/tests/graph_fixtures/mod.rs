@@ -16,7 +16,7 @@ use vyre_foundation::ir::{
 };
 
 /// A `u32` value of symbolic length that lives for one invocation.
-pub fn invocation_contract() -> ValueContract {
+pub(crate) fn invocation_contract() -> ValueContract {
     ValueContract {
         dtype: DataType::U32,
         shape: vec![ShapeDim::Symbol("items".into())],
@@ -26,7 +26,7 @@ pub fn invocation_contract() -> ValueContract {
 }
 
 /// A program that copies one element from `input` to `output`.
-pub fn copy_program(input: &str, output: &str) -> Program {
+pub(crate) fn copy_program(input: &str, output: &str) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
@@ -46,7 +46,7 @@ pub fn copy_program(input: &str, output: &str) -> Program {
 /// `producer` reads `input` and writes `intermediate`; `consumer` reads
 /// `intermediate` and writes `output`. The caller supplies both programs, which
 /// is the only thing the suites disagree about.
-pub fn producer_consumer_pair(producer: Program, consumer: Program) -> ProgramGraph {
+pub(crate) fn producer_consumer_pair(producer: Program, consumer: Program) -> ProgramGraph {
     let mut graph = ProgramGraph::new();
     let input = graph
         .add_external_value("input", invocation_contract())
