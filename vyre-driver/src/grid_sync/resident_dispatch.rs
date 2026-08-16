@@ -368,8 +368,6 @@ mod tests {
         apply_out_stores, cross_segment_store_program, grid_sync_chain,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use vyre_foundation::ir::MemoryOrdering;
-    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
 
     struct ResidentReuseBackend {
         calls: AtomicUsize,

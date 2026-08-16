@@ -5,8 +5,6 @@
 //! devices; runtime policy owns bindings, retained state, queueing, recovery,
 //! resource residency, IO, and telemetry.
 
-#![deny(missing_docs)]
-#![warn(unreachable_pub)]
 // vyre-runtime owns the io_uring zero-copy ingest path and the persistent
 // megakernel ring; both reach into FFI / mmap territory. Every unsafe site
 // carries a `SAFETY:` comment the `lint-unsafe-justification` gate validates.

@@ -36,7 +36,6 @@
 //! a per-file parser cannot do. An id written inline or through a file-local
 //! `const` is read, wherever in the file the `const` sits.
 
-#![forbid(unsafe_code)]
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;

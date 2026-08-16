@@ -344,12 +344,10 @@ fn write_atomic(path: &Path, bytes: &[u8], label: &str) -> Result<(), BackendErr
     let tmp_path = path.with_extension(format!("tmp.{}_{}", std::process::id(), tmp_id));
     let mut file = File::create(&tmp_path)
         .map_err(|error| BackendError::new(format!("failed to create {label}: {error}")))?;
-    file.lock_exclusive()
-        .map_err(|error| BackendError::new(error.to_string()))?;
+    FileExt::lock_exclusive(&file).map_err(|error| BackendError::new(error.to_string()))?;
     file.write_all(bytes)
         .map_err(|error| BackendError::new(error.to_string()))?;
-    file.unlock()
-        .map_err(|error| BackendError::new(error.to_string()))?;
+    FileExt::unlock(&file).map_err(|error| BackendError::new(error.to_string()))?;
     fs::rename(&tmp_path, path)
         .map_err(|error| BackendError::new(format!("failed to install {label}: {error}")))?;
     register_pending_durable_cache_file(path)?;
@@ -421,7 +419,7 @@ fn read_metadata<T: serde::de::DeserializeOwned>(meta_path: &Path) -> Result<T, 
     if metadata.len() > MAX_PIPELINE_CACHE_METADATA_BYTES {
         return Err(());
     }
-    if file.lock_shared().is_err() {
+    if FileExt::lock_shared(&file).is_err() {
         return Err(());
     }
     let capacity = usize::try_from(metadata.len()).map_err(|_| ())?;
@@ -431,7 +429,7 @@ fn read_metadata<T: serde::de::DeserializeOwned>(meta_path: &Path) -> Result<T, 
     let res = Read::by_ref(&mut file)
         .take(bounded_read_limit)
         .read_to_string(&mut text);
-    if file.unlock().is_err() {
+    if FileExt::unlock(&file).is_err() {
         return Err(());
     }
     if res.is_err()

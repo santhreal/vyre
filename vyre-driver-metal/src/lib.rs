@@ -1,9 +1,14 @@
-#![allow(unsafe_code)]
 //! Native Metal backend registration boundary.
 //!
 //! The pure target compiler is registered on every host. Native device
 //! materialization is registered only on Apple targets; `acquire()` on other
 //! targets returns an actionable unsupported error.
+
+// Metal.framework bindings (`metal::*`) are unsafe FFI at every device call.
+// The override is the visible exception to the workspace `unsafe_code = "deny"`
+// floor, reviewed through `xtask/unsafe-budget.txt`, and each site owes a
+// SAFETY comment the `lint-unsafe-justification` gate reads.
+#![allow(unsafe_code)]
 
 use vyre_driver::{BackendError, VyreBackend};
 

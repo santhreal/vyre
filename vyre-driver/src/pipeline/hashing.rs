@@ -2,7 +2,6 @@
 
 use crate::backend::DispatchConfig;
 use vyre_foundation::ir::Program;
-use vyre_spec::BackendId;
 
 /// Return the normalized program digest used by backend pipeline caches.
 ///

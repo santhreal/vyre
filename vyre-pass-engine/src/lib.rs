@@ -1,12 +1,3 @@
-#![allow(
-    clippy::doc_lazy_continuation,
-    clippy::double_must_use,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop,
-    clippy::collapsible_if,
-    clippy::match_like_matches_macro,
-    clippy::redundant_closure
-)]
 //! Vyre pass engine: the optimizer's own passes, executed as vyre Programs.
 //!
 //! A pass here is not a second implementation of a `vyre-foundation` pass. The

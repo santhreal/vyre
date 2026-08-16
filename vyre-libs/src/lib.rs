@@ -34,23 +34,6 @@
 // Semantic catalog entries are immutable values over static identifiers and
 // function pointers, so the standard auto-traits provide Send + Sync without
 // unsafe code.
-#![forbid(unsafe_code)]
-#![deny(missing_docs)]
-#![allow(
-    clippy::too_many_arguments,
-    clippy::needless_range_loop,
-    clippy::double_must_use,
-    clippy::items_after_test_module,
-    clippy::assertions_on_constants,
-    clippy::overly_complex_bool_expr,
-    clippy::filter_map_bool_then
-)]
-// P3.3 nested-dialect reshape: each sub-dialect's single op file
-// shares the sub-dialect's module name (e.g. `math/broadcast/broadcast.rs`).
-// That's the intended shape for community packs that add second/
-// third ops to the same sub-dialect later; the lint would fight
-// the architectural decision.
-#![allow(clippy::module_inception)]
 
 /// Region builder  -  the shared helper every composition routes through.
 

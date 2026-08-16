@@ -1,5 +1,3 @@
-#![forbid(unsafe_code)]
-
 //! Registry adapter that exposes `vyre-reference` as a `VyreBackend`.
 
 use std::sync::Arc;

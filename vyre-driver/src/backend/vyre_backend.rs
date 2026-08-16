@@ -1,8 +1,5 @@
 //! The frozen `VyreBackend` contract.
 
-use std::sync::Arc;
-
-use smallvec::SmallVec;
 use vyre_foundation::ir::Program;
 
 use crate::backend::resident_sequence::{

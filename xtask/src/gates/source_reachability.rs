@@ -258,9 +258,9 @@ impl Gate for SourceReachability {
             report.find(Finding::in_file(
                 path,
                 "file is compiled by no cargo target",
-                "declare it with `mod`, `#[path]`, `include!` or a target entry in the \
-                 owning Cargo.toml, or delete it; a file nothing compiles reads as \
-                 coverage and provides none",
+                "declare it with `mod`, `#[path]` or a target entry in the owning \
+                 Cargo.toml, or delete it; a file nothing compiles reads as coverage \
+                 and provides none",
             ));
         }
         for finding in missing_mods {
@@ -275,6 +275,67 @@ impl Gate for SourceReachability {
             manifests.len(),
             exempt.len()
         ));
+        Ok(report)
+    }
+}
+
+/// Hand-written Rust is composed with `mod`, never with `include!`.
+///
+/// Textual inclusion pastes a file into its parent, so the two share one
+/// compilation unit, one module namespace and one incremental-rebuild boundary.
+/// It also hides the included file from rust-analyzer navigation and from
+/// `cargo doc`, and it is why a module-graph audit read 270 files as unreachable
+/// while they were being compiled: 238 sites pulled 236 files and 56,261 lines
+/// into their parents that way, including 5,065 lines of release-gate checks that
+/// read as dead.
+///
+/// A generated file is the exception, and it is not an exception this gate has to
+/// name: a build script writes into `OUT_DIR`, so the include spells its path
+/// through `concat!(env!("OUT_DIR"), ...)` and the target is not a tracked file.
+/// What this reports is an `include!` of a literal path that the checkout
+/// carries, which is a file that could have been a module.
+pub struct IncludeIsNotAModule;
+
+impl Gate for IncludeIsNotAModule {
+    fn name(&self) -> &'static str {
+        "source-include-module"
+    }
+
+    fn help(&self) -> &'static str {
+        "include! of a tracked Rust file instead of a module declaration"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let tree = Tree::open(&ctx.root)?;
+        let mut report = Report::clean();
+        let tracked: BTreeSet<String> = tree.paths().iter().map(as_key).collect();
+        let sources: Vec<PathBuf> = tree
+            .paths()
+            .iter()
+            .filter(|path| extension_is(path, "rs"))
+            .cloned()
+            .collect();
+        report.note(format!("scanned {} tracked Rust file(s)", sources.len()));
+        for source in &sources {
+            let rel = as_key(source);
+            let text = tree.read(source)?;
+            for raw in scan_source(&text).includes {
+                let target = normalize(&join(&parent_of(&rel), &raw));
+                if !tracked.contains(&target) {
+                    continue;
+                }
+                report.find(Finding::in_file(
+                    &rel,
+                    format!("include! pastes the tracked file {target} into this one"),
+                    format!(
+                        "declare {target} as a module and `use` what it exports; keep the public \
+                         path stable with a re-export if callers name the old one. Only a file a \
+                         build script writes under OUT_DIR is included, and it is named for what \
+                         it holds"
+                    ),
+                ));
+            }
+        }
         Ok(report)
     }
 }
@@ -1098,5 +1159,42 @@ mod tests {
         assert_eq!(literal_body("\"a\\\"b\""), Some("a\"b".to_string()));
         assert_eq!(literal_body("r#\"a\\b\"#"), Some("a\\b".to_string()));
         assert_eq!(literal_body("// comment"), None);
+    }
+}
+
+#[cfg(test)]
+mod include_module_tests {
+    use super::*;
+    use crate::gates::fixture_checkout::checkout;
+
+    /// WHY: the tree reached zero `include!` of hand-written Rust by converting
+    /// 236 files to modules, and nothing stopped the next one. The two neighbours
+    /// that must stay unreported are the build-script form, whose path is built
+    /// from `OUT_DIR` and names no tracked file, and a data include, which is
+    /// `include_str!` and not this macro at all.
+    #[test]
+    fn a_tracked_include_is_reported_and_a_generated_one_is_not() {
+        let (_directory, root) = checkout(&[
+            (
+                "crate/src/lib.rs",
+                "include!(\"sibling.rs\");\ninclude!(concat!(env!(\"OUT_DIR\"), \"/tables.rs\"));\nconst DOC: &str = include_str!(\"notes.md\");\n",
+            ),
+            ("crate/src/sibling.rs", "pub fn sibling() {}\n"),
+            ("crate/src/notes.md", "notes\n"),
+        ]);
+
+        let report = IncludeIsNotAModule
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        let messages: Vec<&str> = report
+            .findings
+            .iter()
+            .map(|finding| finding.message.as_str())
+            .collect();
+        assert_eq!(
+            messages,
+            ["include! pastes the tracked file crate/src/sibling.rs into this one"],
+            "only the hand-written include is a finding: {messages:?}"
+        );
     }
 }

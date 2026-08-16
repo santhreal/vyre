@@ -35,24 +35,6 @@
 //! read, logged, or transmitted. BLAKE3-128 is used solely for payload
 //! integrity verification of binary blobs, not for any authentication purpose.
 
-#![warn(missing_docs)]
-#![forbid(unsafe_code)]
-#![warn(clippy::pedantic)]
-#![cfg_attr(
-    not(test),
-    deny(
-        clippy::unwrap_used,
-        clippy::expect_used,
-        clippy::todo,
-        clippy::unimplemented,
-        clippy::panic
-    )
-)]
-#![allow(
-    clippy::module_name_repetitions,
-    clippy::must_use_candidate,
-    clippy::missing_errors_doc
-)]
 
 pub mod c11_lexer;
 pub mod chunk_lexer_cpu;

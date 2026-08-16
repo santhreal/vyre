@@ -1,10 +1,8 @@
-#![forbid(unsafe_code)]
 //! Ahead-of-time packaging for canonical Vyre compiler artifacts.
 //!
 //! The crate compiles frontend `Program` adapters through `vyre-megakernel`,
 //! attaches bytes from a registered pure target compiler facet, and packages
 //! the authenticated [`ArtifactEnvelope`] with deployment metadata.
-#![deny(missing_docs)]
 
 pub(crate) mod artifact;
 pub(crate) mod bundle;

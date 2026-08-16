@@ -1,19 +1,3 @@
-#![allow(
-    unstable_name_collisions,
-    clippy::field_reassign_with_default,
-    clippy::double_must_use,
-    clippy::type_complexity,
-    clippy::missing_errors_doc,
-    clippy::too_many_arguments,
-    clippy::manual_clamp,
-    clippy::module_inception,
-    clippy::empty_line_after_doc_comments,
-    clippy::let_and_return,
-    clippy::missing_safety_doc
-)]
-#![deny(unsafe_code)]
-#![deny(missing_docs)]
-
 //! # vyre-wgpu  -  wgpu backend for the vyre GPU compute specification
 
 mod allocation;

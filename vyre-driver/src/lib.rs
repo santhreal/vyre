@@ -1,10 +1,3 @@
-#![forbid(unsafe_code)]
-#![allow(unused_imports)]
-#![allow(
-    clippy::only_used_in_recursion,
-    clippy::result_unit_err,
-    clippy::module_inception
-)]
 //! vyre-driver  -  substrate-agnostic backend machinery.
 //!
 //! Registry, runtime, pipeline, routing, diagnostics, and the VyreBackend

@@ -1,5 +1,3 @@
-#![forbid(unsafe_code)]
-
 //! Canonical conformance engine for proof execution, replay, minimization,
 //! algebraic-law checking, and certificate verification.
 
