@@ -367,12 +367,8 @@ fn is_inner_allow_of(line: &str, lint: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::process::Command;
-
-    use tempfile::TempDir;
-
     use super::*;
+    use crate::gates::fixture_checkout::checkout;
 
     /// WHY: the floor is crate-wide, and the narrow module-scoped form on a
     /// generated module is deliberately allowed. A check that could not tell the
@@ -462,7 +458,7 @@ mod tests {
     /// production site next to it must still be reported, or the rule cannot fail.
     #[test]
     fn a_production_expect_owes_a_fix_and_a_test_item_does_not() {
-        let (_directory, root) = fixture_tree(&[(
+        let (_directory, root) = checkout(&[(
             "site.rs",
             "fn load(path: &str) -> String {\n    std::fs::read_to_string(path).expect(\"the config file\")\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn it_loads() {\n        let value = super::load(\"x\").expect(\"a loaded config\");\n        assert!(!value.is_empty());\n    }\n}\n",
         )]);
@@ -494,7 +490,7 @@ mod tests {
     /// comment lines keep the examples readable, and this proves both directions.
     #[test]
     fn a_quoted_unsafe_block_is_data_and_a_real_one_still_needs_its_justification() {
-        let (_directory, root) = fixture_tree(&[
+        let (_directory, root) = checkout(&[
             (
                 "quoted.rs",
                 "fn fixture() {\n    let needles = [\"unsafe {\", \"allow(unsafe_code)\"];\n}\n",
@@ -525,7 +521,7 @@ mod tests {
     /// surface and the pin could only be met by deleting the explanation.
     #[test]
     fn only_a_real_override_counts_against_the_budget() {
-        let (_directory, root) = fixture_tree(&[
+        let (_directory, root) = checkout(&[
             (
                 "xtask/unsafe-budget.txt",
                 "# reviewed surfaces\nreal.rs\n",
@@ -556,29 +552,6 @@ mod tests {
             "the note counts the surface: {:?}",
             report.notes
         );
-    }
-
-    /// A git checkout holding the given files, which is what `Tree::open` needs.
-    ///
-    /// The directory is returned with it: dropping it deletes the tree, so the
-    /// caller holds it for as long as the gate reads it.
-    fn fixture_tree(files: &[(&str, &str)]) -> (TempDir, PathBuf) {
-        let temporary = TempDir::new().expect("a temporary directory");
-        let root = temporary.path().to_path_buf();
-        for (path, text) in files {
-            let target = root.join(path);
-            if let Some(parent) = target.parent() {
-                fs::create_dir_all(parent).expect("a fixture directory");
-            }
-            fs::write(target, text).expect("a fixture file");
-        }
-        let status = Command::new("git")
-            .args(["init", "-q", "."])
-            .current_dir(&root)
-            .status()
-            .expect("git is available");
-        assert!(status.success(), "the fixture git step failed");
-        (temporary, root)
     }
 
     /// The files a report names, in the order it named them.

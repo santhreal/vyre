@@ -400,10 +400,12 @@ fn toplevel(directory: &Path) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::process::Command;
 
     use tempfile::TempDir;
 
     use super::*;
+    use crate::gates::fixture_checkout;
 
     fn vocabulary() -> BTreeSet<String> {
         ["rs", "toml", "json", "md"]
@@ -521,15 +523,12 @@ mod tests {
     /// extensions the tree itself uses, so in a tree carrying no `.rs` and no
     /// `.toml` file a citation of either reads as prose and the gate reports
     /// nothing, for the right reason and with nothing proved.
-    fn checkout(temporary: &TempDir, artifact: &str) -> PathBuf {
-        let root = temporary.path().to_path_buf();
-        fs::create_dir_all(root.join(EVIDENCE_DIR)).expect("an evidence directory");
-        fs::write(root.join("keep.rs"), "fn keep() {}\n").expect("a Rust file");
-        fs::write(root.join("Cargo.toml"), "[workspace]\n").expect("a manifest");
-        fs::write(root.join(EVIDENCE_DIR).join("artifact.json"), artifact)
-            .expect("an evidence artifact");
-        git(&root, &["init", "-q", "."]);
-        root
+    fn checkout(artifact: &str) -> (TempDir, PathBuf) {
+        fixture_checkout::checkout(&[
+            ("keep.rs", "fn keep() {}\n"),
+            ("Cargo.toml", "[workspace]\n"),
+            (&format!("{EVIDENCE_DIR}/artifact.json"), artifact),
+        ])
     }
 
     /// Run one git step in `root`, failing the test when git does.
@@ -567,9 +566,7 @@ mod tests {
     /// citation nobody can locate is not actionable.
     #[test]
     fn a_citation_that_does_not_resolve_is_reported() {
-        let temporary = TempDir::new().expect("a temporary directory");
-        let root = checkout(
-            &temporary,
+        let (_temporary, root) = checkout(
             r#"{"findings":[{"path":"definitely/not/on/disk/anywhere.rs"}]}"#,
         );
 
@@ -600,8 +597,7 @@ mod tests {
     /// git's index rather than of the pattern.
     #[test]
     fn a_cited_path_that_is_gitignored_is_reported() {
-        let temporary = TempDir::new().expect("a temporary directory");
-        let root = checkout(&temporary, "{}");
+        let (_temporary, root) = checkout("{}");
         fs::write(root.join(".gitignore"), "generated.rs\ntracked.rs\n")
             .expect("an ignore rule");
         fs::write(root.join("generated.rs"), "fn generated() {}\n").expect("an ignored file");
@@ -656,9 +652,7 @@ mod tests {
     /// asserted so a filter that reads the first and stops is red.
     #[test]
     fn a_citation_is_read_at_every_placement() {
-        let temporary = TempDir::new().expect("a temporary directory");
-        let root = checkout(
-            &temporary,
+        let (_temporary, root) = checkout(
             concat!(
                 r#"{"path":"absent/on/the/root/object.rs","#,
                 r#""subject":{"path":"absent/under/an/object.rs"},"#,
@@ -701,9 +695,7 @@ mod tests {
     /// turns this red.
     #[test]
     fn a_string_that_names_no_file_is_not_a_citation() {
-        let temporary = TempDir::new().expect("a temporary directory");
-        let root = checkout(
-            &temporary,
+        let (_temporary, root) = checkout(
             concat!(
                 r#"{"version":"1.2.0","#,
                 r#""schema_id":"vyre-conform-input-envelope-v1","#,

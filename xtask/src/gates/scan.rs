@@ -1017,23 +1017,12 @@ mod tests {
     /// does not is, in the same file.
     #[test]
     fn a_statement_filter_keeps_only_the_occurrences_its_chain_condemns() {
-        let directory = tempfile::TempDir::new().expect("temporary directory");
-        let root = directory.path();
-        std::fs::create_dir_all(root.join("src")).expect("source directory");
-        std::fs::write(
-            root.join("src/read.rs"),
+        let (_directory, root) = crate::gates::fixture_checkout::checkout(&[(
+            "src/read.rs",
             "fn bounded(file: &mut File, bytes: &mut Vec<u8>) {\n    Read::by_ref(file)\n        .take(64)\n        .read_to_end(bytes);\n}\nfn unbounded(file: &mut File, bytes: &mut Vec<u8>) {\n    file.read_to_end(bytes);\n}\n",
-        )
-        .expect("source file");
-        Command::new("git")
-            .arg("init")
-            .arg("-q")
-            .arg(".")
-            .current_dir(root)
-            .status()
-            .expect("git init");
+        )]);
 
-        let tree = Tree::open(root).expect("fixture tree");
+        let tree = Tree::open(&root).expect("fixture tree");
         let report = ratchet(
             &tree,
             &Rule {
