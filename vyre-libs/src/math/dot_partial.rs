@@ -96,7 +96,6 @@ pub fn dot_partial_program(q_buffer: &str, k_buffer: &str, out: &str, d: u32) ->
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

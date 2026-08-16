@@ -71,7 +71,6 @@ pub fn core_delimiter_match(
     .with_non_composable_with_self(true)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

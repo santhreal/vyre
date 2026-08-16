@@ -13,7 +13,7 @@
 //!    buffer shapes, spawning `cells` invocations that each run the whole scan). The running-max
 //!    scratch is a plain accumulator guarded to `InvocationId == 0`, so the output must be identical
 //!    regardless of the dispatch grid.
-#![cfg(feature = "all-lego")]
+#![cfg(feature = "math-kernels")]
 
 use vyre_libs::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};

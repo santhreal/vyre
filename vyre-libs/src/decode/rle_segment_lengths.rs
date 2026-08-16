@@ -413,12 +413,10 @@ fn reserve_items<T>(out: &mut Vec<T>, len: usize, context: &str, name: &str) -> 
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

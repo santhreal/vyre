@@ -27,7 +27,13 @@ pub(super) fn is_internal_phase_op(id: &str) -> bool {
 /// These operations emit pure, backend-neutral IR but have no lower registered
 /// composition unit. Keeping this list explicit prevents an arbitrary flat
 /// Tier-3 operation from bypassing the depth gate.
-pub(super) const DECLARED_TIER3_LEAVES: [&str; 9] = [
+///
+/// The three decode codecs are leaves because one module owns each codec and one
+/// op id names it. Each was previously a `vyre-libs` builder wrapping a
+/// registered `vyre-primitives` child, so the child Region was the second
+/// module, not a lower composition unit; collapsing the pair left the emitting
+/// body with nothing under it to name.
+pub(super) const DECLARED_TIER3_LEAVES: [&str; 12] = [
     "vyre-libs::nn::top_k",
     "vyre-libs::math::reduce_variance",
     "vyre-libs::nn::softmax_top_k",
@@ -37,6 +43,9 @@ pub(super) const DECLARED_TIER3_LEAVES: [&str; 9] = [
     "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
     "vyre-libs::math::linalg::matmul_strassen_2x2",
     "vyre-libs::math::fft::fft_radix2",
+    "vyre-libs::decode::base64",
+    "vyre-libs::decode::hex",
+    "vyre-libs::decode::inflate_stored_block",
 ];
 
 pub(super) fn is_declared_tier3_leaf(id: &str) -> bool {
@@ -71,6 +80,12 @@ pub(super) fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo
         report.find(Finding::new(
             format!("no directory `vyre-libs/src/{dir}` answers to the shared-plumbing row"),
             "delete the row: a plumbing row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
+        ));
+    }
+    for dir in dead_substrate_rows(&libs_src) {
+        report.find(Finding::new(
+            format!("no directory `vyre-libs/src/{dir}` answers to the kernel-substrate row"),
+            "delete the row: a substrate row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
         ));
     }
     for marker in PHASE_MARKERS {

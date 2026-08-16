@@ -813,7 +813,6 @@ fn dominates(dom_offsets: &[u32], dom_targets: &[u32], dominator: u32, node: u32
     dom_targets[start..end].contains(&node)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

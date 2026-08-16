@@ -46,7 +46,6 @@ pub fn cpu_ref_into(nodes: &[u32], kind: u32, out: &mut Vec<u32>) {
     nodeset_filter_cpu_ref_into(nodes, NodeSetFilter::Eq(kind), out);
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

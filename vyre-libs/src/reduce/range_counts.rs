@@ -81,7 +81,6 @@ pub fn cpu_ref(histogram: &[u32], start: u32, end: u32) -> u32 {
         .fold(0u32, u32::wrapping_add)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         RANGE_COUNTS_U32_OP_ID,

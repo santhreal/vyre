@@ -98,7 +98,6 @@ pub fn try_mp_edge_clip_cpu_into(
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

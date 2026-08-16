@@ -34,7 +34,6 @@ pub fn cpu_ref_into(nodes: &[u32], out: &mut Vec<u32>) {
     crate::predicate::node_kind_eq::cpu_ref_into(nodes, node_kind::LITERAL, out);
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

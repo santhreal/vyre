@@ -186,7 +186,6 @@ macro_rules! define_bitwise_binary_op {
             Ok(())
         }
 
-        #[cfg(feature = "inventory-registry")]
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::primitive(
                 OP_ID,
@@ -380,7 +379,6 @@ macro_rules! define_bitwise_in_place_op {
             }
         }
 
-        #[cfg(feature = "inventory-registry")]
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::primitive(
                 OP_ID,

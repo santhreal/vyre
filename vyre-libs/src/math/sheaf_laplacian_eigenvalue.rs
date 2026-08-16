@@ -249,7 +249,6 @@ crate::scratch::define_reserve_capacity!(
     "sheaf Laplacian eigenvalue CPU oracle"
 );
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
@@ -276,7 +275,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         POWER_ITERATION_PHASE_OP_ID,

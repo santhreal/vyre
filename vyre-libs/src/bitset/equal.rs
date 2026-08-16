@@ -50,7 +50,6 @@ pub fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

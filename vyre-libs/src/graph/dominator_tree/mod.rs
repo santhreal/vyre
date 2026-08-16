@@ -43,7 +43,6 @@ mod cooper_harvey_kennedy;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod cpu_ref;
 
-#[cfg(feature = "inventory-registry")]
 mod registry;
 
 #[cfg(test)]

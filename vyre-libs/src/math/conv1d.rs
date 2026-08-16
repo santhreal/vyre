@@ -185,7 +185,6 @@ pub fn pack_params(count: u32, stride: u32, radius: u32) -> Vec<u32> {
     vec![count, stride, radius.min(MAX_RADIUS), 0]
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

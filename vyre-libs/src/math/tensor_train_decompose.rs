@@ -594,7 +594,6 @@ fn symmetric_eigen_jacobi_into(
     eigenvalues.extend((0..n).map(|i| a[i * n + i]));
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

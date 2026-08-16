@@ -55,7 +55,6 @@ pub const UTF8_CONT: u32 = 4;
 /// 0xC0, 0xC1 (overlong) or 0xF8..0xFF (out of range)  -  invalid lead.
 pub const UTF8_INVALID: u32 = 5;
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

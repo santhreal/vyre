@@ -670,7 +670,6 @@ fn crc32_byte_shift_matrix() -> [u32; 32] {
     even
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         CRC32_OP_ID,

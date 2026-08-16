@@ -187,7 +187,6 @@ fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
     )]
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         ADLER32_OP_ID,

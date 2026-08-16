@@ -196,7 +196,6 @@ pub fn try_sheaf_diffusion_step_cpu_into(
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

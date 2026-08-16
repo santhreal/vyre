@@ -175,7 +175,6 @@ macro_rules! define_bool_reduce_op {
             )
         }
 
-        #[cfg(feature = "inventory-registry")]
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::primitive(
                 OP_ID,
@@ -255,7 +254,6 @@ macro_rules! define_u32_reduce_op {
             values.iter().copied().fold($identity, fold)
         }
 
-        #[cfg(feature = "inventory-registry")]
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::primitive(
                 OP_ID,

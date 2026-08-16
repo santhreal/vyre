@@ -217,7 +217,6 @@ pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
         .collect()
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         CHAR_CLASS_OP_ID,

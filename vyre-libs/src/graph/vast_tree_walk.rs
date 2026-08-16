@@ -692,12 +692,10 @@ mod tests {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_tree_words() -> Vec<u32> {
     vec![
         1, SENTINEL, 1, SENTINEL, 0, 0, 0, 0, 0, 0, // root
@@ -706,7 +704,6 @@ fn fixture_tree_words() -> Vec<u32> {
     ]
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         PREORDER_OP_ID,
@@ -719,7 +716,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         POSTORDER_OP_ID,

@@ -14,7 +14,6 @@ mod program_parallel_batch_global;
 mod program_serial;
 mod validate;
 
-#[cfg(feature = "inventory-registry")]
 mod registry;
 
 #[cfg(test)]

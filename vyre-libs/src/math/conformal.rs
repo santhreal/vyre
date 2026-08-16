@@ -126,7 +126,6 @@ pub fn predict_interval(y: u32, q_hat: u32) -> (u32, u32) {
     (lo, hi)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

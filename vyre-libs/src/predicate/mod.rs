@@ -207,7 +207,6 @@ macro_rules! define_tag_family_predicate {
                 crate::label::resolve_family::cpu_ref(node_tags, $family)
             }
 
-            #[cfg(feature = "inventory-registry")]
             inventory::submit! {
                 vyre_foundation::operation::OperationRegistration::primitive(
                     OP_ID,
@@ -317,7 +316,6 @@ macro_rules! define_fixed_forward_edge_predicate {
                 );
             }
 
-            #[cfg(feature = "inventory-registry")]
             inventory::submit! {
                 vyre_foundation::operation::OperationRegistration::primitive(
                     OP_ID,
@@ -422,7 +420,6 @@ pub mod size_argument_of;
 ///
 /// Centralizes the repeated `to_le_bytes` flatten used by every graph
 /// predicate's registry block (`audits/VYRE_PRIMITIVES_GAPS.md` dedup).
-#[cfg(feature = "inventory-registry")]
 pub(crate) fn inventory_u32_le_bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }

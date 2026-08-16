@@ -133,7 +133,6 @@ pub fn try_functor_apply_cpu_into(
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

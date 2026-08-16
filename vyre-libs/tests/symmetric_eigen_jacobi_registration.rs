@@ -25,7 +25,7 @@
 //! What it does not catch: a rotation-order change inside `jacobi_eigen_body` that still lands
 //! on the same eigenbasis for this witness. `symmetric_eigen_jacobi_parity` covers the general
 //! matrix, this covers the pinned one.
-#![cfg(all(feature = "math", feature = "inventory-registry"))]
+#![cfg(feature = "math")]
 
 use vyre_foundation::fp_parity::ulp_distance;
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};

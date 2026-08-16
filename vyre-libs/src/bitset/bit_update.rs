@@ -96,7 +96,6 @@ macro_rules! define_bit_update_op {
             );
         }
 
-        #[cfg(feature = "inventory-registry")]
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::primitive(
                 OP_ID,

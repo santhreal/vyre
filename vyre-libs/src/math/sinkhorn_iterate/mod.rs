@@ -96,7 +96,6 @@ pub struct SinkhornExtents {
     pub max_iterations: u32,
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

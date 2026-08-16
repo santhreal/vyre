@@ -8,7 +8,7 @@
 //! the CPU reference over many random bit-matrices, deliberately including out-of-group seed
 //! bits (the exact input class where the IR, which seeds `active` UNMASKED, diverges from
 //! cpu_ref, which masks the seed to the group first).
-#![cfg(all(feature = "all-lego", feature = "cpu-parity"))]
+#![cfg(all(feature = "math-kernels", feature = "cpu-parity"))]
 
 use vyre_libs::math::tensor_scc::{cpu_ref, tensor_scc_fixpoint};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};

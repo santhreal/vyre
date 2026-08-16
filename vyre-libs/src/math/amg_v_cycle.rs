@@ -517,7 +517,6 @@ fn reserve_cpu_scratch(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(),
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
@@ -551,7 +550,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         V_CYCLE_PHASE_OP_ID,

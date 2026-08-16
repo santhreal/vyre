@@ -167,7 +167,6 @@ pub fn givens_rotate_columns(
 // is [0.6, 0.8, -0.8, 0.6] row-major. The read-before-write discipline is what the
 // fixture is really pinning: writing the first column before reading the second
 // would produce 0.6 and 0.36 in row 0.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

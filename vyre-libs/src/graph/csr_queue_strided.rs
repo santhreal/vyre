@@ -85,7 +85,6 @@ pub use crate::graph::csr_frontier_queue::{
     try_csr_queue_forward_traverse_cpu_into as try_csr_queue_strided_forward_traverse_cpu_into,
 };
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         CSR_QUEUE_STRIDED_FORWARD_OP_ID,

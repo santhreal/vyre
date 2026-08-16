@@ -369,7 +369,6 @@ pub fn ziftsieve_gpu(buffers: ZiftsieveBuffers<'_>, extents: ZiftsieveExtents) -
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     let input = vyre_primitives::wire::pack_u32_slice(&[0x10, b'A' as u32, 0x20, b'B' as u32, b'C' as u32]);
     let seq_literal_start = vyre_primitives::wire::pack_u32_slice(&[1, 3]);
@@ -384,7 +383,6 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![vyre_primitives::wire::pack_u32_slice(&[
         b'A' as u32,
@@ -393,7 +391,6 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
     ])]]
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

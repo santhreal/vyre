@@ -52,7 +52,6 @@ define_csr_frontier_step_cpu_ref! {
     pub fn cpu_ref_into,
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

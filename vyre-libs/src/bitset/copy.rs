@@ -26,7 +26,6 @@ pub fn cpu_ref(target: &mut [u32], source: &[u32]) {
     target[..n].copy_from_slice(&source[..n]);
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

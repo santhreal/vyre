@@ -182,7 +182,6 @@ fn store_state_nodes(out: &str) -> Vec<Node> {
         .collect()
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         BLAKE3_G_OP_ID,
@@ -202,7 +201,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         BLAKE3_ROUND_OP_ID,

@@ -160,12 +160,10 @@ pub fn newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols: u32) ->
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_f32(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
 
-#[cfg(feature = "inventory-registry")]
 fn poly5_fixture_expected(values: &[f32]) -> Vec<f32> {
     values
         .iter()
@@ -182,7 +180,6 @@ fn poly5_fixture_expected(values: &[f32]) -> Vec<f32> {
         .collect()
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         POLY5_F32_OP_ID,

@@ -5,7 +5,7 @@
 //! pins are the independent half: they hold the registration's declared output
 //! against the published checksum vector, so an edited fixture fails here
 //! instead of silently redefining the op.
-#![cfg(all(feature = "hash", feature = "inventory-registry"))]
+#![cfg(feature = "hash")]
 
 use vyre_foundation::operation::OperationRegistry;
 use vyre_reference::value::Value;

@@ -9,7 +9,7 @@
 //! it guards against, a serial rewrite that drifts from the real per-lane arithmetic, would
 //! otherwise be invisible, because the reference interpreter infers a grid of n² ≥ n from the
 //! dense matrix and therefore never reproduces amg's grid=1 under-coverage directly.
-#![cfg(feature = "all-lego")]
+#![cfg(feature = "math-kernels")]
 
 use std::sync::Arc;
 

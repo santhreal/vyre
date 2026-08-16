@@ -13,6 +13,27 @@ pub(super) fn composition_regressed(old_fraction: f64, new_fraction: f64) -> boo
     new_fraction + COMPOSITION_REGRESSION_EPSILON < old_fraction
 }
 
+/// Operations whose `composed_fraction` stepped down on purpose, and whose
+/// baseline therefore predates a deliberate shape change.
+///
+/// The trend check reads its baseline out of the previous release tag, which is
+/// history and cannot be edited. When a codec that was a thin `vyre-libs`
+/// wrapper around a registered `vyre-primitives` child collapses into one
+/// module with one op id, the wrapper's child Region goes with it: the op now
+/// emits its own IR instead of nesting a region that emitted it. Composition did
+/// not regress, it stopped being counted, and there is no shape the fix line
+/// asks for that would bring the number back without restoring the second
+/// module.
+///
+/// Each row is held to the condition it suppresses: a row whose op no longer
+/// regresses against the baseline is reported, so it cannot outlive the release
+/// that earned it.
+pub(super) const INTENDED_COMPOSITION_COLLAPSES: [&str; 3] = [
+    "vyre-libs::decode::base64",
+    "vyre-libs::decode::hex",
+    "vyre-libs::decode::inflate_stored_block",
+];
+
 pub(super) fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
     report.note("[7/10] Composition trend (current composed_fraction must not regress from the latest available baseline)".to_string());
     let Some(root) = workspace_root() else {
@@ -37,14 +58,37 @@ pub(super) fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
 
     let current = composition_fractions(ops);
     let mut flagged = 0usize;
+    let mut suppressed: Vec<&str> = Vec::new();
     for (op_id, old_fraction) in previous {
         let Some(new_fraction) = current.get(&op_id) else {
             continue;
         };
-        if composition_regressed(old_fraction, *new_fraction) {
-            report.find(violation(format!("  ✗ {op_id} composed_fraction regressed from {:.1}% to {:.1}%. Fix: restore Region composition or extract shared work to Tier 2.5.",
+        if !composition_regressed(old_fraction, *new_fraction) {
+            continue;
+        }
+        if let Some(row) = INTENDED_COMPOSITION_COLLAPSES
+            .iter()
+            .find(|row| **row == op_id)
+        {
+            suppressed.push(row);
+            report.note(format!(
+                "  • {op_id} composed_fraction stepped from {:.1}% to {:.1}% by design; the wrapper module and its child Region were collapsed into one op",
                 old_fraction * 100.0,
-                new_fraction * 100.0)));
+                new_fraction * 100.0
+            ));
+            continue;
+        }
+        report.find(violation(format!("  ✗ {op_id} composed_fraction regressed from {:.1}% to {:.1}%. Fix: restore Region composition or extract shared work to Tier 2.5.",
+            old_fraction * 100.0,
+            new_fraction * 100.0)));
+        flagged += 1;
+    }
+    for row in INTENDED_COMPOSITION_COLLAPSES {
+        if !suppressed.contains(&row) {
+            report.find(Finding::new(
+                format!("the intended-collapse row `{row}` suppresses no composed_fraction regression against `{baseline_name}`"),
+                DEAD_EXEMPTION_FIX,
+            ));
             flagged += 1;
         }
     }
@@ -177,4 +221,23 @@ mod tests {
         assert!(composition_regressed(0.913043478261, 0.90));
     }
 
+    /// WHY: an op whose composed_fraction dropped to zero on purpose composes
+    /// nothing, so checks 6 and 8 flag it as a non-leaf with no child Region and
+    /// as an island. Exempting it from the trend check alone moves the finding
+    /// rather than closing it, and the next reader sees a collapse row and
+    /// assumes the collapse is accounted for everywhere. The two tables must
+    /// agree, which is the invariant a new collapse row goes red on.
+    ///
+    /// What this does not catch: a declared leaf that is not a collapse. That
+    /// direction is legal, because an op can be a leaf without ever having had a
+    /// higher baseline.
+    #[test]
+    fn every_intended_collapse_is_also_a_declared_leaf() {
+        for row in INTENDED_COMPOSITION_COLLAPSES {
+            assert!(
+                is_declared_tier3_leaf(row),
+                "`{row}` composes nothing by design, so it must also be a declared Tier-3 leaf or checks 6 and 8 flag it"
+            );
+        }
+    }
 }

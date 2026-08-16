@@ -503,7 +503,6 @@ fn usize_from_u32(value: u32, field: &'static str) -> usize {
     usize::try_from(value).unwrap_or(usize::MAX)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
@@ -524,7 +523,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         DENSE_MATVEC_OP_ID,

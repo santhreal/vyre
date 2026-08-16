@@ -148,7 +148,6 @@ pub fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
     rdp + (1.0 / delta).ln() / (alpha - 1.0)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

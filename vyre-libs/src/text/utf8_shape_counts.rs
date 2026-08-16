@@ -158,7 +158,6 @@ pub fn reference_utf8_shape_counts(histogram: &[u32; 256]) -> (u32, u32) {
     utf8_shape_counts_from_histogram(histogram)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         UTF8_SHAPE_COUNTS_OP_ID,

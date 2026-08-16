@@ -136,7 +136,6 @@ pub fn try_greedy_contract_order_cpu_into(
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

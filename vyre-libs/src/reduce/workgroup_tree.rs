@@ -343,17 +343,14 @@ where
     nodes
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_f32(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_u32(values: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(values)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         SUM_F32_OP_ID,
@@ -366,7 +363,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         SUM_U32_OP_ID,
@@ -379,7 +375,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         MAX_F32_OP_ID,

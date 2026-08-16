@@ -2,7 +2,6 @@ use super::layout::OP_ID;
 use super::program::persistent_bfs;
 use crate::graph::program_graph::ProgramGraphShape;
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

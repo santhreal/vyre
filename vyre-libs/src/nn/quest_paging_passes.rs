@@ -219,7 +219,6 @@ pub fn quest_select_top_k(
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         QUEST_ZERO_FILL_OP_ID,
@@ -233,7 +232,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         QUEST_SCORE_PAGES_OP_ID,
@@ -253,7 +251,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         QUEST_SELECT_TOP_K_OP_ID,

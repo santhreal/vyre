@@ -202,7 +202,6 @@ pub fn reference_eval_warm_start(current: &[u32], next: &[u32], seed: &[u32]) ->
     (updated, flag)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

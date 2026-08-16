@@ -59,22 +59,18 @@ pub const fn i4_packed_words(lane_count: u32) -> u32 {
     lane_count.div_ceil(I4_LANES_PER_WORD)
 }
 
-#[cfg(feature = "inventory-registry")]
 fn u32s(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
-#[cfg(feature = "inventory-registry")]
 fn i32s(lanes: &[i32]) -> Vec<u8> {
     vyre_primitives::wire::pack_i32_slice(lanes)
 }
 
-#[cfg(feature = "inventory-registry")]
 fn f32s(floats: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(floats)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         UNPACK_I4_OP_ID,
@@ -89,7 +85,6 @@ inventory::submit! {
     ).with_category("math")
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         I4_DOT_I32_OP_ID,
@@ -99,7 +94,6 @@ inventory::submit! {
     ).with_category("math")
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         I4_DOT_F32_SCALED_OP_ID,
@@ -109,7 +103,6 @@ inventory::submit! {
     ).with_category("math")
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
         vyre_foundation::operation::OperationRegistration::primitive(
             I4_MATVEC_F32_SCALED_OP_ID,
@@ -123,7 +116,6 @@ inventory::submit! {
     ).with_category("math")
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
         vyre_foundation::operation::OperationRegistration::primitive(
             I4_BATCHED_MATVEC_F32_SCALED_OP_ID,
@@ -137,7 +129,6 @@ inventory::submit! {
     ).with_category("math")
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
         vyre_foundation::operation::OperationRegistration::primitive(
             I4_BATCHED_MATMUL_F32_SCALED_OP_ID,
@@ -152,7 +143,6 @@ inventory::submit! {
     ).with_category("math")
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
         vyre_foundation::operation::OperationRegistration::primitive(
             I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID,

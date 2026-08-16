@@ -144,7 +144,6 @@ pub fn cpu_ref_slot_into(
     );
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

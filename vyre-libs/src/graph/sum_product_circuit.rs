@@ -703,7 +703,6 @@ fn validate_sum_product_evaluate_inputs(
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
@@ -746,7 +745,6 @@ inventory::submit! {
 // depths=[0,0,1,2], max_depth=3. Binding order: depths, kinds, child_offsets,
 // child_counts, children, weights, leaf_values, out (seeded zero). reference_eval
 // returns the sole RW buffer `out` = [2.0, 3.0, 5.0, 10.0] in 16.16.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID_LEVELED,

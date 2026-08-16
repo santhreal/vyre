@@ -104,7 +104,6 @@ pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Pro
 // registered while no backend ever ran it. The fixture below is an ordinary
 // inclusive scan whose expected values are closed-form, so it checks real
 // arithmetic rather than merely running.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID_INCLUSIVE_SUM,
@@ -129,7 +128,6 @@ inventory::submit! {
 ///
 /// At or below [`BLOCK_LANES`] so the build stays on the guarded single-block
 /// path, which is the shape the sub-region generators resolve against.
-#[cfg(feature = "inventory-registry")]
 const SCAN_FIXTURE_LEN: u32 = 64;
 
 fn try_multi_block_prefix_scan_sum_u32(

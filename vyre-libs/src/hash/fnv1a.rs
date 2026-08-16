@@ -405,7 +405,6 @@ pub const fn fnv1a64_update_byte(hash: u64, byte: u8) -> u64 {
     (hash ^ byte as u64).wrapping_mul(FNV1A64_PRIME)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         FNV1A32_OP_ID,
@@ -424,7 +423,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         FNV1A64_OP_ID,

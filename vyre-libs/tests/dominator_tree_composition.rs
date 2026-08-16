@@ -23,7 +23,7 @@
 //! What it does not cover: the fixpoint's own convergence. That is
 //! `dominator_tree_pristine`'s Tier 5, which compares the whole program against
 //! the Lengauer-Tarjan oracle.
-#![cfg(all(feature = "graph", feature = "inventory-registry"))]
+#![cfg(feature = "graph")]
 
 use std::collections::BTreeSet;
 

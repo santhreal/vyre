@@ -158,12 +158,10 @@ pub fn ssa_dominance_scan_program(num_nodes: u32, phi_words: u32) -> Program {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

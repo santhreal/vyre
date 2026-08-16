@@ -155,7 +155,6 @@ pub fn reference_planar_rewrite_schedule(candidates: &[u32], h: u32, w: u32, k: 
     vyre_foundation::optimizer::planar_rewrite_schedule_mask(candidates, h, w, k)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

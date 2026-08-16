@@ -71,7 +71,6 @@ mod non_panic_wrapper_tests {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

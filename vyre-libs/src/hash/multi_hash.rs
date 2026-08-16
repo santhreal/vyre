@@ -74,7 +74,6 @@ fn multi_hash_body(input: &str, out: &str, n: u32) -> Vec<Node> {
     )]
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         MULTI_HASH_OP_ID,

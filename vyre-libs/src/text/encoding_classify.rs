@@ -154,7 +154,6 @@ pub fn classify_from_histogram(histogram: &[u32; 256], count: u32) -> u32 {
     ENC_ISO8859_1
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         ENCODING_CLASSIFY_OP_ID,

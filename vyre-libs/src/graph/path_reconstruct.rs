@@ -710,7 +710,6 @@ pub fn cpu_ref_batched(
         .expect("Fix: batched path reconstruction CPU oracle allocation failed");
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

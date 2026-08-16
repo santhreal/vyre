@@ -5,7 +5,6 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hash::fnv1a::fnv1a32_mul_xor_word_expr;
-#[cfg(feature = "inventory-registry")]
 use crate::hash::fnv1a::fnv1a32_mul_xor_word_state;
 
 use super::ast_ops::{AST_ADD, AST_PTR_DEREF, AST_VAR};
@@ -287,18 +286,15 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
-#[cfg(feature = "inventory-registry")]
 fn structural_hash(op: u32, left: u32, right: u32) -> u32 {
     let h = fnv1a32_mul_xor_word_state(op, left);
     fnv1a32_mul_xor_word_state(h, right)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

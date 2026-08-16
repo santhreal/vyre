@@ -131,7 +131,6 @@ pub fn tfn_scalar_mix_cpu(
     out
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

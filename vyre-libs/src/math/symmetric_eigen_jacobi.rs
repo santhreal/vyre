@@ -241,7 +241,6 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
 // count. Measured against the f64 oracle, 22 of the 24 outputs are bit-identical and the two
 // eigenvalues that are not (2.0 and 13.0, each a sum of two cancelling terms) land 1 ULP low.
 // Nothing here justifies a wider window.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

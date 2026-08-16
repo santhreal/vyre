@@ -23,7 +23,7 @@
 //! array. The IR-validity gate in `graph_builders_emit_valid_ir.rs` covers the
 //! unregistered builders.
 
-#![cfg(all(feature = "graph", feature = "inventory-registry"))]
+#![cfg(feature = "graph")]
 
 use std::collections::BTreeMap;
 

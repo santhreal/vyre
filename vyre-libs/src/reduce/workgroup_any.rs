@@ -92,7 +92,6 @@ pub fn cpu_ref(values: &[u32]) -> u32 {
     values.iter().fold(0u32, |acc, value| acc | value)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         WORKGROUP_ANY_U32_OP_ID,

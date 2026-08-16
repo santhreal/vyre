@@ -9,7 +9,6 @@ use vyre_foundation::ir::Program;
 
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
-#[cfg(feature = "inventory-registry")]
 use crate::predicate::node_kind;
 use crate::predicate::traversal::backward_edge_program;
 
@@ -93,7 +92,6 @@ mod tests {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

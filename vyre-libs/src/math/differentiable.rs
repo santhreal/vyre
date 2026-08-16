@@ -214,7 +214,6 @@ pub fn try_differentiable_argmax_cpu_into(
     try_softmax_cpu_into(scaled, out)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

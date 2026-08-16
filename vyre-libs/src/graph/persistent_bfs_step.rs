@@ -249,7 +249,6 @@ pub fn persistent_bfs_step(
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         PERSISTENT_BFS_STEP_OP_ID,

@@ -174,7 +174,6 @@ pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32
 // land on 0.99999994 rather than 1.0. Both are exactly representable, so the
 // fixture is exact and no tolerance is needed. The two off-diagonal cells are
 // the forced zeros.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

@@ -202,7 +202,6 @@ pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
     out
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         LINE_INDEX_OP_ID,

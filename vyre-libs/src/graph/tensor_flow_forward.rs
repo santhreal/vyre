@@ -372,7 +372,6 @@ pub fn try_tensor_flow_forward_cpu_into(
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

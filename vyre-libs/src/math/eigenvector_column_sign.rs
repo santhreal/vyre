@@ -142,7 +142,6 @@ pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
 // ORACLE: multiplying column 0 by -1 gives (1, -0.0) read down the rows, and
 // column 1 is unchanged. The -0.0 is the zero row times -1.0 and is what f32
 // produces; it is in the fixture because the comparison is on bytes.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

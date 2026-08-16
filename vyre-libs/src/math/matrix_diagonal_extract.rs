@@ -82,7 +82,6 @@ pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program 
 //
 // ORACLE: the diagonal of that matrix is [1, 5, 9] by inspection. Small integers
 // are exact in f32 and the operation only copies, so no tolerance applies.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

@@ -48,7 +48,6 @@ pub fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<
     Ok(())
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

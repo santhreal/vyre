@@ -158,7 +158,6 @@ pub fn reference_byte_histogram(bytes: &[u8]) -> [u32; 256] {
     histogram
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         BYTE_HISTOGRAM_256_OP_ID,

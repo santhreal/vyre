@@ -298,7 +298,6 @@ pub fn bracket_match_cpu_ref_into(
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         BRACKET_MATCH_OP_ID,

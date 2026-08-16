@@ -45,7 +45,6 @@ pub fn cpu_ref_into(node_tags: &[u32], family_mask: u32, out: &mut Vec<u32>) {
     nodeset_filter_cpu_ref_into(node_tags, NodeSetFilter::Intersects(family_mask), out);
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

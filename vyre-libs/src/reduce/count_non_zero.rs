@@ -20,7 +20,6 @@ pub fn cpu_ref(values: &[u32]) -> u32 {
     values.iter().filter(|&&value| value != 0).count() as u32
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

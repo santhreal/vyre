@@ -107,7 +107,6 @@ pub fn cpu_interval_merge(
     (mins, maxs)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

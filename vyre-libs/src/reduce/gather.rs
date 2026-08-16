@@ -60,7 +60,6 @@ pub fn try_cpu_ref_into(src: &[u32], indices: &[u32], out: &mut Vec<u32>) -> Res
     try_indexed_move_cpu_ref_into(IndexedMoveKind::Gather, src, indices, indices.len(), out)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

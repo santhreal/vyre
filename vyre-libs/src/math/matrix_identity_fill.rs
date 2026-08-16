@@ -78,7 +78,6 @@ pub fn matrix_identity_fill(matrix: &str, n: u32) -> Program {
 // diagonal predicate from a fill of the first row or first column.
 //
 // ORACLE: the 3x3 identity. Every value is exact in f32.
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

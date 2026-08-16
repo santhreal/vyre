@@ -15,7 +15,6 @@ mod program;
 mod resident_plan;
 mod validate;
 
-#[cfg(feature = "inventory-registry")]
 mod registry;
 
 #[cfg(test)]

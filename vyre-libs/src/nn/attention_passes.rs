@@ -575,7 +575,6 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         ATTENTION_MAX_PASS_OP_ID,
@@ -595,7 +594,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         ATTENTION_SUM_PASS_OP_ID,
@@ -616,7 +614,6 @@ inventory::submit! {
     )
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         ATTENTION_WRITE_PASS_OP_ID,

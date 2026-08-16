@@ -173,7 +173,6 @@ const IN_PLACE_INDEXED: &[(&str, InPlaceIndexed, InPlaceIndexedExpect)] = &[
 
 /// Registered bitset ids this matrix deliberately does not sweep, and the
 /// suite that owns each. A registered id absent from both lists fails.
-#[cfg(feature = "inventory-registry")]
 const EXEMPT: &[(&str, &str)] = &[
     (
         "vyre-primitives::bitset::select1_query",
@@ -331,7 +330,6 @@ fn in_place_indexed_bitset_updates_match_independent_oracles() {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 #[test]
 fn bitset_registry_is_fully_covered() {
     let covered = swept_ids();
@@ -365,7 +363,6 @@ fn bitset_registry_is_fully_covered() {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 fn swept_ids() -> Vec<&'static str> {
     let mut ids: Vec<&'static str> = Vec::new();
     ids.extend(VECTOR_BINARY.iter().map(|(id, ..)| *id));

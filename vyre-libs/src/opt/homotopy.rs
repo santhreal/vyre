@@ -126,7 +126,6 @@ pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
         .collect()
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

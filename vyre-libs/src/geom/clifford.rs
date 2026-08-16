@@ -187,7 +187,6 @@ pub fn clifford2_product_cpu(a: Cl2Mv, b: Cl2Mv) -> Cl2Mv {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

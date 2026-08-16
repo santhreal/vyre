@@ -79,7 +79,6 @@ pub fn try_cpu_ref_into(
     try_indexed_move_cpu_ref_into(IndexedMoveKind::Scatter, src, indices, dst_len, dst)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

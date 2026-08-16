@@ -206,7 +206,6 @@ fn radix_pass(src: &[u32], dst: &mut [u32], bits: u32, pass: usize) {
     }
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

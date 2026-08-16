@@ -21,7 +21,6 @@ pub fn cpu_ref(bitset: &[u32]) -> u32 {
     bitset.iter().map(|w| w.count_ones()).sum()
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,

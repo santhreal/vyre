@@ -156,7 +156,6 @@ pub fn try_csr_frontier_degree_sum_cpu(
     Ok(total)
 }
 
-#[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
