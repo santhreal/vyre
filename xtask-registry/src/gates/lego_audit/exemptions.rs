@@ -9,14 +9,11 @@ use super::*;
 
 /// Id fragments that mark an op as one phase of a larger composition rather than
 /// an op a caller reaches for.
-pub(super) const PHASE_MARKERS: [&str; 9] = [
+pub(super) const PHASE_MARKERS: [&str; 6] = [
     "::hidden_projection",
     "::output_projection",
     "::softmax_stats",
     "::weight_write",
-    ".scope",
-    ".decl",
-    ".identifier_intern",
     "::v_cycle_phase",
     "::power_iteration_phase",
 ];
@@ -30,14 +27,9 @@ pub(super) fn is_internal_phase_op(id: &str) -> bool {
 /// These operations emit pure, backend-neutral IR but have no lower registered
 /// composition unit. Keeping this list explicit prevents an arbitrary flat
 /// Tier-3 operation from bypassing the depth gate.
-pub(super) const DECLARED_TIER3_LEAVES: [&str; 14] = [
+pub(super) const DECLARED_TIER3_LEAVES: [&str; 9] = [
     "vyre-libs::nn::top_k",
-    "vyre-libs::parsing::c11_extract_calls",
-    "vyre-libs::parsing::c11_extract_functions",
-    "vyre-libs::parsing::c_keyword_packed_haystack",
-    "vyre-libs::parsing::c_keyword",
     "vyre-libs::math::reduce_variance",
-    "vyre-libs::parsing::c11_annotate_typedef_names",
     "vyre-libs::nn::softmax_top_k",
     "vyre-libs::nn::flash_attention",
     "vyre-libs::nn::linear_4bit_affine_grouped",
@@ -72,7 +64,9 @@ pub(super) const DEAD_EXEMPTION_FIX: &str =
 /// existence of the stem, because a family that shrank below the collision
 /// threshold no longer needs acknowledging.
 pub(super) fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
-    let libs_src = xtask::checkout::checkout_root().join("vyre-libs").join("src");
+    let libs_src = xtask::checkout::checkout_root()
+        .join("vyre-libs")
+        .join("src");
     for dir in dead_plumbing_rows(&libs_src) {
         report.find(Finding::new(
             format!("no directory `vyre-libs/src/{dir}` answers to the shared-plumbing row"),
@@ -143,5 +137,4 @@ mod tests {
         assert!(is_declared_tier3_leaf("vyre-libs::nn::top_k"));
         assert!(!is_declared_tier3_leaf("vyre-libs::nn::unknown_flat_op"));
     }
-
 }

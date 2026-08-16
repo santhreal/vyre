@@ -21,12 +21,10 @@ pub(super) const STEM_COLLISION_MIN: usize = 4;
 /// `check_0_every_exemption_is_live` holds each row to a stem that would be
 /// reported without it, so a row outliving its family fails instead of reading
 /// as a reviewed decision. The `opt` row was already dead when that rule landed.
-pub(super) const KNOWN_STEM_FAMILIES: [&str; 14] = [
+pub(super) const KNOWN_STEM_FAMILIES: [&str; 12] = [
     "and",
     "ast",
     "attention",
-    "c",
-    "c11",
     "csr",
     "dominator",
     "i4x8",
@@ -152,5 +150,4 @@ mod tests {
         assert!(is_known_stem_family("int4"));
         assert!(!is_known_stem_family("unreviewed"));
     }
-
 }
