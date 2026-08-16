@@ -94,7 +94,10 @@ hash = []
 # is not compiled by a consumer that only wants `math::fixed`.
 # `math-dialect` names `reduce` because `math/reduce_mean.rs` folds through
 # `reduce::workgroup_tree`.
-math-dialect = ["reduce"]
+# It also names `builder-ops` because `math/reduce_mean.rs` composes
+# `strided_accumulate_child` and `math/square.rs` is a `build_indexed_map`
+# skeleton.
+math-dialect = ["builder-ops", "reduce"]
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
 matching = ["matching-substring", "matching-dfa"]
@@ -111,9 +114,10 @@ text = ["reduce"]
 # the crate: the unpack kernel is built from bare IR.
 representation = []
 # `builder-ops` gates the two shared child regions the builder registers as
-# catalog entries of their own. The skeletons behind them are ungated, so a
-# dialect composes `build_indexed_map` and `strided_accumulate_child` without
-# naming this feature.
+# catalog entries of their own. Every dialect whose source composes
+# `build_indexed_map` or `strided_accumulate_child` names it, because the
+# skeletons emit child regions carrying those ids and a build that emits an id
+# its catalog does not contain hands consumers unresolvable programs.
 "builder-ops" = []
 logical = ["bitset"]
 rule = ["dep:regex"]
@@ -143,24 +147,41 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
 # feature instead of restating this set, which is what let the set rot into a
 # dead-code warning on a build that enabled none of them.
 "cat-a-builder-options" = []
-"math-linalg" = ["cat-a-builder-options", "math-dialect", "math-kernels"]
+# `math-linalg` names `builder-ops` because `math/linalg/dot.rs` composes
+# `strided_accumulate_child`.
+"math-linalg" = ["builder-ops", "cat-a-builder-options", "math-dialect", "math-kernels"]
 "math-scan" = ["math-dialect", "math-kernels"]
 "math-broadcast" = ["math-dialect", "math-kernels"]
 "math-algebra" = ["math-dialect", "math-kernels"]
 # `math-succinct` names `graph` because `math/succinct.rs` parents its rank
 # superblock region on `graph::path_reconstruct::OP_ID`.
 "math-succinct" = ["math-dialect", "math-kernels", "graph"]
-"nn-activation" = ["nn-kernels"]
+# `nn-activation` names `builder-ops` because embedding, skip_gate,
+# parallel_residual_block, the optimizer apply steps and the quant pack and
+# unpack kernels are all `build_indexed_map` skeletons.
+"nn-activation" = ["builder-ops", "nn-kernels"]
 "nn-linear" = ["cat-a-builder-options", "math-linalg", "nn-activation", "nn-kernels"]
 "nn-linear-4bit" = ["nn-linear"]
-"nn-norm" = ["cat-a-builder-options", "math-broadcast", "nn-kernels"]
-"nn-attention" = ["cat-a-builder-options", "nn-norm", "math-linalg", "nn-kernels"]
+# `nn-norm` names `builder-ops` because `nn/norm/rms_norm.rs` and the layer-norm
+# reduce phases compose `strided_accumulate_child`.
+"nn-norm" = ["builder-ops", "cat-a-builder-options", "math-broadcast", "nn-kernels"]
+# `nn-attention` names `builder-ops` because `nn/attention/softmax.rs` composes
+# `strided_accumulate_child` in both reduce passes.
+"nn-attention" = [
+    "builder-ops",
+    "cat-a-builder-options",
+    "nn-norm",
+    "math-linalg",
+    "nn-kernels",
+]
 "nn-moe" = ["nn-attention"]
 "nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
 # `llm` names `nn-moe` because `llm/sampling.rs` composes
 # `nn::moe::softmax_top_k` and `llm/paged_kv.rs` builds on
 # `nn::attention::layout`, which `nn-moe` already names.
-"llm" = ["nn-moe"]
+# It also names `builder-ops` because `llm/sampling.rs` builds `logit_adjust`
+# as a `build_indexed_map` skeleton.
+"llm" = ["builder-ops", "nn-moe"]
 # Neither matching domain names `cpu-parity`, for the same reason `decode` does
 # not: it compiled the host oracles into every default build and masked the
 # edges the sweep is for.

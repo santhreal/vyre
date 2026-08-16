@@ -254,6 +254,9 @@ pub fn logit_adjust(
 /// the whole candidate set when it never does, and the draw walks that prefix
 /// against `uniform[0]` scaled by the prefix mass. Scaling the sample by the
 /// mass is what renormalizes the nucleus without a second pass over it.
+///
+/// An empty candidate set has no token to draw, so it builds a trap program
+/// rather than a load at index `candidates - 1`.
 #[must_use]
 pub fn nucleus_select(
     selected: &str,
@@ -263,6 +266,15 @@ pub fn nucleus_select(
     candidates: u32,
     top_p: f32,
 ) -> Program {
+    if candidates == 0 {
+        return vyre_foundation::composition::trap_program(
+            NUCLEUS_SELECT_OP_ID,
+            Some((token, DataType::U32)),
+            "Fix: nucleus_select requires candidates > 0; an empty candidate set has no token to \
+             draw."
+                .to_string(),
+        );
+    }
     let buffers = vec![
         BufferDecl::storage(selected, 0, BufferAccess::ReadOnly, DataType::U32)
             .with_count(candidates),
