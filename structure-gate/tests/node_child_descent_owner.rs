@@ -305,6 +305,41 @@ const WAIVERS: &[Waiver] = &[
         reason: "test oracle deliberately independent of the wire round trip it audits",
     },
     Waiver {
+        path: "vyre-libs/src/graph/dominator_tree/tests/mod.rs",
+        owner: "CompilerCore",
+        reason: "test oracle deliberately independent of the dominator construction it audits",
+    },
+    Waiver {
+        path: "vyre-libs/src/graph/persistent_bfs/tests/behavior_contracts/program_sync_contracts.rs",
+        owner: "CompilerCore",
+        reason: "test oracle deliberately independent of the traversal it audits",
+    },
+    Waiver {
+        path: "vyre-libs/src/graph/persistent_bfs/tests/validation_and_builders.rs",
+        owner: "CompilerCore",
+        reason: "test oracle deliberately independent of the traversal it audits",
+    },
+    Waiver {
+        path: "vyre-libs/tests/adversarial_math.rs",
+        owner: "CompilerCore",
+        reason: "test oracle deliberately independent of the production walker it audits",
+    },
+    Waiver {
+        path: "vyre-libs/tests/ir_shape/mod.rs",
+        owner: "CompilerCore",
+        reason: "shape oracle for the graph tests, independent of the production walker by design",
+    },
+    Waiver {
+        path: "vyre-libs/tests/loop_back_edge_audit.rs",
+        owner: "CompilerCore",
+        reason: "back edge audit oracle, independent of the production walker by design",
+    },
+    Waiver {
+        path: "vyre-libs/tests/prefix_scan_contract.rs",
+        owner: "CompilerCore",
+        reason: "per-lane store counter that folds each condition to decide whether a branch runs for that lane, so it must not descend into a body the lane never takes",
+    },
+    Waiver {
         path: "vyre-libs/tests/surface_contracts.rs",
         owner: "Backends",
         reason: "library surface contract walk owned by the libs lane, not converted in this lane",
@@ -313,36 +348,6 @@ const WAIVERS: &[Waiver] = &[
         path: "vyre-pass-engine/tests/dce_program_back_edge_contract.rs",
         owner: "CompilerCore",
         reason: "test oracle deliberately independent of the dead code walker it audits",
-    },
-    Waiver {
-        path: "vyre-primitives/src/graph/dominator_tree/tests/mod.rs",
-        owner: "CompilerCore",
-        reason: "test oracle deliberately independent of the dominator construction it audits",
-    },
-    Waiver {
-        path: "vyre-primitives/src/graph/persistent_bfs/tests/behavior_contracts/program_sync_contracts.rs",
-        owner: "CompilerCore",
-        reason: "test oracle deliberately independent of the traversal it audits",
-    },
-    Waiver {
-        path: "vyre-primitives/src/graph/persistent_bfs/tests/validation_and_builders.rs",
-        owner: "CompilerCore",
-        reason: "test oracle deliberately independent of the traversal it audits",
-    },
-    Waiver {
-        path: "vyre-primitives/tests/adversarial_math.rs",
-        owner: "CompilerCore",
-        reason: "test oracle deliberately independent of the production walker it audits",
-    },
-    Waiver {
-        path: "vyre-primitives/tests/ir_shape/mod.rs",
-        owner: "CompilerCore",
-        reason: "shape oracle for primitive graph tests, independent of the production walker by design",
-    },
-    Waiver {
-        path: "vyre-primitives/tests/loop_back_edge_audit.rs",
-        owner: "CompilerCore",
-        reason: "back edge audit oracle, independent of the production walker by design",
     },
 ];
 
