@@ -76,10 +76,18 @@ Before writing a new sub-op:
    op's composed fraction. A sibling with a high composed fraction is the
    playbook to follow.
 
-## Promotion criteria
+## Placement, then visibility
 
-A `fn(...) -> Program` graduates from private to one op file to published
-`vyre-libs` op when all three hold:
+Placement is decided by composability alone. A `fn(...) -> Program` built
+from existing IR variants is a Category A composition and belongs in
+`vyre-libs` from its first caller. `GOAL.md` section 5 owns that rule and
+states it directly: reuse count is not an admission criterion, and a
+composition still living in `vyre-primitives` is a live defect. Nothing
+below may be read as a reason to leave a composition outside `vyre-libs`.
+
+What reuse decides is visibility inside `vyre-libs`: whether the function
+stays private to one op file or becomes a published, registered op. It
+graduates when all three hold:
 
 1. **Reuse.** Two or more callers consume it: dialect ops, xtask or
    conform tooling, or a community pack.
@@ -89,11 +97,11 @@ A `fn(...) -> Program` graduates from private to one op file to published
    transformers. Domain compositions glue primitives together; the
    primitive itself is single-purpose.
 
-Promotion inside `vyre-libs` is a visibility change plus a registration,
-not a move. With one caller, leave the helper private: publishing early
-buys churn and no reuse. `lego-audit` reports an orphan published op as
-an adoption advisory, and a catalog consumer registered to fake a second
-caller is a hard failure.
+Publishing is a visibility change plus a registration, not a move: the op
+was already in the right crate. With one caller, leave the helper private,
+because publishing early buys churn and no reuse. `lego-audit` reports an
+orphan published op as an adoption advisory, and a catalog consumer
+registered to fake a second caller is a hard failure.
 
 ## Gate 1 and lego-audit
 

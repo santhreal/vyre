@@ -5,6 +5,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Added
 
+- The docs-register gate reads docs/REGISTER.toml and fails on a banned
+  register phrase, an em dash, or a host-local build setting in any authored
+  Markdown page, and on a repository-root page the documentation manifest does
+  not declare.
 - The `contract-in-source` gate reports a comment that defers its contract to a
   published document instead of stating it. A pointer costs a reader a second
   file and outlives the file it names: when the book those comments pointed
@@ -118,12 +122,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   a neighbouring step's package. Nothing is listed in the test: a workflow
   added tomorrow is judged tomorrow, and renaming a target without updating its
   workflow is red locally instead of in CI.
-- A gate over `vyre_primitives::graph` rejects the argument-transposition
-  class. It walks the module directory and parses every declared signature at
-  run time, so a CSR entry point added later is covered without editing a list:
-  closure entry points must receive the graph as a bundle and must not declare
-  three or more consecutive parameters of one type, and the wider slice-taking
-  family must give each role a single name across the tree.
+- A gate over `vyre_libs::graph` rejects the argument-transposition class. It
+  walks the module directory and parses every declared signature at run time,
+  so a CSR entry point added later is covered without editing a list: closure
+  entry points must receive the graph as a bundle and must not declare three or
+  more consecutive parameters of one type, and the wider slice-taking family
+  must give each role a single name across the tree.
 - The neural library now executes a reusable dense gated-MLP ProgramGraph with
   learned RMSNorm, checkpoint-native output-major gate and up projections, F32
   SwiGLU math, output-major down projection, and residual addition. F16, BF16,
@@ -531,6 +535,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   reduction round no longer requests a device-scope storage fence and a global
   release fence no longer converges the whole workgroup. The four strong
   orderings used to collapse onto one construct.
+- The workspace denies the unexpected_cfgs lint instead of warning. A cfg
+  attribute naming a feature its own crate does not declare removes the code
+  under it, and at warning level that signal is one line in a build that emits
+  many. The one allowance stays: external_ifds_engine names a bridge that
+  cannot be a Cargo feature here.
 - The heuristic audit reads an author's note, not any sentence that names a
   policy. A marker now has to open a plain comment: a doc comment describing a
   cache's eviction policy to its caller, a term used mid-paragraph while
@@ -899,9 +908,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   what its test can see, so a widened slice in one copy weakened an assertion
   in a crate whose author never read the change.
   `vyre_libs::solvers::bellman_tn_order` no longer re-proves the shortest-path
-  relaxation of `vyre_primitives::math::bellman_shortest_path`: what it owes is
-  the routing assertion it already carries, that its composition emits the
+  relaxation of `vyre_libs::math::bellman_shortest_path`: what it owes is the
+  routing assertion it already carries, that its composition emits the
   primitive program unchanged.
+- Eighteen composition domains moved out of vyre-primitives into vyre-libs:
+  bitset, decode, fixpoint, geom, graph, hash, label, math, matching, nfa, nn,
+  opt, parsing, predicate, reduce, text, topology and visual. vyre-primitives
+  now holds marker types, the wire encoding, the dispatch grid owner, the IR
+  safety helpers, the hardware intrinsics and the virtual file system, and its
+  feature list is default, gpu, cpu-parity, vyre-foundation, hardware, all-lego
+  and inventory-registry. Every path of the form vyre_primitives::<domain> is
+  now vyre_libs::<domain>; no compatibility re-export is left behind.
+  Registered operation ids are unchanged, so built IR and the operation catalog
+  keep the same names. Each moved domain has a feature of its own in vyre-libs
+  that names only the domains its own source reaches.
 - `vyre-conform` depends on `vyre-libs` with `features = ["full"]` rather than
   restating ten of the aggregate's members by hand. A hand-kept list of
   aggregate members drifts silently against the aggregate, which is how the
@@ -925,16 +945,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   each owes its own live proof against the CPU reference. What is shared is
   which ops exist.
 - CSR closure entry points take the graph as one named bundle.
-  `vyre_primitives::graph::csr_closure_inputs` owns `CsrGraphView { node_count,
+  `vyre_libs::graph::csr_closure_inputs` owns `CsrGraphView { node_count,
   edge_offsets, edge_targets, edge_kind_mask }` and `CsrClosureInputs { graph,
   allow_mask, max_iters }`, and every closure entry point in
-  `vyre_primitives::graph::csr_bidirectional`,
-  `vyre_primitives::graph::csr_forward_or_changed`,
-  `vyre_primitives::graph::csr_backward_or_changed` and
-  `vyre_primitives::graph::persistent_bfs` now receives them instead of seven
-  or nine positional slots. Neither struct has a constructor: a struct literal
-  is the only way to build one, so a transposed buffer is a compile error
-  rather than a wrong closure. The dispatcher-backed consumers in
+  `vyre_libs::graph::csr_bidirectional`,
+  `vyre_libs::graph::csr_forward_or_changed`,
+  `vyre_libs::graph::csr_backward_or_changed` and
+  `vyre_libs::graph::persistent_bfs` now receives them instead of seven or nine
+  positional slots. Neither struct has a constructor: a struct literal is the
+  only way to build one, so a transposed buffer is a compile error rather than
+  a wrong closure. The dispatcher-backed consumers in
   `vyre_libs::graph::dispatch::csr_bidirectional`,
   `vyre_libs::graph::dispatch::csr_forward_or_changed` and
   `vyre_libs::graph::dispatch::persistent_bfs` take the same bundle, so the
@@ -957,10 +977,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `vyre-libs` pass a counting hook to the primitive driver instead of restating
   it, and the traversal pipeline reference, which counted nothing at all, is
   now the primitive shape published under the pipeline name.
-- `vyre_primitives::graph::csr_closure_inputs` owns two things the CSR closure
-  tests restated at every case: `CsrClosureInputs::allow_all` names the
-  all-ones edge filter a case picks when the filter is not what it is testing,
-  and `graphs::CHAIN_4` and `graphs::DIAMOND_4` name the two small graphs whose
+- `vyre_libs::graph::csr_closure_inputs` owns two things the CSR closure tests
+  restated at every case: `CsrClosureInputs::allow_all` names the all-ones edge
+  filter a case picks when the filter is not what it is testing, and
+  `graphs::CHAIN_4` and `graphs::DIAMOND_4` name the two small graphs whose
   closure is known by inspection. Fifty-six call sites across
   `vyre-primitives`, `vyre-libs` and `vyre-driver-cuda` restated the filter as
   a bare `0xFFFF_FFFF` beside a four-field graph literal, and seventeen more
@@ -1348,10 +1368,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   sweep, and the oracle-matrix sweeps with their volume waves. Each step names
   the class it closes and why no other workflow sees it.
 - The fixed CSR graphs the closure contracts are written against have one
-  owner, `vyre_primitives::graph::csr_closure_inputs::graphs`, and an
-  unrestricted edge filter has one spelling,
-  `vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs::allow_all`.
-  The four-node chain and the four-node diamond were rebuilt from three array
+  owner, `vyre_libs::graph::csr_closure_inputs::graphs`, and an unrestricted
+  edge filter has one spelling,
+  `vyre_libs::graph::csr_closure_inputs::CsrClosureInputs::allow_all`. The
+  four-node chain and the four-node diamond were rebuilt from three array
   literals at each call site, four crate-local `linear_graph` helpers returned
   the chain as an owned triple so a caller had to keep `off`, `tgt` and `msk`
   alive to borrow a view from them, and more than thirty call sites restated
@@ -1368,8 +1388,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   of one.
 - The dense byte-tile Four-Russians matvec corpus has one owner,
   `tests/support/dense_matvec_cases.rs`, with one arm per crate:
-  `vyre_primitives::bitset::four_russians` pins its byte-LUT builder,
-  word-count helper, CPU reference and dispatch Program, and
+  `vyre_libs::bitset::four_russians` pins its byte-LUT builder, word-count
+  helper, CPU reference and dispatch Program, and
   `vyre_libs::encoding::bitset_transform_pipeline` pins its own sizing, LUT
   builder, parity oracle and composed Program. The corpus generator, the
   frontier masking and the naive boolean-semiring oracle were written twice,
@@ -1385,13 +1405,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   setups and differed only in which builders they named, which is why they were
   the largest cross-crate duplicate pair in the repository. The primitive arm
   passes
-  `vyre_primitives::bitset::four_russians::four_russians_dense_matvec_byte_lut`
-  and the substrate arm passes
+  `vyre_libs::bitset::four_russians::four_russians_dense_matvec_byte_lut` and
+  the substrate arm passes
   `vyre_libs::encoding::bitset_transform_pipeline::four_russians_dense_matvec_program`,
   and the failure message names which arm failed.
 - The exploded-supergraph (IFDS) CPU-reference corpus has one owner,
   `vyre_test_support::exploded_ifds_cases`, which declares the cases and owns
-  what a correct CSR for them is. `vyre_primitives::graph::exploded` pins its
+  what a correct CSR for them is. `vyre_libs::graph::exploded` pins its
   allocating, fallible and workspace-reusing builders against it, and
   `vyre_libs::graph::dispatch::exploded` pins its host reference, its
   node-count helper and its dispatched path. The mixed intra/inter/GEN/KILL
@@ -1551,13 +1571,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The `vyre-libs` duplication pin records what the tree measures rather than
   leaving room under it, since a pin with slack hides the next copy.
 - `vyre_libs::graph::dispatch::traversal_dispatch_pipeline` names the
-  `vyre_primitives::graph` program builders it composes instead of
-  re-publishing them. Twenty-one wrappers forwarded every argument and returned
-  the result unchanged, so each body was a restatement of the primitive's
-  parameter list, free to drift from the list it forwards to and unprovable
-  from either side. Nothing outside the module's own tests called any of them.
-  This follows the same removal already applied to the sibling
-  `structural_kernel_pipeline`.
+  `vyre_libs::graph` program builders it composes instead of re-publishing
+  them. Twenty-one wrappers forwarded every argument and returned the result
+  unchanged, so each body was a restatement of the primitive's parameter list,
+  free to drift from the list it forwards to and unprovable from either side.
+  Nothing outside the module's own tests called any of them. This follows the
+  same removal already applied to the sibling `structural_kernel_pipeline`.
 - Three shapes repeated across the `vyre-libs` test corpus have one owner each.
   `vyre-libs/tests/support/optimizer.rs` owns `assert_optimizer_is_idempotent`
   and the debug first-difference reporter that names which node moved when the
@@ -1737,13 +1756,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `Expression::As` arms that differed only in target kind are one arm binding
   the kind. Emitted WGSL is unchanged and the pinned corpus passes without a
   repin.
-- The layering gate now rejects concrete backend vocabulary in production
-  source of a substrate-neutral crate. The roster is every workspace member
-  whose layer in docs/CRATE_OWNERSHIP.toml is neutral, so a new neutral crate
-  is scanned without a rule edit. Documentation and comments in vyre-driver,
-  vyre-lower, vyre-runtime, vyre-spec, vyre-reference, vyre-libs,
-  vyre-foundation, vyre-primitives and vyre-grammar-gen name capabilities and
-  target dialects instead of vendors and emitter crates.
+- The structure gate rejects concrete backend vocabulary in production source
+  of a substrate-neutral crate, reading the word list from
+  structure-gate/backend-vocabulary.toml at run time. The roster is every
+  workspace member whose layer in docs/CRATE_OWNERSHIP.toml is neutral, so a
+  new neutral crate is scanned without a rule edit. Documentation and comments
+  in vyre-driver, vyre-lower, vyre-runtime, vyre-spec, vyre-reference,
+  vyre-libs, vyre-foundation and vyre-primitives name capabilities and target
+  dialects instead of vendors and emitter crates.
   vyre_runtime::uring::gpudirect renames its stats reader and byte cap to
   read_gpudirect_stats and MAX_GPUDIRECT_STATS_BYTES.
 - Shared crates describe launch planning, bitset compression, frontier encoding
@@ -1767,17 +1787,22 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   as the same allocation rather than an equal copy, and
   `Program::canonicalized` keeps that property on an already-canonical body.
 - `vyre_libs::solvers::numerical_kernel_pipeline` re-exports the Sinkhorn entry
-  points of `vyre_primitives::math::sinkhorn_iterate` instead of wrapping them.
-  Seven wrappers forwarded every argument and added nothing, so their whole
-  body was a restatement of the primitive's parameter list, up to twelve
-  positional arguments, free to drift from the list it forwards to and
-  unprovable from either side. A composition names the primitive it composes.
-  The public names are unchanged.
+  points of `vyre_libs::math::sinkhorn_iterate` instead of wrapping them. Seven
+  wrappers forwarded every argument and added nothing, so their whole body was
+  a restatement of the primitive's parameter list, up to twelve positional
+  arguments, free to drift from the list it forwards to and unprovable from
+  either side. A composition names the primitive it composes. The public names
+  are unchanged.
 - `MapResult` has one definition. `vyre-driver-wgpu` spelled `Result<(),
   wgpu::BufferAsyncError>` three times: the public alias in the readback ring
   plus a private copy in the readback and timestamp recorders, one of which
   imported the public alias in the same file it redefined. Both recorders use
   the published alias.
+- ExternalIfdsSecurityBuffers borrows its ten buffer names and publishes them
+  as ExternalIfdsSecurityBuffers::CANONICAL. The ten-argument positional
+  constructor is gone; build the record from CANONICAL or from a struct
+  literal. ExternalIfdsSecurityDispatch and
+  route_security_taint_through_external_ifds carry the buffer lifetime.
 - The `hot-path-nested-rows` gate reads the trait that returns nested byte rows
   rather than counting the text of the type in one crate. A dispatch trait that
   returns `Vec<Vec<u8>>` must also declare a form that fills slots the caller
@@ -1821,6 +1846,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   routing; what differs is the launch, the handle order a resident launch
   reads, and the rejection text, so those are the hooks and everything else is
   a default. A backend now supplies a launch and its own wording.
+- Each decode codec is one module with one registered op id. base64, hex and
+  inflate had a builder and a registration on both sides of the crate boundary,
+  so a built program carried a registered region nested inside a second
+  registered region naming the same work. The surviving ids are
+  vyre-libs::decode::base64, vyre-libs::decode::hex,
+  vyre-libs::decode::inflate_stored_block and
+  vyre-primitives::decode::ziftsieve_literal_copy. The ids
+  vyre-primitives::decode::base64_decode, vyre-primitives::decode::hex_decode,
+  vyre-primitives::decode::inflate_stored and vyre-libs::decode::ziftsieve are
+  gone, and programs from the three collapsed codecs lose one level of region
+  nesting. The inflate trap diagnostics now name
+  vyre-libs::decode::inflate_stored_block. ziftsieve_literal_copy_with_op_id is
+  removed; it existed only to stamp a caller-supplied op id across the crate
+  boundary the collapse deleted.
 - Every module directory under a `src/` tree is entered through its own
   `mod.rs`. The workspace carried both layouts at once: 363 directories had a
   `mod.rs` while 113 modules were a file sitting beside the directory holding
@@ -1837,12 +1876,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   xtask::toml_text::string_field. The CLI documentation generator and the
   documentation checker had the same row-to-scalar closure.
 - Eleven builders computed their own buffer cell count and wrote their own
-  overflow message. `vyre_primitives::math::matrix_cells` and
-  `square_matrix_cells` now own both: the count of a `rows x cols` operand, the
-  `n == 0` rejection for a square one, and one sentence naming the caller and
-  the shape that did not fit. The messages change text. They previously named a
-  domain noun the op id already carries, and eleven copies had drifted to
-  eleven phrasings of the same fact.
+  overflow message. `vyre_libs::math::matrix_cells` and `square_matrix_cells`
+  now own both: the count of a `rows x cols` operand, the `n == 0` rejection
+  for a square one, and one sentence naming the caller and the shape that did
+  not fit. The messages change text. They previously named a domain noun the op
+  id already carries, and eleven copies had drifted to eleven phrasings of the
+  same fact.
 - vyre_foundation::transform::grid_sync_split owns the whole-grid fence walk,
   hoist and segmentation. The compile-time planner cut and the dispatch-time
   split in vyre-driver both call it, replacing the copy that lived in
@@ -1900,6 +1939,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   answered to two paths; the submodules are private and the re-export at
   `visit` is the one path, which is what its own module documentation already
   claimed.
+- Every item the composition move brought into vyre-libs has one public path,
+  and that path names the module that owns the item. A codec is reached through
+  its own module, so vyre_libs::decode::hex::hex_decode replaces
+  vyre_libs::decode::hex_decode. The encoding-classification constants are
+  reached through text, the adaptive traversal selectors through
+  graph::adaptive_traverse, the d-DNNF gate encoding through
+  graph::knowledge_compile, the region triple through matching,
+  gaussian_weights through math::conv1d, and the semiring through
+  math::semiring_gemm.
 - Every item a vyre crate publishes is reachable at one public path. A
   submodule that exists because a file was split is now private to its crate
   and the owning module re-exports what it holds, so vyre-foundation,
@@ -2319,8 +2367,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   4096 binary and 8192 unary cases rather than 2048 and 4096, `i32` samples
   8192 unary cases rather than one pass over its corpus, and `i32` gained the
   saturating subtraction and multiplication cases the interpreter defines.
-- `vyre_primitives::math::scallop_persistent` owns `lineage_fixpoint_program`
-  and `accumulate_lineage_words`. `scallop_join` and `scallop_join_wide` each
+- `vyre_libs::math::scallop_persistent` owns `lineage_fixpoint_program` and
+  `accumulate_lineage_words`. `scallop_join` and `scallop_join_wide` each
   carried their own copy of the persistent program envelope and the lineage
   word join, so a change to the convergence protocol had to be made twice and
   the two spellings had already drifted in how they reported change. Both now
@@ -2349,6 +2397,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   semantic operation witnesses, including each operation's declared tolerance.
   The library operation catalog distinguishes the complete semantic inventory
   from its deterministic executable-fixture projection.
+- Five helpers that sat at a crate root now sit under the concern they serve.
+  The signed fixed-point pair fixed_mul_16_16_expr and
+  fixed_sdiv_by_positive_expr is vyre_libs::math::fixed. fixed_u32_matmul and
+  chebyshev_recurrence are vyre_libs::math. nodeset_filter is
+  vyre_libs::label::nodeset_filter, under label rather than predicate because
+  predicate already reaches label and the reverse edge would invert that
+  closure. demote_intermediate_outputs is vyre_libs::program_outputs. lane_grid
+  has one owner reachable as vyre_primitives::lane_grid and the graph re-export
+  of it is deleted. The unsigned helper in the visual dialect that shared the
+  name fixed_mul_16_16_expr is now fixed_mul_16_16_unsigned_expr; it delegates
+  to wide_mul_shr_u32 and builds the same nodes as before. The graph scratch
+  reservation helpers fold into the crate scratch owner as reserve_items,
+  reserve_capacity, reserve_items_with and resize_vec.
 - Six source files over their measured ceiling are split along the boundaries
   already inside them, and each new file is named for its contents.
   `vyre-runtime/src/tenant.rs` became
@@ -2469,7 +2530,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   once inline for the id test with a different binding name; `store_one_kernel`
   takes the id and the slot and owns the shape.
 - The structural graph, causal and logic kernels are reached at
-  `vyre_primitives::graph`, not through a second set of names in `vyre-libs`.
+  `vyre_libs::graph`, not through a second set of names in `vyre-libs`.
   `graph::dispatch::structural_kernel_pipeline` held sixty-six wrappers across
   a `dispatch` module and a `references` module, one per primitive builder and
   one per CPU oracle, each restating the primitive's parameter list verbatim
@@ -3142,6 +3203,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every crate to find the rows describing one, and the generated per-crate page
   is what answers the question. The section now links `docs/testing/<crate>.md`
   and names the TOML as its authority.
+- The docs-references gate now reads every tracked Markdown file rather than
+  the root, .github and docs pages only, resolves a relative path against the
+  crate that owns the document as well as the workspace root, and exempts
+  historical records; the crate CONFIG, ARCHITECTURE, AUTHORING and README
+  pages that cited a deleted script, an op corpus that never existed, or a
+  module that moved are repointed at what the checkout carries.
 - Three integration suites declared the feature they import through. The
   scope_rewrite_owner_contract and encoded_rewrite_walk_contract suites in
   vyre-pass-engine reach vyre_pass_engine::optimizer, and the
@@ -3173,6 +3240,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   twenty bare-cargo mentions in frozen history were recorded with line numbers
   that every added fragment moved. The evidence artifact went red for documents
   nobody had edited, and the text could not be fixed where it was reported.
+- The four Scallop lineage fixpoint bodies take one LineageFixpoint value
+  instead of restating a nine-argument wiring list each, and the cell count,
+  word count and per-lane chunk count are derived there. A relation cell is
+  owned by one lane which walks the w words inside it, so the launch grid
+  covers n*n*w words with n*n lanes, and the grid-sync fences the large-matrix
+  path emits are cut into sequential dispatches rather than reaching an
+  emitter.
 - Seven modules whose source file lived outside the directory of the module
   that declared it are moved inside it. A `path` attribute was carrying each
   one across a directory boundary: the typecheck critical-contract tests, the
@@ -3202,6 +3276,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   nothing. It now derives every nonzero `process::exit` in the xtask crates at
   run time and requires an enclosing block to write the cause on either stream,
   so a silent exit added anywhere in the tooling fails it.
+- The contributor and crate documentation names the tree as it stands:
+  CONTRIBUTING.md carries no host-local build settings, the placement charter
+  points at docs/architecture/crates.md, and the vyre-primitives page lists
+  only the paths and features the crate still declares.
+- The single-workgroup prefix scan sweeps each element a bounded number of
+  times instead of writing every lane on every round. The workgroup is capped
+  at 256 lanes and a longer input gives each lane a run of elements, so the
+  scratch traffic no longer carries a log2 factor: at 1024 elements the
+  dispatch executes 1544 workgroup-scratch stores where the previous form
+  executed 31745. Sizes above the single-block limit are the multi-block chain,
+  and vyre-libs scan_prefix_sum is the one builder that picks between the two.
 - A per-backend conformance artifact recorded under an older shape is now
   reported as stale, naming both the version it carries and the version the
   reader holds, instead of as unparseable JSON. Three committed artifacts
@@ -3270,6 +3355,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   lines away. A registration in a neighbouring file counts when it names the
   op, so a dialect directory shared by several ops still cannot lend one op's
   registration to another.
+- The sentence that declares a recorded artifact stale is now formed and
+  recognised through one constant in xtask::source_provenance, so the four
+  producers and the recogniser cannot drift apart.
 - A test that compiles a scratch crate builds it in the cargo build directory.
   vyre_test_support::monorepo::cargo_target_directory reports where cargo is
   writing this run's artifacts, resolved from the running test binary, so no
@@ -3285,6 +3373,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   segment, ordered by an explicit retained-state succession that fusion
   legality cannot contract back together. A fence inside a loop body has no
   correct cut and is refused with the loop named.
+- A standalone workgroup reduction is built from a WorkgroupReduction value
+  naming one fold, so the identity, the combine and the tree sweep are derived
+  together instead of arriving as three arguments that could disagree. The
+  nine-parameter builder and its too_many_arguments allow are gone, as are
+  three further allows on Scallop provenance dispatch entry points that were
+  already under the argument threshold.
 - The one-implementation rule for target-payload admission recognizes the
   descriptor form. Every concrete backend now routes through
   `TargetDescriptor::admit_modules`, which calls the shared `admit` and decodes
@@ -3344,7 +3438,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   asynchronous-copy offsets and sizes and trap addresses unfolded. Both now
   drive the shared rewrite walk, so the positions an analysis inspects and the
   positions a rewrite visits are the same list.
-- `vyre_primitives::math::bellman_shortest_path::BellmanBuffers` publishes
+- Runtime barrier elision now takes child descent from the foundation rewrite
+  walk and buffer-effect descent from visit::child_bodies instead of two
+  hand-written matches ending in a catch-all, so a Node variant added with a
+  body is descended into on the commit that declares it rather than treated as
+  a leaf, and an unchanged scope is no longer rebuilt.
+- `vyre_libs::math::bellman_shortest_path::BellmanBuffers` publishes
   `CANONICAL` and `TERSE` binding-name sets, matching the
   `SinkhornBuffers::CANONICAL` it already had. Four sites spelled the same six
   names, one of them in another crate, while the record documented itself as
@@ -3600,9 +3699,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   fingerprint or device signature, and a recorded table that disagrees with the
   evidence are findings now, and a backend a case contract declares without a
   measurement is listed in the table instead of dropping out of it.
-- `vyre_primitives::graph::csr_backward_or_changed` named the per-edge kind
-  array `masks` and the scalar edge-kind filter `edge_kind_mask`, inverting the
-  roles every sibling CSR module gives those two names. A call repointed from a
+- `vyre_libs::graph::csr_backward_or_changed` named the per-edge kind array
+  `masks` and the scalar edge-kind filter `edge_kind_mask`, inverting the roles
+  every sibling CSR module gives those two names. A call repointed from a
   sibling module fed the scalar where the per-edge array belonged. Both
   parameters now carry the tree-wide role names.
 - The CUDA e-graph device-image upload contracts build their snapshots from
@@ -3673,22 +3772,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   lists.
 - The lane-count-to-dispatch-grid ceiling division has one owner,
   `vyre_primitives::dispatch_grid::lane_grid`, ungated at the crate root and
-  re-exported from `vyre_primitives::graph` so every existing call path
-  resolves unchanged. It previously lived inside the `graph` domain, where a
-  domain that does not enable `graph` cannot see it: `decode` does not, and
-  `vyre_primitives::decode::rle_segment_lengths` therefore split its lane count
-  into whole blocks plus a tail block and floored the sum, its own fourth
-  spelling of the same arithmetic. An owner a caller cannot reach is not an
-  owner, and the caller that cannot reach it writes the copy. Routed onto the
-  owner with it: `vyre_primitives::graph::union_find`,
-  `vyre_primitives::graph::persistent_bfs::layout`,
-  `vyre_primitives::math::scallop_join`,
-  `vyre_primitives::math::scallop_join_wide`,
-  `vyre_primitives::math::bigint_add_carry` and
-  `vyre_primitives::math::scallop_persistent`, which carried a private ceiling
-  helper of its own. The persistent-BFS copy spelled it `((count - 1) / width)
-  + 1`, which underflows at zero and was safe only because its one caller
-  guarded zero separately.
+  re-exported from `vyre_libs::graph` so every existing call path resolves
+  unchanged. It previously lived inside the `graph` domain, where a domain that
+  does not enable `graph` cannot see it: `decode` does not, and
+  `vyre_libs::decode::rle_segment_lengths` therefore split its lane count into
+  whole blocks plus a tail block and floored the sum, its own fourth spelling
+  of the same arithmetic. An owner a caller cannot reach is not an owner, and
+  the caller that cannot reach it writes the copy. Routed onto the owner with
+  it: `vyre_libs::graph::union_find`,
+  `vyre_libs::graph::persistent_bfs::layout`, `vyre_libs::math::scallop_join`,
+  `vyre_libs::math::scallop_join_wide`, `vyre_libs::math::bigint_add_carry` and
+  `vyre_libs::math::scallop_persistent`, which carried a private ceiling helper
+  of its own. The persistent-BFS copy spelled it `((count - 1) / width) + 1`,
+  which underflows at zero and was safe only because its one caller guarded
+  zero separately.
 - The documentation reference rule read an absolute path in a code span as
   workspace-relative, so a document mentioning `/dev/null` was reported as
   claiming a missing `dev/null` in this repository. An absolute path outside
@@ -3723,6 +3820,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   invariants for a `DialectRegistry` the crate does not define. Every invariant
   now names a construct that exists, and the sealing entry names
   `backend::private::Sealed`.
+- Parity suites, backend materializers and the gate tooling each take their
+  shared routine from one definition instead of a per-file copy.
 - The duplication gate measures the repository rather than the working
   directory. It walked the tree with `walkdir` and counted every `.rs` file
   present, including files an ignore rule excludes, so a pin recorded on a
@@ -4275,6 +4374,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   bare cargo_full is not on the search path, so a fix line quoting it told the
   reader to run a command that does not resolve. The generators that embed
   those lines emit the same spelling, so the artifact and its generator agree.
+- The vyre-release-gate now collapses every stale-source benchmark verdict into
+  one finding that states how many verdicts over how many artifacts stand
+  behind it and names the command that re-measures each backend, with the
+  verdicts kept as notes, because one commit invalidates every recorded
+  benchmark at once and each invalidated artifact then failed several checks.
 - The operand namespace table of a lowered kernel op has one owner again,
   `vyre_lower::operand_class`. Structural verification and data-dependency
   queries answered from two tables that disagreed on a structured loop operand
@@ -4363,16 +4467,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   transfer size or a trap address was accepted while the same load in a store
   index was rejected.
 - The persistent-fixpoint routing contract is asserted in one place,
-  `vyre_primitives::fixpoint::routing_contract`, over a description of what an
-  op builds on either side of one workgroup width. Each routed convergence op
+  `vyre_libs::fixpoint::routing_contract`, over a description of what an op
+  builds on either side of one workgroup width. Each routed convergence op
   previously carried its own copy of the same four obligations, and the copies
   had drifted in what they accepted: both pinned the grid fence count to a
   literal 8 without stating that the count is two fences per wave, so neither
   would have caught a build whose wave count changed. The contract now checks
   all four at four iteration budgets, and both ops register every way their
   dispatch outgrows one workgroup rather than only the widest state buffer:
-  `vyre_primitives::math::bellman_shortest_path` registers node-widened and
-  edge-widened spans, and `vyre_primitives::math::sinkhorn_iterate` registers
+  `vyre_libs::math::bellman_shortest_path` registers node-widened and
+  edge-widened spans, and `vyre_libs::math::sinkhorn_iterate` registers
   scaling-widened and kernel-widened spans. The span is the widest declared
   buffer once a program carries atomics, so four nodes with 257 edges, and a
   17-by-17 kernel over two 17-element scaling vectors, both cross the threshold
@@ -4744,6 +4848,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   which already covered the two survivors and covers every document added
   since, so the gate reaches zero by describing what is there rather than by
   mourning what is not.
+- The delegating-form closure check reads the source of the crate that owns it
+  instead of a crate named in a literal, so the two prefix-scan facades in
+  vyre-libs solvers are compared against the builders they forward to. Both
+  pass the op id and both buffer names through unchanged, across the empty,
+  single-workgroup and multi-block regimes.
 - The scaffold under `examples/libs-template` renders into a crate that builds.
   It pinned `thiserror` to an exact version the workspace had moved past, so
   the rendered crate could not resolve, and it passed the `Arc<[u32]>` shape of
@@ -4980,6 +5089,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   round-trip under `structural_eq`, and requires each named valid-program seed
   to still decode, so a wire-format change that strands an old seed is red
   without libFuzzer and without a nightly run.
+- The workgroup Blelloch sweep now ends on a barrier, and its final store is
+  bounded by the lane count. Callers read a slot the sweep wrote from another
+  lane: `frontier_word_block_offsets_single_workgroup` reads `scratch_a[lane -
+  1]` on the statement after the sweep returns, so a lane could observe its
+  predecessor's slot before that lane's inclusive add landed and take a block
+  offset short by the previous block's own count. Publication is now the
+  sweep's contract rather than something each of its five call sites has to
+  remember.
 - The workspace member roster has one reader,
   `structure_gate::workspace_members`. It was parsed out of the root manifest
   three times, once inside `structure-gate` and once in each of two gates, and
@@ -5001,7 +5118,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   character comparison, a block that wanted the question-mark operator, a
   `vec!` that never needed to allocate, and a `&PathBuf` parameter that only
   ever read a path.
-- `vyre_primitives::decode::ziftsieve` publishes `ZiftsieveBuffers` and
+- `vyre_libs::decode::ziftsieve` publishes `ZiftsieveBuffers` and
   `ZiftsieveExtents`, so the five buffer names and three extents an indexed
   literal-copy program binds are named at every construction site instead of
   being passed as an eight-long positional list through three entry points and
