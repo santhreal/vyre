@@ -1,8 +1,6 @@
 //! Tests for sanitizer correctness failures vs PMU performance evidence.
 
-use vyre_debug::sanitizer::{
-    PmuExpectation, PmuMeasurement, PmuWarning, SanitizerFailure,
-};
+use vyre_debug::{PmuExpectation, PmuMeasurement, PmuWarning, SanitizerFailure};
 use vyre_foundation::diagnostics::{DiagnosticStage, Severity};
 
 #[test]

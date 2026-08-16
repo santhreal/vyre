@@ -8,7 +8,7 @@ mod gated_delta_spec;
 pub(crate) mod gqa_attention;
 pub(crate) mod layout;
 pub(crate) mod mla;
-pub mod paged_attention;
+pub(crate) mod paged_attention;
 pub(crate) mod partial_rope;
 pub(crate) mod planner;
 pub(crate) mod qk_gain;

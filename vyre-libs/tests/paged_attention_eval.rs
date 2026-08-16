@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::DataType;
-use vyre_libs::nn::attention::paged_attention::{paged_attention, PagedAttentionSpec};
+use vyre_libs::nn::attention::{paged_attention, PagedAttentionSpec};
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
