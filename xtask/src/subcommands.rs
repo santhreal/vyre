@@ -436,6 +436,7 @@ pub fn help_text() -> String {
     }
     text.push_str("\nEvery subcommand is a gate. A gate that owns a generated artifact\n");
     text.push_str("checks it against the tree and rewrites it when passed --write.\n");
+    text.push_str("Run a subcommand with --help for the options it reads.\n");
     text
 }
 
