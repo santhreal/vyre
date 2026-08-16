@@ -60,8 +60,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     TOTAL_INSTRS as u64 * 4 + INSTANCE_COUNT as u64 * 4,
     Some(ContractDescription {
         primitive: "Bytecode interpreter",
-        baseline_crate: "hand-tuned C threaded interpreter",
-        baseline_name: "switch-dispatch loop with computed goto",
+        baseline_crate: "vyre-bench",
+        baseline_name: "in-tree scalar Rust match-dispatch interpreter loop (cpu_interpret)",
         min_speedup_x: 3.0,
     }),
 );

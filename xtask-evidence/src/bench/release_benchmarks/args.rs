@@ -9,6 +9,13 @@ pub(super) struct Config {
     pub(super) workload_suite_only: bool,
 }
 
+/// Parse the caller flags a `GateCtx` carries.
+///
+/// `ctx.args` holds the flags after the subcommand name, so parsing starts at the
+/// first element. This used to start at index 2, which skipped two flags: every
+/// invocation that passed one option reported the third token as unknown, so
+/// `--write --backend cuda` rejected `cuda` and no option was reachable at all. A
+/// bare `--write` still measured, which is why the break stayed hidden.
 pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut backend = "cuda".to_string();
     let mut only = None;
@@ -18,7 +25,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut reuse_existing = false;
     let mut refresh_suites_only = false;
     let mut workload_suite_only = false;
-    let mut index = 2;
+    let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
             "--backend" => {
@@ -88,6 +95,9 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
                 workload_suite_only = true;
                 index += 1;
             }
+            "--write" => {
+                index += 1;
+            }
             "--help" | "-h" => {
                 println!(
                     "USAGE:\n  cargo_full run -p xtask --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing] [--refresh-suites-only] [--workload-suite-only]\n\n\
@@ -114,11 +124,10 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
 mod tests {
     use super::*;
 
+    /// The flags a `GateCtx` carries: everything after the subcommand name, which
+    /// includes `--write` when the caller asked for a re-measure.
     fn args(extra: &[&str]) -> Vec<String> {
-        std::iter::once("cargo".to_string())
-            .chain(std::iter::once("release-benchmarks".to_string()))
-            .chain(extra.iter().map(|arg| arg.to_string()))
-            .collect()
+        extra.iter().map(|arg| (*arg).to_string()).collect()
     }
 
     #[test]
@@ -150,6 +159,37 @@ mod tests {
         assert!(
             !config.refresh_suites_only,
             "Fix: workload-suite execution must still run benchmark artifacts unless refresh-only is also explicit."
+        );
+    }
+
+    /// Every option must be reachable from the first flag onward.
+    ///
+    /// The parser used to start at index 2 while `GateCtx.args` starts at the
+    /// first flag, so the two leading flags were skipped and their values were
+    /// read as commands. `--write --backend cuda` reported `cuda` as an unknown
+    /// option; a lone `--write` fell off the end and silently took the default
+    /// backend, which is why the gate looked usable.
+    #[test]
+    fn every_flag_is_reachable_from_the_first_argument() {
+        let config = parse_args(&args(&["--write", "--backend", "wgpu"]))
+            .expect("Fix: --write --backend must parse; every flag is a caller flag.");
+        assert_eq!(config.backend, "wgpu");
+
+        let config = parse_args(&args(&["--write"]))
+            .expect("Fix: a bare --write must parse and keep the release-path backend.");
+        assert_eq!(config.backend, "cuda");
+
+        let config = parse_args(&args(&["--only", "condition-eval", "--measured-samples", "30"]))
+            .expect("Fix: the first two flags must be parsed, not skipped.");
+        assert_eq!(config.only.as_deref(), Some("condition-eval"));
+        assert_eq!(config.measured_samples, Some(30));
+
+        let Err(error) = parse_args(&args(&["--nonsense"])) else {
+            panic!("Fix: an unknown first flag must still be rejected.");
+        };
+        assert!(
+            error.contains("--nonsense"),
+            "Fix: the error must name the option the caller typed, got `{error}`."
         );
     }
 }

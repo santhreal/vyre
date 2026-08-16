@@ -46,7 +46,7 @@ vyre-spec.workspace = true
 # mapping, and `full` deliberately leaves the regex frontend and its
 # regex-syntax dependency out of what a library consumer gets.
 vyre-libs = { workspace = true, features = ["full", "matching-regex"] }
-vyre-primitives = { workspace = true, features = ["all-lego"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 inventory.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

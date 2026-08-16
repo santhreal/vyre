@@ -929,12 +929,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   opt, parsing, predicate, reduce, text, topology and visual. vyre-primitives
   now holds marker types, the wire encoding, the dispatch grid owner, the IR
   safety helpers, the hardware intrinsics and the virtual file system, and its
-  feature list is default, gpu, cpu-parity, vyre-foundation, hardware, all-lego
-  and inventory-registry. Every path of the form vyre_primitives::<domain> is
-  now vyre_libs::<domain>; no compatibility re-export is left behind.
-  Registered operation ids are unchanged, so built IR and the operation catalog
-  keep the same names. Each moved domain has a feature of its own in vyre-libs
-  that names only the domains its own source reaches.
+  feature list is default, gpu, cpu-parity, vyre-foundation, hardware and
+  inventory-registry. Every path of the form vyre_primitives::<domain> is now
+  vyre_libs::<domain>; no compatibility re-export is left behind. Registered
+  operation ids are unchanged, so built IR and the operation catalog keep the
+  same names. Each moved domain has a feature of its own in vyre-libs that
+  names only the domains its own source reaches.
 - `vyre-conform` depends on `vyre-libs` with `features = ["full"]` rather than
   restating ten of the aggregate's members by hand. A hand-kept list of
   aggregate members drifts silently against the aggregate, which is how the
@@ -1881,6 +1881,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   attributes that had been pointing the compiler back out of those directories
   are deleted, because the default resolution now finds every child. No item
   moved between modules and no public path changed.
+- The `all-lego` feature of vyre-primitives is gone. It aggregated the
+  composition domains that have since moved to vyre-libs, so it had become an
+  alias for `hardware` that gated no source line, while three manifests still
+  justified requesting it in terms of bitset, decode, graph, geometry and
+  optimization operations the crate no longer carries. Consumers name
+  `hardware`, which is the one domain the crate declares. The conform workflow
+  was naming twelve vyre-primitives test targets that moved to vyre-libs with
+  their domains; it now runs each target against its owning crate with the
+  features those targets require.
 - The gate tooling reads and writes a JSON document through one module.
   xtask::json_document owns both directions; the package readiness matrix, the
   release benchmark metrics and the release backend suite all read through it
@@ -3456,6 +3465,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   hand-written matches ending in a catch-all, so a Node variant added with a
   body is descended into on the commit that declares it rather than treated as
   a leaf, and an unchanged scope is no longer rebuilt.
+- A strong barrier is narrowed to the address spaces its body touches, and that
+  decision was covered only by two pinned backend corpora. One of them was
+  stale: the WGSL golden carried the narrowed storage barrier while the SPIR-V
+  golden still pinned the memory-semantics word for the wider fence, so the
+  SPIR-V byte-stability test failed on a change nobody had made. The mapping is
+  now tested where it is decided, including the storage-only, scratch-only,
+  both, neither and nested-body cases and the refusal of relaxed and grid-wide
+  orderings, and the SPIR-V corpus is regenerated to the narrowed word.
 - `vyre_libs::math::bellman_shortest_path::BellmanBuffers` publishes
   `CANONICAL` and `TERSE` binding-name sets, matching the
   `SinkhornBuffers::CANONICAL` it already had. Four sites spelled the same six
@@ -3871,11 +3888,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Every `vyre-primitives` feature compiles alone. The operand-shape guards
   `matrix_cells` and `square_matrix_cells` lived behind the `math` feature
   while `graph` used them, and `math` already enables `graph`, so the missing
-  edge could not be added without a feature cycle: `--features graph`, `math`,
-  `nn`, `geom`, `opt`, `topology` and `all-lego` all failed to build. The
-  guards now live in `vyre_primitives::operand_shape`, compiled unconditionally
-  because a shape check is not a domain, and all twenty-four features build in
-  isolation.
+  edge could not be added without a feature cycle, and every selection naming a
+  domain failed to build. The guards now live in
+  `vyre_primitives::operand_shape`, compiled unconditionally because a shape
+  check is not a domain.
 - An artifact under `release/evidence` is written only when the tree it records
   can be identified. The recorder captures one `git:<commit>:dirty=false` or
   `git:<commit>:dirty=true:worktree=<digest>` fingerprint per run, stamps it at
@@ -4683,6 +4699,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   existed, and the two layers introduced since had no profile at all, which
   left the generator failing for every crate rather than for the ones that were
   wrong.
+- The crate that exists to link every operation registration linked vyre-libs
+  on default features, so 78 of the 327 registered operations never reached the
+  registry it publishes: the geometry, optimization, topology, logical,
+  succinct, algebra, attention and quantization registrations were absent from
+  every walk that read it. Its per-source floor could not see this, because a
+  source linked with a narrow feature selection still contributes more than
+  nothing and every count shrank together. vyre-registry-link now names
+  vyre-libs feature `full`, and a new rule reads the operation ids out of the
+  generated catalog at run time and fails when any of them is missing from the
+  live registry.
 - Every rule that reads the live operation registry now links the crates that
   submit into it. `inventory` registrations live in the object file of the
   declaring crate, and a linker pulls an archive member out of an rlib only
@@ -4867,6 +4893,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   count pair up to 40.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
+- The `vyre-primitives::hardware::subgroup_add` intrinsic performed no subgroup
+  operation. It summed thirty-two memory neighbours in a serial loop, so every
+  lane re-read and re-added its whole subgroup out of storage, while
+  registering the hardware semantic for a subgroup add and documenting itself
+  as mapping to one. It now builds `Expr::subgroup_add`, the reduction the IR
+  already carries and all three emitters already lower, with the lane value in
+  a guarded local and the collective in uniform control flow so the
+  participating-lane set is defined. Values are unchanged: the reference oracle
+  and its three boundary cases are untouched and pass, including two subgroups
+  of thirty-two.
 - The registered witness programs for
   `vyre-primitives::hardware::subgroup_ballot` and
   `vyre-primitives::hardware::subgroup_shuffle` passed an unguarded buffer load

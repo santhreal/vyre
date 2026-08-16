@@ -82,7 +82,7 @@ the naive path at 100 MiB.
 | compiler_grade_release/program_build/macro/release.quantified_condition_loops.1m | 8.7927 us |
 | compiler_grade_release/program_build/macro/release.alias_reaching_def.1m | 7.3963 us |
 | compiler_grade_release/program_build/macro/release.ifds_witness.1m | 7.4797 us |
-| compiler_grade_release/program_build/macro/release.c_ast_traversal.1m | 7.2086 us |
+| compiler_grade_release/program_build/macro/release.ast_motif_traversal.1m | 7.2086 us |
 | compiler_grade_release/program_build/macro/release.megakernel_queue.1m | 8.1397 us |
 | compiler_grade_release/program_build/macro/release.egraph_saturation.1m | 7.3335 us |
 | runtime_io/nvme_gpu_ingest_telemetry/registered_mapped_read/4294967296 | 197.67 ns |

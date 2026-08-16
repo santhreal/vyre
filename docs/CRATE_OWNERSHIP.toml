@@ -652,7 +652,7 @@ seam = "portable-driver"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation registrations"
-features = []
+features = ["full"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = true
@@ -663,7 +663,7 @@ seam = "product-libraries"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "primitive operation registrations"
-features = ["all-lego"]
+features = ["hardware"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = true
@@ -1107,7 +1107,7 @@ seam = "product-libraries"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["all-lego"]
+features = ["hardware"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

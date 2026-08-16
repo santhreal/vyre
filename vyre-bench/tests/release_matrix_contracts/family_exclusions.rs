@@ -35,30 +35,30 @@ fn release_matrix_does_not_attach_condition_eval_to_specialized_workloads() {
 /// assertions here unfailable: they named one dead id. Pinning the matched set
 /// exactly fails on any broad case attaching to this family, not just that one.
 #[test]
-fn release_matrix_attaches_only_the_canonical_case_to_the_c_ast_workload() {
+fn release_matrix_attaches_only_the_canonical_case_to_the_ast_motif_workload() {
     let registry = vyre_bench::registry::collect_all();
     let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
     let family = matrix
         .families
         .iter()
-        .find(|family| family.id == "c-ast-traversal")
-        .expect("Fix: release matrix missing C AST traversal family.");
+        .find(|family| family.id == "ast-motif-traversal")
+        .expect("Fix: release matrix missing AST motif traversal family.");
 
     assert_eq!(
         family.matched_cases,
-        ["release.c_ast_traversal.1m"],
-        "Fix: the C AST traversal workload measures one canonical release case. Any other \
+        ["release.ast_motif_traversal.1m"],
+        "Fix: the AST motif traversal workload measures one canonical release case. Any other \
          case attached here reports some other program's throughput as AST traversal."
     );
     assert_eq!(
         family.cpu_sota_100x_cases,
-        ["release.c_ast_traversal.1m"],
+        ["release.ast_motif_traversal.1m"],
         "Fix: the CPU-SOTA 100x proof for this workload must come from the canonical release \
          case, not from broader pipeline evidence."
     );
     assert_eq!(
         family.max_cpu_sota_min_speedup_x,
         Some(100.0),
-        "Fix: C AST traversal workload max CPU-SOTA speedup must come from the canonical release case."
+        "Fix: AST motif traversal workload max CPU-SOTA speedup must come from the canonical release case."
     );
 }
