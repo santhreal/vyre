@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use vyre_driver::backend_dispatches;
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::release::conformance_evidence_semantics::REQUIRED_BACKENDS;
 use xtask::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
 };
@@ -29,20 +30,34 @@ mod case_classes;
 mod evidence;
 mod scan_matrix;
 
+/// Registered conformance op floor. 49 is the count measured when the floor was
+/// set, against 327 registered today. Which operations a release ships is a
+/// release decision, so the floor moves down only with the new measured count
+/// and the reason recorded here. `.github/workflows/gpu-parity.yml` and the
+/// recorded-artifact reader in `xtask::release::conformance_evidence_semantics`
+/// hold the same number.
 const MIN_RELEASE_OP_COUNT: usize = 49;
 const MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
 
-/// Operations whose INT4 conformance coverage blocks a release outright. They
-/// carry the quantized kernels a release is judged on, so a missing fixture or
-/// expected output here is a blocker rather than a gap someone files.
-const INT4_CONFORMANCE_OPS: &[&str] = &[
-    "vyre-libs::quant::int4_dot_i32",
-    "vyre-libs::quant::int4_dot_f32_scaled",
-    "vyre-libs::quant::int4_matvec_f32_scaled",
-    "vyre-libs::quant::int4_batched_matvec_f32_scaled",
-    "vyre-libs::quant::int4_batched_matmul_f32_scaled",
-    "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled",
-];
+/// Operation id prefix that marks an INT4 conformance subject. The subject set
+/// is derived from this prefix at run time, over the live registry and the op
+/// matrix catalog together, so an INT4 operation added to either surface
+/// inherits the requirement without an edit here. A registration carries no
+/// quantization field, so the id namespace the owning crate spells is the
+/// declared marker.
+const INT4_CONFORMANCE_OP_PREFIX: &str = "vyre-libs::quant::int4_";
+
+/// Floor on the derived INT4 conformance subject set. These operations carry the
+/// quantized kernels a release is judged on, so a missing fixture or expected
+/// output is a blocker rather than a gap someone files.
+///
+/// Derivation alone cannot see a subject that left both surfaces: deleting the
+/// last INT4 operation would empty the set and take every INT4 blocker with it.
+/// Six is the measured count of `vyre-libs::quant::int4_*` operations in the
+/// registry and in the catalog. Which quantized kernels a release is judged on
+/// is a release decision, so this floor moves down only with the new measured
+/// count and the reason recorded here.
+const MIN_INT4_CONFORMANCE_OP_COUNT: usize = 6;
 
 /// Holds release op and backend conformance coverage to the recorded matrix.
 pub struct ConformanceMatrixGate;
@@ -66,11 +81,8 @@ impl Gate for ConformanceMatrixGate {
             .collect::<Vec<_>>();
         let mut entries = Vec::with_capacity(operations.len());
         let mut ids = BTreeSet::new();
-        let mut duplicate_op_ids = BTreeSet::new();
         for entry in operations {
-            if !ids.insert(entry.id) {
-                duplicate_op_ids.insert(entry.id.to_string());
-            }
+            ids.insert(entry.id);
             entries.push(ConformanceEntry {
                 id: entry.id.to_string(),
                 requires_fixture: entry.program().is_some(),
@@ -178,14 +190,14 @@ impl Gate for ConformanceMatrixGate {
             ids.len()
         ));
         }
-        if !duplicate_op_ids.is_empty() {
+        if !catalog.duplicate_required_op_rows.is_empty() {
             blockers.push(format!(
-                "registered conformance matrix contains {} duplicate op id(s)",
-                duplicate_op_ids.len()
+                "OP_MATRIX declares {} op id(s) in more than one row",
+                catalog.duplicate_required_op_rows.len()
             ));
         }
         blockers.append(&mut catalog_blockers);
-        for required in ["cuda", "wgpu", "cpu-ref"] {
+        for required in REQUIRED_BACKENDS {
             if !dispatch_backends.iter().any(|backend| backend == required) {
                 blockers.push(format!("required dispatch backend `{required}` is missing"));
             }
@@ -249,27 +261,51 @@ impl Gate for ConformanceMatrixGate {
                 missing_fail_closed_fanins.len()
             ));
         }
-        for op in INT4_CONFORMANCE_OPS {
-            if !entries
-                .iter()
-                .any(|entry| entry.id == *op && entry.has_test_inputs && entry.has_expected_output)
+        let int4_conformance_ops = ids
+            .iter()
+            .copied()
+            .filter(|id| id.starts_with(INT4_CONFORMANCE_OP_PREFIX))
+            .map(str::to_string)
+            .chain(
+                catalog
+                    .required_ops
+                    .iter()
+                    .filter(|op| op.starts_with(INT4_CONFORMANCE_OP_PREFIX))
+                    .cloned(),
+            )
+            .collect::<BTreeSet<_>>();
+        if int4_conformance_ops.len() < MIN_INT4_CONFORMANCE_OP_COUNT {
+            blockers.push(format!(
+                "the registry and the op matrix catalog declare {} INT4 conformance op(s) between them, below release floor {MIN_INT4_CONFORMANCE_OP_COUNT}",
+                int4_conformance_ops.len()
+            ));
+        }
+        for op in &int4_conformance_ops {
+            if !entry_by_id
+                .get(op.as_str())
+                .is_some_and(|entry| entry.has_test_inputs && entry.has_expected_output)
             {
                 blockers.push(format!(
                     "INT4 conformance op `{op}` is not registered with fixture inputs and expected outputs"
                 ));
             }
-            if coverage
-                .missing_catalog_ops
-                .iter()
-                .any(|missing| missing == *op)
-            {
+            if !catalog.required_ops.contains(op) {
                 blockers.push(format!(
                     "INT4 conformance op `{op}` is missing from the op matrix catalog"
                 ));
             }
+            if coverage
+                .missing_catalog_ops
+                .iter()
+                .any(|missing| missing == op)
+            {
+                blockers.push(format!(
+                    "INT4 conformance op `{op}` is required by the op matrix catalog and has no registered conformance entry"
+                ));
+            }
         }
         let matrix = ConformanceMatrix {
-            schema_version: 5,
+            schema_version: 6,
             op_count: entries.len(),
             distinct_op_count: ids.len(),
             catalog_required_op_count: coverage.catalog_required_op_count,
@@ -288,7 +324,7 @@ impl Gate for ConformanceMatrixGate {
             op_matrix_blocked_release_count: coverage.op_matrix_blocked_release_count,
             op_matrix_blocked_release_rows: catalog.blocked_release_rows,
             op_matrix_errors: catalog.errors,
-            duplicate_op_ids: duplicate_op_ids.into_iter().collect(),
+            duplicate_op_ids: catalog.duplicate_required_op_rows.into_iter().collect(),
             fixture_required_count,
             fixture_input_count,
             expected_output_count,

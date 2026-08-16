@@ -176,6 +176,10 @@ pub fn ci_status_defined(vyre_root: &Path, status: &str, scan_errors: &mut Vec<S
 }
 
 /// Required workflows that a path filter can skip, which makes them optional.
+///
+/// A workflow that cannot be read is not reported here, because it carries no
+/// path filter to report. `inspect_required_workflow_triggers` walks the same
+/// list and records an unreadable file, so the file still turns the gate red.
 pub fn inspect_path_filtered_required_workflows(vyre_root: &Path) -> Vec<String> {
     let mut findings = Vec::new();
     for workflow in REQUIRED_WORKFLOWS {
@@ -197,6 +201,11 @@ pub fn inspect_path_filtered_required_workflows(vyre_root: &Path) -> Vec<String>
 }
 
 /// Required workflows missing a trigger, or unreadable.
+///
+/// The `main` branch list is read out of the `push:` block alone. Read over the
+/// whole trigger section it was satisfied by any `branches:` line, including one
+/// belonging to `pull_request:`, so a workflow that never ran on a push to
+/// `main` reported full trigger coverage.
 pub fn inspect_required_workflow_triggers(vyre_root: &Path) -> Vec<String> {
     let mut missing = Vec::new();
     for workflow in REQUIRED_WORKFLOWS {
@@ -208,27 +217,13 @@ pub fn inspect_required_workflow_triggers(vyre_root: &Path) -> Vec<String> {
         let trigger_prefix = text
             .split_once("\njobs:")
             .map_or(text.as_str(), |(prefix, _)| prefix);
-        let has_pull_request = trigger_prefix.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed == "pull_request:" || trimmed.starts_with("pull_request:")
-        });
-        let has_push = trigger_prefix.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed == "push:" || trimmed.starts_with("push:")
-        });
-        let has_main_branch = trigger_prefix.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed.starts_with("branches:")
-                && (trimmed.contains("[main]")
-                    || trimmed.contains("[\"main\"]")
-                    || trimmed.contains("[ 'main' ]")
-                    || trimmed.contains("[ \"main\" ]")
-                    || trimmed == "branches: main"
-                    || trimmed == "branches: [ main ]")
-        });
-        if !(has_pull_request && has_push && has_main_branch) {
+        let has_pull_request = !trigger_block(trigger_prefix, "pull_request:").is_empty();
+        let push_block = trigger_block(trigger_prefix, "push:");
+        let has_push = !push_block.is_empty();
+        let pushes_main = declares_main_branch(&push_block);
+        if !(has_pull_request && has_push && pushes_main) {
             missing.push(format!(
-                "{}:pull_request={has_pull_request},push={has_push},main_branch={has_main_branch}",
+                "{}:pull_request={has_pull_request},push={has_push},push_main={pushes_main}",
                 path.display()
             ));
         }
@@ -236,7 +231,76 @@ pub fn inspect_required_workflow_triggers(vyre_root: &Path) -> Vec<String> {
     missing
 }
 
+/// The lines of one trigger block, from its key line to the next key at the
+/// same indentation. The key line is included, so an inline `push: {…}` form is
+/// read as its own block.
+fn trigger_block<'a>(trigger_prefix: &'a str, key: &str) -> Vec<&'a str> {
+    let mut block = Vec::new();
+    let mut key_indent = None;
+    for line in trigger_prefix.lines() {
+        let trimmed = line.trim_start();
+        let indent = line.len() - trimmed.len();
+        match key_indent {
+            None => {
+                if trimmed.starts_with(key) {
+                    key_indent = Some(indent);
+                    block.push(line);
+                }
+            }
+            Some(key_indent) => {
+                if trimmed.is_empty() {
+                    continue;
+                }
+                if indent <= key_indent {
+                    break;
+                }
+                block.push(line);
+            }
+        }
+    }
+    block
+}
+
+/// Whether a trigger block declares a branch list naming `main`, inline or as
+/// list items. `branches-ignore:` is a different key and does not count.
+fn declares_main_branch(block: &[&str]) -> bool {
+    let mut in_branch_list = false;
+    for line in block {
+        let trimmed = line.trim();
+        if let Some(inline) = trimmed.strip_prefix("branches:") {
+            if yaml_names(inline).any(|name| name == "main") {
+                return true;
+            }
+            in_branch_list = true;
+            continue;
+        }
+        if !in_branch_list {
+            continue;
+        }
+        match trimmed.strip_prefix("- ") {
+            Some(item) => {
+                if yaml_names(item).any(|name| name == "main") {
+                    return true;
+                }
+            }
+            None => in_branch_list = false,
+        }
+    }
+    false
+}
+
+/// The scalar names one YAML scalar or flow sequence spells.
+fn yaml_names(text: &str) -> impl Iterator<Item = &str> {
+    text.split([',', '[', ']', '\'', '"', ' '])
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+}
+
 /// Release gates whose fan-in job does not fail closed on a skipped dependency.
+///
+/// Every job the fan-in declares in `needs:` must have its result read. A
+/// section-wide search for `.result` passed a fan-in that read one dependency
+/// and ignored the rest, so a job added to `needs:` inherited no check at all.
 pub fn inspect_fail_closed_fanins(vyre_root: &Path) -> Vec<String> {
     let mut missing = Vec::new();
     for (workflow, job_name) in [
@@ -253,14 +317,53 @@ pub fn inspect_fail_closed_fanins(vyre_root: &Path) -> Vec<String> {
             missing.push(format!("{}:{job_name}", path.display()));
             continue;
         };
-        if !(section.contains("if: ${{ always() }}")
-            && section.contains(".result")
-            && section.contains("exit 1"))
-        {
-            missing.push(format!("{}:{job_name}", path.display()));
+        let mut reasons = Vec::new();
+        if !section.contains("if: ${{ always() }}") {
+            reasons.push("the job is not declared `if: ${{ always() }}`".to_string());
+        }
+        if !section.contains("exit 1") {
+            reasons.push("no step exits nonzero".to_string());
+        }
+        let dependencies = job_dependencies(section);
+        if dependencies.is_empty() {
+            reasons.push("the job declares no `needs:` dependency".to_string());
+        }
+        for dependency in dependencies {
+            if !section.contains(&format!("needs.{dependency}.result")) {
+                reasons.push(format!("`needs.{dependency}.result` is never read"));
+            }
+        }
+        if !reasons.is_empty() {
+            missing.push(format!(
+                "{}:{job_name}: {}",
+                path.display(),
+                reasons.join("; ")
+            ));
         }
     }
     missing
+}
+
+/// The job names one job section declares in `needs:`, inline or as list items.
+fn job_dependencies(section: &str) -> Vec<&str> {
+    let mut dependencies = Vec::new();
+    let mut in_needs_list = false;
+    for line in section.lines() {
+        let trimmed = line.trim();
+        if let Some(inline) = trimmed.strip_prefix("needs:") {
+            dependencies.extend(yaml_names(inline));
+            in_needs_list = true;
+            continue;
+        }
+        if !in_needs_list {
+            continue;
+        }
+        match trimmed.strip_prefix("- ") {
+            Some(item) => dependencies.extend(yaml_names(item)),
+            None => in_needs_list = false,
+        }
+    }
+    dependencies
 }
 
 const REQUIRED_WORKFLOWS: &[&str] = &[

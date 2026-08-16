@@ -24,8 +24,7 @@ fn release_backend_case_row(
     let positive = spec.status == "supported"
         && entry.is_some_and(|entry| entry.has_test_inputs && entry.has_expected_output);
     let byte_output = entry.is_some_and(|entry| entry.has_expected_output);
-    let unsupported_diagnostic =
-        spec.status != "supported" || spec.test_case_classes.contains("unsupported_diagnostic");
+    let unsupported_diagnostic = spec.test_case_classes.contains("unsupported_diagnostic");
     let class_sources = [
         (
             "positive",
@@ -63,10 +62,10 @@ fn release_backend_case_row(
         (
             "unsupported_diagnostic",
             unsupported_diagnostic,
-            if spec.status == "supported" {
-                "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+            if unsupported_diagnostic {
+                "OP_MATRIX referenced tests contain unsupported/not-applicable evidence"
             } else {
-                "OP_MATRIX backend status is non-supported and therefore carries explicit unsupported/not-applicable diagnostics"
+                "no referenced test exercises the unsupported diagnostic path"
             },
         ),
     ];
@@ -88,7 +87,7 @@ fn release_backend_case_row(
                 .any(|evidence| evidence.class == *class && evidence.covered)
         })
         .collect::<Vec<_>>();
-    let blockers = missing_required_case_classes
+    let mut blockers = missing_required_case_classes
         .iter()
         .map(|class| {
             format!(
@@ -97,6 +96,12 @@ fn release_backend_case_row(
             )
         })
         .collect::<Vec<_>>();
+    for unreadable in &spec.unreadable_test_paths {
+        blockers.push(format!(
+            "conformance op/backend row `{}:{}` cites test path `{unreadable}`, so its case-class evidence cannot be read",
+            spec.op_id, spec.backend
+        ));
+    }
     ReleaseBackendCaseRow {
         op_id: spec.op_id.clone(),
         backend: spec.backend.clone(),
@@ -163,6 +168,7 @@ mod tests {
             backend: "cuda".to_string(),
             status: "supported".to_string(),
             test_paths: vec!["tests/external_flow_boundary_adversarial.rs".to_string()],
+            unreadable_test_paths: Vec::new(),
             test_case_classes: BTreeSet::from(["negative", "boundary", "adversarial"]),
         };
         let entries = BTreeMap::from([(entry.id.as_str(), &entry)]);
@@ -182,14 +188,49 @@ mod tests {
         assert!(!evidence(row, "unsupported_diagnostic").covered);
     }
 
+    /// WHY: a non-supported row used to satisfy its own `unsupported_diagnostic`
+    /// requirement from the status field the requirement was derived from, so the
+    /// only blocker a non-supported row can raise could never fire. Coverage now
+    /// comes from the tests the row cites.
+    #[test]
+    fn release_backend_case_rows_block_non_supported_rows_without_unsupported_evidence() {
+        let spec = OpMatrixReleaseBackendSpec {
+            op_id: "vyre-libs::scan::prefix_sum_u32".to_string(),
+            backend: "cuda".to_string(),
+            status: "not_applicable".to_string(),
+            test_paths: vec!["tests/prefix_sum_positive.rs".to_string()],
+            unreadable_test_paths: Vec::new(),
+            test_case_classes: BTreeSet::new(),
+        };
+        let entries = BTreeMap::new();
+
+        let rows = release_backend_case_rows(&[spec], &entries);
+        let row = &rows[0];
+
+        assert_all_case_classes_reported(row);
+        assert_eq!(row.required_case_classes, vec!["unsupported_diagnostic"]);
+        assert_eq!(
+            row.missing_required_case_classes,
+            vec!["unsupported_diagnostic"]
+        );
+        assert_eq!(
+            row.blockers,
+            vec![
+                "conformance op/backend row `vyre-libs::scan::prefix_sum_u32:cuda` status `not_applicable` is missing required `unsupported_diagnostic` case-class evidence"
+            ]
+        );
+        assert!(!evidence(row, "unsupported_diagnostic").covered);
+    }
+
     #[test]
     fn release_backend_case_rows_accept_non_supported_rows_with_unsupported_diagnostic() {
         let spec = OpMatrixReleaseBackendSpec {
             op_id: "vyre-libs::scan::prefix_sum_u32".to_string(),
             backend: "cuda".to_string(),
             status: "not_applicable".to_string(),
-            test_paths: Vec::new(),
-            test_case_classes: BTreeSet::new(),
+            test_paths: vec!["tests/prefix_sum_unsupported.rs".to_string()],
+            unreadable_test_paths: Vec::new(),
+            test_case_classes: BTreeSet::from(["unsupported_diagnostic"]),
         };
         let entries = BTreeMap::new();
 
@@ -203,6 +244,42 @@ mod tests {
         assert!(!evidence(row, "positive").covered);
         assert!(!evidence(row, "byte_output").covered);
         assert!(evidence(row, "unsupported_diagnostic").covered);
+    }
+
+    /// WHY: a cited test that cannot be read classified as covering nothing, and
+    /// a supported row takes its required classes from the registry, so a row
+    /// citing a deleted file kept reporting complete case-class evidence.
+    #[test]
+    fn release_backend_case_rows_block_rows_citing_unreadable_tests() {
+        let entry = ConformanceEntry {
+            id: "vyre-libs::scan::prefix_sum_u32".to_string(),
+            requires_fixture: true,
+            has_test_inputs: true,
+            has_expected_output: true,
+            tolerance_ulp: 0,
+        };
+        let spec = OpMatrixReleaseBackendSpec {
+            op_id: entry.id.clone(),
+            backend: "cuda".to_string(),
+            status: "supported".to_string(),
+            test_paths: vec!["tests/deleted.rs".to_string()],
+            unreadable_test_paths: vec![
+                "tests/deleted.rs (No such file or directory)".to_string()
+            ],
+            test_case_classes: BTreeSet::new(),
+        };
+        let entries = BTreeMap::from([(entry.id.as_str(), &entry)]);
+
+        let rows = release_backend_case_rows(&[spec], &entries);
+        let row = &rows[0];
+
+        assert!(row.missing_required_case_classes.is_empty());
+        assert_eq!(
+            row.blockers,
+            vec![
+                "conformance op/backend row `vyre-libs::scan::prefix_sum_u32:cuda` cites test path `tests/deleted.rs (No such file or directory)`, so its case-class evidence cannot be read"
+            ]
+        );
     }
 
     #[test]
@@ -219,6 +296,7 @@ mod tests {
             backend: "wgpu".to_string(),
             status: "supported".to_string(),
             test_paths: Vec::new(),
+            unreadable_test_paths: Vec::new(),
             test_case_classes: BTreeSet::new(),
         };
         let entries = BTreeMap::from([(entry.id.as_str(), &entry)]);

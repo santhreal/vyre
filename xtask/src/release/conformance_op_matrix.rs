@@ -13,6 +13,10 @@ use crate::release::conformance_evidence_semantics::read_conformance_text;
 pub struct OpMatrixCatalog {
     /// Operations the matrix requires a release to cover.
     pub required_ops: BTreeSet<String>,
+    /// Operation ids more than one row declares. `required_ops` is a set, so a
+    /// second row naming an operation is absorbed there and surfaces only as a
+    /// release backend row count that no longer matches the required op count.
+    pub duplicate_required_op_rows: BTreeSet<String>,
     /// Raw `op:backend:status` rows as written.
     pub release_backend_rows: Vec<String>,
     /// The same rows parsed.
@@ -36,6 +40,8 @@ pub struct OpMatrixReleaseBackendSpec {
     pub status: String,
     /// Tests the row cites as proof.
     pub test_paths: Vec<String>,
+    /// Cited paths that could not be read, each with the read error.
+    pub unreadable_test_paths: Vec<String>,
     /// Case classes those tests were found to cover.
     pub test_case_classes: BTreeSet<&'static str>,
 }
@@ -48,15 +54,11 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
         Ok(text) => text,
         Err(error) => {
             return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                release_backend_specs: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
                 errors: vec![format!(
                     "could not read OP_MATRIX at {}: {error}",
                     matrix_path.display()
                 )],
+                ..OpMatrixCatalog::default()
             };
         }
     };
@@ -64,15 +66,11 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
         Ok(value) => value,
         Err(error) => {
             return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                release_backend_specs: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
                 errors: vec![format!(
                     "could not parse OP_MATRIX at {}: {error}",
                     matrix_path.display()
                 )],
+                ..OpMatrixCatalog::default()
             };
         }
     };
@@ -80,32 +78,25 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
         Some(rows) => rows,
         None => {
             return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                release_backend_specs: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
                 errors: vec![format!(
                     "OP_MATRIX at {} has no [[op]] array",
                     matrix_path.display()
                 )],
+                ..OpMatrixCatalog::default()
             };
         }
     };
     if rows.is_empty() {
         return OpMatrixCatalog {
-            required_ops: BTreeSet::new(),
-            release_backend_rows: Vec::new(),
-            release_backend_specs: Vec::new(),
-            missing_release_backend_rows: Vec::new(),
-            blocked_release_rows: Vec::new(),
             errors: vec![format!(
                 "OP_MATRIX at {} has zero op rows",
                 matrix_path.display()
             )],
+            ..OpMatrixCatalog::default()
         };
     }
     let mut required_ops = BTreeSet::new();
+    let mut duplicate_required_op_rows = BTreeSet::new();
     let mut release_backend_rows = Vec::new();
     let mut release_backend_specs = Vec::new();
     let mut missing_release_backend_rows = Vec::new();
@@ -138,10 +129,12 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
-        let test_case_classes = classify_conformance_case_classes(vyre_root, &test_paths);
+        let test_evidence = inspect_conformance_test_evidence(vyre_root, &test_paths);
         for op in row_ops {
             if let Some(op) = op.as_str() {
-                required_ops.insert(op.to_string());
+                if !required_ops.insert(op.to_string()) {
+                    duplicate_required_op_rows.insert(op.to_string());
+                }
                 for backend in ["reference", "cuda", "wgpu"] {
                     match row.get(backend).and_then(toml::Value::as_str) {
                         Some("blocked_release") => {}
@@ -152,7 +145,10 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
                                 backend: backend.to_string(),
                                 status: status.to_string(),
                                 test_paths: test_paths.clone(),
-                                test_case_classes: test_case_classes.clone(),
+                                unreadable_test_paths: test_evidence
+                                    .unreadable_paths
+                                    .clone(),
+                                test_case_classes: test_evidence.case_classes.clone(),
                             });
                         }
                         _ => missing_release_backend_rows.push(format!("{op}:{backend}")),
@@ -163,6 +159,7 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
     }
     OpMatrixCatalog {
         required_ops,
+        duplicate_required_op_rows,
         release_backend_rows,
         release_backend_specs,
         missing_release_backend_rows,
@@ -276,17 +273,35 @@ fn parse_release_backend_row(row: &str) -> Option<(&str, &str, &str)> {
     Some((op, backend, status))
 }
 
+/// What the tests one op matrix row cites were found to prove.
+pub struct ConformanceTestEvidence {
+    /// Case classes the readable cited tests cover.
+    pub case_classes: BTreeSet<&'static str>,
+    /// Cited paths that could not be read, each with the read error. A citation
+    /// nothing can read proves nothing; recording it as an uncovered class
+    /// instead would hide the broken citation whenever the row is not required
+    /// to cover that class.
+    pub unreadable_paths: Vec<String>,
+}
+
 /// Which case classes the named test files cover, from their names and text.
-pub fn classify_conformance_case_classes(
+pub fn inspect_conformance_test_evidence(
     vyre_root: &Path,
     test_paths: &[String],
-) -> BTreeSet<&'static str> {
-    let mut classes = BTreeSet::new();
+) -> ConformanceTestEvidence {
+    let mut case_classes = BTreeSet::new();
+    let mut unreadable_paths = Vec::new();
     for test_path in test_paths {
         let path = vyre_root.join(test_path);
-        let text = read_conformance_text(&path).unwrap_or_default();
+        let text = match read_conformance_text(&path) {
+            Ok(text) => text,
+            Err(error) => {
+                unreadable_paths.push(format!("{test_path} ({error})"));
+                continue;
+            }
+        };
         let lowered = format!("{test_path}\n{text}").to_ascii_lowercase();
-        classes.extend(crate::text_markers::classify_text(
+        case_classes.extend(crate::text_markers::classify_text(
             &lowered,
             &[
                 ("negative", crate::text_markers::NEGATIVE_MARKERS),
@@ -299,6 +314,9 @@ pub fn classify_conformance_case_classes(
             ],
         ));
     }
-    classes
+    ConformanceTestEvidence {
+        case_classes,
+        unreadable_paths,
+    }
 }
 
