@@ -546,6 +546,7 @@ required-features = ["parsing", "decode"]
 [[test]]
 name = "ast_shunting_yard"
 path = "tests/ast_shunting_yard.rs"
+required-features = ["parsing"]
 
 [[test]]
 name = "attention_head_to_token_contract"
@@ -697,6 +698,11 @@ path = "tests/quantized_linear_affine_fma.rs"
 required-features = ["nn-linear"]
 
 [[test]]
+name = "quantized_packing_contracts"
+path = "tests/quantized_packing_contracts.rs"
+required-features = ["cpu-parity", "math"]
+
+[[test]]
 name = "nn_attention_clone_family_ir_invariance"
 path = "tests/nn_attention_clone_family_ir_invariance.rs"
 required-features = ["nn-attention"]
@@ -753,6 +759,21 @@ required-features = ["parsing"]
 name = "scan_hit_buffer_layout_contracts"
 path = "tests/scan_hit_buffer_layout_contracts.rs"
 required-features = ["matching-substring"]
+
+[[test]]
+name = "literal_set_presence_and_positions_reference"
+path = "tests/literal_set_presence_and_positions_reference.rs"
+required-features = ["cpu-parity", "matching-substring"]
+
+[[test]]
+name = "literal_set_presence_reference"
+path = "tests/literal_set_presence_reference.rs"
+required-features = ["cpu-parity", "matching-substring"]
+
+[[test]]
+name = "matching_post_process_contracts"
+path = "tests/matching_post_process_contracts.rs"
+required-features = ["cpu-parity", "matching"]
 
 [[test]]
 name = "rule_condition_program_frame_contract"

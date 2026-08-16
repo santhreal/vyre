@@ -6,6 +6,7 @@ use std::sync::LazyLock;
 
 use crate::BackendError;
 
+pub use crate::target::Target;
 /// Stable validated AOT target identity.
 pub use vyre_foundation::operation::TargetId as AotTargetId;
 
