@@ -21,13 +21,7 @@ use vyre_libs::scheduling::submodular_cache_eviction::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 #[test]
 fn select_retention_set_via_matches_reference_greedy_over_random_gains() {

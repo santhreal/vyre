@@ -17,19 +17,11 @@
 //! reproduces `cpu_conv1d` (mul/accumulate order AND the clamp-to-edge boundary handling).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
 use vyre_libs::math::conv1d::{cpu_conv1d, gaussian_weights};
+use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-const FIXED_ONE: u32 = 1 << 16;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::{xorshift32 as xorshift, FIXED_ONE};
 
 #[test]
 fn smooth_latency_trace_via_matches_cpu_conv1d_bit_exact() {

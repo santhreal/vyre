@@ -2,14 +2,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use vyre_driver::materialize::{
-    self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
+    self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DeviceIdentity,
-    DispatchConfig, ResidentOwner, Submission, TimedDispatchResult,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DispatchConfig, Submission,
+    TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, TargetPayload};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
 
@@ -137,20 +137,14 @@ impl MaterializedInstance for SpirvArtifactInstance {
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     let native = Arc::new(vulkan::VulkanDevice::acquire()?);
-    let format = TargetPayloadFormat::new("spv", 1)
-        .map_err(|error| materialize::compile_error(SPIRV_BACKEND_ID, error))?;
-    let profile = crate::target_compiler::target_profile()?;
-    let generation = ResidentOwner::new()?.get();
     Ok(Box::new(SpirvMaterializer {
         device: native,
-        descriptor: MaterializerDevice::new(
-            DeviceIdentity {
-                backend: SPIRV_BACKEND_ID,
-                device: "vulkan-compute".to_string(),
-                generation,
-            },
-            format,
-            profile,
-        ),
+        descriptor: MaterializerDevice::acquire(DeviceSpec {
+            backend: SPIRV_BACKEND_ID,
+            device: "vulkan-compute".to_string(),
+            format_extension: "spv",
+            format_version: 1,
+            profile: crate::target_compiler::target_profile()?,
+        })?,
     }))
 }

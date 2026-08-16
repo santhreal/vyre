@@ -17,13 +17,7 @@ use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
 use vyre_libs::graph::path_reconstruct::cpu_ref;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 #[test]
 fn reconstruct_path_via_matches_cpu_ref_over_random_forests() {

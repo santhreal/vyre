@@ -18,15 +18,7 @@
 use vyre_libs::solvers::differentiable_autotune::pick_config_pre_exp_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-const FIXED_ONE: u32 = 1 << 16;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::{xorshift32 as xorshift, FIXED_ONE};
 
 /// Exact u32 oracle mirroring `softmax_step` bit-for-bit.
 fn softmax_fixed(pre_exp: &[u32]) -> Vec<u32> {

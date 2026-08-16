@@ -21,7 +21,7 @@
 //! core cannot enumerate and the Naga extension registry must report instead.
 
 use super::*;
-use vyre_foundation::ir::{Expr, Ident, Node};
+use vyre_foundation::ir::{Expr, Ident, Node, NodeExtension};
 use vyre_foundation::visit::node_buffer_refs;
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, assert_samples_match_declared_shape, node_body_slot_samples,
@@ -136,30 +136,12 @@ fn an_opaque_node_without_a_registered_scanner_fails_closed() {
     assert!(message.contains("Fix:"), "unexpected message: {message}");
 }
 
-#[derive(Debug)]
-struct UnregisteredExtension;
-
-impl vyre_foundation::ir::NodeExtension for UnregisteredExtension {
-    fn extension_kind(&self) -> &'static str {
-        "vyre.emit_naga.test.unregistered_node"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "unregistered-node"
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0x3c; 32]
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+vyre_test_support::test_node_extension!(
+    UnregisteredExtension,
+    kind: "vyre.emit_naga.test.unregistered_node",
+    identity: "unregistered-node",
+    fingerprint: 0x3c,
+);
 
 #[test]
 fn async_load_destination_is_a_write_target() {

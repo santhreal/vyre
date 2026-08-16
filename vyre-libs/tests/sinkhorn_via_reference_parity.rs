@@ -22,6 +22,7 @@ use vyre_libs::solvers::sinkhorn_dispatch_clustering::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 const ITERS: u32 = 12;
 const EPS: f32 = 0.1;
@@ -76,13 +77,6 @@ fn two_distant_regions_assign_to_their_nearest_clusters() {
         vec![0, 1],
         "each region takes its co-located cluster"
     );
-}
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
 }
 
 #[test]

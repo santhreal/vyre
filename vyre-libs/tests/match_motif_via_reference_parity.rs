@@ -21,13 +21,7 @@ use vyre_libs::graph::dispatch::motif::{
 use vyre_libs::graph::motif::MotifEdge;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// Build a random valid CSR graph: `n` nodes, each with 0..=3 out-edges to random targets carrying a
 /// small kind mask. Returns (edge_offsets[n+1], edge_targets, edge_kind_mask).

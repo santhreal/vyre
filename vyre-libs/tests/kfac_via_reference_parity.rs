@@ -19,13 +19,7 @@
 use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// A uniform sample in `[-1, 1)` from the PRNG.
 fn unit(state: &mut u32) -> f32 {

@@ -20,6 +20,7 @@ pub mod artifact_paths;
 pub mod artifact_gate;
 pub mod binary;
 pub mod checkout;
+pub mod cli;
 pub mod delegate;
 pub mod docs;
 pub mod fixture_checkout;

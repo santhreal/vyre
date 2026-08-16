@@ -26,6 +26,12 @@ const FRAGMENTS: &str = "release/changes/unreleased";
 const CHANGELOG: &str = "CHANGELOG.md";
 /// The notes body `gh release create --notes-file` attaches to the final tag.
 const NOTES: &str = "release/evidence/docs/release-notes-body.md";
+/// The Markdown documents this gate writes.
+///
+/// A rule that judges authored prose has to know which pages are not authored.
+/// Naming them here, beside the writer, is what keeps that answer true when a
+/// document is added to the writer.
+pub const GENERATED_RELEASE_DOCUMENTS: [&str; 2] = [CHANGELOG, NOTES];
 /// The script that performs the launch steps in order.
 const LAUNCH: &str = "scripts/final-launch.sh";
 /// Keep-a-changelog categories, in the order a section renders them.

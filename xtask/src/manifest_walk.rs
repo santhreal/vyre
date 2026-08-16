@@ -130,3 +130,51 @@ pub(crate) fn collect_manifests<T>(
     }
 }
 
+/// Every dependency a manifest declares, once each, in name order.
+///
+/// Dependency tables nest: `[dependencies]` at the root,
+/// `[target.'cfg(unix)'.dependencies]` under a target selector, and
+/// `[workspace.dependencies]` under the workspace table. A reader that only
+/// looks at the root three tables reports a short list, and a short list of
+/// dependencies reads as a package that does not use the crate it depends on.
+#[must_use]
+pub fn dependency_names(document: &toml::Table) -> Vec<String> {
+    let mut names = Vec::new();
+    collect_dependency_names(document, false, &mut names);
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// Every dependency a manifest declares as `optional = true`, once each, in
+/// name order.
+#[must_use]
+pub fn optional_dependency_names(document: &toml::Table) -> Vec<String> {
+    let mut names = Vec::new();
+    collect_dependency_names(document, true, &mut names);
+    names.sort();
+    names.dedup();
+    names
+}
+
+fn collect_dependency_names(table: &toml::Table, optional_only: bool, out: &mut Vec<String>) {
+    for (key, child) in table {
+        if matches!(
+            key.as_str(),
+            "dependencies" | "dev-dependencies" | "build-dependencies"
+        ) {
+            if let Some(dependencies) = child.as_table() {
+                for (name, dependency) in dependencies {
+                    if !optional_only
+                        || dependency.get("optional").and_then(toml::Value::as_bool) == Some(true)
+                    {
+                        out.push(name.clone());
+                    }
+                }
+            }
+        } else if let Some(child) = child.as_table() {
+            collect_dependency_names(child, optional_only, out);
+        }
+    }
+}
+

@@ -38,17 +38,10 @@ use vyre_libs::analysis::cost_model::predict_runtime_fixed_via;
 use vyre_libs::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
 use vyre_libs::math::conformal::conformal_threshold_cpu;
 
-use vyre_libs::test_parity_oracles::fixed_mul as fixed_mul_16_16;
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-const FIXED_ONE: u32 = 1 << 16;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::{
+    fixed_mul as fixed_mul_16_16, xorshift32 as xorshift, FIXED_ONE,
+};
 
 /// A topo-ordered fixed-point sum-product circuit (children strictly before parents).
 struct Circuit {

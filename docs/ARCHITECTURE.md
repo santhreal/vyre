@@ -2,13 +2,11 @@
 
 Last verified: 2026-08-15
 
-This page is the token-checked summary the architecture gate reads, and the
-entry point for the architecture chapters below. Vyre 0.7.2 is a GPU
-compiler. You build a `Program` from registered operations, compile the
-whole graph into one immutable `Artifact`, emit a target payload, and run
-it on the device. There is no host execution path and no bytecode
-interpreter. `vyre-reference` is the only crate allowed to compute on the
-CPU, and only as the oracle.
+Vyre 0.7.2 is a GPU compiler. You build a `Program` from registered
+operations, compile the whole graph into one immutable `Artifact`, emit a
+target payload, and run it on the device. There is no host execution path
+and no bytecode interpreter. `vyre-reference` is the only crate allowed to
+compute on the CPU, and only as the oracle.
 
 Downstream crates do not own shadow operation identities. The live catalog
 is `docs/generated/OP_SCHEMA.json`, read through
@@ -31,8 +29,8 @@ interpreter arm.
 - `vyre-libs` owns every composition: consumer dialects and the compiler's
   own solvers, encoding, analysis, scheduling, and reasoning. Equal
   residents.
-- `vyre-primitives` owns marker types and hardware intrinsics. Compositions
-  that live here today are a live defect and belong in `vyre-libs`.
+- `vyre-primitives` owns marker types and hardware intrinsics. A composition
+  belongs in `vyre-libs`.
 - `vyre-lower` is the last dialect-free stage: `Program` to
   `KernelDescriptor`.
 - `vyre-megakernel` owns Cross-program composition: candidate generation,

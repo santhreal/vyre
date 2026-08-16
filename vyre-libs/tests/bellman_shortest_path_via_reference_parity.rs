@@ -26,19 +26,13 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_foundation::program_dispatch::DispatchError;
-use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 use vyre_libs::math::bellman_shortest_path::cpu_ref;
+use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 const INF: u32 = u32::MAX;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
 
 #[test]
 fn bellman_via_matches_cpu_ref_on_single_hop_star_graphs() {

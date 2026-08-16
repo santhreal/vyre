@@ -119,6 +119,10 @@ name = "docs-references"
 findings = 0
 
 [[gate]]
+name = "docs-register"
+findings = 0
+
+[[gate]]
 name = "dup-scan"
 findings = 0
 

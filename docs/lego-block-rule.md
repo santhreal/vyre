@@ -1,18 +1,16 @@
 # LEGO-block rule: composition is the architecture
 
-This is the workspace composition policy. Read it before adding or
-restructuring an operation. It owns four things: the discovery step, the
-Gate 1 budget, the promotion criteria, and Category A/C placement.
-`docs/ARCHITECTURE.md` owns workspace boundaries and the crate structure.
-`docs/generated/OP_SCHEMA.json` is the operation inventory this rule
-operates over.
+The workspace composition policy: the discovery step, the Gate 1 budget, the
+promotion criteria, and Category A/C placement. Read it before adding or
+restructuring an operation. `docs/ARCHITECTURE.md` owns workspace boundaries
+and the crate structure. `docs/generated/OP_SCHEMA.json` is the operation
+inventory this rule operates over.
 
 ## The rule
 
-Before inventing a new sub-op, scan the domain folders under
-`vyre-libs/src/` and `vyre-primitives/src/` for a primitive that already
-does the work. Invent a new sub-op only when nothing existing maps and the
-new sub-op will be reused by two or more callers.
+Before inventing a new sub-op, scan the domain folders under `vyre-libs/src/`
+for a primitive that already does the work. Invent a new sub-op only when
+nothing existing maps and the new sub-op will be reused by two or more callers.
 
 The Gate 1 budget is met by reuse, not by bespoke splitting. When
 attention has eight loops, the answer is not four attention-private
@@ -59,15 +57,14 @@ The product claim is that composed primitives beat monolithic kernels.
 The claim fails the moment a dialect reinvents a primitive locally: the
 new caller does not inherit the existing one's hardening, the optimizer
 cannot fuse across the boundary, and the substrate fragments. A primitive
-that lives in one op's source file is leverage nobody else gets.
+that lives in one op's source file is reuse nobody else gets.
 
 ## Discovery
 
 Before writing a new sub-op:
 
-1. **Search by name.** `git grep -n 'fn <verb>' -- vyre-libs/src
-   vyre-primitives/src`. If the work has a name, someone has probably
-   written it.
+1. **Search by name.** `git grep -n 'fn <verb>' -- vyre-libs/src`. If the work
+   has a name, someone has probably written it.
 2. **Search by op id.** `./cargo_full run --bin xtask -- print-composition
    --op-id <id>` walks a registered op's region tree. If a region's
    generator reads like the work you are about to do, that is the
@@ -208,8 +205,8 @@ and audio ops compose too. The domain compositions live in
 `vyre-libs/src/visual/` over `math::conv1d`, existing IR expressions, and
 private helpers where one caller exists.
 
-The lesson: domain thinking creates domain primitives, and composition
-thinking dissolves them into math. When discovery says nothing existing
-maps, run it again at a lower level. A color interpolation is a
-multiply-add. A pixel unpack is a bit shift. The operation is almost
-always already in `math`, in `text`, or in the IR itself.
+Domain thinking creates domain primitives, and composition thinking dissolves
+them into math. When discovery says nothing existing maps, run it again at a
+lower level. A color interpolation is a multiply-add. A pixel unpack is a bit
+shift. The operation is almost always already in `math`, in `text`, or in the
+IR itself.

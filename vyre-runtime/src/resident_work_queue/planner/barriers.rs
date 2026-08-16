@@ -482,28 +482,12 @@ mod tests {
         assert_eq!(barrier_count(rewritten.entry()), 1);
     }
 
-    #[derive(Debug)]
-    struct TestOpaqueNode;
+    use vyre_foundation::ir::NodeExtension;
 
-    impl vyre_foundation::ir::NodeExtension for TestOpaqueNode {
-        fn extension_kind(&self) -> &'static str {
-            "test.opaque"
-        }
-
-        fn debug_identity(&self) -> &str {
-            "test.opaque"
-        }
-
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [7; 32]
-        }
-
-        fn validate_extension(&self) -> Result<(), String> {
-            Ok(())
-        }
-
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_node_extension! {
+        TestOpaqueNode,
+        kind: "test.opaque",
+        identity: "test.opaque",
+        fingerprint: 7,
     }
 }

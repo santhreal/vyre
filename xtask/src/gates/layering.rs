@@ -21,6 +21,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use structure_gate::backend_vocabulary::segments_of;
+
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::manifest_contract::{dep_lines, dependency_hosts, entries, target_package};
 use crate::gates::scan::{self, Tree};
@@ -356,39 +358,6 @@ fn words_in(line: &str) -> Vec<String> {
         }
     }
     found
-}
-
-/// `text` as lowercase identifier segments.
-///
-/// A byte that cannot sit inside an identifier ends the current segment, and an
-/// uppercase letter starts a new one when it follows a lowercase letter or digit
-/// or precedes a lowercase letter, which splits `WGSLModule` into `wgsl` and
-/// `module` rather than one run nothing matches.
-fn segments_of(text: &str) -> Vec<String> {
-    let bytes = text.as_bytes();
-    let mut segments = Vec::new();
-    let mut current = String::new();
-    for (index, letter) in text.char_indices() {
-        if !letter.is_ascii_alphanumeric() {
-            if !current.is_empty() {
-                segments.push(std::mem::take(&mut current));
-            }
-            continue;
-        }
-        let previous = index.checked_sub(1).map(|at| bytes[at]);
-        let next = bytes.get(index + 1).copied();
-        let starts_segment = letter.is_ascii_uppercase()
-            && (previous.is_some_and(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
-                || next.is_some_and(|byte| byte.is_ascii_lowercase()));
-        if starts_segment && !current.is_empty() {
-            segments.push(std::mem::take(&mut current));
-        }
-        current.push(letter.to_ascii_lowercase());
-    }
-    if !current.is_empty() {
-        segments.push(current);
-    }
-    segments
 }
 
 /// No named neutral crate carries a production edge to a backend, driver product

@@ -19,17 +19,11 @@
 //! EXACTLY. So the u32 GPU output equals the f32 reference cast to integer, bit-for-bit.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
 use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
+use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// A small positive integer in `1..=hi`.
 fn small(state: &mut u32, hi: u32) -> u32 {

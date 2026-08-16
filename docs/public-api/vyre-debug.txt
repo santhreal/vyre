@@ -2,7 +2,7 @@ impl core::default::Default for vyre_debug::DescriptorDumpOptions
 impl vyre_debug::ArtifactReport
 impl vyre_debug::NagaDump
 pub enum vyre_debug::BindResultLogError
-pub fn vyre_debug::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_debug::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::error::CompileError>
 pub fn vyre_debug::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
 pub fn vyre_debug::DescriptorDumpOptions::default() -> Self
 pub fn vyre_debug::NagaDump::find(&self, handle: u32) -> core::option::Option<&alloc::vec::Vec<alloc::string::String>>
@@ -33,11 +33,11 @@ pub struct vyre_debug::NagaDump
 pub struct vyre_debug::TargetPayloadReport
 pub struct vyre_debug::UncarrieredAssign
 pub struct vyre_debug::WgslDump
-pub vyre_debug::ArtifactReport::abi: vyre_megakernel::ArtifactAbi
+pub vyre_debug::ArtifactReport::abi: vyre_megakernel::schema::ArtifactAbi
 pub vyre_debug::ArtifactReport::artifact: alloc::string::String
 pub vyre_debug::ArtifactReport::compiler_version: alloc::string::String
 pub vyre_debug::ArtifactReport::request: alloc::string::String
-pub vyre_debug::ArtifactReport::selected_plan: vyre_megakernel::SelectedPlan
+pub vyre_debug::ArtifactReport::selected_plan: vyre_megakernel::schema::SelectedPlan
 pub vyre_debug::ArtifactReport::source_graph: alloc::string::String
 pub vyre_debug::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::TargetPayloadReport>
 pub vyre_debug::BindResultLogError::Open(std::io::error::Error)
