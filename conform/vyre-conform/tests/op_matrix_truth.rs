@@ -15,15 +15,13 @@ mod toml_rows;
 
 use registry::registered_ops;
 use toml_rows::{
-    assert_existing_paths, read_bench_targets, read_toml, required_array, required_str, string_set,
-    workspace_root,
+    assert_existing_paths, read_toml, required_array, required_str, string_set, workspace_root,
 };
 
 #[test]
 fn op_matrix_covers_every_registered_op_once() {
     let root = workspace_root();
     let matrix = read_toml(&root.join("docs/optimization/OP_MATRIX.toml"));
-    let bench_targets = read_bench_targets(&root);
     let registered = registered_ops();
 
     let status_values = string_set(
@@ -75,13 +73,6 @@ fn op_matrix_covers_every_registered_op_once() {
 
         assert_existing_paths(&root, family, "owners", required_array(row, "owners"));
         assert_existing_paths(&root, family, "tests", required_array(row, "tests"));
-        for target in required_array(row, "bench_targets") {
-            assert!(
-                bench_targets.contains(target),
-                "Fix: OP_MATRIX family `{family}` references missing bench target `{target}`."
-            );
-        }
-
         let sources = required_array(row, "registry_sources");
         let ops = required_array(row, "ops");
         assert!(

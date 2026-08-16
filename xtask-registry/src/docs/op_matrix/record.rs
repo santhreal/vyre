@@ -17,5 +17,4 @@ pub(super) struct OpRecord {
     pub(super) spirv: &'static str,
     pub(super) release_blocking_notes: String,
     pub(super) tests: Vec<String>,
-    pub(super) bench_targets: Vec<String>,
 }

@@ -1,8 +1,9 @@
 //! Hold `docs/optimization/OP_MATRIX.toml` to the live operation registry.
 //!
-//! The gate renders the matrix from two sources, the manual scan construct rows
-//! and the live registry, validates the merged rows, and reports the artifact
-//! it would write. One module per stage.
+//! Every `[[op]]` row comes from the live operation registry. The manual
+//! header carries the scan construct tier vocabulary, which is a different row
+//! type with its own artifact section. The gate renders the matrix, validates
+//! the rows, and reports the artifact it would write. One module per stage.
 
 mod manual_rows;
 mod record;
@@ -12,8 +13,7 @@ mod validation;
 
 use xtask::artifact_gate::Inspection;
 
-use manual_rows::manual_records;
-use registered_rows::registered_records;
+use registered_rows::{live_operation_ids, registered_records};
 use render::render_matrix;
 use validation::validate_records;
 
@@ -60,9 +60,8 @@ fn inspect() -> Inspection {
 /// the rows that survived.
 fn build_matrix() -> (String, Vec<String>) {
     let mut problems = Vec::new();
-    let mut records = manual_records();
-    records.extend(registered_records(&mut problems));
-    problems.extend(validate_records(&records));
+    let mut records = registered_records(&mut problems);
+    problems.extend(validate_records(&records, &live_operation_ids()));
 
     records.sort_by(|left, right| {
         (

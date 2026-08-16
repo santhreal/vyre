@@ -13,7 +13,12 @@ use super::record::OpRecord;
 /// This used to return the first violation and abort the run, so a second
 /// duplicate family was invisible until the first was fixed. The count of
 /// sentences returned here is what the gate's pin holds level.
-pub(super) fn validate_records(records: &[OpRecord]) -> Vec<String> {
+///
+/// `registered` is every id the live operation registry declares. A row naming
+/// something outside it is a blocker rather than a silent line, because a
+/// generated document that carries a name nothing registers reads as coverage
+/// the tree does not have.
+pub(super) fn validate_records(records: &[OpRecord], registered: &BTreeSet<&str>) -> Vec<String> {
     let mut problems = Vec::new();
     let mut families = BTreeSet::new();
     let mut ops = BTreeMap::<&str, &str>::new();
@@ -40,6 +45,15 @@ pub(super) fn validate_records(records: &[OpRecord]) -> Vec<String> {
             if let Some(first_family) = ops.insert(op, record.family.as_str()) {
                 problems.push(format!(
                     "Fix: op `{op}` appears in both OP_MATRIX families `{first_family}` and `{}`.",
+                    record.family
+                ));
+            }
+            if !registered.contains(op.as_str()) {
+                problems.push(format!(
+                    "Fix: op `{op}` in OP_MATRIX family `{}` has no live registration. The matrix \
+                     carries op families whose rows resolve to a registered id. An IR-level \
+                     rewrite belongs to the optimizer pass catalog and its generated pass \
+                     artifact, not here.",
                     record.family
                 ));
             }
@@ -70,4 +84,54 @@ fn tier_id_mismatch(declared: OpTier, observed: OpTier) -> bool {
         (declared, observed),
         (OpTier::Intrinsic, OpTier::Library) | (OpTier::Library, OpTier::Intrinsic)
     )
+}
+
+/// The rules live in a private module of the gate, so no integration test can
+/// call [`validate_records`] and prove a rule is able to fail.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(family: &str, op: &str) -> OpRecord {
+        OpRecord {
+            family: family.to_string(),
+            tier: OpTier::Foundation,
+            owners: vec!["vyre-foundation".to_string()],
+            ops: vec![op.to_string()],
+            registry_sources: vec!["vyre-foundation::operation".to_string()],
+            duplicate_ok: false,
+            reference: "supported",
+            foundation_ir: "supported",
+            cuda: "supported",
+            wgpu: "supported",
+            spirv: "experimental",
+            release_blocking_notes: String::new(),
+            tests: vec!["vyre-foundation/tests/op.rs".to_string()],
+        }
+    }
+
+    /// WHY: the matrix understated the op surface by carrying an IR rewrite as an op
+    /// name nothing registered. This proves the rule goes red on such a name, and
+    /// silent on a registered one. It proves nothing about what the registry contains.
+    #[test]
+    fn an_op_with_no_live_registration_blocks_the_matrix() {
+        let registered = BTreeSet::from(["vyre-primitives::bitset::and"]);
+
+        let registered_row = [row("bitset_and", "vyre-primitives::bitset::and")];
+        let live = validate_records(&registered_row, &registered);
+        assert!(live.is_empty(), "registered op must not block: {live:?}");
+
+        let invented_row = [row("integer_strength_reduction", "mul_power_of_two_to_shift")];
+        let invented = validate_records(&invented_row, &registered);
+        assert_eq!(
+            invented,
+            vec![
+                "Fix: op `mul_power_of_two_to_shift` in OP_MATRIX family \
+                 `integer_strength_reduction` has no live registration. The matrix carries op \
+                 families whose rows resolve to a registered id. An IR-level rewrite belongs to \
+                 the optimizer pass catalog and its generated pass artifact, not here."
+                    .to_string()
+            ]
+        );
+    }
 }

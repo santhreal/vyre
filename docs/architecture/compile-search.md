@@ -30,12 +30,18 @@ scores it. `analyze_fusion_pair` returns `FusionDecision::Legal` or
 | `MKL002_NOT_PRODUCER_CONSUMER` | the value does not connect the proposed producer and consumer |
 | `MKL003_LIFECYCLE_BOUNDARY` | the value crosses an invocation or retained-state boundary |
 | `MKL004_MULTIPLE_CONSUMERS` | more than one node consumes the value |
-| `MKL005_WORKGROUP_MISMATCH` | the programs require incompatible workgroup geometry |
-| `MKL006_SYNCHRONIZATION_BOUNDARY` | one program contains an explicit synchronization point |
+| `MKL005_WORKGROUP_MISMATCH` | the programs declare different workgroup geometry |
+| `MKL006_SYNCHRONIZATION_BOUNDARY` | the geometries differ and one program reasons about the size of its own workgroup |
 | `MKL007_DEPENDENCY_CYCLE` | contracting the proposed group would create a dependency cycle |
 
 `FusionRejectionReason` is `#[non_exhaustive]`. A rejection is recorded in
 the artifact rather than dropped, so a plan that looks unfused says why.
+
+A barrier is not a rejection on its own. Two programs that declare the same
+workgroup and synchronize inside it fuse into one kernel, because the merge
+concatenates the arms at that geometry and every barrier is already
+workgroup-uniform. That is what lets a score pass and a value pass over one
+workgroup tile compile to a single dispatch.
 
 ## The unfused baseline is always a candidate
 
