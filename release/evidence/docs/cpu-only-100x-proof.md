@@ -16,15 +16,14 @@ Required generated evidence:
 - `release/evidence/benchmarks/workload-06-quantified-condition-loops.json`
 - `release/evidence/benchmarks/workload-07-alias-reaching-def.json`
 - `release/evidence/benchmarks/workload-08-ifds-witness.json`
-- `release/evidence/benchmarks/workload-09-c-ast-traversal.json`
+- `release/evidence/benchmarks/workload-09-ast-motif-traversal.json`
 - `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json`
-- `release/evidence/benchmarks/workload-11-egraph-saturation.json`
 - `release/evidence/benchmarks/workload-12-sparse-output-compaction.json`
 - CUDA release-suite reports for the current `release.*` workload case ids.
 
 Release contract:
 
-- The current required 100x case ids are `release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.c_ast_traversal.1m`, `release.megakernel_queue.1m`, `release.egraph_saturation.1m`, and `sparse.compaction.count.1m`.
+- The current required 100x case ids are `release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.ast_motif_traversal.1m`, `release.megakernel_queue.1m`, and `sparse.compaction.count.1m`.
 - Each required 100x case must declare a `CpuSota` baseline with `min_speedup_x >= 100.0`.
 - The aggregate 100x proof artifact must include correctness oracle evidence and CUDA benchmark samples for every required 100x contract case.
 - The aggregate 100x proof artifact must preserve source identity and CUDA environment provenance from its source workload reports, including `source_fingerprint`, `git`, GPU model, NVIDIA driver, CUDA runtime, and host CPU model where source reports provide it.

@@ -12,7 +12,7 @@ usage() {
         'Optional environment:' \
         '  VYRE_MACBOOK_BENCH_OUTPUT_DIR Remote directory for benchmark smoke JSON reports.' \
         '  VYRE_MACBOOK_CONNECT_TIMEOUT  SSH connect timeout in seconds, default 8.' \
-        '  VYRE_CARGO_RUNNER             Remote cargo runner override consumed by scripts/lib/cargo_runner.sh.' \
+        '  VYRE_CARGO_RUNNER             Cargo wrapper to run on the Apple GPU host, default ./cargo_full.' \
         '' \
         'Examples:' \
         '  VYRE_MACBOOK_SSH=tt-macbook \' \
@@ -37,7 +37,7 @@ run_remote() {
     local command="$1"
     local root
     root="$(remote_quote "${VYRE_MACBOOK_VYRE_ROOT}")"
-    local setup="set -euo pipefail; cd ${root}; source scripts/lib/cargo_runner.sh; vyre_select_cargo_runner;"
+    local setup="set -euo pipefail; cd ${root}; CARGO_RUNNER=\"\${VYRE_CARGO_RUNNER:-./cargo_full}\";"
     if [[ -n "${VYRE_MACBOOK_BENCH_OUTPUT_DIR:-}" ]]; then
         local bench_output
         bench_output="$(remote_quote "${VYRE_MACBOOK_BENCH_OUTPUT_DIR}")"

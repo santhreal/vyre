@@ -1,0 +1,13 @@
+lane = "gpu-parity-cuda-driver-contracts"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "cuda-driver-contracts"
+state = "live"
+required_status = "GPU Parity + Determinism / CUDA backend contracts"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { command = "./cargo_full test -p vyre-driver-cuda --features cuda --test generated_i32_cuda_reference_matrix --test generated_scalar_cuda_reference_matrix --test generated_cast_fma_cuda_reference_matrix --test generated_atomic_cuda_reference_matrix --test generated_control_cuda_reference_matrix --test generated_f32_cuda_reference_matrix --test generated_memory_cuda_reference_matrix --test generated_resident_cuda_reference_matrix --test generated_resident_sequence_cuda_reference_matrix -- --test-threads=1 --nocapture" },
+  { command = "./cargo_full test -p vyre-driver-cuda --features cuda --test widening_cast_64_cuda_parity -- --test-threads=1 --nocapture" },
+  { command = "./cargo_full test -p vyre-driver-cuda --features cuda --test narrowing_cast_cuda_parity -- --test-threads=1 --nocapture" },
+  { command = "./cargo_full test -p vyre-driver-cuda --features cuda --test synthetic_binop_cuda_parity -- --test-threads=1 --nocapture" },
+  { command = "./cargo_full test -p vyre-driver-cuda --features cuda --test div_zero_shift_mask_cuda_parity -- --test-threads=1 --nocapture" },
+]

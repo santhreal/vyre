@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use crate::api::suite::SuiteKind;
 #[cfg(test)]
 use crate::report::json::ReportSchema;
-use crate::runner::{execute_suite, RunConfig};
+use crate::runner::RunConfig;
 
 mod bundle;
 mod compare;
@@ -117,11 +117,15 @@ enum Commands {
         #[arg(long, default_value = "dashboard")]
         output: String,
     },
+    /// Print the release workload matrix.
+    ///
+    /// This command prints and never writes. The committed
+    /// `release/evidence/benchmarks/release-workload-matrix.json` has one
+    /// producer, the `release-workload-matrix` gate, which stamps a provenance
+    /// head this serialization does not carry.
     ReleaseMatrix {
         #[arg(long, default_value = "table")]
         format: String,
-        #[arg(long)]
-        output: Option<String>,
         #[arg(long)]
         enforce: bool,
     },
@@ -257,20 +261,22 @@ where
             let baseline_report = load_report(&path.to_string_lossy())?;
             let registry = crate::registry::collect_all();
             let config = RunConfig::default();
-            let current_report = execute_suite(&registry, &SuiteKind::Release, &config);
+            let mut current_reports = execute_run_matrix(&registry, &SuiteKind::Release, &config)?;
+            let current_report = current_reports.pop().ok_or_else(|| {
+                anyhow::anyhow!("the release suite returned no report to compare against")
+            })?;
             compare_reports(&baseline_report, &current_report, None)?;
         }
         Commands::List { format } => list_cases(format)?,
         Commands::Explain { id } => explain_case(id)?,
         Commands::Dashboard { output } => generate_dashboard(output)?,
-        Commands::ReleaseMatrix {
-            format,
-            output,
-            enforce,
-        } => {
+        Commands::ReleaseMatrix { format, enforce } => {
             let registry = crate::registry::collect_all();
             let matrix = crate::release_matrix::build_release_matrix(&registry);
-            crate::release_matrix::emit_release_matrix(&matrix, format, output.as_deref())?;
+            print!(
+                "{}",
+                crate::release_matrix::render_release_matrix(&matrix, format)?
+            );
             if *enforce {
                 crate::release_matrix::enforce_release_matrix(&matrix)?;
             }
@@ -308,6 +314,7 @@ mod tests {
                 nvidia_driver_version: Some("unit".to_string()),
                 nvidia_cuda_version: Some("unit".to_string()),
                 features: vec!["backend.usable.cuda".to_string()],
+                build_profile: "release".to_string(),
             },
             features: vec!["backend:cuda".to_string()],
             summary: ReportSummary {

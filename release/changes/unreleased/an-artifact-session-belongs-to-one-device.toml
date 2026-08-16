@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A benchmark artifact session is cached against the program fingerprint and the device signature together. The key was the program alone, so a context repointed at another backend served an artifact compiled for the previous device facts, and the report named a device the measured artifact was never built for."

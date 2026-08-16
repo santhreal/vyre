@@ -1,0 +1,5 @@
+name = "xtask"
+concern = "Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate."
+pages = { spec = "xtask/SPEC.md", readme = "xtask/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["structure-gate"]

@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=true:worktree=587be6a3b515782d4f5c2d438cfd280a4b2bfe2e4de21819ef31730913109ab1",
+  "source_fingerprint": "git:7a82c191b17971aaffcfc9cc7eadc593c612cf76:dirty=true:worktree=e6de91594202c0dfe68a5516ae7dbac8780ae56fcf46ede76d7be37a11392f80",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -92,6 +92,12 @@
       "line": 222,
       "pattern": "panic_macro",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-libs/src/plumbing/host/scratch.rs",
+      "line": 179,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
       "path": "vyre-libs/src/scheduling/megakernel_schedule.rs",
@@ -280,12 +286,6 @@
       "text": "self.inner.lock().expect("
     },
     {
-      "path": "vyre-libs/src/scratch.rs",
-      "line": 179,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
-    },
-    {
       "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
       "line": 90,
       "pattern": "documented_panic_contract",
@@ -425,13 +425,25 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 144,
+      "line": 135,
+      "pattern": "documented_panic_contract",
+      "text": "[] => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 139,
+      "pattern": "documented_panic_contract",
+      "text": "several => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 200,
       "pattern": "documented_panic_contract",
       "text": "let executable = std::env::current_exe().expect(\"Fix: the test binary path must be readable\");"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 150,
+      "line": 206,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -767,7 +779,7 @@
     },
     {
       "path": "xtask-evidence/src/bench/release_benchmarks/cpu_sota_proof.rs",
-      "line": 276,
+      "line": 279,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: the 100x proof evidence is a JSON object.\")"
     },

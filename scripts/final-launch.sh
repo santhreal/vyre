@@ -25,10 +25,8 @@ fi
 
 VYRE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$VYRE_ROOT"
-source scripts/lib/cargo_runner.sh
 source scripts/lib/repo_boundary.sh
 source scripts/lib/release_train.sh
-vyre_select_cargo_runner
 vyre_load_repo_boundary
 vyre_load_release_train
 
@@ -129,7 +127,7 @@ git push origin "$release_branch"
 git push origin "$VYRE_RELEASE_TAG_VYRE_RC"
 
 
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
+./cargo_full run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
 VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh
 printf 'verified GitHub repository is public: %s\n' "$VYRE_RELEASE_PUBLIC_REPO"
 
@@ -190,8 +188,8 @@ jq -n \
         completion_status: "complete"
     }' > release/evidence/final/public-launch-completion.json
 
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --launch-complete
+./cargo_full run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json
+./cargo_full run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --launch-complete
 
 git add \
     release/evidence/package/publish-readiness.json \

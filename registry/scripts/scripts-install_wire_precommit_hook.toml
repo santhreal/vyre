@@ -1,0 +1,3 @@
+path = "scripts/install_wire_precommit_hook.sh"
+state = "operator"
+reason = "symlinks scripts/wire_ci_local.sh as the local pre-push hook"

@@ -1,0 +1,2 @@
+category = "Added"
+text = "Every workspace member carries a SPEC.md naming what it owns, what it must never contain, the edges that cross it, the direction that may not reverse, its invariants and the gates that enforce them, and a README.md; the crate-pages gate derives the roster from the workspace members and fails on a missing page, an undeclared edge or a module map naming a path the crate does not have."

@@ -327,7 +327,7 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     // newline-free token would rewrite that line too and the swap would prove
     // nothing about ordering.
     let candidate = "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\" -m \"$VYRE_RELEASE_TAG_VYRE_RC\"\n";
-    let prepublish = "\"$CARGO_RUNNER\" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
+    let prepublish = "./cargo_full run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
     let reordered = launch
         .replace(candidate, "__VYRE_RELEASE_ORDER_SWAP__")
         .replace(prepublish, candidate)

@@ -329,7 +329,7 @@ const PROVENANCE_KEY: &str = "source_fingerprint";
 /// body was recorded from, which is a different tree from the one running the
 /// gate whenever anything has been committed since, and reporting that as a
 /// divergence would make every artifact rot one commit after it was written.
-fn split_provenance(committed: &str) -> (Option<&str>, String) {
+pub fn split_provenance(committed: &str) -> (Option<&str>, String) {
     let head = format!("{{\n  \"{PROVENANCE_KEY}\": \"");
     let Some(rest) = committed.strip_prefix(head.as_str()) else {
         return (None, committed.to_string());

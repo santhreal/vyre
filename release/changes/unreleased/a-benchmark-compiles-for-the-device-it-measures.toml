@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The benchmark harness builds its compile request from the probed backend profile instead of unknown device facts, so a case that uses subgroup intrinsics is measured on a device that has them rather than recorded as a validation failure."

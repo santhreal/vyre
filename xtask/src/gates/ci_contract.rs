@@ -164,33 +164,29 @@ impl Gate for CiRequired {
             sections.len()
         ));
 
-        let blocking: BTreeSet<&str> = sections
-            .iter()
-            .map(|section| section.workflow.as_str())
-            .collect();
         for (line, workflow) in named_workflows(&document) {
-            let live = tree.exists(&format!(".github/workflows/{workflow}"));
+            if tree.exists(&format!(".github/workflows/{workflow}")) {
+                continue;
+            }
             let paused = tree.exists(&format!(".github/workflows-paused/{workflow}"));
-            if !live && !paused {
+            if paused {
                 report.find(Finding::at(
                     REQUIRED,
                     line,
-                    format!("`{workflow}` names a workflow file the checkout does not carry"),
-                    "name a workflow under .github/workflows or .github/workflows-paused, or \
-                     delete the row; a filename in prose was checked by nothing, so this \
-                     document promised two lanes that had been paused for months",
+                    format!("`{workflow}` is named here and is paused, so it cannot run"),
+                    "restore the workflow under .github/workflows, or delete the row; this \
+                     document declares what must pass, and two of its rows named lanes that \
+                     had been parked for months while nothing went red",
                 ));
                 continue;
             }
-            if paused && blocking.contains(workflow.as_str()) {
-                report.find(Finding::at(
-                    REQUIRED,
-                    line,
-                    format!("`{workflow}` is paused and is also named as a blocking section"),
-                    "restore the workflow, or move its contexts under the deep-gate heading; a \
-                     paused workflow cannot report a context branch protection waits for",
-                ));
-            }
+            report.find(Finding::at(
+                REQUIRED,
+                line,
+                format!("`{workflow}` names a workflow file the checkout does not carry"),
+                "name a workflow under .github/workflows, or delete the row; a filename in \
+                 prose was checked by nothing",
+            ));
         }
 
         for section in &sections {
@@ -657,9 +653,11 @@ mod tests {
 
     /// WHY: the live document is the payload of branch protection, so the rule
     /// has to hold on the tree it ships with. A rule that only passes on a
-    /// fixture proves the fixture.
+    /// fixture proves the fixture. A paused file does not satisfy a name here:
+    /// the document declared two lanes that could not run, and nothing was red
+    /// for as long as nobody opened the other directory.
     #[test]
-    fn the_live_required_document_names_only_workflows_that_exist() {
+    fn the_live_required_document_names_only_workflows_that_run() {
         let root = crate::checkout::checkout_root();
         let tree = Tree::open(&root).expect("Fix: the checkout must be listable");
         let document = tree
@@ -672,9 +670,8 @@ mod tests {
         );
         for (line, workflow) in named {
             assert!(
-                tree.exists(&format!(".github/workflows/{workflow}"))
-                    || tree.exists(&format!(".github/workflows-paused/{workflow}")),
-                "{REQUIRED}:{line} names `{workflow}`, which is in neither workflow directory"
+                tree.exists(&format!(".github/workflows/{workflow}")),
+                "{REQUIRED}:{line} names `{workflow}`, which is not a workflow that runs"
             );
         }
     }

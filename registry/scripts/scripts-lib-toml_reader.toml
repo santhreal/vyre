@@ -1,0 +1,4 @@
+path = "scripts/lib/toml_reader.sh"
+state = "holds_logic"
+destination = "the release train and repository boundary readers in xtask/src/release"
+reason = "wraps read_toml_values.py and checks the value count the caller expected"

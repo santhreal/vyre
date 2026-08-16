@@ -1,0 +1,5 @@
+name = "vyre-driver-spirv"
+concern = "Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence."
+pages = { spec = "vyre-driver-spirv/SPEC.md", readme = "vyre-driver-spirv/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-emit-spirv", "vyre-foundation", "vyre-lower", "vyre-megakernel", "vyre-spec"]

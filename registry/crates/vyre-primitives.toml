@@ -1,0 +1,5 @@
+name = "vyre-primitives"
+concern = "Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs, not here."
+pages = { spec = "vyre-primitives/SPEC.md", readme = "vyre-primitives/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation", "vyre-spec"]

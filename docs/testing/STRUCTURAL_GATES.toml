@@ -151,18 +151,6 @@ export list, which no run of the covered entry points can report on.
 """
 
 [[gate]]
-file = "xtask/tests/tree_contracts/cargo_invocation_resolution.rs"
-test = "every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary"
-reason = """
-Reads every workflow and script for `cargo run` and every manifest for the
-binaries a package ships, then asserts each invocation resolves to exactly one
-target. Whether an invocation resolves is decided by cargo before any code in
-this workspace runs, so no execution can witness it. Running the invocations
-instead would mean building and running every gate to check that the gates can
-be run.
-"""
-
-[[gate]]
 file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
 test = "no_production_crate_outside_the_oracle_ships_a_host_dispatcher"
 reason = """

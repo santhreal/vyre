@@ -63,6 +63,14 @@ name = "ci-matrix"
 findings = 0
 
 [[gate]]
+name = "ci-registry"
+findings = 0
+
+[[gate]]
+name = "ci-steps"
+findings = 0
+
+[[gate]]
 name = "ci-required"
 findings = 0
 
@@ -76,6 +84,10 @@ findings = 0
 
 [[gate]]
 name = "conformance-matrix"
+findings = 0
+
+[[gate]]
+name = "crate-pages"
 findings = 0
 
 [[gate]]

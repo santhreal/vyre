@@ -281,7 +281,7 @@ fn unowned_snapshots(root: &Path, owned: &BTreeSet<&str>) -> Result<Vec<PathBuf>
 /// caller's `sort` is what makes the snapshot a function of the tree: byte order
 /// does not move with a locale.
 fn extract(root: &Path, package: &str) -> Result<String, GateError> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::runner(root);
     let output = Command::new(&cargo)
         .args([
             "public-api",

@@ -146,7 +146,7 @@ impl Gate for CliDocs {
             return Ok(report);
         }
 
-        let runner = crate::output_arg::cargo_runner(&root);
+        let runner = crate::cargo_runner::runner(&root);
         let target = target_directory(&root, &runner)?;
         report
             .findings

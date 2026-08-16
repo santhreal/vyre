@@ -12,6 +12,9 @@ pub mod architecture_contract;
 pub mod bench;
 pub mod check_tier_deps;
 pub mod ci_contract;
+pub mod ci_registry;
+pub mod ci_steps;
+pub mod crate_pages;
 pub mod dedup_report;
 pub mod dep_drift;
 pub mod dispatch_surface;
@@ -69,6 +72,9 @@ pub static GATES: &[&dyn Gate] = &[
     &check_tier_deps::CheckTierDeps,
     &ci_contract::CiMatrix,
     &ci_contract::CiRequired,
+    &ci_registry::CiRegistry,
+    &ci_steps::CiSteps,
+    &crate_pages::CratePages,
     &dep_drift::DepDrift,
     &dispatch_surface::NestedRows,
     &dispatch_surface::OwnedDispatch,

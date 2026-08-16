@@ -96,6 +96,7 @@ pub static SUBSETS: &[Subset] = &[
         help: "Whether the generated documentation artifacts still match the tree",
         gates: &[
             "architecture-contract",
+            "crate-pages",
             "docs-check",
             "docs-coupling",
             "docs-references",
@@ -187,6 +188,8 @@ pub static SUBSETS: &[Subset] = &[
             "invariant-paths",
             "ci-matrix",
             "ci-required",
+            "ci-registry",
+            "ci-steps",
         ],
     },
 ];

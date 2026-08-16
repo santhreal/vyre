@@ -5,8 +5,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
 
 demo="examples/external_ir_extension"
 manifest="$demo/Cargo.toml"
@@ -32,6 +30,6 @@ if ! grep -q '^\[workspace\]$' "$manifest"; then
     exit 1
 fi
 
-"$CARGO_RUNNER" check --manifest-path "$manifest" --locked -q
+./cargo_full check --manifest-path "$manifest" --locked -q
 
 echo "external-ir-extension-ci gate: demo builds as an isolated crate at ${demo_loc} LOC."

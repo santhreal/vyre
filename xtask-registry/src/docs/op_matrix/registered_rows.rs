@@ -95,7 +95,7 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
             };
             vec![owner]
         }
-        OpTier::External => vec!["docs/optimization/README.md".to_string()],
+        OpTier::External => vec!["docs/extending/operation.md".to_string()],
         OpTier::Foundation | OpTier::Unknown => Vec::new(),
         _ => Vec::new(),
     }

@@ -1,0 +1,5 @@
+name = "vyre-emit-spirv"
+concern = "Consume verified lowering products and emit SPIR-V artifacts through the shared writer."
+pages = { spec = "vyre-emit-spirv/SPEC.md", readme = "vyre-emit-spirv/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-emit-naga", "vyre-lower"]

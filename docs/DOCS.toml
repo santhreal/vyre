@@ -54,11 +54,6 @@ title = "vyre"
 audience = "user"
 
 [[root_page]]
-path = "ARCHITECTURE.md"
-title = "Vyre architecture"
-audience = "contributor"
-
-[[root_page]]
 path = "CHANGELOG.md"
 title = "Changelog"
 audience = "user"

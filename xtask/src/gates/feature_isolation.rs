@@ -1028,29 +1028,31 @@ pub fn check_args(pair: &Pair) -> Vec<String> {
     args
 }
 
-/// Compile one pair once.
+/// Compile one pair once, on `toolchain` when one is named.
 ///
-/// The binary comes from [`crate::output_arg::cargo_runner`], which owns which
+/// The binary comes from [`crate::cargo_runner::runner`], which owns which
 /// cargo this tooling spawns and in which directory. A gate that resolves its
 /// own binary picks a different one from every other gate the moment the
 /// environment differs, and the environment differs on CI, where `CARGO` is
 /// unset for a step that does not run under cargo.
-fn check_once(root: &Path, pair: &Pair) -> Result<Observation, GateError> {
-    let runner = crate::output_arg::cargo_runner(root);
-    let output = Command::new(&runner)
-        .current_dir(root)
-        .args(check_args(pair))
-        .output()
-        .map_err(|error| {
-            GateError::new(
-                format!(
-                    "cannot run `{} check` for `{}`: {error}",
-                    runner.display(),
-                    pair.label()
-                ),
-                "install the workspace cargo wrapper the sweep runs, or point VYRE_CARGO_RUNNER at one",
-            )
-        })?;
+fn check_once(
+    root: &Path,
+    cargo: &str,
+    toolchain: &str,
+    pair: &Pair,
+) -> Result<Observation, GateError> {
+    let mut command = Command::new(cargo);
+    command.current_dir(root);
+    if !toolchain.is_empty() {
+        command.arg(format!("+{toolchain}"));
+    }
+    command.args(check_args(pair));
+    let output = command.output().map_err(|error| {
+        GateError::new(
+            format!("cannot run `{cargo} check` for `{}`: {error}", pair.label()),
+            "install a cargo the sweep can run, or restore the cargo_full wrapper at the workspace root",
+        )
+    })?;
     let compiles = output.status.success();
     Ok(Observation {
         first_error: (!compiles)
@@ -1071,12 +1073,17 @@ fn check_once(root: &Path, pair: &Pair) -> Result<Observation, GateError> {
 /// blocked pairs, and a gate that publishes false reds gets ignored, which is
 /// the outcome this whole axis exists to prevent. Only a failure is retried, so
 /// a green sweep pays nothing.
-fn compile(root: &Path, pair: &Pair) -> Result<Observation, GateError> {
-    let first = check_once(root, pair)?;
+fn compile(
+    root: &Path,
+    cargo: &str,
+    toolchain: &str,
+    pair: &Pair,
+) -> Result<Observation, GateError> {
+    let first = check_once(root, cargo, toolchain, pair)?;
     if first.compiles {
         return Ok(first);
     }
-    check_once(root, pair)
+    check_once(root, cargo, toolchain, pair)
 }
 
 /// Render the data file for the whole axis: the declarations, plus the
@@ -1167,6 +1174,83 @@ fn recorded_rows(root: &Path) -> Result<Vec<Row>, GateError> {
         return Ok(Vec::new());
     }
     load_rows(root).map_err(|error| GateError::new(error, STALE_FIX))
+/// The version `[workspace.package].rust-version` advertises.
+///
+/// The manifest is the single owner of the MSRV. A second copy in a workflow,
+/// a script or a toolchain file disagrees with it on the commit that bumps one
+/// of them, and the sweep then measures a compiler nobody publishes.
+fn advertised_msrv(root: &Path) -> Result<String, GateError> {
+    let manifest = root.join("Cargo.toml");
+    let text = read_manifest(&manifest)
+        .map_err(|error| GateError::new(error, "repair the workspace manifest"))?;
+    let parsed: toml::Value = toml::from_str(&text).map_err(|error| {
+        GateError::new(
+            format!("cannot parse {}: {error}", manifest.display()),
+            "repair the workspace manifest",
+        )
+    })?;
+    let version = parsed
+        .get("workspace")
+        .and_then(|workspace| workspace.get("package"))
+        .and_then(|package| package.get("rust-version"))
+        .and_then(toml::Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if version.is_empty() {
+        return Err(GateError::new(
+            format!(
+                "{} declares no [workspace.package].rust-version, and the MSRV sweep measures that version",
+                manifest.display()
+            ),
+            "declare the minimum supported Rust version in the workspace manifest",
+        ));
+    }
+    Ok(version)
+}
+
+/// Install the advertised MSRV toolchain unless rustup already carries it.
+///
+/// The sweep runs `cargo +<msrv>`, which needs the toolchain present. This ran
+/// as a workflow step that read the manifest with a second reader; doing it
+/// here keeps one owner of both the version and the sweep, and a developer gets
+/// the same setup CI gets.
+fn ensure_msrv_toolchain(version: &str, report: &mut Report) -> Result<(), GateError> {
+    let listed = Command::new("rustup")
+        .args(["toolchain", "list"])
+        .output()
+        .map_err(|error| {
+            GateError::new(
+                format!("cannot run `rustup toolchain list`: {error}"),
+                "install rustup, or run the sweep on a host that has the MSRV toolchain",
+            )
+        })?;
+    let installed = String::from_utf8_lossy(&listed.stdout)
+        .lines()
+        .any(|line| line.starts_with(version));
+    if installed {
+        return Ok(());
+    }
+    let install = Command::new("rustup")
+        .args(["toolchain", "install", "--profile", "minimal", version])
+        .output()
+        .map_err(|error| {
+            GateError::new(
+                format!("cannot install the `{version}` toolchain: {error}"),
+                format!("run `rustup toolchain install --profile minimal {version}`"),
+            )
+        })?;
+    if !install.status.success() {
+        return Err(GateError::new(
+            format!(
+                "`rustup toolchain install --profile minimal {version}` failed: {}",
+                String::from_utf8_lossy(&install.stderr).trim()
+            ),
+            "install the advertised MSRV toolchain, or correct [workspace.package].rust-version",
+        ));
+    }
+    report.note(format!("installed the advertised MSRV toolchain {version}"));
+    Ok(())
 }
 
 /// Turn one half's disagreements into findings under the fix that closes them.
@@ -1180,14 +1264,19 @@ fn record(report: &mut Report, failures: Vec<String>, fix: &str) {
 ///
 /// Both the sweep and `--write` need exactly this. The per-pair line is a note
 /// rather than a print, because a gate returns everything it has to say.
+/// `toolchain` names the rustup toolchain the MSRV mode measures, and is empty
+/// for the default one.
 fn observe(
     root: &Path,
     pairs: &[Pair],
+    toolchain: &str,
     report: &mut Report,
 ) -> Result<Vec<(Pair, Observation)>, GateError> {
+    let cargo = crate::cargo_runner::runner(root);
+    let cargo = cargo.to_string_lossy().into_owned();
     let mut observed = Vec::with_capacity(pairs.len());
     for (index, pair) in pairs.iter().enumerate() {
-        let observation = compile(root, pair)?;
+        let observation = compile(root, &cargo, toolchain, pair)?;
         report.note(format!(
             "[{}/{}] {}: {}",
             index + 1,
@@ -1240,7 +1329,17 @@ impl Gate for FeatureIsolation {
     }
 
     fn help(&self) -> &'static str {
-        "Hold every feature selection the manifests declare to a decision; --write records the derived axis, --sweep compiles each pair and reports every selection it left unmeasured, --member NAME and --only-unrecorded narrow the sweep, --list prints the axis"
+        "Hold every feature selection the manifests declare to a decision; --write records the derived axis, --sweep compiles each pair and reports every selection it left unmeasured, --msrv compiles it on the advertised minimum supported Rust version, --member NAME and --only-unrecorded narrow the sweep, --list prints the axis"
+    }
+
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--sweep compiles each declared selection instead of reading the recorded axis",
+            "--msrv compiles the sweep on the minimum supported Rust version the manifest advertises",
+            "--member NAME narrows the sweep to one workspace member",
+            "--only-unrecorded sweeps the selections that carry no recorded outcome",
+            "--list prints the feature axis instead of judging it",
+        ]
     }
 
     fn generates(&self) -> bool {
@@ -1252,12 +1351,13 @@ impl Gate for FeatureIsolation {
         let mut report = Report::clean();
         let list = ctx.has("--list");
         let sweep = ctx.has("--sweep");
+        let msrv = ctx.has("--msrv");
         let only_unrecorded = ctx.has("--only-unrecorded");
         let mut member = None;
         let mut rest = ctx.args.iter();
         while let Some(argument) = rest.next() {
             match argument.as_str() {
-                "--list" | "--sweep" | "--write" | "--only-unrecorded" => {}
+                "--list" | "--sweep" | "--msrv" | "--write" | "--only-unrecorded" => {}
                 "--member" => {
                     member = rest.next().map(String::as_str);
                     if member.is_none() {
@@ -1270,7 +1370,7 @@ impl Gate for FeatureIsolation {
                 other => {
                     return Err(GateError::new(
                         format!("`{other}` is not an argument this gate takes"),
-                        "pass [--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]",
+                        "pass [--list] [--sweep [--msrv] [--write] [--only-unrecorded]] [--member NAME]",
                     ));
                 }
             }
@@ -1279,6 +1379,18 @@ impl Gate for FeatureIsolation {
             return Err(GateError::new(
                 "`--only-unrecorded` narrows what a sweep compiles and no sweep was asked for",
                 "pass `--sweep`",
+            ));
+        }
+        if msrv && !sweep {
+            return Err(GateError::new(
+                "`--msrv` names the compiler the sweep measures and no sweep was asked for",
+                "pass `--sweep`",
+            ));
+        }
+        if msrv && ctx.write {
+            return Err(GateError::new(
+                "the record holds outcomes measured on the default toolchain, and `--msrv` measures another one",
+                "record the axis with `--sweep --write`, and judge the MSRV with `--sweep --msrv`",
             ));
         }
 
@@ -1332,7 +1444,7 @@ impl Gate for FeatureIsolation {
         if ctx.write {
             let previous = recorded_rows(root)?;
             let observed = if sweep {
-                observe(root, &selected, &mut report)?
+                observe(root, &selected, "", &mut report)?
             } else {
                 Vec::new()
             };
@@ -1367,14 +1479,28 @@ impl Gate for FeatureIsolation {
             return Ok(report);
         }
 
-        let observed = observe(root, &selected, &mut report)?;
+        let toolchain = if msrv {
+            let version = advertised_msrv(root)?;
+            ensure_msrv_toolchain(&version, &mut report)?;
+            version
+        } else {
+            String::new()
+        };
+        let observed = observe(root, &selected, &toolchain, &mut report)?;
         record(&mut report, sweep_failures(&rows, &observed), COMPILE_FIX);
         record(
             &mut report,
             unmeasured_failures(&pairs, &observed),
             MEASUREMENT_FIX,
         );
-        report.note(sweep_note(observed.len(), pairs.len()));
+        report.note(match toolchain.is_empty() {
+            true => sweep_note(observed.len(), pairs.len()),
+            false => format!(
+                "{} of {} pair(s) compiled on {toolchain}",
+                observed.len(),
+                pairs.len()
+            ),
+        });
         Ok(report)
     }
 }
