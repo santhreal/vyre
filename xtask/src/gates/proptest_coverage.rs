@@ -9,16 +9,19 @@
 //! bump, so it punished the improvement it exists to encourage and was never
 //! wired into CI.
 //!
-//! The floor is raised deliberately, in a commit that says why. It is lowered for
-//! exactly one reason: the code the tests covered left the tree. A test deleted
-//! while its subject stays is restored, not accounted for.
+//! The floor is raised deliberately, in a commit that says why. It is never
+//! lowered to match a deletion: restore the test instead.
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
-/// Measured floor. 175 tracked files on 2026-08-15, down from 181 on 2026-08-12
-/// because the C and Rust frontends left the workspace and took 8 property-test
-/// files with them; two files elsewhere gained property tests in the same period.
+/// Measured floor. 175 tracked files on 2026-08-15, down from 181 on
+/// 2026-08-12. The C frontend and the Rust frontend left the workspace in
+/// `1d28c2277f`, and eight of the 670 files that commit deleted carried
+/// property tests, measured against its deleted-file list. The invariants they
+/// generated inputs for have no subject in this workspace any more, which is
+/// the only reason this line may fall: every other lowering is a deleted test
+/// and is refused.
 const FLOOR: usize = 175;
 
 /// Stretch target tracked for the 0.7 release.
@@ -58,10 +61,7 @@ impl Gate for ProptestCoverage {
         ));
         if carrying < FLOOR {
             report.find(Finding::new(
-                format!(
-                    "property-test coverage is {} file(s) below the floor of {FLOOR}",
-                    FLOOR - carrying
-                ),
+                format!("property-test coverage is {} file(s) below the floor of {FLOOR}", FLOOR - carrying),
                 "restore the deleted property test; lower the floor in \
                  xtask/src/gates/proptest_coverage.rs only with a stated reason for why the \
                  coverage is no longer needed",
