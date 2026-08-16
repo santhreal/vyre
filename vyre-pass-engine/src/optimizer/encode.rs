@@ -31,7 +31,6 @@
 
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
-use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 use vyre_foundation::visit::{child_bodies, for_each_subexpr, node_operands};
 
@@ -72,7 +71,7 @@ pub struct WrappingRegion {
     /// Generator id of the wrapping Region (preserved on decode).
     pub generator: Ident,
     /// Optional source-region metadata (preserved on decode).
-    pub source_region: Option<GeneratorRef>,
+    pub source_region: Option<Ident>,
 }
 
 /// Result of encoding a `Program` as a ProgramGraph.

@@ -504,7 +504,7 @@ fn usize_from_u32(value: u32, field: &'static str) -> usize {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || four_russians_apply_byte_lut("lhs", "rhs", "lut", "out", 2),
         Some(|| {
@@ -524,7 +524,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         DENSE_MATVEC_OP_ID,
         || four_russians_dense_matvec_byte_lut("frontier", "tile_lut", "out", 1, 1),
         Some(|| {

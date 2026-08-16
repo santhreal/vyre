@@ -44,7 +44,7 @@ pub fn packed_rgba_map(input: &str, output: &str, count: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || packed_rgba_map("in", "out", 4),
         Some(|| {

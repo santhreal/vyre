@@ -48,6 +48,8 @@ pub fn resolve_fixpoint_iterations_usize(
     })
 }
 
+// Inline: `vyre_driver::fixpoint_iterations` is `pub(crate)`, so no integration test can reach what
+// this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

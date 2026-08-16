@@ -1,13 +1,16 @@
 //! Terminal enum variant wire-format round trips.
 //!
 //! Which operator variants exist is owned by
-//! `tests/support/spec_variant_tables.rs`; that every one of them survives an
-//! encode and a decode is this suite's contract. The `DataType` list below
-//! stays local: a cast target may be `Handle`, `Vec`, `TensorShaped` or
-//! `Opaque`, none of which a buffer element table describes.
+//! `tests/support/spec_variant_tables.rs`, and what a round trip has to
+//! preserve is owned by `tests/support/wire_round_trip.rs`. That every variant
+//! survives one is this suite's contract. The `DataType` list below stays
+//! local: a cast target may be `Handle`, `Vec`, `TensorShaped` or `Opaque`,
+//! none of which a buffer element table describes.
 
 #[path = "../../tests/support/spec_variant_tables.rs"]
 mod spec_variant_tables;
+#[path = "../../tests/support/wire_round_trip.rs"]
+mod wire_round_trip;
 
 use smallvec::smallvec;
 use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
@@ -17,15 +20,7 @@ use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };
 use vyre_spec::TypeId;
-
-fn round_trip(program: Program) {
-    let encoded = program
-        .to_wire()
-        .unwrap_or_else(|error| panic!("Fix: terminal variant program must encode: {error}"));
-    let decoded = Program::from_wire(&encoded)
-        .unwrap_or_else(|error| panic!("Fix: terminal variant program must decode: {error}"));
-    assert_eq!(decoded, program);
-}
+use wire_round_trip::assert_canonical_wire_round_trip;
 
 #[test]
 fn every_terminal_data_type_round_trips_in_cast_targets() {
@@ -75,11 +70,14 @@ fn every_terminal_data_type_round_trips_in_cast_targets() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every cast target",
+    );
 }
 
 #[test]
@@ -103,11 +101,14 @@ fn every_terminal_binop_round_trips() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every binop",
+    );
 }
 
 #[test]
@@ -130,11 +131,14 @@ fn every_terminal_unop_round_trips() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every unop",
+    );
 }
 
 #[test]
@@ -165,9 +169,12 @@ fn every_terminal_atomic_op_round_trips() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every atomic op",
+    );
 }

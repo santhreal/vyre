@@ -20,7 +20,8 @@ use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::builder::{
-    check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child, BuildOptions,
+    check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child,
+    strided_writeback_child, BuildOptions,
 };
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
@@ -133,8 +134,6 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
         workgroup,
         generator,
     } = *spec;
-    let local = Expr::var("local");
-    let idx = Expr::var("idx");
     let moments = ReducePhase {
         accumulate: strided_accumulate2_child(
             OP_ID,
@@ -205,38 +204,22 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
             },
         ],
     };
-    // Layer norm keeps its own writeback loop instead of the shared
-    // `strided_writeback_child`: the reduced statistics are read once per
-    // workgroup rather than once per lane, so the guard is a single
-    // first-workgroup branch with no child region around it.
-    let writeback = Node::if_then(
-        Expr::is_first_workgroup(),
+    let writeback = strided_writeback_child(
+        OP_ID,
+        tile,
+        chunks,
+        n,
+        output,
         vec![
             Node::let_bind("mean", Expr::load("ln_stats", Expr::u32(0))),
             Node::let_bind("scale", Expr::load("ln_stats", Expr::u32(1))),
-            Node::loop_for(
-                "chunk",
-                Expr::u32(0),
-                Expr::u32(chunks),
-                vec![
-                    Node::let_bind(
-                        "idx",
-                        Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(tile)), local),
-                    ),
-                    Node::if_then(
-                        Expr::lt(idx.clone(), Expr::u32(n)),
-                        vec![Node::Store {
-                            buffer: output.into(),
-                            index: idx.clone(),
-                            value: Expr::mul(
-                                Expr::sub(Expr::load(input, idx), Expr::var("mean")),
-                                Expr::var("scale"),
-                            ),
-                        }],
-                    ),
-                ],
-            ),
         ],
+        |idx| {
+            Expr::mul(
+                Expr::sub(Expr::load(input, idx), Expr::var("mean")),
+                Expr::var("scale"),
+            )
+        },
     );
 
     tiled_reduce_program(TiledReduceProgram {

@@ -1050,6 +1050,17 @@ boundary = "private"
 seam = "release-tooling"
 
 [[crate.dependency]]
+package = "structure-gate"
+purpose = "read whether a directory carries Rust source, and which directory owns a domain"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
+
+[[crate.dependency]]
 package = "vyre"
 purpose = "public lifecycle facade"
 features = []
@@ -1467,8 +1478,8 @@ seam = "foundation-ir"
 
 [[crate.dependency]]
 package = "vyre-libs"
-purpose = "product operation builders"
-features = ["bitset", "graph", "nn-linear-4bit", "predicate"]
+purpose = "product operation builders, and the host oracles the device path is measured against"
+features = ["bitset", "cpu-parity", "graph", "nn-linear-4bit", "predicate"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

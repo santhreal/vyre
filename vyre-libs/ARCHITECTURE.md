@@ -1,8 +1,9 @@
 # vyre-libs  -  architecture
 
 Tier-3 compositions: every `fn(...) -> Program` that lowers via
-existing IR ops + intrinsics. No hardware-specific arms.
-
+existing IR ops + intrinsics as pure mathematical and semantic transformations.
+No hardware-specific arms, no hardcoded thread-indexing/execution schedules,
+no host dispatch orchestration, and no CPU reference oracles.
 ## Modules (one folder per domain)
 
 ### `decode/`
@@ -66,8 +67,10 @@ reservation, the shape-keyed Program cache and the composition call counters.
 Frozen wire-form types that downstream frontends rely on (PackedAst,
 PgBuffers carrier, etc.).
 
-### `builder/range_ordering.rs`
-Sorted-range helpers used by the matching + dataflow stacks.
+### `builder/`
+The shapes a composition is written in: elementwise maps, tiled reductions,
+sorted-range helpers for the matching and dataflow stacks, and the catalog
+registrations that publish them.
 
 ## Public types
 

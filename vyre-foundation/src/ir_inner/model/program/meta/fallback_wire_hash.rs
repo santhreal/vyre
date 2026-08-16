@@ -140,7 +140,7 @@ impl NodeSink for FallbackWireHasher<'_> {
                 h.update(b"n:Region\0");
                 h.update(generator.as_bytes());
                 if let Some(source_gen) = source_region {
-                    h.update(source_gen.name.as_bytes());
+                    h.update(source_gen.as_bytes());
                 }
             }
             Node::Opaque(ext) => {

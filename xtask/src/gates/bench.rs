@@ -243,7 +243,7 @@ fn smoke_budget_ms(manifest: &toml::Table) -> Result<u64, GateError> {
 /// freshness check. Nothing here sets a build-affecting flag or variable:
 /// build configuration is declared once in `.cargo/config.toml`.
 fn build_bench_binary(root: &Path) -> Result<PathBuf, GateError> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::binary(root);
     let build = Command::new(&cargo)
         .args(["build", "-q", "-p", "vyre-bench"])
         .current_dir(root)
@@ -398,7 +398,7 @@ impl Gate for BenchCoverage {
 
 /// The case ids the `vyre-bench` registry lists.
 fn registered_cases(root: &Path) -> Result<BTreeSet<String>, GateError> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::binary(root);
     let listing = Command::new(&cargo)
         .args([
             "run",

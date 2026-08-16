@@ -15,9 +15,6 @@ mod ring_set;
 mod slot;
 mod stats;
 
-#[cfg(test)]
-mod tests;
-
 pub use ring::ReadbackRing;
 pub use ring_set::ReadbackRingSet;
 pub use slot::{GpuSlot, MapResult, ReadbackTicket};

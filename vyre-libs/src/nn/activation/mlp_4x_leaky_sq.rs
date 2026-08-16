@@ -5,7 +5,7 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 
 const OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq";
 const HIDDEN_SCRATCH: &str = "__mlp_4x_leaky_sq_hidden";
@@ -55,9 +55,7 @@ pub fn mlp_4x_leaky_sq(
     if model_dim == 0 || hidden_dim == 0 {
         return Err("Fix: mlp requires non-zero dimensions".into());
     }
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
     // Confine the strided walk to the first workgroup. `lane` is the GLOBAL
     // invocation id, so without this gate group `g` covers a window shifted up
     // by `g * 256`, missing the low end of its own workgroup-private

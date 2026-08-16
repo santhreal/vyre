@@ -384,6 +384,7 @@ pub fn vyre_runtime::artifact_admission::ArtifactSession::from_envelope_with_mat
 pub fn vyre_runtime::artifact_admission::ArtifactSession::host_bindings(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::ordered_outputs(&self, completion: &vyre_driver::backend::artifact_lifecycle::Completion) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::payload(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::program_outputs(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, completion: &vyre_driver::backend::artifact_lifecycle::Completion) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::rematerialize(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings(&self, resources: &[vyre_driver::backend::resource::Resource]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resource(&self, name: &str) -> core::result::Result<vyre_megakernel::identity::ArtifactValueId, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -730,8 +731,8 @@ pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::try_add(&mu
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::host_copy_avoidance_bps(&self) -> u16
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::is_complete(&self) -> bool
 pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::missing_metric_families(&self) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily>
-pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::queue_depth(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::total_slots(&self) -> u32
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::queue_depth(&self) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::total_slots(&self) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::active_slots_for_opcode_iter(&self, opcode: u32) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot>
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::decode_capacity_evidence(&self, scratch: &vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch) -> vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence
 pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::priority_accounting(&self) -> vyre_runtime::resident_work_queue::policy::PriorityRequeueAccounting

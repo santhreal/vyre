@@ -14,10 +14,10 @@
 //! BIT-EXACT: pure integer arithmetic, so the oracle replicates the kernel exactly
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, accumulated with
 //! wrapping u32 add. Any divergence is a real IR/dispatch defect, not a rounding artifact.
-#![cfg(all(feature = "geom", feature = "test-fixtures"))]
+#![cfg(feature = "geom")]
 
 use vyre_libs::geom::tfn::tfn_scalar_mix;
-use vyre_libs::test_parity_oracles::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
+use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
 

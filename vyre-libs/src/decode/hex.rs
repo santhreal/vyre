@@ -6,7 +6,7 @@
 
 use std::sync::OnceLock;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[cfg(test)]
@@ -118,9 +118,7 @@ pub fn hex_decode_child(
 ) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         hex_decode_body(input, output, table, input_len),
     )
 }

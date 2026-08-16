@@ -591,6 +591,7 @@ fn elements_per_slot_bps(elements: u64, scheduled: u64) -> u64 {
     )
 }
 
+// Inline: covers `CudaTelemetry`, `snapshot`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{CudaTelemetry, CudaTelemetrySnapshot};

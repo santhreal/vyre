@@ -1,0 +1,4 @@
+path = "scripts/lib/read_toml_values.py"
+state = "holds_logic"
+destination = "the release train and repository boundary readers in xtask/src/release"
+reason = "reads dotted keys out of a TOML manifest for the release shell helpers"

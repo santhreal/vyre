@@ -125,7 +125,7 @@ impl NodeVisitor for CountingNodeVisitor {
         &mut self,
         _: &Node,
         _: &Ident,
-        _: &Option<GeneratorRef>,
+        _: &Option<Ident>,
         _: &[Node],
     ) -> ControlFlow<Self::Break> {
         self.count += 1;

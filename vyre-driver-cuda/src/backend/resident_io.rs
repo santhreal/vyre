@@ -1032,6 +1032,8 @@ impl CudaBackend {
     }
 }
 
+// Inline: covers `cuda_resident_live_budget_bytes`, `cuda_resident_total_budget_bytes`, which no
+// integration test can name.
 #[cfg(test)]
 mod resident_budget_tests {
     use super::{cuda_resident_live_budget_bytes, cuda_resident_total_budget_bytes};

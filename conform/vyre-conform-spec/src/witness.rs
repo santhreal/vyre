@@ -79,30 +79,3 @@ impl WitnessSet for U32Witness {
         U32Witness::fingerprint_canonical()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn u32_witness_is_deterministic() {
-        let a = U32Witness::enumerate();
-        let b = U32Witness::enumerate();
-        assert_eq!(a, b, "witness set must be deterministic across calls");
-    }
-
-    #[test]
-    fn u32_witness_fingerprint_stable() {
-        let a = U32Witness::fingerprint_canonical();
-        let b = U32Witness::fingerprint_canonical();
-        assert_eq!(a, b, "fingerprint must be stable");
-    }
-
-    #[test]
-    fn u32_witness_includes_boundaries() {
-        let w = U32Witness::enumerate();
-        assert!(w.contains(&0));
-        assert!(w.contains(&u32::MAX));
-        assert!(w.contains(&0x8000_0000));
-    }
-}

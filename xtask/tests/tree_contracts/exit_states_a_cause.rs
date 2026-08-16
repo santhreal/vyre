@@ -162,7 +162,7 @@ fn xtask_source_roots(root: &Path) -> Vec<PathBuf> {
             continue;
         }
         let source = root.join(trimmed).join("src");
-        if source.is_dir() {
+        if structure_gate::source_scan::carries_rust_source(&source) {
             roots.push(source);
         }
     }

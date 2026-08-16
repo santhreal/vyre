@@ -108,7 +108,7 @@ pub fn cpu_interval_merge(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || interval_merge_program("amin", "amax", "bmin", "bmax", "omin", "omax", 3),
         Some(|| {

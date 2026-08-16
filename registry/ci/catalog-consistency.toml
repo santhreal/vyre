@@ -1,0 +1,8 @@
+lane = "catalog-consistency"
+workflow = ".github/workflows-paused/catalog-consistency.yml"
+state = "superseded"
+file = "deleted"
+reason = "the catalog gate holds docs/generated/catalog.toml to the live operation inventory, which is what the test it ran compared"
+superseded_by = ".github/workflows/gates.yml"
+gate = "catalog"
+steps = []

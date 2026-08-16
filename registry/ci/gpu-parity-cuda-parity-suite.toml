@@ -1,0 +1,9 @@
+lane = "gpu-parity-cuda-parity-suite"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "cuda-parity-suite"
+state = "live"
+required_status = "GPU Parity + Determinism / CUDA parity suite"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { script = "scripts/check_cuda_parity_perf_gate.sh" },
+]

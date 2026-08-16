@@ -6,10 +6,11 @@
 //! the multi-block chain. The primitives own the two bodies and neither of them
 //! chooses.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::{GeneratorRef, Node, Program};
 use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
+use crate::plumbing::program::attribution::attribute_child_nodes;
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::ir::Program;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 
@@ -53,25 +54,10 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
 /// The primitive builds its own region; this replaces that region with the
 /// same body under the same generator, attributed to this composition, so the
 /// selection is an edge to a registered building block rather than a relabel
-/// of the body. Only the entry changes, so only the entry is rebuilt:
-/// `Program::wrapped` would deep-clone the buffer table and reset the metadata
-/// flags.
+/// of the body.
 fn compose_scan_primitive(child_id: &'static str, program: Program) -> Program {
-    let body = match program.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        other => other.to_vec(),
-    };
-    let tagged = vec![wrap_anonymous_region(
-        OP_ID,
-        vec![wrap_child_region(
-            child_id,
-            GeneratorRef {
-                name: OP_ID.to_string(),
-            },
-            body,
-        )],
-    )];
-    program.with_rewritten_wrapped_entry(tagged)
+    let child = attribute_child_nodes(OP_ID, child_id, &program);
+    program.with_rewritten_wrapped_entry(vec![wrap_anonymous_region(OP_ID, child)])
 }
 
 inventory::submit! {
@@ -172,7 +158,12 @@ mod tests {
     fn prefix_sum_boundary_large_path_is_parallel_multi_block() {
         let program = scan_prefix_sum("input", "output", 1025);
         assert_top_region_generator(&program, OP_ID);
-        assert_eq!(program.workgroup_size(), [1024, 1, 1]);
+        // The width is owned by `multi_block_prefix_scan`, which declares the portable invocation
+        // floor. Restating a number here would pin the test to a width the scan no longer uses.
+        assert_eq!(
+            program.workgroup_size(),
+            [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1]
+        );
         assert!(
             !contains_loop(&program),
             "large scan_prefix_sum must not route through a serial per-element loop"
@@ -192,7 +183,11 @@ mod tests {
         for n in 1025..=4097 {
             let program = scan_prefix_sum("input", "output", n);
             assert_top_region_generator(&program, OP_ID);
-            assert_eq!(program.workgroup_size(), [1024, 1, 1], "n={n}");
+            assert_eq!(
+                program.workgroup_size(),
+                [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1],
+                "n={n}"
+            );
             assert!(
                 !contains_loop(&program),
                 "n={n}: large scan_prefix_sum must not emit a serial loop"

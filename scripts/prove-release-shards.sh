@@ -11,8 +11,6 @@ SHARD_WORKERS="${VYRE_RELEASE_SHARD_WORKERS:-4}"
 PROFILE="${VYRE_RELEASE_PROFILE:-debug}"
 
 cd "$ROOT_DIR"
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
 
 if [[ "$OUT_DIR" != /* ]]; then
     OUT_DIR="$ROOT_DIR/$OUT_DIR"
@@ -51,9 +49,9 @@ case "$PROFILE" in
         ;;
 esac
 
-"$CARGO_RUNNER" "${build_args[@]}"
+./cargo_full "${build_args[@]}"
 
-target_root="$("$CARGO_RUNNER" metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
+target_root="$(./cargo_full metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
 target_root="${target_root:-$ROOT_DIR/target}"
 if [[ "$target_root" != /* ]]; then
     target_root="$ROOT_DIR/$target_root"
@@ -94,6 +92,9 @@ for ((index = 0; index < SHARDS; index += 1)); do
     run_shard "$index" "$shard_path" &
     active_jobs=$((active_jobs + 1))
     if [[ "$active_jobs" -ge "$SHARD_WORKERS" ]]; then
+        # `wait -n`, not `wait`: a bare wait reaps every worker and reports the
+        # status of the last one, so a failed shard was counted as a pass and
+        # the counter then said one worker was still running when none was.
         if ! wait -n; then
             failures=$((failures + 1))
         fi

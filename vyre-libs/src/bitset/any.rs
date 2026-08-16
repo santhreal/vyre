@@ -1,71 +1,101 @@
 //! `bitset_any`  -  emit 1 when any bit in the packed bitset is set.
 //!
-//! Single-lane Program driven by invocation 0: scans every word,
-//! ORs them, writes a boolean (0 or 1) to `out[0]`. Used by source-query dialect
-//! `exists` / `any(...)` aggregate lowerings.
+//! One workgroup ORs the packed words: every lane walks a strided slice of the
+//! bitset and stops loading once it has seen a set bit, then the lane verdicts
+//! collapse through a workgroup reduction and lane 0 writes the boolean to
+//! `out[0]`. Used by source-query dialect `exists` / `any(...)` aggregate
+//! lowerings.
 
 use vyre_foundation::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
+};
+
+use crate::builder::cooperative::for_each_index;
+use crate::reduce::workgroup_tree::{max_u32_child, WorkgroupReductionScope};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::bitset::any";
 
+/// Lanes the walk runs on.
+///
+/// The portable invocation width, not the composer's default: this program is fused into the
+/// security flow compositions beside the elementwise bitset arms and the CSR frontier step, which
+/// both declare that width, and fusion refuses to widen an arm that synchronizes its workgroup. So
+/// every arm of that fusion states the same number, and states it by naming the constant that owns
+/// it.
+const ANY_LANES: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
+
+/// Workgroup scratch the lane verdicts reduce through, one u32 entry per lane.
+const ANY_SCRATCH: &str = "bitset_any_scratch";
+
 /// Build a Program: `out[0] = 1` iff any bit of `input` is set.
 ///
-/// AUDIT_2026-04-24 F-ANY-01: the inner loop short-circuits once a
-/// non-zero word is observed (tracked via `found` flag). The IR has
-/// no `break`, so the cheapest escape is to gate the load+or body on
-/// `found == 0`  -  subsequent iterations become empty bodies and the
-/// scan cost degrades to O(first_nonzero_word) instead of O(words).
-/// Bitsets are typically sparse (e.g. taint frontiers with one or
-/// two set bits) so the average cut is large.
+/// AUDIT_2026-04-24 F-ANY-01: a lane stops loading once it has observed a
+/// non-zero word. The IR has no `break`, so the escape is a per-lane `found`
+/// flag gating the load: later iterations of that lane's walk become empty
+/// bodies and its scan cost degrades to O(first set word in its slice) instead
+/// of O(its slice). Bitsets are typically sparse (e.g. taint frontiers with one
+/// or two set bits) so the average cut is large, and the walk itself is now
+/// one lane's slice of the words rather than all of them.
 #[must_use]
 pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
-    let body = vec![
-        Node::let_bind("acc", Expr::u32(0)),
+    let mut body = vec![
+        Node::let_bind("local", Expr::LocalId { axis: 0 }),
         Node::let_bind("found", Expr::u32(0)),
-        Node::loop_for(
-            "w",
-            Expr::u32(0),
-            Expr::u32(words),
-            vec![Node::if_then(
-                Expr::eq(Expr::var("found"), Expr::u32(0)),
-                vec![
-                    Node::assign(
-                        "acc",
-                        Expr::bitor(Expr::var("acc"), Expr::load(input, Expr::var("w"))),
-                    ),
-                    Node::if_then(
-                        Expr::ne(Expr::var("acc"), Expr::u32(0)),
-                        vec![Node::assign("found", Expr::u32(1))],
-                    ),
-                ],
+        Node::if_then(
+            Expr::is_first_workgroup(),
+            vec![Node::store(ANY_SCRATCH, Expr::var("local"), Expr::u32(0))],
+        ),
+        Node::barrier(),
+        Node::if_then(
+            Expr::is_first_workgroup(),
+            vec![for_each_index(
+                words,
+                ANY_LANES,
+                "w",
+                vec![Node::if_then(
+                    Expr::eq(Expr::var("found"), Expr::u32(0)),
+                    vec![Node::if_then(
+                        Expr::ne(Expr::load(input, Expr::var("w")), Expr::u32(0)),
+                        vec![
+                            Node::assign("found", Expr::u32(1)),
+                            Node::store(ANY_SCRATCH, Expr::var("local"), Expr::u32(1)),
+                        ],
+                    )],
+                )],
             )],
         ),
-        Node::store(
+        Node::barrier(),
+    ];
+    // A max over lane verdicts is the OR of them: the slot is 1 exactly when some lane saw a set
+    // bit, which is the answer, and it costs a log-depth tree instead of a second serial pass.
+    body.push(max_u32_child(
+        OP_ID,
+        ANY_LANES,
+        ANY_SCRATCH,
+        WorkgroupReductionScope::FirstWorkgroup,
+    ));
+    body.push(Node::if_then(
+        Expr::and(
+            Expr::is_first_workgroup(),
+            Expr::eq(Expr::var("local"), Expr::u32(0)),
+        ),
+        vec![Node::store(
             out,
             Expr::u32(0),
-            Expr::select(
-                Expr::ne(Expr::var("acc"), Expr::u32(0)),
-                Expr::u32(1),
-                Expr::u32(0),
-            ),
-        ),
-    ];
+            Expr::load(ANY_SCRATCH, Expr::u32(0)),
+        )],
+    ));
     Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
             BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            BufferDecl::workgroup(ANY_SCRATCH, ANY_LANES, DataType::U32),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                body,
-            )],
-        )],
+        [ANY_LANES, 1, 1],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -81,7 +111,7 @@ pub fn cpu_ref(input: &[u32]) -> u32 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_any("input", "out", 2),
         Some(|| {

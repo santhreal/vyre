@@ -443,6 +443,8 @@ fn adapter_index_from_raw(raw: Option<&str>) -> Result<Option<usize>> {
     )))
 }
 
+// Inline: covers `AdapterIdentity`, `adapter_index_from_raw`, `adapter_is_selectable`,
+// `adapter_name_contains`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

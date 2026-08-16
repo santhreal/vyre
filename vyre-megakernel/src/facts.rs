@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::ir::{Ident, ProgramGraph};
 
 use crate::{
-    value_byte_count, workgroup_scratch_bytes, ArtifactNodeId, ArtifactValueId, CompileError,
-    DependencyEdge, DependencyEndpoint, DependencyKind,
+    value_byte_count, workgroup_scratch_declarations, ArtifactNodeId, ArtifactValueId,
+    CompileError, DependencyEdge, DependencyEndpoint, DependencyKind,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,8 +24,12 @@ pub(crate) struct PlanningFacts {
     /// Simultaneously live values in each node's program, from the foundation
     /// register-pressure estimate.
     pub(crate) node_live_values: Vec<u64>,
-    /// Workgroup-scoped scratch bytes each node declares.
-    pub(crate) node_shared_scratch_bytes: Vec<u64>,
+    /// Workgroup-scoped scratch each node declares, one entry per buffer.
+    ///
+    /// Held per buffer rather than as a total because fusion unions buffers by
+    /// name: two members that declare the same tile share it in the generated
+    /// kernel, and a total cannot say which bytes are the same bytes.
+    pub(crate) node_workgroup_scratch: Vec<Vec<(Ident, u64)>>,
     /// Invocations per workgroup each node's program declares.
     pub(crate) node_declared_invocations: Vec<u64>,
     /// Workgroup dimensions each node's program declares.
@@ -53,7 +57,7 @@ pub(crate) fn derive(
     let node_count = graph.nodes().len();
     let mut node_work = Vec::with_capacity(node_count);
     let mut node_live_values = Vec::with_capacity(node_count);
-    let mut node_shared_scratch_bytes = Vec::with_capacity(node_count);
+    let mut node_workgroup_scratch = Vec::with_capacity(node_count);
     let mut node_declared_invocations = Vec::with_capacity(node_count);
     let mut node_declared_workgroup = Vec::with_capacity(node_count);
     let mut node_accepts_width = Vec::with_capacity(node_count);
@@ -62,7 +66,7 @@ pub(crate) fn derive(
         let stats = program.stats();
         node_work.push(u64::try_from(stats.node_count).unwrap_or(u64::MAX));
         node_live_values.push(u64::from(stats.register_pressure_estimate));
-        let scratch = workgroup_scratch_bytes(program);
+        let scratch: Vec<(Ident, u64)> = workgroup_scratch_declarations(program).collect();
         let declared = program.workgroup_size;
         let invocations = u64::from(declared[0])
             .saturating_mul(u64::from(declared[1]))
@@ -75,11 +79,11 @@ pub(crate) fn derive(
         // proposes 1D widths.
         let accepts_width = declared[1] == 1
             && declared[2] == 1
-            && scratch == 0
+            && scratch.is_empty()
             && !stats.has_node_barrier()
             && !stats.subgroup_ops()
             && !program.non_composable_with_self;
-        node_shared_scratch_bytes.push(scratch);
+        node_workgroup_scratch.push(scratch);
         node_declared_invocations.push(invocations.max(1));
         node_declared_workgroup.push(declared);
         node_accepts_width.push(accepts_width);
@@ -110,7 +114,7 @@ pub(crate) fn derive(
     Ok(PlanningFacts {
         node_work,
         node_live_values,
-        node_shared_scratch_bytes,
+        node_workgroup_scratch,
         node_declared_invocations,
         node_declared_workgroup,
         node_accepts_width,

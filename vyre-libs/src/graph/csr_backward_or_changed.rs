@@ -192,7 +192,7 @@ pub fn cpu_ref_closure(inputs: CsrClosureInputs<'_>, frontier: &[u32]) -> (Vec<u
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || csr_backward_or_changed_parallel(ProgramGraphShape::new(4, 4), "frontier", "changed", 1),
         Some(|| {

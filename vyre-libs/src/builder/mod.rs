@@ -17,15 +17,29 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
+/// Mapping an index space onto the lanes of one workgroup.
+///
+/// Behind `reduce` because the argmax collapses its lane partials with the
+/// workgroup reduction children, which that feature owns. Every consumer of a
+/// cooperative walk already enables it.
+#[cfg(feature = "reduce")]
+pub(crate) mod cooperative;
 pub(crate) mod elementwise;
-pub(crate) mod tiled_reduce;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
+/// The two shared child regions registered as operations in their own right.
+///
+/// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and
+/// `STRIDED_ACCUMULATE_OP_ID` are catalog entries, and a catalog entry is
+/// enabled by a feature. The skeletons themselves stay ungated: a dialect
+/// composes them without asking for their registrations.
+#[cfg(feature = "builder-ops")]
 mod registrations;
+pub(crate) mod tiled_reduce;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
@@ -265,9 +279,7 @@ where
             vec![Node::store(output, dst_index, value)],
         ),
     ];
-    let parent = GeneratorRef {
-        name: op_id.to_string(),
-    };
+    let parent = Ident::from(op_id);
 
     Program::wrapped(
         buffers,
@@ -410,13 +422,7 @@ fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> Node
 }
 
 fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec<Node>) -> Node {
-    wrap_child_region(
-        child_op_id,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
-        body,
-    )
+    wrap_child_region(child_op_id, Ident::from(parent_op_id), body)
 }
 
 /// Tensor-ref elementwise binary builder, used by `math::avg_floor`,
@@ -442,12 +448,14 @@ where
     )?;
 
     if a.shape != b.shape || a.shape != out.shape {
-        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-            name: "elementwise_binary".into(),
-            found: vec![],
-            expected: vec![],
-            op: op_id,
-        });
+        return Err(
+            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
+                name: "elementwise_binary".into(),
+                found: vec![],
+                expected: vec![],
+                op: op_id,
+            },
+        );
     }
 
     let a_count = a.element_count().ok_or_else(|| {
@@ -463,12 +471,14 @@ where
         }
     })?;
     if out_count < a_count {
-        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-            name: out.name_str().to_string(),
-            found: out.shape.to_vec(),
-            expected: a.shape.to_vec(),
-            op: op_id,
-        });
+        return Err(
+            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
+                name: out.name_str().to_string(),
+                found: out.shape.to_vec(),
+                expected: a.shape.to_vec(),
+                op: op_id,
+            },
+        );
     }
 
     let n = a_count;
@@ -548,12 +558,14 @@ where
     )?;
 
     if a.shape != out.shape {
-        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-            name: "elementwise_unary".into(),
-            found: vec![],
-            expected: vec![],
-            op: op_id,
-        });
+        return Err(
+            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
+                name: "elementwise_unary".into(),
+                found: vec![],
+                expected: vec![],
+                op: op_id,
+            },
+        );
     }
 
     let n = a.element_count().ok_or_else(|| {

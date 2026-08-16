@@ -162,6 +162,7 @@ where
     Ok(())
 }
 
+// Inline: covers `consumes_host_input`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

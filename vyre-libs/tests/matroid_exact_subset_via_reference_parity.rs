@@ -42,7 +42,7 @@ use vyre_libs::encoding::matroid_exact_megakernel::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A random 0/1 vector of length `len`.
 fn bits(state: &mut u32, len: usize) -> Vec<u32> {

@@ -37,7 +37,7 @@ pub fn dispatcher() -> &'static Path {
             std::process::exit(1);
         });
         dispatcher_from(&current).unwrap_or_else(|| {
-            build(DISPATCHER_PACKAGE).unwrap_or_else(|error| {
+            build(&crate::checkout::checkout_root(), DISPATCHER_PACKAGE).unwrap_or_else(|error| {
                 eprintln!("{error}");
                 std::process::exit(1);
             })
@@ -59,7 +59,7 @@ fn dispatcher_from(current: &Path) -> Option<PathBuf> {
 /// the error. A child that cannot run is a `GateError` rather than a clean
 /// report: a gate that failed to execute has not judged the tree.
 pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report, GateError> {
-    let executable = build(package)?;
+    let executable = build(&ctx.root, package)?;
     let output = Command::new(&executable)
         .arg(name)
         .args(&ctx.args)
@@ -96,6 +96,20 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
     })
 }
 
+/// Whether the argument vector asks the dispatcher itself for help.
+///
+/// Only a leading `--help` does. A `--help` after a subcommand belongs to that
+/// gate, which answers it in its report: reading it here printed the dispatch
+/// roster on stdout instead, which is not a `Report`, so the parent failed the
+/// gate for breaking the protocol rather than showing its usage.
+#[must_use]
+pub fn dispatch_help_requested(args: &[String]) -> bool {
+    match args.first() {
+        None => false,
+        Some(first) => first == "--help" || first == "-h",
+    }
+}
+
 /// Run a delegated binary's `main`: help, then the one gate it was asked for.
 ///
 /// Both delegated crates are entered the same way, because `xtask` enters them
@@ -108,11 +122,7 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
 /// so a converted gate returns everything it has to say and prints none of it.
 pub fn run_delegated_main(package: &str, purpose: &str, gates: &[&dyn Gate]) -> ! {
     let args: Vec<String> = std::env::args().collect();
-    if args
-        .iter()
-        .skip(1)
-        .any(|argument| argument == "--help" || argument == "-h")
-    {
+    if dispatch_help_requested(&args[1..]) {
         print_dispatch_help(package, purpose, gates.iter().map(|gate| gate.name()));
         std::process::exit(0);
     }
@@ -126,7 +136,14 @@ pub fn run_delegated_main(package: &str, purpose: &str, gates: &[&dyn Gate]) -> 
     };
     let root = crate::checkout::checkout_root();
     let ctx = GateCtx::new(root, args[2..].to_vec());
-    match gate.run(&ctx) {
+    // The gate the parent asked for usage is implemented here, so the answer is
+    // built from what this gate declares and travels back as report notes.
+    let outcome = if crate::gate::help_requested(&ctx.args) {
+        Ok(crate::gate::usage_report(*gate))
+    } else {
+        gate.run(&ctx)
+    };
+    match outcome {
         Ok(report) => match serde_json::to_string(&report) {
             Ok(json) => {
                 println!("{json}");
@@ -172,18 +189,13 @@ pub fn print_dispatch_help(
     }
 }
 
-/// Cargo binary that is building this process, so the child build matches it.
-fn cargo() -> String {
-    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string())
-}
-
 /// Build one delegated crate and return the path of the binary cargo produced.
 ///
 /// A crate that does not compile is a gate that could not run, so the compiler
 /// diagnostics travel in the error rather than to this process's stderr: the
 /// caller may be the sweep, which renders every gate's outcome in one place.
-fn build(package: &str) -> Result<PathBuf, GateError> {
-    let output = Command::new(cargo())
+fn build(root: &Path, package: &str) -> Result<PathBuf, GateError> {
+    let output = Command::new(crate::cargo_runner::binary(root))
         .args([
             "build",
             "--quiet",
@@ -193,6 +205,7 @@ fn build(package: &str) -> Result<PathBuf, GateError> {
             package,
             "--message-format=json",
         ])
+        .current_dir(root)
         .output()
         .map_err(|error| {
             GateError::new(
@@ -291,6 +304,26 @@ mod tests {
             executable_from(stdout, "xtask-registry"),
             Some(PathBuf::from("/t/xtask-registry"))
         );
+    }
+
+    /// WHY: `xtask <gate> --help` hands the child `<gate> --help`, and reading
+    /// any `--help` in the vector printed the dispatch roster on stdout. The
+    /// parent then failed the gate for printing instead of returning a report,
+    /// so a gate could not answer `--help` at all.
+    #[test]
+    fn only_a_leading_help_flag_asks_the_dispatcher() {
+        let args = |tokens: &[&str]| -> Vec<String> {
+            tokens.iter().map(|token| (*token).to_string()).collect()
+        };
+
+        assert!(dispatch_help_requested(&args(&["--help"])));
+        assert!(dispatch_help_requested(&args(&["-h"])));
+        assert!(!dispatch_help_requested(&args(&[])));
+        assert!(!dispatch_help_requested(&args(&[
+            "release-benchmarks",
+            "--help"
+        ])));
+        assert!(!dispatch_help_requested(&args(&["release-benchmarks"])));
     }
 
     /// WHY: a successful build that produced no binary for the named package is

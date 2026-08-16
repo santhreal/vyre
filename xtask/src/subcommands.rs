@@ -96,12 +96,44 @@ pub static SUBSETS: &[Subset] = &[
         help: "Whether the generated documentation artifacts still match the tree",
         gates: &[
             "architecture-contract",
+            "cli-docs",
+            "crate-ownership",
+            "crate-pages",
+            "crate-readmes",
             "docs-check",
             "docs-coupling",
             "docs-references",
+            "op-matrix",
             "docs-register",
             "optimization-docs",
             "release-docs",
+            "testing-guides",
+        ],
+    },
+    Subset {
+        name: "benchmarks",
+        help: "Whether the measured benchmark surface is registered, covered and inside its declared budget",
+        gates: &[
+            "bench-coverage",
+            "bench-release",
+            "bench-smoke-runtime",
+            "release-benchmarks",
+            "release-workload-matrix",
+        ],
+    },
+    Subset {
+        name: "release-evidence",
+        help: "Whether the committed release evidence still matches the manifests, the lockfile and the recorded runs",
+        gates: &[
+            "conformance-matrix",
+            "launch-state",
+            "metadata-matrix",
+            "optimization-corpus",
+            "optimization-matrix",
+            "package-readiness",
+            "release-conformance",
+            "release-evidence",
+            "version-matrix",
         ],
     },
     Subset {
@@ -125,16 +157,21 @@ pub static SUBSETS: &[Subset] = &[
             "internal-dep-versions",
             "layering",
             "neutral-crates",
+            "feature-matrix",
+            "feature-isolation",
+            "feature-msrv",
         ],
     },
     Subset {
         name: "source-rules",
-        help: "What every tracked source file must be: compiled by a target, parseable, and inside its size cap",
+        help: "What every tracked source file must be: compiled by a target, run by a runner, parseable, inside its size cap, and product rather than test material",
         gates: &[
             "source-reachability",
             "source-include-module",
             "source-parses",
+            "oracle-sweeps",
             "file-size",
+            "test-material-placement",
         ],
     },
     Subset {
@@ -163,20 +200,27 @@ pub static SUBSETS: &[Subset] = &[
     },
     Subset {
         name: "contract-rules",
-        help: "Frozen public surfaces, wire field parity, device loudness and the unification ratchets",
+        help: "Frozen public surfaces, wire field parity, backend parity registration, device loudness and the unification ratchets",
         gates: &[
             "frozen-contracts",
             "backend-extension",
+            "backend-matrix",
             "program-wire-fields",
+            "public-api-paths",
+            "public-api-snapshot",
             "readback-ring",
             "unification",
+            "cuda-parity",
+            "metal-parity",
+            "spirv-parity",
+            "wire-determinism",
             "gpu-loudness",
             "shader-source",
         ],
     },
     Subset {
         name: "repo-rules",
-        help: "What the checkout carries, what the release evidence cites, and what the documents claim",
+        help: "What the checkout carries, what the release evidence cites, what the documents claim, and whether the registry itself was softened",
         gates: &[
             "repo-hygiene",
             "single-backlog",
@@ -186,7 +230,12 @@ pub static SUBSETS: &[Subset] = &[
             "evidence-paths",
             "invariant-paths",
             "ci-matrix",
+            "ci-registry",
             "ci-required",
+            "ci-steps",
+            "gate-canon",
+            "placement-predicates",
+            "script-ledger",
         ],
     },
 ];
@@ -433,6 +482,7 @@ pub fn help_text() -> String {
     }
     text.push_str("\nEvery subcommand is a gate. A gate that owns a generated artifact\n");
     text.push_str("checks it against the tree and rewrites it when passed --write.\n");
+    text.push_str("Run a subcommand with --help for the options it reads.\n");
     text
 }
 
@@ -449,6 +499,20 @@ mod tests {
         names.sort_unstable();
         names.dedup();
         assert_eq!(before, names.len(), "duplicate gate name in the registry");
+    }
+
+    /// WHY: `--help` is a question about a gate, and a gate that reads the tree
+    /// to answer it has run the check the caller asked it not to run. Every
+    /// option a gate names in its help line is answered from what the gate
+    /// declares, and the roster is the registry, so a gate registered later is
+    /// judged without being listed here. A gate implemented in another package
+    /// declares its usage there and is judged by that package's own table.
+    #[test]
+    fn every_gate_answers_help_with_the_options_it_names() {
+        assert_eq!(
+            crate::gate::usage_gaps(&registry()),
+            Vec::<String>::new()
+        );
     }
 
     /// WHY: a subset that names an unregistered gate silently runs fewer gates

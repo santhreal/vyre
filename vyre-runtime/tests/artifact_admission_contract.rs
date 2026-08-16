@@ -12,7 +12,8 @@ use vyre_driver::{
 };
 use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, Digest, TargetEntryPoint,
@@ -861,4 +862,248 @@ fn persistent_executor_uses_retained_artifact_lifecycle() {
 
 fn retained_session_bindings(artifact: Digest) -> BindingSet {
     BindingSet::new(artifact)
+}
+
+fn symbol_contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
+    ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Symbol("items".into())],
+        access,
+        lifetime,
+    }
+}
+
+fn copy_program(input: &str, output: &str) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            output,
+            Expr::u32(0),
+            Expr::load(input, Expr::u32(0)),
+        )],
+    )
+}
+
+fn add_program(left: &str, right: &str, output: &str) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(left, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(right, 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(output, 2, BufferAccess::ReadWrite, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            output,
+            Expr::u32(0),
+            Expr::add(
+                Expr::load(left, Expr::u32(0)),
+                Expr::load(right, Expr::u32(0)),
+            ),
+        )],
+    )
+}
+
+/// Three nodes over three caller-supplied values, producing an invocation
+/// intermediate, a retained successor, and one graph output.
+///
+/// `input`, `constant` and `retained` are graph externals: nothing in the graph
+/// produces them, so their contents at launch can only come from the caller.
+/// `intermediate`, `retained.next` and `result` are each produced by a node.
+fn three_stage_graph() -> ProgramGraph {
+    let mut graph = ProgramGraph::new();
+    let input = graph
+        .add_external_value(
+            "input",
+            symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .expect("graph input must be valid");
+    let constant = graph
+        .add_external_value(
+            "constant",
+            symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
+        )
+        .expect("graph constant must be valid");
+    let retained = graph
+        .add_external_value(
+            "retained",
+            symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+        )
+        .expect("graph retained value must be valid");
+    let (_, produced) = graph
+        .add_node(
+            "zeta",
+            add_program("input", "constant", "intermediate"),
+            vec![
+                GraphInput {
+                    buffer: "input".into(),
+                    value: input,
+                    contract: symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+                GraphInput {
+                    buffer: "constant".into(),
+                    value: constant,
+                    contract: symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "intermediate".into(),
+                name: "intermediate".into(),
+                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("producer node must be valid");
+    let (_, succeeded) = graph
+        .add_node(
+            "alpha",
+            copy_program("intermediate", "retained"),
+            vec![
+                GraphInput {
+                    buffer: "intermediate".into(),
+                    value: produced[0],
+                    contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                },
+                GraphInput {
+                    buffer: "retained".into(),
+                    value: retained,
+                    contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "retained".into(),
+                name: "retained.next".into(),
+                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                retained_successor_of: Some(retained),
+            }],
+        )
+        .expect("retained-succession node must be valid");
+    graph
+        .add_node(
+            "omega",
+            copy_program("retained.next", "result"),
+            vec![GraphInput {
+                buffer: "retained.next".into(),
+                value: succeeded[0],
+                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![GraphOutput {
+                buffer: "result".into(),
+                name: "result".into(),
+                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("consumer node must be valid");
+    graph
+}
+
+fn payload_over_every_node(neutral: &Artifact) -> TargetPayload {
+    let bindings = neutral
+        .resources()
+        .iter()
+        .enumerate()
+        .map(|(slot, resource)| TargetResourceBinding {
+            resource: resource.value,
+            group: 0,
+            slot: u32::try_from(slot).expect("fixture slot must fit u32"),
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadWrite,
+        })
+        .collect::<Vec<_>>();
+    let entries = neutral
+        .nodes()
+        .iter()
+        .map(|node| TargetEntryPoint {
+            name: "main".to_string(),
+            node: node.id,
+            workgroup_size: [1, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings.clone(),
+        })
+        .collect();
+    TargetPayload::new(
+        neutral,
+        format("test.cache-target", 1),
+        profile("test.cache-target", 1),
+        entries,
+        vec![5, 6, 7],
+    )
+    .expect("fixture payload must be valid")
+}
+
+/// WHY: closes the class "the host input set is derived from what entries touch
+/// instead of from what the graph produces". The set asked the caller for one
+/// buffer per value any entry read, so a program the compiler split across
+/// fusion groups demanded a buffer for every inter-group intermediate: five
+/// buffers here where the graph has three externals. A caller that supplied the
+/// three it authored got a count refusal naming a number it could not derive
+/// from its own graph.
+///
+/// The expectation is the graph's own external values, not a recomputation of
+/// the runtime's rule, so a rule that starts counting produced values again goes
+/// red here whatever route it takes to them.
+///
+/// What it does not catch: whether the bytes reach the right device buffer. That
+/// is the materializer's contract, and the conformance certificate covers it by
+/// comparing results against the reference.
+#[test]
+fn host_inputs_are_the_graph_externals_not_every_value_an_entry_reads() {
+    let neutral = compile_graph(three_stage_graph(), 3);
+    let payload = payload_over_every_node(&neutral);
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated three-stage artifact must materialize");
+
+    let externals = ["input", "constant", "retained"].map(|name| {
+        session
+            .resource(name)
+            .unwrap_or_else(|error| panic!("Fix: `{name}` must be a canonical ABI value: {error}"))
+    });
+    let buffers = [&[0_u8; 16][..], &[0; 16][..], &[0; 16][..]];
+
+    let bindings = session
+        .host_bindings(&buffers)
+        .expect("Fix: the caller supplies one buffer per graph external, so three must bind.");
+    assert_eq!(
+        bindings.resources().keys().copied().collect::<Vec<_>>(),
+        {
+            let mut expected = externals.to_vec();
+            expected.sort_unstable();
+            expected
+        },
+        "Fix: host inputs must be exactly the values no entry produces; an inter-group intermediate is device state."
+    );
+
+    let produced = ["intermediate", "retained.next", "result"].map(|name| {
+        session
+            .resource(name)
+            .unwrap_or_else(|error| panic!("Fix: `{name}` must be a canonical ABI value: {error}"))
+    });
+    for value in produced {
+        assert!(
+            !bindings.resources().contains_key(&value),
+            "Fix: value {} is produced by an entry, so the caller must not be asked for its initial bytes.",
+            value.0
+        );
+    }
+
+    let error = session
+        .host_bindings(&[
+            &[0_u8; 16][..],
+            &[0; 16][..],
+            &[0; 16][..],
+            &[0; 16][..],
+            &[0; 16][..],
+        ])
+        .expect_err("Fix: one buffer per value an entry reads must be refused, not accepted.")
+        .to_string();
+    assert!(
+        error.contains("requires 3 host input buffer(s), but the caller supplied 5"),
+        "Fix: the refusal must name the arity the graph implies so a caller can act on it; got: {error}"
+    );
 }

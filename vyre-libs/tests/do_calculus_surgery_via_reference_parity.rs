@@ -28,7 +28,7 @@ use vyre_libs::reasoning::do_calculus_change_impact::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn intervention_delete_incoming_via_matches_cpu_oracle() {

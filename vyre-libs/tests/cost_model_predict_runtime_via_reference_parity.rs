@@ -39,7 +39,7 @@ use vyre_libs::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
 use vyre_libs::math::conformal::conformal_threshold_cpu;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{
+use vyre_test_support::fixed_point::{
     fixed_mul as fixed_mul_16_16, xorshift32 as xorshift, FIXED_ONE,
 };
 

@@ -169,7 +169,7 @@ fn finite_abs_score(value: f64) -> f64 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             iht_threshold("a", "b", "out", 4)

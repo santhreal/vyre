@@ -3,7 +3,7 @@
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use crate::nn::attention_passes::{
     attention_max_pass_bounded, attention_sum_pass_bounded, attention_write_pass_bounded,
@@ -65,9 +65,7 @@ pub fn gqa_attention(
     };
     let query_base = Expr::mul(row_index.clone(), Expr::u32(head_dim));
     let kv_base = Expr::mul(kv_head, Expr::u32(per_head));
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
 
     let body = vec![
         Node::let_bind("i", Expr::InvocationId { axis: 0 }),
@@ -263,9 +261,7 @@ pub fn gqa_attention_causal_typed(
         Expr::u32(1),
     );
     let scale = Expr::f32(1.0 / (head_dim as f32).sqrt());
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
     let body = vec![
         Node::let_bind("row", Expr::InvocationId { axis: 0 }),
         Node::if_then(

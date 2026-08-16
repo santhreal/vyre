@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every gate, doc generator and evidence run resolves cargo through `xtask::cargo_runner::runner`, which reads `VYRE_CARGO_RUNNER`, then a `cargo_full` beside the workspace root, then that name on `PATH`. Nine call sites plus the delegated-gate builder resolved it three different ways; two of them read `CARGO`, which cargo sets to the plain binary and never to the wrapper, so a child build used a different target directory and job count than the build that started it."

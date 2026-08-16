@@ -34,9 +34,9 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | Status | Audience | Owner | Kind | Page | Authority | Generation |
 | --- | --- | --- | --- | --- | --- | --- |
 | `current` | `extension` | `architecture` | `ownership` | `ARCHITECTURE.md` | self | manual |
-| `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
+| `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../xtask/src/gates/crate_registry.rs](../xtask/src/gates/crate_registry.rs) |
 | `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../xtask/src/docs/docs_check.rs](../xtask/src/docs/docs_check.rs) |
-| `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
+| `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../xtask/src/gates/crate_registry.rs](../xtask/src/gates/crate_registry.rs) |
 | `current` | `contributor` | `architecture` | `architecture` | `architecture/artifact.md` | self | manual |
 | `current` | `contributor` | `architecture` | `architecture` | `architecture/compile-search.md` | self | manual |
 | `current` | `contributor` | `architecture` | `architecture` | `architecture/crates.md` | self | manual |
@@ -86,37 +86,37 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `reference` | `reference/values.md` | self | manual |
 | `current` | `user` | `public-facade` | `reference` | `reference/wire-format.md` | self | manual |
 | `current` | `release` | `release-tooling` | `release` | `release/process.md` | self | manual |
-| `generated` | `contributor` | `testing` | `testing` | `testing/structure-gate.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-aot.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-bench.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-conform-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-conform.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-debug.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-cuda.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-metal.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-wgpu.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-metal.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-naga.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-ptx.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-foundation.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lints.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lower.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-macros.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-megakernel.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-pass-engine.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-primitives.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-registry-link.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-runtime.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-safetensors.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-test-support.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/xtask-evidence.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/xtask-registry.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/xtask.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/structure-gate.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-aot.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-bench.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-conform-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-conform.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-debug.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-cuda.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-metal.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-wgpu.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-metal.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-naga.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-ptx.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-foundation.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lints.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lower.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-macros.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-megakernel.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-pass-engine.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-primitives.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-registry-link.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-runtime.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-safetensors.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-test-support.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/xtask-evidence.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/xtask-registry.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/xtask.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |

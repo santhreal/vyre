@@ -86,7 +86,7 @@ pub use crate::graph::csr_frontier_queue::{
 };
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         CSR_QUEUE_STRIDED_FORWARD_OP_ID,
         || csr_queue_strided_forward_traverse(
             "active_queue",

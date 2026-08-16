@@ -16,6 +16,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   red. The rule lived in a test in an unrelated crate and shelled out to git;
   it now reads the tracked source set through the scanner, reports the file and
   line, and is exercised on 4511 files.
+- The CI registry keeps a row for every workflow path the tree carries or once
+  carried, and the row says whether it runs, is paused with a way back, is
+  superseded by the workflow and gate that run its checks, or leaves a
+  verification class uncovered. Seven lanes were deleted in one commit and
+  nothing went red, because the wiring is derived from the tree and a deleted
+  lane derives to nothing: adversarial input generation, CODEOWNERS
+  trust-boundary coverage, mutation coverage of the verifier and the bitset
+  primitives, and repeat-dispatch determinism on CUDA are recorded as uncovered
+  rather than gone, the catalog, book and randomized-order lanes name what runs
+  their checks now, and a workflow deleted from here on leaves a row that fails
+  the gate until someone records where its checks went.
 - The gates sweep now reads the gate sources and fails a registered gate whose
   run path cannot construct a finding, so a gate that only prints notes can no
   longer pass as coverage. A gate whose honest output is a note is declared
@@ -38,6 +49,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   sweep reports a workflow step that names a script the checkout does not
   carry, which is what every script this campaign deletes leaves behind: a step
   that fails at run time under a name that still reads as coverage.
+- The ci-steps gate resolves every package, test, bench, example, binary and
+  feature token in the workflow steps and the scripts against the workspace
+  manifests, so a step that silently selects nothing fails.
 - The source-include-module gate reports include! of a tracked Rust file. A
   pasted file has no module path, so a name it defines cannot be qualified, its
   items sit in the including module's namespace, and the reachability rules
@@ -114,6 +128,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   F16, BF16, and F32 inputs retain F32 internal math. Guarded rows in the final
   structural tile cannot read padding, change state, or appear in truncated
   output.
+- xtask/ci-registry.toml declares which subsets hold each gate, which workflows
+  run it, every check CI runs that is not a gate, and every paused workflow
+  with the condition that ends the pause; the ci-registry gate holds that
+  declaration to the registry, the subsets and the workflow steps in both
+  directions.
 - A gate resolves every name a `run:` step passes to cargo or to a shell
   against this tree: each `-p` package is a workspace member, each `--test` and
   `--bin` target is declared or auto-discovered by the package the same command
@@ -156,6 +175,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   is addressed to the owner of that domain instead of arriving inside one
   whole-registry log. The whole-registry sweep stays as the backstop for a gate
   that belongs to no subset.
+- Every workspace member carries a SPEC.md naming what it owns, what it must
+  never contain, the edges that cross it, the direction that may not reverse,
+  its invariants and the gates that enforce them, and a README.md; the
+  crate-pages gate derives the roster from the workspace members and fails on a
+  missing page, an undeclared edge or a module map naming a path the crate does
+  not have.
 - The `example-capability` gate builds every crate under `examples/` outside
   the workspace and runs what it asserts. Subjects come from the tracked tree,
   so a new example is covered when it is added: a directory with files and no
@@ -574,6 +599,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   records both anonymous generator prefixes: it named only anonymous:: while
   vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES has held inline::
   as well, so a reader checking a region against the gate saw half the rule.
+- xtask gates --write-baseline records a measured finding count only when it is
+  at or below the pin already recorded, and fails naming every gate that
+  reports more, so a run can no longer legalize a red gate.
 - The Aho-Corasick emit paths in `vyre-libs/src/scan/` read the flat
   output-record span through one owner. Six builders each wrote their own loop
   over `out_begin..out_end` binding `pattern_id` from `output_records`, and
@@ -2018,6 +2046,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and the walk callbacks are named for what they are: NodeSink::accept_node and
   ExprSink::accept_expr. Lowerable and Evaluatable moved into files named for
   the contract each holds instead of a module named traits.
+- The release-workload-matrix gate is the only writer of
+  release/evidence/benchmarks/release-workload-matrix.json, vyre-bench
+  release-matrix prints and no longer writes, and a test compares the committed
+  body against what the case registry derives.
 - `vyre_lower::op_facts` was both a module and a function inside it, so a doc
   link to either was ambiguous and `crate::op_facts` resolved to whichever
   rustdoc preferred. The function is `facts_for`, reached as
@@ -2425,11 +2457,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   chebyshev_recurrence are vyre_libs::math. nodeset_filter is
   vyre_libs::label::nodeset_filter, under label rather than predicate because
   predicate already reaches label and the reverse edge would invert that
-  closure. demote_intermediate_outputs is vyre_libs::program_outputs. lane_grid
-  has one owner reachable as vyre_primitives::lane_grid and the graph re-export
-  of it is deleted. The unsigned helper in the visual dialect that shared the
-  name fixed_mul_16_16_expr is now fixed_mul_16_16_unsigned_expr; it delegates
-  to wide_mul_shr_u32 and builds the same nodes as before. The graph scratch
+  closure. demote_intermediate_outputs is
+  vyre_libs::plumbing::program::outputs. lane_grid has one owner reachable as
+  vyre_primitives::lane_grid and the graph re-export of it is deleted. The
+  unsigned helper in the visual dialect that shared the name
+  fixed_mul_16_16_expr is now fixed_mul_16_16_unsigned_expr; it delegates to
+  wide_mul_shr_u32 and builds the same nodes as before. The graph scratch
   reservation helpers fold into the crate scratch owner as reserve_items,
   reserve_capacity, reserve_items_with and resize_vec.
 - Six source files over their measured ceiling are split along the boundaries
@@ -2791,10 +2824,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   module and field documentation names the concern each policy decides instead
   of an internal plan label.
 - `vyre-libs` no longer reaches across dialect boundaries in private code.
-  `telemetry` is a crate-root module rather than a one-file directory, because
-  counters instrument every dialect and belong to none; `scratch` and
-  `dispatch_program_cache` sit at the crate root beside `dispatch_buffers`,
-  because host dispatch plumbing is not a dialect either. The
+  `telemetry` has one owner rather than a one-file directory, because counters
+  instrument every dialect and belong to none; the scratch reservation, the
+  host program cache and the dispatch byte marshalling sit together under
+  `plumbing::host`, because host dispatch plumbing is not a dialect either. The
   `analysis::dataflow_fixpoint` re-export of the foundation substrate is
   deleted, so the closure family has one path instead of two, and every caller
   names the owner. Composition that crosses dialects names the module that owns
@@ -2806,6 +2839,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   measured. What remains between the three match-emitting entry points is their
   frozen positional signatures and the shared value they each construct from
   them, which no owner can absorb without changing the public ABI.
+- The vyre-libs crate root is a table of contents. Fourteen loose files sat
+  beside twenty-five dialect directories, so the root did not say what the
+  crate is. Each one now sits under the concern it serves: buffer names, tensor
+  references and operand shape under plumbing::operand, program introspection
+  and fused-output demotion under plumbing::program, type signatures, contract
+  presets and the catalog view under plumbing::registration, operand
+  marshalling, scratch reservation, the shape-keyed program cache and the
+  composition counters under plumbing::host, and the byte-range ordering
+  predicates and the builder registrations under builder. Every path that was
+  public is still public at the same spelling, and no operation id,
+  registration or built program changed.
 - `vyre_lints::read_source_bounded` is public surface with its bound stated,
   and `vyre_lints::LINT_SOURCE_READ_CAP` is public beside it so the number a
   caller is refused at has one home instead of a constant and a sentence that
@@ -3213,18 +3257,36 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose backend is the reference interpreter and whose operation records no
   expected outputs now fails with that reason, because comparing the
   interpreter against itself is not evidence.
+- The benchmark harness builds its compile request from the probed backend
+  profile instead of unknown device facts, so a case that uses subgroup
+  intrinsics is measured on a device that has them rather than recorded as a
+  validation failure.
 - The wrapper rule reads an instruction, not any sentence containing the word
   cargo. A comment is a finding when a run verb comes before the command and
   the command is quoted as code, because prose says a full cargo build while an
   instruction quotes what to type. Sentences describing what a build sees were
   previously findings whose only repair was to describe the build less
   precisely.
+- The four surviving citations of the deleted optimization control-plane page
+  now name the file that holds the claim: the conservative shared-memory cap in
+  the CUDA driver profile, the external-operation contract page, the hot-path
+  and benchmark target policies, and the optimization ownership data in the
+  documentation evidence map.
 - Each crate README links the testing guide rendered for that crate instead of
   the data file every guide is rendered from. The generated Testing section
   pointed at `docs/testing/TESTING.toml`, which sends a reader to a table of
   every crate to find the rows describing one, and the generated per-crate page
   is what answers the question. The section now links `docs/testing/<crate>.md`
   and names the TOML as its authority.
+- Each crate SPEC.md links the crate-boundaries chapter by a path relative to
+  the page, so the link resolves from the crate directory it is read in.
+- The crate pages gate refuses a placeholder where a crate states what it must
+  never contain, so a body reading none recorded, none, n/a, tbd or nothing
+  fails the same clause an absent section fails. A boundary with only an
+  inclusion half admits everything, and a non-empty check passed on the page
+  that stated no exclusion at all. The bound on the output a failed benchmark
+  child contributes to a report applies to the joined text, so a command
+  writing on both streams no longer contributes twice the bound.
 - The docs-references gate now reads every tracked Markdown file rather than
   the root, .github and docs pages only, resolves a relative path against the
   crate that owns the document as well as the workspace root, and exempts
@@ -3242,6 +3304,25 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   default, so a plain test run still executes all three. The feature-isolation
   sweep found the eight affected selections; they had been recorded as
   compiling.
+- The CI step gate joins a YAML block scalar the way the runner receives it, so
+  a workflow command written as a folded `run:` block across several lines is
+  checked whole. The reader joined shell continuations only, and every package,
+  feature and test target named after the first line of a folded step was
+  discarded unread: 226 selectors across 108 commands now resolve against the
+  manifests where 159 did before, in both the unresolvable-selector direction
+  and the silently-skipped-target direction. A paused workflow that names a
+  script the checkout does not carry is reported, and a parked file still
+  credits no check. The registry names `ci-registry --write` as the writer of
+  the declaration it reads.
+- A gate asked for `--help` answers with its usage and reads nothing.
+  `bench-crossback --help` read 35 measurements across 18 cases and reported a
+  clean gate, which is the check running on the caller who asked what the check
+  takes. The dispatcher answers a leading `--help` from what the gate declares,
+  a delegated gate answers from the package that implements it, and the answer
+  travels back as report notes so the report protocol holds. Every option a
+  gate names in its help line is declared as a usage line, and the rule reads
+  the gate table at run time, so a gate registered later with an option it
+  never names goes red.
 - The lego-quick gate answers from source text and no longer links the
   operation registry: it moved to xtask, which is where both crates already say
   a source-text gate belongs, so a pre-commit run stops building the registry
@@ -3256,6 +3337,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   construction under vyre-libs, which forbade the one thing a Category A
   composition is defined to do and whose 203-row path exemption list had rotted
   to 59 dead rows because no path list survives a file split.
+- The release-benchmarks gate returns a report for every invocation, including
+  --help, and captures the output of the commands it spawns, so a delegated run
+  no longer fails to parse a formatted table as a report.
 - The command-hygiene scan reads authored documents only. CHANGELOG.md and the
   release notes beside it are generated from release/changes, and a released
   entry records what a version did rather than telling a reader what to run, so
@@ -3309,6 +3393,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   dispatch executes 1544 workgroup-scratch stores where the previous form
   executed 31745. Sizes above the single-block limit are the multi-block chain,
   and vyre-libs scan_prefix_sum is the one builder that picks between the two.
+- The release benchmark generator builds vyre-bench with --release, vyre-bench
+  refuses to measure the release suite from an unoptimized build, and every
+  release benchmark artifact records the build profile that measured it, so a
+  debug-build CPU baseline can no longer inflate a published speedup.
 - A per-backend conformance artifact recorded under an older shape is now
   reported as stale, naming both the version it carries and the version the
   reader holds, instead of as unparseable JSON. Three committed artifacts
@@ -3323,6 +3411,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   string literal and so is the table that spells it. The two rule sources are
   exempt by path, and a test requires each to exist and to still carry the
   language, so a stale exemption is red rather than a silent widening.
+- The compiler-grade thesis axes and the CPU-SOTA 100x contract page name the
+  workloads the suite measures: AST motif traversal replaces the deleted C
+  parser axis, e-graph saturation points at workload 17, and the required 100x
+  case list matches the ten cases the release thresholds declare. The two
+  superseded e-graph artifacts are deleted and the cross-backend comparison
+  table is regenerated from what remains.
+- The release workload matrix calls a CUDA command reproducible only when
+  --release reaches cargo. Everything after the argument separator goes to the
+  benchmark harness, which builds nothing, so a --release written there
+  described an optimized build that never happened.
+- A row in .github/CI_REQUIRED.md naming a workflow the checkout does not carry
+  fails the ci-required gate, and the workflows whose path filters and
+  directories no longer exist are deleted rather than parked.
 - The composition audit reports an unreviewed shape pair rather than a
   duplicate. A shape verdict cannot tell a shared algorithm from a shared IR
   idiom: a guarded lane index, a row-major loop nest and straight-line unrolled
@@ -3349,6 +3450,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   asserting a non-zero exit could never fail and passed against a committed
   schema that already disagreed with the live registry. The schema is
   regenerated from the 359 live registrations.
+- The ci-steps gate reads every script under scripts/, including the shared
+  shell functions and readers in scripts/lib that the registry declares and
+  every script sources; a single-level read skipped them while reporting the
+  directory covered. The structural-gate row for cargo invocation resolution
+  names the gate that now carries the contract.
 - The elementwise map builders live in the builder module rather than under
   math. A shared skeleton hosted inside one gated dialect is unreachable from
   the others: logical depended on math-broadcast only to reach the builder, and
@@ -3380,6 +3486,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The sentence that declares a recorded artifact stale is now formed and
   recognised through one constant in xtask::source_provenance, so the four
   producers and the recogniser cannot drift apart.
+- A workflow step that runs the gate sweep with --subset credits the gates in
+  that subset and no others. Recording the bare sweep for it gave every
+  registered gate a workflow, so a gate no workflow selects could not be
+  reported and the rows that were reported named the wrong file.
 - A test that compiles a scratch crate builds it in the cargo build directory.
   vyre_test_support::monorepo::cargo_target_directory reports where cargo is
   writing this run's artifacts, resolved from the running test binary, so no
@@ -3387,6 +3497,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   compiled the substrate and the foundation under the temp filesystem, which is
   capped, and it no longer clears its own build tree between the two consumers
   it checks.
+- The tail of a failed child command is cut at a character boundary. A cut that
+  landed inside a multibyte character fell back to the whole stream, so the
+  byte bound did not hold for the output it exists to bound.
 - A whole-grid fence is cut into sequential dispatches during compile-request
   validation instead of failing at emit. Program fusion writes
   MemoryOrdering::GridSync inside one node body, so a single-node graph had no
@@ -3523,6 +3636,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   straight to `u64`, so a reference slower than roughly 18 seconds was reported
   as a small number instead of a large one, inverting the speedup it was
   compared against.
+- A benchmark performance contract may only name a CPU baseline this checkout
+  can run. Ten release workload rows advertised tree-sitter, libclang,
+  Hyperscan, ripgrep, egg and unnamed SIMD or optimized CPU implementations,
+  bigint.modexp.4096 named rug 1.27 with a GMP backend, and interpreter named a
+  hand-tuned C threaded interpreter with computed goto. None of those were
+  linked: every one of those cases timed an in-tree scalar Rust routine. The
+  labels now come from one owner that describes the routine actually timed, and
+  a new contract test resolves every named crate against the workspace members
+  and the vyre-bench dependency tables read at run time, so a case that invents
+  a competitor fails instead of shipping. The baselines that do run, faer,
+  openssl, hashbrown, pcre2 and rayon, are unchanged.
 - Enforced benchmark contract failures now retain correctness, timing metrics,
   device identity, and measured speedup in the failed case report instead of
   collapsing into an unprobed error shell.
@@ -4740,6 +4864,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   feature instead of a list kept by hand, and the regenerated documents are
   byte-identical, which is the proof that the documents were right and the edge
   was wrong.
+- The release macro benchmarks no longer time a CPU baseline that rebuilds its
+  own input. `synthetic_cpu_count` regenerated every record from its index
+  inside the timed region, twelve to twenty-four rotate-multiply rounds per
+  column, while the GPU side was handed pre-materialized, pre-uploaded buffers.
+  The recorded evidence read 5508x to 6729x for the count patterns and 928x for
+  the one case that already read materialized bitmaps, and the gap was the
+  generator, not the device. `synthetic_cpu_count_over_inputs` now counts over
+  the same host buffers the device reads and the generator cross-check happens
+  outside the clock. Re-measured on the shipping path,
+  release.condition_eval.1m reports 165.708x with a 4422427 ns baseline p50,
+  and no speedup pin had to move.
 - Four release surfaces named documents the book deletion removed, and each
   failed open. `release_contract_path` pointed at `docs/RELEASE.md` and now
   names `release-train.toml`, the surviving authority for versions, tags,

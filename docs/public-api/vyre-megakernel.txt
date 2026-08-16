@@ -1,5 +1,7 @@
 #[non_exhaustive] pub enum vyre_megakernel::TargetCompileError
 #[non_exhaustive] pub enum vyre_megakernel::legality::FusionRejectionReason
+impl core::error::Error for vyre_megakernel::ResourceNameCollision
+impl core::fmt::Display for vyre_megakernel::ResourceNameCollision
 impl vyre_megakernel::Artifact
 impl vyre_megakernel::ArtifactEnvelope
 impl vyre_megakernel::CompileRequest
@@ -69,6 +71,7 @@ pub enum vyre_megakernel::TargetResourceAccess
 pub enum vyre_megakernel::TargetResourceMemory
 pub enum vyre_megakernel::legality::FusionDecision
 pub fn vyre_megakernel::Artifact::barriers(&self) -> &[vyre_megakernel::BarrierRecord]
+pub fn vyre_megakernel::Artifact::canonical_value_by_name(&self) -> core::result::Result<alloc::collections::btree::map::BTreeMap<&str, vyre_megakernel::ArtifactValueId>, vyre_megakernel::ResourceNameCollision>
 pub fn vyre_megakernel::Artifact::dependencies(&self) -> &[vyre_megakernel::DependencyEdge]
 pub fn vyre_megakernel::Artifact::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::Artifact::fusion(&self) -> &[vyre_megakernel::FusionRecord]
@@ -89,6 +92,7 @@ pub fn vyre_megakernel::ExternalFacts::new(configuration_digest: vyre_megakernel
 pub fn vyre_megakernel::ExternalFacts::with_expected_launch_batch(self, expected_launch_batch: u32) -> Self
 pub fn vyre_megakernel::FinalistEvaluator::measure(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<u64, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::FinalistEvaluator::target_compiler(&self) -> &dyn vyre_megakernel::TargetCompiler
+pub fn vyre_megakernel::ResourceNameCollision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_megakernel::TargetCompiler::compile(&self, artifact: &vyre_megakernel::Artifact) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::TargetCompiler::format(&self) -> &vyre_megakernel::TargetPayloadFormat
 pub fn vyre_megakernel::TargetCompiler::profile(&self) -> &vyre_megakernel::TargetProfile
@@ -137,6 +141,7 @@ pub struct vyre_megakernel::NodeRecord
 pub struct vyre_megakernel::Provenance
 pub struct vyre_megakernel::ResourceAbiRecord
 pub struct vyre_megakernel::ResourceEnvelope
+pub struct vyre_megakernel::ResourceNameCollision
 pub struct vyre_megakernel::ResourceRecord
 pub struct vyre_megakernel::SearchBudget
 pub struct vyre_megakernel::SearchWork
@@ -228,6 +233,9 @@ pub vyre_megakernel::ResourceLifetime::Constant
 pub vyre_megakernel::ResourceLifetime::Invocation
 pub vyre_megakernel::ResourceLifetime::Output
 pub vyre_megakernel::ResourceLifetime::Retained
+pub vyre_megakernel::ResourceNameCollision::first: vyre_megakernel::ArtifactValueId
+pub vyre_megakernel::ResourceNameCollision::name: alloc::string::String
+pub vyre_megakernel::ResourceNameCollision::second: vyre_megakernel::ArtifactValueId
 pub vyre_megakernel::ResourceRecord::byte_count: u64
 pub vyre_megakernel::ResourceRecord::element_count: u64
 pub vyre_megakernel::ResourceRecord::first_stage: u32

@@ -110,7 +110,7 @@ pub fn select1_query(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || select1_query("bits", "queries", "out", 4, 5),
         Some(|| {

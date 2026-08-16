@@ -705,7 +705,7 @@ fn fixture_tree_words() -> Vec<u32> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         PREORDER_OP_ID,
         || ast_walk_preorder("nodes", "out", 3, 3),
         Some(|| vec![vec![
@@ -717,7 +717,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         POSTORDER_OP_ID,
         || ast_walk_postorder("nodes", "out", 3, 3),
         Some(|| vec![vec![

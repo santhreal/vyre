@@ -661,6 +661,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "vfs"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "visual"
 outcome = "compiles"
 
@@ -751,11 +756,6 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "(default),all-lego"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
 feature = "(default),cpu-parity,hardware"
 outcome = "compiles"
 
@@ -772,16 +772,6 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "(none)"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "all-lego"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "all-lego,cpu-parity"
 outcome = "compiles"
 
 [[pair]]

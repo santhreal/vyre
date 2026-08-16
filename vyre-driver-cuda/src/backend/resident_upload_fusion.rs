@@ -38,6 +38,8 @@ pub(crate) fn fuse_resident_upload_copies<'a>(
     driver_fuse_resident_upload_copies(copies)
 }
 
+// Inline: covers `ResidentUploadBytes`, `ResidentUploadCopy`, `fuse_resident_upload_copies`,
+// `push_resident_upload_copy`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use smallvec::SmallVec;

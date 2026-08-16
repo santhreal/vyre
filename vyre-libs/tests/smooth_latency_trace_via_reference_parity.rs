@@ -21,7 +21,7 @@ use vyre_libs::math::conv1d::{cpu_conv1d, gaussian_weights};
 use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{xorshift32 as xorshift, FIXED_ONE};
+use vyre_test_support::fixed_point::{xorshift32 as xorshift, FIXED_ONE};
 
 #[test]
 fn smooth_latency_trace_via_matches_cpu_conv1d_bit_exact() {

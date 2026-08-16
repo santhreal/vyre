@@ -157,27 +157,16 @@ fn rewrite_node(node: Node, facts: &ProgramFacts, changed: &mut bool) -> Vec<Nod
                 .flat_map(|n| rewrite_node(n, facts, changed))
                 .collect(),
         )],
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            vec![Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(
-                    body_vec
-                        .into_iter()
-                        .flat_map(|n| rewrite_node(n, facts, changed))
-                        .collect(),
-                ),
-            }]
-        }
-        other => vec![other],
+        // A `Region`, and every other body-bearing variant this match does not
+        // name, is descended as well: the applicability search below admits a
+        // nested loop through `child_bodies`, so a rewrite that stopped here
+        // would report no change for a program the analysis accepted.
+        // `map_body` owns which slots exist.
+        other => vec![visit::node_map::map_body(other, &mut |body| {
+            body.into_iter()
+                .flat_map(|n| rewrite_node(n, facts, changed))
+                .collect()
+        })],
     }
 }
 

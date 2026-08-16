@@ -98,10 +98,10 @@ fn boundary_failures(
             "UNREGISTERED-CHILD: `{owner_id}` wraps `{generator}` as a child region, but no canonical SemanticOperation exists for that building block. Fix: submit it from the owning Tier 2.5/Tier 3 crate, or rename it `anonymous::{generator}` when it is a phase boundary inside one operation rather than a building block."
         ));
     }
-    if parent.name.contains("::") && !ids.contains(parent.name.as_str()) {
+    if parent.as_str().contains("::") && !ids.contains(parent.as_str()) {
         failures.push(format!(
             "UNKNOWN-PARENT: `{owner_id}` child `{generator}` cites source_region `{}` which is not a registered op id.",
-            parent.name
+            parent.as_str()
         ));
     }
     failures
@@ -111,16 +111,14 @@ fn boundary_failures(
 mod tests {
     use std::sync::Arc;
 
-    use vyre::ir::{Expr, GeneratorRef, Ident, Node, Program};
+    use vyre::ir::{Expr, Ident, Node, Program};
 
     use super::*;
 
     fn child(generator: &str, parent: &str) -> Node {
         Node::Region {
             generator: Ident::from(generator),
-            source_region: Some(GeneratorRef {
-                name: parent.to_string(),
-            }),
+            source_region: Some(Ident::from(parent)),
             body: Arc::new(Vec::new()),
         }
     }
@@ -238,9 +236,7 @@ mod tests {
         for (name, wrapper) in wrappers {
             let outer = Node::Region {
                 generator: Ident::from("vyre-libs::security::flows_to"),
-                source_region: Some(GeneratorRef {
-                    name: "vyre-libs::security::flows_to".to_string(),
-                }),
+                source_region: Some(Ident::from("vyre-libs::security::flows_to")),
                 body: Arc::new(vec![wrapper]),
             };
             let failures = findings(&outer, &["vyre-libs::security::flows_to"]);

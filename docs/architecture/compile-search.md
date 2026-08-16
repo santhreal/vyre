@@ -30,12 +30,18 @@ scores it. `analyze_fusion_pair` returns `FusionDecision::Legal` or
 | `MKL002_NOT_PRODUCER_CONSUMER` | the value does not connect the proposed producer and consumer |
 | `MKL003_LIFECYCLE_BOUNDARY` | the value crosses an invocation or retained-state boundary |
 | `MKL004_MULTIPLE_CONSUMERS` | more than one node consumes the value |
-| `MKL005_WORKGROUP_MISMATCH` | the programs require incompatible workgroup geometry |
-| `MKL006_SYNCHRONIZATION_BOUNDARY` | one program contains an explicit synchronization point |
+| `MKL005_WORKGROUP_MISMATCH` | the programs declare different workgroup geometry |
+| `MKL006_SYNCHRONIZATION_BOUNDARY` | the geometries differ and one program reasons about the size of its own workgroup |
 | `MKL007_DEPENDENCY_CYCLE` | contracting the proposed group would create a dependency cycle |
 
 `FusionRejectionReason` is `#[non_exhaustive]`. A rejection is recorded in
 the artifact rather than dropped, so a plan that looks unfused says why.
+
+A barrier is not a rejection on its own. Two programs that declare the same
+workgroup and synchronize inside it fuse into one kernel, because the merge
+concatenates the arms at that geometry and every barrier is already
+workgroup-uniform. That is what lets a score pass and a value pass over one
+workgroup tile compile to a single dispatch.
 
 ## The unfused baseline is always a candidate
 
@@ -56,21 +62,34 @@ CPU work, target compilations, measurements and elapsed nanoseconds.
 
 ## The cost model is open
 
-`CostBreakdown` has four fields and no hidden term:
+`CostBreakdown` has eleven fields and no hidden term. The unit is nanoseconds
+of expected device time.
 
 | Field | Meaning |
 |---|---|
 | `semantic_work` | sum of semantic IR nodes in the complete graph |
 | `launches` | number of generated kernel launches |
 | `materializations` | number of values crossing generated-kernel boundaries |
-| `total` | the weighted total selection minimizes |
+| `materialized_bytes` | bytes those crossing values move |
+| `live_value_peak` | largest per-invocation live value count in any one group |
+| `shared_scratch_bytes` | largest shared scratch any one group declares, unioned by buffer name |
+| `occupancy_passes_peak` | largest number of resident passes any one group needs |
+| `launch_ns` | launch term |
+| `materialization_ns` | materialized-traffic term |
+| `occupancy_ns` | occupancy term |
+| `total` | sum of the three terms, minimized by selection |
 
-A launch weighs 1000 and a materialization weighs 100. A materialization is
-counted per data dependency whose producer and consumer land in different
-groups, which is exactly the value that has to round-trip through memory.
+A materialization is counted per data dependency whose producer and consumer
+land in different groups, which is exactly the value that has to round-trip
+through memory. `semantic_work` is recorded as evidence and excluded from
+`total`: it is the same for every candidate over one graph.
 
-Both weights are constants in `vyre-megakernel/src/cost.rs`. Reproducing a
-selection needs the graph and the budget, and nothing else.
+A launch is priced at the device's measured per-launch overhead, and at a
+recorded floor of 4224 nanoseconds when the device reports none. Traffic is
+priced at 3788 bytes per nanosecond. Both figures come from
+`foundation.elementwise.add.1m` in `vyre-bench/snapshots`, and both are
+constants in `vyre-megakernel/src/cost.rs`. Reproducing a selection needs the
+graph, the budget and the device facts, and nothing else.
 
 ## Candidate order is deterministic
 

@@ -243,6 +243,8 @@ where
     Some(unsafe { std::mem::transmute_copy::<*mut libc::c_void, T>(&symbol) })
 }
 
+// Inline: covers `nvtx_push_succeeded`, `valid_nvtx_label`, `valid_nvtx_label_bytes`, which no
+// integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

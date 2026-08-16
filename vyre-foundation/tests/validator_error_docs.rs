@@ -108,6 +108,66 @@ fn rule_codes_are_unique_and_ordered() {
     );
 }
 
+/// Path of the hand-written reference page that counts the catalog.
+const REFERENCE_PATH: &str = "docs/reference/diagnostics.md";
+
+#[test]
+fn the_diagnostics_reference_counts_the_rules_it_describes() {
+    let path = vyre_workspace_root().join(REFERENCE_PATH);
+    let page = fs::read_to_string(&path).unwrap_or_else(|error| {
+        panic!("cannot read {REFERENCE_PATH}: {error}. Fix: check the path exists.")
+    });
+
+    let mut per_phase: BTreeMap<&str, usize> = BTreeMap::new();
+    for rule in rules() {
+        *per_phase.entry(rule.phase.as_str()).or_default() += 1;
+    }
+
+    let total = rules().len();
+    assert!(
+        page.contains(&format!("rule set: {total}\n")),
+        "{REFERENCE_PATH} does not state the live rule count of {total}. \
+         Fix: correct the sentence that counts the catalog."
+    );
+
+    let documented: BTreeMap<&str, usize> = validation_section(&page)
+        .lines()
+        .filter_map(phase_row)
+        .collect();
+    assert_eq!(
+        documented, per_phase,
+        "the phase table in {REFERENCE_PATH} does not match the live catalog. \
+         Fix: correct one row per divergent phase; the catalog is the authority."
+    );
+}
+
+/// The `## Validation codes` section, which is the only place the page counts
+/// validation rules. The backend error table lives in another section and its
+/// rows are not phase rows.
+fn validation_section(page: &str) -> &str {
+    let start = page
+        .find("\n## Validation codes\n")
+        .unwrap_or_else(|| panic!("{REFERENCE_PATH} has no validation codes section"));
+    let rest = &page[start + 1..];
+    match rest[1..].find("\n## ") {
+        Some(end) => &rest[..end + 1],
+        None => rest,
+    }
+}
+
+/// Read a `| phase | count |` row, skipping the header and the rule that draws
+/// it.
+fn phase_row(line: &str) -> Option<(&str, usize)> {
+    let mut cells = line.trim().strip_prefix('|')?.split('|');
+    let phase = cells.next()?.trim();
+    let count = cells.next()?.trim().parse().ok()?;
+    cells.next()?;
+    if cells.next().is_some() {
+        return None;
+    }
+    Some((phase, count))
+}
+
 /// One finding per rule code whose block differs, plus one per code present on
 /// only one side.
 fn divergences(on_disk: &str, rendered: &str) -> Vec<String> {

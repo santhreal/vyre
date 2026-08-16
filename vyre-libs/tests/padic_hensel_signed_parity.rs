@@ -18,10 +18,10 @@
 //!
 //! BIT-EXACT: pure integer arithmetic
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, then `wrapping_sub`.
-#![cfg(all(feature = "math", feature = "test-fixtures"))]
+#![cfg(feature = "math")]
 
 use vyre_libs::math::padic::hensel_lift_step;
-use vyre_libs::test_parity_oracles::{
+use vyre_test_support::fixed_point::{
     fixed_mul, signed_fixed_18 as signed_fixed, to_fixed, xorshift32 as xorshift,
 };
 use vyre_primitives::wire::pack_u32_slice as pack_u32;

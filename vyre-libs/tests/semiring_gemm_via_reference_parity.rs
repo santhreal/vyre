@@ -28,7 +28,7 @@ use vyre_libs::analysis::dataflow_fixpoint::{
 use vyre_libs::math::semiring_gemm::Semiring;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 const INF: u32 = u32::MAX;
 

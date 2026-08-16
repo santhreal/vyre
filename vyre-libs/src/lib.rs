@@ -111,6 +111,11 @@ pub mod logical;
 ))]
 pub mod nn;
 
+/// Language-model decode layer  -  paged key-value cache addressing and token
+/// sampling, composed from the neural-net and math dialects.
+#[cfg(feature = "llm")]
+pub mod llm;
+
 /// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
 /// program builders plus immutable compilation artifacts.
 #[cfg(any(
@@ -136,17 +141,29 @@ pub mod hash;
 
 /// Text-processing compositions for the GPU C parser pipeline
 /// (Phase L1+): byte classification, UTF-8 validation, line index.
+#[cfg(feature = "text")]
 pub mod text;
 
 /// Representation sub-dialect: bit-packing and unpacking.
+#[cfg(feature = "representation")]
 pub mod representation;
 
 /// GPU parser infrastructure (Phase L3+): bracket matching, DFA
 /// lexer driver, LR(1) table walker. Grammar tables are generated
 /// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
+// `parsing-kernels` and `go-parser` are the two roots. `parsing` names both
+// language pipelines and `python-parser` names `parsing-kernels`, so a build
+// that asks for either of those already sets one of the two.
+#[cfg(any(
+    feature = "parsing",
+    feature = "parsing-kernels",
+    feature = "go-parser",
+    feature = "python-parser"
+))]
 pub mod parsing;
 
 /// Packed AST walks (`ast_walk_*` catalog ops).
+#[cfg(feature = "graph")]
 pub mod graph;
 
 /// Security / taint compositions for static program analysis.
@@ -174,6 +191,13 @@ pub mod bitset;
 /// ValueSets. Backs source-query dialect aggregates.
 #[cfg(feature = "reduce")]
 pub mod reduce;
+
+/// Virtual filesystem DMA compositions: the `#include` hash resolver that
+/// turns asset identifiers into asynchronous block loads. Built from
+/// `Node::AsyncLoad` and `Node::AsyncWait`, so it composes existing IR and
+/// carries no hardware contract of its own.
+#[cfg(feature = "vfs")]
+pub mod vfs;
 
 /// Label to NodeSet resolver: turn a TagFamily bitmask into a NodeSet bitset.
 #[cfg(feature = "label")]
@@ -261,11 +285,7 @@ pub use plumbing::registration::signatures::{
 };
 /// Owner-local byte fixtures for semantic operation registrations and tests.
 pub(crate) mod fixture_bytes;
-/// Pre-sweep shader snapshot migration entries, collected via inventory.
-/// `pub(crate)` because the registry is an internal pre-sweep tool  -
-/// downstream dialects do not submit through this path.
-pub(crate) mod test_migration;
 
-/// Program composition helpers for parity suites, in-tree and downstream.
-#[cfg(any(test, feature = "test-fixtures"))]
-pub mod test_parity_oracles;
+/// Dispatcher doubles and program sequencing for this crate's own unit tests.
+#[cfg(test)]
+mod test_parity_oracles;

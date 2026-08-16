@@ -373,6 +373,8 @@ fn append_u64_decimal(out: &mut String, mut value: u64) {
     }
 }
 
+// Inline: covers `CHECKSUM_LEN`, `MAX_ENCODED_PIPELINE_BLOB_BYTES`, `encode_cache_blob`, `flush`
+// and 2 more items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

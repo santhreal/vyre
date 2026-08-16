@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=false",
+  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -142,6 +142,12 @@
       "text": "unknown.push(placeholder.to_string());"
     },
     {
+      "path": "xtask/src/gates/crate_readmes.rs",
+      "line": 346,
+      "pattern": "placeholder_text",
+      "text": "/// Every version the release train declares, keyed as a template placeholder."
+    },
+    {
       "path": "xtask-evidence/src/report_fixture.rs",
       "line": 68,
       "pattern": "placeholder_text",
@@ -149,13 +155,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 249,
+      "line": 247,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 252,
+      "line": 250,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     }

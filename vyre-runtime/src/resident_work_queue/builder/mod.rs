@@ -543,7 +543,13 @@ fn process_io_requests() -> Vec<Node> {
                         )),
                         tag: IO_QUEUE_DMA_TAG.into(),
                     },
-                    // Mark as DONE
+                    // The DMA must land before the slot is published as DONE: a
+                    // consumer that sees DONE reads the destination bytes, and
+                    // without the wait those bytes are whatever the copy has
+                    // managed so far. Waiting inside the loop body also keeps
+                    // the tag free for the next published slot, so a second
+                    // trip does not restart a tag already in flight.
+                    Node::async_wait(IO_QUEUE_DMA_TAG),
                     Node::store(
                         "io_queue",
                         Expr::var("io_status_idx"),
@@ -613,5 +619,323 @@ fn execute_already_claimed_slot_body(tenant_id: Expr, claimed_body: Vec<Node>) -
     body
 }
 
+// Inline: covers the crate-private `body_preorder::walk_body_preorder` and
+// `let_names_preorder`, which no integration test can reach.
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::super::body_preorder::{let_names_preorder, walk_body_preorder};
+    use super::*;
+
+    fn async_load_bindings(nodes: &[Node]) -> Vec<(String, String, String)> {
+        let mut bindings = Vec::new();
+        walk_body_preorder(nodes, &mut |node| {
+            if let Node::AsyncLoad {
+                source,
+                destination,
+                tag,
+                ..
+            } = node
+            {
+                bindings.push((
+                    source.as_str().to_string(),
+                    destination.as_str().to_string(),
+                    tag.as_str().to_string(),
+                ));
+            }
+        });
+        bindings
+    }
+
+    #[test]
+    fn io_polling_uses_capability_tables_not_fake_resource_names() {
+        let program = build_program_sharded_with_io_polling(64, &[]);
+        let bindings = async_load_bindings(&program.entry);
+        assert_eq!(bindings.len(), 1);
+        let (source, destination, tag) = &bindings[0];
+        assert_eq!(source, "io_source_capability_table");
+        assert_eq!(destination, "io_destination_capability_table");
+        assert_eq!(tag, "io_queue_dma");
+        assert_ne!(source, "ssd_weights");
+        assert_ne!(destination, "vram_cache");
+    }
+
+    #[test]
+    fn priority_builder_declares_explicit_ring_slots() {
+        let program = build_program_priority_slots(64, 512, &[]);
+        let ring = program
+            .buffer("ring_buffer")
+            .expect("Fix: priority megakernel must declare the ring buffer");
+        assert_eq!(ring.count, 512 * SLOT_WORDS);
+    }
+
+    #[test]
+    fn direct_megakernel_defers_tenant_loads_until_status_is_published() {
+        let body = persistent_body(64, &[]);
+        let top_level_lets = body
+            .iter()
+            .filter_map(|node| match node {
+                Node::Let { name, .. } => Some(name.as_str()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+                top_level_lets,
+                vec!["shutdown_flag", "lane_id", "slot_base"],
+                "Fix: the persistent megakernel prologue must not load tenant metadata before proving the slot is claimable."
+            );
+
+        let names = let_names_preorder(&body);
+        let observed = names
+            .iter()
+            .position(|name| *name == "observed_status")
+            .expect("Fix: status load must gate the claim path");
+        let tenant_mask = names
+            .iter()
+            .position(|name| *name == "tenant_mask")
+            .expect("Fix: tenant authorization must still exist for published slots");
+        assert!(
+                observed < tenant_mask,
+                "Fix: idle megakernel slots must skip tenant table loads; observed_status appears at {observed}, tenant_mask at {tenant_mask}."
+            );
+    }
+
+    #[test]
+    fn empty_sharded_shared_builder_reuses_cached_program_arc() {
+        let first = build_program_sharded_slots_shared(64, 256, &[]);
+        let second = build_program_sharded_slots_shared(64, 256, &[]);
+
+        assert!(
+                Arc::ptr_eq(&first, &second),
+                "Fix: empty megakernel template bootstraps must reuse the cached Arc<Program> instead of cloning the Program before compile."
+            );
+    }
+
+    #[test]
+    fn empty_sharded_once_shared_builder_reuses_cached_program_arc() {
+        let first = build_program_sharded_once_slots_shared(64, 256, &[]);
+        let second = build_program_sharded_once_slots_shared(64, 256, &[]);
+
+        assert!(
+                Arc::ptr_eq(&first, &second),
+                "Fix: one-shot megakernel dispatchers must reuse the cached Arc<Program> instead of rebuilding or cloning the Program on the hot path."
+            );
+    }
+
+    #[test]
+    fn self_loading_miss_handler_program_contains_load_miss_bindings() {
+        let program = build_program_with_self_loading_miss_handler(64, 256, &[]);
+        let names = let_names_preorder(program.entry());
+        assert!(
+            names.iter().any(|n| *n == "resource_id"),
+            "Fix: self-loading miss handler must bind resource_id (the \
+             opaque consumer-defined identifier the IO queue carries)"
+        );
+        assert!(
+            names.iter().any(|n| *n == "found_io_slot"),
+            "Fix: self-loading miss handler must scan for an empty IO slot"
+        );
+        assert!(
+            names.iter().any(|n| *n == "poll_done"),
+            "Fix: self-loading miss handler must poll for DMA completion"
+        );
+    }
+
+    #[test]
+    fn self_loading_miss_handler_does_not_include_async_load_nodes() {
+        let program = build_program_with_self_loading_miss_handler(64, 256, &[]);
+        let bindings = async_load_bindings(program.entry());
+        assert_eq!(
+            bindings.len(),
+            0,
+            "Fix: self-loading miss handler must not introduce AsyncLoad nodes; it writes to the IO queue and polls instead."
+        );
+    }
+
+    /// WHY: the IO polling megakernel started a DMA under `io_queue_dma` inside
+    /// the slot loop, published the slot as DONE, and never waited the transfer.
+    /// A consumer that observes DONE reads the destination buffer, so it read
+    /// whatever the copy had managed so far, and a second published slot in the
+    /// same invocation restarted a tag that was still in flight. The reference
+    /// interpreter refuses such a program outright, so this was also a program
+    /// the crate could build and never run against its own oracle.
+    ///
+    /// Closes: an async start with no matching wait anywhere in the built
+    /// program, for every builder the module re-exports, plus the publish order
+    /// for the IO slot specifically.
+    ///
+    /// Does not catch: a wait present on one path and missing on another, or a
+    /// wait that runs before the transfer it names. Path-sensitive matching
+    /// needs a dataflow pass and lives in `vyre-foundation` validation.
+    mod async_transfer_pairing {
+        use super::*;
+
+        const PAIRING_WORKSPACE_BUFFER: &str = "pairing_resident_workspace";
+
+        /// Contributes one workspace buffer and one bootstrap store, so the
+        /// adapter path builds the same shape a consumer's adapter would.
+        struct PairingWorkspaceAdapter;
+
+        impl ResidentWorkspaceAdapter for PairingWorkspaceAdapter {
+            fn buffer_decl(&self) -> BufferDecl {
+                BufferDecl::output(PAIRING_WORKSPACE_BUFFER, 15, DataType::U32).with_count(4)
+            }
+
+            fn bootstrap_nodes(&self) -> Vec<Node> {
+                vec![Node::store(
+                    PAIRING_WORKSPACE_BUFFER,
+                    Expr::u32(0),
+                    Expr::u32(0),
+                )]
+            }
+        }
+
+        /// Every program the module's `build_program*` re-exports can produce.
+        ///
+        /// Held against the re-export list by
+        /// `every_exported_program_builder_is_covered`, so a new builder turns
+        /// this suite RED until it is called here.
+        fn built_programs() -> Vec<(&'static str, Arc<Program>)> {
+            let adapter = PairingWorkspaceAdapter;
+            vec![
+                ("build_program", Arc::new(build_program())),
+                ("build_program_jit", Arc::new(build_program_jit(64, &[]))),
+                (
+                    "build_program_jit_slots",
+                    Arc::new(build_program_jit_slots(64, 256, &[])),
+                ),
+                (
+                    "build_program_priority",
+                    Arc::new(build_program_priority(64, &[])),
+                ),
+                (
+                    "build_program_priority_slots",
+                    Arc::new(build_program_priority_slots(64, 256, &[])),
+                ),
+                (
+                    "build_program_sharded",
+                    Arc::new(build_program_sharded(64, &[])),
+                ),
+                (
+                    "build_program_sharded_no_io",
+                    Arc::new(build_program_sharded_no_io(64, &[])),
+                ),
+                (
+                    "build_program_sharded_once_slots",
+                    Arc::new(build_program_sharded_once_slots(64, 256, &[])),
+                ),
+                (
+                    "build_program_sharded_once_slots_control_report_shared",
+                    build_program_sharded_once_slots_control_report_shared(64, 256, &[]),
+                ),
+                (
+                    "build_program_sharded_once_slots_shared",
+                    build_program_sharded_once_slots_shared(64, 256, &[]),
+                ),
+                (
+                    "build_program_sharded_slots",
+                    Arc::new(build_program_sharded_slots(64, 256, &[])),
+                ),
+                (
+                    "build_program_sharded_slots_shared",
+                    build_program_sharded_slots_shared(64, 256, &[]),
+                ),
+                (
+                    "build_program_sharded_with_io_polling",
+                    Arc::new(build_program_sharded_with_io_polling(64, &[])),
+                ),
+                (
+                    "build_program_sharded_with_workspace_adapter",
+                    Arc::new(build_program_sharded_with_workspace_adapter(
+                        64, 256, &[], &adapter,
+                    )),
+                ),
+                (
+                    "build_program_with_self_loading_miss_handler",
+                    Arc::new(build_program_with_self_loading_miss_handler(64, 256, &[])),
+                ),
+            ]
+        }
+
+        fn started_and_waited_tags(nodes: &[Node]) -> (Vec<&str>, Vec<&str>) {
+            let mut started: Vec<&str> = Vec::new();
+            let mut waited: Vec<&str> = Vec::new();
+            walk_body_preorder(nodes, &mut |node| match node {
+                Node::AsyncLoad { tag, .. } | Node::AsyncStore { tag, .. } => {
+                    started.push(tag.as_str());
+                }
+                Node::AsyncWait { tag } => waited.push(tag.as_str()),
+                _ => {}
+            });
+            (started, waited)
+        }
+
+        #[test]
+        fn no_builder_starts_an_async_transfer_it_never_waits() {
+            for (name, program) in built_programs() {
+                let (started, waited) = started_and_waited_tags(program.entry());
+                for tag in started {
+                    assert!(
+                        waited.contains(&tag),
+                        "Fix: `{name}` starts async transfer tag `{tag}` and never waits it, so the destination bytes are unsynchronized when the invocation ends and the reference interpreter refuses the program."
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn every_exported_program_builder_is_covered() {
+            let mut exported: Vec<&str> = include_str!("../mod.rs")
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .filter(|token| token.starts_with("build_program"))
+                .collect();
+            exported.sort_unstable();
+            exported.dedup();
+
+            let mut covered: Vec<&str> =
+                built_programs().into_iter().map(|(name, _)| name).collect();
+            covered.sort_unstable();
+
+            assert_eq!(
+                exported, covered,
+                "Fix: call every re-exported `build_program*` builder in built_programs; an uncalled one has no async-pairing coverage."
+            );
+        }
+
+        #[test]
+        fn the_io_slot_is_published_done_only_after_its_transfer_is_waited() {
+            #[derive(Debug, PartialEq, Eq)]
+            enum IoEvent {
+                DmaStarted,
+                DmaWaited,
+                SlotPublishedDone,
+            }
+
+            let program = build_program_sharded_with_io_polling(64, &[]);
+            let mut events: Vec<IoEvent> = Vec::new();
+            walk_body_preorder(program.entry(), &mut |node| match node {
+                Node::AsyncLoad { tag, .. } if tag.as_str() == IO_QUEUE_DMA_TAG => {
+                    events.push(IoEvent::DmaStarted);
+                }
+                Node::AsyncWait { tag } if tag.as_str() == IO_QUEUE_DMA_TAG => {
+                    events.push(IoEvent::DmaWaited);
+                }
+                Node::Store { buffer, value, .. }
+                    if buffer.as_str() == "io_queue" && *value == Expr::u32(slot::DONE) =>
+                {
+                    events.push(IoEvent::SlotPublishedDone);
+                }
+                _ => {}
+            });
+
+            assert_eq!(
+                events,
+                vec![
+                    IoEvent::DmaStarted,
+                    IoEvent::DmaWaited,
+                    IoEvent::SlotPublishedDone
+                ],
+                "Fix: the IO slot must be published DONE only after its DMA is waited; a consumer that sees DONE reads the destination bytes."
+            );
+        }
+    }
+}

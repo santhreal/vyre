@@ -208,7 +208,7 @@ macro_rules! define_tag_family_predicate {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration::primitive(
+                vyre_foundation::operation::OperationRegistration::library(
                     OP_ID,
                     || $function("tags", "nodeset", 4),
                     Some(|| {
@@ -317,7 +317,7 @@ macro_rules! define_fixed_forward_edge_predicate {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration::primitive(
+                vyre_foundation::operation::OperationRegistration::library(
                     OP_ID,
                     || $function(ProgramGraphShape::new(4, $edge_count), "fin", "fout"),
                     Some(|| {

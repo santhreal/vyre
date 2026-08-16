@@ -1,0 +1,4 @@
+path = "scripts/architecture_docs.py"
+state = "retired"
+gate = "architecture-contract"
+reason = "manifest-contract takes the workspace, schema, backend evidence and lane assertions, and doc-contract takes the five documents and their tokens"

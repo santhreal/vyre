@@ -283,7 +283,7 @@ pub const fn pack_bytes_le(b0: u8, b1: u8, b2: u8, b3: u8) -> u32 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || whitespace_classify_word(256),
         Some(|| {

@@ -159,3 +159,105 @@ pub(super) fn signed_i4_nibble_f32_expr(nibble: Expr) -> Expr {
         Expr::sub(Expr::cast(DataType::F32, nibble), Expr::f32(16.0)),
     )
 }
+
+/// The packed-activation INT4 inner product over `cols`, accumulating into the
+/// binding `{prefix}_acc`.
+///
+/// Reads the weight row named by `{prefix}_row` and the activation row named by
+/// `{prefix}_batch`, both packed [`I4_LANES_PER_WORD`] lanes per word with
+/// `words_per_row` words per row. `prefix` names every binding the loop opens
+/// so a schedule that nests this inside a row scan keeps its own accumulator.
+pub(super) fn i4_packed_dot_loop(
+    prefix: &str,
+    weights_packed: &str,
+    activation_batches_packed: &str,
+    cols: u32,
+    words_per_row: u32,
+) -> Node {
+    let row = format!("{prefix}_row");
+    let batch = format!("{prefix}_batch");
+    let col = format!("{prefix}_col");
+    let acc = format!("{prefix}_acc");
+    let weight_word = format!("{prefix}_weight_word");
+    let activation_word = format!("{prefix}_activation_word");
+    let shift = format!("{prefix}_shift");
+    let weight_nibble = format!("{prefix}_weight_nibble");
+    let activation_nibble = format!("{prefix}_activation_nibble");
+    let weight = format!("{prefix}_weight");
+    let activation = format!("{prefix}_activation");
+    Node::loop_for(
+        col.clone(),
+        Expr::u32(0),
+        Expr::u32(cols),
+        vec![
+            Node::let_bind(
+                weight_word.clone(),
+                Expr::add(
+                    Expr::mul(Expr::var(row), Expr::u32(words_per_row)),
+                    Expr::div(Expr::var(col.clone()), Expr::u32(I4_LANES_PER_WORD)),
+                ),
+            ),
+            Node::let_bind(
+                activation_word.clone(),
+                Expr::add(
+                    Expr::mul(Expr::var(batch), Expr::u32(words_per_row)),
+                    Expr::div(Expr::var(col.clone()), Expr::u32(I4_LANES_PER_WORD)),
+                ),
+            ),
+            Node::let_bind(
+                shift.clone(),
+                Expr::mul(
+                    Expr::rem(Expr::var(col), Expr::u32(I4_LANES_PER_WORD)),
+                    Expr::u32(4),
+                ),
+            ),
+            Node::let_bind(
+                weight_nibble.clone(),
+                Expr::bitand(
+                    Expr::shr(
+                        Expr::load(weights_packed, Expr::var(weight_word)),
+                        Expr::var(shift.clone()),
+                    ),
+                    Expr::u32(0xF),
+                ),
+            ),
+            Node::let_bind(
+                activation_nibble.clone(),
+                Expr::bitand(
+                    Expr::shr(
+                        Expr::load(activation_batches_packed, Expr::var(activation_word)),
+                        Expr::var(shift),
+                    ),
+                    Expr::u32(0xF),
+                ),
+            ),
+            Node::let_bind(
+                weight.clone(),
+                signed_i4_nibble_f32_expr(Expr::var(weight_nibble)),
+            ),
+            Node::let_bind(
+                activation.clone(),
+                signed_i4_nibble_f32_expr(Expr::var(activation_nibble)),
+            ),
+            Node::assign(
+                acc.clone(),
+                Expr::add(
+                    Expr::var(acc),
+                    Expr::mul(Expr::var(weight), Expr::var(activation)),
+                ),
+            ),
+        ],
+    )
+}
+
+/// The dequantized score for one `(row, batch)` pair: the accumulator scaled by
+/// its row scale and then by its batch scale.
+pub(super) fn i4_packed_scaled_score(prefix: &str, row_scales: &str, batch_scales: &str) -> Expr {
+    Expr::mul(
+        Expr::mul(
+            Expr::var(format!("{prefix}_acc")),
+            Expr::load(row_scales, Expr::var(format!("{prefix}_row"))),
+        ),
+        Expr::load(batch_scales, Expr::var(format!("{prefix}_batch"))),
+    )
+}

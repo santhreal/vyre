@@ -516,6 +516,8 @@ fn resident_upload_copy_owned<'copy, 'a>(
     }
 }
 
+// Inline: the suite grades against `crate::resident_transfer_fixtures`, which is gated on
+// `cfg(any(test, feature = "test-fixtures"))` and so is absent from an integration test build.
 #[cfg(test)]
 mod tests {
     use smallvec::SmallVec;

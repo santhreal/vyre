@@ -35,7 +35,7 @@ pub fn cpu_ref_into(nodes: &[u32], out: &mut Vec<u32>) {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || literal_of("nodes", "nodeset", 4),
         Some(|| {

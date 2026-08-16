@@ -173,6 +173,8 @@ fn apply_context_bias(cost: u64, bps: u32) -> u64 {
     )
 }
 
+// Inline: `vyre_driver::device_extraction` is `pub(crate)`, so no integration test can reach what
+// this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -10,7 +10,7 @@
 use std::path::Path;
 
 use crate::backend_vocabulary::is_test_source;
-use crate::source_scan::rust_sources_with_text;
+use crate::source_scan::{rust_sources_with_text, SourceText};
 
 const BANNED_PATTERNS: &[&str] = &[
     "BLOCK_LANES",
@@ -36,7 +36,21 @@ const BANNED_PATTERNS: &[&str] = &[
 pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();
 
-    for (file, text) in rust_sources_with_text(root) {
+    for source in rust_sources_with_text(root) {
+        let (file, text) = match source {
+            SourceText::Read { path, text } => (path, text),
+            SourceText::Unread { path, reason } => {
+                if !is_test_source(&path)
+                    && (path.starts_with("vyre-libs/src/")
+                        || path.starts_with("vyre-primitives/src/"))
+                {
+                    failures.push(format!(
+                        "{path} was not read: {reason}; the geometry constant gate cannot report an unread source as clean"
+                    ));
+                }
+                continue;
+            }
+        };
         if is_test_source(&file) {
             continue;
         }

@@ -1,0 +1,12 @@
+lane = "strict-strict"
+workflow = ".github/workflows/strict.yml"
+job = "strict"
+state = "live"
+required_status = "strict-warnings / strict"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = "./cargo_full build --workspace --all-targets --all-features --locked" },
+  { gate = "abstraction-gate" },
+  { command = "./cargo_full clippy --workspace --all-targets --all-features" },
+  { command = "./cargo_full doc --workspace --all-features --no-deps" },
+]

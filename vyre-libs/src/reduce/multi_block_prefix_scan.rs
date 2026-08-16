@@ -1,10 +1,10 @@
 //! Multi-block parallel prefix sum  -  bridges the gap between
-//! the single-workgroup scan shape (≤1024 lanes) and arbitrary-length
+//! the single-workgroup scan shape (one block of lanes) and arbitrary-length
 //! scans that used to fall back to a single-thread sequential loop.
 //!
 //! # Why
 //!
-//! Small scans are handled by the same 1024-lane guarded workgroup
+//! Small scans are handled by the same guarded workgroup
 //! primitive used as the recursive bottom-out. Large scans compose that
 //! primitive into a three-pass multi-block chain. Real workloads (lex
 //! compaction over a 3 MB C TU, histogram CDFs over millions of bins,
@@ -54,6 +54,23 @@ pub const fn multi_block_prefix_scan_requirements() -> vyre_foundation::geometry
         vyre_foundation::geometry::CooperativeWidth::Agnostic,
     )
 }
+/// Lanes per Pass-A block.
+///
+/// One block is one workgroup, so the width has to be one every target admits:
+/// this op declares its geometry when it builds its program, with no device in
+/// hand. The claim that 1024 is the universal maximum was false for the
+/// structured-compute target, whose profile admits 256, and the payload was
+/// refused at admission with `target workgroup extent 1024 exceeds profile limit
+/// 256` on every proof run. The portable extent is owned by
+/// `vyre_foundation::ir`, and a backend that cannot clear it fails its own
+/// profile contract instead of taking this op out of the certificate.
+pub const BLOCK_LANES: u32 = vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
+
+/// Historical direct-scan threshold retained for callers/tests that size
+/// around one level of block-total recursion. The implementation recurses and
+/// bottoms out at the guarded single-workgroup scan once
+/// `num_blocks <= BLOCK_LANES`.
+pub const SOFT_MAX_N: u32 = BLOCK_LANES * BLOCK_LANES;
 fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
     usize::try_from(words)
         .ok()
@@ -124,7 +141,7 @@ pub fn multi_block_prefix_scan_sum_u32_with_geometry(
 // inclusive scan whose expected values are closed-form, so it checks real
 // arithmetic rather than merely running.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID_INCLUSIVE_SUM,
         || multi_block_prefix_scan_sum_u32("input", "output", 64),
         Some(|| {
@@ -182,10 +199,11 @@ fn try_multi_block_prefix_scan_sum_u32_with_block_lanes(
 /// Build an **exclusive** parallel prefix-sum Program over arbitrary `n`:
 /// `output[i] = sum(input[0..i])`, `output[0] = 0`.
 ///
-/// This is the offset buffer `math::stream_compact` requires, the single-block
-/// `math::prefix_scan(ScanKind::ExclusiveSum)` already serves `n ≤ 1024`, but a
-/// compaction batch with more than 1024 live candidates had no on-device
-/// exclusive scan and had to convert an inclusive scan to exclusive on host.
+/// This is the offset buffer `math::stream_compact` requires. The single-block
+/// `math::prefix_scan(ScanKind::ExclusiveSum)` serves up to
+/// `math::prefix_scan::MAX_SINGLE_BLOCK_SCAN` elements, but a compaction batch
+/// with more live candidates than that had no on-device exclusive scan and had
+/// to convert an inclusive scan to exclusive on host.
 ///
 /// Built as `exclusive[i] = inclusive[i] - input[i]`: the tested inclusive
 /// multi-block chain writes an intermediate, then a fused element-difference
@@ -1057,10 +1075,10 @@ mod tests {
     }
 
     #[test]
-    fn recursion_handles_million_elements() {
-        // n = 1_048_576 → num_blocks = 1024 → Pass B falls through to single
-        // workgroup `prefix_scan` (1024 ≤ 1024). Verify build.
-        let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", 1_048_576);
+    fn recursion_bottoms_out_at_one_workgroup_for_the_soft_maximum() {
+        // n = SOFT_MAX_N = BLOCK_LANES^2, so Pass A emits BLOCK_LANES blocks and
+        // Pass B falls through to the single-workgroup `prefix_scan`. Verify build.
+        let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", SOFT_MAX_N);
         let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
         assert!(names.contains(&"in_buf"));
         assert!(names.contains(&"out_buf"));

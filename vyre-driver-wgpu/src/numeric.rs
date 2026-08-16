@@ -7,6 +7,7 @@ use vyre_driver::numeric::BackendNumericPolicy;
 /// numeric-policy pattern across every driver.
 pub(crate) const WGPU_NUMERIC: BackendNumericPolicy = BackendNumericPolicy::new("WGPU");
 
+// Inline: covers `WGPU_NUMERIC`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

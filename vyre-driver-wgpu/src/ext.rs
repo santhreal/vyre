@@ -227,6 +227,9 @@ fn dispatch_wgsl_pipeline_cache_key(wgsl: &str, entry_point: &str) -> Result<[u8
     Ok(*hasher.finalize().as_bytes())
 }
 
+// Inline: the cache-reuse case asserts the length of
+// `WgpuBackend::wgsl_dispatch_pipeline_cache`, a private field, so no integration
+// test can observe that a repeated dispatch compiled once.
 #[cfg(test)]
 mod tests {
     use super::*;

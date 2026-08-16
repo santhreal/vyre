@@ -158,7 +158,11 @@ fn char_class_body(source: &str, classified: &str, n: u32) -> Vec<Node> {
                     // Canonical masked source-byte → 256-table lookup (ONE-PLACE:
                     // vyre_primitives::ir_safe), widens the source byte to u32 and masks the
                     // table index with `& 0xFF` so a >255 element can't read past it.
-                    vyre_primitives::ir_safe::source_byte_table_lookup("table", source, Expr::var("idx")),
+                    vyre_primitives::ir_safe::source_byte_table_lookup(
+                        "table",
+                        source,
+                        Expr::var("idx"),
+                    ),
                 )],
             ),
         ]),
@@ -208,8 +212,8 @@ fn char_class_with_source_type(
 /// Reference oracle: classify each source byte through the lookup table.
 ///
 /// Pure function, exposed for fixture generation + harness oracles.
+#[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
     source
         .iter()
@@ -218,7 +222,7 @@ pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         CHAR_CLASS_OP_ID,
         || char_class("source", "classified", 3),
         Some(|| {

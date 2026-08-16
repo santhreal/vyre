@@ -23,7 +23,7 @@ use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
 use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A small positive integer in `1..=hi`.
 fn small(state: &mut u32, hi: u32) -> u32 {

@@ -19,7 +19,7 @@
 
 use std::collections::BTreeSet;
 
-use vyre::ir::{GeneratorRef, Node, Program};
+use vyre::ir::{Ident, Node, Program};
 use vyre_foundation::visit::child_bodies;
 use xtask::gate::{Finding, Report};
 
@@ -118,7 +118,7 @@ pub struct ChildRegion<'a> {
     /// The generator the region names.
     pub generator: &'a str,
     /// The operation the region declares itself part of, when it declares one.
-    pub source_region: Option<&'a GeneratorRef>,
+    pub source_region: Option<&'a Ident>,
     /// Whether the generator is a registered operation.
     pub registered: bool,
 }
@@ -211,9 +211,7 @@ mod tests {
     fn region(generator: &str, parent: Option<&str>, body: Vec<Node>) -> Node {
         Node::Region {
             generator: Ident::from(generator),
-            source_region: parent.map(|name| GeneratorRef {
-                name: name.to_string(),
-            }),
+            source_region: parent.map(Ident::from),
             body: Arc::new(body),
         }
     }

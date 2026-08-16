@@ -27,7 +27,7 @@ fn assert_composition_chain(program: &Program, parent_id: &str, primitive_id: &s
         panic!("expected one Tier-2.5 child region");
     };
     assert_eq!(generator.as_ref(), primitive_id);
-    assert_eq!(parent.name, parent_id);
+    assert_eq!(parent.as_str(), parent_id);
 }
 
 /// This test prevents the two public INT4 dot wrappers from presenting primitive IR as parent-owned implementation work.

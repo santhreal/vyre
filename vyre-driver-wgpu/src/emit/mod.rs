@@ -393,6 +393,8 @@ fn static_workgroups(
     [output_words.div_ceil(total_threads).max(1), 1, 1]
 }
 
+// Inline: covers `binding_assignments`, `emit_naga_module_for_descriptor`, `static_workgroups`,
+// which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

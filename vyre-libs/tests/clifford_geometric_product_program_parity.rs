@@ -13,10 +13,10 @@
 //! BIT-EXACT (no tolerance): every component is a multiple of 0.5, so each product is an exact multiple of
 //! 0.25 and every sum stays well below 2^23, exactly representable in 16.16. The fixed IR must therefore
 //! reproduce the f64 reference to the BIT.
-#![cfg(all(feature = "geom", feature = "test-fixtures"))]
+#![cfg(feature = "geom")]
 
 use vyre_libs::geom::clifford::clifford2_product;
-use vyre_libs::test_parity_oracles::{from_fixed, to_fixed, xorshift32 as xorshift};
+use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
 

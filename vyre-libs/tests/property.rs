@@ -11,6 +11,7 @@ use proptest::prelude::*;
 use vyre::ir::Program;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
+use vyre_libs::math::prefix_scan::{MAX_SINGLE_BLOCK_SCAN, SCAN_WORKGROUP_LANES};
 use vyre_libs::math::scan::scan_prefix_sum;
 
 fn has_single_region(program: &Program) -> bool {
@@ -46,11 +47,19 @@ proptest! {
         prop_assert_eq!(p.workgroup_size(), [256, 1, 1]);
     }
 
+    /// The workgroup is capped, not inflated. A scan past
+    /// `SCAN_WORKGROUP_LANES` elements gives each lane a longer run instead of
+    /// asking for more lanes, so the next power of two stops being the answer
+    /// at n = 257 and the cap is the answer from there to the single-block
+    /// ceiling.
     #[test]
-    fn scan_prefix_sum_is_valid_for_all_sizes(n in 1u32..1024) {
+    fn scan_prefix_sum_is_valid_for_all_sizes(n in 1u32..=MAX_SINGLE_BLOCK_SCAN) {
         let p = scan_prefix_sum("in", "out", n);
         prop_assert!(has_single_region(&p));
-        prop_assert_eq!(p.workgroup_size(), [n.next_power_of_two().min(256), 1, 1]);
+        prop_assert_eq!(
+            p.workgroup_size(),
+            [n.next_power_of_two().min(SCAN_WORKGROUP_LANES), 1, 1]
+        );
     }
 
     #[test]
@@ -62,6 +71,23 @@ proptest! {
         let p = broadcast(&s, &d, 8);
         prop_assert!(has_single_region(&p));
     }
+}
+
+/// The lane count stops following the next power of two exactly one element
+/// past the cap. A random sample over the whole domain can miss that step, so
+/// the three sizes around it are pinned: the last size the two rules agree on,
+/// the first size they disagree on, and the largest single-block scan.
+#[test]
+fn scan_prefix_sum_caps_lanes_one_element_past_the_workgroup_width() {
+    let lanes = |n: u32| scan_prefix_sum("in", "out", n).workgroup_size()[0];
+
+    assert_eq!(lanes(SCAN_WORKGROUP_LANES), SCAN_WORKGROUP_LANES);
+    assert_eq!(lanes(SCAN_WORKGROUP_LANES + 1), SCAN_WORKGROUP_LANES);
+    assert_eq!(lanes(MAX_SINGLE_BLOCK_SCAN), SCAN_WORKGROUP_LANES);
+    assert!(
+        (SCAN_WORKGROUP_LANES + 1).next_power_of_two() > SCAN_WORKGROUP_LANES,
+        "this contract is vacuous unless the next power of two exceeds the cap here"
+    );
 }
 
 // Every vyre-libs Program contains one top-level Region; these tests

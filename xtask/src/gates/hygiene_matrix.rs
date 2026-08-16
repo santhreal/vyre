@@ -602,7 +602,9 @@ impl Gate for HygieneMatrix {
         let release_surface_coverage = release_surface_coverage(&root);
         let hot_paths = load_hot_path_files(&root);
         let mut structural_gates = load_structural_gates(&root);
-        let finding_classes = classify_findings(&root, &findings, &hot_paths, &structural_gates);
+        let test_gated = structure_gate::cfg_test::test_gated_module_files(&root);
+        let finding_classes =
+            classify_findings(&root, &findings, &hot_paths, &structural_gates, &test_gated);
         let panic_budget = collect_panic_budget(&root, &finding_classes);
         structural_gates.blockers.extend(stale_declaration_blockers(
             &root,
@@ -702,12 +704,13 @@ fn classify_findings(
     findings: &[HygieneFinding],
     hot_paths: &std::collections::BTreeSet<String>,
     structural_gates: &StructuralGateArtifact,
+    test_gated: &BTreeSet<String>,
 ) -> Vec<HygieneFindingClass> {
     findings
         .iter()
         .map(|finding| {
             let owner_lane = hygiene_owner_lane_for_path(&finding.path);
-            let surface = hygiene_surface_for_path(&finding.path);
+            let surface = hygiene_surface_for_path(vyre_root, &finding.path, test_gated);
             let hot_path = hygiene_finding_is_hot_path(vyre_root, &finding.path, hot_paths);
             let declared = is_declared_structural_gate(vyre_root, finding, structural_gates);
             let risk = hygiene_risk(finding.pattern, surface, hot_path, declared);
@@ -904,7 +907,11 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     "coordination"
 }
 
-fn hygiene_surface_for_path(path: &str) -> &'static str {
+fn hygiene_surface_for_path(
+    vyre_root: &Path,
+    path: &str,
+    test_gated: &BTreeSet<String>,
+) -> &'static str {
     let normalized = path.replace('\\', "/");
     if normalized.contains("/target/")
         || normalized.contains("/target-codex/")
@@ -925,7 +932,7 @@ fn hygiene_surface_for_path(path: &str) -> &'static str {
         || normalized.ends_with("_tests.rs")
         || normalized.contains("_tests_")
         || normalized.contains("_test_")
-        || is_cpu_parity_oracle_source(&normalized)
+        || test_gated.contains(&relative_to_vyre(vyre_root, Path::new(path)))
     {
         return "test";
     }
@@ -964,13 +971,6 @@ fn xtask_crate_source_segment(normalized: &str) -> bool {
         tail.split_once('/')
             .is_some_and(|(_crate_name, rest)| rest == "src" || rest.starts_with("src/"))
     })
-}
-
-fn is_cpu_parity_oracle_source(normalized_path: &str) -> bool {
-    normalized_path.ends_with("/cpu_oracle.rs")
-        || normalized_path.ends_with("_cpu_oracle.rs")
-        || normalized_path.ends_with("/bitset_closure_oracle.rs")
-        || normalized_path.ends_with("/reaching/oracle.rs")
 }
 
 /// The release risk of one finding.
@@ -1058,16 +1058,32 @@ fn hygiene_finding_is_hot_path(
     hot_paths.contains(&relative)
 }
 
+/// Whether `.github/workflows` holds a workflow file.
+///
+/// The directory itself survives the deletion of every workflow in it, so its
+/// presence is not coverage.
+fn holds_workflow(vyre_root: &Path) -> bool {
+    let Ok(entries) = fs::read_dir(vyre_root.join(".github/workflows")) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        entry
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "yml" || extension == "yaml")
+    })
+}
+
 fn release_surface_coverage(vyre_root: &Path) -> ReleaseSurfaceCoverage {
     ReleaseSurfaceCoverage {
-        vyre_workspace: vyre_root.join("vyre").is_dir(),
+        vyre_workspace: vyre_root.join("vyre/src/lib.rs").is_file(),
         cuda_driver_crate: vyre_root.join("vyre-driver-cuda/src/lib.rs").is_file(),
         wgpu_driver_crate: vyre_root.join("vyre-driver-wgpu/src/lib.rs").is_file(),
         release_scripts: vyre_root
             .join("scripts/apply-branch-protection.sh")
             .is_file()
             && vyre_root.join("xtask/src/gates/layering.rs").is_file(),
-        github_workflows: vyre_root.join(".github/workflows").is_dir(),
+        github_workflows: holds_workflow(vyre_root),
         branch_protection_controls: vyre_root.join(".github/CI_REQUIRED.md").is_file()
             && vyre_root
                 .join("scripts/apply-branch-protection.sh")
@@ -2639,7 +2655,53 @@ fn line_contains_raw_workspace_cargo(line: &str) -> bool {
     else {
         return trimmed.starts_with("cargo +");
     };
+    if is_emitted_sentence(trimmed, offset) {
+        return comment_instructs_a_run(&trimmed[..offset]);
+    }
     !is_comment_line(trimmed) || comment_instructs_a_run(&trimmed[..offset])
+}
+
+/// Whether the command at `offset` is inside a sentence the code emits.
+///
+/// A gate that spawns cargo through the one resolver still has to say which
+/// command failed, and that sentence names `cargo test`. Reading it as an
+/// invocation reported three gates that call the wrapper correctly. An emitted
+/// sentence is then judged by [`comment_instructs_a_run`], the same question
+/// asked of a comment: a message telling a maintainer to run something must
+/// name the wrapper, and one saying what failed is a description.
+///
+/// A spawn names its program to `Command::new`, so a line that does stays
+/// reported however it is quoted, and text printed for a reader to copy is not
+/// one of the message shapes.
+fn is_emitted_sentence(trimmed: &str, offset: usize) -> bool {
+    if trimmed.contains("Command::new") {
+        return false;
+    }
+    let bytes = trimmed.as_bytes();
+    let mut quotes = 0usize;
+    let mut at = 0usize;
+    while at < offset {
+        match bytes[at] {
+            b'\\' => at += 1,
+            b'"' => quotes += 1,
+            _ => {}
+        }
+        at += 1;
+    }
+    if quotes % 2 == 0 {
+        return false;
+    }
+    let before = &trimmed[..offset];
+    [
+        "format!(",
+        "panic!(",
+        "expect(",
+        "unwrap_or_else(",
+        "GateError::new(",
+        "assert",
+    ]
+    .iter()
+    .any(|shape| before.contains(shape))
 }
 
 fn line_contains_invalid_cargo_full_xtask(line: &str) -> bool {
@@ -2891,6 +2953,10 @@ mod tests {
     /// sentence describing what a build does was a finding a reader could only
     /// clear by describing the build less precisely. An instruction is what the
     /// rule is about, and the verb that makes it one comes before the command.
+    /// A sentence the code emits is judged by the same question: three gates
+    /// that spawn through the one resolver were reported for the diagnostic
+    /// naming the command that failed to start, while a message printed for a
+    /// reader to type still names the wrapper.
     #[test]
     fn a_cargo_command_is_a_finding_when_a_comment_tells_a_reader_to_run_it() {
         for instruction in [
@@ -2899,6 +2965,8 @@ mod tests {
             "// rebuild it with `cargo build -p xtask`",
             "let usage = \"cargo xtask gate1\";",
             "println!(\"  cargo run -p {package} -- <subcommand>\");",
+            "panic!(\"rerun with `cargo test -p xtask --lib`\");",
+            "Command::new(\"bash\").arg(\"-c\").arg(\"cargo test -p xtask\");",
         ] {
             assert!(
                 line_contains_raw_workspace_cargo(instruction),
@@ -2910,6 +2978,9 @@ mod tests {
             "//! `cargo check -p <member>` is what the plain default build gets.",
             "// A cargo test target that does not exist fails before it runs.",
             "//! `cargo check -p <member>` is what the plain default build gets.",
+            "format!(\"`cargo test --test {suite}` could not be started: {error}\"),",
+            "format!(\"cannot run cargo test for `{package}`: {error}\"),",
+            "GateError::new(format!(\"`cargo build` produced no binary\"), advice),",
         ] {
             assert!(
                 !line_contains_raw_workspace_cargo(description),
@@ -3069,18 +3140,18 @@ mod tests {
             "/w/xtask/src/gates/gate1.rs",
         ] {
             assert_eq!(
-                hygiene_surface_for_path(path),
+                hygiene_surface_for_path(Path::new("/w"), path, &BTreeSet::new()),
                 "release_tooling",
                 "Fix: {path} is xtask source and must carry release-tooling thresholds."
             );
         }
         assert_eq!(
-            hygiene_surface_for_path("/w/docs/optimization/PASSES.md"),
+            hygiene_surface_for_path(Path::new("/w"), "/w/docs/optimization/PASSES.md", &BTreeSet::new()),
             "docs",
             "Fix: real documentation must still classify as docs."
         );
         assert_eq!(
-            hygiene_surface_for_path("/w/vyre-libs/src/docs/loader.rs"),
+            hygiene_surface_for_path(Path::new("/w"), "/w/vyre-libs/src/docs/loader.rs", &BTreeSet::new()),
             "docs",
             "Fix: only the xtask tree is reclassified; other trees keep the docs rule."
         );
@@ -3458,6 +3529,7 @@ mod tests {
             &findings,
             &hot_paths,
             &structural_gates(&[]),
+            &BTreeSet::new(),
         );
 
         assert_eq!(classes[0].surface, "production");
@@ -3483,6 +3555,7 @@ mod tests {
             &findings,
             &std::collections::BTreeSet::new(),
             &structural_gates(&[]),
+            &BTreeSet::new(),
         );
 
         assert_eq!(classes[0].surface, "test");
@@ -3522,6 +3595,7 @@ mod tests {
                 "driver/tests/source_contracts.rs",
                 "no_other_file_calls_the_owner",
             )]),
+            &BTreeSet::new(),
         );
 
         assert_eq!(
@@ -3572,27 +3646,42 @@ mod tests {
         );
     }
 
+    /// A module a crate declares under `#[cfg(test)]` compiles only for tests, so its
+    /// panics are test hygiene even though the file sits under `src`. The classifier
+    /// learns that from the set of gated files the tree itself declares, so a module
+    /// that loses its gate is counted against the crate's panic budget again.
     #[test]
-    fn cpu_parity_oracle_sources_are_test_hygiene_not_release_blockers() {
+    fn a_cfg_test_gated_source_is_test_hygiene_and_the_same_file_ungated_is_not() {
         let hot_paths = std::collections::BTreeSet::new();
         let findings = vec![HygieneFinding {
-            path: "/repo/vyre-reference/src/ifds_cpu_oracle.rs".to_string(),
-            line: 37,
+            path: "/repo/vyre-libs/src/test_parity_oracles.rs".to_string(),
+            line: 44,
             pattern: "panic_macro",
-            text: "panic!(\"IFDS CPU oracle\")".to_string(),
+            text: "panic!(\"unsupported oracle width\")".to_string(),
             test: None,
         }];
 
+        let gated = BTreeSet::from(["vyre-libs/src/test_parity_oracles.rs".to_string()]);
         let classes = classify_findings(
-            Path::new("."),
+            Path::new("/repo"),
             &findings,
             &hot_paths,
             &structural_gates(&[]),
+            &gated,
         );
-
         assert_eq!(classes[0].surface, "test");
         assert_eq!(classes[0].risk, "test_hygiene");
         assert!(!classes[0].release_blocker);
+
+        let classes = classify_findings(
+            Path::new("/repo"),
+            &findings,
+            &hot_paths,
+            &structural_gates(&[]),
+            &BTreeSet::new(),
+        );
+        assert_eq!(classes[0].surface, "production");
+        assert_ne!(classes[0].risk, "test_hygiene");
     }
 
     /// The dedicated test-support crate is test infrastructure even though its code lives under `src`.
@@ -3621,6 +3710,7 @@ mod tests {
             &findings,
             &hot_paths,
             &structural_gates(&[]),
+            &BTreeSet::new(),
         );
 
         assert!(classes.iter().all(|class| class.surface == "test"));
@@ -3643,7 +3733,11 @@ mod tests {
     #[test]
     fn feature_gated_test_harness_sources_are_test_hygiene() {
         assert_eq!(
-            hygiene_surface_for_path("/repo/vyre-driver-cuda/src/test_harness/fake_backend.rs"),
+            hygiene_surface_for_path(
+            Path::new("/repo"),
+            "/repo/vyre-driver-cuda/src/test_harness/fake_backend.rs",
+            &BTreeSet::new(),
+        ),
             "test"
         );
     }
@@ -3651,7 +3745,11 @@ mod tests {
     #[test]
     fn fuzz_targets_are_test_surface_not_release_production() {
         assert_eq!(
-            hygiene_surface_for_path("vyre-foundation/fuzz/fuzz_targets/reachability.rs"),
+            hygiene_surface_for_path(
+            Path::new("."),
+            "vyre-foundation/fuzz/fuzz_targets/reachability.rs",
+            &BTreeSet::new(),
+        ),
             "test"
         );
     }
@@ -3708,6 +3806,7 @@ mod tests {
             &findings,
             &hot_paths,
             &structural_gates(&[]),
+            &BTreeSet::new(),
         );
 
         assert!(classes[0].hot_path);
@@ -4020,7 +4119,7 @@ pub fn undocumented() {
         for member in &crates {
             let source = format!("/w/{member}/src/gates/some_gate.rs");
             assert_eq!(
-                hygiene_surface_for_path(&source),
+                hygiene_surface_for_path(Path::new("/w"), &source, &BTreeSet::new()),
                 "release_tooling",
                 "Fix: {source} is xtask source and must carry release-tooling thresholds."
             );

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The crate README generator renders nothing while the ownership registry, the crate guides or the release train disagrees with the workspace, and it refuses to write a generated contract that itself claims a retired release, while a retired claim in the crate own prose is reported and no longer blocks the regeneration of the generated region."

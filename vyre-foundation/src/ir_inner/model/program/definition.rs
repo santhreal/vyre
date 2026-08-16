@@ -10,6 +10,27 @@ use crate::ir_inner::model::node::Node;
 
 use super::BufferDecl;
 
+/// Invocations per workgroup every registered target profile admits.
+///
+/// A program declares its workgroup extent when it is built, before any backend
+/// is known, so an op whose algorithm needs a fixed cooperative block has to
+/// pick a width without asking a device. This is that width: the floor every
+/// target's capability record must clear, so a program sized to it is admissible
+/// on all of them.
+///
+/// It is not a device limit and it is not any one backend's number. Each backend
+/// declares its own limit in its own target dialect, and the widest workgroup a
+/// given backend accepts is that record, not this. What this pins is the
+/// narrowest of them, which is the only width a substrate-neutral crate can
+/// choose. `vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum` sized
+/// its block at 1024 on the claim that 1024 is universal; the structured-compute
+/// target admits 256, and the payload was refused at admission on every proof
+/// run.
+///
+/// A backend whose profile cannot clear this floor fails a conformance contract
+/// naming both numbers rather than silently narrowing what ships.
+pub const PORTABLE_WORKGROUP_INVOCATIONS: u32 = 256;
+
 /// A complete vyre program.
 ///
 /// Contains everything needed to execute a GPU compute dispatch:

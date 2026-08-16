@@ -311,6 +311,7 @@ impl<'a> UringResidentQueuePump<'a> {
     }
 }
 
+// Inline: covers `PendingPublish`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -3,7 +3,7 @@ use super::intersect_step::{dominator_tree_intersect_step, OP_ID as INTERSECT_ST
 use super::program::{dominator_tree_program, IDOM_NONE, OP_ID};
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || dominator_tree_program(4, 4, 4, "idom"),
         Some(|| {
@@ -28,7 +28,7 @@ inventory::submit! {
 // The forest is a chain `0 <- 1 <- 2` with node 3 not yet reached, so the
 // witness covers the upward walk and the `IDOM_NONE` guard that stops it.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         DEPTH_OP_ID,
         || dominator_tree_depth(4, "idom", "dt_depth"),
         Some(|| {
@@ -45,7 +45,7 @@ inventory::submit! {
 // takes the first-predecessor branch on nodes 1 and 2, both arms of the LCA
 // descent on node 3, and reports movement.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         INTERSECT_STEP_OP_ID,
         || dominator_tree_intersect_step(4, 4, "idom", "dt_depth"),
         Some(|| {

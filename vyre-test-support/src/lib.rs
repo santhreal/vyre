@@ -157,6 +157,7 @@ pub mod data_type_elements;
 #[cfg(feature = "ir-fixtures")]
 pub mod data_type_variants;
 pub mod exploded_ifds_cases;
+pub mod fixed_point;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
@@ -288,7 +289,7 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
     let mut gated_paths: BTreeSet<PathBuf> = BTreeSet::new();
     for (path, text) in &src_texts {
         let module_dir = module_directory(path);
-        for name in structure_gate::cfg_test_module_declarations(text) {
+        for name in structure_gate::cfg_test::cfg_test_module_declarations(text) {
             gated_paths.insert(module_dir.join(format!("{name}.rs")));
             gated_paths.insert(module_dir.join(&name));
         }
@@ -313,7 +314,7 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
         // byte after the first `#[cfg(test)]` marker counted production code as
         // test text, and a crate whose first marker precedes its re-export list
         // had 174 symbols "covered" by a `pub use` block that merely names them.
-        let gated = structure_gate::cfg_test_items(text);
+        let gated = structure_gate::cfg_test::cfg_test_items(text);
         if !gated.is_empty() {
             corpus.push_str(&gated);
             corpus.push('\n');

@@ -227,6 +227,8 @@ impl std::fmt::Display for ResidentGraphReuseTelemetryError {
 
 impl std::error::Error for ResidentGraphReuseTelemetryError {}
 
+// Inline: `vyre_driver::residency` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};

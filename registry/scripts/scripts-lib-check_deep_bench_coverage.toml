@@ -1,0 +1,4 @@
+path = "scripts/lib/check_deep_bench_coverage.py"
+state = "retired"
+gate = "bench-coverage"
+reason = "the coverage derivation is the gate's"

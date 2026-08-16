@@ -15,7 +15,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -95,9 +95,7 @@ pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
 pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n: u32) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         eigenvector_column_sign_body(eigenvectors, n),
     )
 }
@@ -143,7 +141,7 @@ pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
 // column 1 is unchanged. The -0.0 is the zero row times -1.0 and is what f32
 // produces; it is in the fixture because the comparison is on bytes.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || eigenvector_column_sign("evec", 2),
         Some(|| {

@@ -41,10 +41,13 @@
 //!   requirement, `verified-intentional` against fusion, whose disjointness
 //!   proof already covers those nodes' buffer operands.
 
+use super::collect_var_reads;
 use super::substitution::expr_contains_opaque;
-use super::{collect_var_reads, rename_var_in_expr};
-use crate::ir::{Ident, Node};
+use crate::ir::{Expr, Ident, Node};
+use crate::optimizer::rewrite::rewrite_expr;
+use crate::transform::rewrite_walk::{self, NodeRewrite};
 use rustc_hash::FxHashSet;
+use std::borrow::Cow;
 
 /// Every name `nodes` binds, nested scopes included.
 ///
@@ -146,68 +149,50 @@ fn node_unsummarisable_effect(node: &Node) -> bool {
     }
 }
 
-/// Re-key `node` from induction variable `from` onto `to`, rewriting reads
-/// and binding occurrences alike so the rewrite leaves no reference behind.
+/// Re-key `node` from induction variable `from` onto `to`, rewriting reads and
+/// binding occurrences alike so the rewrite leaves no reference behind.
+///
+/// Which positions exist is [`rewrite_walk::rewrite_node`]'s decision, the one
+/// rewriting enumeration of `Node`. This function used to carry a second copy
+/// of that enumeration, and the copy had to be extended by hand every time a
+/// variant gained an operand: the async copy offset and size and the trap
+/// address were added long after the arithmetic positions, and until then a
+/// renamed loop read a variable that no longer bound. The copy also rewrote
+/// reads inside a nested loop that rebinds `from` without rewriting that
+/// loop's own induction variable, which left the inner body reading the outer
+/// name.
+///
+/// Stream tags reach [`NodeRewrite::tag`], which this policy leaves at its
+/// default: a tag that spells the induction variable names an in-flight
+/// transfer rather than a value, and renaming one end of a pair separates it
+/// from its wait. `Opaque` is the one payload this walk cannot enter, which is
+/// why [`unsummarisable_effect`] reports it and both callers refuse a body
+/// that holds one.
 pub(super) fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
-    match node {
-        Node::Let { name, value } => Node::Let {
-            name: if name == *from { to.clone() } else { name },
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Assign { name, value } => Node::Assign {
-            name: if name == *from { to.clone() } else { name },
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::Store {
-            buffer,
-            index: rename_var_in_expr(index, from, to),
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond: rename_var_in_expr(cond, from, to),
-            then: rename_var_in_body(then, from, to),
-            otherwise: rename_var_in_body(otherwise, from, to),
-        },
-        Node::Loop {
-            var,
-            from: lo,
-            to: hi,
-            body,
-        } => Node::Loop {
-            var,
-            from: rename_var_in_expr(lo, from, to),
-            to: rename_var_in_expr(hi, from, to),
-            body: rename_var_in_body(body, from, to),
-        },
-        Node::Block(body) => Node::Block(rename_var_in_body(body, from, to)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec = std::sync::Arc::try_unwrap(body).unwrap_or_else(|arc| (*arc).clone());
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(rename_var_in_body(body_vec, from, to)),
-            }
-        }
-        other => other,
-    }
+    let mut rename = RenameVar { from, to };
+    rewrite_walk::rewrite_node(&node, &mut rename).unwrap_or(node)
 }
 
-fn rename_var_in_body(body: Vec<Node>, from: &Ident, to: &Ident) -> Vec<Node> {
-    body.into_iter()
-        .map(|n| rename_var_in_node(n, from, to))
-        .collect()
+/// Rewrites one value name wherever the walk offers a value position.
+struct RenameVar<'a> {
+    from: &'a Ident,
+    to: &'a Ident,
+}
+
+impl NodeRewrite for RenameVar<'_> {
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        match rewrite_expr(expr, &mut |candidate| match candidate {
+            Expr::Var(name) if name == self.from => Some(Expr::Var(self.to.clone())),
+            _ => None,
+        }) {
+            Cow::Borrowed(_) => None,
+            Cow::Owned(rewritten) => Some(rewritten),
+        }
+    }
+
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        (name == self.from).then(|| self.to.clone())
+    }
 }
 
 #[cfg(test)]
@@ -297,6 +282,63 @@ mod tests {
                 &to
             ),
             Node::Block(vec![Node::store("b", Expr::var("z"), Expr::var("keep"))])
+        );
+    }
+
+    /// WHY: `rename_var_in_node` reaches every position through
+    /// `rewrite_walk`, which offers the value namespace and the tag namespace
+    /// through separate hooks. This pins that the rename takes only the value
+    /// one. A tag spelling the induction variable names an in-flight transfer,
+    /// and renaming the start without the wait leaves `validate::async_pipeline`
+    /// reading a copy nothing waits for (V132) and a wait for nothing (V133).
+    /// Reachable only through a body whose loop variable collides with a stream
+    /// tag, which nothing rejects: the two namespaces never see each other.
+    #[test]
+    fn rename_leaves_a_tag_that_spells_the_induction_variable_alone() {
+        let from = Ident::from("i");
+        let to = Ident::from("z");
+        assert_eq!(
+            rename_var_in_node(
+                Node::AsyncWait {
+                    tag: Ident::from("i"),
+                },
+                &from,
+                &to
+            ),
+            Node::AsyncWait {
+                tag: Ident::from("i"),
+            }
+        );
+    }
+
+    /// WHY: the hand-written rename this replaced rewrote reads inside a
+    /// nested loop that rebinds the renamed name without rewriting that loop's
+    /// own induction variable, so the inner body read the outer name and the
+    /// inner counter went unread. The validator rejects a body that rebinds
+    /// its own loop variable, so no accepted program reached it, but the
+    /// rewrite is now closed under its own recursion rather than by that
+    /// external argument.
+    #[test]
+    fn rename_rewrites_a_nested_loop_that_rebinds_the_same_name() {
+        let from = Ident::from("i");
+        let to = Ident::from("z");
+        assert_eq!(
+            rename_var_in_node(
+                Node::loop_for(
+                    "i",
+                    Expr::u32(0),
+                    Expr::u32(4),
+                    vec![Node::store("b", Expr::var("i"), Expr::u32(1))],
+                ),
+                &from,
+                &to
+            ),
+            Node::loop_for(
+                "z",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![Node::store("b", Expr::var("z"), Expr::u32(1))],
+            )
         );
     }
 
@@ -432,7 +474,10 @@ mod tests {
         for (label, legal, body_a, body_b) in shared_fixtures() {
             let i = Ident::from("i");
             let j = Ident::from("j");
-            let body_b = rename_var_in_body(body_b, &i, &j);
+            let body_b: Vec<Node> = body_b
+                .into_iter()
+                .map(|node| rename_var_in_node(node, &i, &j))
+                .collect();
             let entry = vec![
                 Node::loop_for("i", Expr::u32(0), Expr::u32(8), body_a),
                 Node::loop_for("j", Expr::u32(0), Expr::u32(8), body_b),

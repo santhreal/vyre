@@ -14,10 +14,10 @@
 //!
 //! BIT-EXACT: pure integer arithmetic
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, then `wrapping_add`.
-#![cfg(all(feature = "opt", feature = "test-fixtures"))]
+#![cfg(feature = "opt")]
 
 use vyre_libs::opt::homotopy::homotopy_euler_predictor;
-use vyre_libs::test_parity_oracles::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
+use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
 

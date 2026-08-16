@@ -153,6 +153,8 @@ impl RunningMean {
     }
 }
 
+// Inline: the window cases read `PairedSpeculationWindow::side_compile_cost_ns`, a
+// private field, so no integration test can observe the accumulated cost.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,36 +1,31 @@
-//! FlashAttention-2 tiling  -  sequence-tiled online-softmax attention.
+//! FlashAttention-2 tiling  -  the online-softmax core at a cooperative tile
+//! width.
 //!
-//! Two builders are provided:
-//!
-//! - [`flash_attention_2`]  -  tiled variant. Each invocation handles one
-//!   query row. The KV sequence is processed in tiles of `tile_size`;
-//!   scores for a whole tile are computed first, then the online-softmax
-//!   state `(m, l, o_acc)` is updated once per tile.
-//!
-//! - [`flash_attention_2_reference`]  -  scalar per-row online-softmax
-//!   without tiling. Used as a parity oracle.
+//! [`flash_attention_2`] selects the tiled plan and composes
+//! [`online_softmax_attention`](super::tiled_online_softmax::online_softmax_attention),
+//! which owns the recurrence. Parity is against
+//! [`attention_reference`](super::attention_reference), the offline three-pass
+//! schedule: an oracle that shares the implementation under test agrees by
+//! construction rather than by being right, and a scalar copy of this
+//! recurrence was exactly that.
 //!
 //! Category-A composition.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{DataType, Program};
 
 use super::planner::plan_flash_attention_tiled;
-use crate::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, positive_denominator,
-};
-use crate::nn::f32_stability::flush_tiny;
+use super::tiled_online_softmax::compose_online_softmax_attention;
 
 const OP_ID: &str = "vyre-libs::nn::flash_attention_2";
-const REFERENCE_OP_ID: &str = "vyre-libs::nn::flash_attention_2_reference";
 
 /// Build a Program that computes FlashAttention-2 with explicit
 /// sequence tiling.
 ///
-/// Each invocation handles one query row.  The KV sequence is iterated
-/// in tiles of `tile_size`.  For every tile all scores are computed
-/// first, then the row-level online-softmax accumulator `(m, l, o_acc)`
-/// is updated in one batched step.
+/// Each invocation handles one query row. The KV sequence is iterated in tiles
+/// of `tile_size`. For every tile all scores are computed first, then the
+/// row-level online-softmax accumulator `(m, l, o_acc)` is updated in one
+/// batched step.
 ///
 /// # Parameters
 ///
@@ -63,345 +58,7 @@ pub fn flash_attention_2(
             return trap_program(OP_ID, Some((out, DataType::F32)), error);
         }
     };
-    let scale_expr = Expr::f32(1.0f32 / (head_dim as f32).sqrt());
-    let q_idx = |local: Expr, d: Expr| Expr::add(Expr::mul(local, Expr::u32(head_dim)), d);
-    let score_idx = |local: Expr, j: Expr| Expr::add(Expr::mul(local, Expr::u32(tile_size)), j);
-    let o_idx = |local: Expr, d: Expr| Expr::add(Expr::mul(local, Expr::u32(head_dim)), d);
-    let compute_tile_scores = vec![Node::loop_for(
-        "tile_j",
-        Expr::u32(0),
-        Expr::var("tile_len"),
-        vec![
-            Node::let_bind("dot_val", Expr::f32(0.0)),
-            Node::loop_for(
-                "score_d",
-                Expr::u32(0),
-                Expr::u32(head_dim),
-                vec![Node::assign(
-                    "dot_val",
-                    Expr::add(
-                        Expr::var("dot_val"),
-                        Expr::mul(
-                            Expr::load(
-                                "q_scratch",
-                                q_idx(Expr::var("local"), Expr::var("score_d")),
-                            ),
-                            Expr::load(
-                                k,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::var("tile_start"), Expr::var("tile_j")),
-                                        Expr::u32(head_dim),
-                                    ),
-                                    Expr::var("score_d"),
-                                ),
-                            ),
-                        ),
-                    ),
-                )],
-            ),
-            Node::let_bind("raw_score", Expr::mul(Expr::var("dot_val"), scale_expr)),
-            Node::let_bind("score", bounded_score(Expr::var("raw_score"))),
-            Node::store(
-                "score_tile",
-                score_idx(Expr::var("local"), Expr::var("tile_j")),
-                Expr::var("score"),
-            ),
-        ],
-    )];
-    let update_o_acc = vec![Node::loop_for(
-        "out_d",
-        Expr::u32(0),
-        Expr::u32(head_dim),
-        vec![
-            Node::let_bind("weighted_v", Expr::f32(0.0)),
-            Node::loop_for(
-                "v_j",
-                Expr::u32(0),
-                Expr::var("tile_len"),
-                vec![Node::assign(
-                    "weighted_v",
-                    Expr::add(
-                        Expr::var("weighted_v"),
-                        Expr::mul(
-                            Expr::UnOp {
-                                op: UnOp::Exp,
-                                operand: Box::new(bounded_exp_arg(Expr::sub(
-                                    Expr::load(
-                                        "score_tile",
-                                        score_idx(Expr::var("local"), Expr::var("v_j")),
-                                    ),
-                                    Expr::var("m_new"),
-                                ))),
-                            },
-                            Expr::load(
-                                v,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::var("tile_start"), Expr::var("v_j")),
-                                        Expr::u32(head_dim),
-                                    ),
-                                    Expr::var("out_d"),
-                                ),
-                            ),
-                        ),
-                    ),
-                )],
-            ),
-            Node::store(
-                "o_acc",
-                o_idx(Expr::var("local"), Expr::var("out_d")),
-                Expr::add(
-                    Expr::mul(
-                        Expr::var("rescale"),
-                        Expr::load("o_acc", o_idx(Expr::var("local"), Expr::var("out_d"))),
-                    ),
-                    Expr::var("weighted_v"),
-                ),
-            ),
-        ],
-    )];
-    let body = super::tiled_online_softmax::tiled_online_softmax_body(
-        super::tiled_online_softmax::TiledOnlineSoftmaxSpec {
-            q,
-            out,
-            item_var: "row",
-            item_count: seq_len,
-            seq_len,
-            head_dim,
-            tile_size,
-            tile_count: plan.tile_count,
-        },
-        compute_tile_scores,
-        update_o_acc,
-    );
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(plan.logical_elements),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(plan.logical_elements),
-            BufferDecl::storage(v, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(plan.logical_elements),
-            BufferDecl::workgroup("q_scratch", plan.q_scratch_elements, DataType::F32),
-            BufferDecl::workgroup("score_tile", plan.score_scratch_elements, DataType::F32),
-            BufferDecl::workgroup("o_acc", plan.o_acc_scratch_elements, DataType::F32),
-            BufferDecl::output(out, 3, DataType::F32).with_count(plan.logical_elements),
-        ],
-        [plan.workgroup_lanes, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
-}
-
-/// Simple scalar online-softmax attention reference (no tiling).
-///
-/// One invocation per query row, workgroup size `[1, 1, 1]`.  This is
-/// the standard flash-attention recurrence processed key-by-key.
-#[must_use]
-pub fn flash_attention_2_reference(
-    q: &str,
-    k: &str,
-    v: &str,
-    out: &str,
-    seq_len: u32,
-    head_dim: u32,
-) -> Program {
-    if seq_len == 0 || head_dim == 0 {
-        return trap_program(
-            REFERENCE_OP_ID,
-            Some((out, DataType::F32)),
-            "Fix: flash_attention_2_reference seq_len and head_dim must be > 0".to_string(),
-        );
-    }
-
-    let elements = match seq_len.checked_mul(head_dim) {
-        Some(e) => e,
-        None => {
-            return trap_program(
-                REFERENCE_OP_ID,
-                Some((out, DataType::F32)),
-                "Fix: flash_attention_2_reference seq_len*head_dim overflows u32".to_string(),
-            );
-        }
-    };
-
-    let scale = 1.0f32 / (head_dim as f32).sqrt();
-    let scale_expr = Expr::f32(scale);
-
-    // Per-key online-softmax update.
-    let key_body = vec![
-        // score = scale * dot(Q[row,:], K[j,:])
-        Node::let_bind("dot_val", Expr::f32(0.0)),
-        Node::loop_for(
-            "kd",
-            Expr::u32(0),
-            Expr::u32(head_dim),
-            vec![Node::assign(
-                "dot_val",
-                Expr::add(
-                    Expr::var("dot_val"),
-                    Expr::mul(
-                        Expr::load(
-                            q,
-                            Expr::add(
-                                Expr::mul(Expr::var("row"), Expr::u32(head_dim)),
-                                Expr::var("kd"),
-                            ),
-                        ),
-                        Expr::load(
-                            k,
-                            Expr::add(
-                                Expr::mul(Expr::var("j"), Expr::u32(head_dim)),
-                                Expr::var("kd"),
-                            ),
-                        ),
-                    ),
-                ),
-            )],
-        ),
-        Node::let_bind(
-            "raw_score",
-            Expr::mul(Expr::var("dot_val"), scale_expr.clone()),
-        ),
-        Node::let_bind("score", bounded_score(Expr::var("raw_score"))),
-        // m_new = max(m, score)
-        Node::let_bind(
-            "m_new",
-            Expr::select(
-                Expr::gt(Expr::var("score"), Expr::var("m")),
-                Expr::var("score"),
-                Expr::var("m"),
-            ),
-        ),
-        // rescale = exp(m - m_new)
-        Node::let_bind(
-            "rescale",
-            Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(bounded_exp_arg(Expr::sub(
-                    Expr::var("m"),
-                    Expr::var("m_new"),
-                ))),
-            },
-        ),
-        // prob = exp(score - m_new)
-        Node::let_bind(
-            "prob",
-            Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(bounded_exp_arg(Expr::sub(
-                    Expr::var("score"),
-                    Expr::var("m_new"),
-                ))),
-            },
-        ),
-        // l = rescale * l + prob
-        Node::let_bind(
-            "l_new",
-            Expr::add(
-                Expr::mul(Expr::var("rescale"), Expr::var("l")),
-                Expr::var("prob"),
-            ),
-        ),
-        // o[d] = rescale * o[d] + prob * V[j, d]
-        Node::loop_for(
-            "od",
-            Expr::u32(0),
-            Expr::u32(head_dim),
-            vec![Node::store(
-                "o_ref",
-                Expr::add(
-                    Expr::mul(Expr::var("row"), Expr::u32(head_dim)),
-                    Expr::var("od"),
-                ),
-                Expr::add(
-                    Expr::mul(
-                        Expr::var("rescale"),
-                        Expr::load(
-                            "o_ref",
-                            Expr::add(
-                                Expr::mul(Expr::var("row"), Expr::u32(head_dim)),
-                                Expr::var("od"),
-                            ),
-                        ),
-                    ),
-                    Expr::mul(
-                        Expr::var("prob"),
-                        Expr::load(
-                            v,
-                            Expr::add(
-                                Expr::mul(Expr::var("j"), Expr::u32(head_dim)),
-                                Expr::var("od"),
-                            ),
-                        ),
-                    ),
-                ),
-            )],
-        ),
-        Node::assign("m", Expr::var("m_new")),
-        Node::assign("l", Expr::var("l_new")),
-    ];
-
-    let per_row = vec![
-        Node::let_bind("m", Expr::f32(f32::MIN)),
-        Node::let_bind("l", Expr::f32(0.0)),
-        // Zero o_ref for this row
-        Node::loop_for(
-            "init_d",
-            Expr::u32(0),
-            Expr::u32(head_dim),
-            vec![Node::store(
-                "o_ref",
-                Expr::add(
-                    Expr::mul(Expr::var("row"), Expr::u32(head_dim)),
-                    Expr::var("init_d"),
-                ),
-                Expr::f32(0.0),
-            )],
-        ),
-        Node::loop_for("j", Expr::u32(0), Expr::u32(seq_len), key_body),
-        // Write final output
-        Node::let_bind("denom", positive_denominator(Expr::var("l"))),
-        Node::loop_for(
-            "write_d",
-            Expr::u32(0),
-            Expr::u32(head_dim),
-            vec![Node::store(
-                out,
-                Expr::add(
-                    Expr::mul(Expr::var("row"), Expr::u32(head_dim)),
-                    Expr::var("write_d"),
-                ),
-                flush_tiny(Expr::div(
-                    Expr::load(
-                        "o_ref",
-                        Expr::add(
-                            Expr::mul(Expr::var("row"), Expr::u32(head_dim)),
-                            Expr::var("write_d"),
-                        ),
-                    ),
-                    Expr::var("denom"),
-                )),
-            )],
-        ),
-    ];
-
-    let body = vec![
-        Node::let_bind("row", Expr::InvocationId { axis: 0 }),
-        Node::if_then(Expr::lt(Expr::var("row"), Expr::u32(seq_len)), per_row),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::storage(v, 2, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::workgroup("o_ref", elements, DataType::F32),
-            BufferDecl::output(out, 3, DataType::F32).with_count(elements),
-        ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(REFERENCE_OP_ID, body)],
-    )
+    compose_online_softmax_attention(OP_ID, q, k, v, out, &plan)
 }
 
 #[cfg(test)]
@@ -418,10 +75,11 @@ mod tests {
         )
     }
 
-    /// Tiled FlashAttention-2 agrees with the scalar reference on a
-    /// non-trivial random fixture.
+    /// Tiled FlashAttention-2 agrees with the offline three-pass schedule on
+    /// a non-trivial random fixture. The oracle is a different algorithm, not a
+    /// second spelling of the recurrence under test.
     #[test]
-    fn flash_attention_2_matches_reference() {
+    fn flash_attention_2_matches_attention_reference() {
         let seq_len = 8_u32;
         let head_dim = 16_u32;
         let tile_size = 4_u32;
@@ -444,7 +102,7 @@ mod tests {
             &v,
         );
         let expected = run_program(
-            flash_attention_2_reference("q", "k", "v", "out", seq_len, head_dim),
+            crate::nn::attention::attention_reference("q", "k", "v", "out", seq_len, head_dim),
             &q,
             &k,
             &v,
@@ -454,7 +112,7 @@ mod tests {
         for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
             assert!(
                 (a - e).abs() <= 1.0e-3,
-                "flash_attention_2 vs reference mismatch at index {i}: {a} != {e}"
+                "flash_attention_2 vs attention_reference mismatch at index {i}: {a} != {e}"
             );
         }
     }
@@ -498,7 +156,7 @@ mod tests {
             &v,
         );
         let expected = run_program(
-            flash_attention_2_reference("q", "k", "v", "out", seq_len, head_dim),
+            crate::nn::attention::attention_reference("q", "k", "v", "out", seq_len, head_dim),
             &q,
             &k,
             &v,
@@ -531,7 +189,7 @@ mod tests {
             &v,
         );
         let expected = run_program(
-            flash_attention_2_reference("q", "k", "v", "out", seq_len, head_dim),
+            crate::nn::attention::attention_reference("q", "k", "v", "out", seq_len, head_dim),
             &q,
             &k,
             &v,
@@ -564,7 +222,7 @@ mod tests {
             &v,
         );
         let expected = run_program(
-            flash_attention_2_reference("q", "k", "v", "out", seq_len, head_dim),
+            crate::nn::attention::attention_reference("q", "k", "v", "out", seq_len, head_dim),
             &q,
             &k,
             &v,

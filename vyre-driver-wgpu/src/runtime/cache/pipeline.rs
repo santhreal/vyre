@@ -418,6 +418,7 @@ fn rebasing_atomic_add_u64(counter: &AtomicU64, value: u64, label: &'static str)
     }
 }
 
+// Inline: covers `EvictionEntry`, `LruPipelineCache`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

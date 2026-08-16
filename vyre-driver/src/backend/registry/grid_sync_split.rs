@@ -257,6 +257,7 @@ fn borrowed_inputs_from_owned(inputs: &[Vec<u8>]) -> Result<Vec<&[u8]>, BackendE
     Ok(borrowed)
 }
 
+// Inline: covers `wrap_grid_sync_split`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::wrap_grid_sync_split;

@@ -1,54 +1,32 @@
 use super::*;
 
+/// Judge a recorded backend matrix against the markers the producer declares.
+///
+/// The floor and the required ids are one fact read from one place: the marker
+/// arrays in `backend_matrix`. A hand-written count beside them drifts the
+/// first time a marker is added, and then requires fewer markers than exist.
 pub(crate) fn check_backend_feature_markers(
     requirement_id: &str,
     matrix: &serde_json::Value,
     field: &str,
-    minimum: usize,
     failures: &mut Vec<String>,
 ) {
     let Some(markers) = backend_matrix_markers(requirement_id, matrix, field, failures) else {
         return;
     };
+    let required_ids: Vec<&str> = match field {
+        "cuda_feature_markers" => crate::release::backend_matrix::cuda_feature_marker_ids(),
+        "wgpu_feature_markers" => crate::release::backend_matrix::wgpu_feature_marker_ids(),
+        _ => Vec::new(),
+    };
+    let minimum = required_ids.len();
     if markers.len() < minimum {
         failures.push(format!(
             "requirement `{requirement_id}` backend matrix `{field}` has {} marker(s), needs at least {minimum}",
             markers.len()
         ));
     }
-    let required_ids: &[&str] = match field {
-        "cuda_feature_markers" => &[
-            "tensor-core-fragment",
-            "ldmatrix-cp-async",
-            "predicated-execution",
-            "instruction-scheduling",
-            "ptx-vector-load-gap-scheduling",
-            "ptx-compute-load-gap-scheduling",
-            "ptx-vector-load-fusion",
-            "ptx-vector-store-fusion",
-            "async-copy-emitter",
-            "mma-emitter",
-            "cuda-resident-dispatch",
-            "cuda-resident-io",
-            "cuda-graph-launch",
-            "cuda-module-cache",
-            "cuda-ptx-source-cache",
-            "cuda-ptx-target-probe",
-            "megakernel-paired-speculation",
-        ],
-        "wgpu_feature_markers" => &[
-            "wgpu-artifact-materializer",
-            "wgpu-megakernel-dispatcher",
-            "wgpu-readback-ring",
-            "wgpu-async-dispatch-prefetch",
-            "wgpu-dispatch-scratch-reuse",
-            "wgpu-disk-cache",
-            "wgpu-no-cpu-fallback-test",
-            "megakernel-paired-speculation",
-        ],
-        _ => &[],
-    };
-    for required_id in required_ids {
+    for required_id in &required_ids {
         if !markers.iter().any(|marker| {
             marker.get("id").and_then(serde_json::Value::as_str) == Some(*required_id)
         }) {

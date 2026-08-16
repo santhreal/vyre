@@ -26,6 +26,12 @@ impl Gate for PrintComposition {
         "Walk the decomposition chain of every registered operation; --op-id ID narrows to one"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--op-id ID narrows the walk to one registered operation",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let selected = ctx.flag("--op-id");
         let mut report = Report::clean();

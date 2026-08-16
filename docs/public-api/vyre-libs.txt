@@ -152,6 +152,7 @@ impl vyre_libs::graph::toposort::ToposortCsrDispatchPlan
 impl vyre_libs::graph::toposort::ToposortCsrScratch
 impl vyre_libs::graph::vector_neighbor_graph::VectorGraphTopKEntry
 impl vyre_libs::intern::PerfectHash
+impl vyre_libs::llm::sampling::TokenSampler<'_>
 impl vyre_libs::matching::AnchorDfaPlan
 impl vyre_libs::matching::CompiledDfa
 impl vyre_libs::matching::DfaDedupBatch
@@ -369,6 +370,7 @@ pub const fn vyre_libs::math::quantized::i4_packed_words(lane_count: u32) -> u32
 pub const fn vyre_libs::math::scallop_join::scallop_join_dispatch_grid(n: u32) -> [u32; 3]
 pub const fn vyre_libs::math::sparse_selector::SparseKernelSelectedPath::as_str(self) -> &'static str
 pub const fn vyre_libs::math::sparse_selector::SparseKernelWorkloadClass::as_str(self) -> &'static str
+pub const fn vyre_libs::nn::attention::attention_layout_dispatch_grid(elements: u32) -> [u32; 3]
 pub const fn vyre_libs::parsing::bytecode_dispatch_table_pack::packed_dispatch_table_len(entries_len: usize) -> usize
 pub const fn vyre_libs::parsing::line_splice_classify::line_splice_classify_dispatch_grid(byte_count: u32) -> [u32; 3]
 pub const fn vyre_libs::parsing::lr_tables::Action::pack(self) -> u32
@@ -705,6 +707,11 @@ pub const vyre_libs::hash::table::EMPTY_KEY: u32
 pub const vyre_libs::hash::table::MISS_VALUE: u32
 pub const vyre_libs::hash::table::RESERVED_KEY: u32
 pub const vyre_libs::label::resolve_family::OP_ID: &str
+pub const vyre_libs::llm::paged_kv::PAGED_KV_APPEND_OP_ID: &str
+pub const vyre_libs::llm::paged_kv::PAGED_KV_GATHER_OP_ID: &str
+pub const vyre_libs::llm::sampling::LOGIT_ADJUST_OP_ID: &str
+pub const vyre_libs::llm::sampling::NUCLEUS_SELECT_OP_ID: &str
+pub const vyre_libs::llm::sampling::SAMPLE_TOKEN_OP_ID: &str
 pub const vyre_libs::matching::ANCHOR_DFA_PLAN_SCHEMA_VERSION: u32
 pub const vyre_libs::matching::BRACKET_KIND_CLOSE: u32
 pub const vyre_libs::matching::BRACKET_KIND_OPEN: u32
@@ -806,8 +813,10 @@ pub const vyre_libs::nfa::subgroup_nfa::NAME_OUT: &str
 pub const vyre_libs::nfa::subgroup_nfa::NAME_STATE: &str
 pub const vyre_libs::nfa::subgroup_nfa::NAME_TRANSITION: &str
 pub const vyre_libs::nfa::subgroup_nfa::OP_ID: &str
+pub const vyre_libs::nn::attention::ATTENTION_LAYOUT_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_libs::nn::attention::FLASH_ATTENTION_OUTPUT_TOLERANCE_ABS: f32
 pub const vyre_libs::nn::attention::FLASH_ATTENTION_SEQUENCE_PARALLEL_TARGET_TILES_PER_SPLIT: u32
+pub const vyre_libs::nn::attention::tiled_online_softmax::OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_MAX_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_SUM_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_WRITE_PASS_OP_ID: &str
@@ -1029,7 +1038,6 @@ pub const vyre_libs::solvers::kfac_autotune_step::OP_ID: &str
 pub const vyre_libs::solvers::sheaf_spectral_clustering::DEFAULT_SPECTRUM_ITERATIONS: u32
 pub const vyre_libs::solvers::sinkhorn_dispatch_clustering::OP_ID: &str
 pub const vyre_libs::solvers::sinkhorn_full_clustering::OP_ID: &str
-pub const vyre_libs::test_parity_oracles::FIXED_ONE: u32
 pub const vyre_libs::text::BYTE_HISTOGRAM_256_OP_ID: &str
 pub const vyre_libs::text::CHAR_CLASS_OP_ID: &str
 pub const vyre_libs::text::CHAR_CLASS_WORKGROUP_SIZE: [u32; 3]
@@ -1084,6 +1092,7 @@ pub const vyre_libs::text::UTF8_SHAPE_COUNTS_OP_ID: &str
 pub const vyre_libs::text::UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_libs::topology::simplicial::OP_ID: &str
 pub const vyre_libs::topology::vietoris_rips::OP_ID: &str
+pub const vyre_libs::vfs::resolve::VFS_RESOLVE_OP_ID: &str
 pub const vyre_libs::visual::packed_rgba_map::OP_ID: &str
 pub enum vyre_libs::analysis::diagnostic_aggregation::DiagnosticAggregationError
 pub enum vyre_libs::analysis::incremental_invalidation::IncrementalInvalidationError
@@ -1112,6 +1121,8 @@ pub enum vyre_libs::graph::reachable::ReachableError
 pub enum vyre_libs::graph::vast_tree_walk::VastWalkOrder
 pub enum vyre_libs::hash::crc32::Crc32MapReduceStepKind
 pub enum vyre_libs::intern::BuildError
+pub enum vyre_libs::llm::paged_kv::PagedKvError
+pub enum vyre_libs::llm::sampling::SamplingError
 pub enum vyre_libs::matching::AnchorDfaPlanError
 pub enum vyre_libs::math::prefix_scan::ScanKind
 pub enum vyre_libs::math::sparse_selector::SparseKernelSelectedPath
@@ -2181,6 +2192,12 @@ pub fn vyre_libs::intern::try_build_chd<I, S>(entries: I) -> core::result::Resul
 pub fn vyre_libs::label::resolve_family::cpu_ref(node_tags: &[u32], family_mask: u32) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::label::resolve_family::cpu_ref_into(node_tags: &[u32], family_mask: u32, out: &mut alloc::vec::Vec<u32>)
 pub fn vyre_libs::label::resolve_family::resolve_family(node_tags: &str, nodeset_out: &str, node_count: u32, family_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::llm::paged_kv::paged_kv_append(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, chunk: &str, chunk_tokens: u32, position: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::paged_kv::PagedKvError>
+pub fn vyre_libs::llm::paged_kv::paged_kv_dispatch_grid(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, tokens: u32) -> core::result::Result<[u32; 3], vyre_libs::llm::paged_kv::PagedKvError>
+pub fn vyre_libs::llm::paged_kv::paged_kv_gather(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, window: &str, window_tokens: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::paged_kv::PagedKvError>
+pub fn vyre_libs::llm::sampling::TokenSampler<'_>::program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::sampling::SamplingError>
+pub fn vyre_libs::llm::sampling::logit_adjust(logits: &str, counts: &str, adjusted: &str, vocabulary: u32, temperature: f32, penalty: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::llm::sampling::nucleus_select(selected: &str, weights: &str, uniform: &str, token: &str, candidates: u32, top_p: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::logical::nand(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::logical::nor(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::matching::AnchorDfaPlan::is_complete(&self) -> bool
@@ -2572,7 +2589,6 @@ pub fn vyre_libs::nn::attention::attention_token_to_head(spec: vyre_libs::nn::at
 pub fn vyre_libs::nn::attention::chunked_gated_delta(spec: &vyre_libs::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>
 pub fn vyre_libs::nn::attention::flash_attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::flash_attention_2(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32, tile_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::nn::attention::flash_attention_2_reference(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::gqa_attention(q: &str, k: &str, v_buf: &str, output: &str, n_q_heads: u32, n_kv_heads: u32, seq_len: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal_typed(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -2589,6 +2605,7 @@ pub fn vyre_libs::nn::attention::quest_paging(query: &str, page_metadata: &str, 
 pub fn vyre_libs::nn::attention::recurrent_gated_delta(spec: &vyre_libs::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>
 pub fn vyre_libs::nn::attention::softmax(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::softmax_reference(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::nn::attention::tiled_online_softmax::online_softmax_attention(q: &str, k: &str, v: &str, out: &str, plan: &vyre_libs::nn::attention::FlashAttentionWorkPlan) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::try_attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::nn::attention::turboquant_attention(q: &str, k_packed: &str, v_packed: &str, out: &str, seq_len: u32, d_head: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention_passes::attention_max_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -3385,16 +3402,6 @@ pub fn vyre_libs::solvers::tensor_train_compression::tt_storage_size(compressed:
 pub fn vyre_libs::telemetry::bump(c: &core::sync::atomic::AtomicU64)
 pub fn vyre_libs::telemetry::snapshot_counters() -> alloc::vec::Vec<(&'static str, u64)>
 pub fn vyre_libs::telemetry::total_calls() -> u64
-pub fn vyre_libs::test_parity_oracles::fixed_matvec(matrix: &[u32], vector: &[u32], n: usize) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::test_parity_oracles::fixed_mul(a: u32, b: u32) -> u32
-pub fn vyre_libs::test_parity_oracles::fixed_sdiv_by_positive(numerator: u32, denominator: u32) -> u32
-pub fn vyre_libs::test_parity_oracles::from_fixed(v: u32) -> f64
-pub fn vyre_libs::test_parity_oracles::signed_fixed_17(state: &mut u32) -> u32
-pub fn vyre_libs::test_parity_oracles::signed_fixed_18(state: &mut u32) -> u32
-pub fn vyre_libs::test_parity_oracles::signed_fixed_19(state: &mut u32) -> u32
-pub fn vyre_libs::test_parity_oracles::to_fixed(v: f64) -> u32
-pub fn vyre_libs::test_parity_oracles::wrap_program_sequence(programs: &[&vyre_foundation::ir_inner::model::program::definition::Program], workgroup_size: [u32; 3]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::test_parity_oracles::xorshift32(state: &mut u32) -> u32
 pub fn vyre_libs::text::build_char_class_table() -> [u32; 256]
 pub fn vyre_libs::text::byte_histogram_256(input: &str, histogram: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::text::byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -3428,6 +3435,7 @@ pub fn vyre_libs::topology::vietoris_rips::try_extract_edges_cpu_into(edge_mask:
 pub fn vyre_libs::topology::vietoris_rips::try_vietoris_rips_edge_filter_cpu_into(dist_matrix: &[f64], epsilon: f64, n: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_libs::topology::vietoris_rips::vietoris_rips_edge_filter(dist_matrix: &str, epsilon: &str, edge_mask: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::topology::vietoris_rips::vietoris_rips_edge_filter_cpu(dist_matrix: &[f64], epsilon: f64, n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_libs::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, num_requests: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::GaussianBlurStages::programs(&self) -> [&vyre_foundation::ir_inner::model::program::definition::Program; 2]
 pub fn vyre_libs::visual::GaussianKernel::from_weights(radius: u32, weights: alloc::vec::Vec<u32>) -> core::result::Result<Self, vyre_libs::visual::GaussianKernelError>
 pub fn vyre_libs::visual::GaussianKernel::new(radius: u32, sigma: f32) -> Self
@@ -3598,6 +3606,9 @@ pub mod vyre_libs::hash::table
 pub mod vyre_libs::intern
 pub mod vyre_libs::label
 pub mod vyre_libs::label::resolve_family
+pub mod vyre_libs::llm
+pub mod vyre_libs::llm::paged_kv
+pub mod vyre_libs::llm::sampling
 pub mod vyre_libs::logical
 pub mod vyre_libs::matching
 pub mod vyre_libs::math
@@ -3663,6 +3674,7 @@ pub mod vyre_libs::nfa::subgroup_nfa
 pub mod vyre_libs::nn
 pub mod vyre_libs::nn::activation
 pub mod vyre_libs::nn::attention
+pub mod vyre_libs::nn::attention::tiled_online_softmax
 pub mod vyre_libs::nn::attention_passes
 pub mod vyre_libs::nn::attention_stability
 pub mod vyre_libs::nn::backward
@@ -3806,12 +3818,13 @@ pub mod vyre_libs::solvers::tensor_network_fusion_order
 pub mod vyre_libs::solvers::tensor_train_chain_fusion
 pub mod vyre_libs::solvers::tensor_train_compression
 pub mod vyre_libs::telemetry
-pub mod vyre_libs::test_parity_oracles
 pub mod vyre_libs::text
 pub mod vyre_libs::topology
 pub mod vyre_libs::topology::betti_persistence
 pub mod vyre_libs::topology::simplicial
 pub mod vyre_libs::topology::vietoris_rips
+pub mod vyre_libs::vfs
+pub mod vyre_libs::vfs::resolve
 pub mod vyre_libs::visual
 pub mod vyre_libs::visual::packed_rgba_map
 pub static vyre_libs::analysis::decision_telemetry::AUTOTUNE_DELTA_LARGE: core::sync::atomic::AtomicU64
@@ -4018,6 +4031,8 @@ pub struct vyre_libs::hash::crc32::Crc32Chunk
 pub struct vyre_libs::hash::crc32::Crc32MapReducePlan
 pub struct vyre_libs::hash::crc32::Crc32MapReduceStep
 pub struct vyre_libs::intern::PerfectHash
+pub struct vyre_libs::llm::paged_kv::PagedKvCache<'a>
+pub struct vyre_libs::llm::sampling::TokenSampler<'a>
 pub struct vyre_libs::matching::AnchorDfaCandidate<'anchor>
 pub struct vyre_libs::matching::AnchorDfaLiteral
 pub struct vyre_libs::matching::AnchorDfaPlan
@@ -4203,7 +4218,6 @@ pub use vyre_libs::parsing::vast::walk_preorder_indices
 pub use vyre_libs::scan::FusionError
 pub use vyre_libs::scan::fuse_programs
 pub use vyre_libs::scan::fuse_programs_vec
-pub use vyre_libs::test_parity_oracles::u32_bytes
 pub vyre_libs::BufferDescriptor::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_libs::BufferDescriptor::count: u32
 pub vyre_libs::BufferDescriptor::dtype: vyre_spec::data_type::DataType
@@ -4942,6 +4956,45 @@ pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow::d: u32
 pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow::w: u32
 pub vyre_libs::intern::BuildError::ConstructionFailed(usize)
 pub vyre_libs::intern::BuildError::DuplicateKey(alloc::string::String)
+pub vyre_libs::llm::paged_kv::PagedKvCache::block_table: &'a str
+pub vyre_libs::llm::paged_kv::PagedKvCache::block_tokens: u32
+pub vyre_libs::llm::paged_kv::PagedKvCache::blocks: u32
+pub vyre_libs::llm::paged_kv::PagedKvCache::blocks_per_sequence: u32
+pub vyre_libs::llm::paged_kv::PagedKvCache::cache: &'a str
+pub vyre_libs::llm::paged_kv::PagedKvCache::dtype: vyre_spec::data_type::DataType
+pub vyre_libs::llm::paged_kv::PagedKvCache::head_dim: u32
+pub vyre_libs::llm::paged_kv::PagedKvCache::heads: u32
+pub vyre_libs::llm::paged_kv::PagedKvCache::sequences: u32
+pub vyre_libs::llm::paged_kv::PagedKvError::ElementCountOverflow
+pub vyre_libs::llm::paged_kv::PagedKvError::EmptyShape
+pub vyre_libs::llm::paged_kv::PagedKvError::Range
+pub vyre_libs::llm::paged_kv::PagedKvError::Range::block_tokens: u32
+pub vyre_libs::llm::paged_kv::PagedKvError::Range::blocks_per_sequence: u32
+pub vyre_libs::llm::paged_kv::PagedKvError::Range::end: u32
+pub vyre_libs::llm::paged_kv::PagedKvError::UnsupportedDtype
+pub vyre_libs::llm::paged_kv::PagedKvError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs::llm::sampling::SamplingError::CandidatesExceedVocabulary
+pub vyre_libs::llm::sampling::SamplingError::CandidatesExceedVocabulary::candidates: u32
+pub vyre_libs::llm::sampling::SamplingError::CandidatesExceedVocabulary::vocabulary: u32
+pub vyre_libs::llm::sampling::SamplingError::EmptyVocabulary
+pub vyre_libs::llm::sampling::SamplingError::Fusion
+pub vyre_libs::llm::sampling::SamplingError::Fusion::reason: alloc::string::String
+pub vyre_libs::llm::sampling::SamplingError::NoCandidates
+pub vyre_libs::llm::sampling::SamplingError::Penalty
+pub vyre_libs::llm::sampling::SamplingError::Penalty::penalty: f32
+pub vyre_libs::llm::sampling::SamplingError::Temperature
+pub vyre_libs::llm::sampling::SamplingError::Temperature::temperature: f32
+pub vyre_libs::llm::sampling::SamplingError::TopP
+pub vyre_libs::llm::sampling::SamplingError::TopP::top_p: f32
+pub vyre_libs::llm::sampling::TokenSampler::candidates: u32
+pub vyre_libs::llm::sampling::TokenSampler::counts: &'a str
+pub vyre_libs::llm::sampling::TokenSampler::logits: &'a str
+pub vyre_libs::llm::sampling::TokenSampler::repetition_penalty: f32
+pub vyre_libs::llm::sampling::TokenSampler::temperature: f32
+pub vyre_libs::llm::sampling::TokenSampler::token: &'a str
+pub vyre_libs::llm::sampling::TokenSampler::top_p: f32
+pub vyre_libs::llm::sampling::TokenSampler::uniform: &'a str
+pub vyre_libs::llm::sampling::TokenSampler::vocabulary: u32
 pub vyre_libs::matching::AnchorDfaCandidate::bytes: &'anchor [u8]
 pub vyre_libs::matching::AnchorDfaCandidate::pattern_id: u32
 pub vyre_libs::matching::AnchorDfaLiteral::bytes: alloc::vec::Vec<u8>

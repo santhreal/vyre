@@ -528,6 +528,8 @@ impl MultiGpuExecutor {
     }
 }
 
+// Inline: covers `empty_gpu_work_result_slots`, `finalize_gpu_work_results`, `partition`, which no
+// integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

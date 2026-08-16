@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release benchmark generator builds vyre-bench with --release, vyre-bench refuses to measure the release suite from an unoptimized build, and every release benchmark artifact records the build profile that measured it, so a debug-build CPU baseline can no longer inflate a published speedup."

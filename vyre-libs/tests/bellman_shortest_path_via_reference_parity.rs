@@ -30,7 +30,7 @@ use vyre_libs::math::bellman_shortest_path::cpu_ref;
 use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 const INF: u32 = u32::MAX;
 

@@ -28,6 +28,13 @@ impl Gate for Shrink {
         "Delta-debug every registered corpus case that fails its oracle down to a minimal reproducer; --program ID narrows to one, --oracle PATH replaces the oracle"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--program ID narrows the run to one registered corpus case",
+            "--oracle PATH replaces the oracle the reproducer is minimised against",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let oracle = match ctx.flag("--oracle") {
             Some(path) => Oracle::Command(PathBuf::from(path)),

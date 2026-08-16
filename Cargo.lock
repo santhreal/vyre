@@ -2892,6 +2892,7 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 name = "structure-gate"
 version = "0.1.0"
 dependencies = [
+ "tempfile",
  "toml",
  "walkdir",
 ]
@@ -3423,6 +3424,7 @@ dependencies = [
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
+ "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
@@ -3655,6 +3657,7 @@ dependencies = [
  "vyre-emit-naga",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3761,6 +3764,7 @@ dependencies = [
 name = "vyre-lower"
 version = "0.7.2"
 dependencies = [
+ "bincode",
  "imbl",
  "rustc-hash 2.1.3",
  "serde",

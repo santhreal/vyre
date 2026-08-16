@@ -104,9 +104,9 @@ impl Gate for OpNames {
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let libs = ctx.root.join("vyre-libs/src");
-        if !libs.is_dir() {
+        if !structure_gate::source_scan::carries_rust_source(&libs) {
             return Err(GateError::new(
-                format!("{} is not a directory", libs.display()),
+                format!("{} holds no Rust source", libs.display()),
                 "run the gate against a checkout that contains vyre-libs",
             ));
         }

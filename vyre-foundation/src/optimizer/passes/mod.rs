@@ -21,6 +21,9 @@
 //! backend can inherit before target emission.
 //!
 
+use crate::ir::Ident;
+use rustc_hash::FxHashSet;
+
 pub mod algebraic;
 pub mod cleanup;
 pub(crate) mod driver;
@@ -30,15 +33,69 @@ pub mod memory;
 pub mod specialization;
 pub mod sync;
 
+/// What a caller has already proved about the point an expression is moving to.
+///
+/// The rewrites that ask whether an expression may be re-evaluated somewhere
+/// else differ only in which facts they hold, not in how expressions are
+/// classified. Carrying the facts as one value keeps [`classify`] the single
+/// owner of the classification.
+#[derive(Clone, Copy)]
+struct ReexecutionRules<'a> {
+    /// `BufferRef` and `BufLen` read buffer metadata rather than contents, so a
+    /// rewrite moving an expression within one invocation may carry them; one
+    /// re-evaluating it at a new program point may not.
+    allow_buffer_metadata: bool,
+    /// `SubgroupLocalId` and `SubgroupSize` are invariant within a subgroup, so
+    /// a rewrite that stays inside one may carry them.
+    allow_subgroup_identity: bool,
+    /// Buffers a `Load` may read. A read-only buffer is written by nothing in a
+    /// valid program, so its load answers the same value wherever it runs.
+    loadable: Option<&'a FxHashSet<Ident>>,
+}
+
 pub(crate) fn expr_is_observably_free(expr: &crate::ir::Expr) -> bool {
-    expr_is_observably_free_with(expr, true, false)
+    classify(
+        expr,
+        ReexecutionRules {
+            allow_buffer_metadata: true,
+            allow_subgroup_identity: false,
+            loadable: None,
+        },
+    )
 }
 
 pub(crate) fn expr_is_observably_free_for_reexecution(
     expr: &crate::ir::Expr,
     allow_subgroup_identity: bool,
 ) -> bool {
-    expr_is_observably_free_with(expr, false, allow_subgroup_identity)
+    classify(
+        expr,
+        ReexecutionRules {
+            allow_buffer_metadata: false,
+            allow_subgroup_identity,
+            loadable: None,
+        },
+    )
+}
+
+/// Re-executable at a new program point, allowing a `Load` from a buffer in
+/// `read_only`.
+///
+/// Loop-invariant hoisting is the caller: it moves a binding out of a loop
+/// body, where a load from a buffer the program declares read-only reads the
+/// same element it read on every iteration.
+pub(crate) fn expr_is_reexecutable_over_read_only_loads(
+    expr: &crate::ir::Expr,
+    read_only: &FxHashSet<Ident>,
+) -> bool {
+    classify(
+        expr,
+        ReexecutionRules {
+            allow_buffer_metadata: false,
+            allow_subgroup_identity: false,
+            loadable: Some(read_only),
+        },
+    )
 }
 
 /// Whether `expr` contains no `Atomic` and no `Opaque` anywhere.
@@ -98,17 +155,36 @@ pub(crate) fn expr_is_observably_free_with(
     allow_buffer_metadata: bool,
     allow_subgroup_identity: bool,
 ) -> bool {
+    classify(
+        expr,
+        ReexecutionRules {
+            allow_buffer_metadata,
+            allow_subgroup_identity,
+            loadable: None,
+        },
+    )
+}
+
+/// The one walk that decides whether an expression may be evaluated somewhere
+/// other than where it is written.
+///
+/// Exhaustive with no catch-all arm: a new `Expr` variant fails to compile here
+/// rather than reading as free of effects and licensing a move no one judged.
+fn classify(expr: &crate::ir::Expr, rules: ReexecutionRules<'_>) -> bool {
     use crate::ir::Expr;
     match expr {
-        Expr::Load { .. }
-        | Expr::Atomic { .. }
+        Expr::Atomic { .. }
         | Expr::Call { .. }
         | Expr::Opaque(_)
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
         | Expr::SubgroupReduce { .. } => false,
-        Expr::SubgroupLocalId | Expr::SubgroupSize => allow_subgroup_identity,
-        Expr::BufferRef { .. } | Expr::BufLen { .. } => allow_buffer_metadata,
+        Expr::Load { buffer, index } => {
+            rules.loadable.is_some_and(|allowed| allowed.contains(buffer))
+                && classify(index, rules)
+        }
+        Expr::SubgroupLocalId | Expr::SubgroupSize => rules.allow_subgroup_identity,
+        Expr::BufferRef { .. } | Expr::BufLen { .. } => rules.allow_buffer_metadata,
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)
@@ -117,41 +193,14 @@ pub(crate) fn expr_is_observably_free_with(
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. } => true,
-        Expr::BinOp { left, right, .. } => {
-            expr_is_observably_free_with(left, allow_buffer_metadata, allow_subgroup_identity)
-                && expr_is_observably_free_with(
-                    right,
-                    allow_buffer_metadata,
-                    allow_subgroup_identity,
-                )
-        }
-        Expr::UnOp { operand, .. } => {
-            expr_is_observably_free_with(operand, allow_buffer_metadata, allow_subgroup_identity)
-        }
+        Expr::BinOp { left, right, .. } => classify(left, rules) && classify(right, rules),
+        Expr::UnOp { operand, .. } => classify(operand, rules),
         Expr::Select {
             cond,
             true_val,
             false_val,
-        } => {
-            expr_is_observably_free_with(cond, allow_buffer_metadata, allow_subgroup_identity)
-                && expr_is_observably_free_with(
-                    true_val,
-                    allow_buffer_metadata,
-                    allow_subgroup_identity,
-                )
-                && expr_is_observably_free_with(
-                    false_val,
-                    allow_buffer_metadata,
-                    allow_subgroup_identity,
-                )
-        }
-        Expr::Cast { value, .. } => {
-            expr_is_observably_free_with(value, allow_buffer_metadata, allow_subgroup_identity)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_is_observably_free_with(a, allow_buffer_metadata, allow_subgroup_identity)
-                && expr_is_observably_free_with(b, allow_buffer_metadata, allow_subgroup_identity)
-                && expr_is_observably_free_with(c, allow_buffer_metadata, allow_subgroup_identity)
-        }
+        } => classify(cond, rules) && classify(true_val, rules) && classify(false_val, rules),
+        Expr::Cast { value, .. } => classify(value, rules),
+        Expr::Fma { a, b, c } => classify(a, rules) && classify(b, rules) && classify(c, rules),
     }
 }

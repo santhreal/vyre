@@ -58,7 +58,7 @@ use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::any_descendant;
+use crate::visit::{any_descendant, node_map};
 
 /// Fold loop-induction-range-determined `If` conditions.
 #[derive(Debug, Default)]
@@ -194,27 +194,16 @@ fn recurse(
                 .map(|n| recurse(n, range, shape_facts, changed))
                 .collect(),
         ),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(
-                    body_vec
-                        .into_iter()
-                        .map(|n| recurse(n, range, shape_facts, changed))
-                        .collect(),
-                ),
-            }
-        }
-        other => other,
+        // Every other body-bearing variant carries the enclosing range into
+        // its body: the `Loop` arm above only established a range after
+        // proving the variable is rebound nowhere in the body, nested scopes
+        // included. `map_body` owns which slots exist, so a new nesting
+        // variant is folded instead of handed back untouched.
+        other => node_map::map_body(other, &mut |body| {
+            body.into_iter()
+                .map(|n| recurse(n, range, shape_facts, changed))
+                .collect()
+        }),
     }
 }
 

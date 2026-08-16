@@ -22,7 +22,7 @@ use vyre_libs::solvers::sinkhorn_dispatch_clustering::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 const ITERS: u32 = 12;
 const EPS: f32 = 0.1;

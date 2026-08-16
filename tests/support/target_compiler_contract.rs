@@ -26,8 +26,8 @@ use std::collections::BTreeMap;
 use vyre_driver::BackendRegistration;
 use vyre_driver::{BindingSet, BoundResource};
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
     Artifact, ArtifactValueId, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
@@ -98,6 +98,82 @@ pub(crate) fn single_lane_artifact(access: BufferAccess, facts_seed: u8) -> Arti
     .validate()
     .expect("single-lane fixture request must validate");
     vyre_megakernel::compile(&request).expect("single-lane fixture must compile")
+}
+
+/// Program that reads one U32 lane and writes it to another buffer.
+fn copy_one_program(input: &str, output: &str) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::output(output, 1, DataType::U32).with_count(1),
+        ],
+        [64, 1, 1],
+        vec![Node::store(
+            output,
+            Expr::u32(0),
+            Expr::load(input, Expr::u32(0)),
+        )],
+    )
+}
+
+/// A two-stage artifact: one node's output is the next node's input.
+///
+/// The single-lane fixture compiles to one fusion group, which makes every
+/// contract about pairing two parallel per-group lists vacuous: with one element
+/// each, no permutation of them is observable. Chaining the second node onto the
+/// first forces a dependency the planner cannot fuse away, so the artifact
+/// carries two groups, the payload two entries, and the bundle two modules.
+pub(crate) fn two_stage_artifact(access: BufferAccess) -> Artifact {
+    const MIDDLE: &str = "middle";
+    let mut graph = ProgramGraph::new();
+    let (_, first_values) = graph
+        .add_node(
+            "first",
+            store_one_program(),
+            Vec::new(),
+            vec![GraphOutput {
+                buffer: OUTPUT.into(),
+                name: MIDDLE.into(),
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(1)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Invocation,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("two-stage fixture graph must accept its producer");
+    let middle = *first_values
+        .first()
+        .expect("the producer declares one output value");
+    graph
+        .add_node(
+            "second",
+            copy_one_program(MIDDLE, OUTPUT),
+            vec![GraphInput {
+                buffer: MIDDLE.into(),
+                value: middle,
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(1)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![store_one_output(access)],
+        )
+        .expect("two-stage fixture graph must accept its consumer");
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 1, 0, 0, 1),
+        1_000_000,
+    )
+    .validate()
+    .expect("two-stage fixture request must validate");
+    vyre_megakernel::compile(&request).expect("two-stage fixture must compile")
 }
 
 /// The registration a backend publishes, proven reachable by both registry routes.
@@ -174,6 +250,36 @@ impl TargetExpectation<'_> {
         let payload = compiler.compile(&artifact).unwrap_or_else(|error| {
             panic!(
                 "Fix: backend `{}` must compile the single-lane artifact: {error}",
+                self.backend_id
+            )
+        });
+        (artifact, payload)
+    }
+
+    /// A two-group artifact and the payload this backend's compiler emits for it.
+    ///
+    /// Every contract about pairing the payload's per-group lists needs more than
+    /// one group to say anything, so it compiles [`two_stage_artifact`] instead of
+    /// the single-lane fixture and refuses to return a payload that turned out to
+    /// carry one group after all.
+    pub(crate) fn compiled_two_stage(&self) -> (Artifact, TargetPayload) {
+        let compiler = registration(self.backend_id)
+            .target_compiler()
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: backend `{}` must register a pure target compiler: {error}",
+                    self.backend_id
+                )
+            });
+        let artifact = two_stage_artifact(self.output_access.clone());
+        assert!(
+            artifact.fusion().len() >= 2,
+            "Fix: the two-stage fixture compiled to {} fusion group(s), so every contract over paired per-group lists built on it is vacuous. Give the fixture a dependency the planner cannot fuse away.",
+            artifact.fusion().len()
+        );
+        let payload = compiler.compile(&artifact).unwrap_or_else(|error| {
+            panic!(
+                "Fix: backend `{}` must compile the two-stage artifact: {error}",
                 self.backend_id
             )
         });

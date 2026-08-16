@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Partial RoPE is emitted by the attention layout base, so one builder now owns every guarded element move in the attention and paged-cache families."

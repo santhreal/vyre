@@ -410,26 +410,29 @@ impl CudaBackend {
                     &mut params_ref,
                     &mut kernel_args,
                 )?;
-                // Take this step's grid-barrier counter for its launches and
-                // release it once they complete. Per step rather than per
+                // Take this step's module-scope globals for its launches and
+                // release them once they complete. Per step rather than per
                 // sequence: two steps that share a module would otherwise
-                // deadlock this thread against its own gate.
-                let grid_barrier = self.lease_grid_barrier(
+                // deadlock this thread against its own gate. Per step also means
+                // each step's trap record is read against that step, so a refusal
+                // names the step that trapped.
+                let module_globals = self.lease_module_globals(
                     step.program,
                     &step.prepared,
                     &step.ptx_src,
                     step.module_key,
                 )?;
                 // `launch_then_release` runs the launches and ends the lease in
-                // the one safe order: the release synchronizes the stream before
-                // freeing the gate, so a launch failure cannot leave a grid
-                // spinning while the next sequence resets the counter under it.
-                grid_barrier.launch_then_release(
+                // the one safe order: the release synchronizes the stream, reads
+                // the trap record, and only then frees the gate, so a launch
+                // failure cannot leave a grid spinning and a trap cannot be erased
+                // by the next step's reset.
+                module_globals.launch_then_release(
                     stream.raw(),
-                    "resident sequence grid-sync launch",
-                    |grid_barrier| {
+                    "resident sequence launch",
+                    |module_globals| {
                         self.replay_fixpoint_launches(
-                            grid_barrier,
+                            module_globals,
                             resolved.func,
                             &mut kernel_args,
                             &step.prepared,

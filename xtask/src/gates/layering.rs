@@ -722,8 +722,8 @@ impl Registry {
                     names.join(", ")
                 ),
                 "record the crate's layer and allowed internal edges in the registry, then \
-                 run `python3 scripts/crate_ownership.py --write`; an unregistered crate has \
-                 an empty closure, so every edge it has would report at once",
+                 run `xtask crate-ownership --write`; an unregistered crate has an empty \
+                 closure, so every edge it has would report at once",
             ));
         }
 

@@ -75,7 +75,7 @@ fn multi_hash_body(input: &str, out: &str, n: u32) -> Vec<Node> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         MULTI_HASH_OP_ID,
         || multi_hash_program("input", "out", 3),
         Some(|| vec![vec![vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc")]]),

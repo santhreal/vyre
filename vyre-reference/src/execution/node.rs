@@ -19,10 +19,16 @@ use crate::{
 
 /// Execute one scheduling step for an invocation.
 ///
+/// When the step is the one that ends the invocation, every async transfer it
+/// started must already have been waited on. That check lives here because
+/// `step` is the only way this executor advances, so no driver can reach the end
+/// of an invocation without passing through it.
+///
 /// # Errors
 ///
 /// Returns [`ReferenceError`] for uniform-control-flow violations, out-of-bounds
-/// stores, malformed loops, or expression evaluation failures.
+/// stores, malformed loops, expression evaluation failures, or an async transfer
+/// still pending when the invocation ends.
 pub fn step<'a>(
     invocation: &mut Invocation<'a>,
     memory: &mut Memory,
@@ -32,6 +38,19 @@ pub fn step<'a>(
         return Ok(());
     }
 
+    step_frames(invocation, memory, program)?;
+
+    if invocation.done() {
+        invocation.assert_async_drained()?;
+    }
+    Ok(())
+}
+
+fn step_frames<'a>(
+    invocation: &mut Invocation<'a>,
+    memory: &mut Memory,
+    program: &'a Program,
+) -> Result<(), crate::ReferenceError> {
     loop {
         let Some(frame) = invocation.frames_mut().pop() else {
             return Ok(());
@@ -535,7 +554,8 @@ fn eval_barrier(invocation: &mut Invocation<'_>) -> Result<(), crate::ReferenceE
     Ok(())
 }
 
-// Inline: covers the crate-private `step`, which no integration test can reach.
+// Inline: covers `crate::oob::Buffer`, which no integration test can reach, so a
+// fixture cannot bind named buffers into `Memory` from outside the crate.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -609,5 +629,197 @@ mod tests {
         run_program(&program, &mut memory).unwrap();
 
         assert_eq!(bytes(&memory, "dst"), vec![0, 0, 0, 21, 22, 23, 24, 0]);
+    }
+
+    /// WHY: the reference tree must not hold two verdicts for one program. Both
+    /// executors reach the three async rules (a tag started twice, a wait with
+    /// nothing pending, a transfer still queued at the end of an invocation)
+    /// through `execution::async_transfer::PendingAsyncTransfers`. The third one
+    /// used to differ: the hashmap interpreter refused it and this executor
+    /// dropped it, so the same program was accepted by one path and rejected by
+    /// the other. A transfer nobody waited on means the invocation's result
+    /// depends on bytes nobody synchronized, so both refuse.
+    ///
+    /// Closes: an async start node whose wait never runs, on both transitions to
+    /// done (frames exhausted, and `Node::Return`), for every `Async*` variant
+    /// the IR declares, with the two executors held to one message.
+    ///
+    /// Does not catch: a wait that runs on some paths and not others. Only the
+    /// lane that skipped the wait is refused here, so a program whose skipping
+    /// branch is unreachable for the fixture's inputs still passes. The static
+    /// form of the rule in `vyre-foundation` validation is what covers that.
+    mod pending_async_transfers {
+        use super::*;
+        use crate::value::Value;
+
+        const PENDING_TAG: &str = "pending_copy";
+
+        /// Whether an async node kind STARTS a transfer, so the
+        /// end-of-invocation rule must fire for it, or only OBSERVES one.
+        #[derive(Debug, PartialEq, Eq)]
+        enum AsyncRole {
+            StartsTransfer,
+            ObservesTransfer,
+        }
+
+        const ASYNC_NODE_ROLES: &[(&str, AsyncRole)] = &[
+            ("AsyncLoad", AsyncRole::StartsTransfer),
+            ("AsyncStore", AsyncRole::StartsTransfer),
+            ("AsyncWait", AsyncRole::ObservesTransfer),
+        ];
+
+        /// Every `Async*` variant the IR declares.
+        ///
+        /// Read from `NODE_VARIANT_NAMES`, the registry the `Node` declaration
+        /// itself emits, so adding an async variant turns this suite RED until
+        /// someone classifies it and gives it a fixture.
+        fn declared_async_variants() -> Vec<&'static str> {
+            let mut names: Vec<&'static str> = vyre_foundation::ir::NODE_VARIANT_NAMES
+                .iter()
+                .copied()
+                .filter(|name| name.starts_with("Async"))
+                .collect();
+            names.sort_unstable();
+            names
+        }
+
+        fn async_start_node(kind: &str) -> Node {
+            match kind {
+                "AsyncLoad" => Node::async_load_gpu_driven(
+                    "src",
+                    "dst",
+                    Expr::u32(0),
+                    Expr::u32(4),
+                    PENDING_TAG,
+                ),
+                "AsyncStore" => {
+                    Node::async_store("src", "dst", Expr::u32(0), Expr::u32(4), PENDING_TAG)
+                }
+                other => panic!(
+                    "Fix: classify `Node::{other}` in ASYNC_NODE_ROLES and give it a fixture in async_start_node."
+                ),
+            }
+        }
+
+        /// One invocation, so the ids in a refusal are `InvocationIds::ZERO` on
+        /// either executor and the two messages are comparable verbatim.
+        fn single_lane_program(body: Vec<Node>) -> Program {
+            Program::wrapped(
+                vec![
+                    BufferDecl::read("src", 0, DataType::U32).with_count(1),
+                    BufferDecl::output("dst", 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                body,
+            )
+        }
+
+        fn statement_executor(program: &Program) -> Result<(), crate::ReferenceError> {
+            let mut memory = Memory::empty()
+                .with_storage("src", Buffer::new(vec![1, 2, 3, 4], DataType::U32))
+                .with_storage("dst", Buffer::new(vec![0; 4], DataType::U32));
+            run_program(program, &mut memory)
+        }
+
+        fn hashmap_executor(program: &Program) -> Result<(), crate::ReferenceError> {
+            let inputs = vec![
+                Value::from(vec![1_u8, 2, 3, 4]),
+                Value::from(vec![0_u8; 4]),
+            ];
+            crate::reference_eval(program, &inputs).map(|_| ())
+        }
+
+        fn refusal(
+            executor: fn(&Program) -> Result<(), crate::ReferenceError>,
+            program: &Program,
+        ) -> String {
+            executor(program)
+                .expect_err(
+                    "Fix: an async transfer nobody waited on must refuse, not be dropped silently.",
+                )
+                .to_string()
+        }
+
+        #[test]
+        fn every_async_variant_the_ir_declares_is_classified() {
+            let classified = {
+                let mut names: Vec<&str> =
+                    ASYNC_NODE_ROLES.iter().map(|(name, _)| *name).collect();
+                names.sort_unstable();
+                names
+            };
+            assert_eq!(
+                declared_async_variants(),
+                classified,
+                "Fix: classify every declared `Async*` node variant in ASYNC_NODE_ROLES; an unclassified one has no end-of-invocation coverage."
+            );
+        }
+
+        #[test]
+        fn a_transfer_left_pending_refuses_when_the_frames_run_out() {
+            for (kind, _) in ASYNC_NODE_ROLES
+                .iter()
+                .filter(|(_, role)| *role == AsyncRole::StartsTransfer)
+            {
+                let program = single_lane_program(vec![async_start_node(kind)]);
+                let message = refusal(statement_executor, &program);
+                assert!(
+                    message.contains("still pending")
+                        && message.contains(PENDING_TAG)
+                        && message.contains("AsyncWait"),
+                    "Fix: `Node::{kind}` left pending must name the tag and the missing AsyncWait, got: {message}"
+                );
+            }
+        }
+
+        #[test]
+        fn a_transfer_left_pending_refuses_when_the_invocation_returns_early() {
+            for (kind, _) in ASYNC_NODE_ROLES
+                .iter()
+                .filter(|(_, role)| *role == AsyncRole::StartsTransfer)
+            {
+                let program = single_lane_program(vec![async_start_node(kind), Node::Return]);
+                let message = refusal(statement_executor, &program);
+                assert!(
+                    message.contains("still pending") && message.contains(PENDING_TAG),
+                    "Fix: `Return` must not launder a pending `Node::{kind}` past the check, got: {message}"
+                );
+            }
+        }
+
+        #[test]
+        fn both_executors_refuse_a_pending_transfer_with_one_message() {
+            for (kind, _) in ASYNC_NODE_ROLES
+                .iter()
+                .filter(|(_, role)| *role == AsyncRole::StartsTransfer)
+            {
+                let program = single_lane_program(vec![async_start_node(kind)]);
+                assert_eq!(
+                    refusal(statement_executor, &program),
+                    refusal(hashmap_executor, &program),
+                    "Fix: the reference tree must not hold two verdicts for one program; `Node::{kind}` differs by executor."
+                );
+            }
+        }
+
+        #[test]
+        fn a_waited_transfer_is_accepted_by_both_executors() {
+            for (kind, _) in ASYNC_NODE_ROLES
+                .iter()
+                .filter(|(_, role)| *role == AsyncRole::StartsTransfer)
+            {
+                let program = single_lane_program(vec![
+                    async_start_node(kind),
+                    Node::async_wait(PENDING_TAG),
+                    Node::Return,
+                ]);
+                statement_executor(&program).unwrap_or_else(|error| {
+                    panic!("Fix: a waited `Node::{kind}` must still be accepted, got: {error}")
+                });
+                hashmap_executor(&program).unwrap_or_else(|error| {
+                    panic!("Fix: a waited `Node::{kind}` must still be accepted, got: {error}")
+                });
+            }
+        }
     }
 }

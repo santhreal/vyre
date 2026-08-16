@@ -4,7 +4,7 @@
 //! its own operation rather than three lines repeated inside each solver.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::plumbing::operand::shape::square_matrix_cells;
@@ -44,9 +44,7 @@ pub fn matrix_identity_fill_body(matrix: &str, n: u32) -> Vec<Node> {
 pub fn matrix_identity_fill_region(parent_op_id: &str, matrix: &str, n: u32) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         matrix_identity_fill_body(matrix, n),
     )
 }
@@ -79,7 +77,7 @@ pub fn matrix_identity_fill(matrix: &str, n: u32) -> Program {
 //
 // ORACLE: the 3x3 identity. Every value is exact in f32.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || matrix_identity_fill("m", 3),
         Some(|| {
