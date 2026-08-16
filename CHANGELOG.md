@@ -878,6 +878,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   no scope model, compared against the exact oracle it cannot reproduce under
   shadowing. Removed with it, having no callers left, a wrapper whose body
   forwarded a fixture's source bytes to the sequence.
+- A changelog fragment is one file, `release/changes/unreleased/<id>.toml`,
+  holding `category` and `text` with the file name as the id. Every fragment
+  used to be a `[[fragments]]` table appended to one file, and a three-way
+  merge of two branches that each appended one matched the shared blank line
+  and `[[fragments]]` header between the two sides, left them out of the
+  conflicting region, and resolved only the differing tails. The `merge=union`
+  attribute then concatenated those tails under one header, so one fragment
+  carried two ids and the file stopped being valid TOML; without the attribute
+  the same merge stops on a conflict instead. The attribute is gone with the
+  file it named, and `release-docs` reads the directory, rejects an unknown key
+  and refuses a fragment whose text is empty. A regression test builds two
+  branches that each add a fragment and merges them, so the fusion cannot come
+  back quietly.
 - The command-line contract no longer renders a book page.
   `scripts/cli_docs.py` kept generating `docs/CLI.md`, which is deleted, so the
   gate compared a generated document against a file that is not there while its
@@ -3728,6 +3741,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `vyre-driver-cuda/src/backend/enqueue_cleanup.rs` now owns
   `FailedEnqueueGuards` and `abandon_failed_enqueue`, which perform that
   sequence once and return the same error text the four sites produced.
+- Every CUDA graph, executable graph, stream and device pointer guard keeps a
+  reference to the context it destroys its handle against. The guards took
+  their context liveness from a sibling field of the enclosing struct, and both
+  enclosing structs declare that field first, so the context was released
+  before the destroy calls ran. cuGraphExecDestroy then read freed driver
+  memory and blocked forever on a lock word with no owner: a conformance
+  dispatch stopped with no CPU use, no device work and no error, and the
+  cross-backend parity matrix never reported a summary.
 - The live CUDA INT4 parity contracts diff against the CPU oracles
   `vyre-primitives` publishes behind `cpu-parity`, not against a private
   reimplementation of them.
@@ -3836,6 +3857,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   commit would carry: tracked files plus new files no rule excludes, so a copy
   still counts before it is committed. Running the gate outside a git checkout
   now fails with that as the remedy instead of measuring whatever is on disk.
+- Device waits are bounded. Stream and event synchronization poll the CUDA
+  driver with a spin window and capped sleep instead of blocking without a
+  deadline, and a conformance compile, dispatch or session drop that outlives
+  its step deadline returns an error naming the operation, the backend and the
+  ceiling. VYRE_CUDA_DEVICE_WAIT_TIMEOUT_SECS sets the driver-level ceiling,
+  which defaults to 300 seconds.
 - Every intra-doc link in the workspace resolves, so `cargo doc` builds with
   `broken_intra_doc_links` denied. The regex DFA module pointed readers at
   `crate::scan::RegionEvidencePipeline`, a type that exists nowhere in the
@@ -4142,6 +4169,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   had each independently overridden the foreign-artifact string with the same
   replacement text, which is the evidence that the action is not
   backend-specific.
+- The INT4 conformance requirement is a gate blocker instead of dead code.
+  `conformance-matrix` carried a private routine that required every INT4
+  quantization op to be registered with fixture inputs and expected outputs,
+  and to be present in the op matrix catalog. Nothing called it, so no INT4 op
+  was ever held to it. The requirement now runs inside the gate, computed from
+  the same entries the evidence document reports, and a missing fixture or a
+  missing catalog row is reported as a blocker. The live registry satisfies it,
+  so the gate reports no INT4 blocker today.
 - `cargo xtask check-tier-deps` judges every production dependency in the
   workspace, derived from the layer each crate already declares in
   `docs/CRATE_OWNERSHIP.toml`. It carried its own hardcoded table of crate
@@ -4383,6 +4418,21 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   behind it and names the command that re-measures each backend, with the
   verdicts kept as notes, because one commit invalidates every recorded
   benchmark at once and each invalidated artifact then failed several checks.
+- Acquiring the wgpu backend from two threads at once no longer kills the
+  process. Every adapter query and device request built its own wgpu instance,
+  and two overlapping instance constructions raced inside the Vulkan loader:
+  one thread negotiating an ICD in vkCreateInstance left the loader dispatch
+  table half written, and the other called through a null function pointer from
+  vkEnumerateInstanceExtensionProperties. Instance construction is now
+  serialized process-wide, and the instance stays per acquisition because the
+  GLES backend inside it owns a thread-current EGL context.
+- OP_MATRIX owner paths point at a directory that exists for the matching
+  domain. The generator derives a vyre-libs owner from the operation id as
+  `vyre-libs/src/<domain>`, with named exceptions for optim, quant and builder.
+  Every `vyre-libs::matching` operation lives under `vyre-libs/src/scan`, so
+  four families named `vyre-libs/src/matching`, which is not a directory, and
+  `op_matrix_covers_every_registered_op_once` failed on the missing path. The
+  domain is now mapped the way optim and quant already are.
 - The operand namespace table of a lowered kernel op has one owner again,
   `vyre_lower::operand_class`. Structural verification and data-dependency
   queries answered from two tables that disagreed on a structured loop operand
@@ -4912,6 +4962,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   while the edge enables `full` and `matching-regex`, so the derived crate
   graph described a build nothing performs. The row now names both, and the
   graph is regenerated from it.
+- The cross-backend parity matrix measures every registered operation on the
+  reference backend and on every linked backend in one run, and reports each
+  operation it could not measure with its stage, its backend and its detail. It
+  aborted on the first missing fixture or refused dispatch, so the summary
+  counters described a sweep that had stopped early.
 - The runtime publishes 4 items at more than one path, down from the recorded
   119, and the pin records it. Deleting the re-export-only `scaling` module and
   making the uring submodules private removed 115 second paths; the committed

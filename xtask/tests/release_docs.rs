@@ -459,7 +459,7 @@ fn two_branches_appending_a_fragment_merge_with_both_fragments_intact() {
     );
     git(split.path(), &["merge", "alpha", "-m", "merge"]);
 
-    let output = run_generator(split.path(), "--write");
+    let output = run_gate(split.path(), "--write");
     assert!(
         output.status.success(),
         "Fix: the merged fragment set must still parse: {}",
