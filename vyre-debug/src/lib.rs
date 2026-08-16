@@ -1,7 +1,7 @@
 //! Inspection and diagnostic helpers for Vyre IR and lowered kernel descriptors.
 /// Canonical compiler artifact and selected-plan diagnostics.
 /// Capability classification for neutral vs target-specific debug features.
-pub mod capability;
+pub(crate) mod capability;
 
 pub(crate) mod artifact_report;
 pub(crate) mod body_path_map;
@@ -24,7 +24,7 @@ pub mod source_assignments;
 /// WGSL emission and source-line mapping.
 pub(crate) mod wgsl;
 /// Sanitizer correctness failures and PMU performance expectations.
-pub mod sanitizer;
+pub(crate) mod sanitizer;
 
 pub use artifact_report::{ArtifactReport, TargetPayloadReport};
 pub use carriers::{carrier_summary, find_uncarriered_assigns, CarrierSummary, UncarrieredAssign};
