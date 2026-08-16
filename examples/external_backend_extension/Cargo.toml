@@ -1,0 +1,21 @@
+[package]
+name = "external_backend_extension"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+inventory = "=0.3.24"
+vyre = "0.7.2"
+vyre-driver = "0.7.2"
+vyre-foundation = "0.7.2"
+vyre-reference = "0.7.2"
+
+
+[workspace]
+
+[patch.crates-io]
+vyre = { path = "../../vyre" }
+vyre-driver = { path = "../../vyre-driver" }
+vyre-foundation = { path = "../../vyre-foundation" }
+vyre-reference = { path = "../../vyre-reference" }

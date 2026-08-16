@@ -568,7 +568,10 @@ kind = "lifecycle"
 section = "Lifecycle and extension contracts"
 authority = "self"
 generation = "manual"
-covers = ["vyre-driver/BACKEND_CONTRACT.md"]
+covers = [
+    "examples/external_backend_extension/**",
+    "vyre-driver/BACKEND_CONTRACT.md",
+]
 nav = true
 
 [[page]]
@@ -581,7 +584,10 @@ kind = "lifecycle"
 section = "Lifecycle and extension contracts"
 authority = "self"
 generation = "manual"
-covers = ["examples/external_ir_extension/**"]
+covers = [
+    "examples/external_ir_extension/**",
+    "examples/libs-template/**",
+]
 nav = true
 
 [[page]]

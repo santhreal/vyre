@@ -80,3 +80,17 @@ That example's target emits the compiler-selected module as opaque wire
 bytes and has no device, so its factory and materializer fail explicitly
 rather than returning a stub. A production target supplies its own backend
 and materializer in the same crate.
+
+`examples/external_backend_extension` registers the other facet. It implements
+`vyre_driver::VyreBackend`, submits a `BackendRegistration` with a factory that
+constructs it and a `BackendCapability` declaring dispatch, and `vyre_driver::acquire`
+serves it exactly as it serves a driver crate in the workspace. It evaluates
+through `vyre-reference` rather than a device, so a host with no accelerator
+still runs the assertion.
+
+The `example-capability` gate builds both crates against the published surface
+and runs what they assert:
+
+```sh
+cargo run -p xtask -- example-capability
+```

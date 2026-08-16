@@ -84,6 +84,7 @@ pub static SUBSETS: &[Subset] = &[
         gates: &[
             "check-tier-deps",
             "dup-scan",
+            "example-capability",
             "hot-path-scan",
             "hygiene-matrix",
             "heuristic-audit",

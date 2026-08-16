@@ -59,14 +59,11 @@ members = [
 ]
 
 exclude = [
+    "examples/external_backend_extension",
     "examples/external_ir_extension",
+    "examples/libs-template",
     "vyre-foundation/fuzz",
 ]
-
-# The old `demos/rust_lexer_gpu` and `demos/rust_parser_gpu` workspace
-# members were removed with the WGSL-string dialects they depended on.
-# New parser demos must be added as normal workspace members backed by
-# pure-IR builders and their own tests.
 
 [workspace.package]
 edition = "2021"

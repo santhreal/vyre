@@ -16,6 +16,7 @@ pub mod dispatch_surface;
 pub mod doc_contract;
 pub mod dup_scan;
 pub mod evidence_paths;
+pub mod example_capability;
 pub mod feature_isolation;
 pub mod file_size;
 #[cfg(test)]
@@ -67,6 +68,7 @@ pub static GATES: &[&dyn Gate] = &[
     &dup_scan::DupScan,
     &evidence_paths::EvidencePaths,
     &evidence_paths::InvariantPaths,
+    &example_capability::ExampleCapability,
     &feature_isolation::FeatureIsolation,
     &file_size::FileSize,
     &frozen_contract::BackendExtension,

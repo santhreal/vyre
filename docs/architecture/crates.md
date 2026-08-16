@@ -269,3 +269,20 @@ a row naming no gate fails. A gate that owns a generated artifact checks it
 by default and regenerates only when asked.
 
 Not here: an exemption. A gate that is allowed to be red is not a gate.
+
+## Outside the workspace
+
+The root manifest excludes four directories. Each resolves against its own
+manifest, so none of them inherits workspace lints, patches or features, and
+none is built by a workspace command.
+
+| Directory | What it proves |
+|---|---|
+| `examples/external_ir_extension` | An out-of-tree crate registers a semantic operation and a compile-only target facet. |
+| `examples/external_backend_extension` | An out-of-tree crate implements `vyre_driver::VyreBackend` and is served by `vyre_driver::acquire`. |
+| `examples/libs-template` | The Category A author path, from scaffold to a passing conformance test. |
+| `vyre-foundation/fuzz` | The libFuzzer targets for the wire decoder, the byte decoder and the registry TOML reader. |
+
+The `example-capability` gate builds each example against the published surface
+and runs what it asserts. See [add an operation](../extending/operation.md) and
+[add a backend](../extending/backend.md).

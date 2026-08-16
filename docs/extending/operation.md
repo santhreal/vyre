@@ -16,8 +16,8 @@ That is the whole registration. No workspace crate is edited, no central
 list is appended to, and `OperationRegistry` is the only semantic lookup
 either way.
 
-`examples/external_ir_extension` is a standalone crate that does this and
-is built by the `external-ir-demo` gate:
+`examples/external_ir_extension` is a standalone crate that does this, and the
+`example-capability` gate builds it and runs it:
 
 ```sh
 cargo run --manifest-path examples/external_ir_extension/Cargo.toml
@@ -79,3 +79,16 @@ held to it.
 A dialect or category is a derived namespace projection over the one
 registry. It is not a second registry, and typed opaque IR extension
 registrations stay separate from semantic operation registration.
+
+## Starting from the scaffold
+
+`examples/libs-template` is a cargo-generate scaffold for a Category A dialect
+crate: one typed builder over `TensorRef`, the validation helpers
+`check_tensors`, `check_same_shape` and `checked_element_count`, and an
+`examples/libs-template/tests/cat_a_conform.rs` that asserts byte identity
+against `vyre_reference::reference_eval`. Its placeholders are
+`{{crate_name}}`, `{{crate_name_snake}}` and `{{gh_org}}`.
+
+The `example-capability` gate renders it, patches every dependency this
+checkout provides at the checkout, and runs its conformance test, so the
+scaffold cannot drift from the surface it is written against.
