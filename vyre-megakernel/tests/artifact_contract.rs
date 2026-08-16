@@ -11,8 +11,8 @@ use vyre_foundation::ir::{
 use vyre_megakernel::{
     compile,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
-    Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest, DeviceFacts, DependencyKind,
-    Digest, ExternalFacts, SearchBudget,
+    Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest, DependencyKind,
+    DeviceFacts, Digest, ExternalFacts, SearchBudget,
 };
 
 const LIMIT: u64 = 1_000_000;
@@ -266,8 +266,8 @@ fn request_with(
         budget,
         max_artifact_bytes,
     )
-        .validate()
-        .expect("fixture request must validate")
+    .validate()
+    .expect("fixture request must validate")
 }
 
 fn request(max_artifact_bytes: u64) -> vyre_megakernel::ValidatedCompileRequest {
@@ -456,9 +456,9 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         budget(),
         LIMIT,
     )
-        .validate()
-        .err()
-        .expect("missing symbol must fail");
+    .validate()
+    .err()
+    .expect("missing symbol must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC002_MISSING_SYMBOL");
     assert_eq!(
         diagnostic_path(&error),
@@ -474,9 +474,9 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         budget(),
         LIMIT,
     )
-        .validate()
-        .err()
-        .expect("missing constant identity must fail");
+    .validate()
+    .err()
+    .expect("missing constant identity must fail");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC023_MISSING_CONSTANT_IDENTITY"
@@ -619,7 +619,9 @@ fn grid_sync_without_cooperative_launch_fails_at_compile() {
 
 /// Device facts stating one capability decision, with every other capability
 /// present and generous budgets, so a test isolates the flag it flips.
-fn device_with(edit: impl FnOnce(&mut vyre_foundation::validate::BackendCapabilities)) -> DeviceFacts {
+fn device_with(
+    edit: impl FnOnce(&mut vyre_foundation::validate::BackendCapabilities),
+) -> DeviceFacts {
     let mut capabilities = vyre_foundation::validate::BackendCapabilities {
         supports_subgroup_ops: true,
         supports_indirect_dispatch: true,
