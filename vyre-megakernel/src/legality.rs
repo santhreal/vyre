@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use vyre_foundation::ir::{ProgramGraph, ValueLifetime};
+use vyre_foundation::ir::{Program, ProgramGraph, ValueLifetime};
 
-use crate::{ArtifactNodeId, ArtifactValueId};
+use crate::{workgroup_scratch_declarations, ArtifactNodeId, ArtifactValueId};
 
 /// Stable reason that prevents two graph nodes from sharing one generated kernel.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,9 +15,10 @@ pub enum FusionRejectionReason {
     LifecycleBoundary,
     /// More than one node consumes the value.
     MultipleConsumers,
-    /// The programs require incompatible workgroup geometry.
+    /// The programs declare different workgroup geometry.
     WorkgroupMismatch,
-    /// One of the programs contains an explicit synchronization point.
+    /// The programs declare different workgroup geometry and one of them
+    /// reasons about the size of its own workgroup, so no fused geometry works.
     SynchronizationBoundary,
     /// Contracting the proposed group would create a dependency cycle.
     DependencyCycle,
@@ -49,6 +50,19 @@ pub enum FusionDecision {
 }
 
 /// Checks whether one dataflow edge may be internalized into a fused group.
+///
+/// A barrier does not by itself forbid fusion. `merge_programs_shared`
+/// concatenates the arms and inserts a barrier between a writer arm and a
+/// later reader arm, and the validator has already proven every barrier
+/// workgroup-uniform, so at one shared geometry the fused kernel reaches every
+/// barrier from every invocation. What fusion cannot do is rewrite an arm for a
+/// different workgroup, which is why the two questions are asked together. The
+/// search cannot widen such a group either: `group_workgroup` holds a group at
+/// its declared shape unless every member tolerates a proposed width.
+///
+/// Admitting a barrier at one geometry is what makes a fused attention block
+/// expressible: scores written to a workgroup tile, one barrier, then the value
+/// pass reading that tile, as a single kernel instead of two dispatches.
 #[must_use]
 pub fn analyze_fusion_pair(
     graph: &ProgramGraph,
@@ -76,11 +90,25 @@ pub fn analyze_fusion_pair(
     if value.consumers.len() != 1 {
         return FusionDecision::Rejected(FusionRejectionReason::MultipleConsumers);
     }
+    let pinned = pins_workgroup_geometry(&producer.program)
+        || pins_workgroup_geometry(&consumer.program);
     if producer.program.workgroup_size != consumer.program.workgroup_size {
+        if pinned {
+            return FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary);
+        }
         return FusionDecision::Rejected(FusionRejectionReason::WorkgroupMismatch);
     }
-    if producer.program.stats().has_node_barrier() || consumer.program.stats().has_node_barrier() {
-        return FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary);
-    }
     FusionDecision::Legal
+}
+
+/// Does this program reason about the size of its own workgroup?
+///
+/// A barrier orders the invocations of one workgroup and a workgroup-scoped
+/// buffer is sized for one workgroup, so either one fixes the geometry the
+/// program was written for. `reject_workgroup_geometry_change` in
+/// `vyre-foundation` owns the same judgement for the merge itself and asks the
+/// same two questions; this reads the megakernel's own scratch accessor so the
+/// two agree on what a workgroup buffer is.
+fn pins_workgroup_geometry(program: &Program) -> bool {
+    program.stats().has_node_barrier() || workgroup_scratch_declarations(program).next().is_some()
 }

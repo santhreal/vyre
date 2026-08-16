@@ -176,29 +176,43 @@ fn whole_graph() -> ProgramGraph {
         .unwrap();
     graph
 }
+#[derive(Clone, Copy)]
+enum GeometryPin {
+    None,
+    Barrier,
+    WorkgroupScratch,
+}
+
 fn fusion_pair_graph(
     producer_workgroup: [u32; 3],
     consumer_workgroup: [u32; 3],
-    producer_barrier: bool,
+    producer_pin: GeometryPin,
 ) -> ProgramGraph {
-    fn pair_program(input: &str, output: &str, workgroup: [u32; 3], barrier: bool) -> Program {
+    fn pair_program(
+        input: &str,
+        output: &str,
+        workgroup: [u32; 3],
+        pin: GeometryPin,
+    ) -> Program {
+        let mut buffers = vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
+        ];
         let mut body = Vec::new();
-        if barrier {
-            body.push(Node::barrier());
+        match pin {
+            GeometryPin::None => {}
+            GeometryPin::Barrier => body.push(Node::barrier()),
+            GeometryPin::WorkgroupScratch => {
+                buffers.push(BufferDecl::workgroup("tile", 8, DataType::U32));
+                body.push(Node::store("tile", Expr::u32(0), Expr::u32(1)));
+            }
         }
         body.push(Node::store(
             output,
             Expr::u32(0),
             Expr::load(input, Expr::u32(0)),
         ));
-        Program::wrapped(
-            vec![
-                BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-                BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
-            ],
-            workgroup,
-            body,
-        )
+        Program::wrapped(buffers, workgroup, body)
     }
 
     let invocation = contract(BufferAccess::ReadWrite, ValueLifetime::Invocation);
@@ -209,12 +223,7 @@ fn fusion_pair_graph(
     let (_, intermediate) = graph
         .add_node(
             "producer",
-            pair_program(
-                "input",
-                "intermediate",
-                producer_workgroup,
-                producer_barrier,
-            ),
+            pair_program("input", "intermediate", producer_workgroup, producer_pin),
             vec![GraphInput {
                 buffer: "input".into(),
                 value: input,
@@ -231,7 +240,7 @@ fn fusion_pair_graph(
     graph
         .add_node(
             "consumer",
-            pair_program("intermediate", "output", consumer_workgroup, false),
+            pair_program("intermediate", "output", consumer_workgroup, GeometryPin::None),
             vec![GraphInput {
                 buffer: "intermediate".into(),
                 value: intermediate[0],
@@ -372,17 +381,23 @@ fn candidate_bound_terminates_search_with_best_explored_plan() {
         .iter()
         .all(|group| group.members.len() == 1));
 }
-/// WHY: target geometry and explicit synchronization are hard legality boundaries, not costs.
+/// WHY: workgroup geometry is a hard legality boundary and synchronization is only a
+/// boundary when the geometries already differ. A barrier at one shared geometry fuses,
+/// which is the fused attention shape over a workgroup tile.
 #[test]
 fn fusion_legality_reasons_are_stable_for_geometry_and_synchronization() {
-    let geometry = fusion_pair_graph([32, 1, 1], [64, 1, 1], false);
-    assert_eq!(
+    fn decide(graph: &ProgramGraph) -> FusionDecision {
         analyze_fusion_pair(
-            &geometry,
+            graph,
             ArtifactNodeId(0),
             ArtifactNodeId(1),
             ArtifactValueId(1),
-        ),
+        )
+    }
+
+    let geometry = fusion_pair_graph([32, 1, 1], [64, 1, 1], GeometryPin::None);
+    assert_eq!(
+        decide(&geometry),
         FusionDecision::Rejected(FusionRejectionReason::WorkgroupMismatch)
     );
     assert_eq!(
@@ -390,16 +405,16 @@ fn fusion_legality_reasons_are_stable_for_geometry_and_synchronization() {
         "MKL005_WORKGROUP_MISMATCH"
     );
 
-    let synchronization = fusion_pair_graph([32, 1, 1], [32, 1, 1], true);
-    assert_eq!(
-        analyze_fusion_pair(
-            &synchronization,
-            ArtifactNodeId(0),
-            ArtifactNodeId(1),
-            ArtifactValueId(1),
-        ),
-        FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary)
-    );
+    for pin in [GeometryPin::Barrier, GeometryPin::WorkgroupScratch] {
+        let widened = fusion_pair_graph([32, 1, 1], [64, 1, 1], pin);
+        assert_eq!(
+            decide(&widened),
+            FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary)
+        );
+
+        let shared = fusion_pair_graph([32, 1, 1], [32, 1, 1], pin);
+        assert_eq!(decide(&shared), FusionDecision::Legal);
+    }
     assert_eq!(
         FusionRejectionReason::SynchronizationBoundary.code(),
         "MKL006_SYNCHRONIZATION_BOUNDARY"
