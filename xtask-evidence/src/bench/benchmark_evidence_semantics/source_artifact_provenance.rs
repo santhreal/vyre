@@ -53,7 +53,8 @@ pub(crate) fn describe_source_artifact_freshness_mismatch(
                 source_fingerprint,
                 current_source_fingerprint,
             } => issues.push(format!(
-                "source_artifact `{artifact}` {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+                "source_artifact `{artifact}` {field} `{source_fingerprint}` {predicate} `{current_source_fingerprint}`",
+                                predicate = xtask::source_provenance::STALE_SOURCE_PREDICATE
             )),
         }
     }

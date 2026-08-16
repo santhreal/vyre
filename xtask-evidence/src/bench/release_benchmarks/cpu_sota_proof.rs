@@ -139,7 +139,8 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                         source_fingerprint,
                         current_source_fingerprint,
                     } => blockers.push(format!(
-                        "100x source artifact `{artifact}` {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+                        "100x source artifact `{artifact}` {field} `{source_fingerprint}` {predicate} `{current_source_fingerprint}`",
+                                                predicate = xtask::source_provenance::STALE_SOURCE_PREDICATE
                     )),
                 }
             }

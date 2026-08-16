@@ -1,7 +1,8 @@
 # Criterion baselines
 
-Every crate with a bench target has a section below. `scripts/check_bench_baselines.sh`
-enumerates `*/benches/*.rs` and fails when one of those crates has no section.
+Every crate with a bench target has a section below. The `bench-baselines` gate
+reads each member manifest for a bench target and fails when one of those
+packages has no section.
 
 Each number is the criterion median of the run named under the section, on the
 machine recorded here. Recapture a section by rerunning its command and

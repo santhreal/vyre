@@ -478,8 +478,9 @@ pub(crate) fn check_source_fingerprint_freshness(
                 source_fingerprint,
                 current_source_fingerprint,
             } => failures.push(format!(
-                "requirement `{}` benchmark `{label}` {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`",
-                requirement.id
+                "requirement `{}` benchmark `{label}` {field} `{source_fingerprint}` {predicate} `{current_source_fingerprint}`",
+                requirement.id,
+                predicate = xtask::source_provenance::STALE_SOURCE_PREDICATE
             )),
         }
     }
