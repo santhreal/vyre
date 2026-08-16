@@ -18,13 +18,7 @@
 use vyre_libs::solvers::tensor_train_chain_fusion::{fusion_pressure_via, should_fuse_chain_via};
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// The exact fusion pressure: the product of the nonzero ranks (zero ranks carry no dataflow and are
 /// skipped by the chain).

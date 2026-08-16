@@ -17,6 +17,7 @@
 use vyre_libs::solvers::persistent_homology_loop_signature::region_loop_skeleton_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// Exact u32 replica of the `vietoris_rips_edge_filter` kernel: for the flat row-major `t = i*n + j`
 /// cell, emit `1` iff the cell is strictly upper-triangular (`i < j`) AND the fixed-point distance is
@@ -32,13 +33,6 @@ fn vietoris_rips_edge_mask(dist_fixed: &[u32], epsilon_fixed: u32, n: usize) -> 
         }
     }
     mask
-}
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
 }
 
 #[test]

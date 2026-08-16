@@ -38,15 +38,9 @@ use vyre_libs::solvers::amg_pass_solver::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::{from_fixed, xorshift32 as xorshift};
 
 const FIXED_ONE: f64 = 65536.0;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
 
 /// Convert a non-negative f64 (a multiple of 0.5 or a power of two in this suite) to 16.16 fixed-point.
 fn to_fixed(v: f64) -> u32 {
@@ -55,12 +49,6 @@ fn to_fixed(v: f64) -> u32 {
         "this suite feeds only non-negative fixed-point inputs"
     );
     (v * FIXED_ONE).round() as u32
-}
-
-/// Decode a 16.16 fixed-point output as the SIGNED value it encodes (correct for both signs; identical
-/// to the unsigned reading for any non-negative magnitude < 2^31).
-fn from_fixed(v: u32) -> f64 {
-    f64::from(v as i32) / FIXED_ONE
 }
 
 /// A fine-level diagonal value in {2, 4} (exact 16.16 division). Capped at 4 (not 8) so the coarse

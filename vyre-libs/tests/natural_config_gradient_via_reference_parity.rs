@@ -27,13 +27,9 @@ use vyre_libs::solvers::differentiable_autotune::natural_config_gradient_magnitu
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::test_parity_oracles::{
-    fixed_matvec,
-    fixed_mul as fixed_mul_16_16,
-    signed_fixed_17 as signed_fisher,
-    xorshift32 as xorshift,
+    fixed_matvec, fixed_mul as fixed_mul_16_16, signed_fixed_17 as signed_fisher, to_fixed,
+    xorshift32 as xorshift, FIXED_ONE,
 };
-
-const FIXED_ONE: u32 = 1 << 16;
 
 /// Exact replica of the softmax_step IR: normalized 16.16 probabilities.
 fn softmax_fixed(pre_exp: &[u32]) -> Vec<u32> {
@@ -94,10 +90,6 @@ fn natural_config_gradient_via_matches_exact_composite_oracle() {
         off_diagonal_mixing > 200,
         "composite sweep must exercise multi-candidate Fisher coupling, got {off_diagonal_mixing}"
     );
-}
-
-fn to_fixed(v: f64) -> u32 {
-    (v * 65536.0).round() as i64 as u32
 }
 
 #[test]

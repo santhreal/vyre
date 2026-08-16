@@ -17,19 +17,11 @@
 //! asserts BOTH the direct u32 min oracle AND agreement with the importable `mp_edge_clip_cpu`.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
 use vyre_libs::math::spectral_shape::mp_edge_clip_cpu;
+use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-const FIXED_ONE: u32 = 1 << 16;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::{xorshift32 as xorshift, FIXED_ONE};
 
 #[test]
 fn shape_spectrum_via_matches_u32_min_clip_bit_exact() {

@@ -9,18 +9,12 @@
 //!     magnitude;
 //!   * rank-1 input truncated to `r_next == 1`: the dominant component is kept exactly;
 //!   * a hand-checked diagonal case.
-#![cfg(feature = "math")]
+#![cfg(all(feature = "math", feature = "test-fixtures"))]
 
 use vyre_libs::math::tensor_train_decompose::tensor_train_decompose_step;
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 use vyre_primitives::wire::{decode_f32_le_bytes_all as unpack_f32, pack_f32_slice as pack_f32};
 use vyre_reference::value::Value;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
 
 fn rand_f32(state: &mut u32) -> f32 {
     let bits = xorshift(state);

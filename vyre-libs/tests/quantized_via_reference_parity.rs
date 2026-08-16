@@ -14,24 +14,18 @@
 //! consumers match their `_cpu` oracles. The pre-fix over-feed surfaces here as a hard dispatch error.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_libs::solvers::quantized_dispatch::{
-    i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
-    i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
-};
 use vyre_libs::math::quantized::{
     i4x8_batched_matmul_f32_scaled_cpu, i4x8_batched_matmul_top1_f32_scaled_cpu,
     i4x8_batched_matvec_f32_scaled_cpu, i4x8_dot_f32_scaled_cpu, i4x8_matvec_f32_scaled_cpu,
     pack_i4x8_cpu,
 };
+use vyre_libs::solvers::quantized_dispatch::{
+    i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
+    i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
+};
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// A signed INT4 nibble value in `[-8, 7]`.
 fn i4(state: &mut u32) -> i32 {

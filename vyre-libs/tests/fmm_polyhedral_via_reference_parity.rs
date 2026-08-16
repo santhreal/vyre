@@ -25,13 +25,7 @@ use vyre_libs::solvers::fmm_polyhedral_compress::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// A bounded f32 in [0, 1).
 fn unit_f32(state: &mut u32) -> f32 {

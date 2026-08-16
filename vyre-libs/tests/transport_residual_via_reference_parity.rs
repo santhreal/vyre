@@ -19,17 +19,11 @@
 //! `T_next = 2·(M·T_curr) − T_prev` that distinguishes transport from the positive-only fusion filter.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
 use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
+use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// A small SIGNED integer in `-lo..=hi`, returned as a two's-complement u32.
 fn signed(state: &mut u32, span: i32) -> u32 {

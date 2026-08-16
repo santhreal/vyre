@@ -14,13 +14,7 @@
 use vyre_libs::encoding::bitset_summary::{per_word_popcount_via, total_set_bits_via};
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 #[test]
 fn popcount_via_matches_inline_count_ones_oracle() {

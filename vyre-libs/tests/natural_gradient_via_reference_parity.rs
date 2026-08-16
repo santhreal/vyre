@@ -22,8 +22,7 @@ use vyre_libs::solvers::natural_gradient_autotuner::precondition_autotune_gradie
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::test_parity_oracles::{
-    fixed_matvec as natural_gradient_fixed,
-    signed_fixed_19 as signed_fixed,
+    fixed_matvec as natural_gradient_fixed, signed_fixed_19 as signed_fixed, to_fixed,
     xorshift32 as xorshift,
 };
 
@@ -59,10 +58,6 @@ fn precondition_autotune_gradient_fixed_via_matches_exact_fixed_point_matvec() {
         moved_cases > 380,
         "only {moved_cases}/400 preconditions were non-zero, the matvec is not being exercised"
     );
-}
-
-fn to_fixed(v: f64) -> u32 {
-    (v * 65536.0).round() as i64 as u32
 }
 
 #[test]
