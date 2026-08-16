@@ -169,9 +169,9 @@ impl vyre_libs::math::sparse_selector::SparseKernelSelectedPath
 impl vyre_libs::math::sparse_selector::SparseKernelWorkloadClass
 impl vyre_libs::math::tensor_train_decompose::TensorTrainCpuScratch
 impl vyre_libs::nn::attention::Attention
+impl vyre_libs::nn::attention::PagedAttentionSpec<'_>
+impl vyre_libs::nn::attention::PagedCacheAppendSpec<'_>
 impl vyre_libs::nn::attention::Softmax
-impl vyre_libs::nn::attention::paged_attention::PagedAttentionSpec<'_>
-impl vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec<'_>
 impl vyre_libs::nn::linear::Linear
 impl vyre_libs::nn::linear::QuantizedLinear4BitSpec
 impl vyre_libs::nn::norm::LayerNorm
@@ -826,11 +826,6 @@ pub const vyre_libs::nn::attention::PAGED_ATTENTION_OP_ID: &str
 pub const vyre_libs::nn::attention::PAGED_ATTENTION_SUM_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention::PAGED_ATTENTION_WRITE_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention::PAGED_CACHE_APPEND_OP_ID: &str
-pub const vyre_libs::nn::attention::paged_attention::PAGED_ATTENTION_MAX_PASS_OP_ID: &str
-pub const vyre_libs::nn::attention::paged_attention::PAGED_ATTENTION_OP_ID: &str
-pub const vyre_libs::nn::attention::paged_attention::PAGED_ATTENTION_SUM_PASS_OP_ID: &str
-pub const vyre_libs::nn::attention::paged_attention::PAGED_ATTENTION_WRITE_PASS_OP_ID: &str
-pub const vyre_libs::nn::attention::paged_attention::PAGED_CACHE_APPEND_OP_ID: &str
 pub const vyre_libs::nn::attention::tiled_online_softmax::OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_MAX_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_SUM_PASS_OP_ID: &str
@@ -1151,8 +1146,6 @@ pub enum vyre_libs::nn::attention::KvCacheAppendError
 pub enum vyre_libs::nn::attention::PagedAttentionError
 pub enum vyre_libs::nn::attention::PagedCacheAppendError
 pub enum vyre_libs::nn::attention::RecurrentGatedDeltaError
-pub enum vyre_libs::nn::attention::paged_attention::PagedAttentionError
-pub enum vyre_libs::nn::attention::paged_attention::PagedCacheAppendError
 pub enum vyre_libs::nn::conv::CausalConvActivation
 pub enum vyre_libs::nn::conv::DepthwiseCausalConv1dError
 pub enum vyre_libs::nn::model::DenseGatedMlpError
@@ -2601,6 +2594,8 @@ pub fn vyre_libs::nn::attention::Attention::new(q: vyre_libs::TensorRef, k: vyre
 pub fn vyre_libs::nn::attention::Attention::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::nn::attention::Attention::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::nn::attention::Attention::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::nn::attention::PagedAttentionSpec<'_>::validate(&self) -> core::result::Result<(u32, u32, u32, u32), vyre_libs::nn::attention::PagedAttentionError>
+pub fn vyre_libs::nn::attention::PagedCacheAppendSpec<'_>::validate(&self) -> core::result::Result<(u32, u32, u32), vyre_libs::nn::attention::PagedCacheAppendError>
 pub fn vyre_libs::nn::attention::Softmax::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::nn::attention::Softmax::new(input: vyre_libs::TensorRef, output: vyre_libs::TensorRef) -> Self
 pub fn vyre_libs::nn::attention::Softmax::with_region_generator(self, name: &'static str) -> Self
@@ -2621,12 +2616,8 @@ pub fn vyre_libs::nn::attention::gqa_attention_causal_typed(q: &str, k: &str, v_
 pub fn vyre_libs::nn::attention::kv_cache_append(spec: vyre_libs::nn::attention::KvCacheAppendSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::KvCacheAppendError>
 pub fn vyre_libs::nn::attention::mla_compress_kv(h: &str, w_dk: &str, c_out: &str, hidden_dim: u32, kv_lora_rank: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::mla_decode(q: &str, kv_cache: &str, kr_cache: &str, w_uk: &str, w_uv: &str, out: &str, seq_len: u32, num_heads: u32, head_dim: u32, kv_lora_rank: u32, qk_rope_head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
-pub fn vyre_libs::nn::attention::paged_attention(spec: &vyre_libs::nn::attention::paged_attention::PagedAttentionSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::paged_attention::PagedAttentionError>
-pub fn vyre_libs::nn::attention::paged_attention::PagedAttentionSpec<'_>::validate(&self) -> core::result::Result<(u32, u32, u32, u32), vyre_libs::nn::attention::paged_attention::PagedAttentionError>
-pub fn vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec<'_>::validate(&self) -> core::result::Result<(u32, u32, u32), vyre_libs::nn::attention::paged_attention::PagedCacheAppendError>
-pub fn vyre_libs::nn::attention::paged_attention::paged_attention(spec: &vyre_libs::nn::attention::paged_attention::PagedAttentionSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::paged_attention::PagedAttentionError>
-pub fn vyre_libs::nn::attention::paged_attention::paged_cache_append(spec: &vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::paged_attention::PagedCacheAppendError>
-pub fn vyre_libs::nn::attention::paged_cache_append(spec: &vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::paged_attention::PagedCacheAppendError>
+pub fn vyre_libs::nn::attention::paged_attention(spec: &vyre_libs::nn::attention::PagedAttentionSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::PagedAttentionError>
+pub fn vyre_libs::nn::attention::paged_cache_append(spec: &vyre_libs::nn::attention::PagedCacheAppendSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::PagedCacheAppendError>
 pub fn vyre_libs::nn::attention::partial_rope(input: &str, cos_table: &str, sin_table: &str, output: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::partial_rope_at_offset(input: &str, cos_table: &str, sin_table: &str, output: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32, position_offset: u32, table_seq_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::partial_rope_at_offset_typed(input: &str, cos_table: &str, sin_table: &str, output: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32, position_offset: u32, table_seq_len: u32, activation_dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -3717,7 +3708,6 @@ pub mod vyre_libs::nn
 pub mod vyre_libs::nn::activation
 pub mod vyre_libs::nn::attention
 pub mod vyre_libs::nn::attention::fused_tile_attention
-pub mod vyre_libs::nn::attention::paged_attention
 pub mod vyre_libs::nn::attention::tiled_online_softmax
 pub mod vyre_libs::nn::attention_passes
 pub mod vyre_libs::nn::attention_stability
@@ -4112,8 +4102,6 @@ pub struct vyre_libs::nn::attention::KvCacheAppendSpec<'a>
 pub struct vyre_libs::nn::attention::PagedAttentionSpec<'a>
 pub struct vyre_libs::nn::attention::PagedCacheAppendSpec<'a>
 pub struct vyre_libs::nn::attention::Softmax
-pub struct vyre_libs::nn::attention::paged_attention::PagedAttentionSpec<'a>
-pub struct vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec<'a>
 pub struct vyre_libs::nn::attention_passes::AttentionWritePassProgramSpec<'a>
 pub struct vyre_libs::nn::inference_graph::Ds4FlashConfig
 pub struct vyre_libs::nn::linear::Linear
@@ -5324,61 +5312,6 @@ pub vyre_libs::nn::attention::RecurrentGatedDeltaError::InvalidHeadGrouping::key
 pub vyre_libs::nn::attention::RecurrentGatedDeltaError::InvalidHeadGrouping::value_heads: u32
 pub vyre_libs::nn::attention::RecurrentGatedDeltaError::UnsupportedDtype
 pub vyre_libs::nn::attention::RecurrentGatedDeltaError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::BlockTableCapacity
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::BlockTableCapacity::block_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::BlockTableCapacity::blocks_per_sequence: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::BlockTableCapacity::capacity: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::BlockTableCapacity::context_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::CausalRange
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::CausalRange::cache_offset: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::CausalRange::context_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::CausalRange::query_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::ElementCountOverflow
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::EmptyShape
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::HeadMismatch
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::HeadMismatch::kv_heads: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::HeadMismatch::q_heads: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::UnsupportedDtype
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::block_table: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::block_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::blocks: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::blocks_per_sequence: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::cache_offset: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::causal: bool
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::context_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::head_dim: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::k_cache: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::kv_heads: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::output: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::q: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::q_heads: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::query_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::scale: core::option::Option<f32>
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::sequences: u32
-pub vyre_libs::nn::attention::paged_attention::PagedAttentionSpec::v_cache: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::BlockTableCapacity
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::BlockTableCapacity::block_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::BlockTableCapacity::blocks_per_sequence: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::BlockTableCapacity::capacity: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::BlockTableCapacity::end_position: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::ElementCountOverflow
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::EmptyShape
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::UnsupportedDtype
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::block_table: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::block_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::blocks: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::blocks_per_sequence: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::cache: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::chunk: &'a str
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::chunk_tokens: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::head_dim: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::kv_heads: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::sequences: u32
-pub vyre_libs::nn::attention::paged_attention::PagedCacheAppendSpec::start_position: u32
 pub vyre_libs::nn::attention_passes::AttentionWritePassProgramSpec::d: u32
 pub vyre_libs::nn::attention_passes::AttentionWritePassProgramSpec::k: &'a str
 pub vyre_libs::nn::attention_passes::AttentionWritePassProgramSpec::max_in: &'a str

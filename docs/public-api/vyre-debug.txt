@@ -1,30 +1,34 @@
 impl core::default::Default for vyre_debug::DescriptorDumpOptions
-impl core::error::Error for vyre_debug::sanitizer::PmuWarning
-impl core::fmt::Display for vyre_debug::sanitizer::PmuWarning
+impl core::error::Error for vyre_debug::PmuWarning
+impl core::fmt::Display for vyre_debug::PmuWarning
 impl vyre_debug::ArtifactReport
 impl vyre_debug::NagaDump
-impl vyre_debug::sanitizer::PmuExpectation
-impl vyre_debug::sanitizer::PmuMeasurement
-impl vyre_debug::sanitizer::SanitizerFailure
-impl vyre_debug::sanitizer::SanitizerKind
-pub const fn vyre_debug::sanitizer::SanitizerKind::code(self) -> &'static str
-pub const fn vyre_debug::sanitizer::SanitizerKind::suggested_fix(self) -> &'static str
-pub const vyre_debug::DEBUG_CAPABILITIES: &[vyre_debug::capability::DebugCapabilityInfo]
-pub const vyre_debug::capability::DEBUG_CAPABILITIES: &[vyre_debug::capability::DebugCapabilityInfo]
+impl vyre_debug::PmuExpectation
+impl vyre_debug::PmuMeasurement
+impl vyre_debug::SanitizerFailure
+impl vyre_debug::SanitizerKind
+pub const fn vyre_debug::SanitizerKind::code(self) -> &'static str
+pub const fn vyre_debug::SanitizerKind::suggested_fix(self) -> &'static str
+pub const vyre_debug::DEBUG_CAPABILITIES: &[vyre_debug::DebugCapabilityInfo]
 pub enum vyre_debug::BindResultLogError
 pub enum vyre_debug::DebugCapabilityKind
 pub enum vyre_debug::PmuWarning
 pub enum vyre_debug::PmuWorkloadClass
 pub enum vyre_debug::SanitizerKind
-pub enum vyre_debug::capability::DebugCapabilityKind
-pub enum vyre_debug::sanitizer::PmuWarning
-pub enum vyre_debug::sanitizer::PmuWorkloadClass
-pub enum vyre_debug::sanitizer::SanitizerKind
 pub fn vyre_debug::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::error::CompileError>
 pub fn vyre_debug::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
 pub fn vyre_debug::DescriptorDumpOptions::default() -> Self
 pub fn vyre_debug::NagaDump::find(&self, handle: u32) -> core::option::Option<&alloc::vec::Vec<alloc::string::String>>
-pub fn vyre_debug::capability::neutral_debug_capabilities() -> alloc::vec::Vec<&'static vyre_debug::capability::DebugCapabilityInfo>
+pub fn vyre_debug::PmuExpectation::dense_regular() -> Self
+pub fn vyre_debug::PmuExpectation::reduction_tree() -> Self
+pub fn vyre_debug::PmuExpectation::sparse_or_gather() -> Self
+pub fn vyre_debug::PmuMeasurement::evaluate(&self, expectation: &vyre_debug::PmuExpectation) -> alloc::vec::Vec<vyre_debug::PmuWarning>
+pub fn vyre_debug::PmuWarning::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_debug::SanitizerFailure::compute_sanitizer(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_debug::SanitizerFailure::data_race(message: impl core::convert::Into<alloc::string::String>, address: u64, thread: [u32; 3]) -> Self
+pub fn vyre_debug::SanitizerFailure::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_debug::SanitizerFailure::out_of_bounds(message: impl core::convert::Into<alloc::string::String>, address: u64) -> Self
+pub fn vyre_debug::SanitizerFailure::vulkan_validation(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::CarrierSummary
 pub fn vyre_debug::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::DescriptorDiff
 pub fn vyre_debug::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::DescriptorDumpOptions) -> vyre_debug::DescriptorDump
@@ -37,22 +41,10 @@ pub fn vyre_debug::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescr
 pub fn vyre_debug::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::definition::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::UncarrieredAssign>
 pub fn vyre_debug::fixtures::loop_carry_smoke() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_debug::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::BindResultLogError>
-pub fn vyre_debug::neutral_debug_capabilities() -> alloc::vec::Vec<&'static vyre_debug::capability::DebugCapabilityInfo>
-pub fn vyre_debug::sanitizer::PmuExpectation::dense_regular() -> Self
-pub fn vyre_debug::sanitizer::PmuExpectation::reduction_tree() -> Self
-pub fn vyre_debug::sanitizer::PmuExpectation::sparse_or_gather() -> Self
-pub fn vyre_debug::sanitizer::PmuMeasurement::evaluate(&self, expectation: &vyre_debug::sanitizer::PmuExpectation) -> alloc::vec::Vec<vyre_debug::sanitizer::PmuWarning>
-pub fn vyre_debug::sanitizer::PmuWarning::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_debug::sanitizer::SanitizerFailure::compute_sanitizer(message: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_debug::sanitizer::SanitizerFailure::data_race(message: impl core::convert::Into<alloc::string::String>, address: u64, thread: [u32; 3]) -> Self
-pub fn vyre_debug::sanitizer::SanitizerFailure::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
-pub fn vyre_debug::sanitizer::SanitizerFailure::out_of_bounds(message: impl core::convert::Into<alloc::string::String>, address: u64) -> Self
-pub fn vyre_debug::sanitizer::SanitizerFailure::vulkan_validation(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_debug::neutral_debug_capabilities() -> alloc::vec::Vec<&'static vyre_debug::DebugCapabilityInfo>
 pub fn vyre_debug::source_assignments::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
 pub mod vyre_debug
-pub mod vyre_debug::capability
 pub mod vyre_debug::fixtures
-pub mod vyre_debug::sanitizer
 pub mod vyre_debug::source_assignments
 pub struct vyre_debug::ArtifactReport
 pub struct vyre_debug::CarrierSummary
@@ -69,10 +61,6 @@ pub struct vyre_debug::SanitizerFailure
 pub struct vyre_debug::TargetPayloadReport
 pub struct vyre_debug::UncarrieredAssign
 pub struct vyre_debug::WgslDump
-pub struct vyre_debug::capability::DebugCapabilityInfo
-pub struct vyre_debug::sanitizer::PmuExpectation
-pub struct vyre_debug::sanitizer::PmuMeasurement
-pub struct vyre_debug::sanitizer::SanitizerFailure
 pub vyre_debug::ArtifactReport::abi: vyre_megakernel::schema::ArtifactAbi
 pub vyre_debug::ArtifactReport::artifact: alloc::string::String
 pub vyre_debug::ArtifactReport::compiler_version: alloc::string::String
@@ -97,7 +85,7 @@ pub vyre_debug::DanglingRef::referenced_in_body_path: alloc::vec::Vec<usize>
 pub vyre_debug::DanglingRef::referencing_op_index: usize
 pub vyre_debug::DanglingRef::referencing_op_kind: alloc::string::String
 pub vyre_debug::DebugCapabilityInfo::is_binary_safe: bool
-pub vyre_debug::DebugCapabilityInfo::kind: vyre_debug::capability::DebugCapabilityKind
+pub vyre_debug::DebugCapabilityInfo::kind: vyre_debug::DebugCapabilityKind
 pub vyre_debug::DebugCapabilityInfo::name: &'static str
 pub vyre_debug::DebugCapabilityInfo::requires_target_emitter: bool
 pub vyre_debug::DebugCapabilityKind::NeutralArtifact
@@ -120,7 +108,7 @@ pub vyre_debug::PmuExpectation::allow_uncoalesced_traffic: bool
 pub vyre_debug::PmuExpectation::max_bank_conflicts: u64
 pub vyre_debug::PmuExpectation::max_spill_bytes: u64
 pub vyre_debug::PmuExpectation::min_occupancy_pct: f64
-pub vyre_debug::PmuExpectation::workload: vyre_debug::sanitizer::PmuWorkloadClass
+pub vyre_debug::PmuExpectation::workload: vyre_debug::PmuWorkloadClass
 pub vyre_debug::PmuMeasurement::achieved_bandwidth_gb_s: f64
 pub vyre_debug::PmuMeasurement::bank_conflicts: u64
 pub vyre_debug::PmuMeasurement::occupancy_pct: f64
@@ -143,7 +131,7 @@ pub vyre_debug::PmuWorkloadClass::SparseOrGather
 pub vyre_debug::SanitizerFailure::device_address: core::option::Option<u64>
 pub vyre_debug::SanitizerFailure::instruction_offset: core::option::Option<u32>
 pub vyre_debug::SanitizerFailure::invocation_coords: core::option::Option<[u32; 3]>
-pub vyre_debug::SanitizerFailure::kind: vyre_debug::sanitizer::SanitizerKind
+pub vyre_debug::SanitizerFailure::kind: vyre_debug::SanitizerKind
 pub vyre_debug::SanitizerFailure::message: alloc::string::String
 pub vyre_debug::SanitizerFailure::raw_tool_output: core::option::Option<alloc::string::String>
 pub vyre_debug::SanitizerKind::ComputeSanitizer
@@ -162,47 +150,3 @@ pub vyre_debug::UncarrieredAssign::loop_path: alloc::vec::Vec<alloc::string::Str
 pub vyre_debug::UncarrieredAssign::name: alloc::string::String
 pub vyre_debug::WgslDump::text: alloc::string::String
 pub vyre_debug::WgslDump::variable_lines: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::capability::DebugCapabilityInfo::is_binary_safe: bool
-pub vyre_debug::capability::DebugCapabilityInfo::kind: vyre_debug::capability::DebugCapabilityKind
-pub vyre_debug::capability::DebugCapabilityInfo::name: &'static str
-pub vyre_debug::capability::DebugCapabilityInfo::requires_target_emitter: bool
-pub vyre_debug::capability::DebugCapabilityKind::NeutralArtifact
-pub vyre_debug::capability::DebugCapabilityKind::NeutralDescriptor
-pub vyre_debug::capability::DebugCapabilityKind::TargetBinaryPayload
-pub vyre_debug::capability::DebugCapabilityKind::TargetBinaryPayload::format: alloc::string::String
-pub vyre_debug::capability::DebugCapabilityKind::TargetNagaWgsl
-pub vyre_debug::sanitizer::PmuExpectation::allow_uncoalesced_traffic: bool
-pub vyre_debug::sanitizer::PmuExpectation::max_bank_conflicts: u64
-pub vyre_debug::sanitizer::PmuExpectation::max_spill_bytes: u64
-pub vyre_debug::sanitizer::PmuExpectation::min_occupancy_pct: f64
-pub vyre_debug::sanitizer::PmuExpectation::workload: vyre_debug::sanitizer::PmuWorkloadClass
-pub vyre_debug::sanitizer::PmuMeasurement::achieved_bandwidth_gb_s: f64
-pub vyre_debug::sanitizer::PmuMeasurement::bank_conflicts: u64
-pub vyre_debug::sanitizer::PmuMeasurement::occupancy_pct: f64
-pub vyre_debug::sanitizer::PmuMeasurement::spill_bytes: u64
-pub vyre_debug::sanitizer::PmuMeasurement::uncoalesced_transactions: u64
-pub vyre_debug::sanitizer::PmuWarning::BankConflictExceeded
-pub vyre_debug::sanitizer::PmuWarning::BankConflictExceeded::allowed: u64
-pub vyre_debug::sanitizer::PmuWarning::BankConflictExceeded::observed: u64
-pub vyre_debug::sanitizer::PmuWarning::LowOccupancy
-pub vyre_debug::sanitizer::PmuWarning::LowOccupancy::expected: f64
-pub vyre_debug::sanitizer::PmuWarning::LowOccupancy::observed: f64
-pub vyre_debug::sanitizer::PmuWarning::SpillExceeded
-pub vyre_debug::sanitizer::PmuWarning::SpillExceeded::allowed: u64
-pub vyre_debug::sanitizer::PmuWarning::SpillExceeded::observed: u64
-pub vyre_debug::sanitizer::PmuWarning::UncoalescedTrafficOnDenseWorkload
-pub vyre_debug::sanitizer::PmuWarning::UncoalescedTrafficOnDenseWorkload::observed: u64
-pub vyre_debug::sanitizer::PmuWorkloadClass::DenseRegular
-pub vyre_debug::sanitizer::PmuWorkloadClass::ReductionTree
-pub vyre_debug::sanitizer::PmuWorkloadClass::SparseOrGather
-pub vyre_debug::sanitizer::SanitizerFailure::device_address: core::option::Option<u64>
-pub vyre_debug::sanitizer::SanitizerFailure::instruction_offset: core::option::Option<u32>
-pub vyre_debug::sanitizer::SanitizerFailure::invocation_coords: core::option::Option<[u32; 3]>
-pub vyre_debug::sanitizer::SanitizerFailure::kind: vyre_debug::sanitizer::SanitizerKind
-pub vyre_debug::sanitizer::SanitizerFailure::message: alloc::string::String
-pub vyre_debug::sanitizer::SanitizerFailure::raw_tool_output: core::option::Option<alloc::string::String>
-pub vyre_debug::sanitizer::SanitizerKind::ComputeSanitizer
-pub vyre_debug::sanitizer::SanitizerKind::DataRace
-pub vyre_debug::sanitizer::SanitizerKind::IllegalInstruction
-pub vyre_debug::sanitizer::SanitizerKind::OutOfBoundsMemory
-pub vyre_debug::sanitizer::SanitizerKind::VulkanValidation

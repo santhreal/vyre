@@ -5,7 +5,7 @@
 //! - Shared-memory capacity limits and register-pressure spill bounds.
 //! - Retention of unswizzled, synchronous, and unfused fallback candidates.
 
-use vyre_lower::analyses::resource_bounds::{
+use vyre_lower::analyses::{
     verify_candidate_legality, LegalityCheck, TailHandling, TargetResourceLimits,
 };
 use vyre_lower::{BindingLayout, KernelBody, KernelDescriptor};

@@ -8,14 +8,7 @@
 #[non_exhaustive] pub enum vyre_driver::SpecValue
 #[non_exhaustive] pub enum vyre_driver::SubgroupOp
 #[non_exhaustive] pub enum vyre_driver::Target
-#[non_exhaustive] pub enum vyre_driver::aot::Target
 #[non_exhaustive] pub enum vyre_driver::fusion::FusionDecision
-#[non_exhaustive] pub enum vyre_driver::registry::AttrValue
-#[non_exhaustive] pub enum vyre_driver::registry::EnforceVerdict
-#[non_exhaustive] pub enum vyre_driver::registry::MigrationError
-#[non_exhaustive] pub enum vyre_driver::registry::MutationClass
-#[non_exhaustive] pub enum vyre_driver::registry::Target
-#[non_exhaustive] pub enum vyre_driver::target::Target
 #[non_exhaustive] pub enum vyre_driver::tuner::Mode
 #[non_exhaustive] pub enum vyre_driver::tuner::NaturalGradientTuningError
 #[non_exhaustive] pub struct vyre_driver::DispatchConfig
@@ -77,14 +70,15 @@ impl core::fmt::Display for vyre_driver::persistent::QueueFull
 impl core::fmt::Display for vyre_driver::result_compaction::ResultCompactionError
 impl core::fmt::Display for vyre_driver::tuner::NaturalGradientTuningError
 impl core::iter::traits::collect::FromIterator<u32> for vyre_driver::arm_independence::BindingSlotSet
+impl inventory::Collect for vyre_driver::AotLauncherEmitter
 impl inventory::Collect for vyre_driver::BackendCapability
 impl inventory::Collect for vyre_driver::BackendPrecedence
 impl inventory::Collect for vyre_driver::BackendRegistration
 impl inventory::Collect for vyre_driver::Deprecation
 impl inventory::Collect for vyre_driver::Migration
-impl inventory::Collect for vyre_driver::aot::AotLauncherEmitter
-impl serde_core::ser::Serialize for vyre_driver::target::Target
+impl serde_core::ser::Serialize for vyre_driver::Target
 impl vyre_driver::AdaptiveSpeculator
+impl vyre_driver::AotLauncherFiles
 impl vyre_driver::AttrMap
 impl vyre_driver::BackendError
 impl vyre_driver::BackendLayoutFingerprint
@@ -110,6 +104,9 @@ impl vyre_driver::LaunchPlan
 impl vyre_driver::Migration
 impl vyre_driver::MigrationRegistry
 impl vyre_driver::MutationClass
+impl vyre_driver::PeerAccessCapability
+impl vyre_driver::PeerTopology
+impl vyre_driver::PeerTransferAccounting
 impl vyre_driver::PipelineCacheAudit
 impl vyre_driver::PipelineCacheIdentity
 impl vyre_driver::PipelineCacheKey
@@ -135,13 +132,13 @@ impl vyre_driver::SpeculativeVariantRace
 impl vyre_driver::SubgroupCaps
 impl vyre_driver::SubgroupOp
 impl vyre_driver::TailMaskPolicy
+impl vyre_driver::Target
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::result_compaction::ResultCompactionError
-impl vyre_driver::aot::AotLauncherFiles
 impl vyre_driver::arm_independence::ArmBindingSummary
 impl vyre_driver::arm_independence::BindingSlotSet
 impl vyre_driver::autotune_store::AutotuneKey
@@ -171,9 +168,6 @@ impl vyre_driver::observability::DriverObservability
 impl vyre_driver::param_inlining::ParamInliningDecision
 impl vyre_driver::param_inlining::ParamInliningPolicy
 impl vyre_driver::parity_harness::ParityInput
-impl vyre_driver::peer_transfer::PeerAccessCapability
-impl vyre_driver::peer_transfer::PeerTopology
-impl vyre_driver::peer_transfer::PeerTransferAccounting
 impl vyre_driver::persistent::PersistentEngine
 impl vyre_driver::pgo::PgoTable
 impl vyre_driver::reservation_policy::ReservationPolicy
@@ -183,7 +177,6 @@ impl vyre_driver::shadow::ConformanceCase
 impl vyre_driver::shadow::ConformanceMatrix
 impl vyre_driver::shadow::ReferenceExecutor
 impl vyre_driver::shape_prediction::ShapeHistory
-impl vyre_driver::target::Target
 impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
 impl vyre_driver::trap_record::TrapRecord
@@ -199,8 +192,8 @@ impl vyre_driver::validation::ProgramValidationCaps
 impl vyre_driver::validation::ValidationCache
 impl vyre_foundation::geometry::GeometryStrategy for vyre_driver::DeviceProfile
 impl<'a> vyre_driver::ExtractionDevice<'a>
-impl<'a> vyre_driver::peer_transfer::PeerTransferPlanner<'a>
-impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::target::Target
+impl<'a> vyre_driver::PeerTransferPlanner<'a>
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::Target
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::Chain<A, B>
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::EnforceGate for vyre_driver::Chain<A, B>
 impl<K, S> core::default::Default for vyre_driver::reservation_policy::ReusableIndexScratch<K, S> where S: core::default::Default
@@ -226,6 +219,9 @@ pub const fn vyre_driver::ExtractionDevice<'a>::with_trace_jit(self, counters: v
 pub const fn vyre_driver::Migration::new(from: (&'static str, vyre_driver::Semver), to: (&'static str, vyre_driver::Semver), rewrite: fn(&mut vyre_driver::AttrMap) -> core::result::Result<(), vyre_driver::MigrationError>) -> Self
 pub const fn vyre_driver::MutationClass::requires_byte_parity(self) -> bool
 pub const fn vyre_driver::MutationClass::uses_law_proof(self) -> bool
+pub const fn vyre_driver::PeerAccessCapability::is_direct(&self) -> bool
+pub const fn vyre_driver::PeerAccessCapability::is_reachable(&self) -> bool
+pub const fn vyre_driver::PeerTopology::device_count(&self) -> u32
 pub const fn vyre_driver::PipelineCacheMissReason::classify(evidence: vyre_driver::PipelineCacheMissEvidence) -> Self
 pub const fn vyre_driver::PipelineCacheMissReason::metric_suffix(self) -> &'static str
 pub const fn vyre_driver::PipelineFeatureFlags::bits(self) -> u32
@@ -259,9 +255,6 @@ pub const fn vyre_driver::numeric::BackendNumericPolicy::new(backend: &'static s
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::disabled() -> Self
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::large_inline_default() -> Self
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::small_inline_default() -> Self
-pub const fn vyre_driver::peer_transfer::PeerAccessCapability::is_direct(&self) -> bool
-pub const fn vyre_driver::peer_transfer::PeerAccessCapability::is_reachable(&self) -> bool
-pub const fn vyre_driver::peer_transfer::PeerTopology::device_count(&self) -> u32
 pub const fn vyre_driver::reservation_policy::ReservationPolicy::new(context: &'static str, fix: &'static str) -> Self
 pub const fn vyre_driver::transfer_accounting::TransferAccountingPolicy::new(domain: &'static str, fix_action: &'static str) -> Self
 pub const fn vyre_driver::tuner::Mode::production_default() -> Self
@@ -311,7 +304,6 @@ pub const vyre_driver::megakernel_fixtures::OVERFLOW_WAVES: &[vyre_driver::megak
 pub const vyre_driver::megakernel_fixtures::THREE_EQUAL_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
 pub const vyre_driver::megakernel_fixtures::THREE_SMALL_WAVES: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave]
 pub const vyre_driver::numeric::BASIS_POINTS_DENOMINATOR: u32
-pub const vyre_driver::registry::DEPRECATED_OP_CODE: &str
 pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURES: &[vyre_driver::self_optimizer_bench::ScalingFixture]
 pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURE_SIZES: &[usize]
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
@@ -370,13 +362,9 @@ pub enum vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 pub enum vyre_driver::multi_query_execution::MultiQueryExecutionError
 pub enum vyre_driver::ordering::DensePermutationDefect
 pub enum vyre_driver::param_inlining::ParamInliningDecision
-pub enum vyre_driver::peer_transfer::PeerAccessCapability
-pub enum vyre_driver::peer_transfer::PeerLinkKind
-pub enum vyre_driver::peer_transfer::PeerTransferError
 pub enum vyre_driver::persistent::PersistentThreadMode
 pub enum vyre_driver::pipeline_fusion::CrossPipelineConflict
 pub enum vyre_driver::pipeline_fusion::CrossPipelineFusionDecision
-pub enum vyre_driver::registry::IntrinsicRegistrationError
 pub enum vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'a>
 pub enum vyre_driver::result_compaction::ResultCompactionError
 pub enum vyre_driver::shadow::ConformanceError
@@ -401,6 +389,7 @@ pub fn vyre_driver::AdaptiveSpeculator::record(&self, report: vyre_driver::Specu
 pub fn vyre_driver::AdaptiveSpeculator::samples(&self) -> u32
 pub fn vyre_driver::AdaptiveSpeculator::should_speculate(&self) -> bool
 pub fn vyre_driver::AdaptiveSpeculator::threshold_ppm(&self) -> u64
+pub fn vyre_driver::AotLauncherFiles::from_entries(dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>, entries: impl core::iter::traits::collect::IntoIterator<Item = (std::path::PathBuf, alloc::string::String)>) -> Self
 pub fn vyre_driver::ArtifactInstance::artifact(&self) -> vyre_megakernel::identity::Digest
 pub fn vyre_driver::ArtifactInstance::device(&self) -> &vyre_driver::DeviceIdentity
 pub fn vyre_driver::ArtifactInstance::payload(&self) -> vyre_megakernel::identity::Digest
@@ -525,6 +514,13 @@ pub fn vyre_driver::MigrationRegistry::apply_chain(&self, op_id: &'static str, f
 pub fn vyre_driver::MigrationRegistry::deprecation(&self, op_id: &str) -> core::option::Option<&'static vyre_driver::Deprecation>
 pub fn vyre_driver::MigrationRegistry::global() -> &'static vyre_driver::MigrationRegistry
 pub fn vyre_driver::MigrationRegistry::lookup(&self, op_id: &str, from: vyre_driver::Semver) -> core::option::Option<&'static vyre_driver::Migration>
+pub fn vyre_driver::PeerTopology::capability(&self, src: u32, dst: u32) -> vyre_driver::PeerAccessCapability
+pub fn vyre_driver::PeerTopology::new(device_count: u32) -> Self
+pub fn vyre_driver::PeerTopology::set_capability(&mut self, src: u32, dst: u32, capability: vyre_driver::PeerAccessCapability)
+pub fn vyre_driver::PeerTopology::set_symmetric_capability(&mut self, dev_a: u32, dev_b: u32, capability: vyre_driver::PeerAccessCapability)
+pub fn vyre_driver::PeerTransferAccounting::record_completion(&mut self, plan: &vyre_driver::PeerTransferPlan) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::PeerTransferPlanner<'a>::new(topology: &'a vyre_driver::PeerTopology, device_generations: &'a alloc::collections::btree::map::BTreeMap<u32, u64>) -> Self
+pub fn vyre_driver::PeerTransferPlanner<'a>::plan_transfer(&self, request: vyre_driver::PeerTransferRequest) -> core::result::Result<vyre_driver::PeerTransferPlan, vyre_driver::PeerTransferError>
 pub fn vyre_driver::PendingDispatch::await_result(self: alloc::boxed::Box<Self>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::PendingDispatch::await_result_async(self: alloc::boxed::Box<Self>) -> impl core::future::future::Future<Output = core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>> + core::marker::Send where Self: core::marker::Sized
 pub fn vyre_driver::PendingDispatch::await_result_into(self: alloc::boxed::Box<Self>, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
@@ -584,6 +580,10 @@ pub fn vyre_driver::SpeculativeVariantRace::winner(&self) -> vyre_driver::Specul
 pub fn vyre_driver::Submission::is_ready(&self) -> bool
 pub fn vyre_driver::Submission::wait(self: alloc::boxed::Box<Self>) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>
 pub fn vyre_driver::TailMaskPolicy::is_aligned(&self) -> bool
+pub fn vyre_driver::Target::aot_target_id(self) -> &'static str
+pub fn vyre_driver::Target::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
+pub fn vyre_driver::Target::extension(self) -> &'static str
+pub fn vyre_driver::Target::serialize<S>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error> where S: serde_core::ser::Serializer
 pub fn vyre_driver::TypedDispatchExt::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_f32(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<f32>>, vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_f32_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<f32>>) -> core::result::Result<(), vyre_driver::BackendError>
@@ -699,9 +699,6 @@ pub fn vyre_driver::allocation::reserve_smallvec_additional<A>(vec: &mut smallve
 pub fn vyre_driver::allocation::reserve_smallvec_to_capacity<A>(vec: &mut smallvec::SmallVec<A>, target_capacity: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where A: smallvec::Array
 pub fn vyre_driver::allocation::reserve_vec_additional<T>(vec: &mut alloc::vec::Vec<T>, additional: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::allocation::reserve_vec_to_capacity<T>(vec: &mut alloc::vec::Vec<T>, target_capacity: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::aot::AotLauncherFiles::from_entries(dependencies: alloc::vec::Vec<vyre_driver::aot::LauncherDependency>, entries: impl core::iter::traits::collect::IntoIterator<Item = (std::path::PathBuf, alloc::string::String)>) -> Self
-pub fn vyre_driver::aot::emit_aot_launcher_target(target: &vyre_foundation::operation::TargetId, request: &vyre_driver::aot::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::aot::AotLauncherFiles, vyre_driver::BackendError>
-pub fn vyre_driver::aot::registered_aot_launcher_emitters() -> alloc::vec::Vec<&'static vyre_driver::aot::AotLauncherEmitter>
 pub fn vyre_driver::arm_independence::ArmBindingSummary::default() -> Self
 pub fn vyre_driver::arm_independence::ArmBindingSummary::new() -> Self
 pub fn vyre_driver::arm_independence::BindingSlotSet::contains(&self, slot: &u32) -> bool
@@ -792,7 +789,7 @@ pub fn vyre_driver::durable_fanout::parent_directories<E>(paths: &[std::path::Pa
 pub fn vyre_driver::durable_fanout::worker_count() -> usize
 pub fn vyre_driver::dynamic_element_count_from_bytes(element: &vyre_spec::data_type::DataType, byte_len: usize) -> core::option::Option<u32>
 pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
-pub fn vyre_driver::emit_aot_launcher_target(target: &vyre_foundation::operation::TargetId, request: &vyre_driver::aot::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::aot::AotLauncherFiles, vyre_driver::BackendError>
+pub fn vyre_driver::emit_aot_launcher_target(target: &vyre_foundation::operation::TargetId, request: &vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, vyre_driver::BackendError>
 pub fn vyre_driver::encode_counter_tail(report: vyre_driver::SpeculationReport) -> [u8; 8]
 pub fn vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::enforce_output_budget(config: &vyre_driver::DispatchConfig, actual: usize) -> core::result::Result<(), vyre_driver::BackendError>
@@ -1013,13 +1010,6 @@ pub fn vyre_driver::parity_harness::u32_bytes(words: &[u32]) -> alloc::vec::Vec<
 pub fn vyre_driver::parity_harness::u32_words(bytes: &[u8]) -> alloc::vec::Vec<u32>
 pub fn vyre_driver::parity_harness::u64_words(bytes: &[u8]) -> alloc::vec::Vec<u64>
 pub fn vyre_driver::parse_counter_tail(output_bytes: &[u8]) -> core::option::Option<vyre_driver::SpeculationReport>
-pub fn vyre_driver::peer_transfer::PeerTopology::capability(&self, src: u32, dst: u32) -> vyre_driver::peer_transfer::PeerAccessCapability
-pub fn vyre_driver::peer_transfer::PeerTopology::new(device_count: u32) -> Self
-pub fn vyre_driver::peer_transfer::PeerTopology::set_capability(&mut self, src: u32, dst: u32, capability: vyre_driver::peer_transfer::PeerAccessCapability)
-pub fn vyre_driver::peer_transfer::PeerTopology::set_symmetric_capability(&mut self, dev_a: u32, dev_b: u32, capability: vyre_driver::peer_transfer::PeerAccessCapability)
-pub fn vyre_driver::peer_transfer::PeerTransferAccounting::record_completion(&mut self, plan: &vyre_driver::peer_transfer::PeerTransferPlan) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::peer_transfer::PeerTransferPlanner<'a>::new(topology: &'a vyre_driver::peer_transfer::PeerTopology, device_generations: &'a alloc::collections::btree::map::BTreeMap<u32, u64>) -> Self
-pub fn vyre_driver::peer_transfer::PeerTransferPlanner<'a>::plan_transfer(&self, request: vyre_driver::peer_transfer::PeerTransferRequest) -> core::result::Result<vyre_driver::peer_transfer::PeerTransferPlan, vyre_driver::peer_transfer::PeerTransferError>
 pub fn vyre_driver::persistent::PersistentEngine::claim(&self) -> core::option::Option<vyre_driver::persistent::PersistentWorkItem>
 pub fn vyre_driver::persistent::PersistentEngine::enqueue(&self, item: vyre_driver::persistent::PersistentWorkItem) -> core::result::Result<u32, vyre_driver::persistent::QueueFull>
 pub fn vyre_driver::persistent::PersistentEngine::head(&self) -> u32
@@ -1049,15 +1039,11 @@ pub fn vyre_driver::record_launch_measurement(program: &vyre_foundation::ir_inne
 pub fn vyre_driver::record_speculative_variant_race(store: &mut vyre_driver::autotune_store::AutotuneStore, keys: vyre_driver::SpeculativeVariantKeys<'_>, race: vyre_driver::SpeculativeVariantRace) -> vyre_driver::SpeculativeVariantDecision
 pub fn vyre_driver::reduction_offsets(subgroup_size: u32) -> alloc::vec::Vec<u32>
 pub fn vyre_driver::reduction_offsets_into(subgroup_size: u32, offsets: &mut alloc::vec::Vec<u32>)
-pub fn vyre_driver::registered_aot_launcher_emitters() -> alloc::vec::Vec<&'static vyre_driver::aot::AotLauncherEmitter>
+pub fn vyre_driver::registered_aot_launcher_emitters() -> alloc::vec::Vec<&'static vyre_driver::AotLauncherEmitter>
 pub fn vyre_driver::registered_backends() -> core::result::Result<&'static [vyre_driver::BackendRegistration], vyre_driver::BackendError>
 pub fn vyre_driver::registered_backends_by_precedence() -> core::result::Result<alloc::vec::Vec<&'static vyre_driver::BackendRegistration>, vyre_driver::BackendError>
 pub fn vyre_driver::registered_backends_by_precedence_slice() -> core::result::Result<&'static [&'static vyre_driver::BackendRegistration], vyre_driver::BackendError>
 pub fn vyre_driver::registered_target_operation_facets() -> core::result::Result<&'static [vyre_foundation::operation::TargetOperationFacet], vyre_driver::BackendError>
-pub fn vyre_driver::registry::EnforceGate::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_driver::EnforceVerdict
-pub fn vyre_driver::registry::EnforceGate::name(&self) -> &'static str
-pub fn vyre_driver::registry::deprecation_diagnostic(dep: &vyre_driver::Deprecation) -> vyre_foundation::diagnostics::Diagnostic
-pub fn vyre_driver::registry::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::SemanticOperation, vyre_driver::IntrinsicRegistrationError>
 pub fn vyre_driver::replace_output_buffers_preserving_slots(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers)
 pub fn vyre_driver::replace_output_buffers_preserving_slots_with_memory_stats(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers) -> vyre_driver::OutputReplacementStats
 pub fn vyre_driver::replace_output_buffers_preserving_slots_with_stats(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers) -> vyre_driver::OutputSlotStats
@@ -1153,10 +1139,6 @@ pub fn vyre_driver::strategy::LoweringStrategy::name(&self) -> &str
 pub fn vyre_driver::strategy::LoweringStrategy::priority(&self) -> u32
 pub fn vyre_driver::strategy::select_precision_lowering(caps: &vyre_foundation::validate::options::BackendCapabilities, hint: &vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint) -> vyre_driver::strategy::PrecisionLoweringPlan
 pub fn vyre_driver::strategy::select_strategy<'a>(strategies: &'a [alloc::boxed::Box<dyn vyre_driver::strategy::LoweringStrategy>], caps: &vyre_foundation::validate::options::BackendCapabilities, op: &vyre_spec::bin_op::BinOp) -> core::option::Option<&'a dyn vyre_driver::strategy::LoweringStrategy>
-pub fn vyre_driver::target::Target::aot_target_id(self) -> &'static str
-pub fn vyre_driver::target::Target::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
-pub fn vyre_driver::target::Target::extension(self) -> &'static str
-pub fn vyre_driver::target::Target::serialize<S>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error> where S: serde_core::ser::Serializer
 pub fn vyre_driver::target_dialect::TargetDialect::compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>
 pub fn vyre_driver::target_dialect::TargetDialect::profile(&self) -> core::result::Result<vyre_megakernel::envelope::TargetProfile, vyre_driver::BackendError>
 pub fn vyre_driver::trace_jit_policy::decide_trace_jit_speculation(inputs: vyre_driver::trace_jit_policy::TraceJitInputs) -> vyre_driver::trace_jit_policy::TraceJitDecision
@@ -1240,7 +1222,6 @@ pub macro vyre_driver::resident_pipeline_launch!
 pub mod vyre_driver
 pub mod vyre_driver::accounting
 pub mod vyre_driver::allocation
-pub mod vyre_driver::aot
 pub mod vyre_driver::arm_independence
 pub mod vyre_driver::async_copy_overlap
 pub mod vyre_driver::autotune_store
@@ -1276,11 +1257,9 @@ pub mod vyre_driver::ordering
 pub mod vyre_driver::output_slots
 pub mod vyre_driver::param_inlining
 pub mod vyre_driver::parity_harness
-pub mod vyre_driver::peer_transfer
 pub mod vyre_driver::persistent
 pub mod vyre_driver::pgo
 pub mod vyre_driver::pipeline_fusion
-pub mod vyre_driver::registry
 pub mod vyre_driver::reservation_policy
 pub mod vyre_driver::resident_transfer_fixtures
 pub mod vyre_driver::resident_transfer_fusion
@@ -1290,7 +1269,6 @@ pub mod vyre_driver::shadow
 pub mod vyre_driver::shape_prediction
 pub mod vyre_driver::speculation_verdict
 pub mod vyre_driver::strategy
-pub mod vyre_driver::target
 pub mod vyre_driver::target_dialect
 pub mod vyre_driver::trace_jit_policy
 pub mod vyre_driver::transfer_accounting
@@ -1368,10 +1346,6 @@ pub struct vyre_driver::SpeculativeVariantRace
 pub struct vyre_driver::SubgroupCaps
 pub struct vyre_driver::TailMaskPolicy
 pub struct vyre_driver::TimedDispatchResult
-pub struct vyre_driver::aot::AotLauncherEmitter
-pub struct vyre_driver::aot::AotLauncherFiles
-pub struct vyre_driver::aot::AotLauncherRequest<'a>
-pub struct vyre_driver::aot::LauncherDependency
 pub struct vyre_driver::arm_independence::ArmBindingSummary
 pub struct vyre_driver::arm_independence::BindingSlotSet
 pub struct vyre_driver::autotune_store::AutotuneKey
@@ -1445,23 +1419,12 @@ pub struct vyre_driver::observability::DriverObservability
 pub struct vyre_driver::observability::SubstrateAuditEvent
 pub struct vyre_driver::param_inlining::ParamInliningPolicy
 pub struct vyre_driver::parity_harness::ParityInput
-pub struct vyre_driver::peer_transfer::PeerTopology
-pub struct vyre_driver::peer_transfer::PeerTransferAccounting
-pub struct vyre_driver::peer_transfer::PeerTransferPlan
-pub struct vyre_driver::peer_transfer::PeerTransferPlanner<'a>
-pub struct vyre_driver::peer_transfer::PeerTransferRequest
 pub struct vyre_driver::persistent::PersistentEngine
 pub struct vyre_driver::persistent::QueueFull
 pub struct vyre_driver::persistent::RingAtomics
 pub struct vyre_driver::pgo::BackendLatency
 pub struct vyre_driver::pgo::PgoTable
 pub struct vyre_driver::pgo::RouteDecision
-pub struct vyre_driver::registry::AttrMap
-pub struct vyre_driver::registry::Chain<A, B>
-pub struct vyre_driver::registry::Deprecation
-pub struct vyre_driver::registry::Migration
-pub struct vyre_driver::registry::MigrationRegistry
-pub struct vyre_driver::registry::Semver
 pub struct vyre_driver::reservation_policy::ReservationPolicy
 pub struct vyre_driver::reservation_policy::ReusableIndexScratch<K, S>
 pub struct vyre_driver::resident_transfer_fixtures::UploadRequest
@@ -1516,7 +1479,6 @@ pub trait vyre_driver::materialize::MaterializedInstance
 pub trait vyre_driver::materialize::ResidentInstance: vyre_driver::materialize::MaterializedInstance
 pub trait vyre_driver::megakernel_execution::MegakernelExecutionPlanner
 pub trait vyre_driver::observability::BackendObservabilityProvider
-pub trait vyre_driver::registry::EnforceGate: vyre_driver::registry::enforce::sealed::Sealed + core::marker::Send + core::marker::Sync
 pub trait vyre_driver::strategy::LoweringStrategy: core::marker::Send + core::marker::Sync + core::fmt::Debug
 pub trait vyre_driver::tuner::BackendTimer
 pub type vyre_driver::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u8>>
@@ -1538,12 +1500,11 @@ pub use vyre_driver::Severity
 pub use vyre_driver::allocation::try_reserve_hash_map_to_capacity
 pub use vyre_driver::allocation::try_reserve_hash_set_to_capacity
 pub use vyre_driver::allocation::try_reserve_vec_to_capacity
-pub use vyre_driver::aot::AotTargetId
 pub use vyre_driver::grid_sync::contains_grid_sync
 pub use vyre_driver::node_op_id
-pub vyre_driver::AotLauncherEmitter::emit: fn(&vyre_driver::aot::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::aot::AotLauncherFiles, alloc::string::String>
+pub vyre_driver::AotLauncherEmitter::emit: fn(&vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, alloc::string::String>
 pub vyre_driver::AotLauncherEmitter::target: vyre_foundation::operation::TargetId
-pub vyre_driver::AotLauncherFiles::dependencies: alloc::vec::Vec<vyre_driver::aot::LauncherDependency>
+pub vyre_driver::AotLauncherFiles::dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>
 pub vyre_driver::AotLauncherFiles::files: alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String>
 pub vyre_driver::AotLauncherRequest::crate_name: &'a str
 pub vyre_driver::AotLauncherRequest::include_collectives: bool
@@ -1779,7 +1740,7 @@ pub vyre_driver::OutputSlotStats::reused_slots: usize
 pub vyre_driver::OutputSlotStats::total_slots: usize
 pub vyre_driver::PeerAccessCapability::DirectPeerMemory
 pub vyre_driver::PeerAccessCapability::DirectPeerMemory::bandwidth_gbps: u32
-pub vyre_driver::PeerAccessCapability::DirectPeerMemory::link: vyre_driver::peer_transfer::PeerLinkKind
+pub vyre_driver::PeerAccessCapability::DirectPeerMemory::link: vyre_driver::PeerLinkKind
 pub vyre_driver::PeerAccessCapability::PeerDisabled
 pub vyre_driver::PeerAccessCapability::StagedHostTransfer
 pub vyre_driver::PeerAccessCapability::Unreachable
@@ -1814,9 +1775,9 @@ pub vyre_driver::PeerTransferError::UnreachablePeer::dst: u32
 pub vyre_driver::PeerTransferError::UnreachablePeer::src: u32
 pub vyre_driver::PeerTransferError::ZeroByteTransfer
 pub vyre_driver::PeerTransferPlan::cancelled: bool
-pub vyre_driver::PeerTransferPlan::capability: vyre_driver::peer_transfer::PeerAccessCapability
+pub vyre_driver::PeerTransferPlan::capability: vyre_driver::PeerAccessCapability
 pub vyre_driver::PeerTransferPlan::is_direct: bool
-pub vyre_driver::PeerTransferPlan::request: vyre_driver::peer_transfer::PeerTransferRequest
+pub vyre_driver::PeerTransferPlan::request: vyre_driver::PeerTransferRequest
 pub vyre_driver::PeerTransferRequest::byte_len: usize
 pub vyre_driver::PeerTransferRequest::dst_device: u32
 pub vyre_driver::PeerTransferRequest::dst_generation: u64
@@ -1978,24 +1939,6 @@ pub vyre_driver::TimedDispatchResult::enqueue_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::outputs: vyre_driver::OutputBuffers
 pub vyre_driver::TimedDispatchResult::wait_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::wall_ns: u64
-pub vyre_driver::aot::AotLauncherEmitter::emit: fn(&vyre_driver::aot::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::aot::AotLauncherFiles, alloc::string::String>
-pub vyre_driver::aot::AotLauncherEmitter::target: vyre_foundation::operation::TargetId
-pub vyre_driver::aot::AotLauncherFiles::dependencies: alloc::vec::Vec<vyre_driver::aot::LauncherDependency>
-pub vyre_driver::aot::AotLauncherFiles::files: alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String>
-pub vyre_driver::aot::AotLauncherRequest::crate_name: &'a str
-pub vyre_driver::aot::AotLauncherRequest::include_collectives: bool
-pub vyre_driver::aot::AotLauncherRequest::include_ttt_loop: bool
-pub vyre_driver::aot::AotLauncherRequest::target: vyre_foundation::operation::TargetId
-pub vyre_driver::aot::LauncherDependency::name: &'static str
-pub vyre_driver::aot::LauncherDependency::spec: &'static str
-pub vyre_driver::aot::Target::Extension(&'static str)
-pub vyre_driver::aot::Target::NativeModule
-pub vyre_driver::aot::Target::PrimaryBinary
-pub vyre_driver::aot::Target::PrimaryText
-pub vyre_driver::aot::Target::Ptx
-pub vyre_driver::aot::Target::ReferenceBackend
-pub vyre_driver::aot::Target::SecondaryText
-pub vyre_driver::aot::Target::SpirV
 pub vyre_driver::arm_independence::ArmBindingSummary::reads: vyre_driver::arm_independence::BindingSlotSet
 pub vyre_driver::arm_independence::ArmBindingSummary::writes: vyre_driver::arm_independence::BindingSlotSet
 pub vyre_driver::arm_independence::ArmConflict::ReadAfterWrite
@@ -2499,54 +2442,6 @@ pub vyre_driver::param_inlining::ParamInliningPolicy::max_inline_bytes: u32
 pub vyre_driver::parity_harness::ParityInput::bytes: alloc::vec::Vec<u8>
 pub vyre_driver::parity_harness::ParityInput::element: vyre_spec::data_type::DataType
 pub vyre_driver::parity_harness::ParityInput::name: &'static str
-pub vyre_driver::peer_transfer::PeerAccessCapability::DirectPeerMemory
-pub vyre_driver::peer_transfer::PeerAccessCapability::DirectPeerMemory::bandwidth_gbps: u32
-pub vyre_driver::peer_transfer::PeerAccessCapability::DirectPeerMemory::link: vyre_driver::peer_transfer::PeerLinkKind
-pub vyre_driver::peer_transfer::PeerAccessCapability::PeerDisabled
-pub vyre_driver::peer_transfer::PeerAccessCapability::StagedHostTransfer
-pub vyre_driver::peer_transfer::PeerAccessCapability::Unreachable
-pub vyre_driver::peer_transfer::PeerLinkKind::HostStaged
-pub vyre_driver::peer_transfer::PeerLinkKind::NVLink
-pub vyre_driver::peer_transfer::PeerLinkKind::NVLink::generation: u32
-pub vyre_driver::peer_transfer::PeerLinkKind::NVLink::links: u32
-pub vyre_driver::peer_transfer::PeerLinkKind::None
-pub vyre_driver::peer_transfer::PeerLinkKind::PCIe
-pub vyre_driver::peer_transfer::PeerLinkKind::PCIe::gen: u32
-pub vyre_driver::peer_transfer::PeerLinkKind::PCIe::lanes: u32
-pub vyre_driver::peer_transfer::PeerTransferAccounting::cancelled_transfers: u64
-pub vyre_driver::peer_transfer::PeerTransferAccounting::direct_bytes: u64
-pub vyre_driver::peer_transfer::PeerTransferAccounting::direct_transfers: u64
-pub vyre_driver::peer_transfer::PeerTransferAccounting::staged_bytes: u64
-pub vyre_driver::peer_transfer::PeerTransferAccounting::staged_transfers: u64
-pub vyre_driver::peer_transfer::PeerTransferError::AccountingOverflow(alloc::string::String)
-pub vyre_driver::peer_transfer::PeerTransferError::AsymmetricAccessViolation
-pub vyre_driver::peer_transfer::PeerTransferError::AsymmetricAccessViolation::dst: u32
-pub vyre_driver::peer_transfer::PeerTransferError::AsymmetricAccessViolation::src: u32
-pub vyre_driver::peer_transfer::PeerTransferError::Cancelled
-pub vyre_driver::peer_transfer::PeerTransferError::Cancelled::ticket: u64
-pub vyre_driver::peer_transfer::PeerTransferError::DeviceOutOfBounds
-pub vyre_driver::peer_transfer::PeerTransferError::DeviceOutOfBounds::count: u32
-pub vyre_driver::peer_transfer::PeerTransferError::DeviceOutOfBounds::device: u32
-pub vyre_driver::peer_transfer::PeerTransferError::StaleDeviceGeneration
-pub vyre_driver::peer_transfer::PeerTransferError::StaleDeviceGeneration::actual_gen: u64
-pub vyre_driver::peer_transfer::PeerTransferError::StaleDeviceGeneration::device: u32
-pub vyre_driver::peer_transfer::PeerTransferError::StaleDeviceGeneration::expected_gen: u64
-pub vyre_driver::peer_transfer::PeerTransferError::UnreachablePeer
-pub vyre_driver::peer_transfer::PeerTransferError::UnreachablePeer::dst: u32
-pub vyre_driver::peer_transfer::PeerTransferError::UnreachablePeer::src: u32
-pub vyre_driver::peer_transfer::PeerTransferError::ZeroByteTransfer
-pub vyre_driver::peer_transfer::PeerTransferPlan::cancelled: bool
-pub vyre_driver::peer_transfer::PeerTransferPlan::capability: vyre_driver::peer_transfer::PeerAccessCapability
-pub vyre_driver::peer_transfer::PeerTransferPlan::is_direct: bool
-pub vyre_driver::peer_transfer::PeerTransferPlan::request: vyre_driver::peer_transfer::PeerTransferRequest
-pub vyre_driver::peer_transfer::PeerTransferRequest::byte_len: usize
-pub vyre_driver::peer_transfer::PeerTransferRequest::dst_device: u32
-pub vyre_driver::peer_transfer::PeerTransferRequest::dst_generation: u64
-pub vyre_driver::peer_transfer::PeerTransferRequest::dst_offset: u64
-pub vyre_driver::peer_transfer::PeerTransferRequest::src_device: u32
-pub vyre_driver::peer_transfer::PeerTransferRequest::src_generation: u64
-pub vyre_driver::peer_transfer::PeerTransferRequest::src_offset: u64
-pub vyre_driver::peer_transfer::PeerTransferRequest::ticket: u64
 pub vyre_driver::persistent::PersistentThreadMode::Auto
 pub vyre_driver::persistent::PersistentThreadMode::Disable
 pub vyre_driver::persistent::PersistentThreadMode::Force
@@ -2569,48 +2464,6 @@ pub vyre_driver::pipeline_fusion::CrossPipelineConflict::WriteWriteConflict
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::Fuse
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::KeepSeparate
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::KeepSeparate::reason: vyre_driver::pipeline_fusion::CrossPipelineConflict
-pub vyre_driver::registry::AttrValue::Bool(bool)
-pub vyre_driver::registry::AttrValue::Bytes(alloc::vec::Vec<u8>)
-pub vyre_driver::registry::AttrValue::F32(f32)
-pub vyre_driver::registry::AttrValue::I32(i32)
-pub vyre_driver::registry::AttrValue::String(alloc::string::String)
-pub vyre_driver::registry::AttrValue::U32(u32)
-pub vyre_driver::registry::Deprecation::deprecated_since: vyre_driver::Semver
-pub vyre_driver::registry::Deprecation::note: &'static str
-pub vyre_driver::registry::Deprecation::op_id: &'static str
-pub vyre_driver::registry::EnforceVerdict::Allow
-pub vyre_driver::registry::EnforceVerdict::Deny
-pub vyre_driver::registry::EnforceVerdict::Deny::detail: alloc::string::String
-pub vyre_driver::registry::EnforceVerdict::Deny::policy: &'static str
-pub vyre_driver::registry::IntrinsicRegistrationError::UnknownId
-pub vyre_driver::registry::IntrinsicRegistrationError::UnknownId::id: &'static str
-pub vyre_driver::registry::Migration::from: (&'static str, vyre_driver::Semver)
-pub vyre_driver::registry::Migration::rewrite: fn(&mut vyre_driver::AttrMap) -> core::result::Result<(), vyre_driver::MigrationError>
-pub vyre_driver::registry::Migration::to: (&'static str, vyre_driver::Semver)
-pub vyre_driver::registry::MigrationError::Custom
-pub vyre_driver::registry::MigrationError::Custom::reason: alloc::string::String
-pub vyre_driver::registry::MigrationError::MissingAttribute
-pub vyre_driver::registry::MigrationError::MissingAttribute::name: alloc::string::String
-pub vyre_driver::registry::MigrationError::OutOfRange
-pub vyre_driver::registry::MigrationError::OutOfRange::name: alloc::string::String
-pub vyre_driver::registry::MigrationError::WrongType
-pub vyre_driver::registry::MigrationError::WrongType::expected: &'static str
-pub vyre_driver::registry::MigrationError::WrongType::name: alloc::string::String
-pub vyre_driver::registry::MutationClass::Cosmetic
-pub vyre_driver::registry::MutationClass::Lowering
-pub vyre_driver::registry::MutationClass::Semantic
-pub vyre_driver::registry::MutationClass::Structural
-pub vyre_driver::registry::Semver::major: u32
-pub vyre_driver::registry::Semver::minor: u32
-pub vyre_driver::registry::Semver::patch: u32
-pub vyre_driver::registry::Target::Extension(&'static str)
-pub vyre_driver::registry::Target::NativeModule
-pub vyre_driver::registry::Target::PrimaryBinary
-pub vyre_driver::registry::Target::PrimaryText
-pub vyre_driver::registry::Target::Ptx
-pub vyre_driver::registry::Target::ReferenceBackend
-pub vyre_driver::registry::Target::SecondaryText
-pub vyre_driver::registry::Target::SpirV
 pub vyre_driver::resident_transfer_fixtures::UploadRequest::bytes: alloc::vec::Vec<u8>
 pub vyre_driver::resident_transfer_fixtures::UploadRequest::dst_ptr: u64
 pub vyre_driver::resident_transfer_fixtures::UploadRequest::handle_id: u64
@@ -2689,14 +2542,6 @@ pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::argument_bound: f32
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::degree: u8
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::op: vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
-pub vyre_driver::target::Target::Extension(&'static str)
-pub vyre_driver::target::Target::NativeModule
-pub vyre_driver::target::Target::PrimaryBinary
-pub vyre_driver::target::Target::PrimaryText
-pub vyre_driver::target::Target::Ptx
-pub vyre_driver::target::Target::ReferenceBackend
-pub vyre_driver::target::Target::SecondaryText
-pub vyre_driver::target::Target::SpirV
 pub vyre_driver::target_dialect::EmittedDialectModule::bytes: alloc::vec::Vec<u8>
 pub vyre_driver::target_dialect::EmittedDialectModule::dynamic_shared_bytes: u32
 pub vyre_driver::target_dialect::EmittedDialectModule::entry_point: alloc::string::String

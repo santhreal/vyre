@@ -34,7 +34,7 @@ pub(crate) mod descriptor;
 pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
 pub(crate) mod error;
-pub mod lower;
+pub(crate) mod lower;
 pub(crate) mod op_facts;
 pub mod operand_class;
 pub mod pattern_audit;

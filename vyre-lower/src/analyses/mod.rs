@@ -5,9 +5,9 @@
 //! semantics or descriptor structure. Concrete emission strategy lives in the
 //! owning emitter or driver.
 
-pub mod affine_access_map;
-pub mod resource_bounds;
-pub mod target_metrics;
+pub(crate) mod affine_access_map;
+pub(crate) mod resource_bounds;
+pub(crate) mod target_metrics;
 
 pub(crate) mod access_kind;
 pub mod alias_facts;
@@ -24,7 +24,7 @@ pub(crate) mod load_counts;
 pub(crate) mod op_histogram;
 pub(crate) mod reaching_def_facts;
 pub(crate) mod shared_mem_promote;
-pub mod shared_store_race;
+pub(crate) mod shared_store_race;
 pub mod structured_walk;
 pub(crate) mod texture_promote;
 pub(crate) mod value_range;
