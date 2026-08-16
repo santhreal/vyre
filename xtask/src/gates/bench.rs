@@ -71,7 +71,7 @@ impl Gate for BenchBaselines {
                 report.find(Finding::in_file(
                     RESULTS,
                     format!("`{package}` declares a bench target but has no `### {package}` section"),
-                    format!("run `cargo bench -p {package}` and record the medians under a `### {package}` heading"),
+                    format!("run `./cargo_full bench -p {package}` and record the medians under a `### {package}` heading"),
                 ));
             }
         }

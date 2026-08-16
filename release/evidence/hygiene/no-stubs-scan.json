@@ -1,13 +1,19 @@
 {
-  "source_fingerprint": "git:faa8731f525cc2b9626f2601372c1eb1eb308327:dirty=true:worktree=8c12e19ae94a270ecdba06f9a0f5ce0a01d7e27b7653ed4d3c68734e925a1064",
+  "source_fingerprint": "git:5edb1d10f8be09d51eef370fc10a848ab717da9b:dirty=true:worktree=268ed7a250af69ae98751bc50d3b5b9df2d17e3af85198910e0368847789ce1c",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
     {
       "path": "vyre-driver/src/grid_sync/resident_dispatch.rs",
-      "line": 204,
+      "line": 203,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
+    },
+    {
+      "path": "vyre-libs/src/graph/program_graph.rs",
+      "line": 327,
+      "pattern": "placeholder_text",
+      "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
     {
       "path": "vyre-bench/src/cases/scan_ac_irregular/mod.rs",
@@ -62,12 +68,6 @@
       "line": 435,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
-    },
-    {
-      "path": "vyre-primitives/src/graph/program_graph.rs",
-      "line": 327,
-      "pattern": "placeholder_text",
-      "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
     {
       "path": "conform/vyre-conform-spec/src/schema.rs",

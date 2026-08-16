@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:1d28c2277fea9ef670ec31f3078009ade08303c8:dirty=true:worktree=07663108a5942b8ba5cf9fc1132f18bfab8c5256bfb679c9c39b76c8d294f0e8",
+  "source_fingerprint": "git:5edb1d10f8be09d51eef370fc10a848ab717da9b:dirty=true:worktree=268ed7a250af69ae98751bc50d3b5b9df2d17e3af85198910e0368847789ce1c",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -19,7 +19,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 9
+      "count": 16
     },
     {
       "owner_lane": "coordination",
@@ -28,7 +28,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 5
+      "count": 7
     },
     {
       "owner_lane": "coordination",
@@ -55,7 +55,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 11
+      "count": 10
     },
     {
       "owner_lane": "coordination",
@@ -172,7 +172,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 4
+      "count": 1
     },
     {
       "owner_lane": "lower_emit",
@@ -217,7 +217,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 6
+      "count": 3
     },
     {
       "owner_lane": "scan_static",
@@ -235,16 +235,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 17
-    },
-    {
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "panic_macro",
-      "release_blocker": false,
-      "count": 1
+      "count": 14
     },
     {
       "owner_lane": "security_dataflow",
