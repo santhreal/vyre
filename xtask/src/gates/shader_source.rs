@@ -13,7 +13,7 @@
 //! reports a count below the pin.
 
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
@@ -142,8 +142,69 @@ impl Gate for ShaderSource {
             ));
         }
 
+        for shader in unreferenced_shaders(&tree)? {
+            report.find(Finding::in_file(
+                &shader,
+                "checked-in shader source that nothing names",
+                "delete it, or load it from the code that needs it; a shader no lowering \
+                 reaches is a second implementation of an operation nobody compares",
+            ));
+        }
+
         Ok(report)
     }
+}
+
+/// Extensions that make a checked-in file a shader or kernel source.
+const SHADER_EXTENSIONS: &[&str] = &["wgsl", "metal", "cu", "ptx"];
+
+/// Extensions of a file that can name a shader in order to load or build it.
+const REFERRER_EXTENSIONS: &[&str] = &["rs", "toml", "py", "sh", "yml", "yaml"];
+
+/// Tracked shader sources whose file name appears in no buildable file.
+///
+/// Matched on file name rather than repository path, because a load site spells a
+/// path relative to itself. Two shaders sharing a name are therefore both
+/// reachable once either is named, which is the deliberate loose end: the rule
+/// catches a file nothing mentions at all, which is what an orphan is.
+fn unreferenced_shaders(tree: &Tree) -> Result<Vec<PathBuf>, GateError> {
+    let shaders: Vec<PathBuf> = tree
+        .paths()
+        .iter()
+        .filter(|path| has_extension(path, SHADER_EXTENSIONS))
+        .cloned()
+        .collect();
+    if shaders.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut named = vec![false; shaders.len()];
+    for file in tree.paths() {
+        if !has_extension(file, REFERRER_EXTENSIONS) {
+            continue;
+        }
+        let text = tree.read(file)?;
+        for (index, shader) in shaders.iter().enumerate() {
+            if named[index] {
+                continue;
+            }
+            let Some(name) = shader.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            named[index] = text.contains(name);
+        }
+    }
+    Ok(shaders
+        .into_iter()
+        .zip(named)
+        .filter_map(|(shader, named)| (!named).then_some(shader))
+        .collect())
+}
+
+/// Whether a path carries one of the given extensions.
+fn has_extension(path: &Path, extensions: &[&str]) -> bool {
+    path.extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| extensions.contains(&value))
 }
 
 /// Whether a file may hold shader syntax.
