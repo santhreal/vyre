@@ -30,6 +30,7 @@ mod driver;
 mod program;
 /// Per-Expr rewrite-action discriminants written by the kernel.
 pub mod rewrite_action;
+mod rule_shapes;
 
 pub use driver::{gpu_algebraic_identities, PatternMatchError};
 pub use program::{build_pattern_match_program, build_pattern_match_program_with_cse};
