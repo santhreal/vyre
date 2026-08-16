@@ -19,11 +19,11 @@ mod harness;
 use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{DataType, Node, Program};
 use vyre_libs::nn::attention::{
-    attention, attention_head_to_token, attention_head_to_token_typed, attention_reference,
-    attention_token_to_head, chunked_gated_delta, flash_attention, flash_attention_2,
-    gqa_attention, gqa_attention_causal, gqa_attention_causal_typed, kv_cache_append,
-    kv_cache_append_typed, mla_compress_kv, mla_decode, partial_rope, qk_gain, quest_paging,
-    recurrent_gated_delta, softmax, turboquant_attention, GatedDeltaSpec,
+    attention, attention_head_to_token, attention_reference, attention_token_to_head,
+    chunked_gated_delta, flash_attention, flash_attention_2, gqa_attention, gqa_attention_causal,
+    gqa_attention_causal_typed, kv_cache_append, mla_compress_kv, mla_decode, partial_rope,
+    qk_gain, quest_paging, recurrent_gated_delta, softmax, turboquant_attention,
+    AttentionPermuteSpec, GatedDeltaSpec, KvCacheAppendSpec,
 };
 use vyre_libs::nn::norm::layer_norm;
 
@@ -75,6 +75,35 @@ fn flash_fixture() -> Program {
     flash_attention_2("q", "k", "v", "out", SEQ_LEN, HEAD_DIM, TILE_SIZE)
 }
 
+/// The layout-move fixture shape, ragged in every axis so a transposed index
+/// derivation cannot produce the same fingerprint.
+fn permute_spec(dtype: DataType) -> AttentionPermuteSpec<'static> {
+    AttentionPermuteSpec {
+        input: "input",
+        output: "output",
+        batch: 2,
+        heads: 3,
+        sequence: 5,
+        head_dim: 4,
+        dtype,
+    }
+}
+
+fn cache_spec(dtype: DataType) -> KvCacheAppendSpec<'static> {
+    KvCacheAppendSpec {
+        prior: "prior",
+        chunk: "chunk",
+        next: "next",
+        batch: 2,
+        heads: 2,
+        capacity: 8,
+        chunk_len: 3,
+        head_dim: 4,
+        offset: 2,
+        dtype,
+    }
+}
+
 fn entry_points() -> Vec<(&'static str, Program)> {
     vec![
         (
@@ -105,7 +134,10 @@ fn entry_points() -> Vec<(&'static str, Program)> {
             "flash_attention/direct",
             flash_attention("q", "k", "v", "out", 4, 4).expect("direct flash builds"),
         ),
-        ("attention", attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM)),
+        (
+            "attention",
+            attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM),
+        ),
         ("attention/direct", attention("q", "k", "v", "out", 4, 4)),
         (
             "attention_reference",
@@ -127,25 +159,24 @@ fn entry_points() -> Vec<(&'static str, Program)> {
         ),
         (
             "kv_cache_append",
-            kv_cache_append("prior", "chunk", "next", 2, 2, 8, 3, 4, 2).expect("cache builds"),
+            kv_cache_append(cache_spec(DataType::F32)).expect("cache builds"),
         ),
         (
             "kv_cache_append/f16",
-            kv_cache_append_typed("prior", "chunk", "next", 2, 2, 8, 3, 4, 2, DataType::F16)
-                .expect("typed cache builds"),
+            kv_cache_append(cache_spec(DataType::F16)).expect("typed cache builds"),
         ),
         (
             "attention_head_to_token",
-            attention_head_to_token("input", "output", 2, 3, 5, 4).expect("head to token builds"),
+            attention_head_to_token(permute_spec(DataType::F32)).expect("head to token builds"),
         ),
         (
             "attention_head_to_token/f16",
-            attention_head_to_token_typed("input", "output", 2, 3, 5, 4, DataType::F16)
+            attention_head_to_token(permute_spec(DataType::F16))
                 .expect("typed head to token builds"),
         ),
         (
             "attention_token_to_head",
-            attention_token_to_head("input", "output", 2, 5, 3, 4).expect("token to head builds"),
+            attention_token_to_head(permute_spec(DataType::F32)).expect("token to head builds"),
         ),
         (
             "quest_paging",
@@ -248,19 +279,19 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "kv_cache_append",
-        "13404f04d3caabb8e5b73e4a87b81f4e9a43f3769524bc9de222828223dba891",
+        "067c81e0ff60304ca068a19a62764e047d6f6a0103b233cddf76187256846278",
     ),
     (
         "kv_cache_append/f16",
-        "65b5891b893a906a2ac6f9c5d4364c2b989c93eda3c17b387b6c3e562cfbf306",
+        "9ab4cf74461e53473d5dc038cfe4268e291c67efcd1b02fc4bb3fef1c9b23701",
     ),
     (
         "attention_head_to_token",
-        "3cdc5b0cae92da81221b5158a2d12968884db611a7340f106630bd685898b588",
+        "395c6514b88affb341ba84d41f9473b1f51e6b36fe95dadf53ad72a6f26fe327",
     ),
     (
         "attention_head_to_token/f16",
-        "bd08abf7a28bc81ef126b5a37dcb6bd8e2ac44b9496209967c04aab9527a2f8b",
+        "f09483dfb0a8d7b5395f81668c070526b8f5762b7f2299f2f113e8137273212b",
     ),
     (
         "attention_token_to_head",
@@ -437,30 +468,13 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
             "vyre-primitives::reduce::workgroup_sum_f32",
         ],
     ),
-    (
-        "flash_attention",
-        &[
-            "vyre-libs::nn::flash_attention",
-        ],
-    ),
+    ("flash_attention", &["vyre-libs::nn::flash_attention"]),
     (
         "flash_attention/direct",
-        &[
-            "vyre-libs::nn::flash_attention",
-        ],
+        &["vyre-libs::nn::flash_attention"],
     ),
-    (
-        "attention",
-        &[
-            "vyre-libs::nn::attention",
-        ],
-    ),
-    (
-        "attention/direct",
-        &[
-            "vyre-libs::nn::attention",
-        ],
-    ),
+    ("attention", &["vyre-libs::nn::attention"]),
+    ("attention/direct", &["vyre-libs::nn::attention"]),
     (
         "attention_reference",
         &[
@@ -501,35 +515,19 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
             "vyre-primitives::nn::attention_write_pass",
         ],
     ),
-    (
-        "kv_cache_append",
-        &[
-            "vyre-libs::nn::kv_cache_append",
-        ],
-    ),
-    (
-        "kv_cache_append/f16",
-        &[
-            "vyre-libs::nn::kv_cache_append",
-        ],
-    ),
+    ("kv_cache_append", &["vyre-libs::nn::kv_cache_append"]),
+    ("kv_cache_append/f16", &["vyre-libs::nn::kv_cache_append"]),
     (
         "attention_head_to_token",
-        &[
-            "vyre-libs::nn::attention_head_to_token",
-        ],
+        &["vyre-libs::nn::attention_head_to_token"],
     ),
     (
         "attention_head_to_token/f16",
-        &[
-            "vyre-libs::nn::attention_head_to_token",
-        ],
+        &["vyre-libs::nn::attention_head_to_token"],
     ),
     (
         "attention_token_to_head",
-        &[
-            "vyre-libs::nn::attention_token_to_head",
-        ],
+        &["vyre-libs::nn::attention_token_to_head"],
     ),
     (
         "quest_paging",
@@ -540,30 +538,13 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
             "vyre-primitives::nn::quest_zero_fill",
         ],
     ),
-    (
-        "partial_rope",
-        &[
-            "vyre-libs::nn::partial_rope",
-        ],
-    ),
-    (
-        "qk_gain",
-        &[
-            "vyre-libs::nn::qk_gain",
-        ],
-    ),
+    ("partial_rope", &["vyre-libs::nn::partial_rope"]),
+    ("qk_gain", &["vyre-libs::nn::qk_gain"]),
     (
         "turboquant_attention",
-        &[
-            "vyre-libs::nn::attention::turboquant",
-        ],
+        &["vyre-libs::nn::attention::turboquant"],
     ),
-    (
-        "mla_compress_kv",
-        &[
-            "vyre-libs::nn::mla_compress_kv",
-        ],
-    ),
+    ("mla_compress_kv", &["vyre-libs::nn::mla_compress_kv"]),
 ];
 
 /// A generator identity is part of the wire encoding, so renaming one moves
