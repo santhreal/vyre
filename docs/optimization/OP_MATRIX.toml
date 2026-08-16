@@ -2718,6 +2718,81 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
+family = "vyre-libs::llm::logit_adjust"
+tier = "libs"
+owners = ["vyre-libs/src/llm"]
+ops = ["vyre-libs::llm::logit_adjust"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::llm::nucleus_select"
+tier = "libs"
+owners = ["vyre-libs/src/llm"]
+ops = ["vyre-libs::llm::nucleus_select"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::llm::paged_kv_append"
+tier = "libs"
+owners = ["vyre-libs/src/llm"]
+ops = ["vyre-libs::llm::paged_kv_append"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::llm::paged_kv_gather"
+tier = "libs"
+owners = ["vyre-libs/src/llm"]
+ops = ["vyre-libs::llm::paged_kv_gather"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::llm::sample_token"
+tier = "libs"
+owners = ["vyre-libs/src/llm"]
+ops = ["vyre-libs::llm::sample_token"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
 family = "vyre-libs::logical::nand"
 tier = "libs"
 owners = ["vyre-libs/src/logical"]
