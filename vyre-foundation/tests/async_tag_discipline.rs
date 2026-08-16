@@ -15,11 +15,11 @@
 //! pipeline emits stay accepted, and the single-tag shape that silently
 //! overwrites is rejected.
 //!
-//! Not caught, deliberately: a copy started and never waited. Both executors
-//! drop a pending transfer at the end of an invocation instead of failing, and
-//! a program that starts one copy and returns is accepted today. Also not
-//! caught: a loop whose trip count is not a literal, because a body that runs
-//! at most once has no back edge to reuse a tag across.
+//! Not caught, deliberately: a copy started and never waited. The two reference
+//! executors disagree about it, one failing the invocation and one dropping the
+//! transfer, so a static rule would refuse programs an authoritative executor
+//! accepts. Also not caught: a loop whose trip count is not a literal, because
+//! a body that runs at most once has no back edge to reuse a tag across.
 
 use vyre_foundation::ir::{Expr, Node, Program, NODE_VARIANT_NAMES};
 use vyre_foundation::validate::validate;
@@ -248,7 +248,7 @@ fn a_start_inside_a_block_reaches_the_wait_outside_it() {
 fn a_copy_started_and_never_waited_carries_no_diagnostic() {
     assert_clean(
         vec![load("stage0")],
-        "both executors drop a pending transfer at the end of an invocation",
+        "the reference executors disagree about a transfer left pending",
     );
 }
 

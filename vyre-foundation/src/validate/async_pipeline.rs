@@ -27,10 +27,13 @@
 //! * a start of a tag that is in flight on every path reaching it,
 //! * a wait on a tag that is in flight on no path reaching it.
 //!
-//! A copy started and never waited is NOT reported. Both executors drop a
-//! pending transfer at the end of an invocation rather than failing, a runtime
-//! may drain a store after the dispatch, and a program that starts one copy and
-//! returns is accepted today.
+//! A copy started and never waited is NOT reported, because the two reference
+//! executors disagree about it. The hashmap interpreter fails the invocation
+//! (`run_invocations` reports the tag still pending); the statement executor
+//! drops the transfer and completes. A static rule needs one oracle to be right
+//! against, and rejecting on a disagreement would refuse programs an
+//! authoritative executor accepts. The two starts-and-waits rules above hold in
+//! both.
 //!
 //! A `Loop` body is analysed twice when its literal bounds prove at least two
 //! iterations, so a tag started in the body and left in flight across the back
