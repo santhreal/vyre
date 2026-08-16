@@ -151,6 +151,8 @@ pub mod target_dialect;
 pub mod trace_jit_policy;
 /// Backend-neutral checked transfer accounting policy.
 pub mod transfer_accounting;
+/// Device-side trap record layout shared by every backend that reports one.
+pub mod trap_record;
 /// Backend-neutral autotuner framework.
 pub mod tuner;
 /// Shared validation caches and launch-geometry contracts.

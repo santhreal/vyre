@@ -523,9 +523,7 @@ impl BodyCtx<'_> {
                     .operands
                     .first()
                     .ok_or_else(|| EmitError::InvalidDescriptor("Trap missing address".into()))?;
-                let _address = self.lookup_operand(address_id)?;
-                let _ = writeln!(self.text, "    // trap tag: {tag}");
-                let _ = writeln!(self.text, "    bra $L_exit;");
+                self.emit_trap(tag, address_id)?;
             }
             Resume { tag } => {
                 let _ = writeln!(self.text, "    // resume tag: {tag}");

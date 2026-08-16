@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::ffi::CStr;
 use std::hash::BuildHasherDefault;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::Arc;
 
 use cudarc::driver::sys::{CUfunction, CUmodule};
 use dashmap::mapref::entry::Entry;
@@ -23,8 +24,10 @@ use super::capacity_accounting::{
 use super::driver_module::{
     get_cuda_module_function, get_cuda_module_global, load_cuda_module_data,
     unload_cuda_module_or_log, GRID_BARRIER_SYMBOL_CSTR, GRID_BARRIER_SYMBOL_NAME,
+    TRAP_SIDECAR_SYMBOL_CSTR,
 };
 use super::ptx_disk_cache::write_ptx_dump;
+use super::trap_sidecar::{declares_trap_sidecar, trap_sidecar_from_module, TrapSidecar};
 use crate::backend::staging_reserve::reserve_vec;
 
 const MODULE_CACHE_SOFT_CAP: usize = 2048;
@@ -34,16 +37,27 @@ thread_local! {
     static PTX_CSTR_SCRATCH: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
 }
 
+/// The module-scope globals one loaded module exposes to the host.
+///
+/// Both are per-module, not per-launch, which is why a launch that uses either
+/// one holds the module's gate for its whole execution: an overlapping launch of
+/// the same module would reset the other's state underneath it.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct ModuleGlobals {
+    /// Device pointer + byte size of the cooperative grid-barrier counter.
+    /// `Some` only for a grid-sync program.
+    pub(crate) grid_barrier: Option<(u64, usize)>,
+    /// The trap record and its tag table. `Some` only when the module declares a
+    /// trap.
+    pub(crate) trap: Option<Arc<TrapSidecar>>,
+}
+
 /// Loaded CUDA module and its `main` entry function.
 #[derive(Debug)]
 struct CachedModule {
     module: CUmodule,
     main: CUfunction,
-    /// Device pointer + byte size of the module-scope cooperative grid-barrier
-    /// counter (`_vyre_grid_barrier`). `Some` only when the PTX declares it
-    /// (a grid-sync program); the host zeroes this counter before each
-    /// cooperative launch. `None` for every non-grid-sync kernel.
-    grid_barrier_global: Option<(u64, usize)>,
+    globals: ModuleGlobals,
     access_count: AtomicU32,
 }
 
@@ -140,21 +154,24 @@ impl CudaModuleCache {
         }
     }
 
-    /// Device pointer + byte size of this kernel's cooperative grid-barrier
-    /// counter, loading the module if it is not cached. Returns `None` for a
-    /// kernel that declares no grid barrier (the caller must already know,
-    /// from `contains_grid_sync`, whether one is required and treat `None` on
-    /// a grid-sync program as a hard codegen error).
-    pub(crate) fn grid_barrier_global_for_ptx(
+    /// This module's host-visible module-scope globals, loading the module if it
+    /// is not cached.
+    ///
+    /// Both globals are resolved in one lookup because both are needed by the
+    /// same launch and neither is cheap to ask for twice: a second lookup is a
+    /// second cache probe, and a second module load on a miss. The caller must
+    /// already know from the program whether a grid barrier is REQUIRED, and
+    /// treat a missing one on a grid-sync program as a codegen failure.
+    pub(crate) fn module_globals_for_ptx(
         &self,
         ptx_src: &str,
         key: ModuleCacheKey,
         ptx_target_sm: u32,
-    ) -> Result<Option<(u64, usize)>, BackendError> {
+    ) -> Result<ModuleGlobals, BackendError> {
         if let Some(module) = self.modules.get(&key) {
             increment_cache_access_u32(&module.access_count, "CUDA module cache access count");
             increment_cache_counter_u64(&self.hits, "CUDA module cache hits");
-            return Ok(module.grid_barrier_global);
+            return Ok(module.globals.clone());
         }
         increment_cache_counter_u64(&self.misses, "CUDA module cache misses");
 
@@ -168,13 +185,13 @@ impl CudaModuleCache {
                     "CUDA module cache access count",
                 );
                 increment_cache_counter_u64(&self.hits, "CUDA module cache hits");
-                Ok(existing.get().grid_barrier_global)
+                Ok(existing.get().globals.clone())
             }
             Entry::Vacant(entry) => {
                 let loaded = load_module(ptx_src, ptx_target_sm)?;
-                let global = loaded.grid_barrier_global;
+                let globals = loaded.globals.clone();
                 entry.insert(loaded);
-                Ok(global)
+                Ok(globals)
             }
         }
     }
@@ -309,10 +326,51 @@ fn load_module(ptx_src: &str, ptx_target_sm: u32) -> Result<CachedModule, Backen
     } else {
         None
     };
+    // Resolve the trap record when this kernel declares one. Same exact text
+    // signal, and the same reason it must not be a speculative lookup: a
+    // swallowed NOT_FOUND here would leave `trap: None` on a trapping kernel, the
+    // launch would skip the readback, and a trapped launch would be reported as a
+    // successful one.
+    let trap = if declares_trap_sidecar(ptx_src) {
+        let symbol = CStr::from_bytes_with_nul(TRAP_SIDECAR_SYMBOL_CSTR).map_err(|error| {
+            BackendError::KernelCompileFailed {
+                backend: crate::CUDA_BACKEND_ID.to_string(),
+                compiler_message: format!(
+                    "CUDA trap sidecar symbol literal was invalid: {error}. Fix: keep the driver's NUL-terminated copy of vyre_emit_ptx::TRAP_SIDECAR_SYMBOL valid."
+                ),
+            }
+        })?;
+        let resolved = match get_cuda_module_global(module, symbol) {
+            Ok((device_ptr, byte_count)) => {
+                trap_sidecar_from_module(device_ptr, byte_count, ptx_src)
+            }
+            Err(res) => Err(BackendError::KernelCompileFailed {
+                backend: crate::CUDA_BACKEND_ID.to_string(),
+                compiler_message: format!(
+                    "cuModuleGetGlobal(trap sidecar) failed with {res:?} for sm_{ptx_target_sm} even though the module text declares it. Fix: ensure the PTX emitter emits the module-scope trap record for trapping kernels."
+                ),
+            }),
+        };
+        match resolved {
+            Ok(sidecar) => Some(sidecar),
+            Err(error) => {
+                unload_cuda_module_or_log(
+                    module,
+                    "CUDA module cleanup after trap sidecar resolution failure",
+                );
+                return Err(error);
+            }
+        }
+    } else {
+        None
+    };
     Ok(CachedModule {
         module,
         main: func,
-        grid_barrier_global,
+        globals: ModuleGlobals {
+            grid_barrier: grid_barrier_global,
+            trap,
+        },
         access_count: AtomicU32::new(1),
     })
 }

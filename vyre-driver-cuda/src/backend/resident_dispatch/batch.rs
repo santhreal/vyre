@@ -295,22 +295,25 @@ impl CudaBackend {
             enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
 
             // One lease covers every batch element: they all enqueue on this one
-            // stream, so stream order already separates their barrier counts.
-            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
+            // stream, so stream order already separates their barrier counts, and
+            // the trap record is claimed by the first element that traps.
+            let module_globals =
+                self.lease_module_globals(program, prepared, ptx_src, module_key)?;
             let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();
             // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream before freeing
-            // the gate, so a launch failure cannot leave a grid spinning while the
-            // next sequence resets the counter underneath it.
-            grid_barrier.launch_then_release(
+            // one safe order: the release synchronizes the stream, reads the trap
+            // record, and only then frees the gate, so a launch failure cannot
+            // leave a grid spinning and a trap cannot be erased by the next
+            // sequence's reset.
+            module_globals.launch_then_release(
                 stream_raw,
-                "resident batch grid-sync launch",
-                |grid_barrier| {
+                "resident batch launch",
+                |module_globals| {
                     for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
                         let mut params_ref = params_ptr;
                         Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
                         self.replay_fixpoint_launches(
-                            grid_barrier,
+                            module_globals,
                             func,
                             &mut kernel_args,
                             prepared,

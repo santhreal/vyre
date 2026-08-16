@@ -27,6 +27,7 @@ pub(crate) mod schedule;
 mod store_guard;
 mod subgroup;
 mod text_capacity;
+mod trap;
 mod type_suffix;
 mod unop;
 mod value_bindings;

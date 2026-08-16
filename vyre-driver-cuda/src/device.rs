@@ -649,11 +649,11 @@ impl CudaDeviceCaps {
             supports_specialization_constants: false,
             supports_f16: self.hardware_supports_f16(),
             supports_bf16: self.hardware_supports_bf16(),
-            // False while the PTX emitter lowers `KernelOpKind::Trap` to a source
-            // comment and a branch to the kernel exit and records nothing. See
-            // `CudaDeviceCaps::program_validation_caps` for the whole reason; the
-            // two records must report the same answer.
-            supports_trap_propagation: false,
+            // True because the emitter writes a trap record into the module-scope
+            // sidecar and every launch path reads it back after synchronizing. See
+            // `CudaDeviceCaps::program_validation_caps`; the two records must
+            // report the same answer.
+            supports_trap_propagation: true,
             supports_tensor_cores: self.hardware_supports_tensor_cores(),
             has_mul_high: true,
             has_dual_issue_fp32_int32: true,

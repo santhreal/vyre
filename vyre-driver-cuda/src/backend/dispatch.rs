@@ -6,6 +6,7 @@ use dashmap::DashMap;
 
 use cudarc::driver::CudaContext;
 use smallvec::SmallVec;
+use vyre_driver::trap_record::{decode_trap_record, TRAP_RECORD_BYTES};
 use vyre_driver::validation::ValidationCache;
 use vyre_driver::SpeculationMode;
 use vyre_driver::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
@@ -14,8 +15,8 @@ use vyre_foundation::ir::Program;
 
 use super::allocations::{DeviceAllocationPool, PinnedHostAllocationPool};
 use super::module_cache::{
-    CudaModuleCache, CudaPtxSourceCache, CudaPtxSourceCacheSnapshot, ModuleCacheKey,
-    PtxSourceCacheKey,
+    CudaModuleCache, CudaPtxSourceCache, CudaPtxSourceCacheSnapshot, ModuleCacheKey, ModuleGlobals,
+    PtxSourceCacheKey, TrapSidecar,
 };
 use super::plan::{compute_ordered_output_indices, CudaDispatchPlan};
 use super::ptx_target::select_loadable_ptx_target_sm;
@@ -62,7 +63,7 @@ mod tests {
             "Fix: the refusal must name the counter symbol so a reader can find it. Got: {message}"
         );
         assert!(
-            message.contains("enqueue_reset"),
+            message.contains("enqueue_barrier_reset"),
             "Fix: the refusal must name the call that was skipped, so the fix does not require \
              reading this module. Got: {message}"
         );
@@ -319,23 +320,26 @@ mod tests {
     }
 
     /// Is the gate's busy flag set right now?
-    fn gate_is_busy(gate: &std::sync::Arc<super::GridBarrierGate>) -> bool {
+    fn gate_is_busy(gate: &std::sync::Arc<super::ModuleGlobalsGate>) -> bool {
         *gate
             .busy
             .lock()
             .expect("Fix: the gate mutex must not be poisoned inside this test.")
     }
 
-    /// A lease holding the gate but addressing no counter.
+    /// A lease holding the gate but addressing no global.
     ///
     /// Exercises the gate lifecycle without a CUDA context: the release
     /// short-circuits before any stream work, so ordering and freeing are
     /// observable on the host.
-    fn gate_only_lease(gate: &std::sync::Arc<super::GridBarrierGate>) -> super::GridBarrierLease {
-        let guard = super::GridBarrierGate::acquire(gate)
+    fn gate_only_lease(
+        gate: &std::sync::Arc<super::ModuleGlobalsGate>,
+    ) -> super::ModuleGlobalsLease {
+        let guard = super::ModuleGlobalsGate::acquire(gate)
             .expect("Fix: a fresh gate must be acquirable by the first caller.");
-        super::GridBarrierLease {
-            target: None,
+        super::ModuleGlobalsLease {
+            barrier: None,
+            trap: None,
             guard: Some(guard),
             arrival_ceiling: 0,
         }
@@ -361,8 +365,8 @@ mod tests {
     /// the gate is still held DURING the wait.
     #[test]
     fn release_in_order_holds_the_gate_until_the_synchronize_returns() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
+        let gate = std::sync::Arc::new(super::ModuleGlobalsGate::default());
+        let guard = super::ModuleGlobalsGate::acquire(&gate)
             .expect("Fix: a fresh gate must be acquirable by the first caller.");
         assert!(
             gate_is_busy(&gate),
@@ -402,8 +406,8 @@ mod tests {
     /// is freed races the next sequence's memset and can read that instead.
     #[test]
     fn release_in_order_audits_after_the_synchronize_and_while_the_gate_is_held() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
+        let gate = std::sync::Arc::new(super::ModuleGlobalsGate::default());
+        let guard = super::ModuleGlobalsGate::acquire(&gate)
             .expect("Fix: a fresh gate must be acquirable by the first caller.");
         let steps = std::cell::RefCell::new(Vec::new());
         let audit_saw_gate_held = std::cell::Cell::new(false);
@@ -444,8 +448,8 @@ mod tests {
     /// and block every later cooperative launch of the module.
     #[test]
     fn release_in_order_frees_the_gate_and_skips_the_audit_when_the_synchronize_fails() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
+        let gate = std::sync::Arc::new(super::ModuleGlobalsGate::default());
+        let guard = super::ModuleGlobalsGate::acquire(&gate)
             .expect("Fix: a fresh gate must be acquirable by the first caller.");
         let audited = std::cell::Cell::new(false);
         let result = super::release_in_order(
@@ -488,8 +492,8 @@ mod tests {
     /// real defect.
     #[test]
     fn release_in_order_frees_the_gate_when_the_audit_refuses() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
+        let gate = std::sync::Arc::new(super::ModuleGlobalsGate::default());
+        let guard = super::ModuleGlobalsGate::acquire(&gate)
             .expect("Fix: a fresh gate must be acquirable by the first caller.");
         let result =
             super::release_in_order(Some(guard), || Ok(()), || Err(test_error("stale counter")));
@@ -515,7 +519,7 @@ mod tests {
     /// the exclusion the counter depends on.
     #[test]
     fn launch_then_release_runs_the_launch_while_the_gate_is_held() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
+        let gate = std::sync::Arc::new(super::ModuleGlobalsGate::default());
         let lease = gate_only_lease(&gate);
         let held_during_launch = std::cell::Cell::new(false);
         let launched =
@@ -552,7 +556,7 @@ mod tests {
     /// dispatch would report success.
     #[test]
     fn launch_then_release_reports_a_failed_launch_and_still_frees_the_gate() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
+        let gate = std::sync::Arc::new(super::ModuleGlobalsGate::default());
         let lease = gate_only_lease(&gate);
         let result: Result<(), super::BackendError> =
             lease.launch_then_release(std::ptr::null_mut(), "gate lifetime unit test", |_lease| {
@@ -585,8 +589,8 @@ mod tests {
     /// would be invisible until a multi-threaded caller appeared.
     #[test]
     fn a_released_gate_is_acquirable_again_and_a_held_one_is_not() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let first = super::GridBarrierGate::acquire(&gate)
+        let gate = std::sync::Arc::new(super::ModuleGlobalsGate::default());
+        let first = super::ModuleGlobalsGate::acquire(&gate)
             .expect("Fix: a fresh gate must be acquirable by the first caller.");
         assert!(
             gate_is_busy(&gate),
@@ -597,7 +601,7 @@ mod tests {
             !gate_is_busy(&gate),
             "Fix: dropping the guard must clear the busy flag, including on unwind."
         );
-        let second = super::GridBarrierGate::acquire(&gate)
+        let second = super::ModuleGlobalsGate::acquire(&gate)
             .expect("Fix: a released gate must be acquirable by the next sequence.");
         assert!(
             gate_is_busy(&gate),
@@ -628,11 +632,12 @@ pub struct CudaBackend {
     /// kernel shape, so this makes the per-launch occupancy-evidence query a map
     /// lookup after the first launch instead of repeated FFI (Law 7).
     pub(crate) occupancy_blocks_cache: Arc<DashMap<(usize, u32), u32>>,
-    /// Serializing gate per module-cache key for cooperative grid-sync launches,
-    /// created on first use. Keyed exactly like the module cache because that is
-    /// the aliasing set: one key means one loaded CUmodule and therefore one
-    /// module-scope `_vyre_grid_barrier` counter. See [`GridBarrierGate`].
-    grid_barrier_gates: Arc<DashMap<ModuleCacheKey, Arc<GridBarrierGate>>>,
+    /// Serializing gate per module-cache key for launches that hold a
+    /// module-scope global, created on first use. Keyed exactly like the module
+    /// cache because that is the aliasing set: one key means one loaded CUmodule
+    /// and therefore one `_vyre_grid_barrier` counter and one trap record. See
+    /// [`ModuleGlobalsGate`].
+    module_globals_gates: Arc<DashMap<ModuleCacheKey, Arc<ModuleGlobalsGate>>>,
     pub(crate) ctx: Arc<CudaContext>,
 }
 
@@ -676,7 +681,7 @@ impl CudaBackend {
             async_upload_stream: Arc::new(Mutex::new(None)),
             telemetry: Arc::new(CudaTelemetry::default()),
             occupancy_blocks_cache: Arc::new(DashMap::new()),
-            grid_barrier_gates: Arc::new(DashMap::new()),
+            module_globals_gates: Arc::new(DashMap::new()),
             ctx,
         })
     }
@@ -964,15 +969,14 @@ impl CudaBackend {
             .function_for_ptx(ptx_src, key, self.ptx_target_sm())
     }
 
-    /// Device pointer + byte size of the cooperative grid-barrier counter for
-    /// this PTX module, or `None` when the kernel declares no grid barrier.
-    pub(crate) fn grid_barrier_global_with_key(
+    /// The module-scope globals this PTX module exposes to the host.
+    pub(crate) fn module_globals_with_key(
         &self,
         ptx_src: &str,
         key: ModuleCacheKey,
-    ) -> Result<Option<(u64, usize)>, BackendError> {
+    ) -> Result<ModuleGlobals, BackendError> {
         self.module_cache
-            .grid_barrier_global_for_ptx(ptx_src, key, self.ptx_target_sm())
+            .module_globals_for_ptx(ptx_src, key, self.ptx_target_sm())
     }
 
     /// The module-scope `_vyre_grid_barrier` counter this launch must start from
@@ -982,24 +986,23 @@ impl CudaBackend {
     /// in-kernel barriers, and each barrier's release target is a compile-time
     /// multiple of `gridSize`. A launch that starts from a stale value therefore
     /// releases its first barrier before every CTA has arrived. Every cooperative
-    /// launch site takes a [`GridBarrierLease`] over it, which resolves the
-    /// counter here and zeroes it before each launch, so the borrowed-host path,
-    /// the resident paths, and the compiled pipeline that reuses them share ONE
-    /// reset instead of drifting copies.
+    /// launch site takes a [`ModuleGlobalsLease`] over it, which zeroes it before
+    /// each launch, so the borrowed-host path, the resident paths, and the
+    /// compiled pipeline that reuses them share ONE reset instead of drifting
+    /// copies.
     ///
     /// A grid-sync program whose loaded module declares no counter is a codegen
     /// failure, not a launch to attempt quietly.
-    pub(crate) fn grid_barrier_reset_target(
+    fn grid_barrier_reset_target(
         &self,
         program: &Program,
         prepared: &CudaDispatchPlan,
-        ptx_src: &str,
-        module_key: ModuleCacheKey,
+        globals: &ModuleGlobals,
     ) -> Result<Option<(u64, usize)>, BackendError> {
         if !prepared.cooperative || !vyre_driver::grid_sync::contains_grid_sync(program) {
             return Ok(None);
         }
-        match self.grid_barrier_global_with_key(ptx_src, module_key)? {
+        match globals.grid_barrier {
             Some(global) => Ok(Some(global)),
             None => Err(BackendError::InvalidProgram {
                 fix:
@@ -1009,40 +1012,51 @@ impl CudaBackend {
         }
     }
 
-    /// Exclusive lease on the module-scope `_vyre_grid_barrier` counter for one
-    /// cooperative launch sequence, or an inert lease when this launch needs no
-    /// counter.
+    /// Exclusive lease on this module's host-visible module-scope globals for one
+    /// launch sequence, or an inert lease when the module has none.
     ///
-    /// Acquiring the lease BLOCKS while another launch sequence on the same
-    /// module is still in flight, which is what makes the shared counter safe.
-    /// Hold it across the resets and launches, then end it with
-    /// [`GridBarrierLease::launch_then_release`].
-    pub(crate) fn lease_grid_barrier(
+    /// Acquiring the lease BLOCKS while another launch sequence on the same module
+    /// is still in flight, which is what makes a per-module global safe to share
+    /// across concurrent dispatches. Hold it across the resets and launches, then
+    /// end it with [`ModuleGlobalsLease::launch_then_release`].
+    ///
+    /// A trap-declaring module takes the lease whether or not the launch is
+    /// cooperative, because the trap record is per-module exactly as the counter
+    /// is: two overlapping launches would zero each other's record and the second
+    /// one's trap would be reported against the first one's launch, or lost.
+    pub(crate) fn lease_module_globals(
         &self,
         program: &Program,
         prepared: &CudaDispatchPlan,
         ptx_src: &str,
         module_key: ModuleCacheKey,
-    ) -> Result<GridBarrierLease, BackendError> {
-        let Some(target) =
-            self.grid_barrier_reset_target(program, prepared, ptx_src, module_key)?
-        else {
-            return Ok(GridBarrierLease {
-                target: None,
+    ) -> Result<ModuleGlobalsLease, BackendError> {
+        let globals = self.module_globals_with_key(ptx_src, module_key)?;
+        let barrier = self.grid_barrier_reset_target(program, prepared, &globals)?;
+        let trap = globals.trap;
+        if barrier.is_none() && trap.is_none() {
+            return Ok(ModuleGlobalsLease {
+                barrier: None,
+                trap: None,
                 guard: None,
                 arrival_ceiling: 0,
             });
+        }
+        let arrival_ceiling = if barrier.is_some() {
+            grid_barrier_arrival_ceiling(ptx_src, prepared.launch.grid)?
+        } else {
+            0
         };
-        let arrival_ceiling = grid_barrier_arrival_ceiling(ptx_src, prepared.launch.grid)?;
         let gate = Arc::clone(
-            self.grid_barrier_gates
+            self.module_globals_gates
                 .entry(module_key)
-                .or_insert_with(|| Arc::new(GridBarrierGate::default()))
+                .or_insert_with(|| Arc::new(ModuleGlobalsGate::default()))
                 .value(),
         );
-        let guard = GridBarrierGate::acquire(&gate)?;
-        Ok(GridBarrierLease {
-            target: Some(target),
+        let guard = ModuleGlobalsGate::acquire(&gate)?;
+        Ok(ModuleGlobalsLease {
+            barrier,
+            trap,
             guard: Some(guard),
             arrival_ceiling,
         })
@@ -1176,8 +1190,9 @@ impl CudaBackend {
     }
 }
 
-/// Serializes cooperative grid-sync launch sequences that share one loaded
-/// module's `_vyre_grid_barrier` arrival counter.
+/// Serializes launch sequences that share one loaded module's host-visible
+/// module-scope globals: the `_vyre_grid_barrier` arrival counter and the trap
+/// record.
 ///
 /// # Why serializing is required rather than merely tidy
 ///
@@ -1204,7 +1219,8 @@ impl CudaBackend {
 /// work. Cooperative grid-sync launches that share a module now run one at a
 /// time, and the lease is held until the launch COMPLETES because the counter
 /// stays live for the kernel's whole execution. Launches on different modules,
-/// on independent backends, and every non-grid-sync launch are untouched.
+/// on independent backends, and every launch of a module with neither global are
+/// untouched.
 ///
 /// The throughput this gives up is small in practice and unavailable in
 /// principle: a cooperative launch requires every block co-resident, so a
@@ -1213,50 +1229,65 @@ impl CudaBackend {
 /// its OWN counter, which means the counter's address has to become a launch
 /// input rather than a module-scope symbol. That is an emitter and kernel-ABI
 /// change, not a driver-side one.
+///
+/// # The trap record has the same shape
+///
+/// The trap record is also a module-scope global, zeroed before a launch and read
+/// after it. Two overlapping launches of one trap-declaring module would zero
+/// each other's record: the second launch's zeroing erases a trap the first
+/// launch already recorded, so a launch that trapped is reported as successful
+/// and its output is read as an answer. That is the same class of failure as a
+/// clobbered counter and it takes the same gate, which is why one gate per module
+/// covers both rather than two gates racing for the same module.
+///
+/// A trap-declaring launch is serialized whether or not it is cooperative, and
+/// unlike a cooperative launch it has no residency argument saying a second one
+/// had nowhere to run. That cost is real: concurrent launches of one trapping
+/// module now run one at a time. It buys the ability to report the trap at all,
+/// which is the difference between a refusal and a wrong answer.
 #[derive(Debug, Default)]
-pub(crate) struct GridBarrierGate {
+pub(crate) struct ModuleGlobalsGate {
     busy: Mutex<bool>,
     free: Condvar,
 }
 
-impl GridBarrierGate {
-    /// Block until no other launch sequence holds this module's counter.
-    fn acquire(gate: &Arc<Self>) -> Result<GridBarrierGuard, BackendError> {
+impl ModuleGlobalsGate {
+    /// Block until no other launch sequence holds this module's globals.
+    fn acquire(gate: &Arc<Self>) -> Result<ModuleGlobalsGuard, BackendError> {
         let mut busy = gate.busy.lock().map_err(|_| BackendError::DispatchFailed {
             code: None,
             message:
-                "CUDA cooperative grid-barrier gate mutex was poisoned by a panicking launch. Fix: a launch panicked while holding the module's _vyre_grid_barrier counter; treat the earlier panic as the defect."
+                "CUDA module-globals gate mutex was poisoned by a panicking launch. Fix: a launch panicked while holding the module's grid-barrier counter or trap record; treat the earlier panic as the defect."
                     .to_string(),
         })?;
         while *busy {
             busy = gate.free.wait(busy).map_err(|_| BackendError::DispatchFailed {
                 code: None,
                 message:
-                    "CUDA cooperative grid-barrier gate mutex was poisoned while waiting for the module's counter. Fix: a launch panicked while holding it; treat the earlier panic as the defect."
+                    "CUDA module-globals gate mutex was poisoned while waiting for the module's globals. Fix: a launch panicked while holding them; treat the earlier panic as the defect."
                         .to_string(),
             })?;
         }
         *busy = true;
         drop(busy);
-        Ok(GridBarrierGuard {
+        Ok(ModuleGlobalsGuard {
             gate: Arc::clone(gate),
         })
     }
 }
 
-/// Releases its [`GridBarrierGate`] on drop, including on unwind, so a panicking
-/// launch cannot wedge every later cooperative launch of the same module.
+/// Releases its [`ModuleGlobalsGate`] on drop, including on unwind, so a
+/// panicking launch cannot wedge every later launch of the same module.
 #[derive(Debug)]
-pub(crate) struct GridBarrierGuard {
-    gate: Arc<GridBarrierGate>,
+pub(crate) struct ModuleGlobalsGuard {
+    gate: Arc<ModuleGlobalsGate>,
 }
 
-impl Drop for GridBarrierGuard {
+impl Drop for ModuleGlobalsGuard {
     fn drop(&mut self) {
         // Recover the poisoned guard rather than propagating: failing to clear
-        // the flag here would block every future cooperative launch on this
-        // module, which is strictly worse than continuing after someone else's
-        // panic.
+        // the flag here would block every future launch on this module, which is
+        // strictly worse than continuing after someone else's panic.
         let mut busy = self
             .gate
             .busy
@@ -1268,37 +1299,45 @@ impl Drop for GridBarrierGuard {
     }
 }
 
-/// One cooperative launch sequence's exclusive hold on a module's grid-barrier
-/// counter, plus the counter itself.
+/// One launch sequence's exclusive hold on a module's host-visible module-scope
+/// globals, plus the globals themselves.
 ///
-/// An inert lease (no grid-sync barrier in the program, or a non-cooperative
-/// launch) holds nothing and enqueues nothing, so non-grid-sync launches pay only
-/// a moved `Option`.
+/// An inert lease (a module that declares neither the grid-barrier counter nor a
+/// trap record) holds nothing and enqueues nothing, so an ordinary launch pays
+/// only two moved `Option`s.
 #[derive(Debug)]
-pub(crate) struct GridBarrierLease {
-    target: Option<(u64, usize)>,
-    guard: Option<GridBarrierGuard>,
+pub(crate) struct ModuleGlobalsLease {
+    /// The cooperative grid-barrier counter, when this launch must reset one.
+    barrier: Option<(u64, usize)>,
+    /// The trap record, when the loaded module declares one.
+    trap: Option<Arc<TrapSidecar>>,
+    guard: Option<ModuleGlobalsGuard>,
     /// Arrivals ONE launch of this kernel can contribute: static barrier count
-    /// times grid block count. See [`grid_barrier_arrival_ceiling`].
+    /// times grid block count. See [`grid_barrier_arrival_ceiling`]. Zero when no
+    /// counter is held.
     arrival_ceiling: u64,
 }
 
-impl GridBarrierLease {
-    /// Zero the counter on `stream`, ahead of the launch it belongs to.
+impl ModuleGlobalsLease {
+    /// Zero the grid-barrier counter on `stream`, ahead of the launch it belongs
+    /// to.
     ///
     /// The memset is stream-ordered, so it lands before the kernel that reads the
     /// counter without any host synchronization. Call this before EVERY launch in
     /// the sequence, not once per sequence: each launch drives the counter up to
     /// `barriers * gridSize` and the next launch must start from zero.
     ///
+    /// The trap record is deliberately NOT reset here. See
+    /// [`ModuleGlobalsLease::launch_then_release`].
+    ///
     /// # Safety
     ///
     /// `stream` must be live until the memset completes.
-    pub(crate) unsafe fn enqueue_reset(
+    pub(crate) unsafe fn enqueue_barrier_reset(
         &self,
         stream: cudarc::driver::sys::CUstream,
     ) -> Result<(), BackendError> {
-        let Some((counter_ptr, counter_len)) = self.target else {
+        let Some((counter_ptr, counter_len)) = self.barrier else {
             return Ok(());
         };
         // SAFETY: the pointer came from cuModuleGetGlobal on the module this
@@ -1306,31 +1345,74 @@ impl GridBarrierLease {
         unsafe { super::copy::memset_d8_async_checked(counter_ptr, 0, counter_len, stream) }
     }
 
-    /// Run `launch` under this lease, then end the lease, in the ONE order that
-    /// is safe.
+    /// Zero the trap record on `stream`, once, ahead of the whole sequence.
+    ///
+    /// # Safety
+    ///
+    /// `stream` must be live until the memset completes.
+    unsafe fn enqueue_trap_reset(
+        &self,
+        stream: cudarc::driver::sys::CUstream,
+    ) -> Result<(), BackendError> {
+        let Some(trap) = self.trap.as_deref() else {
+            return Ok(());
+        };
+        // SAFETY: the pointer came from cuModuleGetGlobal on the module this lease
+        // was taken against and the byte count was validated against the record
+        // size at load; stream lifetime is the caller's guarantee.
+        unsafe {
+            super::copy::memset_d8_async_checked(trap.device_ptr(), 0, trap.byte_count(), stream)
+        }
+    }
+
+    /// Zero the trap record, run `launch` under this lease, then end the lease, in
+    /// the ONE order that is safe.
     ///
     /// The launch closure's error is captured rather than propagated, so the
     /// release always runs, and the release SYNCHRONIZES `stream` before the gate
     /// is freed. That synchronize is why this order cannot be rearranged and why
-    /// the release cannot be moved into the closure or made cheap: the counter is
+    /// the release cannot be moved into the closure or made cheap: the globals are
     /// live for the kernel's whole EXECUTION, not merely until the launch call
     /// returns. Free the gate before the grid finishes and the next sequence
     /// memsets `_vyre_grid_barrier` to zero underneath a still-running kernel,
     /// whose remaining barriers then wait for a release target that can no longer
-    /// be reached. That is a hang rather than an error, and it reproduces only
-    /// under cooperative launch.
+    /// be reached.
+    ///
+    /// # Why the trap record is zeroed here and not per launch
+    ///
+    /// One lease can cover many launches: fixpoint iterations, and every element
+    /// of a batched dispatch, all enqueued on one stream and read back once at
+    /// release. The device claims the record with a compare-and-swap, so the FIRST
+    /// trap in the sequence is the one kept. Zeroing per launch would instead erase
+    /// the record an earlier launch had already written, and the read at release
+    /// would find zero: a sequence whose second element trapped after its first
+    /// element trapped would be reported as successful. Once per sequence makes
+    /// "any launch under this lease trapped" the thing the readback answers, which
+    /// is the question the caller is asking. The cost is that `lane` identifies the
+    /// trapping lane within the sequence, not which launch it belonged to.
     ///
     /// Taking `self` by value is deliberate: it makes skipping the release
     /// unrepresentable at a call site. Hand-writing the sequence instead, as
     /// `let launched = (|| { .. })(); release(..)?; launched?;`, works but puts
     /// the ordering back in four places, and getting it wrong there COMPILES and
-    /// passes every non-cooperative test.
+    /// passes every test whose program neither traps nor grid-syncs.
+    ///
+    /// `stream` must be live for the whole sequence, which every caller already
+    /// guarantees by owning the stream across the launch.
     pub(crate) fn launch_then_release<T>(
         self,
         stream: cudarc::driver::sys::CUstream,
         label: &'static str,
         launch: impl FnOnce(&Self) -> Result<T, BackendError>,
     ) -> Result<T, BackendError> {
+        // SAFETY: the caller owns `stream` across the launch sequence this lease
+        // covers, so it outlives the memset enqueued here.
+        let reset = unsafe { self.enqueue_trap_reset(stream) };
+        if let Err(error) = reset {
+            // The gate is freed by dropping the lease. Nothing was launched, so
+            // there is nothing to synchronize or read back.
+            return Err(error);
+        }
         let launched = launch(&self);
         self.release_after_launch(stream, label)?;
         launched
@@ -1338,13 +1420,21 @@ impl GridBarrierLease {
 
     /// End the lease once the launches have completed.
     ///
-    /// When a counter is held this SYNCHRONIZES `stream` first, and that is
-    /// load-bearing rather than defensive: the counter is live for the kernel's
-    /// whole execution, so releasing at enqueue time would let the next sequence
-    /// reset the counter under a still-running grid, which is the hang described
-    /// on [`GridBarrierGate`]. An inert lease synchronizes nothing.
+    /// When a global is held this SYNCHRONIZES `stream` first, and that is
+    /// load-bearing rather than defensive on both counts: the counter is live for
+    /// the kernel's whole execution, so releasing at enqueue time would let the
+    /// next sequence reset it under a still-running grid, which is the hang
+    /// described on [`ModuleGlobalsGate`]; and the trap record is only complete
+    /// once the kernel has finished, so reading it before the synchronize would
+    /// report no trap on a launch that was about to write one. An inert lease
+    /// synchronizes nothing.
     ///
-    /// Private on purpose: [`GridBarrierLease::launch_then_release`] is the only
+    /// The trap is read BEFORE the arrival audit. A trapped kernel exits early, so
+    /// it legitimately skips later barriers and its arrival count is not evidence
+    /// of anything; reporting a stale-counter suspicion instead of the trap would
+    /// name the wrong defect.
+    ///
+    /// Private on purpose: [`ModuleGlobalsLease::launch_then_release`] is the only
     /// caller, so no launch site can open-code the release and drift out of
     /// order.
     fn release_after_launch(
@@ -1352,19 +1442,65 @@ impl GridBarrierLease {
         stream: cudarc::driver::sys::CUstream,
         label: &'static str,
     ) -> Result<(), BackendError> {
-        if self.target.is_none() {
-            return Ok(());
-        }
         let Self {
-            target,
+            barrier,
+            trap,
             guard,
             arrival_ceiling,
         } = self;
+        if barrier.is_none() && trap.is_none() {
+            return Ok(());
+        }
         release_in_order(
             guard,
             || crate::stream::synchronize_raw_stream(stream, label),
-            || audit_arrivals(target, arrival_ceiling),
+            || {
+                read_trap_record(trap.as_deref())?;
+                audit_arrivals(barrier, arrival_ceiling)
+            },
         )
+    }
+}
+
+/// Read the trap record and refuse the launch if a lane wrote one.
+///
+/// # The bug this locks out
+///
+/// The device cannot return an error. A trapping kernel branches to its exit
+/// label, so the launch reports success, `cuStreamSynchronize` reports success,
+/// and the output buffers hold whatever the lanes had written before the guard
+/// fired. Without this read the caller gets that as an answer. This target
+/// advertises `supports_trap_propagation`, so a program with a trap is admitted
+/// rather than refused up front, and this read is what makes the advertisement
+/// true.
+///
+/// The caller MUST have synchronized `stream` first: a record read before the
+/// kernel finishes says nothing about whether it trapped.
+fn read_trap_record(trap: Option<&TrapSidecar>) -> Result<(), BackendError> {
+    let Some(trap) = trap else {
+        return Ok(());
+    };
+    let mut record = [0_u8; TRAP_RECORD_BYTES];
+    // SAFETY: the pointer came from cuModuleGetGlobal for this module and
+    // addresses at least TRAP_RECORD_BYTES, checked when the module was loaded.
+    // The caller synchronized the stream, so the kernel's writes have landed and
+    // no launch is in flight against this record.
+    unsafe {
+        super::copy::d2h_sync_checked(
+            record.as_mut_ptr().cast::<std::ffi::c_void>(),
+            trap.device_ptr(),
+            TRAP_RECORD_BYTES,
+        )?;
+    }
+    match decode_trap_record(&record)? {
+        None => Ok(()),
+        Some(decoded) => Err(BackendError::DispatchFailed {
+            code: None,
+            message: format!(
+                "cuda dispatch trapped: {}",
+                decoded.describe(|code| trap.tag_for_code(code))
+            ),
+        }),
     }
 }
 
@@ -1380,7 +1516,7 @@ impl GridBarrierLease {
 /// failed synchronize or a failed audit still frees the gate instead of leaving
 /// the busy flag set.
 fn release_in_order(
-    guard: Option<GridBarrierGuard>,
+    guard: Option<ModuleGlobalsGuard>,
     synchronize: impl FnOnce() -> Result<(), BackendError>,
     audit: impl FnOnce() -> Result<(), BackendError>,
 ) -> Result<(), BackendError> {
@@ -1476,7 +1612,7 @@ fn verify_arrival_count(observed: u32, ceiling: u64) -> Result<(), BackendError>
     Err(BackendError::DispatchFailed {
         code: None,
         message: format!(
-            "CUDA cooperative grid-sync launch left the module-scope _vyre_grid_barrier counter at {observed} arrivals, above the {ceiling} that one launch of this kernel can contribute (static barrier count times grid blocks). The counter was not zeroed before this launch, so its barriers released on arrival instead of waiting and the kernel's cross-block reads are WRONG even though the launch reported success. Fix: every cooperative launch site must hold a GridBarrierLease and call enqueue_reset before EACH launch; a new launch path that skips it reintroduces silent wrong answers from the second launch onward."
+            "CUDA cooperative grid-sync launch left the module-scope _vyre_grid_barrier counter at {observed} arrivals, above the {ceiling} that one launch of this kernel can contribute (static barrier count times grid blocks). The counter was not zeroed before this launch, so its barriers released on arrival instead of waiting and the kernel's cross-block reads are WRONG even though the launch reported success. Fix: every cooperative launch site must hold a ModuleGlobalsLease and call enqueue_barrier_reset before EACH launch; a new launch path that skips it reintroduces silent wrong answers from the second launch onward."
         ),
     })
 }

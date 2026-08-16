@@ -10,6 +10,13 @@ use cudarc::driver::sys::{CUfunction, CUmodule, CUresult};
 pub(crate) const GRID_BARRIER_SYMBOL_NAME: &str = "_vyre_grid_barrier";
 pub(super) const GRID_BARRIER_SYMBOL_CSTR: &[u8] = b"_vyre_grid_barrier\0";
 
+/// Module-scope trap record symbol, emitted by the primary text emitter as
+/// `.global .align 4 .u32 _vyre_trap_sidecar[N];`. The name is owned by
+/// [`vyre_emit_ptx::TRAP_SIDECAR_SYMBOL`]; the NUL-terminated form is spelled
+/// here because a `CStr` cannot be built from a `&str` constant at compile time,
+/// and a mismatch between the two is caught by `trap_sidecar_symbol_names_agree`.
+pub(super) const TRAP_SIDECAR_SYMBOL_CSTR: &[u8] = b"_vyre_trap_sidecar\0";
+
 pub(crate) fn load_cuda_module_data(image_with_nul: &[u8]) -> Result<CUmodule, CUresult> {
     if image_with_nul.last().copied() != Some(0) {
         return Err(CUresult::CUDA_ERROR_INVALID_VALUE);
@@ -122,6 +129,30 @@ mod module_lifecycle_tests {
         assert!(
             super::unload_cuda_module(std::ptr::null_mut()).is_ok(),
             "Fix: null CUDA module unload should be a no-op so cleanup paths can be idempotent."
+        );
+    }
+
+    /// WHY: the NUL-terminated symbol the driver looks up is a second spelling of
+    /// a name the emitter owns. If the emitter renames the symbol and this copy
+    /// does not follow, `cuModuleGetGlobal` returns NOT_FOUND, the sidecar is
+    /// treated as absent, and a trapping launch reports success. That is the
+    /// fail-open shape this whole path exists to remove, so the two spellings are
+    /// pinned together rather than left to a runtime NOT_FOUND.
+    ///
+    /// Does not catch a rename of the array LENGTH: the word count comes from
+    /// `vyre_lower::TRAP_SIDECAR_WORDS` on both sides, and a size disagreement
+    /// surfaces as the byte-count check in `module_registry`.
+    #[test]
+    fn trap_sidecar_symbol_names_agree() {
+        let with_nul = super::TRAP_SIDECAR_SYMBOL_CSTR;
+        let cstr = std::ffi::CStr::from_bytes_with_nul(with_nul)
+            .expect("Fix: the trap sidecar symbol literal must be NUL-terminated.");
+        assert_eq!(
+            cstr.to_str()
+                .expect("Fix: the trap sidecar symbol must be UTF-8."),
+            vyre_emit_ptx::TRAP_SIDECAR_SYMBOL,
+            "Fix: the driver's NUL-terminated trap sidecar symbol drifted from the \
+             emitter's. Set it to the emitter's name plus a trailing NUL."
         );
     }
 }

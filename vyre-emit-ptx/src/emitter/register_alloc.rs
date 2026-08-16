@@ -2,13 +2,19 @@ use std::fmt::Write as _;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use vyre_lower::{
-    BindingLayout, BindingSlot, KernelDescriptor, KernelOpKind, MemoryClass, TRAP_SIDECAR_NAME,
+    BindingLayout, BindingSlot, DescriptorTrapTag, KernelDescriptor, KernelOpKind, MemoryClass,
+    Name, TRAP_SIDECAR_NAME,
 };
 
 use super::param_identifier::sanitize_param_name;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
 use crate::{EmitError, PtxEmitOptions};
+
+/// Register `emit_thread_geometry` leaves holding the axis-0 global invocation
+/// id. Anything that reports which lane did something reads this, so the two
+/// stay in one file.
+pub(super) const GLOBAL_ID_AXIS0_REG: &str = "%r3";
 
 impl<'a> BodyCtx<'a> {
     pub(super) fn new(
@@ -18,6 +24,7 @@ impl<'a> BodyCtx<'a> {
         read_only_cache_slots: FxHashSet<u32>,
         text_capacity: usize,
         op_capacity: usize,
+        trap_tags: &[DescriptorTrapTag],
     ) -> Self {
         let slot_count = bindings.slots.len();
         let full_workgroup_entry = requires_full_workgroup_entry(desc);
@@ -58,6 +65,10 @@ impl<'a> BodyCtx<'a> {
                 Default::default(),
             ),
             nonuniform_cond_depth: 0,
+            trap_tag_codes: trap_tags
+                .iter()
+                .map(|entry| (Name::clone(&entry.tag), entry.code))
+                .collect(),
         };
         this.emit_thread_geometry();
         this
@@ -68,7 +79,10 @@ impl<'a> BodyCtx<'a> {
         self.text.push_str("    mov.u32 %r0, %ctaid.x;\n");
         self.text.push_str("    mov.u32 %r1, %ntid.x;\n");
         self.text.push_str("    mov.u32 %r2, %tid.x;\n");
-        self.text.push_str("    mad.lo.u32 %r3, %r0, %r1, %r2;\n");
+        let _ = writeln!(
+            self.text,
+            "    mad.lo.u32 {GLOBAL_ID_AXIS0_REG}, %r0, %r1, %r2;"
+        );
         self.text.push_str("    mov.u32 %r4, %ctaid.y;\n");
         self.text.push_str("    mov.u32 %r5, %ntid.y;\n");
         self.text.push_str("    mov.u32 %r6, %tid.y;\n");
@@ -204,7 +218,10 @@ impl<'a> BodyCtx<'a> {
             );
         } else {
             self.text.push_str("    ld.global.ca.u32   %r26, [%rd0];\n");
-            self.text.push_str("    setp.ge.u32     %p0, %r3, %r26;\n");
+            let _ = writeln!(
+                self.text,
+                "    setp.ge.u32     %p0, {GLOBAL_ID_AXIS0_REG}, %r26;"
+            );
             self.text.push_str("    @%p0 bra $L_exit;\n\n");
         }
         Ok(())

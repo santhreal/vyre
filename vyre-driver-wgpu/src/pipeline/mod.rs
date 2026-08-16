@@ -753,32 +753,28 @@ impl WgpuPipeline {
     }
 }
 
+/// Decode a trap sidecar readback into this backend's refusal.
+///
+/// The record layout and the short-readback refusal live in
+/// [`vyre_driver::trap_record`]; only the wording and the tag lookup are this
+/// backend's. A short readback is a refusal, not a "no trap", so the error is
+/// returned rather than mapped to `None`.
 pub(crate) fn trap_error_from_sidecar(bytes: &[u8], trap_tags: &[TrapTag]) -> Option<BackendError> {
-    let required_len = usize::try_from(TRAP_SIDECAR_WORDS)
-        .ok()
-        .and_then(|words| words.checked_mul(4))
-        .unwrap_or(usize::MAX);
-    if bytes.len() < required_len {
-        return Some(BackendError::new(format!(
-            "internal wgpu trap readback returned {} bytes but {required_len} bytes are required. Fix: allocate the trap sidecar as {TRAP_SIDECAR_WORDS} u32 words.",
-            bytes.len()
-        )));
+    match vyre_driver::trap_record::decode_trap_record(bytes) {
+        Err(error) => Some(error),
+        Ok(None) => None,
+        Ok(Some(record)) => {
+            let detail = record.describe(|code| {
+                trap_tags
+                    .iter()
+                    .find(|tag| tag.code == code)
+                    .map(|tag| tag.tag.as_ref().to_owned())
+            });
+            Some(BackendError::new(format!(
+                "wgpu dispatch trapped: {detail}"
+            )))
+        }
     }
-    let flag = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-    if flag == 0 {
-        return None;
-    }
-    let address = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
-    let tag_code = u32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]);
-    let lane = u32::from_le_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]);
-    let tag = trap_tags
-        .iter()
-        .find(|tag| tag.code == tag_code)
-        .map(|tag| tag.tag.as_ref())
-        .unwrap_or("unknown Node::Trap tag code");
-    Some(BackendError::new(format!(
-        "wgpu dispatch trapped: address={address}, tag_code={tag_code}, lane={lane}, tag=`{tag}`."
-    )))
 }
 
 /// Buffer-binding validation, usage flags, and output-clear helpers

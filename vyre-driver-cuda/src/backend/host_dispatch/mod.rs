@@ -623,21 +623,23 @@ impl CudaBackend {
             }
             let mut params_ref = params_buf_ptr;
             let mut kernel_args = Self::kernel_args(&mut ptr_values, &mut params_ref)?;
-            // Take this module's grid-barrier counter for the whole launch
-            // sequence. The lease resolves the counter once and BLOCKS while a
-            // cooperative launch of the same module is still in flight; see
-            // `GridBarrierGate` for why concurrent sharing corrupts or hangs it.
-            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
+            // Take this module's module-scope globals for the whole launch
+            // sequence. The lease resolves them once and BLOCKS while another
+            // launch of the same module is still in flight; see
+            // `ModuleGlobalsGate` for why concurrent sharing corrupts or hangs.
+            let module_globals =
+                self.lease_module_globals(program, prepared, ptx_src, module_key)?;
             // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream before freeing
-            // the gate, so a launch failure cannot leave a grid spinning while the
-            // next sequence resets the counter underneath it.
-            grid_barrier.launch_then_release(
+            // one safe order: the release synchronizes the stream, reads the trap
+            // record, and only then frees the gate, so a launch failure cannot
+            // leave a grid spinning and a trap cannot be erased by the next
+            // sequence's reset.
+            module_globals.launch_then_release(
                 stream_raw,
-                "host dispatch grid-sync launch",
-                |grid_barrier| {
+                "host dispatch launch",
+                |module_globals| {
                     self.replay_fixpoint_launches(
-                        grid_barrier,
+                        module_globals,
                         func,
                         &mut kernel_args,
                         prepared,

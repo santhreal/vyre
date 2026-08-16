@@ -491,24 +491,26 @@ impl CudaBackend {
             let mut params_ref = params_ptr;
             let mut kernel_args = Self::kernel_args(&mut launch_ptrs, &mut params_ref)?;
             probe::charge(probe::Phase::Resolve, resolve_started);
-            // Hold this module's grid-barrier counter across the launch sequence.
-            // The lease blocks while another cooperative launch of the same module
-            // is still in flight; see `GridBarrierGate`.
+            // Hold this module's module-scope globals across the launch sequence.
+            // The lease blocks while another launch of the same module is still in
+            // flight; see `ModuleGlobalsGate`.
             let lease_started = probe::mark();
-            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
+            let module_globals =
+                self.lease_module_globals(program, prepared, ptx_src, module_key)?;
             probe::charge(probe::Phase::Lease, lease_started);
             // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream before freeing
-            // the gate, so a launch failure cannot leave a grid spinning while the
-            // next sequence resets the counter underneath it.
+            // one safe order: the release synchronizes the stream, reads the trap
+            // record, and only then frees the gate, so a launch failure cannot
+            // leave a grid spinning and a trap cannot be erased by the next
+            // sequence's reset.
             let launch_and_release_started = probe::mark();
-            grid_barrier.launch_then_release(
+            module_globals.launch_then_release(
                 stream_raw,
-                "resident async dispatch grid-sync launch",
-                |grid_barrier| {
+                "resident async dispatch launch",
+                |module_globals| {
                     probe::measure(probe::Phase::LaunchLoop, || {
                         self.replay_fixpoint_launches(
-                            grid_barrier,
+                            module_globals,
                             func,
                             &mut kernel_args,
                             prepared,

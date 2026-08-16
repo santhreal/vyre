@@ -110,4 +110,11 @@ pub(super) struct BodyCtx<'a> {
     /// Tracked so [`Self::emit_return`] can refuse instead of emitting a branch
     /// that can hang the kernel.
     pub(super) nonuniform_cond_depth: u32,
+    /// Stable numeric code per distinct trap tag, from
+    /// `vyre_lower::descriptor_trap_tags`. A trap writes its code into sidecar
+    /// word 2, and the host decodes that word through the same table, so the
+    /// numbering must come from the shared owner rather than emission order
+    /// here: a code minted locally would decode to a different tag on a host
+    /// that walked the descriptor instead.
+    pub(super) trap_tag_codes: FxHashMap<Name, u32>,
 }
