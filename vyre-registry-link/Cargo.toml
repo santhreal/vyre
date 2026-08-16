@@ -57,3 +57,13 @@ metal = ["dep:vyre-driver-metal"]
 reference = ["dep:vyre-driver-reference"]
 spirv = ["dep:vyre-driver-spirv"]
 wgpu = ["dep:vyre-driver-wgpu"]
+
+# The rules read the operation registry as well as the backend one, so they
+# cannot build when the operation sources are not linked. Declared rather than
+# wrapped in a file-level `cfg`: cargo then skips the suite for a selection that
+# lacks the feature instead of failing on it, and a consumer reads the
+# prerequisite from the manifest.
+[[test]]
+name = "registry_link_rules"
+path = "tests/registry_link_rules.rs"
+required-features = ["operations"]

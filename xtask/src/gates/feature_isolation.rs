@@ -510,6 +510,46 @@ pub fn agreement_failures(pairs: &[Pair], rows: &[Row]) -> Vec<String> {
     failures
 }
 
+/// Every disagreement between what a sweep compiled and what the rows record.
+///
+/// The expensive half's judgement, separated from the compiling so it can be
+/// held to both directions without a cargo run. A recorded `compiles` that
+/// fails is the break the axis exists to catch. A recorded `blocked` that now
+/// compiles is the other half: a reason that has stopped being true keeps a
+/// selection exempt, and the exemption then covers the next break in it.
+///
+/// A selection the rows do not mention at all is the agreement half's finding,
+/// and it is skipped here so one omission is reported once, under the fix that
+/// closes it, rather than a second time as a `blocked` row that compiles.
+#[must_use]
+pub fn sweep_failures(rows: &[Row], observed: &[(Pair, Observation)]) -> Vec<String> {
+    let mut failures = Vec::new();
+    for (pair, observation) in observed {
+        let Some(row) = rows
+            .iter()
+            .find(|row| row.member == pair.member && row.feature == pair.feature)
+        else {
+            continue;
+        };
+        match (row.outcome == COMPILES, observation.compiles) {
+            (true, false) => failures.push(format!(
+                "`{}` is recorded `{COMPILES}` and fails with {}",
+                pair.label(),
+                observation
+                    .first_error
+                    .as_deref()
+                    .unwrap_or("no parsed diagnostic")
+            )),
+            (false, true) => failures.push(format!(
+                "`{}` is recorded `{BLOCKED}` and now compiles; set outcome = \"{COMPILES}\" and drop its reason",
+                pair.label()
+            )),
+            _ => {}
+        }
+    }
+    failures
+}
+
 /// What compiling one pair produced.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Observation {
@@ -873,30 +913,80 @@ impl Gate for FeatureIsolation {
             return Ok(report);
         }
 
-        let mut failures = Vec::new();
-        for (pair, observation) in observe(root, &selected, &mut report)? {
-            let recorded_compiles = rows
-                .iter()
-                .find(|row| row.member == pair.member && row.feature == pair.feature)
-                .is_some_and(|row| row.outcome == COMPILES);
-            match (recorded_compiles, observation.compiles) {
-                (true, false) => failures.push(format!(
-                    "`{}` is recorded `{COMPILES}` and fails with {}",
-                    pair.label(),
-                    observation
-                        .first_error
-                        .as_deref()
-                        .unwrap_or("no parsed diagnostic")
-                )),
-                (false, true) => failures.push(format!(
-                    "`{}` is recorded `{BLOCKED}` and now compiles; set outcome = \"{COMPILES}\" and drop its reason",
-                    pair.label()
-                )),
-                _ => {}
-            }
-        }
+        let observed = observe(root, &selected, &mut report)?;
+        let failures = sweep_failures(&rows, &observed);
         record(&mut report, failures, COMPILE_FIX);
         report.note(format!("{} pair(s) compiled", selected.len()));
         Ok(report)
+    }
+
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: the sweep half is what turns the record from a claim into a
+    /// measurement, and it has to fail in both directions. A selection recorded
+    /// `compiles` that fails is the break the axis exists to catch, and it is the
+    /// exact state this workspace was in: two test suites in vyre-pass-engine and
+    /// one in vyre-registry-link imported a feature-gated namespace, so six
+    /// selections recorded as compiling did not. A selection recorded `blocked`
+    /// that now compiles is the other direction: a reason that stopped being true
+    /// keeps the selection exempt, and the exemption then covers the next break in
+    /// it.
+    #[test]
+    fn a_recorded_outcome_that_disagrees_with_the_build_is_reported_both_ways() {
+        let pair = |member: &str, feature: &str| Pair {
+            member: member.to_string(),
+            feature: feature.to_string(),
+        };
+        let row = |member: &str, feature: &str, outcome: &str| Row {
+            member: member.to_string(),
+            feature: feature.to_string(),
+            outcome: outcome.to_string(),
+            reason: (outcome == BLOCKED).then(|| "the vendored driver has no Linux build".to_string()),
+        };
+        let rows = vec![
+            row("vyre-pass-engine", "all-solvers", COMPILES),
+            row("vyre-libs", "matching-regex", BLOCKED),
+            row("vyre-libs", "visual", COMPILES),
+        ];
+        let observed = vec![
+            (
+                pair("vyre-pass-engine", "all-solvers"),
+                Observation {
+                    compiles: false,
+                    first_error: Some(
+                        "E0433 at vyre-pass-engine/tests/scope_rewrite_owner_contract.rs:19"
+                            .to_string(),
+                    ),
+                },
+            ),
+            (
+                pair("vyre-libs", "matching-regex"),
+                Observation { compiles: true, first_error: None },
+            ),
+            (
+                pair("vyre-libs", "visual"),
+                Observation { compiles: true, first_error: None },
+            ),
+            // No row at all: the agreement half owns that, and counting it here
+            // too would report one omission as two unrelated failures.
+            (
+                pair("vyre-libs", "unrecorded"),
+                Observation { compiles: true, first_error: None },
+            ),
+        ];
+
+        let failures = sweep_failures(&rows, &observed);
+        assert_eq!(
+            failures,
+            vec![
+                "`vyre-pass-engine --no-default-features --features all-solvers` is recorded `compiles` and fails with E0433 at vyre-pass-engine/tests/scope_rewrite_owner_contract.rs:19".to_string(),
+                "`vyre-libs --no-default-features --features matching-regex` is recorded `blocked` and now compiles; set outcome = \"compiles\" and drop its reason".to_string(),
+            ],
+            "a recorded outcome the build contradicts is reported, in the direction it was contradicted, and an agreeing pair is not"
+        );
     }
 }

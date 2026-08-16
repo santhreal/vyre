@@ -89,3 +89,13 @@ required-features = ["optimizer"]
 name = "dce_dispatch_binding_contract"
 path = "tests/dce_dispatch_binding_contract.rs"
 required-features = ["optimizer"]
+
+[[test]]
+name = "scope_rewrite_owner_contract"
+path = "tests/scope_rewrite_owner_contract.rs"
+required-features = ["optimizer"]
+
+[[test]]
+name = "encoded_rewrite_walk_contract"
+path = "tests/encoded_rewrite_walk_contract.rs"
+required-features = ["optimizer"]
