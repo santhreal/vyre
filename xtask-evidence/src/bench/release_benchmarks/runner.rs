@@ -323,6 +323,10 @@ pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result
 }
 
 /// The last `MAX_CHILD_OUTPUT_BYTES` of what a failed child said, stderr first.
+///
+/// The bound is on the text the report carries, so the streams are joined
+/// before the cut. Cutting each stream to the bound and then joining them lets
+/// a child that writes on both put twice the bound into the report.
 fn child_output_tail(stdout: &[u8], stderr: &[u8]) -> String {
     let mut text = String::new();
     for stream in [stderr, stdout] {
@@ -334,19 +338,18 @@ fn child_output_tail(stdout: &[u8], stderr: &[u8]) -> String {
         if !text.is_empty() {
             text.push(' ');
         }
-        let start = said.len().saturating_sub(MAX_CHILD_OUTPUT_BYTES);
-        let start = said
-            .char_indices()
-            .map(|(index, _)| index)
-            .find(|index| *index >= start)
-            .unwrap_or(said.len());
-        text.push_str(&said[start..]);
+        text.push_str(said);
     }
     if text.is_empty() {
-        "the child said nothing".to_string()
-    } else {
-        text
+        return "the child said nothing".to_string();
     }
+    let start = text.len().saturating_sub(MAX_CHILD_OUTPUT_BYTES);
+    let start = text
+        .char_indices()
+        .map(|(index, _)| index)
+        .find(|index| *index >= start)
+        .unwrap_or(text.len());
+    text.split_off(start)
 }
 
 #[cfg(test)]
@@ -972,5 +975,24 @@ mod tests {
         );
         assert!(said.ends_with(&tail));
         assert_eq!(tail.chars().next(), Some('\u{20ac}'));
+    }
+
+    /// WHY: the bound is on the text the report carries. Cutting stdout and
+    /// stderr to the bound one at a time and joining them afterwards let a
+    /// child that writes on both streams put twice the bound into the report,
+    /// which is what a noisy failing benchmark does.
+    #[test]
+    fn a_child_tail_bounds_both_streams_together() {
+        let out = "o".repeat(MAX_CHILD_OUTPUT_BYTES);
+        let err = "e".repeat(MAX_CHILD_OUTPUT_BYTES);
+
+        let tail = child_output_tail(out.as_bytes(), err.as_bytes());
+
+        assert!(
+            tail.len() <= MAX_CHILD_OUTPUT_BYTES,
+            "Fix: the child tail must stay within its byte bound, got {}",
+            tail.len()
+        );
+        assert!(tail.ends_with('o'), "Fix: the tail keeps what was said last.");
     }
 }

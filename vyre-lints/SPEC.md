@@ -10,7 +10,9 @@ The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-lints).
 
 ## Must never contain
 
-(none recorded)
+IR types, dialect operations, backends, and anything that runs a compiled
+program. A lint here reads source text and reports a location, so a rule that
+needs a built graph belongs to the crate that owns the graph.
 
 ## What crosses its edges
 

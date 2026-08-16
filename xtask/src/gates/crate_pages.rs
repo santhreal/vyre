@@ -90,12 +90,21 @@ fn spec_findings(
             format!("`{name}` states no exclusion, so its boundary admits everything"),
             format!("add a `{EXCLUSION_HEADING}` section naming what the crate must not hold"),
         ));
-    } else if section(text, EXCLUSION_HEADING).trim().is_empty() {
-        findings.push(Finding::in_file(
-            spec,
-            format!("`{name}` carries an empty exclusion section"),
-            "state what the crate must not hold, or delete the heading",
-        ));
+    } else {
+        let stated = section(text, EXCLUSION_HEADING);
+        if stated.trim().is_empty() {
+            findings.push(Finding::in_file(
+                spec,
+                format!("`{name}` carries an empty exclusion section"),
+                "state what the crate must not hold, or delete the heading",
+            ));
+        } else if states_nothing(&stated) {
+            findings.push(Finding::in_file(
+                spec,
+                format!("`{name}` records a placeholder where its exclusion belongs"),
+                "name what the crate must not hold; a crate with nothing to exclude has no boundary",
+            ));
+        }
     }
     let declared = manifest_edges(tree, name, members);
     for (line, claimed) in claimed_edges(text, members, name) {
@@ -109,6 +118,31 @@ fn spec_findings(
         }
     }
     findings
+}
+
+/// Whether a section body records a placeholder instead of a statement.
+///
+/// `(none recorded)` passes a non-empty check and states no boundary, which is
+/// the shape the exclusion rule exists to refuse: a crate that excludes nothing
+/// admits everything.
+fn states_nothing(body: &str) -> bool {
+    let letters: String = body
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect();
+    matches!(
+        letters.as_str(),
+        "" | "none"
+            | "nonerecorded"
+            | "nonestated"
+            | "notrecorded"
+            | "nothing"
+            | "na"
+            | "tbd"
+            | "todo"
+            | "unknown"
+    )
 }
 
 /// Every workspace crate the member manifest depends on.
@@ -427,6 +461,32 @@ mod tests {
         let found = findings(&root);
         assert_eq!(found.len(), 1, "{}", messages(&found));
         assert!(found[0].message.contains("empty exclusion section"));
+    }
+
+    /// WHY: a body that reads `(none recorded)` is non-empty and states no
+    /// boundary, so the presence check passes on a page that excludes nothing.
+    /// Every placeholder spelling is refused at the same clause, because the
+    /// next crate reaches for a different one.
+    #[test]
+    fn a_placeholder_exclusion_is_reported() {
+        for placeholder in ["(none recorded)", "None.", "TBD", "n/a"] {
+            let (_temporary, root) = fixture();
+            std::fs::write(
+                root.join("demo/SPEC.md"),
+                format!(
+                    "# demo\n\n## Owns\n\nThings.\n\n## Must never contain\n\n{placeholder}\n\n## What crosses its edges\n\nNothing.\n"
+                ),
+            )
+            .expect("Fix: the fixture must be writable");
+
+            let found = findings(&root);
+            assert_eq!(found.len(), 1, "{}", messages(&found));
+            assert!(
+                found[0].message.contains("placeholder where its exclusion belongs"),
+                "{}",
+                found[0].message
+            );
+        }
     }
 
     /// WHY: a page may only claim an edge the build has. The direction matters:

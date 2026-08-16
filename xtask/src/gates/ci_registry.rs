@@ -29,7 +29,7 @@
 //!    not carry is a step that fails at run time under a name that reads as
 //!    coverage.
 //!
-//! The declaration is written by `xtask gates --write-baseline`, which derives
+//! The declaration is written by `xtask ci-registry --write`, which derives
 //! every column from the registry and the workflow steps, so no column is
 //! maintained by hand and none can quietly fall behind.
 
@@ -47,6 +47,8 @@ use crate::subcommands::{self, SUBSETS};
 pub const REGISTRY: &str = "xtask/ci-registry.toml";
 /// Schema this gate reads.
 pub const SCHEMA_VERSION: i64 = 1;
+/// The command that writes the declaration.
+pub const WRITER: &str = "./cargo_full run -p xtask --bin xtask -- ci-registry --write";
 /// Where the workflows live.
 const WORKFLOWS: &str = ".github/workflows";
 /// Where a workflow that does not run is parked.
@@ -161,7 +163,7 @@ pub fn load(root: &Path) -> Result<Registry, GateError> {
     let text = fs::read_to_string(&path).map_err(|error| {
         GateError::new(
             format!("cannot read {}: {error}", path.display()),
-            format!("regenerate it with `./cargo_full run -p xtask --bin xtask -- {RUNNER} --write-baseline`"),
+            format!("regenerate it with `{WRITER}`"),
         )
     })?;
     let registry: Registry = toml::from_str(&text).map_err(|error| {
@@ -176,7 +178,7 @@ pub fn load(root: &Path) -> Result<Registry, GateError> {
                 "{REGISTRY} declares schema_version {} and this gate reads {SCHEMA_VERSION}",
                 registry.schema_version
             ),
-            "regenerate the file with `--write-baseline`, or teach the gate the new schema",
+            format!("regenerate the file with `{WRITER}`, or teach the gate the new schema"),
         ));
     }
     Ok(registry)
@@ -189,8 +191,12 @@ pub struct WorkflowNames {
     pub invoked: BTreeMap<String, BTreeSet<String>>,
     /// Every `xtask gates --subset <name>` a workflow runs, and where.
     pub subsets: BTreeMap<String, BTreeSet<String>>,
-    /// Every `scripts/<path>` a workflow names, and where, with the line.
+    /// Every `scripts/<path>` a live workflow names, and where, with the line.
     pub scripts: Vec<(String, usize, String)>,
+    /// Every `scripts/<path>` a paused workflow names, and where, with the
+    /// line. A parked workflow runs nothing, so it credits no check, and a
+    /// script it names still has to exist for the pause to be reversible.
+    pub paused_scripts: Vec<(String, usize, String)>,
     /// Every `cargo_full run -p <package>` a workflow runs, and where.
     pub packages: BTreeMap<String, BTreeSet<String>>,
 }
@@ -203,8 +209,35 @@ pub struct WorkflowNames {
 /// prose that ends a sentence with a script name invokes nothing.
 pub fn workflow_names(root: &Path) -> WorkflowNames {
     let mut names = WorkflowNames::default();
-    let Ok(entries) = fs::read_dir(root.join(WORKFLOWS)) else {
-        return names;
+    for path in yaml_files(&root.join(WORKFLOWS)) {
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let file = file_name(&path);
+        for (index, line) in text.lines().enumerate() {
+            read_line(&mut names, &file, index + 1, line);
+        }
+    }
+    for path in yaml_files(&root.join(PAUSED)) {
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let file = file_name(&path);
+        for (index, line) in text.lines().enumerate() {
+            if let Some(script) = referenced_script(line) {
+                names
+                    .paused_scripts
+                    .push((file.clone(), index + 1, script.to_string()));
+            }
+        }
+    }
+    names
+}
+
+/// Every workflow file in one directory, sorted.
+fn yaml_files(directory: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = fs::read_dir(directory) else {
+        return Vec::new();
     };
     let mut files: Vec<PathBuf> = entries
         .flatten()
@@ -215,19 +248,14 @@ pub fn workflow_names(root: &Path) -> WorkflowNames {
         })
         .collect();
     files.sort();
-    for path in files {
-        let Ok(text) = fs::read_to_string(&path) else {
-            continue;
-        };
-        let file = path
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        for (index, line) in text.lines().enumerate() {
-            read_line(&mut names, &file, index + 1, line);
-        }
-    }
-    names
+    files
+}
+
+/// The file name of `path`.
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
 /// Read one workflow line into the name sets.
@@ -417,7 +445,7 @@ pub fn render(
 ) -> String {
     let mut text = String::from(
         "# Every check CI runs, declared once, written by\n\
-         # `xtask gates --write-baseline`.\n\
+         # `xtask ci-registry --write`.\n\
          #\n\
          # A `[[gate]]` row carries the subsets that hold the gate and the\n\
          # workflows that run it. An `[[external]]` row is a check CI runs that\n\
@@ -520,7 +548,7 @@ pub fn findings(
             0 => findings.push(Finding::in_file(
                 REGISTRY,
                 format!("gate `{name}` has no row"),
-                "add one with its measured finding count, or regenerate the file with `--write-baseline`",
+                format!("add one with its measured finding count, or regenerate the file with `{WRITER}`"),
             )),
             1 => {}
             count => findings.push(Finding::in_file(
@@ -764,25 +792,30 @@ fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> V
 fn external_findings(root: &Path, registry: &Registry, names: &WorkflowNames) -> Vec<Finding> {
     let mut findings = Vec::new();
     let directory = root.join("scripts");
-    for (file, line, script) in &names.scripts {
-        if script.contains('*') {
-            if !SCRIPT_GLOBS.contains(&script.as_str()) {
+    for (parent, scripts) in [
+        (WORKFLOWS, &names.scripts),
+        (PAUSED, &names.paused_scripts),
+    ] {
+        for (file, line, script) in scripts {
+            if script.contains('*') {
+                if !SCRIPT_GLOBS.contains(&script.as_str()) {
+                    findings.push(Finding::at(
+                        format!("{parent}/{file}"),
+                        *line as u32,
+                        format!("`scripts/{script}` is not an accepted glob"),
+                        "name the script, or add the glob to the accepted set",
+                    ));
+                }
+                continue;
+            }
+            if !directory.join(script).exists() {
                 findings.push(Finding::at(
-                    format!("{WORKFLOWS}/{file}"),
+                    format!("{parent}/{file}"),
                     *line as u32,
-                    format!("`scripts/{script}` is not an accepted glob"),
-                    "name the script, or add the glob to the accepted set",
+                    format!("the step runs `scripts/{script}`, which the checkout does not carry"),
+                    "point the step at what owns the rule now, or delete the step",
                 ));
             }
-            continue;
-        }
-        if !directory.join(script).exists() {
-            findings.push(Finding::at(
-                format!("{WORKFLOWS}/{file}"),
-                *line as u32,
-                format!("the step runs `scripts/{script}`, which the checkout does not carry"),
-                "point the step at what owns the rule now, or delete the step",
-            ));
         }
     }
 
@@ -1358,6 +1391,34 @@ mod tests {
         let clean = workflow_findings(&root, &declaration, &["catalog"]);
         fs::remove_dir_all(&root).ok();
         assert!(clean.is_empty(), "{}", messages(&clean));
+    }
+
+    /// WHY: a parked lane is a lane someone means to restart, and the script it
+    /// calls rots while it waits. The reference is judged in both directories,
+    /// and a parked file still runs nothing, so it credits no `[[external]]`
+    /// row and cannot make a deleted check read as covered.
+    #[test]
+    fn a_paused_workflow_naming_a_missing_script_is_reported() {
+        let root = std::env::temp_dir().join(format!("vyre-ci-parked-{}", std::process::id()));
+        fs::create_dir_all(root.join(PAUSED)).expect("the fixture tree is created");
+        fs::create_dir_all(root.join("scripts")).expect("the script directory is created");
+        fs::write(
+            root.join(PAUSED).join("mutation-testing.yml"),
+            "jobs:\n  run:\n    steps:\n      - run: scripts/mutation_budget.sh\n",
+        )
+        .expect("the parked workflow is written");
+
+        let names = workflow_names(&root);
+        let found = messages(&external_findings(&root, &registry(Vec::new()), &names));
+        let credited = derived_externals(&names);
+        fs::remove_dir_all(&root).ok();
+        assert!(
+            found.contains(
+                "the step runs `scripts/mutation_budget.sh`, which the checkout does not carry"
+            ),
+            "{found}"
+        );
+        assert!(credited.is_empty(), "{credited:?}");
     }
 
     /// WHY: the file used to carry per-row prose that let a failing gate stay

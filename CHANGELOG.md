@@ -3284,6 +3284,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and names the TOML as its authority.
 - Each crate SPEC.md links the crate-boundaries chapter by a path relative to
   the page, so the link resolves from the crate directory it is read in.
+- The crate pages gate refuses a placeholder where a crate states what it must
+  never contain, so a body reading none recorded, none, n/a, tbd or nothing
+  fails the same clause an absent section fails. A boundary with only an
+  inclusion half admits everything, and a non-empty check passed on the page
+  that stated no exclusion at all. The bound on the output a failed benchmark
+  child contributes to a report applies to the joined text, so a command
+  writing on both streams no longer contributes twice the bound.
 - The docs-references gate now reads every tracked Markdown file rather than
   the root, .github and docs pages only, resolves a relative path against the
   crate that owns the document as well as the workspace root, and exempts
@@ -3301,6 +3308,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   default, so a plain test run still executes all three. The feature-isolation
   sweep found the eight affected selections; they had been recorded as
   compiling.
+- The CI step gate joins a YAML block scalar the way the runner receives it, so
+  a workflow command written as a folded `run:` block across several lines is
+  checked whole. The reader joined shell continuations only, and every package,
+  feature and test target named after the first line of a folded step was
+  discarded unread: 226 selectors across 108 commands now resolve against the
+  manifests where 159 did before, in both the unresolvable-selector direction
+  and the silently-skipped-target direction. A paused workflow that names a
+  script the checkout does not carry is reported, and a parked file still
+  credits no check. The registry names `ci-registry --write` as the writer of
+  the declaration it reads.
 - The lego-quick gate answers from source text and no longer links the
   operation registry: it moved to xtask, which is where both crates already say
   a source-text gate belongs, so a pre-commit run stops building the registry

@@ -319,9 +319,16 @@ impl Step {
 
 /// Read every cargo invocation one workflow or script file makes.
 ///
-/// A shell continuation is one command: `ci.yml` names its package on one line
+/// A command reaches the runner as one string however the file wraps it. A
+/// shell continuation is one command: `ci.yml` names its package on one line
 /// and forty test targets on the lines below it, so a reader that stops at the
 /// newline sees forty targets belonging to no package and cannot check either.
+/// A workflow writes the same command as a YAML block scalar instead, where the
+/// continuation is the indentation and no backslash appears at all; a reader
+/// that joins backslashes only takes the first line of such a step and throws
+/// every selector after it away, which is the whole population in
+/// `conform.yml`. Both forms are joined here.
+///
 /// Everything after a bare `--` belongs to the test binary rather than to
 /// cargo, so `-- --nocapture` is not read as a selector.
 #[must_use]
@@ -330,18 +337,19 @@ pub fn steps(origin: &str, text: &str) -> Vec<Step> {
     let lines: Vec<&str> = text.lines().collect();
     let mut index = 0;
     while index < lines.len() {
+        if let Some((next, commands)) = block_scalar(&lines, index) {
+            for (line, command) in commands {
+                if let Some(step) = read_command(origin, line, &command) {
+                    steps.push(step);
+                }
+            }
+            index = next;
+            continue;
+        }
         let start = index;
         let mut command = String::new();
         loop {
-            let line = lines[index].trim();
-            let line = if line.starts_with('#') {
-                ""
-            } else {
-                match line.find(" #") {
-                    Some(at) => &line[..at],
-                    None => line,
-                }
-            };
+            let line = code(lines[index]);
             let continues = line.ends_with('\\');
             command.push_str(line.trim_end_matches('\\'));
             command.push(' ');
@@ -355,6 +363,86 @@ pub fn steps(origin: &str, text: &str) -> Vec<Step> {
         }
     }
     steps
+}
+
+/// One line with its shell comment removed.
+fn code(line: &str) -> &str {
+    let line = line.trim();
+    if line.starts_with('#') {
+        return "";
+    }
+    match line.find(" #") {
+        Some(at) => &line[..at],
+        None => line,
+    }
+}
+
+/// The commands a `run:` block scalar starting at `index` issues, and the line
+/// after the block.
+///
+/// A folded block (`>`) is one command however many lines it spans, because
+/// YAML joins them with a space before the runner ever sees it. A literal block
+/// (`|`) is a shell script, so each line is its own command and a backslash
+/// still continues one.
+fn block_scalar(lines: &[&str], index: usize) -> Option<(usize, Vec<(usize, String)>)> {
+    let opener = lines[index];
+    let column = opener.len() - opener.trim_start().len();
+    let declaration = opener.trim_start().trim_start_matches("- ").trim();
+    let indicator = declaration.strip_prefix("run:")?.trim();
+    if !indicator.starts_with('>') && !indicator.starts_with('|') {
+        return None;
+    }
+    let folded = indicator.starts_with('>');
+    let mut body = Vec::new();
+    let mut end = index + 1;
+    while end < lines.len() {
+        let line = lines[end];
+        let blank = line.trim().is_empty();
+        if !blank && line.len() - line.trim_start().len() <= column {
+            break;
+        }
+        body.push((end + 1, if blank { "" } else { code(line) }));
+        end += 1;
+    }
+    let mut commands = Vec::new();
+    if folded {
+        let mut joined = String::new();
+        let mut first = index + 1;
+        for (line, text) in body {
+            if text.is_empty() {
+                if !joined.trim().is_empty() {
+                    commands.push((first, std::mem::take(&mut joined)));
+                }
+                first = line + 1;
+                continue;
+            }
+            if joined.is_empty() {
+                first = line;
+            }
+            joined.push_str(text);
+            joined.push(' ');
+        }
+        if !joined.trim().is_empty() {
+            commands.push((first, joined));
+        }
+    } else {
+        let mut carried: Option<(usize, String)> = None;
+        for (line, text) in body {
+            let continues = text.ends_with('\\');
+            let (first, mut command) = carried.take().unwrap_or((line, String::new()));
+            command.push_str(text.trim_end_matches('\\'));
+            command.push(' ');
+            if continues {
+                carried = Some((first, command));
+            } else {
+                commands.push((first, command));
+            }
+        }
+        if let Some(rest) = carried {
+            commands.push(rest);
+        }
+    }
+    Some((end, commands))
 }
 
 /// Read one command into the selectors it names.
@@ -455,6 +543,13 @@ fn templated(token: &str) -> bool {
 }
 
 /// Every selector in `step` the tree cannot satisfy.
+///
+/// A step naming several packages satisfies a feature or a target when any one
+/// of them carries it, because that is what cargo does: `--features x` fails
+/// with `none of the selected packages contains this feature` and `--test x`
+/// with `no test target named x`, so the selector is refused only when no
+/// selected package declares it. Requiring every named package to carry it
+/// would report a step cargo runs as broken.
 #[must_use]
 pub fn findings(step: &Step, packages: &BTreeMap<String, Package>) -> Vec<Finding> {
     let mut findings = Vec::new();
@@ -847,6 +942,43 @@ mod tests {
                 (Kind::Test, "one".to_string()),
                 (Kind::Test, "two".to_string())
             ]
+        );
+    }
+
+    /// WHY: the workflows write their cargo commands as YAML folded scalars,
+    /// where the continuation is the indentation and no backslash appears. A
+    /// reader that joins backslashes only took the first line of such a step
+    /// and threw every selector after it away, so the gate reported the
+    /// workflows clean while the population it exists to check was invisible.
+    /// A blank line ends one folded command and starts the next.
+    #[test]
+    fn a_folded_block_is_one_command_and_carries_its_selectors() {
+        let read = steps(
+            "conform.yml",
+            "      - name: Verify\n        run: >-\n          ./cargo_full test -p vyre-primitives\n          --features hardware,cpu-parity\n          --test registry_oob_clean\n\n      - name: Next\n        run: ./cargo_full test -p vyre-libs\n",
+        );
+        assert_eq!(read.len(), 2, "{read:?}");
+        let folded = &read[0];
+        assert_eq!(folded.packages, vec!["vyre-primitives".to_string()]);
+        assert_eq!(
+            folded.features,
+            vec!["hardware".to_string(), "cpu-parity".to_string()]
+        );
+        assert_eq!(
+            folded.targets,
+            vec![(Kind::Test, "registry_oob_clean".to_string())]
+        );
+        assert_eq!(folded.line, 3);
+        assert_eq!(read[1].packages, vec!["vyre-libs".to_string()]);
+
+        let packages = set(vec![with_test(package("vyre-primitives"), "other", &[])]);
+        let found = findings(folded, &packages);
+        assert!(
+            messages(&found).contains(
+                "`--test registry_oob_clean`, which vyre-primitives does not carry"
+            ),
+            "{}",
+            messages(&found)
         );
     }
 

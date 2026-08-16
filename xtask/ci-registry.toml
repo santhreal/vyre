@@ -1,5 +1,5 @@
 # Every check CI runs, declared once, written by
-# `xtask gates --write-baseline`.
+# `xtask ci-registry --write`.
 #
 # A `[[gate]]` row carries the subsets that hold the gate and the
 # workflows that run it. An `[[external]]` row is a check CI runs that
