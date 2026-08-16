@@ -276,6 +276,43 @@ fn sequence_state_transition_preserves_contract() {
     );
 }
 
+/// A retained-to-output transition is reserved for a Program result buffer.
+/// Ordinary mutable state must remain retained across every successor edge.
+#[test]
+fn non_output_buffer_cannot_end_a_retained_succession() {
+    let retained = contract(BufferAccess::ReadWrite, ValueLifetime::Retained);
+    let mut graph = ProgramGraph::new();
+    let state = graph
+        .add_external_value("cache.0", retained.clone())
+        .expect("initial retained state must be valid");
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("cache", 0, DataType::F32)],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    let error = graph
+        .add_node(
+            "decode.final",
+            program,
+            vec![GraphInput {
+                buffer: "cache".into(),
+                value: state,
+                contract: retained,
+            }],
+            vec![GraphOutput {
+                buffer: "cache".into(),
+                name: "cache.output".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: Some(state),
+            }],
+        )
+        .expect_err("an ordinary mutable buffer must not terminate retained state");
+    assert!(matches!(
+        error,
+        ProgramGraphError::InvalidRetainedTransition { .. }
+    ));
+}
+
 /// Prevents model layers from changing cache shape or lifetime across decode steps.
 #[test]
 fn incompatible_sequence_state_transition_fails_closed() {

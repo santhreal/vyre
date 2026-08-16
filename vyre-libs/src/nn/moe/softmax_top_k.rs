@@ -63,7 +63,7 @@ fn softmax_top_k_buffers(
     let mut buffers = vec![
         BufferDecl::storage(scores, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
         BufferDecl::output(out_indices, 1, DataType::U32).with_count(k),
-        BufferDecl::read_write(out_weights, 2, DataType::F32).with_count(k),
+        BufferDecl::storage(out_weights, 2, BufferAccess::WriteOnly, DataType::F32).with_count(k),
     ];
     buffers.extend(softmax_top_k_scratch(3, k));
     buffers

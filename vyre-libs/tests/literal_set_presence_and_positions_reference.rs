@@ -12,6 +12,8 @@
 //! separate presence bitmap word-for-word AND the fused triple set equals the
 //! separate position set. A divergence here is a recall bug in the fold.
 
+#![cfg(all(feature = "matching-substring", feature = "cpu-parity"))]
+
 mod wire_words;
 use wire_words::decode_u32_words as decode_u32;
 

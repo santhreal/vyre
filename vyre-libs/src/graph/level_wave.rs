@@ -214,6 +214,32 @@ where
     }
 }
 
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
+            level_wave_program_with_buffers(
+                vec![Node::store("out", Expr::InvocationId { axis: 0 }, Expr::u32(1))],
+                "depths",
+                vec![BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(4)],
+                4,
+                4,
+            )
+        },
+        Some(|| {
+            let to_bytes = vyre_primitives::wire::pack_u32_slice;
+            vec![
+                vec![to_bytes(&[0, 1, 2, 3])],
+                vec![to_bytes(&[0, 0, 0, 0])],
+            ]
+        }),
+        Some(|| {
+            let to_bytes = vyre_primitives::wire::pack_u32_slice;
+            vec![vec![to_bytes(&[1, 1, 1, 1])]]
+        }),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

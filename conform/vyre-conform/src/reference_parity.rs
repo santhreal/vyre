@@ -40,7 +40,27 @@ pub(crate) fn compare_backend_against_reference(
     let execution = if let Some(max_iterations) = prepared.convergence_max_iterations {
         Execution::Fixpoint { max_iterations }
     } else {
-        match ExecutionRoute::open(&prepared.program, backend) {
+        let mut first_inputs: Vec<&[u8]> = Vec::with_capacity(prepared.input_plan.source_count());
+        if let Some(first_case) = prepared.cases.first() {
+            if let Err(error) =
+                plan_witness_inputs_into(first_case, &prepared.input_plan, &mut first_inputs)
+            {
+                return ConformanceResult {
+                    op_id: prepared.id.into(),
+                    backend_id,
+                    passed: false,
+                    message: format!(
+                        "witness input planning failed for first case: {error}. Fix: fixture cases must match Program buffer declarations."
+                    ),
+                    replay_capsule: None,
+                };
+            }
+        }
+        match ExecutionRoute::open_with_representative_inputs(
+            &prepared.program,
+            &first_inputs,
+            backend,
+        ) {
             Ok(route) => Execution::Direct(route),
             Err(error) => {
                 return ConformanceResult {

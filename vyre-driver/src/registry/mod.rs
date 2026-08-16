@@ -14,6 +14,7 @@ pub(crate) mod migration;
 /// Operation mutation classification.
 pub(crate) mod mutation;
 
+pub use crate::target::Target;
 pub use enforce::{Chain, EnforceGate, EnforceVerdict};
 pub use intrinsic_adapter::{validate_intrinsic_lowering, IntrinsicRegistrationError};
 pub use migration::DEPRECATED_OP_CODE;

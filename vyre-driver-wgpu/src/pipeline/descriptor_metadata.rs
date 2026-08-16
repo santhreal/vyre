@@ -48,8 +48,7 @@ pub(crate) struct BufferBindingInfo {
 pub(crate) fn descriptor_buffer_bindings(
     descriptor: &vyre_lower::KernelDescriptor,
     public_output_bindings: &FxHashSet<u32>,
-    explicit_output_bindings: &FxHashSet<u32>,
-    pipeline_live_out_bindings: &FxHashSet<u32>,
+    host_input_bindings: &FxHashSet<(u32, u32)>,
 ) -> Result<Vec<BufferBindingInfo>, BackendError> {
     let mut bindings = Vec::new();
     vyre_driver::allocation::try_reserve_vec_to_capacity(
@@ -69,11 +68,8 @@ pub(crate) fn descriptor_buffer_bindings(
         let access = descriptor_buffer_access(slot.visibility);
         let internal_trap = slot.name == TRAP_SIDECAR_NAME;
         let is_output = public_output_bindings.contains(&slot.slot) && !internal_trap;
-        let explicit_output = explicit_output_bindings.contains(&slot.slot);
-        let pipeline_live_out = pipeline_live_out_bindings.contains(&slot.slot);
         let preserve_input_contents = access == vyre_foundation::ir::BufferAccess::ReadWrite
-            && !explicit_output
-            && !(is_output && pipeline_live_out)
+            && host_input_bindings.contains(&(group, slot.slot))
             && !internal_trap;
         bindings.push(BufferBindingInfo {
             group,

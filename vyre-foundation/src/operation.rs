@@ -1,16 +1,18 @@
 //! Canonical semantic operation registration and derived catalog views.
 
 use std::borrow::Cow;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::panic::Location;
 use std::sync::LazyLock;
 
 use crate::dialect_lookup::Signature;
 use crate::ir::{BufferAccess, Program};
 use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
+use crate::visit::collect_call_op_ids;
 
 /// Deterministic fixture input cases. One case contains declaration-ordered buffers.
 pub type OperationFixtures = fn() -> Vec<Vec<Vec<u8>>>;
+
 /// One immutable semantic record used by validation, inlining, conformance,
 /// documentation, and target-facet joins.
 #[derive(Clone, Copy, Debug)]
@@ -39,6 +41,10 @@ pub struct SemanticOperation {
     pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
     /// Source file that owns the registration.
     pub source_file: &'static str,
+    /// Optional explicit closed effects.
+    pub explicit_effects: Option<OperationEffects>,
+    /// Optional explicit closed capabilities.
+    pub explicit_capabilities: Option<RequiredCapabilities>,
 }
 
 impl SemanticOperation {
@@ -48,17 +54,40 @@ impl SemanticOperation {
         self.build.map(|build| build().with_entry_op_id(self.id))
     }
 
-    /// Derive target-neutral capability requirements from the canonical program.
+    /// Derive target-neutral capability requirements transitively over `Expr::Call`.
     #[must_use]
     pub fn required_capabilities(self) -> Option<RequiredCapabilities> {
-        self.program().map(|program| scan_capabilities(&program))
+        OperationRegistry::global()
+            .transitive_capabilities(self.id)
+            .or_else(|| self.direct_required_capabilities())
     }
 
-    /// Derive target-neutral effects from the canonical program.
+    /// Direct (local) capability requirements without call-graph transitive propagation.
+    #[must_use]
+    pub fn direct_required_capabilities(self) -> Option<RequiredCapabilities> {
+        self.explicit_capabilities
+            .or_else(|| self.program().map(|program| scan_capabilities(&program)))
+    }
+
+    /// Derive target-neutral effects transitively over `Expr::Call`.
     #[must_use]
     pub fn effects(self) -> Option<OperationEffects> {
-        self.program()
-            .map(|program| OperationEffects::from_program(&program))
+        OperationRegistry::global()
+            .transitive_effects(self.id)
+            .or_else(|| self.direct_effects())
+    }
+
+    /// Direct (local) memory and synchronization effects without call-graph transitive propagation.
+    #[must_use]
+    pub fn direct_effects(self) -> Option<OperationEffects> {
+        self.explicit_effects
+            .or_else(|| self.program().map(|program| OperationEffects::from_program(&program)))
+    }
+
+    /// Direct callees invoked by this operation via `Expr::Call`.
+    #[must_use]
+    pub fn callees(self) -> Option<&'static [&'static str]> {
+        OperationRegistry::global().callees(self.id)
     }
 
     /// Return the coarse category.
@@ -71,6 +100,50 @@ impl SemanticOperation {
     #[must_use]
     pub const fn tolerance(self) -> u32 {
         self.tolerance.f32_ulp
+    }
+
+    /// Effective composite semantic version including local schema version, transitive effects,
+    /// capabilities, and the global call-graph closure identity.
+    ///
+    /// Any mutation that alters a direct or nested callee's effects, capabilities, or call graph
+    /// deterministically alters this composite version, ensuring downstream consolidation and
+    /// cache invalidation verdicts update soundly.
+    #[must_use]
+    pub fn composite_version(self) -> u64 {
+        OperationRegistry::global()
+            .composite_version(self.id)
+            .unwrap_or_else(|| {
+                let mut hasher = blake3::Hasher::new();
+                hasher.update(b"vyre-foundation::semantic_operation::composite_version::v1\n");
+                hasher.update(self.id.as_bytes());
+                hasher.update(&self.semantic_version.to_le_bytes());
+                if let Some(eff) = self.direct_effects() {
+                    hasher.update(&[
+                        eff.reads as u8,
+                        eff.writes as u8,
+                        eff.atomics as u8,
+                        eff.synchronizes as u8,
+                    ]);
+                }
+                if let Some(caps) = self.direct_required_capabilities() {
+                    hasher.update(&[
+                        caps.subgroup_ops as u8,
+                        caps.f16 as u8,
+                        caps.bf16 as u8,
+                        caps.f64 as u8,
+                        caps.async_dispatch as u8,
+                        caps.indirect_dispatch as u8,
+                        caps.tensor_ops as u8,
+                        caps.trap as u8,
+                        caps.distributed_collectives as u8,
+                    ]);
+                    hasher.update(&caps.static_storage_bytes.to_le_bytes());
+                }
+                let hash_bytes = hasher.finalize();
+                let mut bytes = [0u8; 8];
+                bytes.copy_from_slice(&hash_bytes.as_bytes()[..8]);
+                u64::from_le_bytes(bytes)
+            })
     }
 }
 
@@ -169,6 +242,25 @@ pub struct OperationEffects {
 }
 
 impl OperationEffects {
+    /// Conservative strongest applicable effects (all effects active).
+    pub const ALL: Self = Self {
+        reads: true,
+        writes: true,
+        atomics: true,
+        synchronizes: true,
+    };
+
+    /// Merge another effect set into this one (field-wise OR).
+    #[must_use]
+    pub const fn union(self, other: Self) -> Self {
+        Self {
+            reads: self.reads || other.reads,
+            writes: self.writes || other.writes,
+            atomics: self.atomics || other.atomics,
+            synchronizes: self.synchronizes || other.synchronizes,
+        }
+    }
+
     /// Derive neutral effects from the canonical program declaration and statistics.
     #[must_use]
     pub fn from_program(program: &Program) -> Self {
@@ -238,6 +330,10 @@ pub struct OperationRegistration {
     pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
     /// Source file that owns the registration.
     pub source_file: &'static str,
+    /// Optional explicit closed effects.
+    pub explicit_effects: Option<OperationEffects>,
+    /// Optional explicit closed capabilities.
+    pub explicit_capabilities: Option<RequiredCapabilities>,
 }
 
 impl OperationRegistration {
@@ -264,17 +360,12 @@ impl OperationRegistration {
             tolerance: TolerancePolicy::EXACT,
             geometry_requirements: None,
             source_file: Location::caller().file(),
+            explicit_effects: None,
+            explicit_capabilities: None,
         }
     }
 
     /// Construct a Category A composition registration.
-    ///
-    /// Every registration built through a constructor is a composition over
-    /// existing IR. A Category C intrinsic declares a hardware contract as
-    /// well, so it writes the struct literal and names the extra fields the
-    /// contract needs; there is no constructor that sets
-    /// [`OperationTier::Intrinsic`] from four arguments, because 142 call
-    /// sites reached for one and declared a tier none of them meant.
     #[must_use]
     #[track_caller]
     pub const fn library(
@@ -355,6 +446,7 @@ impl OperationRegistration {
         self.tolerance = tolerance;
         self
     }
+
     /// Attach target-neutral execution geometry requirements.
     #[must_use]
     pub const fn with_geometry_requirements(
@@ -362,6 +454,20 @@ impl OperationRegistration {
         requirements: crate::geometry::GeometryRequirements,
     ) -> Self {
         self.geometry_requirements = Some(requirements);
+        self
+    }
+
+    /// Attach explicit closed effects.
+    #[must_use]
+    pub const fn with_explicit_effects(mut self, effects: OperationEffects) -> Self {
+        self.explicit_effects = Some(effects);
+        self
+    }
+
+    /// Attach explicit closed capabilities.
+    #[must_use]
+    pub const fn with_explicit_capabilities(mut self, capabilities: RequiredCapabilities) -> Self {
+        self.explicit_capabilities = Some(capabilities);
         self
     }
 
@@ -377,19 +483,33 @@ impl OperationRegistration {
         self.build.map(|build| build().with_entry_op_id(self.id))
     }
 
+    /// Direct (local) required capabilities without call-graph transitive propagation.
+    #[must_use]
+    pub fn direct_required_capabilities(&self) -> Option<RequiredCapabilities> {
+        self.explicit_capabilities
+            .or_else(|| self.program().map(|program| scan_capabilities(&program)))
+    }
+
+    /// Direct (local) memory and synchronization effects without call-graph transitive propagation.
+    #[must_use]
+    pub fn direct_effects(&self) -> Option<OperationEffects> {
+        self.explicit_effects
+            .or_else(|| self.program().map(|program| OperationEffects::from_program(&program)))
+    }
+
     /// Derive target-neutral capability requirements from the canonical program.
     #[must_use]
     pub fn required_capabilities(&self) -> Option<RequiredCapabilities> {
-        self.program().map(|program| scan_capabilities(&program))
+        self.direct_required_capabilities()
     }
 
     /// Derive target-neutral effects from the canonical program.
     #[must_use]
     pub fn effects(&self) -> Option<OperationEffects> {
-        self.program()
-            .map(|program| OperationEffects::from_program(&program))
+        self.direct_effects()
     }
 }
+
 impl From<&'static OperationRegistration> for SemanticOperation {
     fn from(registration: &'static OperationRegistration) -> Self {
         Self {
@@ -405,9 +525,12 @@ impl From<&'static OperationRegistration> for SemanticOperation {
             tolerance: registration.tolerance,
             geometry_requirements: registration.geometry_requirements,
             source_file: registration.source_file,
+            explicit_effects: registration.explicit_effects,
+            explicit_capabilities: registration.explicit_capabilities,
         }
     }
 }
+
 inventory::collect!(OperationRegistration);
 
 /// Catalog validation failure.
@@ -428,7 +551,7 @@ pub enum OperationRegistryError {
     /// A registration supplied neither a neutral program nor an explicit signature.
     #[error("operation `{id}` supplies neither a neutral program nor an explicit signature")]
     MissingSemantics {
-        /// Incomplete operation id.
+        /// Invalid operation id.
         id: &'static str,
     },
     /// A registration id names no crate.
@@ -451,14 +574,6 @@ pub enum OperationRegistryError {
     },
 }
 
-/// Hold one registration's declared tier to the crate that minted its id.
-///
-/// The tier was once read out of the id text, so a registration declared a tier
-/// and the classifier overruled it with a guess made from a namespace prefix.
-/// The id is now the authority over which tiers an identity can carry, and the
-/// declaration has to agree with it: a workspace crate mints foundation,
-/// intrinsic and library identities, a consumer crate mints external ones, and
-/// an id naming no crate mints nothing.
 fn validate_identity(entry: &OperationRegistration) -> Result<(), OperationRegistryError> {
     match operation_id_namespace(entry.id) {
         IdNamespace::Unknown => Err(OperationRegistryError::UnknownNamespace { id: entry.id }),
@@ -490,10 +605,387 @@ fn validate_identity(entry: &OperationRegistration) -> Result<(), OperationRegis
     }
 }
 
+/// Transitive call-graph closure over semantic operation registrations.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CallGraphClosure {
+    /// Direct callees for each registered operation ID (sorted and deduplicated).
+    pub direct_callees: BTreeMap<&'static str, Vec<&'static str>>,
+    /// Direct (local) effects for each operation ID.
+    pub direct_effects: BTreeMap<&'static str, OperationEffects>,
+    /// Direct (local) capabilities for each operation ID.
+    pub direct_capabilities: BTreeMap<&'static str, RequiredCapabilities>,
+    /// Transitive effects solved to a fixed point for each operation ID.
+    pub transitive_effects: BTreeMap<&'static str, OperationEffects>,
+    /// Transitive capabilities solved to a fixed point for each operation ID.
+    pub transitive_capabilities: BTreeMap<&'static str, RequiredCapabilities>,
+    /// Operations participating in recursive cycles or unresolved callee chains without closed contracts.
+    pub unclosed_or_cyclic: BTreeSet<&'static str>,
+    /// Deterministic 64-bit fingerprint of the resolved call-graph closure.
+    pub closure_identity: u64,
+}
+
+impl CallGraphClosure {
+    /// Solve the call graph closure to a fixed point over a collection of registrations.
+    ///
+    /// Every canonical program is built at most once during this solve pass.
+    #[must_use]
+    pub fn solve_from_registrations<'a, I>(registrations: I) -> Self
+    where
+        I: IntoIterator<Item = &'a OperationRegistration>,
+    {
+        let reg_map: BTreeMap<&'static str, &OperationRegistration> = registrations
+            .into_iter()
+            .map(|reg| (reg.id, reg))
+            .collect();
+
+        let mut direct_callees: BTreeMap<&'static str, Vec<&'static str>> = BTreeMap::new();
+        let mut direct_effects: BTreeMap<&'static str, OperationEffects> = BTreeMap::new();
+        let mut direct_capabilities: BTreeMap<&'static str, RequiredCapabilities> = BTreeMap::new();
+        let mut unclosed_or_cyclic: BTreeSet<&'static str> = BTreeSet::new();
+
+        // 1. Build canonical program once for each registration and extract local facts.
+        for (&id, &reg) in &reg_map {
+            if let Some(build) = reg.build {
+                let program = (build)().with_entry_op_id(id);
+                let local_eff = reg
+                    .explicit_effects
+                    .unwrap_or_else(|| OperationEffects::from_program(&program));
+                let local_caps = reg
+                    .explicit_capabilities
+                    .unwrap_or_else(|| scan_capabilities(&program));
+                let raw_callees = collect_call_op_ids(&program);
+
+                let mut callees: Vec<&'static str> = Vec::with_capacity(raw_callees.len());
+                for raw_callee in raw_callees {
+                    if let Some((&matched_id, _)) = reg_map.get_key_value(raw_callee.as_ref()) {
+                        callees.push(matched_id);
+                    } else {
+                        let leaked: &'static str = Box::leak(raw_callee.to_string().into_boxed_str());
+                        callees.push(leaked);
+                    }
+                }
+                callees.sort_unstable();
+                callees.dedup();
+
+                direct_callees.insert(id, callees);
+                direct_effects.insert(id, local_eff);
+                direct_capabilities.insert(id, local_caps);
+            } else {
+                direct_callees.insert(id, Vec::new());
+                if let (Some(eff), Some(caps)) = (reg.explicit_effects, reg.explicit_capabilities) {
+                    direct_effects.insert(id, eff);
+                    direct_capabilities.insert(id, caps);
+                } else {
+                    direct_effects.insert(id, reg.explicit_effects.unwrap_or(OperationEffects::ALL));
+                    direct_capabilities.insert(
+                        id,
+                        reg.explicit_capabilities
+                            .unwrap_or_else(RequiredCapabilities::all),
+                    );
+                    unclosed_or_cyclic.insert(id);
+                }
+            }
+        }
+
+        // 2. Identify unresolved callees (nodes calling an unregistered ID).
+        for (&id, callees) in &direct_callees {
+            for &callee in callees {
+                if !reg_map.contains_key(callee) {
+                    unclosed_or_cyclic.insert(id);
+                }
+            }
+        }
+
+        // 3. Detect recursive cycles via Tarjan's Strongly Connected Components algorithm.
+        let sccs = compute_sccs(&direct_callees);
+        for scc in sccs {
+            let is_cycle = if scc.len() > 1 {
+                true
+            } else if scc.len() == 1 {
+                let node = scc[0];
+                direct_callees
+                    .get(node)
+                    .is_some_and(|callees| callees.contains(&node))
+            } else {
+                false
+            };
+
+            if is_cycle {
+                for &node in &scc {
+                    let reg = reg_map.get(node);
+                    let has_contract = reg.is_some_and(|r| {
+                        r.explicit_effects.is_some() && r.explicit_capabilities.is_some()
+                    });
+                    if !has_contract {
+                        unclosed_or_cyclic.insert(node);
+                        direct_effects.insert(node, OperationEffects::ALL);
+                        direct_capabilities.insert(node, RequiredCapabilities::all());
+                    }
+                }
+            }
+        }
+
+        // Ensure all unclosed/cyclic nodes default to strongest effects and capabilities.
+        for &node in &unclosed_or_cyclic {
+            let reg = reg_map.get(node);
+            let has_contract = reg.is_some_and(|r| {
+                r.explicit_effects.is_some() && r.explicit_capabilities.is_some()
+            });
+            if !has_contract {
+                direct_effects.insert(node, OperationEffects::ALL);
+                direct_capabilities.insert(node, RequiredCapabilities::all());
+            }
+        }
+
+        // 4. Fixed-Point Propagation over the call graph edges.
+        let mut transitive_effects = direct_effects.clone();
+        let mut transitive_capabilities = direct_capabilities.clone();
+
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for (&u, callees) in &direct_callees {
+                for &v in callees {
+                    let (v_eff, v_caps) = if reg_map.contains_key(v) {
+                        let eff = transitive_effects
+                            .get(v)
+                            .copied()
+                            .unwrap_or(OperationEffects::ALL);
+                        let caps = transitive_capabilities
+                            .get(v)
+                            .copied()
+                            .unwrap_or_else(RequiredCapabilities::all);
+                        (eff, caps)
+                    } else {
+                        (OperationEffects::ALL, RequiredCapabilities::all())
+                    };
+
+                    let u_eff = transitive_effects.get_mut(u).unwrap();
+                    let merged_eff = u_eff.union(v_eff);
+                    if merged_eff != *u_eff {
+                        *u_eff = merged_eff;
+                        changed = true;
+                    }
+
+                    let u_caps = transitive_capabilities.get_mut(u).unwrap();
+                    let merged_caps = u_caps.join(v_caps);
+                    if merged_caps != *u_caps {
+                        *u_caps = merged_caps;
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        // 5. Deterministic call-graph closure identity calculation.
+        let closure_identity = compute_closure_identity(
+            &reg_map,
+            &direct_callees,
+            &transitive_effects,
+            &transitive_capabilities,
+            &unclosed_or_cyclic,
+        );
+
+        Self {
+            direct_callees,
+            direct_effects,
+            direct_capabilities,
+            transitive_effects,
+            transitive_capabilities,
+            unclosed_or_cyclic,
+            closure_identity,
+        }
+    }
+
+    /// Return the resolved transitive effects for an operation.
+    #[must_use]
+    pub fn transitive_effects(&self, id: &str) -> Option<OperationEffects> {
+        self.transitive_effects.get(id).copied()
+    }
+
+    /// Return the resolved transitive required capabilities for an operation.
+    #[must_use]
+    pub fn transitive_capabilities(&self, id: &str) -> Option<RequiredCapabilities> {
+        self.transitive_capabilities.get(id).copied()
+    }
+
+    /// Return direct callees invoked by an operation via `Expr::Call`.
+    #[must_use]
+    pub fn callees(&self, id: &str) -> Option<&[&'static str]> {
+        self.direct_callees
+            .get(id)
+            .map(|callees| callees.as_slice())
+    }
+
+    /// Return whether an operation participates in an unclosed recursive cycle or unresolved call.
+    #[must_use]
+    pub fn is_unclosed_or_cyclic(&self, id: &str) -> bool {
+        self.unclosed_or_cyclic.contains(id)
+    }
+
+    /// Return the deterministic 64-bit closure identity.
+    #[must_use]
+    pub fn closure_identity(&self) -> u64 {
+        self.closure_identity
+    }
+
+    /// Calculate effective composite version for an operation.
+    #[must_use]
+    pub fn composite_version(&self, id: &str, base_version: u32) -> Option<u64> {
+        let eff = self.transitive_effects(id)?;
+        let caps = self.transitive_capabilities(id)?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"vyre-foundation::call_graph_closure::composite_version::v1\n");
+        hasher.update(id.as_bytes());
+        hasher.update(&base_version.to_le_bytes());
+        hasher.update(&[
+            eff.reads as u8,
+            eff.writes as u8,
+            eff.atomics as u8,
+            eff.synchronizes as u8,
+        ]);
+        hasher.update(&[
+            caps.subgroup_ops as u8,
+            caps.f16 as u8,
+            caps.bf16 as u8,
+            caps.f64 as u8,
+            caps.async_dispatch as u8,
+            caps.indirect_dispatch as u8,
+            caps.tensor_ops as u8,
+            caps.trap as u8,
+            caps.distributed_collectives as u8,
+        ]);
+        hasher.update(&caps.static_storage_bytes.to_le_bytes());
+        hasher.update(&self.closure_identity.to_le_bytes());
+        let hash_bytes = hasher.finalize();
+        let mut bytes = [0u8; 8];
+        bytes.copy_from_slice(&hash_bytes.as_bytes()[..8]);
+        Some(u64::from_le_bytes(bytes))
+    }
+}
+
+fn compute_sccs(adj: &BTreeMap<&'static str, Vec<&'static str>>) -> Vec<Vec<&'static str>> {
+    struct Tarjan<'a> {
+        adj: &'a BTreeMap<&'static str, Vec<&'static str>>,
+        index: usize,
+        indices: BTreeMap<&'static str, usize>,
+        lowlinks: BTreeMap<&'static str, usize>,
+        on_stack: BTreeSet<&'static str>,
+        stack: Vec<&'static str>,
+        sccs: Vec<Vec<&'static str>>,
+    }
+
+    impl<'a> Tarjan<'a> {
+        fn strongconnect(&mut self, v: &'static str) {
+            self.indices.insert(v, self.index);
+            self.lowlinks.insert(v, self.index);
+            self.index += 1;
+            self.stack.push(v);
+            self.on_stack.insert(v);
+
+            if let Some(neighbors) = self.adj.get(v) {
+                for &w in neighbors {
+                    if !self.indices.contains_key(w) {
+                        if self.adj.contains_key(w) {
+                            self.strongconnect(w);
+                            let w_low = self.lowlinks[w];
+                            let v_low = self.lowlinks.get_mut(v).unwrap();
+                            *v_low = (*v_low).min(w_low);
+                        }
+                    } else if self.on_stack.contains(w) {
+                        let w_idx = self.indices[w];
+                        let v_low = self.lowlinks.get_mut(v).unwrap();
+                        *v_low = (*v_low).min(w_idx);
+                    }
+                }
+            }
+
+            if self.lowlinks[v] == self.indices[v] {
+                let mut scc = Vec::new();
+                while let Some(w) = self.stack.pop() {
+                    self.on_stack.remove(w);
+                    scc.push(w);
+                    if w == v {
+                        break;
+                    }
+                }
+                self.sccs.push(scc);
+            }
+        }
+    }
+
+    let mut tarjan = Tarjan {
+        adj,
+        index: 0,
+        indices: BTreeMap::new(),
+        lowlinks: BTreeMap::new(),
+        on_stack: BTreeSet::new(),
+        stack: Vec::new(),
+        sccs: Vec::new(),
+    };
+
+    for &node in adj.keys() {
+        if !tarjan.indices.contains_key(node) {
+            tarjan.strongconnect(node);
+        }
+    }
+
+    tarjan.sccs
+}
+
+fn compute_closure_identity(
+    reg_map: &BTreeMap<&'static str, &OperationRegistration>,
+    direct_callees: &BTreeMap<&'static str, Vec<&'static str>>,
+    transitive_effects: &BTreeMap<&'static str, OperationEffects>,
+    transitive_capabilities: &BTreeMap<&'static str, RequiredCapabilities>,
+    unclosed_or_cyclic: &BTreeSet<&'static str>,
+) -> u64 {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"vyre-foundation::call_graph_closure::v1\n");
+    for (&id, reg) in reg_map {
+        hasher.update(id.as_bytes());
+        hasher.update(&reg.semantic_version.to_le_bytes());
+        if let Some(callees) = direct_callees.get(id) {
+            for callee in callees {
+                hasher.update(b"->");
+                hasher.update(callee.as_bytes());
+            }
+        }
+        if let Some(eff) = transitive_effects.get(id) {
+            hasher.update(&[
+                eff.reads as u8,
+                eff.writes as u8,
+                eff.atomics as u8,
+                eff.synchronizes as u8,
+            ]);
+        }
+        if let Some(caps) = transitive_capabilities.get(id) {
+            hasher.update(&[
+                caps.subgroup_ops as u8,
+                caps.f16 as u8,
+                caps.bf16 as u8,
+                caps.f64 as u8,
+                caps.async_dispatch as u8,
+                caps.indirect_dispatch as u8,
+                caps.tensor_ops as u8,
+                caps.trap as u8,
+                caps.distributed_collectives as u8,
+            ]);
+            hasher.update(&caps.static_storage_bytes.to_le_bytes());
+        }
+        hasher.update(&[unclosed_or_cyclic.contains(id) as u8]);
+    }
+    let hash_bytes = hasher.finalize();
+    let mut bytes = [0u8; 8];
+    bytes.copy_from_slice(&hash_bytes.as_bytes()[..8]);
+    u64::from_le_bytes(bytes)
+}
+
 /// Immutable validated view over every linked semantic operation registration.
 pub struct OperationRegistry {
     ordered: Vec<&'static OperationRegistration>,
     by_id: BTreeMap<&'static str, &'static OperationRegistration>,
+    call_graph: CallGraphClosure,
 }
 
 impl OperationRegistry {
@@ -515,7 +1007,12 @@ impl OperationRegistry {
                 return Err(OperationRegistryError::DuplicateId { id: entry.id });
             }
         }
-        Ok(Self { ordered, by_id })
+        let call_graph = CallGraphClosure::solve_from_registrations(ordered.iter().copied());
+        Ok(Self {
+            ordered,
+            by_id,
+            call_graph,
+        })
     }
 
     /// Return the process-wide validated semantic operation registry.
@@ -526,6 +1023,44 @@ impl OperationRegistry {
                 .unwrap_or_else(|error| panic!("invalid semantic operation registry: {error}"))
         });
         &REGISTRY
+    }
+
+    /// Return the immutable precomputed call graph closure over all registered operations.
+    #[must_use]
+    pub fn call_graph_closure(&self) -> &CallGraphClosure {
+        &self.call_graph
+    }
+
+    /// Return transitive effects for an operation.
+    #[must_use]
+    pub fn transitive_effects(&self, id: &str) -> Option<OperationEffects> {
+        self.call_graph.transitive_effects(id)
+    }
+
+    /// Return transitive required capabilities for an operation.
+    #[must_use]
+    pub fn transitive_capabilities(&self, id: &str) -> Option<RequiredCapabilities> {
+        self.call_graph.transitive_capabilities(id)
+    }
+
+    /// Return direct callees for an operation.
+    #[must_use]
+    pub fn callees(&self, id: &str) -> Option<&[&'static str]> {
+        self.call_graph.callees(id)
+    }
+
+    /// Return deterministic call-graph closure identity.
+    #[must_use]
+    pub fn call_graph_closure_identity(&self) -> u64 {
+        self.call_graph.closure_identity()
+    }
+
+    /// Return effective composite version for an operation.
+    #[must_use]
+    pub fn composite_version(&self, id: &str) -> Option<u64> {
+        let entry = self.by_id.get(id)?;
+        self.call_graph
+            .composite_version(id, entry.semantic_version)
     }
 
     /// Resolve one stable operation identity.
@@ -541,9 +1076,6 @@ impl OperationRegistry {
 }
 
 /// Validated target identity carried by target-owned facet registrations.
-///
-/// Linked target owners construct borrowed identities at declaration time.
-/// Deserialized manifests retain owned identities without leaking storage.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TargetId(Cow<'static, str>);
 
@@ -629,11 +1161,6 @@ const fn has_surrounding_ascii_whitespace(bytes: &[u8]) -> bool {
 }
 
 /// Derived target-specific capability keyed by canonical semantic operation id.
-///
-/// Concrete drivers submit one backend registration containing their validated
-/// target identity, compiler, materializer, and supported-operation set. The
-/// shared driver joins that record with [`OperationRegistry`] to produce this
-/// read-only view without a second operation submission.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TargetOperationFacet {
     /// Canonical semantic operation id.
@@ -653,11 +1180,6 @@ mod tests {
     use std::collections::BTreeSet;
 
     /// The tier roster carries every variant of the tier enum.
-    ///
-    /// `OperationTier` is `non_exhaustive`, so no integration test can match it
-    /// exhaustively; this is the only place the compiler can hold the roster to
-    /// the enum. Adding a variant stops this match compiling, and the arm count
-    /// then holds the roster to it.
     #[test]
     fn the_roster_carries_every_tier() {
         let mut seen = BTreeSet::new();
@@ -687,12 +1209,6 @@ mod tests {
     }
 
     /// A workspace id cannot carry a tier only a consumer identity has.
-    ///
-    /// `validate_identity` is crate-private and the registry that calls it reads
-    /// the process-wide inventory, so no integration test can hand it a
-    /// registration: submitting a rejected one to the inventory would poison
-    /// every other test in the same binary. This is the only place the rejection
-    /// can be exercised on a registration built for the purpose.
     #[test]
     fn a_workspace_id_declaring_an_external_tier_is_rejected() {
         let entry = OperationRegistration::new(

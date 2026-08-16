@@ -7,8 +7,8 @@ use vyre_foundation::ir::{BufferAccess, ProgramGraph, ProgramGraphValue, ShapeDi
 use crate::error::{failure, overflow, CompileError, CompilerFailureKind};
 use crate::identity::{ArtifactNodeId, ArtifactValueId, FusionGroupId};
 use crate::schema::{
-    AbiAccess, ArtifactAbi, EntryAbiRecord, MaterializationReason, MaterializationRecord,
-    ResourceAbiRecord, ResourceEnvelope, ResourceLifetime, ResourceRecord,
+    AbiAccess, ArtifactAbi, EntryAbiRecord, EntryResourceBinding, MaterializationReason,
+    MaterializationRecord, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime, ResourceRecord,
 };
 
 pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileError> {
@@ -41,18 +41,56 @@ pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileErro
     let entries = graph
         .nodes()
         .iter()
-        .map(|node| EntryAbiRecord {
-            node: ArtifactNodeId(node.id.0),
-            inputs: node
-                .inputs
-                .iter()
-                .map(|input| ArtifactValueId(input.value.0))
-                .collect(),
-            outputs: node
-                .outputs
-                .iter()
-                .map(|output| ArtifactValueId(output.0))
-                .collect(),
+        .map(|node| {
+            let mut inputs = Vec::new();
+            let mut outputs = Vec::new();
+            let mut input_bindings = Vec::new();
+            let mut output_bindings = Vec::new();
+            for buffer in node.program.buffers() {
+                let is_in = matches!(
+                    buffer.access(),
+                    BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
+                );
+                let is_out = matches!(
+                    buffer.access(),
+                    BufferAccess::WriteOnly | BufferAccess::ReadWrite
+                ) || buffer.is_output()
+                    || buffer.pipeline_live_out;
+
+                if is_in {
+                    if let Some(input) = node.inputs.iter().find(|i| i.buffer == buffer.name()) {
+                        let value = ArtifactValueId(input.value.0);
+                        inputs.push(value);
+                        input_bindings.push(EntryResourceBinding {
+                            buffer: buffer.name().to_string(),
+                            value,
+                        });
+                    }
+                }
+                if is_out {
+                    if let Some(pos) = node
+                        .output_ports
+                        .iter()
+                        .position(|o| o.buffer == buffer.name())
+                    {
+                        if let Some(output_id) = node.outputs.get(pos) {
+                            let value = ArtifactValueId(output_id.0);
+                            outputs.push(value);
+                            output_bindings.push(EntryResourceBinding {
+                                buffer: buffer.name().to_string(),
+                                value,
+                            });
+                        }
+                    }
+                }
+            }
+            EntryAbiRecord {
+                node: ArtifactNodeId(node.id.0),
+                inputs,
+                input_bindings,
+                outputs,
+                output_bindings,
+            }
         })
         .collect();
     Ok(ArtifactAbi { resources, entries })
@@ -195,6 +233,7 @@ pub(crate) fn build_resources(
                 ValueLifetime::Retained => ResourceLifetime::Retained,
                 ValueLifetime::Output => ResourceLifetime::Output,
             },
+            retained_predecessor: value.retained_successor_of.map(|id| ArtifactValueId(id.0)),
             first_stage: producer_stage,
             last_stage,
         });

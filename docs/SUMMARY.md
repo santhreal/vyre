@@ -7,6 +7,7 @@
 
 - [Crate boundaries](architecture/crates.md)
 - [LEGO-block rule](lego-block-rule.md)
+- [Launch geometry is a lowering decision](design/geometry-lowering.md)
 - [Parsing](architecture/parsing.md)
 - [The artifact is the output type](architecture/artifact.md)
 - [Tile values in the IR](design/tile-values.md)

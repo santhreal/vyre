@@ -321,13 +321,13 @@ mod tests {
         let pass_a = prefix_pass_a("input", "partials", "totals", 1024 + 1);
         assert_eq!(
             program_generator(&pass_a),
-            "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum::pass_a"
+            "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_a"
         );
 
         let pass_c = prefix_pass_c("partials", "totals_scanned", "output", 1024 + 1);
         assert_eq!(
             program_generator(&pass_c),
-            "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum::pass_c"
+            "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_c"
         );
     }
 

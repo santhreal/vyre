@@ -46,6 +46,10 @@ pub(crate) enum CompilerFailureKind {
     InvalidDeviceFacts,
     /// A finalist could not be compiled for the target or timed on the device.
     FinalistEvaluation,
+    /// A representative input was supplied for an unknown or graph-produced value.
+    UnknownRepresentativeInput,
+    /// A representative input byte length does not match the graph value's static size.
+    RepresentativeInputLengthMismatch,
 }
 
 impl CompilerFailureKind {
@@ -73,6 +77,10 @@ impl CompilerFailureKind {
             Self::UnknownConstantIdentity => "MKC024_UNKNOWN_CONSTANT_IDENTITY",
             Self::InvalidDeviceFacts => "MKC025_INVALID_DEVICE_FACTS",
             Self::FinalistEvaluation => "MKC026_FINALIST_EVALUATION",
+            Self::UnknownRepresentativeInput => "MKC027_UNKNOWN_REPRESENTATIVE_INPUT",
+            Self::RepresentativeInputLengthMismatch => {
+                "MKC028_REPRESENTATIVE_INPUT_LENGTH_MISMATCH"
+            }
         }
     }
 }
@@ -85,7 +93,9 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::InvalidSearchBudget
         | CompilerFailureKind::MissingConstantIdentity
         | CompilerFailureKind::UnknownConstantIdentity
-        | CompilerFailureKind::InvalidDeviceFacts => DiagnosticStage::Validate,
+        | CompilerFailureKind::InvalidDeviceFacts
+        | CompilerFailureKind::UnknownRepresentativeInput
+        | CompilerFailureKind::RepresentativeInputLengthMismatch => DiagnosticStage::Validate,
         CompilerFailureKind::DependencyCycle | CompilerFailureKind::FinalistEvaluation => {
             DiagnosticStage::Plan
         }

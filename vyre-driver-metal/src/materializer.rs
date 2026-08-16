@@ -66,7 +66,7 @@ mod native {
             Ok(Box::new(MetalArtifactInstance {
                 core: self
                     .descriptor
-                    .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
+                    .instance(artifact, payload, materialize::NEUTRAL_MESSAGES)?,
                 backend: Arc::clone(&self.backend),
                 modules,
             }))

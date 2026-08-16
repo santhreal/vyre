@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Artifact materialization now maps target resources to Program inputs by canonical identity instead of backend descriptor position, excludes backend-allocated read-write outputs from prior host inputs, and rejects conformance fixture byte lengths that disagree with the canonical Program ABI before device measurement."

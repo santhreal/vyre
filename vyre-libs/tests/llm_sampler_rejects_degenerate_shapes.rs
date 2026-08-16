@@ -17,23 +17,21 @@
 #![cfg(feature = "llm")]
 
 use vyre_foundation::ir::{Node, Program};
+use vyre_foundation::visit::any_descendant;
 use vyre_libs::llm::sampling::nucleus_select;
 use vyre_libs::nn::moe::softmax_top_k;
 
 /// The trap tags a program's entry carries, at any region depth.
 fn trap_tags(program: &Program) -> Vec<String> {
-    fn walk(node: &Node, out: &mut Vec<String>) {
-        if let Node::Trap { tag, .. } = node {
-            out.push(tag.as_str().to_string());
-        }
-        for body in vyre_foundation::visit::child_bodies(node) {
-            for child in body {
-                walk(child, out);
-            }
-        }
-    }
     let mut out = Vec::new();
-    program.entry().iter().for_each(|node| walk(node, &mut out));
+    for node in program.entry() {
+        let _ = any_descendant(node, &mut |child| {
+            if let Node::Trap { tag, .. } = child {
+                out.push(tag.as_str().to_string());
+            }
+            false
+        });
+    }
     out
 }
 

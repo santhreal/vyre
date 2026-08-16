@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Single-program artifact graphs now classify every backend-allocated buffer, including read-write pipeline live-outs, as an output. Artifact submission no longer asks callers to provide internal fused-pipeline storage as a host input."

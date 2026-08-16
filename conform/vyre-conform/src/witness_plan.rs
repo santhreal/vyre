@@ -43,9 +43,8 @@ impl WitnessInputPlan {
         let mut fixture_index = 0usize;
         for (buffer_index, buffer) in program.buffers().iter().enumerate() {
             if buffer.kind() == MemoryKind::Shared
-                || buffer.is_output()
-                || (buffer.is_pipeline_live_out()
-                    && matches!(buffer.access(), BufferAccess::ReadWrite))
+                || buffer.access() == BufferAccess::Workgroup
+                || buffer.is_backend_allocated_output()
             {
                 continue;
             }
@@ -148,9 +147,20 @@ pub fn plan_witness_inputs_into<'a>(
                 buffer_index,
                 byte_len,
             } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
+                if let Some(bytes) = matching_fixture_bytes(
+                    fixture_inputs,
+                    *buffer_index,
+                    *fixture_index,
+                    plan.sources.len(),
+                ) {
+                    if let Some(expected) = byte_len {
+                        if bytes.len() != *expected {
+                            return Err(format!(
+                                "witness input buffer at fixture index `{fixture_index}` / program index `{buffer_index}` expected {expected} bytes from its static buffer declaration but received {} bytes. Fix: provide exact fixture byte lengths matching the Program declaration.",
+                                bytes.len()
+                            ));
+                        }
+                    }
                     backend_inputs.push(bytes);
                     continue;
                 }
@@ -164,9 +174,20 @@ pub fn plan_witness_inputs_into<'a>(
                 zero_index,
                 byte_len,
             } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
+                if let Some(bytes) = matching_fixture_bytes(
+                    fixture_inputs,
+                    *buffer_index,
+                    *fixture_index,
+                    plan.sources.len(),
+                ) {
+                    if let Some(expected) = byte_len {
+                        if bytes.len() != *expected {
+                            return Err(format!(
+                                "witness input buffer at fixture index `{fixture_index}` / program index `{buffer_index}` expected {expected} bytes from its static buffer declaration but received {} bytes. Fix: provide exact fixture byte lengths matching the Program declaration.",
+                                bytes.len()
+                            ));
+                        }
+                    }
                     backend_inputs.push(bytes);
                     continue;
                 }
@@ -206,27 +227,16 @@ pub fn plan_witness_inputs_owned_into(
     Ok(())
 }
 
-fn matching_fixture_bytes<'a>(
-    fixture_inputs: &'a [Vec<u8>],
+fn matching_fixture_bytes(
+    fixture_inputs: &[Vec<u8>],
     buffer_index: usize,
     fixture_index: usize,
-    byte_len: Option<usize>,
-) -> Option<&'a [u8]> {
-    if let Some(byte_len) = byte_len {
-        return fixture_inputs
-            .get(buffer_index)
-            .filter(|bytes| bytes.len() == byte_len)
-            .or_else(|| {
-                fixture_inputs
-                    .get(fixture_index)
-                    .filter(|bytes| bytes.len() == byte_len)
-            })
-            .or_else(|| fixture_inputs.get(fixture_index))
-            .or_else(|| fixture_inputs.get(buffer_index))
-            .map(Vec::as_slice);
-    }
-    fixture_inputs
-        .get(fixture_index)
-        .or_else(|| fixture_inputs.get(buffer_index))
-        .map(Vec::as_slice)
+    total_sources: usize,
+) -> Option<&[u8]> {
+    let index = if fixture_inputs.len() > total_sources {
+        buffer_index
+    } else {
+        fixture_index
+    };
+    fixture_inputs.get(index).map(Vec::as_slice)
 }

@@ -5,12 +5,12 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use vyre_foundation::validate::BackendCapabilities;
 
-use crate::identity::Digest;
+use crate::identity::{domain_digest, Digest};
 use crate::request::{SearchBudget, ValidatedCompileRequest};
 
 pub(crate) const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
-pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v2\0";
-
+pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v3\0";
+pub(crate) const REPRESENTATIVE_INPUT_DOMAIN: &[u8] = b"vyre-megakernel-representative-input-v1\0";
 /// Every fact that makes one compilation of one graph produce one artifact.
 ///
 /// Device facts belong here because the plan is selected against them: the same
@@ -22,6 +22,7 @@ pub(crate) struct RequestIdentity<'a> {
     configuration_digest: Digest,
     symbolic_bindings: &'a BTreeMap<String, u64>,
     constant_identities: Vec<(u32, Digest)>,
+    representative_inputs: Vec<(u32, Digest, u64)>,
     expected_launch_batch: u32,
     search_budget: SearchBudget,
     device_capabilities: DeviceCapabilityIdentity,
@@ -103,6 +104,17 @@ impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
                 .constant_identities
                 .iter()
                 .map(|(id, digest)| (id.0, *digest))
+                .collect(),
+            representative_inputs: request
+                .representative_inputs()
+                .iter()
+                .map(|(id, bytes)| {
+                    (
+                        id.0,
+                        domain_digest(REPRESENTATIVE_INPUT_DOMAIN, bytes),
+                        bytes.len() as u64,
+                    )
+                })
                 .collect(),
             expected_launch_batch: request.facts.expected_launch_batch,
             search_budget: request.search_budget,

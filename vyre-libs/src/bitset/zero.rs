@@ -16,7 +16,7 @@ pub fn bitset_zero(target: &str, words: u32) -> Program {
     let w = Expr::InvocationId { axis: 0 };
     Program::wrapped(
         vec![
-            BufferDecl::storage(target, 0, BufferAccess::ReadWrite, DataType::U32)
+            BufferDecl::storage(target, 0, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(words),
         ],
         [256, 1, 1],

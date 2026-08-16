@@ -48,6 +48,123 @@ fn wgpu_production_route_executes_canonical_artifact() {
     assert_ne!(session.payload_digest().0, [0; 32]);
 }
 
+/// WHY: a runtime-sized host buffer is dynamic in target IR but its exact
+/// representative extent must size the canonical artifact resource.
+#[test]
+fn wgpu_runtime_sized_input_uses_representative_extent() {
+    let registration = live_backend_registry()
+        .expect("valid backend registry")
+        .iter()
+        .find(|registration| registration.id == "wgpu")
+        .expect("Fix: the gpu feature must link the wgpu registration");
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::load("input", Expr::u32(2)),
+        )],
+    );
+    let input = [11_u32, 22, 33]
+        .into_iter()
+        .flat_map(u32::to_le_bytes)
+        .collect::<Vec<_>>();
+
+    let session =
+        ProductionSession::compile_with_representative_inputs(&program, &[&input], registration)
+            .expect("runtime-sized representative input must size artifact resources");
+    let outputs = session
+        .submit(&[&input])
+        .expect("runtime-sized input must submit through the artifact route");
+    assert_eq!(outputs, vec![33_u32.to_le_bytes().to_vec()]);
+}
+
+#[test]
+fn cuda_production_route_executes_line_index() {
+    let registrations = live_backend_registry().expect("valid backend registry");
+    let Some(registration) = registrations.iter().find(|reg| reg.id == "cuda") else {
+        return;
+    };
+    if !backend_dispatches("cuda").expect("valid backend registry") {
+        return;
+    }
+    let source = b"ab\ncd";
+    let n = source.len() as u32;
+    let program = vyre_libs::text::line_index("source", "lines", n);
+    let mut u32_input = Vec::with_capacity(source.len() * 4);
+    for &b in source {
+        u32_input.extend_from_slice(&(b as u32).to_le_bytes());
+    }
+
+    let session = ProductionSession::compile_with_representative_inputs(&program, &[&u32_input], registration)
+        .expect("Fix: production conformance compilation and materialization must succeed for line_index on CUDA");
+    let outputs = session
+        .submit(&[&u32_input])
+        .expect("Fix: line_index artifact submission must succeed on CUDA");
+
+    let lines_index = program
+        .output_buffer_indices()
+        .iter()
+        .position(|&idx| program.buffers()[idx as usize].name() == "lines")
+        .expect("lines output index");
+    let out_u32s: Vec<u32> = outputs[lines_index]
+        .chunks_exact(4)
+        .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
+        .collect();
+    assert_eq!(&out_u32s[..source.len()], &[0, 0, 0, 1, 1]);
+}
+
+#[test]
+fn cuda_production_route_reports_traps_on_malformed_inputs() {
+    let registrations = live_backend_registry().expect("valid backend registry");
+    let Some(registration) = registrations.iter().find(|reg| reg.id == "cuda") else {
+        return;
+    };
+    if !backend_dispatches("cuda").expect("valid backend registry") {
+        return;
+    }
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::if_then(
+                Expr::ne(Expr::load("input", Expr::u32(0)), Expr::u32(0)),
+                vec![Node::trap(
+                    Expr::load("input", Expr::u32(0)),
+                    "deliberate malformed-input trap",
+                )],
+            ),
+            Node::store("out", Expr::u32(0), Expr::u32(0)),
+        ],
+    )
+    .with_entry_op_id("vyre-conform::production_route::conditional_trap");
+
+    let valid_representative = 0_u32.to_le_bytes();
+    let session = ProductionSession::compile_with_representative_inputs(
+        &program,
+        &[&valid_representative],
+        registration,
+    )
+    .expect("Fix: safe finalist inputs must compile a trap-declaring program on CUDA");
+    let malformed = 1_u32.to_le_bytes();
+    let error = session
+        .submit(&[&malformed])
+        .expect_err("malformed input must trap on CUDA");
+    let message = error.to_string();
+    assert!(
+        message.contains("cuda dispatch trapped")
+            && message.contains("deliberate malformed-input trap"),
+        "Fix: CUDA production execution must report the device trap and its tag, got: {message}"
+    );
+}
+
 /// Every registered artifact backend finishes a whole session lifecycle, drop
 /// included, inside [`LIFECYCLE_DEADLINE`].
 ///

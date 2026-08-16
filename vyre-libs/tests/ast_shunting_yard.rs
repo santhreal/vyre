@@ -1,5 +1,6 @@
 //! Reference-oracle tests for expression AST shunting-yard lowering.
 
+#![cfg(feature = "parsing")]
 #![allow(deprecated)]
 mod wire_words;
 

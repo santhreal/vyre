@@ -54,6 +54,12 @@ from, and its own body digest is recomputed and compared on admission. A
 payload that has been edited, or that names a different artifact, does not
 admit.
 
+Schema 7 authenticates each entry input and output as a Program buffer name
+paired with its canonical graph value. It also records retained-predecessor
+lineage. Materializers resolve active buffers through those named records and
+inactive split-segment declarations through exact target `(group, slot)`
+metadata. A missing, ambiguous or unrelated identity rejects the payload.
+
 ## What consumes the artifact
 
 Device admission, materialization, submission, queues, residency and

@@ -106,6 +106,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::visit::any_descendant;
 
     #[test]
     fn zero_order_is_rejected() {
@@ -143,14 +144,13 @@ mod tests {
     #[test]
     fn diagonal_extract_binds_local_id() {
         let program = matrix_diagonal_extract("m", "diag", 4);
-        let has_local_binding = program.entry().iter().any(|node| match node {
-            Node::Region { body, .. } => body.iter().any(|inner| match inner {
+        let has_local_binding = program.entry().iter().any(|node| {
+            any_descendant(node, &mut |inner| match inner {
                 Node::Let { name, value } => {
                     name == "local" && matches!(value, Expr::LocalId { axis: 0 })
                 }
                 _ => false,
-            }),
-            _ => false,
+            })
         });
         assert!(
             has_local_binding,
