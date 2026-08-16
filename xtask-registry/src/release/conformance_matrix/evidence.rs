@@ -34,6 +34,10 @@ pub(super) struct ConformanceMatrix {
     pub(super) op_matrix_blocked_release_count: usize,
     pub(super) op_matrix_blocked_release_rows: Vec<String>,
     pub(super) op_matrix_errors: Vec<String>,
+    /// Op ids OP_MATRIX declares in more than one row. The live registry cannot
+    /// contribute one: `OperationRegistry` refuses a duplicate registration at
+    /// construction, so a scan of the registry it handed back reported an
+    /// emptiness that was already proved and left the catalog unchecked.
     pub(super) duplicate_op_ids: Vec<String>,
     pub(super) fixture_required_count: usize,
     pub(super) fixture_input_count: usize,

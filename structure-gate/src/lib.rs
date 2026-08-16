@@ -987,6 +987,12 @@ pub fn workspace_excludes(root: &Path) -> Vec<String> {
 }
 
 /// One `[workspace]` array of paths, empty when the key is absent.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed. Every gate in this
+/// crate answers for the roster that manifest declares, so a gate that carried
+/// on with an empty roster would report a clean tree it never read.
 fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
     let manifest = root.join("Cargo.toml");
     let text = read_source_bounded(&manifest)
