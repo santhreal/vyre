@@ -615,7 +615,7 @@ fn check_1_no_reinvention(report: &mut Report, ops: &[OpInfo]) -> usize {
             sim * 100.0)));
     }
     if pairs.is_empty() {
-        report.note(format!("  ✓ no cross-dialect duplication"));
+        report.note("  ✓ no cross-dialect duplication".to_string());
     }
     pairs.len()
 }
@@ -731,16 +731,26 @@ fn is_declared_tier3_leaf(id: &str) -> bool {
 const DEAD_EXEMPTION_FIX: &str =
     "delete the row: an exemption that matches no registered op exempts nothing, and it reads as coverage of an op that no longer exists";
 
-/// Every exemption row must match a registered op.
+/// Every exemption row must match something the tree still holds.
 ///
-/// An exemption is a rule that a named op is judged elsewhere: a phase of a
+/// An exemption is a rule that a named subject is judged elsewhere: a phase of a
 /// larger composition, a declared pure-IR leaf, an op whose shape comes from a
-/// shared builder, or a pair whose shapes were read side by side and judged
-/// distinct. A row naming an op that was renamed or deleted stops
-/// exempting anything, and nothing says so: the list keeps its length, the audit
-/// keeps passing, and a reader takes the row as evidence the op is covered. Two
-/// rows were already in that state.
+/// shared builder, a pair whose shapes were read side by side and judged
+/// distinct, or a directory that is plumbing rather than a dialect. A row naming
+/// something that was renamed or deleted stops exempting anything, and nothing
+/// says so: the list keeps its length, the audit keeps passing, and a reader
+/// takes the row as evidence the subject is covered. Two rows were already in
+/// that state.
 fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
+    let libs_src = xtask::checkout::checkout_root().join("vyre-libs").join("src");
+    for dir in SHARED_PLUMBING_DIRS {
+        if !libs_src.join(dir).is_dir() {
+            report.find(Finding::new(
+                format!("no directory `vyre-libs/src/{dir}` answers to the shared-plumbing row"),
+                "delete the row: a plumbing row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
+            ));
+        }
+    }
     for marker in PHASE_MARKERS {
         if !ops.iter().any(|op| op.id.contains(marker)) {
             report.find(Finding::new(
@@ -791,7 +801,7 @@ fn same_subdialect(a: &str, b: &str) -> bool {
 /// should dominate own_nodes.
 fn check_2_depth_of_composition(report: &mut Report, ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
-    report.note(format!("[2/10] Depth-of-composition (Tier 3 ops compose ≥25% registered child nodes or declare a pure-IR leaf)"));
+    report.note("[2/10] Depth-of-composition (Tier 3 ops compose ≥25% registered child nodes or declare a pure-IR leaf)".to_string());
     for op in ops {
         if op.tier != Tier::T3 {
             continue;
@@ -813,9 +823,10 @@ fn check_2_depth_of_composition(report: &mut Report, ops: &[OpInfo]) -> usize {
         }
     }
     if flagged == 0 {
-        report.note(format!(
+        report.note(
             "  ✓ Tier 3 ops meet registered-child depth or declare reviewed pure-IR leaves"
-        ));
+                .to_string(),
+        );
     }
     flagged
 }
@@ -892,9 +903,9 @@ fn validate_primitive_admission(
             .insert(exception.family.clone(), exception)
             .is_some()
         {
-            report.find(violation(format!(
-                "  ✗ duplicate primitive admission exception family"
-            )));
+            report.find(violation(
+                "  ✗ duplicate primitive admission exception family".to_string(),
+            ));
             flagged += 1;
         }
     }
@@ -973,7 +984,7 @@ fn check_3_primitive_coverage(report: &mut Report, ops: &[OpInfo]) -> usize {
 /// canonical operation contract are exempt.
 fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
-    report.note(format!("[6/10] Composition-chain coverage (non-leaf ops must have ≥ 1 child Region with source_region)"));
+    report.note("[6/10] Composition-chain coverage (non-leaf ops must have ≥ 1 child Region with source_region)".to_string());
     for op in ops {
         // Tier 2 intrinsics and Tier 2.5 primitives are leaves unless
         // their own bodies choose to compose deeper primitives.
@@ -997,36 +1008,46 @@ fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpInfo]) -> us
         }
     }
     if flagged == 0 {
-        report.note(format!(
-            "  ✓ every non-leaf op names at least one child op in its Region chain"
-        ));
+        report.note(
+            "  ✓ every non-leaf op names at least one child op in its Region chain".to_string(),
+        );
     }
     flagged
 }
 
-/// Walk `vyre-libs/src/<dialect>/**/*.rs`; flag any `use` or `pub use`
-/// path reaching into `vyre_libs::<other_dialect>::...` or
-/// `crate::<other_dialect>::...` across a dialect
-/// boundary. Cross-dialect coupling means the shared piece belongs in
-/// Tier 2.5 (`vyre-primitives`), not duplicated or imported sideways.
+/// Walk `vyre-libs/src/<dialect>/**/*.rs` and report every `use` that reaches
+/// into `crate::<other_dialect>::...` or `vyre_libs::<other_dialect>::...`.
+///
+/// A dialect owns its own surface and depends downward on `vyre-primitives`. An
+/// edge to a sibling is allowed, and some are necessary: a linear layer is a
+/// bias-matmul. What is not allowed is naming that edge from inside the
+/// importing file, three levels into the other dialect's module tree, where
+/// nothing collects it. The edge is declared once at the crate root, in
+/// `vyre_libs::prelude`, and imported from there.
 ///
 /// The check is structural  -  it parses Rust use trees with `syn`, so grouped
-/// imports, aliases, globs, and `pub use` are audited consistently without
-/// relying on line-oriented grep.
+/// imports, aliases and globs are audited consistently without relying on
+/// line-oriented grep. It reads paths, not visibility: a `pub use` re-export is
+/// skipped because re-exporting is how the seam itself is written, and every
+/// other import is judged by where it points.
 ///
-/// Generic byte-range ordering lives in `vyre_libs::range_ordering`; Tier 3
-/// dialects must not regain private sibling dependencies.
+/// `lego-quick` asks a weaker question over the same subject: whether some
+/// feature gating the importing dialect enables one gating the imported
+/// dialect. Feature aggregates make that true by accident, so it passes edges
+/// this check reports. The two are not one measurement with two answers, and
+/// collapsing them onto the stricter rule is open work.
 fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
-    report.note(format!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)"));
+    report.note("[4/10] Cross-dialect reach-through (a dialect names a sibling edge in vyre_libs::prelude, not from inside its own module tree)".to_string());
     let libs_root = Some(
         xtask::checkout::checkout_root()
             .join("vyre-libs")
             .join("src"),
     );
     let Some(libs_root) = libs_root.filter(|p| p.is_dir()) else {
-        report.find(violation(format!(
+        report.find(violation(
             "  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root."
-        )));
+                .to_string(),
+        ));
         return 0;
     };
     let (dialects, list_errors) = list_dialect_dirs(&libs_root);
@@ -1037,9 +1058,7 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
         return list_errors.len();
     }
     if dialects.len() < 2 {
-        report.note(format!(
-            "  ✓ fewer than 2 dialects present; nothing to cross."
-        ));
+        report.note("  ✓ fewer than 2 dialects present; nothing to cross.".to_string());
         return 0;
     }
     let mut flagged = 0usize;
@@ -1091,15 +1110,16 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
                         continue;
                     }
                     if use_path.imports_dialect(other_name) {
-                        report.note(format!(
-                            "  ✗ {}/{} line {}: `{}` → imports `{other_name}` dialect privately. \
-                             Fix: hoist the shared piece into vyre-primitives, or route via a \
-                             public re-export at crate root.",
+                        report.find(violation(format!(
+                            "  ✗ {}/{} line {}: `{}` → reaches into the `{other_name}` dialect. \
+                             Fix: re-export the item from vyre-libs/src/prelude.rs and import it \
+                             as `crate::prelude::…`, or hoist the shared piece into \
+                             vyre-primitives.",
                             dialect_name,
                             path.file_name().and_then(|n| n.to_str()).unwrap_or("?"),
                             use_path.line,
                             use_path.segments.join("::")
-                        ));
+                        )));
                         flagged += 1;
                     }
                 }
@@ -1107,12 +1127,28 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
         }
     }
     if flagged == 0 {
-        report.note(format!(
-            "  ✓ no Tier-3 dialect imports another Tier-3 dialect privately"
-        ));
+        report.note(
+            "  ✓ every cross-dialect edge is named in vyre_libs::prelude, not reached into"
+                .to_string(),
+        );
     }
     flagged
 }
+
+/// Directories under `vyre-libs/src` that are shared plumbing rather than a
+/// dialect, so a dialect importing from one is not a cross-dialect edge.
+///
+/// `check_0_every_exemption_is_live` holds each row to an existing directory: a
+/// row naming a directory that was renamed or removed exempts nothing, and the
+/// list still reads as if it did.
+const SHARED_PLUMBING_DIRS: [&str; 6] = [
+    "region",
+    "tensor_ref",
+    "builder",
+    "buffer_names",
+    "descriptor",
+    "test_support",
+];
 
 fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathBuf>, Vec<String>) {
     let read_dir = match std::fs::read_dir(root) {
@@ -1144,16 +1180,10 @@ fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathBuf>, Vec<St
         if !path.is_dir() {
             continue;
         }
-        // Skip non-dialect dirs: region, tensor_ref, builder, buffer_names,
-        // descriptor are shared utility modules at crate root; everything
-        // else under src/ is a domain dialect.
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        if matches!(
-            name,
-            "region" | "tensor_ref" | "builder" | "buffer_names" | "descriptor" | "test_support"
-        ) {
+        if SHARED_PLUMBING_DIRS.contains(&name) {
             continue;
         }
         out.push(path);
@@ -1166,7 +1196,7 @@ fn check_5_god_files(report: &mut Report) -> usize {
     let Some(root) = workspace_root() else {
         // A missing workspace root is a real environment failure, not a
         // size advisory, so it still fails the audit.
-        report.find(violation(format!("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.")));
+        report.find(violation("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.".to_string()));
         return 1;
     };
 
@@ -1235,15 +1265,13 @@ fn composition_regressed(old_fraction: f64, new_fraction: f64) -> bool {
 }
 
 fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note(format!("[7/10] Composition trend (current composed_fraction must not regress from the latest available baseline)"));
+    report.note("[7/10] Composition trend (current composed_fraction must not regress from the latest available baseline)".to_string());
     let Some(root) = workspace_root() else {
-        report.find(violation(format!("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.")));
+        report.find(violation("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.".to_string()));
         return 1;
     };
     let Some(tag) = previous_tag(&root) else {
-        report.note(format!(
-            "  ✓ no previous git tag found; trend check has no baseline"
-        ));
+        report.note("  ✓ no previous git tag found; trend check has no baseline".to_string());
         return 0;
     };
     let (previous, baseline_name) = if let Some(previous) =
@@ -1380,7 +1408,7 @@ fn previous_composition_baseline(
 const ISLAND_MIN_NODES: usize = 20;
 
 fn check_8_composability(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note(format!("[8/10] Composability (every non-leaf op must be composed by ≥ 1 caller OR compose ≥ 1 child op)"));
+    report.note("[8/10] Composability (every non-leaf op must be composed by ≥ 1 caller OR compose ≥ 1 child op)".to_string());
     let mut callers: HashMap<String, usize> = HashMap::new();
     for op in ops {
         for child in &op.children {
@@ -1413,7 +1441,7 @@ fn check_8_composability(report: &mut Report, ops: &[OpInfo]) -> usize {
         }
     }
     if flagged == 0 {
-        report.note(format!("  ✓ no island ops"));
+        report.note("  ✓ no island ops".to_string());
     }
     flagged
 }

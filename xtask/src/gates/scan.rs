@@ -389,7 +389,9 @@ pub struct Rule<'r> {
     /// Repository-relative roots the rule covers. A root that does not exist is
     /// fatal, because a rule scanning nothing reports success forever.
     pub roots: &'r [&'r str],
-    /// Paths inside the scope the rule does not cover, such as test trees.
+    /// Paths inside the scope the rule does not cover, such as test trees. A skip
+    /// that leaves nothing behind is fatal for the same reason a missing root is:
+    /// the rule scans no file and reports success forever.
     pub skip: &'r dyn Fn(&Path) -> bool,
     /// What a matching line looks like.
     pub line: &'r dyn Fn(&str) -> bool,
@@ -425,11 +427,22 @@ pub struct Rule<'r> {
 pub fn ratchet(tree: &Tree, rule: &Rule<'_>) -> Result<crate::gate::Report, GateError> {
     use crate::gate::{Finding, Report};
 
-    let files: Vec<PathBuf> = tree
-        .rust(rule.roots)?
+    let in_scope = tree.rust(rule.roots)?;
+    let in_scope_count = in_scope.len();
+    let files: Vec<PathBuf> = in_scope
         .into_iter()
         .filter(|path| !(rule.skip)(path))
         .collect();
+    if files.is_empty() {
+        return Err(GateError::new(
+            format!(
+                "the rule under {} skips all {in_scope_count} file(s) in scope",
+                rule.roots.join(", ")
+            ),
+            "narrow the skip predicate or move the roots to where the subject now lives; a rule \
+             that scans no file reports success forever",
+        ));
+    }
     let mut hits = tree.hits(&files, |line| (rule.line)(line))?;
     if let Some(predicate) = rule.statement {
         hits = retain_by_statement(tree, hits, predicate)?;
@@ -1046,6 +1059,49 @@ mod tests {
             lines,
             vec![Some(7), Some(7)],
             "only the chain without a bound counts"
+        );
+    }
+
+    /// WHY: a missing root was already fatal because a rule scanning nothing
+    /// reports success forever, and a skip predicate that excludes every file in
+    /// scope produces the same empty scan with an existing root. That is how a
+    /// rule survives the directory it guards being renamed under the exemption:
+    /// the root still exists, every file now matches the skip, and the pinned
+    /// count stays at zero. Both directions are proved on the same fixture.
+    ///
+    /// What this does not catch: a skip that leaves one file whose subject moved
+    /// into the files it excludes.
+    #[test]
+    fn a_rule_that_skips_every_file_in_scope_is_fatal() {
+        let (_directory, root) = crate::gates::fixture_checkout::checkout(&[(
+            "src/read.rs",
+            "fn unbounded(file: &mut File, bytes: &mut Vec<u8>) {\n    file.read_to_end(bytes);\n}\n",
+        )]);
+        let tree = Tree::open(&root).expect("fixture tree");
+        let rule = |skip: &'static dyn Fn(&Path) -> bool| Rule {
+            roots: &["src"],
+            skip,
+            line: &|line| line.contains("read_to_end"),
+            reviewed: &[],
+            reviewed_line: None,
+            statement: None,
+            message: "unbounded read",
+            fix: "cap the read",
+            unreviewed_message: "unbounded read nobody signed off",
+            unreviewed_fix: "cap the read",
+        };
+
+        let error = ratchet(&tree, &rule(&|_| true)).expect_err("an empty scan is fatal");
+        assert_eq!(
+            error.message, "the rule under src skips all 1 file(s) in scope",
+            "the error names the scope and how many files the skip removed"
+        );
+
+        let report = ratchet(&tree, &rule(&|_| false)).expect("one file left in scope");
+        assert_eq!(
+            report.findings.len(),
+            2,
+            "the same rule reports the occurrence once the skip stops covering it"
         );
     }
 }
