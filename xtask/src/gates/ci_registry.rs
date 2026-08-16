@@ -661,6 +661,7 @@ pub fn findings(
 fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> Vec<Finding> {
     let mut findings = Vec::new();
     let files = workflow_files(root);
+    let runs = derived_workflows(&workflow_names(root), &derived_subsets());
     let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
     for row in &registry.workflow {
         *seen.entry(row.path.as_str()).or_default() += 1;
@@ -753,8 +754,15 @@ fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> V
                 }
             }
             SUPERSEDED => {
-                if !files.contains_key(row.superseded_by.as_str()) {
-                    findings.push(Finding::in_file(
+                let successor = files.get(row.superseded_by.as_str()).copied();
+                let file = row
+                    .superseded_by
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or_default()
+                    .to_string();
+                match successor {
+                    None => findings.push(Finding::in_file(
                         REGISTRY,
                         format!(
                             "`{}` is superseded by `{}`, which the checkout does not carry",
@@ -764,13 +772,49 @@ fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> V
                             "name the workflow that runs its checks, or declare it \
                              `{UNPROTECTED}` with the class nothing covers"
                         ),
-                    ));
+                    )),
+                    Some(LIVE) => {}
+                    Some(state) => findings.push(Finding::in_file(
+                        REGISTRY,
+                        format!(
+                            "`{}` is superseded by `{}`, which is `{state}` and runs nothing",
+                            row.path, row.superseded_by
+                        ),
+                        format!(
+                            "coverage terminates at a lane CI runs today; name a `{LIVE}` \
+                             workflow, or declare it `{UNPROTECTED}` with the class nothing \
+                             covers"
+                        ),
+                    )),
                 }
-                if !row.gate.is_empty() && !gate_names.contains(&row.gate.as_str()) {
+                if row.gate.is_empty() {
+                    findings.push(Finding::in_file(
+                        REGISTRY,
+                        format!("`{}` names no gate that carries its checks", row.path),
+                        format!(
+                            "name the registered gate the successor runs, or declare the lane \
+                             `{UNPROTECTED}` with the class nothing covers"
+                        ),
+                    ));
+                } else if !gate_names.contains(&row.gate.as_str()) {
                     findings.push(Finding::in_file(
                         REGISTRY,
                         format!("`{}` names gate `{}`, which is not registered", row.path, row.gate),
                         "name the gate that carries the checks, or leave the field empty",
+                    ));
+                } else if successor == Some(LIVE)
+                    && !runs
+                        .get(row.gate.as_str())
+                        .is_some_and(|workflows| workflows.contains(&file))
+                {
+                    findings.push(Finding::in_file(
+                        REGISTRY,
+                        format!(
+                            "`{}` says gate `{}` runs in `{}`, and that workflow does not run it",
+                            row.path, row.gate, row.superseded_by
+                        ),
+                        "the steps decide; name the workflow whose steps run the gate, or run \
+                         the gate from the one named here",
                     ));
                 }
             }
@@ -870,7 +914,21 @@ fn write(root: &Path) -> Result<Report, GateError> {
     let workflows = derived_workflows(&names, &subsets);
     let externals = derived_externals(&names);
     let files = workflow_files(root);
-    let recorded = load(root).map(|registry| registry.workflow).unwrap_or_default();
+    let recorded = match load(root) {
+        Ok(registry) => registry.workflow,
+        Err(_) if !registry_path(root).exists() => Vec::new(),
+        Err(error) => {
+            return Err(GateError::new(
+                format!(
+                    "{REGISTRY} carries the pause and retirement reasons and cannot be read, so \
+                     a rewrite would drop them: {}",
+                    error.message
+                ),
+                "repair the file, or delete it to regenerate a declaration that states no reason"
+                    .to_string(),
+            ));
+        }
+    };
     let gates = subcommands::registry();
     let gate_names: Vec<&str> = gates.iter().map(|gate| gate.name()).collect();
     let text = render(&gate_names, &subsets, &workflows, &externals, &recorded, &files);
@@ -1346,21 +1404,64 @@ mod tests {
         assert!(written.contains(&format!("path = \"{path}\"")), "{written}");
     }
 
+    /// WHY: the reasons a lane is parked or retired exist only in the committed
+    /// declaration; the generator derives everything else. Rewriting over a file
+    /// that failed to parse replaces every reason with an empty field and reads
+    /// as a clean regeneration, so a rewrite reads the file first and refuses
+    /// when it is present and unreadable. An absent file states nothing, so the
+    /// first write is allowed.
+    #[test]
+    fn a_rewrite_refuses_to_drop_the_reasons_it_cannot_read() {
+        let root = std::env::temp_dir().join(format!("vyre-ci-rewrite-{}", std::process::id()));
+        fs::create_dir_all(root.join(WORKFLOWS)).expect("the fixture tree is created");
+        fs::create_dir_all(root.join(XTASK)).expect("the xtask directory is created");
+        fs::write(root.join(WORKFLOWS).join("gates.yml"), "name: gates\n")
+            .expect("the workflow is written");
+
+        write(&root).expect("an absent declaration is written from the checkout");
+        let generated = fs::read_to_string(registry_path(&root)).expect("the file is written");
+        fs::write(registry_path(&root), "schema_version = 1\nworkflow = 3\n")
+            .expect("the broken declaration is written");
+        let refused = write(&root).expect_err("an unreadable declaration is not rewritten");
+        let after = fs::read_to_string(registry_path(&root)).expect("the file is still there");
+        fs::remove_dir_all(&root).ok();
+
+        assert!(generated.contains("gates.yml"), "{generated}");
+        assert!(refused.message.contains("cannot be read"), "{refused:?}");
+        assert_eq!(after, "schema_version = 1\nworkflow = 3\n");
+    }
+
     /// WHY: the three ways a lane can end are the three a row may declare, and
     /// each carries the fact that makes it readable. A retirement that names a
     /// successor nobody carries, or an uncovered class nobody states, records
-    /// nothing while reading as a decision.
+    /// nothing while reading as a decision. Coverage also has to terminate: a
+    /// row whose successor is itself parked, or whose successor runs some other
+    /// gate, reads as covered while nothing performs the checks, and the
+    /// committed declaration retired the randomized-order lane into another
+    /// paused lane exactly that way.
     #[test]
     fn a_retirement_states_where_the_checks_went() {
         let root = std::env::temp_dir().join(format!("vyre-ci-retired-{}", std::process::id()));
         fs::create_dir_all(root.join(WORKFLOWS)).expect("the fixture tree is created");
-        fs::write(root.join(WORKFLOWS).join("gates.yml"), "name: gates\n")
-            .expect("the workflow is written");
-        let mut declaration = registry(Vec::new());
-        declaration
-            .workflow
-            .push(workflow_row(&format!("{WORKFLOWS}/gates.yml"), LIVE));
+        fs::create_dir_all(root.join(PAUSED)).expect("the parked directory is created");
+        fs::write(
+            root.join(WORKFLOWS).join("gates.yml"),
+            "jobs:\n  run:\n    steps:\n      - run: ./cargo_full run -p xtask --bin xtask -- catalog\n",
+        )
+        .expect("the workflow is written");
+        fs::write(root.join(PAUSED).join("parked.yml"), "name: parked\n")
+            .expect("the parked workflow is written");
+        let live = || workflow_row(&format!("{WORKFLOWS}/gates.yml"), LIVE);
+        let parked = || {
+            let mut row = workflow_row(&format!("{PAUSED}/parked.yml"), PAUSED_STATE);
+            row.reason = "the toolchain it needs fails to install".to_string();
+            row.returns_when = "the install is fixed".to_string();
+            row
+        };
 
+        let mut declaration = registry(Vec::new());
+        declaration.workflow.push(live());
+        declaration.workflow.push(parked());
         let mut superseded = workflow_row(&format!("{WORKFLOWS}/catalog.yml"), SUPERSEDED);
         superseded.reason = "the gate registry runs the catalog check".to_string();
         superseded.superseded_by = format!("{WORKFLOWS}/departed.yml");
@@ -1375,10 +1476,38 @@ mod tests {
         assert!(found.contains("names gate `not-a-gate`"), "{found}");
         assert!(found.contains("records no uncovered class"), "{found}");
 
+        let mut into_a_parked_lane = registry(Vec::new());
+        into_a_parked_lane.workflow.push(live());
+        into_a_parked_lane.workflow.push(parked());
+        let mut laundered = workflow_row(&format!("{WORKFLOWS}/random-order.yml"), SUPERSEDED);
+        laundered.reason = "the other randomized-order lane carries it".to_string();
+        laundered.superseded_by = format!("{PAUSED}/parked.yml");
+        laundered.gate = "catalog".to_string();
+        into_a_parked_lane.workflow.push(laundered);
+        let dead_end = messages(&workflow_findings(&root, &into_a_parked_lane, &["catalog"]));
+        assert!(
+            dead_end.contains("is `paused` and runs nothing"),
+            "{dead_end}"
+        );
+
+        let mut wrong_lane = registry(Vec::new());
+        wrong_lane.workflow.push(live());
+        wrong_lane.workflow.push(parked());
+        let mut elsewhere = workflow_row(&format!("{WORKFLOWS}/catalog.yml"), SUPERSEDED);
+        elsewhere.reason = "the gate registry runs the catalog check".to_string();
+        elsewhere.superseded_by = format!("{WORKFLOWS}/gates.yml");
+        elsewhere.gate = "docs-check".to_string();
+        wrong_lane.workflow.push(elsewhere);
+        let unrun = messages(&workflow_findings(
+            &root,
+            &wrong_lane,
+            &["catalog", "docs-check"],
+        ));
+        assert!(unrun.contains("and that workflow does not run it"), "{unrun}");
+
         let mut declaration = registry(Vec::new());
-        declaration
-            .workflow
-            .push(workflow_row(&format!("{WORKFLOWS}/gates.yml"), LIVE));
+        declaration.workflow.push(live());
+        declaration.workflow.push(parked());
         let mut superseded = workflow_row(&format!("{WORKFLOWS}/catalog.yml"), SUPERSEDED);
         superseded.reason = "the gate registry runs the catalog check".to_string();
         superseded.superseded_by = format!("{WORKFLOWS}/gates.yml");
@@ -1444,18 +1573,40 @@ mod tests {
         }
     }
 
-    /// WHY: a workflow explains itself in YAML comments, and prose that ends a
-    /// sentence with a script name invokes nothing. Reading a comment as a step
-    /// makes the gate fail on documentation.
+    /// WHY: a reference is read out of a shell command, and the same file
+    /// explains itself in YAML comments. Prose that ends a sentence with a
+    /// script name invokes nothing, so reading it as a reference makes the gate
+    /// fail on documentation. A quoted path, a nested path, a trailing
+    /// semicolon and a glob are all forms a step is written in, and the reader
+    /// takes the command even when a comment follows it on the same line.
     #[test]
     fn a_reference_comes_from_a_command_not_from_prose() {
         assert_eq!(
             referenced_script("        run: bash scripts/check_feature_msrv.sh"),
             Some("check_feature_msrv.sh")
         );
+        assert_eq!(
+            referenced_script("        run: bash scripts/lib/cargo_runner.sh --strict"),
+            Some("lib/cargo_runner.sh")
+        );
+        assert_eq!(
+            referenced_script("        run: bash \"scripts/check_public_api.sh\";"),
+            Some("check_public_api.sh")
+        );
+        assert_eq!(
+            referenced_script("        run: bash scripts/check_*.sh"),
+            Some("check_*.sh")
+        );
+        assert_eq!(
+            referenced_script("        run: bash scripts/gate.sh # see scripts/other.sh."),
+            Some("gate.sh")
+        );
+        assert_eq!(referenced_script("      # all on scripts/cargo_runner.sh."), None);
         assert_eq!(referenced_script("      # see scripts/check_feature_msrv.sh"), None);
+        assert_eq!(referenced_script("        run: cargo test"), None);
         assert_eq!(token("dep-drift --strict"), "dep-drift");
         assert_eq!(token("--nocapture"), "--nocapture");
+        assert_eq!(token(""), "");
     }
 
     /// WHY: the derivation is what makes every column checkable rather than

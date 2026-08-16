@@ -773,18 +773,62 @@ fn run_findings(
 /// `scripts/` keeps its shared shell functions and its TOML reader one level
 /// down, in `scripts/lib`. A single-level read skipped them, so a cargo
 /// invocation written in a helper every script sources sat outside the gate.
-fn read_steps(root: &Path, directory: &str, extensions: &[&str]) -> Vec<Step> {
+fn read_steps(root: &Path, directory: &str, extensions: &[&str]) -> Vec<Scanned> {
     let mut files = Vec::new();
     collect_step_files(&root.join(directory), directory, extensions, &mut files);
     files.sort();
-    let mut steps = Vec::new();
+    let mut scanned = Vec::new();
     for (origin, path) in files {
-        let Ok(text) = std::fs::read_to_string(&path) else {
-            continue;
-        };
-        steps.extend(self::steps(&origin, &text));
+        let text = std::fs::read_to_string(&path).ok();
+        let steps = text
+            .as_deref()
+            .map(|text| self::steps(&origin, text))
+            .unwrap_or_default();
+        scanned.push(Scanned {
+            origin,
+            text,
+            steps,
+        });
     }
-    steps
+    scanned
+}
+
+/// One file the step reader opened, and what it took from it.
+struct Scanned {
+    origin: String,
+    /// The file text, or `None` when the checkout carries the file and it
+    /// could not be read.
+    text: Option<String>,
+    steps: Vec<Step>,
+}
+
+/// What a scan of one source directory failed to read.
+///
+/// A derivation that silently yields nothing is the same defect as no gate.
+/// Two shapes produce that: a file the reader cannot open, and a directory the
+/// checkout carries that the walk reads no file from. Both leave commands
+/// unchecked while the gate reports a clean count.
+fn scan_findings(directory: &str, present: bool, scanned: &[Scanned]) -> Vec<Finding> {
+    let mut findings: Vec<Finding> = scanned
+        .iter()
+        .filter(|file| file.text.is_none())
+        .map(|file| {
+            Finding::in_file(
+                file.origin.clone(),
+                "this file cannot be read, so every command it runs is unchecked",
+                "repair the file, or delete it",
+            )
+        })
+        .collect();
+    if present && scanned.is_empty() {
+        findings.push(Finding::in_file(
+            directory.to_string(),
+            "the checkout carries this directory and the step reader read no file in it",
+            "the walk is broken, or the extensions this gate reads no longer match what the \
+             directory holds",
+        ));
+    }
+    findings
 }
 
 /// Every file under `directory` the caller reads, paired with the path a
@@ -843,29 +887,34 @@ impl Gate for CiSteps {
         let mut report = Report::clean();
         let mut selectors = 0;
         let mut steps = 0;
-        let mut files = BTreeSet::new();
+        let mut files = 0;
         for (directory, extensions) in SOURCES {
-            for step in read_steps(&ctx.root, directory, extensions) {
-                selectors += step.packages.len() + step.targets.len() + step.features.len();
-                steps += 1;
-                files.insert(step.origin.clone());
-                for finding in findings(&step, &packages) {
-                    if *directory == PAUSED {
-                        report.find(Finding::at(
-                            step.origin.clone(),
-                            step.line,
-                            format!("{} while the workflow is paused", finding.message),
-                            "a paused workflow that cannot run is a deletion nobody performed; delete it, or repair the step",
-                        ));
-                    } else {
-                        report.find(finding);
+            let scan = read_steps(&ctx.root, directory, extensions);
+            for finding in scan_findings(directory, ctx.root.join(directory).is_dir(), &scan) {
+                report.find(finding);
+            }
+            for scanned in &scan {
+                files += 1;
+                for step in &scanned.steps {
+                    selectors += step.packages.len() + step.targets.len() + step.features.len();
+                    steps += 1;
+                    for finding in findings(step, &packages) {
+                        if *directory == PAUSED {
+                            report.find(Finding::at(
+                                step.origin.clone(),
+                                step.line,
+                                format!("{} while the workflow is paused", finding.message),
+                                "a paused workflow that cannot run is a deletion nobody performed; delete it, or repair the step",
+                            ));
+                        } else {
+                            report.find(finding);
+                        }
                     }
                 }
             }
         }
         report.note(format!(
-            "{selectors} selector(s) across {steps} command(s) in {} file(s), against {} workspace member(s)",
-            files.len(),
+            "{selectors} selector(s) across {steps} command(s) in {files} file(s), against {} workspace member(s)",
             packages.len()
         ));
         Ok(report)
@@ -1150,6 +1199,38 @@ mod tests {
         );
     }
 
+    /// WHY: the count this gate prints is only worth reading if a scan that
+    /// takes nothing fails. A file the reader cannot open leaves every command
+    /// in it unchecked, and a directory the checkout carries that the walk
+    /// reads no file from is the whole surface silently uncovered, which is the
+    /// failure mode of a derived check that yields nothing.
+    #[test]
+    fn a_scan_that_reads_nothing_is_reported() {
+        let unreadable = vec![Scanned {
+            origin: ".github/workflows/ci.yml".to_string(),
+            text: None,
+            steps: Vec::new(),
+        }];
+        let found = scan_findings(WORKFLOWS, true, &unreadable);
+        assert!(messages(&found).contains("cannot be read"), "{}", messages(&found));
+
+        let empty = scan_findings(WORKFLOWS, true, &[]);
+        assert!(
+            messages(&empty).contains("read no file in it"),
+            "{}",
+            messages(&empty)
+        );
+
+        assert!(scan_findings(PAUSED, false, &[]).is_empty());
+
+        let read = vec![Scanned {
+            origin: ".github/workflows/ci.yml".to_string(),
+            text: Some("      - run: cargo test -p vyre\n".to_string()),
+            steps: vec![read_command("ci.yml", 1, "cargo test -p vyre").expect("a command")],
+        }];
+        assert!(scan_findings(WORKFLOWS, true, &read).is_empty());
+    }
+
     /// WHY: prose about cargo is not a call to it. A comment naming a failure
     /// mode, and a sentence with the word cargo in it, must read as no command
     /// at all, or the gate fails on documentation.
@@ -1200,8 +1281,12 @@ mod tests {
         let resolved = packages(&tree).expect("the manifests parse");
         let mut found = Vec::new();
         for (directory, extensions) in SOURCES {
-            for step in read_steps(&root, directory, extensions) {
-                found.extend(findings(&step, &resolved));
+            let scan = read_steps(&root, directory, extensions);
+            found.extend(scan_findings(directory, root.join(directory).is_dir(), &scan));
+            for scanned in &scan {
+                for step in &scanned.steps {
+                    found.extend(findings(step, &resolved));
+                }
             }
         }
         assert!(found.is_empty(), "{}", messages(&found));
