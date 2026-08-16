@@ -50,11 +50,12 @@
 //! # Why it fails by default
 //!
 //! [`WAIVERS`] is a closed roster: a reported site absent from it fails, and a
-//! roster entry that matches nothing fails as stale. So a new hand-written descent
-//! fails without anyone remembering this file exists, and a descent that is fixed
-//! ledger, not a suppression list: each entry names the subsystem that owns the
-//! file, as `docs/CRATE_OWNERSHIP.toml` declares it, because only that subsystem
-//! converts the file.
+//! roster entry that matches nothing fails as stale. So a new hand-written
+//! descent fails without anyone remembering this file exists, and a descent
+//! that is converted onto an owner fails until its row is deleted. The roster
+//! is a ledger, not a suppression list: each entry names the subsystem that
+//! owns the file, as `docs/CRATE_OWNERSHIP.toml` declares it, because only that
+//! subsystem can convert the descent it waives.
 //!
 //! # What it does not catch
 //!

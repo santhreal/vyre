@@ -151,7 +151,7 @@ fn cfg_test_spans_detailed(text: &str) -> Vec<CfgTestSpan> {
             break;
         };
         let predicate = &text[predicate_start + 1..predicate_end];
-        if !mentions_test(predicate) {
+        if !mentions_test(predicate) || !compiles_with_test(predicate) {
             search = predicate_end + 1;
             continue;
         }
@@ -169,6 +169,47 @@ fn cfg_test_spans_detailed(text: &str) -> Vec<CfgTestSpan> {
         search = item_end;
     }
     spans
+}
+
+/// True when some configuration with `test` on compiles the item.
+///
+/// `#[cfg(not(test))]` names `test` and is the opposite of a test gate: it
+/// compiles only into a build without `test`, so its item is production code
+/// and a scan of production text has to keep reading it. Atoms other than
+/// `test` are free: a `feature` may be on or off, so a predicate naming one is
+/// satisfiable unless `test` itself forbids it.
+fn compiles_with_test(predicate: &str) -> bool {
+    let predicate = predicate.trim();
+    if let Some(rest) = predicate.strip_prefix("all(") {
+        return arguments(rest).iter().all(|part| compiles_with_test(part));
+    }
+    if let Some(rest) = predicate.strip_prefix("any(") {
+        let parts = arguments(rest);
+        return parts.is_empty() || parts.iter().any(|part| compiles_with_test(part));
+    }
+    if let Some(rest) = predicate.strip_prefix("not(") {
+        return arguments(rest).iter().all(|part| compiles_without_test(part));
+    }
+    true
+}
+
+/// True when some configuration with `test` on leaves the predicate false.
+///
+/// The dual of [`compiles_with_test`], for reading a `not(..)`. `test` itself
+/// is on, so it cannot be false; every other atom can be.
+fn compiles_without_test(predicate: &str) -> bool {
+    let predicate = predicate.trim();
+    if let Some(rest) = predicate.strip_prefix("all(") {
+        return arguments(rest).iter().any(|part| compiles_without_test(part));
+    }
+    if let Some(rest) = predicate.strip_prefix("any(") {
+        let parts = arguments(rest);
+        return parts.is_empty() || parts.iter().all(|part| compiles_without_test(part));
+    }
+    if let Some(rest) = predicate.strip_prefix("not(") {
+        return arguments(rest).iter().all(|part| compiles_with_test(part));
+    }
+    predicate != "test"
 }
 
 /// True when every configuration the predicate admits has `test` on.
@@ -385,15 +426,29 @@ struct InlineModule<'a> {
 /// a gate fixture string is text, and a phantom block spanning a real
 /// declaration prefixes it with a module that does not exist, which drops the
 /// file from the set with nothing reporting it.
+///
+/// Whitespace and comments between the keyword, the name and the brace are
+/// skipped rather than required to be one space, so `mod\nname {` and
+/// `mod name /* comment */ {` are the same block to the compiler and to this
+/// reader. A spelling this missed resolved a declaration inside the block
+/// against the file's own directory, and the file it named exists nowhere.
 fn inline_module_blocks(text: &str) -> Vec<InlineModule<'_>> {
     let mut blocks = Vec::new();
     let mut offsets = code_offsets(text).peekable();
     while let Some(keyword) = offsets.next() {
-        if !text[keyword..].starts_with("mod ") || !is_keyword_start(text, keyword) {
+        let Some(after_keyword) = text[keyword..]
+            .strip_prefix("mod")
+            .map(|rest| text.len() - rest.len())
+        else {
+            continue;
+        };
+        if !is_keyword_start(text, keyword) || !ends_word(text, after_keyword) {
             continue;
         }
-        let after_keyword = keyword + "mod ".len();
-        let rest = &text[after_keyword..];
+        let Some(name_start) = next_code_offset(text, after_keyword) else {
+            continue;
+        };
+        let rest = &text[name_start..];
         let name_len = rest
             .find(|c: char| !c.is_alphanumeric() && c != '_')
             .unwrap_or(rest.len());
@@ -401,12 +456,12 @@ fn inline_module_blocks(text: &str) -> Vec<InlineModule<'_>> {
         if name.is_empty() {
             continue;
         }
-        let after = &text[after_keyword + name_len..];
-        let brace = after.len() - after.trim_start().len();
-        if !after[brace..].starts_with('{') {
+        let Some(open) = next_code_offset(text, name_start + name_len) else {
+            continue;
+        };
+        if !text[open..].starts_with('{') {
             continue;
         }
-        let open = after_keyword + name_len + brace;
         let Some(close) = match_delimited(text, open, b'{', b'}') else {
             continue;
         };
@@ -420,6 +475,32 @@ fn inline_module_blocks(text: &str) -> Vec<InlineModule<'_>> {
         }
     }
     blocks
+}
+
+/// First byte past `from` that holds code, skipping whitespace, comments and
+/// literals.
+fn next_code_offset(text: &str, from: usize) -> Option<usize> {
+    let bytes = text.as_bytes();
+    let mut index = from;
+    while index < bytes.len() {
+        if let Some(span) = opaque_span(text, index) {
+            index += span.max(1);
+            continue;
+        }
+        if !bytes[index].is_ascii_whitespace() {
+            return Some(index);
+        }
+        index += 1;
+    }
+    None
+}
+
+/// True when the word ending at `index` is not continued by another word byte.
+fn ends_word(text: &str, index: usize) -> bool {
+    text[index..]
+        .chars()
+        .next()
+        .is_none_or(|c| !c.is_alphanumeric() && c != '_')
 }
 
 /// Names of the inline modules holding `offset`, outermost first.

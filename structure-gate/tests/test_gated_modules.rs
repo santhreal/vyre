@@ -147,6 +147,44 @@ fn a_quoted_inline_module_does_not_move_a_declaration() {
     );
 }
 
+/// A block whose keyword, name and brace are separated by a newline or a
+/// comment is the same block to the compiler.
+///
+/// A reader that demands the literal `mod ` followed by one identifier and then
+/// only whitespace records no block for `mod\nouter {`, so the declaration
+/// inside it resolves against the file's own directory. The path it names holds
+/// no file, the real one matches nothing, and the module keeps counting as
+/// production code.
+#[test]
+fn a_block_spelled_across_a_line_or_a_comment_still_holds_its_declaration() {
+    for (label, header) in [
+        ("newline", "pub mod\nouter {\n"),
+        ("comment", "pub mod outer /* named here */ {\n"),
+        ("two spaces", "pub mod  outer {\n"),
+    ] {
+        let tree = tempfile::tempdir().expect("Fix: the fixture root must be creatable.");
+        let source = tree.path().join("demo/src");
+        std::fs::create_dir_all(source.join("outer")).expect("Fix: the tree must be creatable.");
+        std::fs::write(
+            source.join("lib.rs"),
+            format!("{header}    #[cfg(test)]\n    mod checks;\n}}\n"),
+        )
+        .expect("Fix: the fixture crate root must be writable.");
+        std::fs::write(source.join("outer/checks.rs"), "")
+            .expect("Fix: the fixture module must be writable.");
+        std::fs::write(source.join("checks.rs"), "")
+            .expect("Fix: the decoy module must be writable.");
+
+        let gated = test_gated_module_files(tree.path());
+
+        assert_eq!(
+            gated.into_iter().collect::<Vec<_>>(),
+            vec!["demo/src/outer/checks.rs".to_string()],
+            "Fix: the {label} spelling of an inline module must still hold its declaration"
+        );
+    }
+}
+
 /// Which gate spellings the set accepts, on a tree written for the case.
 ///
 /// `#[cfg(test)]` and `#[cfg(all(test, unix))]` name a module no build without
