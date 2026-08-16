@@ -114,9 +114,12 @@ pub fn validate_with_options(
             program,
         ));
 
-    // V131/V132: async copy tag discipline. Reports a tag started while it is
-    // already in flight and a wait with nothing to wait for. Both are relations
-    // between two nodes on a path, which the node walk cannot see.
+    // V131/V132/V133: async copy tag discipline. Reports a tag started while
+    // it is already in flight, a wait with nothing to wait for, and a transfer
+    // left in flight where the invocation ends. All three are relations
+    // between nodes on a path, which the node walk cannot see. The
+    // differential property in `tests` runs this pass on its legacy arm too,
+    // because a pass only one arm runs makes every async program a mismatch.
     report
         .errors
         .extend(crate::validate::async_pipeline::check_async_pipeline(
