@@ -409,7 +409,18 @@ fn estimate_node_allocations(node: &Node, estimate: &mut IrAllocationEstimate) {
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Return
-        | Node::Barrier { .. } => {}
+        | Node::Barrier { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. } => {}
+        Node::TileElementwise { body, .. } => {
+            estimate.add_container::<Node>(body.len());
+            for node in body {
+                estimate_node_allocations(node, estimate);
+            }
+        }
     }
 }
 

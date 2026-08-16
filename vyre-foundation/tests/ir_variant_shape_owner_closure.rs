@@ -72,7 +72,7 @@ use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
 use vyre_foundation::visit::node_map::map_body;
 use vyre_foundation::visit::{
     child_bodies, child_bodies_mut, for_each_expr, node_scalars, node_shape, node_tag,
-    walk_nodes_mut,
+    node_variadic_operands, walk_nodes_mut,
 };
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, assert_samples_match_declared_shape, node_body_slot_samples,
@@ -384,12 +384,13 @@ fn node_scalars_reports_every_operand_the_rewriting_walk_offers() {
         let mut observed = ObserveShallow::default();
         rewrite_walk::rewrite_node(&sample.node, &mut observed);
 
-        let scalars: Vec<Expr> = node_scalars(&sample.node)
+        let mut scalars: Vec<Expr> = node_scalars(&sample.node)
             .operands
             .into_iter()
             .flatten()
             .cloned()
             .collect();
+        scalars.extend(node_variadic_operands(&sample.node).iter().cloned());
 
         assert_eq!(
             scalars,
@@ -601,6 +602,16 @@ const HOOK_NAME_EXCEPTIONS: &[(&str, &str, &str)] = &[
     ("AllGather", "visit_collective", "See AllReduce."),
     ("ReduceScatter", "visit_collective", "See AllReduce."),
     ("Broadcast", "visit_collective", "See AllReduce."),
+    (
+        "TileLoad",
+        "visit_tile",
+        "All six tile variants carry the same dispatch shape and fold into one hook.",
+    ),
+    ("TileStore", "visit_tile", "See TileLoad."),
+    ("TileMatmul", "visit_tile", "See TileLoad."),
+    ("TileReduce", "visit_tile", "See TileLoad."),
+    ("TileElementwise", "visit_tile", "See TileLoad."),
+    ("TileDecl", "visit_tile", "See TileLoad."),
     (
         "Opaque",
         "visit_opaque_node",

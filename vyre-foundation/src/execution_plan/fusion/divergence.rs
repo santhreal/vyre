@@ -45,7 +45,15 @@ pub(super) fn has_divergent_invocation_gated_store(
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => false,
+        Node::TileElementwise { body, .. } => body
+            .iter()
+            .any(|n| has_divergent_invocation_gated_store(n, inside_invocation_gate)),
     }
 }
 
@@ -143,7 +151,15 @@ fn node_has_launch_geometry_dependent_write(
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => false,
+        Node::TileElementwise { body, .. } => {
+            nodes_have_launch_geometry_dependent_write(body, launch_vars, inside_launch_gate)
+        }
     }
 }
 
