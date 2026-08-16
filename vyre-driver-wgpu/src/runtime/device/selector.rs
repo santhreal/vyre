@@ -135,7 +135,7 @@ pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
 ///
 /// Returns `BackendError` when probe-result metadata cannot be reserved.
 pub(crate) fn try_enumerate_adapters() -> Result<Vec<wgpu::AdapterInfo>> {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::new_instance();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
     let mut infos = Vec::new();
     reserve_probe_vec(&mut infos, adapters.len(), "adapter enumeration metadata")?;
@@ -146,7 +146,7 @@ pub(crate) fn try_enumerate_adapters() -> Result<Vec<wgpu::AdapterInfo>> {
 /// Report whether the centralized adapter probe can see at least one real GPU.
 #[must_use]
 pub fn has_real_gpu_adapter() -> bool {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::new_instance();
     instance
         .enumerate_adapters(wgpu::Backends::all())
         .iter()
@@ -163,7 +163,7 @@ pub fn has_real_gpu_adapter() -> bool {
 ///
 /// Returns `BackendError` when the adapter is no longer visible.
 pub fn adapter_for_info(expected: &wgpu::AdapterInfo) -> Result<wgpu::Adapter> {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::new_instance();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
     let mut probed = Vec::new();
     reserve_probe_vec(&mut probed, adapters.len(), "adapter recovery probe report")?;
@@ -206,7 +206,7 @@ fn adapter_info_matches(candidate: &wgpu::AdapterInfo, expected: &wgpu::AdapterI
 /// Build the centralized adapter diagnostic report used by acquisition errors.
 #[must_use]
 pub fn adapter_probe_report() -> AdapterProbeReport {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::new_instance();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
     let mut report = AdapterProbeReport {
         probed: Vec::new(),
@@ -266,7 +266,7 @@ pub fn adapter_probe_report() -> AdapterProbeReport {
 ///
 /// Returns `BackendError` when no adapter matches.
 pub fn select_adapter(criteria: &AdapterCriteria) -> Result<(usize, wgpu::AdapterInfo)> {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::new_instance();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
     for (idx, adapter) in adapters.iter().enumerate() {
         let info = adapter.get_info();
@@ -357,7 +357,7 @@ async fn acquire_gpu_for_adapter_identity(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::new_instance();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
     for adapter in &adapters {
         let info = adapter.get_info();
@@ -406,7 +406,7 @@ pub async fn acquire_gpu_for_adapter(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::new_instance();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
     let adapter = adapters.get(index).ok_or_else(|| BackendError::new(format!(
         "adapter index {index} out of range (saw {} adapters). Fix: call enumerate_adapters() first to see valid indices.",

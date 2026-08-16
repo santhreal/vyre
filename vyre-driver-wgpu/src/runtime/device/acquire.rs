@@ -1,6 +1,7 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, OnceLock};
+use std::ops::Deref;
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::{self, Thread};
 use vyre_driver::BackendError;
@@ -8,6 +9,54 @@ use vyre_driver::BackendError;
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 
 use super::reserve_probe_vec;
+
+/// Excludes concurrent Vulkan loader startup and shutdown across the process.
+///
+/// A `wgpu::Instance` starts the Vulkan loader, and loader startup is not
+/// reentrant. While one thread is inside `vkCreateInstance` negotiating an ICD,
+/// the loader dispatch table is half written, and a second thread entering
+/// `vkEnumerateInstanceExtensionProperties` at that moment calls through a null
+/// function pointer and the process dies with SIGSEGV. `vkDestroyInstance`
+/// rewrites the same loader state, so it is held under the same lock.
+static LOADER_STARTUP: Mutex<()> = Mutex::new(());
+
+fn loader_startup() -> MutexGuard<'static, ()> {
+    LOADER_STARTUP
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+}
+
+/// One wgpu instance, created and destroyed with no other loader work in flight.
+///
+/// The instance stays per acquisition rather than shared. The GLES backend inside
+/// an instance owns an EGL context, an EGL context is current on exactly one
+/// thread, and a second thread reaching the same instance gets `EGL_BAD_ACCESS`.
+/// Serializing the loader transitions is what the fault needs; sharing the
+/// instance is not.
+pub(crate) struct LoaderInstance(Option<wgpu::Instance>);
+
+impl Deref for LoaderInstance {
+    type Target = wgpu::Instance;
+
+    fn deref(&self) -> &wgpu::Instance {
+        self.0
+            .as_ref()
+            .expect("Fix: a LoaderInstance is only empty while it is being dropped")
+    }
+}
+
+impl Drop for LoaderInstance {
+    fn drop(&mut self) {
+        let _startup = loader_startup();
+        drop(self.0.take());
+    }
+}
+
+/// Construct one wgpu instance, with no other loader transition in flight.
+pub(crate) fn new_instance() -> LoaderInstance {
+    let _startup = loader_startup();
+    LoaderInstance(Some(wgpu::Instance::default()))
+}
 
 /// Snapshot of features that were actually enabled when the cached
 /// device was created. Consumed by `WgpuBackend::supports_*` methods
@@ -189,7 +238,7 @@ pub async fn acquire_gpu() -> Result<(
         return super::selector::acquire_gpu_for_adapter(index).await;
     }
 
-    let instance = wgpu::Instance::default();
+    let instance = new_instance();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
     let mut candidates = Vec::new();
     reserve_probe_vec(
