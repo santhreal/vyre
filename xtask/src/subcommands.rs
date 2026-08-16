@@ -187,6 +187,8 @@ pub static SUBSETS: &[Subset] = &[
             "invariant-paths",
             "ci-matrix",
             "ci-required",
+            "ci-registry",
+            "ci-steps",
         ],
     },
 ];

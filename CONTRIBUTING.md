@@ -50,8 +50,18 @@ subset with what it judges. The subsets group gates by what they answer for:
 
 A gate reports findings. `xtask/gate-baselines.toml` pins the count each gate is
 allowed: more findings than the pin fails, fewer is reported so the pin can be
-lowered. The pin only moves down. A gate that owns a generated artifact checks
-it by default and rewrites it only when you pass `--write`.
+lowered. The pin only moves down, and `gates --write-baseline` refuses to record
+a count above the pin already written. A gate that owns a generated artifact
+checks it by default and rewrites it only when you pass `--write`.
+
+`xtask/ci-registry.toml` declares the wiring: which subsets hold each gate,
+which workflows run it, every check CI runs that is not a gate, and every paused
+workflow with the condition that ends the pause. Regenerate it with
+`./cargo_full run -p xtask --bin xtask -- ci-registry --write` after adding a
+gate, a subset or a workflow step. The `ci-registry` gate compares the file
+against the registry, the subsets and the steps in both directions, and
+`ci-steps` resolves every package, test, bench, example, binary and feature a
+step names against the workspace manifests.
 
 Run the smallest gate that owns the contract you changed, then the subset that
 contains it.
