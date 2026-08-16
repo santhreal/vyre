@@ -11,20 +11,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 /// Verifies every optimizer rewrite proof obligation with an SMT solver.
 pub struct VerifyRewriteProofs;
 
-impl Gate for VerifyRewriteProofs {
-    fn name(&self) -> &'static str {
-        "verify-rewrite-proofs"
-    }
-
-    fn help(&self) -> &'static str {
-        "Verify every optimizer rewrite proof fixture"
-    }
-
+impl xtask::gate::GateBehavior for VerifyRewriteProofs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let obligations = vyre_foundation::optimizer::rewrite_proof_registry::shipped_obligations();
         let out_dir = ctx.root.join("target").join("rewrite-proofs");
@@ -42,6 +34,7 @@ impl Gate for VerifyRewriteProofs {
         })?;
 
         let mut report = Report::clean();
+        report.cover_complete("rewrite proof obligations", obligations.len());
         report.note(format!("{} shipped obligation(s)", obligations.len()));
         let mut proven = 0usize;
         for obligation in &obligations {
@@ -53,28 +46,28 @@ impl Gate for VerifyRewriteProofs {
                 )
             })?;
             match verdict(&solver, &script_path)?.as_str() {
-                "unsat" => proven += 1,
-                "sat" => report.find(Finding::new(
-                    format!(
-                        "rewrite `{}` is unsound: z3 found a counter-model",
-                        obligation.rewrite
-                    ),
-                    format!(
-                        "repair the rewrite in vyre-foundation or narrow its guard, then re-run; the counter-model is reproducible with `z3 -smt2 {}`",
-                        script_path.display()
-                    ),
-                )),
-                other => report.find(Finding::new(
-                    format!(
-                        "rewrite `{}` is undischarged: z3 answered `{other}`",
-                        obligation.rewrite
-                    ),
-                    format!(
-                        "strengthen the obligation until z3 decides it, or narrow the rewrite; the script is at {}",
-                        script_path.display()
-                    ),
-                )),
-            }
+            "unsat" => proven += 1,
+            "sat" => report.find(Finding::new(
+                format!(
+                    "rewrite `{}` is unsound: z3 found a counter-model",
+                    obligation.rewrite
+                ),
+                format!(
+                    "repair the rewrite in vyre-foundation or narrow its guard, then re-run; the counter-model is reproducible with `z3 -smt2 {}`",
+                    script_path.display()
+                ),
+            )),
+            other => report.find(Finding::new(
+                format!(
+                    "rewrite `{}` is undischarged: z3 answered `{other}`",
+                    obligation.rewrite
+                ),
+                format!(
+                    "strengthen the obligation until z3 decides it, or narrow the rewrite; the script is at {}",
+                    script_path.display()
+                ),
+            )),
+        }
         }
         report.note(format!("{proven} obligation(s) proven unsat"));
         Ok(report)
@@ -101,4 +94,36 @@ fn solver_path() -> Option<PathBuf> {
     std::env::split_paths(&path)
         .map(|entry| entry.join("z3"))
         .find(|candidate| candidate.is_file())
+}
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn solver_verdicts_are_classified_soundly() {
+        let classify = |verdict: &str| -> (&'static str, Option<String>) {
+            match verdict {
+                "unsat" => ("proven", None),
+                "sat" => (
+                    "unsound",
+                    Some("rewrite is unsound: z3 found a counter-model".to_string()),
+                ),
+                other => (
+                    "undischarged",
+                    Some(format!("rewrite is undischarged: z3 answered `{other}`")),
+                ),
+            }
+        };
+
+        let (status_unsat, finding_unsat) = classify("unsat");
+        assert_eq!(status_unsat, "proven");
+        assert!(finding_unsat.is_none());
+
+        let (status_sat, finding_sat) = classify("sat");
+        assert_eq!(status_sat, "unsound");
+        assert!(finding_sat.unwrap().contains("counter-model"));
+
+        let (status_unknown, finding_unknown) = classify("unknown");
+        assert_eq!(status_unknown, "undischarged");
+        assert!(finding_unknown.unwrap().contains("z3 answered `unknown`"));
+    }
 }

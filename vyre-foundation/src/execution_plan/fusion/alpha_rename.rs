@@ -85,7 +85,7 @@ impl<'a> ArmRenamer<'a> {
     /// wrap, carries no provenance, and lands the arm body in the shared scope.
     ///
     /// A *provenance* `Region` (any other generator, e.g. a primitive's
-    /// `vyre-primitives::label::resolve_family` group) is preserved verbatim:
+    /// `vyre-libs::label::resolve_family` group) is preserved verbatim:
     /// its breadcrumb/label semantics are asserted on downstream
     /// (`null_check_sanitized_by_uses_pg_node_tags_not_frontier`), and its
     /// bindings are genuinely arm-local. The fused program re-acquires one

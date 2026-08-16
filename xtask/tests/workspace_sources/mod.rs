@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use proc_macro2::LineColumn;
-use xtask::gate::{Gate, GateCtx, Report};
+use xtask::gate::{GateBehavior, GateCtx, Report};
 
 /// The checkout root, resolved from the working directory at run time.
 ///
@@ -78,14 +78,17 @@ pub(crate) fn workspace_member_sources(root: &Path) -> Vec<PathBuf> {
 /// The fixture has to be a real checkout: every gate here reads the tree
 /// through `git ls-files`, so a directory of untracked files reads as an empty
 /// workspace and the gate would report nothing at all.
-pub(crate) fn run_gate(gate: &dyn Gate, root: &Path, write: bool) -> Report {
+pub(crate) fn run_gate(name: &str, gate: &'static dyn GateBehavior, root: &Path, write: bool) -> Report {
     let args = if write {
         vec!["--write".to_string()]
     } else {
         Vec::new()
     };
-    gate.run(&GateCtx::new(root.to_path_buf(), args))
-        .unwrap_or_else(|error| panic!("Fix: {} must run: {error:?}", gate.name()))
+    let desc = xtask::gate_metadata::descriptor_by_name(name);
+    let registered = xtask::gate::RegisteredGate::new(desc, gate);
+    registered
+        .run(&GateCtx::new(root.to_path_buf(), args))
+        .unwrap_or_else(|error| panic!("Fix: {name} must run: {error:?}"))
 }
 
 /// Track everything currently in a fixture directory, making it a checkout the

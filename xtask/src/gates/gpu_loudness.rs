@@ -5,7 +5,7 @@
 //! loud abort sits near it, either an acquisition that panics or an assertion
 //! that names the corrective action.
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// Lines above and below a skip site that may carry its loud abort.
@@ -25,18 +25,11 @@ const LOUD: &[&str] = &[
 /// Silent-skip sites in GPU tests.
 pub struct GpuLoudness;
 
-impl Gate for GpuLoudness {
-    fn name(&self) -> &'static str {
-        "gpu-loudness"
-    }
-
-    fn help(&self) -> &'static str {
-        "tests that return early when a device probe fails"
-    }
-
+impl crate::gate::GateBehavior for GpuLoudness {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("gpu source files", tree.all_rust().len());
         for path in tree.all_rust() {
             let text = tree.read(&path)?;
             let masked = scan::mask_literals(&text);

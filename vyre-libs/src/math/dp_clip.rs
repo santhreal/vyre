@@ -33,7 +33,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::dp_clip_per_sample";
+pub const OP_ID: &str = "vyre-libs::math::dp_clip_per_sample";
 
 /// Emit the per-sample clip Program. Each lane handles one element of
 /// one sample.

@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use xtask::gate::{Gate, GateCtx};
+use xtask::gate::{GateBehavior, GateCtx};
 use xtask::gates::public_api::{roster, PublicApiSnapshot};
 use xtask::gates::scan::Tree;
 

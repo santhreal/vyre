@@ -141,7 +141,7 @@ fn owner_paths(
     }
 }
 
-/// `vyre-primitives::graph::toposort` becomes the directory that carries the
+/// `vyre-libs::graph::toposort` becomes the directory that carries the
 /// code today, `vyre-libs/src/graph`.
 ///
 /// Operation ids are frozen, so the id names the crate an operation was minted

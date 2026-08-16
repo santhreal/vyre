@@ -11,7 +11,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::kfac_block_inverse";
+pub const OP_ID: &str = "vyre-libs::math::kfac_block_inverse";
 
 /// Block-diagonal inverse builder.
 ///

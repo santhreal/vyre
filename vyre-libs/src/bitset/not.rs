@@ -5,7 +5,7 @@ use vyre_foundation::ir::{Program, UnOp};
 use crate::bitset::unary_word::bitset_unary_word_program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::not";
+pub const OP_ID: &str = "vyre-libs::bitset::not";
 
 /// Build a Program: `out[w] = !input[w]`.
 ///

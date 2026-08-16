@@ -31,7 +31,7 @@ pub use plan::{
 pub use program::motif;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::motif";
+pub const OP_ID: &str = "vyre-libs::graph::motif";
 /// Canonical binding index for motif scratch hits.
 pub const MOTIF_HITS_BUFFER: u32 = BINDING_PRIMITIVE_START;
 /// Canonical binding index for the public witness output.

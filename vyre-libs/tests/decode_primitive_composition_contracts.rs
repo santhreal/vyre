@@ -24,9 +24,9 @@ use vyre_libs::decode::inflate::inflate_stored_block;
 /// Ids the collapse deleted. A region naming one of these means a second builder
 /// for the same codec came back.
 const COLLAPSED_IDS: &[&str] = &[
-    "vyre-primitives::decode::base64_decode",
-    "vyre-primitives::decode::hex_decode",
-    "vyre-primitives::decode::inflate_stored",
+    "vyre-libs::decode::base64_decode",
+    "vyre-libs::decode::hex_decode",
+    "vyre-libs::decode::inflate_stored",
     "vyre-libs::decode::ziftsieve",
 ];
 

@@ -28,7 +28,7 @@ pub const AND_NODE: u32 = 3;
 pub const OR_NODE: u32 = 4;
 
 /// Op id for the GPU-shaped d-DNNF evaluator.
-pub const OP_ID: &str = "vyre-primitives::graph::ddnnf_evaluate";
+pub const OP_ID: &str = "vyre-libs::graph::ddnnf_evaluate";
 /// One lane per compiled d-DNNF node in a bottom-up evaluation wave.
 pub const DDNNF_EVALUATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

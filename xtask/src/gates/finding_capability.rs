@@ -20,14 +20,15 @@
 //! beside it, and the rule in a shared runner such as
 //! [`crate::gates::scan::ratchet`].
 //!
-//! A definition site is either an `impl Gate for` block whose `name` method
-//! returns the gate name, or an invocation of a macro that generates the impl,
-//! which carries the name as a `name:` literal. Sixteen of the registered gates
-//! are the second shape, so a check that reads only the first reports them as
-//! undefinable, and a check that fires on a correct tree is worse than none.
-//! For a macro site the judged body is the invocation plus the body of the macro
-//! it names, because the rule is split across the two: the invocation supplies
-//! the inspection and the macro supplies the call that settles it.
+//! A definition site is either a `GateBehavior` implementation joined to its
+//! descriptor name through a keyed registration tuple, or an invocation of a
+//! macro that generates the behavior and carries a `name:` literal. Sixteen of
+//! the registered gates use the macro shape, so a check that reads only direct
+//! behavior implementations reports them as undefinable, and a check that fires
+//! on a correct tree is worse than none. For a macro site the judged body is the
+//! invocation plus the body of the macro it names, because the rule is split
+//! across the two: the invocation supplies the inspection and the macro supplies
+//! the call that settles it.
 //!
 //! A gate whose honest output is a note declares that in [`NOTE_ONLY_GATES`]
 //! with the gate that carries the failing form, and a row there whose gate can
@@ -105,7 +106,7 @@ fn verdict_failures(
         let declared = note_only.iter().any(|(gate, _)| gate == name);
         match capability.get(*name) {
             None => failures.push(format!(
-                "gate `{name}` is registered but no definition site under {} names it: no `impl Gate for` block whose `name` method returns it, and no macro invocation carrying `name: \"{name}\"`; the check cannot judge a gate it cannot find",
+                "gate `{name}` is registered but no definition site under {} names it: no behavior definition is paired with its descriptor name, and no macro invocation carries `name: \"{name}\"`; the check cannot judge a gate it cannot find",
                 roots.join(", ")
             )),
             Some(true) if declared => failures.push(format!(
@@ -129,8 +130,8 @@ fn verdict_failures(
 
 /// The `src` directory of every workspace member that can declare a gate.
 ///
-/// A gate implements the `Gate` trait, which this crate owns, so a member that
-/// can declare one is this crate or a member that depends on it. The list is
+/// A gate implements `GateBehavior`, which this crate owns, so a member that can
+/// declare one is this crate or a member that depends on it. The list is
 /// read from the manifests rather than written here: a written list of two
 /// roots reported the sixteen gates declared in the third as undefinable, and a
 /// written list cannot notice a fourth crate.
@@ -187,9 +188,22 @@ fn capability_by_gate(tree: &Tree, roots: &[String]) -> Result<BTreeMap<String, 
         sources.iter().flat_map(|text| functions(text)).collect();
     let macros: Vec<(String, String)> =
         sources.iter().flat_map(|text| macro_bodies(text)).collect();
+    let mut registrations = BTreeMap::new();
+    for (type_name, gate_name) in sources.iter().flat_map(|text| behavior_registrations(text)) {
+        if let Some(previous) = registrations.insert(type_name.clone(), gate_name.clone()) {
+            if previous != gate_name {
+                return Err(GateError::new(
+                    format!(
+                        "gate behavior `{type_name}` is registered as both `{previous}` and `{gate_name}`"
+                    ),
+                    "give every registered descriptor one distinct execution behavior",
+                ));
+            }
+        }
+    }
     let mut verdicts = BTreeMap::new();
     for text in &sources {
-        for (gate, body) in gate_sites(text, &macros) {
+        for (gate, body) in gate_sites(text, &macros, &registrations) {
             let reachable = emits(&body, &functions, 0);
             verdicts.insert(gate, reachable);
         }
@@ -265,47 +279,96 @@ fn is_name_byte(byte: u8) -> bool {
 }
 
 /// Every `(gate name, judged body)` pair the text declares, either shape.
-fn gate_sites(text: &str, macros: &[(String, String)]) -> Vec<(String, String)> {
-    let mut sites = gate_run_bodies(text);
+fn gate_sites(
+    text: &str,
+    macros: &[(String, String)],
+    registrations: &BTreeMap<String, String>,
+) -> Vec<(String, String)> {
+    let mut sites = gate_run_bodies_registered(text, registrations);
     sites.extend(macro_gate_sites(text, macros));
     sites
 }
 
-/// Every `(gate name, run body)` pair an `impl Gate for` block declares.
+/// Every `(gate name, run body)` pair an `impl GateBehavior for` block declares.
 ///
-/// The gate name is read from the `name` method rather than from the type, so
-/// the verdict is keyed by the same string the registry, the baseline and the
-/// workflows use.
+/// Production names come from the behavior registration table. The empty-map
+/// fallback keeps parser unit fixtures independent while a real unregistered
+/// behavior still leaves its authoritative descriptor without a matching site.
 fn gate_run_bodies(text: &str) -> Vec<(String, String)> {
+    gate_run_bodies_registered(text, &BTreeMap::new())
+}
+
+fn gate_run_bodies_registered(
+    text: &str,
+    registrations: &BTreeMap<String, String>,
+) -> Vec<(String, String)> {
     let mut out = Vec::new();
-    let mut from = 0;
-    while let Some(at) = text[from..].find("impl Gate for ") {
-        let start = from + at;
-        let Some(open) = text[start..].find('{').map(|offset| start + offset) else {
-            break;
-        };
-        let block = balanced(text, open);
-        from = open + block.len();
-        let Some(name) = returned_name(block) else {
-            continue;
-        };
-        let Some(run) = block.find("fn run(") else {
-            continue;
-        };
-        let Some(body_open) = block[run..].find('{').map(|offset| run + offset) else {
-            continue;
-        };
-        out.push((name, balanced(block, body_open).to_string()));
+    for marker in [
+        "impl crate::gate::GateBehavior for ",
+        "impl xtask::gate::GateBehavior for ",
+        "impl GateBehavior for ",
+    ] {
+        let mut from = 0;
+        while let Some(at) = text[from..].find(marker) {
+            let start = from + at;
+            let type_start = start + marker.len();
+            let Some(open) = text[start..].find('{').map(|offset| start + offset) else {
+                break;
+            };
+            let type_name = text[type_start..open].trim();
+            let block = balanced(text, open);
+            from = open + block.len();
+            if type_name.contains('$') {
+                continue;
+            }
+            let name = registrations
+                .get(type_name)
+                .cloned()
+                .unwrap_or_else(|| type_to_kebab(type_name));
+            let Some(run) = block.find("fn run(") else {
+                continue;
+            };
+            let Some(body_open) = block[run..].find('{').map(|offset| run + offset) else {
+                continue;
+            };
+            out.push((name, balanced(block, body_open).to_string()));
+        }
     }
     out
+}
+
+/// Map an implementation type to the descriptor name that registers it.
+fn behavior_registrations(text: &str) -> Vec<(String, String)> {
+    let mut registrations = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix("(\"") else {
+            continue;
+        };
+        let Some((name, behavior)) = rest.split_once("\",") else {
+            continue;
+        };
+        let Some(path) = behavior
+            .trim()
+            .strip_prefix('&')
+            .and_then(|path| path.strip_suffix("),"))
+        else {
+            continue;
+        };
+        let Some(type_name) = path.rsplit("::").next() else {
+            continue;
+        };
+        registrations.push((type_name.to_string(), name.to_string()));
+    }
+    registrations
 }
 
 /// Every `(gate name, judged body)` pair a macro invocation declares.
 ///
 /// An invocation is a definition site when it carries a `name:` string literal,
-/// which is how a macro that generates a `Gate` impl receives the registered
-/// name. The judged body is the invocation followed by the body of the macro it
-/// names, so the walk sees both the caller's rule expression and the generated
+/// which is how a macro that generates a `GateBehavior` implementation receives
+/// the registered name. The judged body is the invocation followed by the body
+/// it names, so the walk sees both the caller's rule expression and the generated
 /// `run`.
 fn macro_gate_sites(text: &str, macros: &[(String, String)]) -> Vec<(String, String)> {
     let bytes = text.as_bytes();
@@ -401,15 +464,21 @@ fn field_literal(body: &str, field: &str) -> Option<String> {
     None
 }
 
-/// The string literal a `fn name` method returns.
-fn returned_name(block: &str) -> Option<String> {
-    let at = block.find("fn name(")?;
-    let open = block[at..].find('{').map(|offset| at + offset)?;
-    let body = balanced(block, open);
-    let quote = body.find('"')?;
-    let rest = &body[quote + 1..];
-    let close = rest.find('"')?;
-    Some(rest[..close].to_string())
+/// Convert a PascalCase struct name to kebab-case gate name.
+fn type_to_kebab(type_name: &str) -> String {
+    let raw = type_name.split("::").last().unwrap_or(type_name).trim();
+    let mut kebab = String::new();
+    for (i, ch) in raw.chars().enumerate() {
+        if ch.is_uppercase() {
+            if i > 0 && !kebab.ends_with('-') {
+                kebab.push('-');
+            }
+            kebab.push(ch.to_ascii_lowercase());
+        } else {
+            kebab.push(ch);
+        }
+    }
+    kebab
 }
 
 /// Every `(function name, body)` pair the text declares.
@@ -656,16 +725,14 @@ mod tests {
     #[test]
     fn a_run_that_only_notes_is_separated_from_one_that_finds() {
         let source = r#"
-impl Gate for Reports {
-    fn name(&self) -> &'static str { "reports" }
+impl crate::gate::GateBehavior for Reports {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         report.note("counted 3 files".to_string());
         Ok(report)
     }
 }
-impl Gate for Judges {
-    fn name(&self) -> &'static str { "judges" }
+impl crate::gate::GateBehavior for Judges {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         report.find(Finding::new("wrong", "fix it"));
@@ -685,6 +752,59 @@ impl Gate for Judges {
         );
     }
 
+    /// WHY: behavior type names are implementation details. Descriptor names such as
+    /// `hot-path-reserve` cannot be reconstructed from `ReserveArgument`, so the
+    /// capability census must join through the live registration table.
+    #[test]
+    fn behavior_registration_name_overrides_type_spelling() {
+        let source = r#"
+pub static GATES: &[(&str, &dyn GateBehavior)] = &[
+    ("hot-path-reserve", &hot_path::ReserveArgument),
+];
+impl crate::gate::GateBehavior for ReserveArgument {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(Report::with_findings(vec![Finding::new("wrong", "fix it")]))
+    }
+}
+"#;
+        let registrations: BTreeMap<String, String> =
+            behavior_registrations(source).into_iter().collect();
+        let sites = gate_run_bodies_registered(source, &registrations);
+        assert_eq!(sites.len(), 1);
+        assert_eq!(sites[0].0, "hot-path-reserve");
+    }
+
+    /// WHY: local imported, local qualified, and dependency-qualified trait names
+    /// are the live implementation spellings. Dropping one makes its owner
+    /// package disappear from the capability census.
+    #[test]
+    fn an_imported_behavior_trait_still_declares_a_gate_site() {
+        let source = r#"
+pub static GATES: &[(&str, &dyn GateBehavior)] = &[
+    ("imported-name", &ImportedBehavior),
+    ("dependency-name", &DependencyBehavior),
+];
+impl GateBehavior for ImportedBehavior {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(Report::with_findings(vec![Finding::new("wrong", "fix it")]))
+    }
+}
+impl xtask::gate::GateBehavior for DependencyBehavior {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(Report::with_findings(vec![Finding::new("wrong", "fix it")]))
+    }
+}
+"#;
+        let registrations: BTreeMap<String, String> =
+            behavior_registrations(source).into_iter().collect();
+        let sites = gate_run_bodies_registered(source, &registrations);
+        let names: BTreeSet<String> = sites.into_iter().map(|(name, _)| name).collect();
+        assert_eq!(
+            names,
+            BTreeSet::from(["dependency-name".to_string(), "imported-name".to_string()])
+        );
+    }
+
     /// WHY: a rule one call away from its finding is the common shape, and the
     /// walk has to follow it or every ratchet gate reads as unfailable. A helper
     /// the body does not call must not count, or the check degrades to asking
@@ -692,14 +812,12 @@ impl Gate for Judges {
     #[test]
     fn reachability_follows_a_called_helper_and_stops_at_an_uncalled_one() {
         let source = r#"
-impl Gate for Delegates {
-    fn name(&self) -> &'static str { "delegates" }
+impl crate::gate::GateBehavior for Delegates {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         judge(&tree)
     }
 }
-impl Gate for Strands {
-    fn name(&self) -> &'static str { "strands" }
+impl crate::gate::GateBehavior for Strands {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         Ok(Report::clean())
     }
@@ -731,8 +849,7 @@ fn judge(tree: &Tree) -> Result<Report, GateError> {
     #[test]
     fn a_finding_built_only_inside_a_test_module_does_not_count() {
         let source = r#"
-impl Gate for Reports {
-    fn name(&self) -> &'static str { "reports" }
+impl crate::gate::GateBehavior for Reports {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         Ok(Report::clean())
     }
@@ -781,11 +898,11 @@ mod tests {
     }
 
     /// WHY: sixteen of the registered gates are declared by a macro that
-    /// generates the `Gate` impl, so a check that reads only `impl Gate for`
-    /// blocks reports every one of them as undefinable and fires on a correct
-    /// tree. The verdict has to come from the same walk either way, which means
-    /// the macro body counts as part of the site: the invocation holds the rule
-    /// and the macro holds the call that reports it.
+    /// generates the `GateBehavior` implementation, so a check that reads only
+    /// direct behavior blocks reports every one of them as undefinable and fires
+    /// on a correct tree. The verdict has to come from the same walk either way,
+    /// which means the macro body counts as part of the site: the invocation
+    /// holds the rule and the macro holds the call that reports it.
     ///
     /// The second gate is the guard that matters: a macro body carries the `run`
     /// it generates, and reading that declaration as a call resolves it to some
@@ -799,8 +916,7 @@ mod tests {
 macro_rules! settles {
     ($gate:ident, name: $name:literal, inspect: |$ctx:ident| $rule:expr $(,)?) => {
         pub struct $gate;
-        impl Gate for $gate {
-            fn name(&self) -> &'static str { $name }
+        impl crate::gate::GateBehavior for $gate {
             fn run(&self, $ctx: &GateCtx) -> Result<Report, GateError> {
                 Ok(settle_inspection($ctx, $name, $rule))
             }
@@ -810,8 +926,7 @@ macro_rules! settles {
 macro_rules! reports {
     ($gate:ident, name: $name:literal) => {
         pub struct $gate;
-        impl Gate for $gate {
-            fn name(&self) -> &'static str { $name }
+        impl crate::gate::GateBehavior for $gate {
             fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
                 let mut report = Report::clean();
                 report.note(count(&ctx.root));
@@ -837,7 +952,7 @@ fn inspect(root: &Path) -> Inspection {
         let production = without_test_modules(&without_comments(source));
         let functions = functions(&production);
         let macros = macro_bodies(&production);
-        let verdicts: BTreeMap<String, bool> = gate_sites(&production, &macros)
+        let verdicts: BTreeMap<String, bool> = gate_sites(&production, &macros, &BTreeMap::new())
             .into_iter()
             .map(|(gate, body)| (gate, emits(&body, &functions, 0)))
             .collect();
@@ -870,15 +985,13 @@ fn inspect(root: &Path) -> Inspection {
 /// }
 /// ```
 /*
- * impl Gate for Commented {
- *     fn name(&self) -> &'static str { "commented" }
+ * impl crate::gate::GateBehavior for Commented {
  *     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
  *         Ok(Report::with_findings(vec![Finding::new("wrong", "fix it")]))
  *     }
  * }
  */
-impl Gate for Real {
-    fn name(&self) -> &'static str { "real" }
+impl crate::gate::GateBehavior for Real {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         // Finding::new("wrong", "fix it")
         let quoted = "name: \"quoted\"";
@@ -888,7 +1001,7 @@ impl Gate for Real {
 "#;
         let production = without_test_modules(&without_comments(source));
         let macros = macro_bodies(&production);
-        let names: Vec<String> = gate_sites(&production, &macros)
+        let names: Vec<String> = gate_sites(&production, &macros, &BTreeMap::new())
             .into_iter()
             .map(|(gate, _)| gate)
             .collect();
@@ -898,7 +1011,7 @@ impl Gate for Real {
             vec!["real".to_string()],
             "only the declared gate is a site: not the documented example, not the commented-out impl, not the name in a string"
         );
-        let verdicts: Vec<bool> = gate_sites(&production, &macros)
+        let verdicts: Vec<bool> = gate_sites(&production, &macros, &BTreeMap::new())
             .into_iter()
             .map(|(_, body)| emits(&body, &functions(&production), 0))
             .collect();

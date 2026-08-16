@@ -9,7 +9,7 @@
 //! those comments pointed into was deleted and every pointer became a pointer to
 //! nothing with no gate red to show for it.
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// The manifest of documented claims.
@@ -18,15 +18,7 @@ const MANIFEST: &str = "contracts/doc_claims_manifest.toml";
 /// Documented claims resolve to a phrase in a document and a test that runs.
 pub struct DocClaims;
 
-impl Gate for DocClaims {
-    fn name(&self) -> &'static str {
-        "doc-claims"
-    }
-
-    fn help(&self) -> &'static str {
-        "claims whose document, phrase or proving test is missing"
-    }
-
+impl crate::gate::GateBehavior for DocClaims {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let manifest = tree.read_toml(MANIFEST)?;
@@ -37,6 +29,7 @@ impl Gate for DocClaims {
             .and_then(toml::Value::as_array)
             .map(Vec::as_slice)
             .unwrap_or_default();
+        report.cover_complete("documented claims", claims.len());
         if claims.is_empty() {
             report.find(Finding::in_file(
                 MANIFEST,
@@ -110,19 +103,12 @@ const DOCUMENT_SUFFIX: &str = ".md";
 /// A source comment states its contract instead of naming a document.
 pub struct ContractInSource;
 
-impl Gate for ContractInSource {
-    fn name(&self) -> &'static str {
-        "contract-in-source"
-    }
-
-    fn help(&self) -> &'static str {
-        "comments that defer a contract to a published document instead of stating it"
-    }
-
+impl crate::gate::GateBehavior for ContractInSource {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let sources = tree.all_rust();
         let mut report = Report::clean();
+        report.cover_complete("source contract files", sources.len());
         let mut scanned = 0_usize;
         for path in &sources {
             let text = tree.read(path)?;

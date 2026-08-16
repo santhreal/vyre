@@ -21,7 +21,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::geom::tfn_scalar_mix";
+pub const OP_ID: &str = "vyre-libs::geom::tfn_scalar_mix";
 
 /// Emit `out[i, c_out] = Σ_{c_in} weights[c_out, c_in] · features[i, c_in]`.
 ///

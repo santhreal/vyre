@@ -18,13 +18,13 @@ pub const CRC32_INIT: u32 = 0xFFFF_FFFF;
 pub const CRC32_POLY: u32 = 0xEDB8_8320;
 
 /// Stable Tier 2.5 op id for the CRC-32 serial byte walker.
-pub const CRC32_OP_ID: &str = "vyre-primitives::hash::crc32";
+pub const CRC32_OP_ID: &str = "vyre-libs::hash::crc32";
 
 /// Stable Tier 2.5 op id for parallel CRC-32 chunk summary emission.
-pub const CRC32_CHUNK_OP_ID: &str = "vyre-primitives::hash::crc32_chunk";
+pub const CRC32_CHUNK_OP_ID: &str = "vyre-libs::hash::crc32_chunk";
 
 /// Stable Tier 2.5 op id for pairwise CRC-32 chunk-summary reduction.
-pub const CRC32_PAIR_REDUCE_OP_ID: &str = "vyre-primitives::hash::crc32_pair_reduce";
+pub const CRC32_PAIR_REDUCE_OP_ID: &str = "vyre-libs::hash::crc32_pair_reduce";
 
 static CRC32_TABLE: OnceLock<[u32; 256]> = OnceLock::new();
 

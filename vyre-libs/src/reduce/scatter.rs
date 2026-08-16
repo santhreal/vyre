@@ -34,7 +34,7 @@ use super::indexed_move::{indexed_move_cpu_ref_into, try_indexed_move_cpu_ref_in
 use super::indexed_move::{indexed_move_program, IndexedMoveKind};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::reduce::scatter";
+pub const OP_ID: &str = "vyre-libs::reduce::scatter";
 
 /// Build a Program: `dst[indices[i]] = src[i]` for every `i < count`
 /// where `indices[i] < count`.

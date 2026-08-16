@@ -91,7 +91,7 @@ use crate::math::scallop_persistent::{
 };
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::scallop_join";
+pub const OP_ID: &str = "vyre-libs::math::scallop_join";
 /// One lane per relation cell in the lineage fixpoint.
 pub const SCALLOP_JOIN_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

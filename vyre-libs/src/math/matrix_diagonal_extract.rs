@@ -13,7 +13,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::builder::cooperative::{for_each_index, LANES};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::matrix_diagonal_extract";
+pub const OP_ID: &str = "vyre-libs::math::matrix_diagonal_extract";
 
 /// Emit the walk that copies `matrix[i * n + i]` into `diagonal[i]`.
 ///

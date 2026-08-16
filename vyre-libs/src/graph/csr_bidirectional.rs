@@ -19,7 +19,7 @@ use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;
 use crate::graph::program_graph::ProgramGraphShape;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::csr_bidirectional";
+pub const OP_ID: &str = "vyre-libs::graph::csr_bidirectional";
 /// Canonical dispatch input label for graph node scratch.
 pub const CSR_BIDIRECTIONAL_NODES_BUFFER: &str = "csr_bidirectional nodes";
 /// Canonical dispatch input label for CSR offsets.

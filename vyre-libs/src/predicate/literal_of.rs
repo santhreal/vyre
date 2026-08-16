@@ -13,7 +13,7 @@ use crate::predicate::node_kind;
 use crate::predicate::node_kind_eq::node_kind_eq_with_op_id;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::predicate::literal_of";
+pub const OP_ID: &str = "vyre-libs::predicate::literal_of";
 
 /// Build a Program that emits every node whose kind is Literal.
 #[must_use]

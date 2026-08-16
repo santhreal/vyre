@@ -34,7 +34,7 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::output_arg::read_text_bounded;
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
@@ -158,26 +158,17 @@ impl Page {
 /// on disk.
 pub struct DocsCheck;
 
-impl Gate for DocsCheck {
-    fn name(&self) -> &'static str {
-        "docs-check"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the manifest-backed documentation lifecycle, generated navigation and public links to the tree; --write regenerates the navigation"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for DocsCheck {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let docs = ctx.root.join(DOCS);
         let mut report = Report::clean();
+        report.produced(SUMMARY);
+        report.produced(INDEX);
 
         let Some((owners, pages)) = load_manifest(&ctx.root, &mut report)? else {
             return Ok(report);
         };
+        report.cover_complete("authored documentation pages", pages.len());
         let published = published_pages(&ctx.root, &docs)?;
         for finding in validate(&docs, &owners, &pages, &published) {
             report.find(finding);
@@ -992,6 +983,7 @@ fn read_text(root: &Path, relative: &str) -> Result<String, GateError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::GateBehavior;
 
     use std::path::PathBuf;
 

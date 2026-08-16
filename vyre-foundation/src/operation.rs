@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
+use std::panic::Location;
 use std::sync::LazyLock;
 
 use crate::dialect_lookup::Signature;
@@ -38,6 +39,8 @@ pub struct SemanticOperation {
     pub tolerance: TolerancePolicy,
     /// Optional target-neutral execution geometry requirements.
     pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
+    /// Source file that owns the registration.
+    pub source_file: &'static str,
     /// Optional explicit closed effects.
     pub explicit_effects: Option<OperationEffects>,
     /// Optional explicit closed capabilities.
@@ -325,6 +328,8 @@ pub struct OperationRegistration {
     pub tolerance: TolerancePolicy,
     /// Optional target-neutral execution geometry requirements.
     pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
+    /// Source file that owns the registration.
+    pub source_file: &'static str,
     /// Optional explicit closed effects.
     pub explicit_effects: Option<OperationEffects>,
     /// Optional explicit closed capabilities.
@@ -334,6 +339,7 @@ pub struct OperationRegistration {
 impl OperationRegistration {
     /// Construct a neutral operation registration with exact comparison policy.
     #[must_use]
+    #[track_caller]
     pub const fn new(
         id: &'static str,
         tier: OperationTier,
@@ -353,6 +359,7 @@ impl OperationRegistration {
             laws: &[],
             tolerance: TolerancePolicy::EXACT,
             geometry_requirements: None,
+            source_file: Location::caller().file(),
             explicit_effects: None,
             explicit_capabilities: None,
         }
@@ -360,6 +367,7 @@ impl OperationRegistration {
 
     /// Construct a Category A composition registration.
     #[must_use]
+    #[track_caller]
     pub const fn library(
         id: &'static str,
         build: fn() -> Program,
@@ -375,6 +383,23 @@ impl OperationRegistration {
         )
     }
 
+    /// Construct a Category C registration owned by `vyre-primitives`.
+    #[must_use]
+    #[track_caller]
+    pub const fn primitive(
+        id: &'static str,
+        build: fn() -> Program,
+        test_inputs: Option<OperationFixtures>,
+        expected_output: Option<OperationFixtures>,
+    ) -> Self {
+        Self::new(
+            id,
+            OperationTier::Intrinsic,
+            Some(build),
+            test_inputs,
+            expected_output,
+        )
+    }
     /// Attach an explicit signature.
     #[must_use]
     pub const fn with_signature(mut self, signature: Signature) -> Self {
@@ -393,6 +418,13 @@ impl OperationRegistration {
     #[must_use]
     pub const fn with_laws(mut self, laws: &'static [&'static str]) -> Self {
         self.laws = laws;
+        self
+    }
+
+    /// Attach the source file that owns this registration.
+    #[must_use]
+    pub const fn with_source_file(mut self, source_file: &'static str) -> Self {
+        self.source_file = source_file;
         self
     }
 
@@ -492,6 +524,7 @@ impl From<&'static OperationRegistration> for SemanticOperation {
             laws: registration.laws,
             tolerance: registration.tolerance,
             geometry_requirements: registration.geometry_requirements,
+            source_file: registration.source_file,
             explicit_effects: registration.explicit_effects,
             explicit_capabilities: registration.explicit_capabilities,
         }

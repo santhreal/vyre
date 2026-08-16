@@ -391,7 +391,7 @@ fn ptx_lowers_workgroup_sum_region_to_subgroup_reduction() {
             Node::let_bind("local", Expr::LocalId { axis: 0 }),
             Node::store("scratch", Expr::var("local"), Expr::f32(1.0)),
             Node::Region {
-                generator: "vyre-primitives::reduce::workgroup_sum_f32_child".into(),
+                generator: "vyre-libs::reduce::workgroup_sum_f32_child".into(),
                 source_region: None,
                 body: std::sync::Arc::new(vec![
                     Node::store(

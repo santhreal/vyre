@@ -11,7 +11,7 @@ use super::binary_word::{binary_word_program, BitwiseBinaryOp};
 use vyre_foundation::ir::Program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::and_not";
+pub const OP_ID: &str = "vyre-libs::bitset::and_not";
 
 /// Build a Program: `out[w] = lhs[w] & !rhs[w]`.
 ///

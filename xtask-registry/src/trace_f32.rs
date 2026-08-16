@@ -19,20 +19,12 @@
 use vyre::ir::Program;
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 /// Runs recorded operation fixtures through the reference interpreter.
 pub struct TraceF32;
 
-impl Gate for TraceF32 {
-    fn name(&self) -> &'static str {
-        "trace-f32"
-    }
-
-    fn help(&self) -> &'static str {
-        "Run the recorded test inputs of every registered operation through the reference; --op-id ID narrows to one"
-    }
-
+impl xtask::gate::GateBehavior for TraceF32 {
     fn usage(&self) -> &'static [&'static str] {
         &["--op-id ID narrows the run to one registered operation"]
     }
@@ -43,12 +35,13 @@ impl Gate for TraceF32 {
         if let Some(op_id) = selected {
             if corpus.is_empty() {
                 return Err(GateError::new(
-                    format!("op id `{op_id}` is not registered, or is registered without test inputs"),
-                    "add `test_inputs` to its canonical registration first; this gate then computes the expected outputs",
-                ));
+                format!("op id `{op_id}` is not registered, or is registered without test inputs"),
+                "add `test_inputs` to its canonical registration first; this gate then computes the expected outputs",
+            ));
             }
         }
         let mut report = Report::clean();
+        report.cover_complete("corpus cases", corpus.len());
         let mut traced = 0usize;
         for case in &corpus {
             let mut literal = String::from("Some(|| vec![");
@@ -67,12 +60,12 @@ impl Gate for TraceF32 {
                     Err(error) => {
                         rejected = true;
                         report.find(Finding::new(
-                            format!(
-                                "the reference rejected recorded input set {run_idx} of `{}`: {error}",
-                                case.id
-                            ),
-                            "repair the operation program, or replace the offending recorded input; the reference is the oracle the fixture is measured against",
-                        ));
+                        format!(
+                            "the reference rejected recorded input set {run_idx} of `{}`: {error}",
+                            case.id
+                        ),
+                        "repair the operation program, or replace the offending recorded input; the reference is the oracle the fixture is measured against",
+                    ));
                     }
                 }
             }
@@ -146,4 +139,19 @@ fn corpus(selected: Option<&str>) -> Vec<Case> {
     collect!(vyre_libs::operation_catalog::all_entries);
     collect!(vyre_primitives::operation_catalog::all_entries);
     cases
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_run_formats_hex_buffer_literals() {
+        let outputs = vec![vec![0x00, 0x01, 0x02, 0x03], vec![0x10, 0x20]];
+        let text = render_run(0, &outputs);
+        assert!(text.contains("// run 0"));
+        assert!(text.contains("0x00, 0x01, 0x02, 0x03,"));
+        assert!(text.contains("output buffer 0 (4 bytes)"));
+        assert!(text.contains("0x10, 0x20,"));
+        assert!(text.contains("output buffer 1 (2 bytes)"));
+    }
 }

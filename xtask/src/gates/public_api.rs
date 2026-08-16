@@ -23,7 +23,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Directory holding one snapshot per publishable package.
@@ -66,19 +66,7 @@ pub fn roster(tree: &Tree) -> Result<Vec<Snapshotted>, GateError> {
 /// Every publishable crate's externally reachable API matches its snapshot.
 pub struct PublicApiSnapshot;
 
-impl Gate for PublicApiSnapshot {
-    fn name(&self) -> &'static str {
-        "public-api-snapshot"
-    }
-
-    fn help(&self) -> &'static str {
-        "Whether every publishable crate's public API, with all features on, matches its committed snapshot"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for PublicApiSnapshot {
     fn usage(&self) -> &'static [&'static str] {
         &["--crate NAME judges one publishable crate instead of every one"]
     }
@@ -86,6 +74,11 @@ impl Gate for PublicApiSnapshot {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let rows = roster(&tree)?;
+        let mut report = Report::clean();
+        report.cover_complete("public api exports", rows.len());
+        for row in &rows {
+            report.produced(PathBuf::from(SNAPSHOT_DIR).join(format!("{}.txt", row.package)));
+        }
         let scoped = ctx.flag("--crate").map(str::to_string);
         if let Some(name) = &scoped {
             if !rows
@@ -98,7 +91,6 @@ impl Gate for PublicApiSnapshot {
                 ));
             }
         }
-        let mut report = Report::default();
         let owned: BTreeSet<&str> = rows.iter().map(|row| row.package.as_str()).collect();
         for stale in unowned_snapshots(&ctx.root, &owned)? {
             report.find(Finding::in_file(
@@ -343,6 +335,7 @@ fn extract(root: &Path, package: &str) -> Result<String, GateError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout;
 
     /// WHY: the roster and the snapshot directory are one set, and the two ways

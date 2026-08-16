@@ -27,7 +27,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Directories that carry a `README.md` without being workspace members.
@@ -301,20 +301,13 @@ fn numbered_section(text: &str, heading: &str) -> Vec<(u32, String)> {
 /// Hold every crate to a boundary page and a module map.
 pub struct CratePages;
 
-impl Gate for CratePages {
-    fn name(&self) -> &'static str {
-        "crate-pages"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every workspace member to a SPEC.md stating its boundary and a README.md whose module map resolves"
-    }
-
+impl crate::gate::GateBehavior for CratePages {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let members = tree.member_manifests()?;
-        let names: Vec<String> = members.iter().map(|member| member.name.clone()).collect();
         let mut report = Report::clean();
+        report.cover_complete("crate documentation pages", members.len());
+        let names: Vec<String> = members.iter().map(|member| member.name.clone()).collect();
         for member in &members {
             for finding in member_findings(&tree, &member.path, &member.name, &names) {
                 report.find(finding);
@@ -350,6 +343,7 @@ impl Gate for CratePages {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout::checkout;
     use std::path::Path;
 

@@ -26,7 +26,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::topology::vietoris_rips_edge_filter";
+pub const OP_ID: &str = "vyre-libs::topology::vietoris_rips_edge_filter";
 
 /// Emit the edge filter Program.
 ///

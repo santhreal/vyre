@@ -86,6 +86,30 @@ fn a_test_gated_module_file_is_not_on_any_route() {
     );
 }
 
+/// A test-only child stays test-only when its parent carries a production
+/// feature. The inherited feature must not erase the child's test predicate.
+#[test]
+fn a_test_child_of_a_feature_gated_parent_has_no_route() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let src = dir.path().join("src");
+    write(
+        &src.join("lib.rs"),
+        "#[cfg(feature = \"math\")]\npub mod math;\n",
+    );
+    write(
+        &src.join("math/mod.rs"),
+        "#[cfg(test)]\nmod region_tests;\n",
+    );
+    write(&src.join("math/region_tests.rs"), "fn helper() {}\n");
+
+    let routes = module_routes(&src);
+
+    assert!(
+        route(&routes, "math/region_tests.rs").is_none(),
+        "a parent feature does not make its cfg(test) child production source: {routes:?}"
+    );
+}
+
 /// A directory no declaration names carries no module.
 #[test]
 fn a_directory_no_declaration_names_is_not_a_module() {

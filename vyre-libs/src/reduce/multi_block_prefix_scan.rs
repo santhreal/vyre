@@ -39,13 +39,11 @@ use vyre_foundation::ir::{
 };
 
 /// Canonical op id for inclusive sum-scan over arbitrary `n`.
-pub const OP_ID_INCLUSIVE_SUM: &str =
-    "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum";
+pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum";
 
 /// Canonical op id for the exclusive-sum element-difference pass that turns the
 /// inclusive multi-block scan into an exclusive one.
-pub const OP_ID_EXCLUSIVE_SUM: &str =
-    "vyre-primitives::reduce::multi_block_prefix_scan_exclusive_sum";
+pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-libs::reduce::multi_block_prefix_scan_exclusive_sum";
 
 /// Return the execution geometry requirements for multi-block prefix scan.
 #[must_use]

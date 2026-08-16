@@ -77,6 +77,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
                 laws: &[],
                 tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
                 geometry_requirements: None,
+                source_file: file!(),
             }
         }
 
@@ -177,7 +178,8 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
                 expected_output: Some(expected_output),
                 laws: &[],
                 tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-                geometry_requirements: None,
+            geometry_requirements: None,
+            source_file: file!(),
             }
         }
 

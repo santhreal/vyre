@@ -16,7 +16,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// Source roots whose registries are read on a dispatch or lookup path.
@@ -37,18 +37,12 @@ const FREEZE_MARKERS: &[&str] = &["LazyLock::new(", "OnceLock", "get_or_init(", 
 /// Registry walks that run per lookup rather than once.
 pub struct InventoryWalk;
 
-impl Gate for InventoryWalk {
-    fn name(&self) -> &'static str {
-        "hot-path-inventory"
-    }
-
-    fn help(&self) -> &'static str {
-        "inventory::iter outside a once-only index construction"
-    }
-
+impl crate::gate::GateBehavior for InventoryWalk {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let files = tree.rust(ROOTS)?;
+        let mut report = Report::clean();
+        report.cover_complete("inventory sources", files.len());
         let mut findings = Vec::new();
         let mut walks = 0usize;
         for path in &files {
@@ -247,6 +241,7 @@ fn declared_name(code: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout;
 
     /// The gate's report for a tree where one file under one root holds `text`.

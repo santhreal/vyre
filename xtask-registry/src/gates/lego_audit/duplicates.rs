@@ -77,8 +77,8 @@ pub(super) fn lego_duplicate_subject(op: &OpInfo) -> DuplicateSubject {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::path::PathBuf;
+    use xtask::gates::dedup_report::duplicate_report_json_path;
 
     /// WHY: this preserves the explicit duplicate-report output path contract.
     /// The gate reads the flag off `GateCtx` and resolves it through the shared

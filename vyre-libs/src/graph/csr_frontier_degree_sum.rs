@@ -31,7 +31,7 @@ use crate::graph::program_graph::{
 };
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::csr_frontier_degree_sum";
+pub const OP_ID: &str = "vyre-libs::graph::csr_frontier_degree_sum";
 
 /// Canonical binding index for the input frontier bitset.
 pub const BINDING_FRONTIER_IN: u32 = BINDING_PRIMITIVE_START;
@@ -318,6 +318,6 @@ mod tests {
     fn op_id_is_canonical_and_stable() {
         // Operation ids appear in serialized semantic metadata and benchmark
         // attribution; changing one is wire-format-visible.
-        assert_eq!(OP_ID, "vyre-primitives::graph::csr_frontier_degree_sum");
+        assert_eq!(OP_ID, "vyre-libs::graph::csr_frontier_degree_sum");
     }
 }

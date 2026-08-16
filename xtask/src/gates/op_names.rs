@@ -13,7 +13,7 @@ use std::path::Path;
 
 use walkdir::WalkDir;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 
 /// Verbs that say nothing about what an op computes.
 const BANNED_PREFIXES: &[&str] = &["compute_", "do_", "run_", "make_", "create_", "new_"];
@@ -93,15 +93,7 @@ fn is_op_source(path: &Path) -> bool {
 /// Holds every public op function in `vyre-libs` to the canonical naming scheme.
 pub struct OpNames;
 
-impl Gate for OpNames {
-    fn name(&self) -> &'static str {
-        "op-names"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every public function in vyre-libs op sources to the canonical operation naming scheme"
-    }
-
+impl crate::gate::GateBehavior for OpNames {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let libs = ctx.root.join("vyre-libs/src");
         if !structure_gate::source_scan::carries_rust_source(&libs) {
@@ -112,6 +104,7 @@ impl Gate for OpNames {
         }
         let mut report = Report::clean();
         let mut scanned = 0usize;
+        let mut public_functions = 0usize;
         for entry in WalkDir::new(&libs) {
             let entry = entry.map_err(|error| {
                 GateError::new(
@@ -140,6 +133,7 @@ impl Gate for OpNames {
                 let Some(name) = declared_function(line) else {
                     continue;
                 };
+                public_functions += 1;
                 let line_number = u32::try_from(index + 1).unwrap_or(u32::MAX);
                 for violation in violations(name) {
                     report.find(Finding::at(
@@ -151,6 +145,7 @@ impl Gate for OpNames {
                 }
             }
         }
+        report.cover_complete("public operation functions", public_functions);
         report.note(format!("scanned {scanned} op source file(s)"));
         Ok(report)
     }

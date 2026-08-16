@@ -26,29 +26,28 @@ pub use programs::{
 };
 
 /// Canonical op id for packed signed INT4 unpacking.
-pub const UNPACK_I4_OP_ID: &str = "vyre-primitives::math::quantized::unpack_i4x8";
+pub const UNPACK_I4_OP_ID: &str = "vyre-libs::math::quantized::unpack_i4x8";
 
 /// Canonical op id for packed signed INT4 dot products.
-pub const I4_DOT_I32_OP_ID: &str = "vyre-primitives::math::quantized::i4x8_dot_i32";
+pub const I4_DOT_I32_OP_ID: &str = "vyre-libs::math::quantized::i4x8_dot_i32";
 
 /// Canonical op id for fused scaled packed signed INT4 dot products.
-pub const I4_DOT_F32_SCALED_OP_ID: &str = "vyre-primitives::math::quantized::i4x8_dot_f32_scaled";
+pub const I4_DOT_F32_SCALED_OP_ID: &str = "vyre-libs::math::quantized::i4x8_dot_f32_scaled";
 
 /// Canonical op id for fused scaled packed signed INT4 matrix-vector products.
-pub const I4_MATVEC_F32_SCALED_OP_ID: &str =
-    "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled";
+pub const I4_MATVEC_F32_SCALED_OP_ID: &str = "vyre-libs::math::quantized::i4x8_matvec_f32_scaled";
 
 /// Canonical op id for batched fused scaled packed signed INT4 matvec.
 pub const I4_BATCHED_MATVEC_F32_SCALED_OP_ID: &str =
-    "vyre-primitives::math::quantized::i4x8_batched_matvec_f32_scaled";
+    "vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled";
 
 /// Canonical op id for batched fused scaled packed signed INT4 matmul.
 pub const I4_BATCHED_MATMUL_F32_SCALED_OP_ID: &str =
-    "vyre-primitives::math::quantized::i4x8_batched_matmul_f32_scaled";
+    "vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled";
 
 /// Canonical op id for fused packed signed INT4 batched matmul top-1 routing.
 pub const I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID: &str =
-    "vyre-primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled";
+    "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled";
 
 /// Number of signed 4-bit lanes per packed u32 word.
 pub const I4_LANES_PER_WORD: u32 = 8;

@@ -3,9 +3,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl};
 use crate::graph::program_graph::{word_buffer, BINDING_PRIMITIVE_START};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::persistent_bfs";
+pub const OP_ID: &str = "vyre-libs::graph::persistent_bfs";
 /// Canonical op id for batched persistent BFS over many seed frontiers.
-pub const BATCH_OP_ID: &str = "vyre-primitives::graph::persistent_bfs_batch";
+pub const BATCH_OP_ID: &str = "vyre-libs::graph::persistent_bfs_batch";
 
 /// Canonical binding index for the input frontier bitset.
 pub const BINDING_FRONTIER_IN: u32 = BINDING_PRIMITIVE_START;

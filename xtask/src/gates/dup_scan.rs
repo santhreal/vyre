@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan;
 
 /// Shingle length in normalized lines.
@@ -476,15 +476,7 @@ fn lower_pin(
 /// Measures cross-file duplicate source blocks against the pinned per-crate baseline.
 pub struct DupScan;
 
-impl Gate for DupScan {
-    fn name(&self) -> &'static str {
-        "dup-scan"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold cross-file duplicate source blocks to the pinned per-crate baseline; --write pins a newly measured crate, --lower-pin CRATE lowers one row, --report [CRATE] lists the files"
-    }
-
+impl crate::gate::GateBehavior for DupScan {
     fn usage(&self) -> &'static [&'static str] {
         &[
             "--lower-pin CRATE lowers one pinned row to what the crate measures now",
@@ -492,13 +484,10 @@ impl Gate for DupScan {
         ]
     }
 
-    fn generates(&self) -> bool {
-        true
-    }
-
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
         let mut report = Report::clean();
+        report.produced("xtask/dup-baseline.toml");
 
         if let Some(position) = ctx.args.iter().position(|argument| argument == "--report") {
             let only = ctx
@@ -507,6 +496,7 @@ impl Gate for DupScan {
                 .filter(|value| !value.starts_with("--"))
                 .map(String::as_str);
             let reports = report_for(root, only)?;
+            report.cover_complete("source files with duplication measurements", reports.len());
             let scope = only.unwrap_or("the workspace");
             let total: usize = reports.iter().map(|entry| entry.duplicate_lines).sum();
             report.note(format!(
@@ -526,6 +516,7 @@ impl Gate for DupScan {
         }
 
         let counts = measure(root)?;
+        report.cover_complete("workspace crates", counts.len());
 
         if let Some(position) = ctx
             .args

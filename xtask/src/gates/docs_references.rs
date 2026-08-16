@@ -31,7 +31,7 @@
 use std::collections::BTreeSet;
 use std::path::{Component, Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Documents that record what happened rather than what the tree holds.
@@ -133,15 +133,7 @@ impl Source {
 /// published path.
 pub struct DocsReferences;
 
-impl Gate for DocsReferences {
-    fn name(&self) -> &'static str {
-        "docs-references"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every path a published document names in a code span, a link target or a command example to a published path"
-    }
-
+impl crate::gate::GateBehavior for DocsReferences {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let documents = documents(&tree)?;
@@ -150,6 +142,7 @@ impl Gate for DocsReferences {
             collect(&tree, document, &mut references)?;
         }
         let mut report = Report::clean();
+        report.cover_complete("doc reference documents", documents.len());
         for reference in &references {
             let Some(problem) = judge(&tree, reference) else {
                 continue;

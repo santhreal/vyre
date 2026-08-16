@@ -10,7 +10,7 @@ use super::workspace_sources::{run_gate, track_fixture, workspace_root};
 
 /// Run the gate over a fixture checkout.
 fn run(root: &Path, write: bool) -> Report {
-    run_gate(&CrateReadmes, root, write)
+    run_gate("crate-readmes", &CrateReadmes, root, write)
 }
 
 /// Every message the gate reported, joined for a failure diagnostic.

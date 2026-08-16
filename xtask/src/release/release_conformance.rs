@@ -9,7 +9,7 @@ use std::process::Command;
 // The op matrix and everything derived from it have one owner, so a second
 // copy here cannot drift from the registered-op matrix again.
 use crate::artifact_gate::{self, Inspection};
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
 };
@@ -90,34 +90,18 @@ struct BackendConformanceArtifact {
 /// Holds the recorded backend conformance evidence to the op matrix and to itself.
 pub struct ReleaseConformanceGate;
 
-impl Gate for ReleaseConformanceGate {
-    fn name(&self) -> &'static str {
-        "release-conformance"
-    }
-
-    fn help(&self) -> &'static str {
-        "Judge the recorded backend conformance artifacts under \
-         release/evidence/conformance. Proves each requested backend recorded an artifact, that \
-         it covers every op id the op matrix requires, reaches the release op-pair floor, \
-         repeats no op id, emits no empty op id, carries no failed pair, carries no pair from \
-         another backend, and that its diff summaries are the ones its own pairs imply. Proves \
-         nothing by itself about the hardware: no dispatch runs unless --write is passed, and a \
-         recorded artifact is only as current as the run that wrote it. With --write it runs \
-         vyre-conform against each requested backend and rewrites the artifacts."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for ReleaseConformanceGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        report.cover_complete("release evidence matrices", 1);
         let config = match parse_args(&ctx.args) {
             Ok(config) => config,
             Err(message) => {
-                return Ok(Report::with_findings(vec![Finding::new(
+                report.find(Finding::new(
                     message,
                     "Pass --backend with one of cuda, wgpu, metal, cpu-ref, reference, or all.",
-                )]))
+                ));
+                return Ok(report);
             }
         };
         let inspection = if ctx.write {
@@ -127,7 +111,7 @@ impl Gate for ReleaseConformanceGate {
         };
         Ok(artifact_gate::settle_inspection(
             ctx,
-            self.name(),
+            ctx.gate_name()?,
             inspection,
         ))
     }
@@ -1073,7 +1057,7 @@ mod tests {
     #[test]
     fn diff_summary_uses_replay_capsule_digests_for_output_mismatch() {
         let mut failure = pair(
-            "vyre-primitives::math::tensor_network_pair_contract",
+            "vyre-libs::math::tensor_network_pair_contract",
             "cuda",
             false,
             "backend output diverged from vyre-reference on case 0",

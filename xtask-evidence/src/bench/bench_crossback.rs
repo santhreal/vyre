@@ -20,7 +20,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 use xtask::output_arg::read_text_bounded;
 
 /// The committed release benchmark evidence, and the table derived from it.
@@ -67,35 +67,23 @@ const REGENERATE: &str =
 
 pub(crate) struct BenchCrossbackGate;
 
-impl Gate for BenchCrossbackGate {
-    fn name(&self) -> &'static str {
-        "bench-crossback"
-    }
-
-    fn help(&self) -> &'static str {
-        "Derive the cross-backend comparison table from the committed release benchmark evidence \
-         and hold the recorded table to it; --write records it"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl xtask::gate::GateBehavior for BenchCrossbackGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let cases = collect(&ctx.root, &mut report)?;
+        report.cover_complete("benchmark crossback cases", cases.len());
         let measured: usize = cases.values().map(|case| case.measured.len()).sum();
         if measured == 0 {
             report.find(Finding::in_file(
                 PathBuf::from(EVIDENCE_DIR),
                 format!(
                     "the committed benchmark evidence carries no measured backend row, so there \
-                     is no cross-backend comparison to record ({} artifact(s) read as \
-                     `{RESULT_SCHEMA}`)",
+                 is no cross-backend comparison to record ({} artifact(s) read as \
+                 `{RESULT_SCHEMA}`)",
                     cases.len()
                 ),
                 "Run a release benchmark suite on hardware and commit its result artifact. A \
-                 comparison table with no measurement in it records nothing.",
+             comparison table with no measurement in it records nothing.",
             ));
             return Ok(report);
         }
@@ -457,6 +445,7 @@ mod tests {
     fn read(artifacts: &[(&str, Value)]) -> (BTreeMap<String, Case>, Report) {
         let mut cases = BTreeMap::new();
         let mut report = Report::clean();
+        report.cover_complete("benchmark crossback cases", cases.len());
         for (name, document) in artifacts {
             read_artifact(name, document, &mut cases, &mut report);
         }
@@ -641,12 +630,14 @@ mod tests {
         let path = directory.path().join("cross-backend-comparison.md");
         std::fs::write(&path, &rendered).expect("write table");
         let mut report = Report::clean();
+        report.cover_complete("benchmark crossback cases", cases.len());
         audit_table(&path, &rendered, &mut report);
         assert_eq!(report.findings, Vec::new());
 
         let tampered = rendered.replace("0.800", "0.001");
         std::fs::write(&path, &tampered).expect("write tampered table");
         let mut report = Report::clean();
+        report.cover_complete("benchmark crossback cases", cases.len());
         audit_table(&path, &rendered, &mut report);
         assert_eq!(report.findings.len(), 1);
         assert_eq!(

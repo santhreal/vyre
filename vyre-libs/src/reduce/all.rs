@@ -1,7 +1,7 @@
 //! Boolean all-nonzero reduction over a u32 ValueSet.
 
 crate::reduce::atomic_scalar::define_bool_reduce_op! {
-    op_id: "vyre-primitives::reduce::all",
+    op_id: "vyre-libs::reduce::all",
     fn_name: reduce_all,
     kind: AllNonZero,
     true_case: [1, 7, 9],

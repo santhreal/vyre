@@ -1,4 +1,4 @@
-use super::layout::OP_ID;
+const OP_ID: &str = "vyre-libs::graph::csr_forward_or_changed";
 use super::program_serial::csr_forward_or_changed;
 use crate::graph::program_graph::ProgramGraphShape;
 

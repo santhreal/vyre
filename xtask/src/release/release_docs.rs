@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::release::release_train::RELEASE_TRAIN_TOML_PATH;
 
 /// Where the unreleased fragments live.
@@ -69,25 +69,20 @@ const LAUNCH_STEPS: [&str; 10] = [
 /// The changelog and release notes state what the fragments and the train say.
 pub struct ReleaseDocs;
 
-impl Gate for ReleaseDocs {
-    fn name(&self) -> &'static str {
-        "release-docs"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the changelog and the release notes body to the release train and the unreleased fragments; --write regenerates both"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for ReleaseDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let train = read_toml(&ctx.root, RELEASE_TRAIN_TOML_PATH)?;
         let mut report = Report::clean();
+        for doc in GENERATED_RELEASE_DOCUMENTS {
+            report.produced(doc);
+        }
 
         train_findings(&train, &mut report);
         let grouped = fragment_entries(&ctx.root, &mut report)?;
+        report.cover_complete(
+            "release change fragments",
+            grouped.values().map(Vec::len).sum(),
+        );
         if report.count() > 0 {
             return Ok(report);
         }

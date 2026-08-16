@@ -589,11 +589,11 @@ mod tests {
     fn program_builders_emit_expected_scientific_primitives() {
         assert_eq!(
             program_generator(&dispatch_bhattacharyya_per_element("p", "q", "out", 8)),
-            "vyre-primitives::math::bhattacharyya_coefficient"
+            "vyre-libs::math::bhattacharyya_coefficient"
         );
         assert_eq!(
             program_generator(&dispatch_tt_contract_step("acc", "core", "out", 2, 2)),
-            "vyre-primitives::math::tt_contract_step"
+            "vyre-libs::math::tt_contract_step"
         );
         assert_eq!(
             program_generator(&dispatch_p2m_step(
@@ -604,65 +604,65 @@ mod tests {
                 4,
                 2
             )),
-            "vyre-primitives::math::fmm_p2m_step"
+            "vyre-libs::math::fmm_p2m_step"
         );
         assert_eq!(
             program_generator(&dispatch_p2m_zeroth_f32_step(
                 "scores", "assign", "moments", 4, 2
             )),
-            "vyre-primitives::math::fmm_p2m_zeroth_f32_step"
+            "vyre-libs::math::fmm_p2m_zeroth_f32_step"
         );
         assert_eq!(
             program_generator(&dispatch_m2l_zeroth_f32_step("moments", "dist", "local", 2)),
-            "vyre-primitives::math::fmm_m2l_zeroth_f32_step"
+            "vyre-libs::math::fmm_m2l_zeroth_f32_step"
         );
         assert_eq!(
             program_generator(&dispatch_l2p_zeroth_f32_step(
                 "local", "assign", "out", 4, 2
             )),
-            "vyre-primitives::math::fmm_l2p_zeroth_f32_step"
+            "vyre-libs::math::fmm_l2p_zeroth_f32_step"
         );
         assert_eq!(
             program_generator(&dispatch_qsvt_block_encode("a", "norm", "scaled", 2)),
-            "vyre-primitives::math::qsvt_block_encode"
+            "vyre-libs::math::qsvt_block_encode"
         );
         assert_eq!(
             program_generator(&dispatch_hensel_lift_step("x", "fx", "df", "out", 2)),
-            "vyre-primitives::math::hensel_lift_step"
+            "vyre-libs::math::hensel_lift_step"
         );
         assert_eq!(
             program_generator(&dispatch_sos_gram_construct(
                 "pairs", "coeffs", "gram", 2, 3
             )),
-            "vyre-primitives::math::sos_gram_construct"
+            "vyre-libs::math::sos_gram_construct"
         );
         assert_eq!(
             program_generator(&dispatch_bigint_add_carry(4)),
-            "vyre-primitives::math::bigint_add_carry"
+            "vyre-libs::math::bigint_add_carry"
         );
         assert_eq!(
             program_generator(&dispatch_tn_pair_contract("a", "b", "c", 2, 2, 2)),
-            "vyre-primitives::math::tensor_network_pair_contract"
+            "vyre-libs::math::tensor_network_pair_contract"
         );
         assert_eq!(
             program_generator(&dispatch_rk4_step(
                 "y", "k1", "k2", "k3", "k4", "h", "out", 2
             )),
-            "vyre-primitives::math::ode_rk4_step"
+            "vyre-libs::math::ode_rk4_step"
         );
         assert_eq!(
             program_generator(&dispatch_sinkhorn_scale("target", "divisor", "out", 2)),
-            "vyre-primitives::math::sinkhorn_scale"
+            "vyre-libs::math::sinkhorn_scale"
         );
         assert_eq!(
             program_generator(&dispatch_score_denoise_step(
                 "x", "score", "noise", "alpha", "beta", "sigma", "out", 2
             )),
-            "vyre-primitives::math::score_denoise_step"
+            "vyre-libs::math::score_denoise_step"
         );
         assert_eq!(
             program_generator(&dispatch_conformal_threshold("scores", "q", 8, 4)),
-            "vyre-primitives::math::conformal_threshold"
+            "vyre-libs::math::conformal_threshold"
         );
         assert_eq!(
             program_generator(&dispatch_semiring_gemm(
@@ -674,11 +674,11 @@ mod tests {
                 2,
                 Semiring::Real
             )),
-            "vyre-primitives::math::semiring_gemm"
+            "vyre-libs::math::semiring_gemm"
         );
         assert_eq!(
             program_generator(&dispatch_mz_project_step("p", "f", "out", 2)),
-            "vyre-primitives::math::mori_zwanzig_project_step"
+            "vyre-libs::math::mori_zwanzig_project_step"
         );
     }
 
@@ -687,7 +687,7 @@ mod tests {
         let program =
             dispatch_semiring_gemm_wide("state", "rules", "next", Some("state"), 2, 2, 2, 2);
         let generator = program_generator(&program);
-        assert!(generator.contains("vyre-primitives::math::semiring_gemm"));
+        assert!(generator.contains("vyre-libs::math::semiring_gemm"));
         assert!(generator.contains("semiring_gemm_wide"));
     }
 

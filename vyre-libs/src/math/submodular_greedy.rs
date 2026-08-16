@@ -46,7 +46,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::submodular_argmax_of_marginals";
+pub const OP_ID: &str = "vyre-libs::math::submodular_argmax_of_marginals";
 
 /// Sentinel value for "no winner found" (all candidates picked).
 pub const NO_WINNER: u32 = u32::MAX;

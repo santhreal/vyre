@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 
 use toml::Value;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::crate_registry::{self, CrateRecord};
 use crate::gates::scan::Tree;
 
@@ -40,23 +40,12 @@ const FIX: &str = "run `xtask crate-readmes --write`";
 /// The generated contract section in every crate README.
 pub struct CrateReadmes;
 
-impl Gate for CrateReadmes {
-    fn name(&self) -> &'static str {
-        "crate-readmes"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the generated contract section of every crate README to the manifests, the ownership registry, the release train and the crate guides; --write regenerates it"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for CrateReadmes {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let records = crate_registry::load_registry(&tree, &mut report)?;
+        report.cover_complete("crate readmes", records.len());
         let guides = load_guides(&tree, &records, &mut report)?;
         let versions = release_versions(&tree, &mut report)?;
 
@@ -70,6 +59,16 @@ impl Gate for CrateReadmes {
                 records.len()
             ));
             return Ok(report);
+        }
+
+        if ctx.write {
+            let cli_report = crate::docs::cli_docs::refresh_readmes(ctx)?;
+            report.findings.extend(cli_report.findings);
+            report.notes.extend(cli_report.notes);
+            report.coverage.extend(cli_report.coverage);
+            if !report.findings.is_empty() {
+                return Ok(report);
+            }
         }
 
         let mut written = 0usize;
@@ -91,6 +90,7 @@ impl Gate for CrateReadmes {
                 continue;
             };
             let relative = format!("{}/README.md", record.path);
+            report.produced(&relative);
             let existing = read_readme(&ctx.root, &relative)?;
             let contract = render_contract(
                 record,

@@ -17,7 +17,7 @@
 //! line-start representation.
 
 use std::sync::Arc;
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{tag_program, trap_program, wrap_anonymous_region};
 
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes;
 use vyre_foundation::geometry::GeometryRequirements;
@@ -26,7 +26,7 @@ use vyre_foundation::ir::{
 };
 
 /// Stable op id for the registered Tier 3 wrapper.
-pub const LINE_INDEX_OP_ID: &str = "vyre-primitives::text::line_index";
+pub const LINE_INDEX_OP_ID: &str = "vyre-libs::text::line_index";
 const FLAG_OP_ID: &str = "anonymous::vyre-primitives::text::line_index::line_start_flags";
 
 /// Return the execution geometry requirements for line indexing.
@@ -153,7 +153,12 @@ fn try_line_index_with_source_type(
 
     vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass])
         .map(correct_flag_barrier)
-        .map(|program| crate::plumbing::program::outputs::demote_intermediate_outputs(program, lines))
+        .map(|program| {
+            tag_program(
+                LINE_INDEX_OP_ID,
+                crate::plumbing::program::outputs::demote_intermediate_outputs(program, lines),
+            )
+        })
         .map_err(|error| {
             format!(
                 "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan fusion instead of falling back to a serial lane-0 loop."

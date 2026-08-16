@@ -22,7 +22,7 @@ use super::BufferDecl;
 /// declares its own limit in its own target dialect, and the widest workgroup a
 /// given backend accepts is that record, not this. What this pins is the
 /// narrowest of them, which is the only width a substrate-neutral crate can
-/// choose. `vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum` sized
+/// choose. `vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum` sized
 /// its block at 1024 on the claim that 1024 is universal; the structured-compute
 /// target admits 256, and the payload was refused at admission on every proof
 /// run.

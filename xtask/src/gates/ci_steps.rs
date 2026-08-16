@@ -32,7 +32,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Where the workflows that run live.
@@ -878,19 +878,12 @@ const SOURCES: &[(&str, &[&str])] = &[
     (SCRIPTS, &["sh", "py"]),
 ];
 
-impl Gate for CiSteps {
-    fn name(&self) -> &'static str {
-        "ci-steps"
-    }
-
-    fn help(&self) -> &'static str {
-        "Resolve every package, target, binary and feature a workflow or script names against the workspace manifests"
-    }
-
+impl crate::gate::GateBehavior for CiSteps {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let packages = packages(&tree)?;
         let mut report = Report::clean();
+        report.cover_complete("ci workflow packages", packages.len());
         let mut selectors = 0;
         let mut steps = 0;
         let mut files = 0;

@@ -24,7 +24,7 @@ pub use strided::{
 };
 
 /// Canonical op id for queue-to-queue delta CSR expansion.
-pub const CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str = "vyre-primitives::graph::csr_queue_delta_enqueue";
+pub const CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str = "vyre-libs::graph::csr_queue_delta_enqueue";
 
 /// Default workgroup size for queue-to-queue delta expansion.
 pub const CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];

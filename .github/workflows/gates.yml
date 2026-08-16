@@ -29,26 +29,17 @@ jobs:
       - name: Run the registered gate sweep
         run: ./cargo_full run -p xtask -- gates
 
-      # One step per domain, so a red gate is addressed to the owner of that
-      # domain instead of arriving as one failed whole-registry log that says
-      # only that the tree is red. Every registered gate must be named by a
-      # workflow, directly or through one of these subsets, and the sweep fails
-      # when one is named by nothing.
-      - name: Composition rules
-        run: ./cargo_full run -p xtask -- gates --subset composition
-
-      # The external-IR extension demo is the only proof that a third party can
-      # extend the IR from outside this workspace, and presence proves nothing.
-      # `example-capability`, registered in this subset, builds every example as
-      # its own isolated crate against the committed lockfile.
-      - name: Tree structure and hygiene
-        run: ./cargo_full run -p xtask -- gates --subset structure
+      # Descriptor areas are the only named subsets. The whole sweep above
+      # remains authoritative; these focused runs address failures to the owner
+      # without maintaining a second handwritten gate list.
+      - name: LEGO composition laws
+        run: ./cargo_full run -p xtask -- gates --subset lego-audit
 
       - name: Generated documentation artifacts
         run: ./cargo_full run -p xtask -- gates --subset docs
 
-      - name: IR compile, reduce and proof
-        run: ./cargo_full run -p xtask -- gates --subset ir
+      - name: Pre-publish compiler and release contracts
+        run: ./cargo_full run -p xtask -- gates --subset prepublish
 
       # Structural rules that must hold while the workspace does not compile,
       # so they live in a crate that depends on no vyre crate.
@@ -77,49 +68,16 @@ jobs:
       - name: Install rustfmt for the parse rule
         run: rustup component add rustfmt
 
-      # Each step below names a subset of the registry. The sweep above runs every
-      # gate already; these steps are what make each rule named by a workflow, so
-      # a gate cannot be registered, pinned and then reached by nothing. A rule
-      # whose verdict arrives in no job is what let three gates sit red for a
-      # fortnight.
+      # These are the remaining descriptor-derived areas. Every registered area
+      # is named by a workflow, and an unknown or retired area fails the sweep.
+      - name: CI registry rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset ci-rules
 
-      # Every Cargo.toml is a workspace member, its own workspace root or a
-      # reviewed orphan; every path edge and inherited key resolves to a tracked
-      # manifest; and a publishable crate's dependency on a member carries a
-      # version exactly when that member is published. None of this runs cargo:
-      # the defect the path rule detects is a workspace cargo cannot load, and
-      # the publish rule fails only during a publish nobody can rehearse.
-      - name: Manifest rules
-        run: ./cargo_full run -p xtask --bin xtask -- gates --subset manifest-rules
-
-      # A file no target compiles is not code, it is a claim: glyph_grid shipped
-      # an op registration and eight contracts that no `mod` declaration named,
-      # while three generated documents listed the op as supported. A green build
-      # is exactly what an orphan produces. The parse half answers the other
-      # question, because the answer for an orphan and for a scaffolding template
-      # are both "no target". The size cap is here too: it is red on fourteen
-      # files and its verdict reached nobody, because no workflow ran it.
-      - name: Source rules
-        run: ./cargo_full run -p xtask --bin xtask -- gates --subset source-rules
-
-      # Allocation, blocking waits and unbounded growth on the dispatch path.
       - name: Hot-path rules
-        run: ./cargo_full run -p xtask --bin xtask -- gates --subset hot-path-rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset hot-path
 
-      # Lint hygiene, unsafe justification and the property-test floor.
-      - name: Lint rules
-        run: ./cargo_full run -p xtask --bin xtask -- gates --subset lint-rules
-
-      # Frozen public surfaces, IR wire field parity, device loudness and the
-      # unification ratchets.
-      - name: Contract rules
+      - name: Source, manifest, API, and workspace contracts
         run: ./cargo_full run -p xtask --bin xtask -- gates --subset contract-rules
-
-      # What the checkout carries, what the release evidence cites, what the
-      # documents claim about the tree, and the axes the hosted CI matrix
-      # declares.
-      - name: Repository rules
-        run: ./cargo_full run -p xtask --bin xtask -- gates --subset repo-rules
 
   feature-msrv:
     name: Every feature compiles alone on the MSRV

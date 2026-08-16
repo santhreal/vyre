@@ -11,7 +11,7 @@ use crate::builder::cooperative::{for_each_index, LANES};
 use crate::plumbing::operand::shape::square_matrix_cells;
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::matrix_identity_fill";
+pub const OP_ID: &str = "vyre-libs::math::matrix_identity_fill";
 
 /// Emit the cell walk that writes `1.0` on the diagonal and `0.0` elsewhere.
 ///

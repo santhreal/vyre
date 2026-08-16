@@ -9,7 +9,7 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// The reviewed list of files permitted to carry `allow(unsafe_code)`.
@@ -23,18 +23,11 @@ const BUDGET: &str = "xtask/unsafe-budget.txt";
 /// is an inline `#[cfg(test)]` item, which is the same code in a different file.
 pub struct ExpectHasFix;
 
-impl Gate for ExpectHasFix {
-    fn name(&self) -> &'static str {
-        "lint-expect-fix"
-    }
-
-    fn help(&self) -> &'static str {
-        "expect() sites with no corrective guidance in their message"
-    }
-
+impl crate::gate::GateBehavior for ExpectHasFix {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("source files", tree.all_rust().len());
         if let Some(note) = tree.absence_note() {
             report.note(note);
         }
@@ -109,18 +102,11 @@ impl Gate for ExpectHasFix {
 /// that used to stand beside it, which read one lint out of that population.
 pub struct OneLintPolicy;
 
-impl Gate for OneLintPolicy {
-    fn name(&self) -> &'static str {
-        "lint-one-policy"
-    }
-
-    fn help(&self) -> &'static str {
-        "members that do not inherit the workspace lint policy, or override it at their crate root"
-    }
-
+impl crate::gate::GateBehavior for OneLintPolicy {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("source files", tree.all_rust().len());
         let members = tree.members()?;
         report.note(format!("{} workspace member(s)", members.len()));
         for member in &members {
@@ -184,18 +170,11 @@ impl Gate for OneLintPolicy {
 /// crate that no longer existed, so the budget reserved review for nothing.
 pub struct UnsafeBudget;
 
-impl Gate for UnsafeBudget {
-    fn name(&self) -> &'static str {
-        "lint-unsafe-budget"
-    }
-
-    fn help(&self) -> &'static str {
-        "files carrying allow(unsafe_code) against the reviewed budget"
-    }
-
+impl crate::gate::GateBehavior for UnsafeBudget {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("source files", tree.all_rust().len());
         let budget_text = tree.read(BUDGET)?;
         let reviewed: BTreeSet<&str> = budget_text
             .lines()
@@ -250,15 +229,7 @@ impl Gate for UnsafeBudget {
 /// Every unsafe block carries a justification a reader can check.
 pub struct UnsafeJustification;
 
-impl Gate for UnsafeJustification {
-    fn name(&self) -> &'static str {
-        "lint-unsafe-justification"
-    }
-
-    fn help(&self) -> &'static str {
-        "unsafe blocks with no SAFETY justification, or a placeholder one"
-    }
-
+impl crate::gate::GateBehavior for UnsafeJustification {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         const COP_OUTS: &[&str] = &[
             "todo",
@@ -276,6 +247,7 @@ impl Gate for UnsafeJustification {
             .into_iter()
             .filter(|path| !is_outside_production(path))
             .collect();
+        report.cover_complete("production source files", files.len());
         report.note(format!("scanned {} production source file(s)", files.len()));
         for file in &files {
             // A quoted block is fixture text, including this gate's own examples,
@@ -474,6 +446,7 @@ fn is_attribute_path_byte(character: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout::checkout;
 
     /// WHY: the policy is crate-wide, and three neighbours of the defect must

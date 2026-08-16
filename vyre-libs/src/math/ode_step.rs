@@ -18,7 +18,7 @@
 //! |---|---|
 //! | `vyre-libs::nn::neural_ode` consumers | continuous-time NN training |
 //! | `vyre-libs::physics::flow` consumers | Lipschitz-bounded flows / sim |
-//! | `vyre-primitives::opt::homotopy_continuation` (#9) | **path-tracking step** in homotopy methods uses RK4 to follow zeros of `H(x, t) = 0`; same Program serves user-dialect ODE *and* vyre's own combinatorial-optimization substrate |
+//! | `vyre-libs::opt::homotopy_continuation` (#9) | **path-tracking step** in homotopy methods uses RK4 to follow zeros of `H(x, t) = 0`; same Program serves user-dialect ODE *and* vyre's own combinatorial-optimization substrate |
 //!
 //! # Separate ODE-Step Ops
 //!
@@ -31,7 +31,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::ode_rk4_step";
+pub const OP_ID: &str = "vyre-libs::math::ode_rk4_step";
 
 /// Emit the RK4 next-state combiner Program.
 ///

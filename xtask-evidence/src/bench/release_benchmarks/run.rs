@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 use super::args::{parse_args, Config, Parsed, USAGE};
 use super::artifact_metrics::read_text_bounded;
@@ -27,26 +27,20 @@ const MATRIX_ARTIFACT: &str = "release/evidence/benchmarks/release-workload-matr
 
 pub(crate) struct ReleaseBenchmarksGate;
 
-impl Gate for ReleaseBenchmarksGate {
-    fn name(&self) -> &'static str {
-        "release-benchmarks"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every recorded release benchmark artifact to its blocker contract. `--write` \
-         re-measures the suite on a release host."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl xtask::gate::GateBehavior for ReleaseBenchmarksGate {
     fn usage(&self) -> &'static [&'static str] {
         USAGE
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
+        for path in [
+            "release/evidence/benchmarks/benchmark-matrix.json",
+            "release/evidence/benchmarks/evidence-benchmark-matrix.json",
+        ] {
+            report.produced(path);
+        }
+        report.cover_complete("release benchmark suites", 2);
         let config = match parse_args(&ctx.args) {
             Ok(Parsed::Run(config)) => config,
             Ok(Parsed::Usage) => {

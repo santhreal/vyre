@@ -25,7 +25,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::builder::cooperative::{for_each_index, Argmax, KeyKind, LANES};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::sheaf_laplacian_eigenvalue";
+pub const OP_ID: &str = "vyre-libs::math::sheaf_laplacian_eigenvalue";
 /// Inner scan-phase op id.
 ///
 /// The `power_iteration_phase` suffix is a LEGACY-STABLE identity string: it is pinned in the
@@ -34,7 +34,7 @@ pub const OP_ID: &str = "vyre-primitives::math::sheaf_laplacian_eigenvalue";
 /// phase itself no longer runs a power iteration, it performs the exact single-pass diagonal
 /// max/arg-max scan below (the diagonal operator's dominant eigenpair is closed-form).
 const POWER_ITERATION_PHASE_OP_ID: &str =
-    "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase";
+    "vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase";
 
 /// Workgroup scratch the diagonal entry reduces through, one u32 entry per lane.
 const SHEAF_MAX_SCRATCH: &str = "eig_max_scratch";

@@ -11,7 +11,7 @@ use vyre_foundation::ir::Program;
 use super::binary_word::copy_word_program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::copy";
+pub const OP_ID: &str = "vyre-libs::bitset::copy";
 
 /// Build a Program: `target[w] = source[w]` for `w` in `0..words`.
 #[must_use]

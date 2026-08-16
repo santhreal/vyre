@@ -36,7 +36,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::randomized_projection_step";
+pub const OP_ID: &str = "vyre-libs::math::randomized_projection_step";
 
 /// Emit `Y = A · Ω` where:
 /// - `A` is `m × n` row-major u32.

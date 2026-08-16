@@ -33,7 +33,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::bhattacharyya_coefficient";
+pub const OP_ID: &str = "vyre-libs::math::bhattacharyya_coefficient";
 
 /// Numerical floor for `sqrt(p_i)`. Caller supplies `p` and `q` in
 /// 16.16 fixed-point already representing probabilities; the GPU

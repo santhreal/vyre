@@ -31,7 +31,7 @@
 //! # Lego-rule note
 //!
 //! No new GPU primitive ships. The Grünwald-Letnikov weights are a
-//! **kernel data table** that vyre-primitives::math::conv1d already
+//! **kernel data table** that vyre-libs::math::conv1d already
 //! consumes. The single new function is the host-side
 //! [`crate::math::fractional::grunwald_letnikov_kernel`] that produces the weights.
 

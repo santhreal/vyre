@@ -1,7 +1,7 @@
 //! Unsigned maximum reduction over a u32 ValueSet.
 
 crate::reduce::atomic_scalar::define_u32_reduce_op! {
-    op_id: "vyre-primitives::reduce::max",
+    op_id: "vyre-libs::reduce::max",
     fn_name: reduce_max,
     kind: Max,
     identity: 0,
