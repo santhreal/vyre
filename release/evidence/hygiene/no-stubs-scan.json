@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:261d5680b496cb24fb7b6a690cb85803ef552597:dirty=true:worktree=3c95a2ffad1e8d50ef7ab8975481b090ed37a8bb94d130cdaab77893052d3e07",
+  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=false",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -8,6 +8,12 @@
       "line": 203,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
+    },
+    {
+      "path": "vyre-libs/src/graph/program_graph.rs",
+      "line": 327,
+      "pattern": "placeholder_text",
+      "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
     {
       "path": "vyre-bench/src/cases/scan_ac_irregular/mod.rs",
@@ -41,7 +47,7 @@
     },
     {
       "path": "vyre-test-support/src/ir_variants.rs",
-      "line": 128,
+      "line": 110,
       "pattern": "placeholder_text",
       "text": "/// variants with placeholder operands, so this set is the one to use when the"
     },
@@ -64,12 +70,6 @@
       "text": "/// what a caller-supplied placeholder has to cover."
     },
     {
-      "path": "vyre-primitives/src/graph/program_graph.rs",
-      "line": 327,
-      "pattern": "placeholder_text",
-      "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
-    },
-    {
       "path": "conform/vyre-conform-spec/src/schema.rs",
       "line": 165,
       "pattern": "placeholder_text",
@@ -83,43 +83,43 @@
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 44,
+      "line": 45,
       "pattern": "placeholder_text",
       "text": "/// A placeholder outside this table is a finding, because rendering an unknown"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 200,
+      "line": 191,
       "pattern": "placeholder_text",
       "text": "/// One template: every placeholder known, and the rendered crate passing."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 216,
+      "line": 207,
       "pattern": "placeholder_text",
       "text": "format!(\"`{path}` uses the placeholder `{unknown}`, which this gate cannot render\"),"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 363,
+      "line": 365,
       "pattern": "placeholder_text",
       "text": "/// Substitute every known placeholder."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 366,
+      "line": 368,
       "pattern": "placeholder_text",
       "text": "for (placeholder, value) in PLACEHOLDERS {"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 367,
+      "line": 369,
       "pattern": "placeholder_text",
       "text": "rendered = rendered.replace(placeholder, value);"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 381,
+      "line": 383,
       "pattern": "placeholder_text",
       "text": "let placeholder = &after[..close + 2];"
     },
@@ -127,7 +127,7 @@
       "path": "xtask/src/gates/example_capability.rs",
       "line": 384,
       "pattern": "placeholder_text",
-      "text": ".any(|(known, _)| *known == placeholder)"
+      "text": "if !PLACEHOLDERS.iter().any(|(known, _)| *known == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",

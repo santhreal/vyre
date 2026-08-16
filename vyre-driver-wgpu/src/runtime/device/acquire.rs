@@ -38,6 +38,12 @@ pub(crate) struct LoaderInstance(Option<wgpu::Instance>);
 impl Deref for LoaderInstance {
     type Target = wgpu::Instance;
 
+    /// # Panics
+    ///
+    /// Panics if the instance has already been taken, which happens only inside
+    /// `Drop` while the loader lock is held. `Deref` cannot report that as an
+    /// error, and a caller cannot observe the emptied state, because nothing
+    /// holds a reference to the guard after its drop begins.
     fn deref(&self) -> &wgpu::Instance {
         self.0
             .as_ref()
