@@ -7,6 +7,11 @@
 //!
 //! - `core`  -  substrate-neutral parsing primitives (AST node kinds,
 //!   delimiter handling, grammar table walkers).
+//! - `lr_tables`  -  precomputed LR action/goto tables and the CPU reference
+//!   parser that walks them.
+//! - `vast`  -  the packed AST wire format and its host walks.
+//! - `source_cache`  -  content-hash LRU cache for parsed source artifacts.
+//! - `parallel_parse`  -  parallel corpus parse on top of that cache.
 //! - `go`  -  Go 1.21 lex + structural extraction.
 //!   Feature-gated behind `go-parser`.
 //! - `python`  -  Python 3.12 sparse lex + structural extraction.
