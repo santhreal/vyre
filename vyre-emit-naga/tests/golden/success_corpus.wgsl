@@ -102,7 +102,6 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
             break;
         }
         storageBarrier();
-        workgroupBarrier();
         vyre_block_scope_10_ = _vyre_local_id.x;
         vyre_block_scope_11_ = 7u;
         let _e19 = vyre_block_scope_10_;

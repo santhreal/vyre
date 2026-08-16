@@ -552,14 +552,14 @@ mod tests {
                 var: Ident::from("outer"),
                 from: Expr::u32(0),
                 to: Expr::u32(2),
-                body: Arc::new(vec![Node::Loop {
+                body: vec![Node::Loop {
                     var: Ident::from("inner"),
                     from: Expr::u32(0),
                     to: Expr::u32(2),
-                    body: Arc::new(vec![Node::Block(vec![Node::barrier_with_ordering(
+                    body: vec![Node::Block(vec![Node::barrier_with_ordering(
                         MemoryOrdering::GridSync,
-                    )])]),
-                }]),
+                    )])],
+                }],
             }],
         );
         assert_eq!(
@@ -584,11 +584,11 @@ mod tests {
                 var: Ident::from("round"),
                 from: Expr::u32(0),
                 to: Expr::u32(4),
-                body: Arc::new(vec![
+                body: vec![
                     store(0, 1),
                     Node::barrier_with_ordering(MemoryOrdering::GridSync),
                     store(1, 2),
-                ]),
+                ],
             }],
         );
         assert!(contains_grid_sync(&program));

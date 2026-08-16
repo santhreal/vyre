@@ -22,6 +22,11 @@ use vyre_lower::descriptor_builder::{
 };
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
+/// Workgroup scratch bindings live above the host-visible slot range, which
+/// `vyre_lower::verify` enforces. Read from the lowering constant rather than
+/// written out, so a change to the range moves this fixture with it.
+const SCRATCH_SLOT: u32 = vyre_lower::WORKGROUP_SLOT_BASE;
+
 /// Every ordering the memory model assigns a wire tag to. Read from the decoder
 /// rather than written out, so a new variant appears here without an edit.
 fn every_ordering() -> Vec<MemoryOrdering> {
@@ -82,17 +87,17 @@ fn storage_only(ordering: MemoryOrdering) -> KernelDescriptor {
 /// Barrier body that touches workgroup scratch on both sides and nothing else.
 fn scratch_only(ordering: MemoryOrdering) -> KernelDescriptor {
     descriptor("barrier_scratch_only")
-        .slot(shared_rw(0, DataType::U32, 64, "tile"))
+        .slot(shared_rw(SCRATCH_SLOT, DataType::U32, 64, "tile"))
         .dispatch(64, 1, 1)
         .body(
             body()
                 .literals([LiteralValue::U32(0)])
                 .op(op(KernelOpKind::LocalInvocationId, [0], 0))
                 .op(lit(0, 1))
-                .op(effect(KernelOpKind::StoreShared, [0, 0, 1]))
+                .op(effect(KernelOpKind::StoreShared, [SCRATCH_SLOT, 0, 1]))
                 .op(effect(KernelOpKind::Barrier { ordering }, []))
-                .op(op(KernelOpKind::LoadShared, [0, 0], 2))
-                .op(effect(KernelOpKind::StoreShared, [0, 0, 2])),
+                .op(op(KernelOpKind::LoadShared, [SCRATCH_SLOT, 0], 2))
+                .op(effect(KernelOpKind::StoreShared, [SCRATCH_SLOT, 0, 2])),
         )
         .build()
 }
@@ -102,16 +107,16 @@ fn scratch_only(ordering: MemoryOrdering) -> KernelDescriptor {
 fn both_spaces(ordering: MemoryOrdering) -> KernelDescriptor {
     descriptor("barrier_both_spaces")
         .slot(global_rw(0, DataType::U32, "buf"))
-        .slot(shared_rw(1, DataType::U32, 64, "tile"))
+        .slot(shared_rw(SCRATCH_SLOT, DataType::U32, 64, "tile"))
         .dispatch(64, 1, 1)
         .body(
             body()
                 .literals([LiteralValue::U32(0)])
                 .op(op(KernelOpKind::LocalInvocationId, [0], 0))
                 .op(op(KernelOpKind::LoadGlobal, [0, 0], 1))
-                .op(effect(KernelOpKind::StoreShared, [1, 0, 1]))
+                .op(effect(KernelOpKind::StoreShared, [SCRATCH_SLOT, 0, 1]))
                 .op(effect(KernelOpKind::Barrier { ordering }, []))
-                .op(op(KernelOpKind::LoadShared, [1, 0], 2))
+                .op(op(KernelOpKind::LoadShared, [SCRATCH_SLOT, 0], 2))
                 .op(effect(KernelOpKind::StoreGlobal, [0, 0, 2])),
         )
         .build()

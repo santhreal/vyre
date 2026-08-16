@@ -39,7 +39,7 @@ const MAX_NESTING_DEPTH: usize = 64;
 /// bindings on wgpu) never see a Shared slot. Any rewrite that allocates
 /// new Shared/Scratch bindings must seed its `next_slot` cursor at or above
 /// this constant to avoid colliding with host slots in `BindingLayout.slots`.
-pub(crate) const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
+pub const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
 
 /// Lower a vyre Program to the substrate-neutral kernel descriptor.
 ///
