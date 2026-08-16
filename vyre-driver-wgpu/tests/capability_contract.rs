@@ -186,3 +186,29 @@ fn f16_programs_are_rejected_by_capability_gate_before_lowering() {
         "Fix: unsupported F16 programs must fail at the backend capability gate with an actionable capability error. Got {text}"
     );
 }
+
+#[test]
+fn cooperative_dispatch_is_rejected_until_grid_sync_is_supported() {
+    let backend = live_backend();
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::Return],
+    );
+
+    let mut config = DispatchConfig::default();
+    config.cooperative = true;
+    let error = backend
+        .dispatch(&program, &[], &config)
+        .expect_err("Fix: wgpu must reject cooperative dispatch with UnsupportedFeature");
+    match error {
+        vyre_driver::BackendError::UnsupportedFeature { name, backend } => {
+            assert!(name.contains("cooperative"), "got {name}");
+            assert_eq!(backend, "wgpu");
+        }
+        other => panic!("expected UnsupportedFeature, got {other:?}"),
+    }
+}

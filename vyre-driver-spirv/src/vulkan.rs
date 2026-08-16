@@ -442,6 +442,12 @@ pub(crate) unsafe fn dispatch_program(
     inputs: &[&[u8]],
     config: &vyre_driver::DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, BackendError> {
+    if config.cooperative {
+        return Err(BackendError::UnsupportedFeature {
+            name: "SPIR-V cooperative grid dispatch".to_string(),
+            backend: crate::SPIRV_BACKEND_ID.to_string(),
+        });
+    }
     let workgroup_size = config.workgroup_override.unwrap_or(program.workgroup_size);
     if workgroup_size.contains(&0) {
         return Err(BackendError::InvalidProgram {
