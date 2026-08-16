@@ -3,9 +3,9 @@
 #![cfg(feature = "go-parser")]
 #![allow(deprecated)]
 
-mod common;
-use common::decode_u32_words;
-use common::go::{pack_source, run, tokenize, zeroed_u32_words};
+mod wire_words;
+use wire_words::decode_u32_words;
+use wire_words::go::{pack_source, run, tokenize, zeroed_u32_words};
 use std::fs;
 use std::path::{Path, PathBuf};
 

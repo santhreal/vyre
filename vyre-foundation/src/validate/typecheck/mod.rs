@@ -21,7 +21,7 @@ mod tests {
     use super::*;
     use crate::ir_inner::model::expr::Expr;
     use crate::ir_inner::model::program::BufferDecl;
-    use crate::ir_inner::model::spec_types::{BinOp, DataType};
+    use crate::ir_inner::model::op_signature::{BinOp, DataType};
     use crate::validate::Binding;
     use rustc_hash::FxHashMap;
 

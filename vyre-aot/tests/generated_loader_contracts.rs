@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unreachable_pub)]
 
-mod common;
+mod fixture_target;
 #[path = "../templates/artifact.rs.tmpl"]
 mod generated_loader;
 
@@ -13,11 +13,11 @@ use serde_json::json;
 use vyre_aot::package_artifact;
 
 fn package(dir: &Path) -> serde_json::Value {
-    let envelope = common::compiled_artifact();
+    let envelope = fixture_target::compiled_artifact();
     package_artifact(
         dir,
         &envelope,
-        common::fixture_target(),
+        fixture_target::fixture_target(),
         &[1_u8, 2, 3, 5, 8, 13, 21, 34],
         "generated-loader-contract",
         "",
@@ -84,11 +84,11 @@ fn generated_loader_rejects_envelope_digest_mismatch() {
 #[test]
 fn generated_loader_projects_target_module_and_abi_from_envelope() {
     let dir = tempfile::tempdir().expect("tempdir must be available");
-    let expected = common::compiled_artifact();
+    let expected = fixture_target::compiled_artifact();
     package_artifact(
         dir.path(),
         &expected,
-        common::fixture_target(),
+        fixture_target::fixture_target(),
         &[1_u8, 2, 3, 5, 8, 13, 21, 34],
         "generated-loader-contract",
         "",

@@ -1,4 +1,4 @@
-use crate::common::{assert_u32_output_lanes, cuda_reference_outputs, live_backend, u32_bytes};
+use crate::harness::{assert_u32_output_lanes, cuda_reference_outputs, live_backend, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 

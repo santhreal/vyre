@@ -3,11 +3,11 @@
 
 #![cfg(test)]
 
-mod common;
-#[path = "common/hash_parsing_fnv.rs"]
+mod harness;
+#[path = "harness/hash_parsing_fnv.rs"]
 mod hash_parsing_fnv;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use std::num::NonZeroU32;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;

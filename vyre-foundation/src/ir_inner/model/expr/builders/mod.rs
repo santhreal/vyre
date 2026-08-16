@@ -1,6 +1,6 @@
 mod ops {
     use crate::ir_inner::model::expr::Expr;
-    use crate::ir_inner::model::spec_types::{BinOp, UnOp};
+    use crate::ir_inner::model::op_signature::{BinOp, UnOp};
 
     #[must_use]
     #[inline]

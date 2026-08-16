@@ -1,7 +1,7 @@
 //! WGPU integer arithmetic contract tests.
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::VyreBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

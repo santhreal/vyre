@@ -13,7 +13,7 @@ use super::evidence_schema::{
     OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
     OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
 };
-use super::inspect_core::{
+use super::artifact_metrics::{
     read_benchmark_report, read_text_bounded, report_cases, suite_metric_percentile,
     WallClockMinima,
 };

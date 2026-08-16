@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::f32_bytes as bytes;
+mod wire_words;
+use wire_words::f32_bytes as bytes;
 
 use vyre_libs::nn::attention::attention_head_to_token;
 use vyre_reference::value::Value;

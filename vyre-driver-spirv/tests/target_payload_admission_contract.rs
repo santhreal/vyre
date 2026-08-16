@@ -20,8 +20,8 @@ use vyre_megakernel::{
     TargetProfile,
 };
 
-mod support;
-use support::{foreign_artifact, spirv};
+mod target_artifacts;
+use target_artifacts::{foreign_artifact, spirv};
 
 /// A real artifact and the real payload a target compiler produced for it.
 fn compiled() -> (Artifact, TargetPayload) {

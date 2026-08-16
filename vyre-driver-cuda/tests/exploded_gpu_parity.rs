@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::exploded::{
     build_ifds_csr_via, reference_canonicalize_csr_within_rows,
 };

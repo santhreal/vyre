@@ -2,8 +2,8 @@
 
 #![cfg(feature = "nn-linear-4bit")]
 
-mod common;
-use common::{f32_bytes, f32_words as decode_f32};
+mod wire_words;
+use wire_words::{f32_bytes, f32_words as decode_f32};
 
 use vyre_libs::nn::linear::{linear_4bit_affine_grouped_typed, QuantizedLinear4BitSpec};
 use vyre_reference::value::Value;

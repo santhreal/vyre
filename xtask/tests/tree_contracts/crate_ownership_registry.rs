@@ -4,10 +4,10 @@ use std::fs;
 use std::path::Path;
 use std::process::Output;
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 fn run_registry(root: &Path, mode: &str) -> Output {
-    super::common::run_generator("scripts/crate_ownership.py", root, mode)
+    super::workspace_sources::run_generator("scripts/crate_ownership.py", root, mode)
 }
 
 fn write_member(root: &Path, path: &str, package: &str, dependencies: &str) {

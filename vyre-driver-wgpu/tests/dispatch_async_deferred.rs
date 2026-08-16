@@ -4,8 +4,8 @@
 //! file covers the deferred API boundary where validation must fail before a
 //! pending GPU handle is returned.
 
-mod common;
-use common::acquire_live_backend as live_backend;
+mod harness;
+use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};

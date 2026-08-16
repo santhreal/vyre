@@ -23,9 +23,9 @@
     feature = "matching-dfa",
 ))]
 
-mod common;
+mod harness;
 
-use common::{decode_u32_words, u32_bytes};
+use harness::{decode_u32_words, u32_bytes};
 use proptest::prelude::*;
 use vyre::ir::Program;
 use vyre_reference::value::Value;

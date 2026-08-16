@@ -6,8 +6,8 @@
 //! - Execution latency is consistent with a GPU round-trip, not instant CPU results
 //! - `WgpuBackend::acquire()` fails when only CPU adapters are available
 
-mod common;
-use common::acquire_live_backend as live_backend;
+mod harness;
+use harness::acquire_live_backend as live_backend;
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};

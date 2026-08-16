@@ -190,7 +190,7 @@ Each lint exists because the defect it catches shipped once. Not here: style. A 
 
 ### structure-gate
 
-The structural contract: the crate roster, one identity per operation, one home per concept. It also owns the correct source-text reader, the one that handles nested block comments, raw strings, and a character literal that is not a lifetime.
+The structural contract: the crate roster, one identity per operation, one home per concept, one place per module. It also owns the correct source-text reader, the one that handles nested block comments, raw strings, and a character literal that is not a lifetime.
 
 Not here: a second source scanner. The reason this crate matters is that a bad masker desynchronises a brace matcher on the first raw string it meets, and a contract built on a bad masker reports confident nonsense.
 

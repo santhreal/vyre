@@ -7,7 +7,7 @@ use buffer_table::{put_hints_payload, put_leb_str, put_memory_regions};
 
 use super::put_node;
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::spec_types::BufferAccess;
+use crate::ir_inner::model::op_signature::BufferAccess;
 use crate::perf::PerfScope;
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{

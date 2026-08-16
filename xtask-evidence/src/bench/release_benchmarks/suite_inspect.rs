@@ -8,7 +8,7 @@ use super::evidence_schema::{
     BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField,
     HardwareUnavailableReason,
 };
-use super::inspect_core::{
+use super::artifact_metrics::{
     first_metric_p50, read_benchmark_report, read_text_bounded, record_observed_metric_percentile,
     record_required_metric_percentile, report_cases, WallClockMinima,
 };

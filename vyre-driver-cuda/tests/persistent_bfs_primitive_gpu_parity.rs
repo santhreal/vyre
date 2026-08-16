@@ -3,9 +3,9 @@
 #![cfg(test)]
 
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
 use vyre_primitives::graph::persistent_bfs::{

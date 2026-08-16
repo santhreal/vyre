@@ -10,7 +10,7 @@ use super::evidence_schema::{
     BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
 };
 use super::frontier_leaderboard::write_frontier_leaderboard;
-use super::inspect_core::read_text_bounded;
+use super::artifact_metrics::read_text_bounded;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
 use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES};
 use super::runner::{

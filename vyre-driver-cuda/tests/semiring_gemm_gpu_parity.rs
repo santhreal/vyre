@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::analysis::dataflow_fixpoint::{
     reference_semiring_gemm, semiring_gemm_via, semiring_gemm_via_bool_or,
     semiring_gemm_via_lineage, semiring_gemm_via_min_plus, Semiring,

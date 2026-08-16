@@ -2,9 +2,9 @@
 use vyre_debug::{dump_wgsl, dump_wgsl_with_lines};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
-#[path = "support/mod.rs"]
-mod support;
-use support::minimal_program;
+#[path = "program_fixtures/mod.rs"]
+mod program_fixtures;
+use program_fixtures::minimal_program;
 
 #[test]
 fn dump_wgsl_minimal_program_returns_compute_entry() {

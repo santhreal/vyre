@@ -18,7 +18,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 /// Below this many members the manifest walk has stopped seeing the workspace.
 const MINIMUM_MEMBERS: usize = 20;

@@ -20,8 +20,8 @@
 //! sign-extend (`-7i32 as u64 == 0xFFFF_FFFF_FFFF_FFF9`), driven by the SOURCE
 //! signedness, not the target's.
 
-mod common;
-use common::live_backend;
+mod harness;
+use harness::live_backend;
 
 use vyre_driver::parity_harness::{
     dispatch_single_output, elementwise_program, u64_words, ParityInput,

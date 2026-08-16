@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{bf16_bytes, bf16_word, f32_bytes, f32_words_of as decode_f32};
+mod wire_words;
+use wire_words::{bf16_bytes, bf16_word, f32_bytes, f32_words_of as decode_f32};
 
 use std::collections::HashMap;
 

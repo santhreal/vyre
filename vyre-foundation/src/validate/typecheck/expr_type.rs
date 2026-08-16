@@ -2,7 +2,7 @@
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::spec_types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use crate::validate::Binding;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
@@ -102,7 +102,7 @@ pub(crate) fn expr_type<E: TypeEnv + ?Sized>(expr: &Expr, env: &mut E) -> Option
         }
     }
 
-    use crate::ir_inner::model::spec_types::UnOp;
+    use crate::ir_inner::model::op_signature::UnOp;
 
     let mut frames: Frames<'_> = SmallVec::new();
     frames.push(Frame::Enter(expr));

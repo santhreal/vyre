@@ -6,9 +6,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::self_optimizer::{body_of, run_pipeline};
+use harness::self_optimizer::{body_of, run_pipeline};
 use vyre::ir::{Expr, Node, Program};
 
 #[test]

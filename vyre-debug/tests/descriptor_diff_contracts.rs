@@ -1,9 +1,9 @@
 //! Descriptor diffing reports no change for identical descriptors and names the ops DCE removed.
 use vyre_debug::diff_descriptors;
 
-#[path = "support/mod.rs"]
-mod support;
-use support::minimal_program;
+#[path = "program_fixtures/mod.rs"]
+mod program_fixtures;
+use program_fixtures::minimal_program;
 
 #[test]
 fn diff_descriptors_identical_returns_empty_diff() {

@@ -18,12 +18,12 @@ use vyre_primitives::graph::program_graph::ProgramGraphShape;
 mod metrics;
 mod queue_closure;
 mod queue_materialize;
-mod support;
+mod fixture;
 #[cfg(test)]
 mod tests;
 
 use metrics::{skewed_csr_baseline_metric_points, skewed_csr_metric_points};
-use support::{
+use fixture::{
     build_skewed_csr_fixture, skewed_csr_cpu_oracle, skewed_csr_inputs, SkewedCsrStats,
     CSR_ALLOW_MASK, CSR_NODE_COUNT, SUITES,
 };

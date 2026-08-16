@@ -1,12 +1,12 @@
 //! Regression coverage for AOT packaging of canonical compiler envelopes.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::{package_artifact, TargetId};
 
 #[test]
 fn package_and_read_round_trip_the_canonical_envelope() {
-    let envelope = common::compiled_artifact();
+    let envelope = fixture_target::compiled_artifact();
     let neutral_digest = envelope.neutral().digest();
     let payload_digest = envelope.target_payloads()[0].digest();
     let target_bytes = envelope.target_payloads()[0].bytes().to_vec();
@@ -15,7 +15,7 @@ fn package_and_read_round_trip_the_canonical_envelope() {
     package_artifact(
         directory.path(),
         &envelope,
-        common::fixture_target(),
+        fixture_target::fixture_target(),
         &[9; 32],
         "canonical-package",
         "regression fixture",
@@ -26,7 +26,7 @@ fn package_and_read_round_trip_the_canonical_envelope() {
 
     assert_eq!(manifest.schema, "vyre-aot-manifest-v4");
     assert_eq!(manifest.artifact_name, "canonical-package");
-    assert_eq!(manifest.target, common::fixture_target());
+    assert_eq!(manifest.target, fixture_target::fixture_target());
     assert_eq!(decoded.neutral().digest(), neutral_digest);
     assert_eq!(decoded.target_payloads()[0].digest(), payload_digest);
     assert_eq!(decoded.target_payloads()[0].bytes(), target_bytes);

@@ -31,7 +31,7 @@ const CORE_ROOTS: &[&str] = &[
 /// Measured line counts for files under the core crates. The cap is this number
 /// plus five percent, rounded up.
 const CORE_MEASURED: &[(&str, usize)] = &[
-    ("vyre-driver-wgpu/src/backend_impl.rs", 1360),
+    ("vyre-driver-wgpu/src/backend_dispatch.rs", 1360),
     ("vyre-driver-wgpu/src/pipeline/mod.rs", 900),
     ("vyre-driver-wgpu/src/buffer/handle/mod.rs", 674),
     ("vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs", 331),

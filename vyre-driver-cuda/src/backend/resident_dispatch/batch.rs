@@ -21,7 +21,7 @@ use crate::backend::resident_dispatch::descriptor_cursor::{
     next_resident_handle, resident_required_handles,
 };
 use crate::backend::resident_dispatch::host_uploads::enqueue_optional_resident_h2d_copy;
-use crate::backend::resident_dispatch_support::{
+use crate::backend::resident_dispatch_accounting::{
     checked_resident_dispatch_capacity_mul, CudaResidentBatchDispatch,
 };
 use crate::backend::staging_reserve::{reserve_hash_set, reserve_smallvec};

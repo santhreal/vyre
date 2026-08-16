@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{cuda_u32_bitset_output, with_live_backend};
+use harness::{cuda_u32_bitset_output, with_live_backend};
 use vyre_primitives::predicate::literal_of::{cpu_ref as literal_cpu, literal_of};
 use vyre_primitives::predicate::node_kind_eq::{cpu_ref as kind_eq_cpu, node_kind_eq};
 

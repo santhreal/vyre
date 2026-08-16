@@ -15,12 +15,12 @@ use vyre_driver_spirv::SpirvBackend;
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{TargetModuleBundle, TargetPayload, TargetPayloadFormat};
 
-mod support;
-use support::target_compiler_contract::{
+mod target_artifacts;
+use target_artifacts::target_compiler_contract::{
     assert_materializer_executes_payload, assert_target_compiler_emits_bundle, registration,
     store_one_program,
 };
-use support::{artifact, foreign_artifact, spirv};
+use target_artifacts::{artifact, foreign_artifact, spirv};
 
 /// First word of every well-formed SPIR-V module.
 const SPIRV_MAGIC: u32 = 0x0723_0203;

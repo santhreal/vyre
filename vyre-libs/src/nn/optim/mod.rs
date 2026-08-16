@@ -3,7 +3,7 @@
 //! MuonEq-R, AdamW, EMA, Newton-Schulz orthogonalization.
 pub(crate) mod adamw_step;
 pub(crate) mod ema_apply;
-pub(crate) mod muon_core;
+pub(crate) mod muon_step;
 pub(crate) mod muon_update;
 pub(crate) mod muoneq_r;
 pub(crate) mod newton_schulz;

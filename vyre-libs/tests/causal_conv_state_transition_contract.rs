@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{f32_bytes, f32_words_of as decode_f32};
+mod wire_words;
+use wire_words::{f32_bytes, f32_words_of as decode_f32};
 
 use vyre::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,

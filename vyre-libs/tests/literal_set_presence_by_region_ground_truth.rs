@@ -18,8 +18,8 @@
 //! against the real wgpu backend, the actual production path, so a
 //! subgroup-divergence under-fire that only manifests on device is caught there.
 
-mod common;
-use common::decode_u32_words as decode_u32;
+mod wire_words;
+use wire_words::decode_u32_words as decode_u32;
 
 mod presence_oracle;
 

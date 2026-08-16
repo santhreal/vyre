@@ -12,8 +12,8 @@
 //! (The inventory's 2026-06-18 "signed mod emits SRem, correct" conclusion was a
 //! source-read that was never GPU-verified; this test is the empirical truth.)
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

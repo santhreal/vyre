@@ -11,8 +11,8 @@
 
 #![cfg(feature = "matching-dfa")]
 #![allow(deprecated)]
-mod common;
-use common::{decode_u32_words, u32_bytes};
+mod wire_words;
+use wire_words::{decode_u32_words, u32_bytes};
 use vyre_libs::scan::aho_corasick;
 use vyre_primitives::matching::{dfa_compile, CompiledDfa};
 use vyre_reference::value::Value;

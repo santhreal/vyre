@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::process::{Command, Output};
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 fn run(executable: &str, args: &[&str]) -> Output {
     Command::new(executable)

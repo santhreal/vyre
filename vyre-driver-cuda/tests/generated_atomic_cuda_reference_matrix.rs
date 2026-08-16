@@ -1,10 +1,10 @@
 //! Generated live CUDA/reference differential matrix for atomic memory semantics.
 
-mod common;
-#[path = "common/generated_atomic_matrix.rs"]
+mod harness;
+#[path = "harness/generated_atomic_matrix.rs"]
 mod generated_atomic_matrix;
 
-use common::{
+use harness::{
     assert_u32_output_lanes, cuda_reference_outputs, live_backend, u32_bytes,
     GENERATED_LANE_COUNT as LANE_COUNT,
 };

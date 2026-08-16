@@ -16,8 +16,8 @@
     feature = "matching-dfa",
 ))]
 
-mod common;
-use common::{decode_u32_words, u32_bytes};
+mod wire_words;
+use wire_words::{decode_u32_words, u32_bytes};
 use vyre::ir::Program;
 use vyre_reference::value::Value;
 

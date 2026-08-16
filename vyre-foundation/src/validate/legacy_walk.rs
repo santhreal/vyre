@@ -23,7 +23,7 @@ use super::uniformity::is_uniform;
 use super::{barrier, shadowing, Binding, ValidationOptions, ValidationReport};
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::spec_types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 
 #[inline]
 pub(crate) fn validate_nodes(

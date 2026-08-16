@@ -339,7 +339,7 @@ mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_support::StaticOutputs;
+    use crate::test_parity_oracles::StaticOutputs;
 
     #[test]
     fn build_program_declares_four_buffers() {

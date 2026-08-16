@@ -2,7 +2,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
-use super::program_helpers::{
+use super::i4_expressions::{
     i4_dot_accumulation_body, i4_matvec_scaled_body, signed_i4_nibble_expr,
     signed_i4_nibble_f32_expr,
 };

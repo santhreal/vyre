@@ -2,13 +2,13 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
+mod workspace_sources;
 
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
 
-use common::workspace_root;
+use workspace_sources::workspace_root;
 
 /// Run the gate against one checkout, from inside it.
 ///

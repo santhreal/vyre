@@ -164,14 +164,14 @@ fn parse_or_panic<T>(path: &Path, parsed: Result<T, syn::Error>) -> T {
 /// Whether the member rooted at `src_dir` implements the backend trait anywhere
 /// in its production sources.
 fn member_implements_backend_trait(src_dir: &Path) -> bool {
-    super::common::rust_sources_under(src_dir)
+    super::workspace_sources::rust_sources_under(src_dir)
         .iter()
         .any(|path| parse_or_panic(path, implements_backend_trait(&read_source(path))))
 }
 
 /// Every workspace member `src` directory that implements the backend trait.
 fn backend_crate_src_dirs(root: &Path) -> Vec<PathBuf> {
-    super::common::workspace_member_src_dirs(root)
+    super::workspace_sources::workspace_member_src_dirs(root)
         .into_iter()
         .filter(|src_dir| member_implements_backend_trait(src_dir))
         .collect()
@@ -180,16 +180,16 @@ fn backend_crate_src_dirs(root: &Path) -> Vec<PathBuf> {
 /// No backend crate may name a three-deep byte-row vector in production source.
 #[test]
 fn backend_sources_reject_triple_nested_byte_row_types() {
-    let root = super::common::workspace_root();
+    let root = super::workspace_sources::workspace_root();
     let mut violations = Vec::new();
 
     for src_dir in backend_crate_src_dirs(&root) {
-        for path in super::common::rust_sources_under(&src_dir) {
+        for path in super::workspace_sources::rust_sources_under(&src_dir) {
             let locations = parse_or_panic(&path, nested_byte_row_locations(&read_source(&path)));
             violations.extend(
                 locations
                     .into_iter()
-                    .map(|location| super::common::violation_location(&root, &path, location)),
+                    .map(|location| super::workspace_sources::violation_location(&root, &path, location)),
             );
         }
     }
@@ -211,11 +211,11 @@ fn backend_sources_reject_triple_nested_byte_row_types() {
 /// rather than trusted.
 #[test]
 fn the_scanned_set_is_exactly_the_crates_that_implement_the_backend_trait() {
-    let root = super::common::workspace_root();
+    let root = super::workspace_sources::workspace_root();
     let scanned: BTreeSet<PathBuf> = backend_crate_src_dirs(&root).into_iter().collect();
 
     let mut disagreements = Vec::new();
-    for src_dir in super::common::workspace_member_src_dirs(&root) {
+    for src_dir in super::workspace_sources::workspace_member_src_dirs(&root) {
         let implements = member_implements_backend_trait(&src_dir);
         if implements != scanned.contains(&src_dir) {
             disagreements.push(format!(

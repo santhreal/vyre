@@ -1,8 +1,8 @@
 //! Generated live CUDA/reference differential matrix for f32 IR semantics.
 
-mod common;
+mod harness;
 
-use common::{
+use harness::{
     assert_f32_matrix_sweep, assert_u32_matrix_sweep, eq_word, f32_bytes, ge_word,
     generated_lane_program, gt_word, guarded_generated_store, le_word, live_backend, lt_word,
     ne_word, GeneratedMatrixCase, GENERATED_LANE_COUNT as LANE_COUNT,

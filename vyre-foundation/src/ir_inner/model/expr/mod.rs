@@ -3,7 +3,7 @@
 // Every expression evaluates to a typed value. Expressions are pure:
 // they read state but do not modify it.
 
-use crate::ir_inner::model::spec_types::{DataType, SubgroupReduceOp};
+use crate::ir_inner::model::op_signature::{DataType, SubgroupReduceOp};
 use std::fmt;
 use std::hash::Hash;
 use std::sync::Arc;

@@ -5,7 +5,7 @@ use vyre_spec::OpIntensity;
 
 use crate::ir::Node;
 use crate::ir_inner::model::expr::Ident;
-use crate::ir_inner::model::spec_types::BufferAccess;
+use crate::ir_inner::model::op_signature::BufferAccess;
 use crate::visit::walk_nodes_and_exprs;
 
 use super::Program;

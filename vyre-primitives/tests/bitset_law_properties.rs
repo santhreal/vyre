@@ -25,7 +25,7 @@ macro_rules! bitset_and_law_tests {
             ) {
                 prop_assert_eq!(
                     $cpu_ref(&lhs, &rhs),
-                    crate::bitset_law_support::manual_bitset_binary(&lhs, &rhs, |a, b| a & b)
+                    crate::bitset_law_properties::manual_bitset_binary(&lhs, &rhs, |a, b| a & b)
                 );
             }
 
@@ -79,7 +79,7 @@ macro_rules! bitset_or_law_tests {
             ) {
                 prop_assert_eq!(
                     $cpu_ref(&lhs, &rhs),
-                    crate::bitset_law_support::manual_bitset_binary(&lhs, &rhs, |a, b| a | b)
+                    crate::bitset_law_properties::manual_bitset_binary(&lhs, &rhs, |a, b| a | b)
                 );
             }
 

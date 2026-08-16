@@ -18,7 +18,7 @@
 
 mod allocation;
 mod async_dispatch;
-mod backend_impl;
+mod backend_dispatch;
 pub mod buffer;
 mod capabilities;
 mod descriptor_mapping;

@@ -12,8 +12,8 @@
 //! separate presence bitmap word-for-word AND the fused triple set equals the
 //! separate position set. A divergence here is a recall bug in the fold.
 
-mod common;
-use common::decode_u32_words as decode_u32;
+mod wire_words;
+use wire_words::decode_u32_words as decode_u32;
 
 use std::collections::BTreeSet;
 

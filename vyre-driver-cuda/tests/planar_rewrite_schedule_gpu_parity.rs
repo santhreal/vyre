@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_primitives::parsing::planar_rewrite::{
     planar_rewrite_schedule, reference_planar_rewrite_schedule,

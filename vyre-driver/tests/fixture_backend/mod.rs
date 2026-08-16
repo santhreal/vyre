@@ -60,8 +60,8 @@ macro_rules! register_dispatchable_backend {
                 payload_format: None,
                 reference_oracle: $oracle,
                 factory: $factory,
-                supported_ops: $crate::common::no_supported_ops,
-                semantic_operations: $crate::common::no_supported_ops,
+                supported_ops: $crate::fixture_backend::no_supported_ops,
+                semantic_operations: $crate::fixture_backend::no_supported_ops,
                 target_compiler: None,
                 materializer: None,
             }

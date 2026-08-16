@@ -6,7 +6,7 @@
 //! permissions before the program reaches the GPU.
 
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::spec_types::{BufferAccess, DataType};
+use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;

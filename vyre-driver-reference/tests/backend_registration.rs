@@ -3,8 +3,8 @@
 use vyre_driver::{acquire, backend_dispatches};
 use vyre_foundation::ir::{Expr, Node, Program};
 
-mod support;
-use support::u32_out_buffer;
+mod dispatch_fixtures;
+use dispatch_fixtures::u32_out_buffer;
 
 #[test]
 fn cpu_ref_registers_as_dispatch_backend() {

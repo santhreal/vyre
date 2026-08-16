@@ -46,7 +46,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `async_dispatch_contract` | `vyre-driver-wgpu/tests/async_dispatch_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_dispatch_contract` |
 | `test` | `async_dispatch_non_blocking` | `vyre-driver-wgpu/tests/async_dispatch_non_blocking.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_dispatch_non_blocking` |
 | `test` | `binding_layout_drift` | `vyre-driver-wgpu/tests/binding_layout_drift.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binding_layout_drift` |
-| `test` | `binop_parity_support` | `vyre-driver-wgpu/tests/binop_parity_support.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binop_parity_support` |
+| `test` | `binop_parity_fixtures` | `vyre-driver-wgpu/tests/binop_parity_fixtures.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binop_parity_fixtures` |
 | `test` | `bitset_zero_gpu_parity` | `vyre-driver-wgpu/tests/bitset_zero_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test bitset_zero_gpu_parity` |
 | `test` | `blake3_compress_gpu_parity` | `vyre-driver-wgpu/tests/blake3_compress_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test blake3_compress_gpu_parity` |
 | `test` | `buf_len_array_length` | `vyre-driver-wgpu/tests/buf_len_array_length.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test buf_len_array_length` |

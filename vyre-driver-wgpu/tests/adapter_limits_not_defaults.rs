@@ -8,8 +8,8 @@
 //! - Reported limits match the live `wgpu::Limits`
 //! - `subgroup_size` is not `None` when the adapter supports subgroups
 
-mod common;
-use common::shared_live_backend as live_backend;
+mod harness;
+use harness::shared_live_backend as live_backend;
 
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;

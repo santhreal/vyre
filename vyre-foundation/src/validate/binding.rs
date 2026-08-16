@@ -9,7 +9,7 @@
 /// These constants bound the size and depth of programs that the
 /// validator will accept.
 use crate::ir_inner::model::expr::Ident;
-use crate::ir_inner::model::spec_types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;

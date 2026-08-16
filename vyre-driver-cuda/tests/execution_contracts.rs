@@ -1,7 +1,7 @@
 //! Live CUDA execution contracts for lane coverage and readback semantics.
 
-mod common;
-use common::{
+mod harness;
+use harness::{
     bytes_f32 as bytes_to_f32, bytes_u32, compiled_cuda_outputs_with_config, f32_bytes, i32_bytes,
     ordered_f32_bits, u16_bytes, u32_bytes,
 };

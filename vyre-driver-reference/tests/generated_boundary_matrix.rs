@@ -8,8 +8,8 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-mod support;
-use support::{dispatch_with_inputs, u32_out_buffer};
+mod dispatch_fixtures;
+use dispatch_fixtures::{dispatch_with_inputs, u32_out_buffer};
 
 #[derive(Clone, Copy)]
 struct BinaryCase {

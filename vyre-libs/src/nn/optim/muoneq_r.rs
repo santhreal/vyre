@@ -4,7 +4,7 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::nn::optim::muon_core::muon_step_program;
+use crate::nn::optim::muon_step::muon_step_program;
 
 const OP_ID: &str = "vyre-libs::optim::muoneq_r";
 

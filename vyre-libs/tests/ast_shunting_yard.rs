@@ -1,10 +1,10 @@
 //! Reference-oracle tests for expression AST shunting-yard lowering.
 
 #![allow(deprecated)]
-mod common;
+mod wire_words;
 
-use common::bytes_from_words;
-use common::words_from_bytes;
+use wire_words::bytes_from_words;
+use wire_words::words_from_bytes;
 use vyre::ir::Expr;
 use vyre_libs::parsing::core::ast::node::*;
 use vyre_libs::parsing::core::ast::shunting::ast_shunting_yard_with_capacity;

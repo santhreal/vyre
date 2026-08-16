@@ -1,7 +1,7 @@
 use super::*;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
-use crate::common::self_optimizer::optimized_store_value;
+use crate::harness::self_optimizer::optimized_store_value;
 
 #[test]
 fn cuda_bitxor_chain_cancels_right_via_cse() {

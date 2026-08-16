@@ -14,7 +14,7 @@
 
 use std::path::Path;
 
-use super::common::{sources_under, workspace_root};
+use super::workspace_sources::{sources_under, workspace_root};
 
 /// The one file allowed to resolve the running binary, relative to the checkout.
 const OWNER: &str = "xtask/src/delegate.rs";

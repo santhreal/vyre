@@ -23,8 +23,8 @@
 //! (Integer `abs`/`sign` are intentionally absent: the oracle's integer unary
 //! dispatch errors on them, they are float-only ops by contract.)
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

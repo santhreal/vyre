@@ -1,6 +1,6 @@
 //! Smoke tests for target-neutral `vyre_aot::compile` behavior.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts, TargetId};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -53,5 +53,5 @@ fn launcher_requires_linked_target_emitter() {
 }
 
 fn minimal_ptx_artifact_for_template_test() -> vyre_aot::ArtifactEnvelope {
-    common::compiled_artifact()
+    fixture_target::compiled_artifact()
 }

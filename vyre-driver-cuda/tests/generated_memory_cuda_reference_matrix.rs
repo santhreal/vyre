@@ -1,8 +1,8 @@
 //! Generated live CUDA/reference differential matrix for indexed memory semantics.
 
-mod common;
+mod harness;
 
-use common::{
+use harness::{
     assert_f32_matrix_sweep, assert_u32_matrix_sweep, bool_bytes, f32_bytes,
     generated_lane_program, guarded_generated_store_at, i32_bytes, live_backend, u32_bytes,
     GeneratedMatrixCase, GENERATED_LANE_COUNT as LANE_COUNT,

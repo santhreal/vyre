@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::dominator_frontier::{
     dominance_frontier as reference_dominance_frontier,
     dominance_frontier_via,

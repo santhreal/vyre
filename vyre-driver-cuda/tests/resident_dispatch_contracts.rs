@@ -10,7 +10,7 @@
 
 #[path = "resident_dispatch_contracts/basic_resident_contracts.rs"]
 mod basic_resident_contracts;
-mod common;
+mod harness;
 #[path = "resident_dispatch_contracts/optimizer_combined_contracts.rs"]
 mod optimizer_combined_contracts;
 #[path = "resident_dispatch_contracts/repeated_sequence_contracts.rs"]
@@ -20,7 +20,7 @@ mod resident_lane_fixture;
 #[path = "resident_dispatch_contracts/sequence_readback_contracts.rs"]
 mod sequence_readback_contracts;
 
-use common::{bytes_u32, u32_bytes};
+use harness::{bytes_u32, u32_bytes};
 use resident_lane_fixture::*;
 
 use vyre_driver::{DispatchConfig, Resource, VyreBackend};

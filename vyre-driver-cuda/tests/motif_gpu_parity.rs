@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::motif::{match_motif as reference_match_motif, match_motif_via};
 use vyre_primitives::graph::motif::MotifEdge;
 

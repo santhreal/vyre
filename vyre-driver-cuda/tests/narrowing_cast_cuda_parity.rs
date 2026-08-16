@@ -14,8 +14,8 @@
 //! are backend-independent and live in `vyre_test_support::cast_parity`, which
 //! the wgpu twin of this gate reads too. Only the dispatch below is CUDA.
 
-mod common;
-use common::live_backend;
+mod harness;
+use harness::live_backend;
 
 use vyre_driver::parity_harness::{
     dispatch_single_output, elementwise_program, u32_words, ParityInput,

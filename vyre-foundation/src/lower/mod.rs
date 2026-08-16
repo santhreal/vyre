@@ -15,7 +15,7 @@ pub(crate) mod subgroup_lowering;
 pub use effects::{compute_program_effects, ProgramEffects};
 pub use subgroup_lowering::lower_subgroup_reductions;
 
-use crate::ir_inner::model::spec_types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use std::{error::Error, fmt};
 
 /// Error raised while progressively lowering a [`crate::ir::Program`] into a backend IR

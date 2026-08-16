@@ -1,6 +1,6 @@
 //! AOT contracts for canonical compiler artifact envelopes.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::TargetId;
 
@@ -33,7 +33,7 @@ fn target_ids_reject_invalid_deserialized_spellings() {
 /// Regression: AOT size accounting must read the canonical neutral resource envelope.
 #[test]
 fn total_buffer_bytes_comes_from_canonical_resources() {
-    let envelope = common::compiled_artifact();
+    let envelope = fixture_target::compiled_artifact();
     assert_eq!(
         envelope.neutral().resource_envelope().total_bytes,
         256 * 4 + 64 * 4
@@ -43,7 +43,7 @@ fn total_buffer_bytes_comes_from_canonical_resources() {
 /// Regression: selected target bytes must be read from the exact canonical attachment.
 #[test]
 fn envelope_selects_the_canonical_target_payload() {
-    let envelope = common::compiled_artifact();
+    let envelope = fixture_target::compiled_artifact();
     let payload = envelope
         .target_payloads()
         .iter()

@@ -9,8 +9,8 @@
 //! implementation still pending for pipeline artifacts specifically).
 #![allow(missing_docs)]
 
-mod common;
-use common::acquire_live_backend as live_backend;
+mod harness;
+use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DEFAULT_PIPELINE_CACHE_ENTRIES;

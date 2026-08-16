@@ -38,4 +38,4 @@ pub(crate) mod program_graph_identity;
 mod program_graph_wire;
 
 /// The frozen IR vocabulary re-exported from `vyre-spec`.
-pub(crate) mod spec_types;
+pub(crate) mod op_signature;

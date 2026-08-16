@@ -2,9 +2,9 @@
 
 extern crate self as vyre;
 
-mod support;
+mod expansion_fixtures;
 
-pub use support::{ir, optimizer};
+pub use expansion_fixtures::{ir, optimizer};
 
 use vyre_macros::vyre_pass;
 

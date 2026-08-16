@@ -10,9 +10,9 @@
 
 #![cfg(test)]
 
-mod common;
-use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{wrapped, WgpuProgramDispatcher};
+mod harness;
+use harness::acquire_live_backend as live_backend;
+use harness::self_optimizer::{wrapped, WgpuProgramDispatcher};
 
 use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;

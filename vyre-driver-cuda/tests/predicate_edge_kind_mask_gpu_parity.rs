@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
