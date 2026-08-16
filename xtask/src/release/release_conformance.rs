@@ -360,7 +360,7 @@ fn measure_backend(workspace_root: &Path, backend_id: &str) -> BackendConformanc
         "--ops".to_string(),
         "all".to_string(),
     ]);
-    let runner = crate::cargo_runner::runner(workspace_root);
+    let runner = crate::cargo_runner::binary(workspace_root);
     let command = format!("{} {}", runner.display(), args.join(" "));
     let output = Command::new(&runner)
         .args(&args)

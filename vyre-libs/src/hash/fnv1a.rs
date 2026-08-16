@@ -406,7 +406,7 @@ pub const fn fnv1a64_update_byte(hash: u64, byte: u8) -> u64 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         FNV1A32_OP_ID,
         || fnv1a32_program("input", "out", 1),
         Some(|| {
@@ -424,7 +424,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         FNV1A64_OP_ID,
         || fnv1a64_program("input", "out"),
         Some(|| {

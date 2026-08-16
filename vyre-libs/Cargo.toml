@@ -56,6 +56,7 @@ full = [
     "representation",
     "builder-ops",
     "geom", "opt", "topology",
+    "vfs",
 ]
 cpu-parity = ["vyre-primitives/cpu-parity"]
 
@@ -67,6 +68,7 @@ cpu-parity = ["vyre-primitives/cpu-parity"]
 # `subset_of` on `reduce::atomic_scalar::atomic_grid_stride_u32`.
 bitset = ["reduce"]
 reduce = []
+vfs = []
 fixpoint = ["bitset"]
 label = ["bitset"]
 # `graph` names `math-kernels` because seven graph kernels reach

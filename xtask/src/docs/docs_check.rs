@@ -212,9 +212,9 @@ impl Gate for DocsCheck {
         // navigation is generated: a stale summary linking a page the manifest
         // no longer holds used to report a broken link and then refuse to write
         // the summary that no longer links it.
-        let links = link_findings(&ctx.root, &pages, &mut report)?;
+        let links = navigation_link_findings(&ctx.root, &mut report)?;
         report.note(format!(
-            "{} published page(s), {links} outbound link(s)",
+            "{} published page(s), {links} navigation link(s)",
             pages.len()
         ));
         Ok(report)
@@ -665,20 +665,19 @@ fn is_word_character(character: char) -> bool {
     character.is_alphanumeric() || character == '_'
 }
 
-/// Findings for every outbound link in the published navigation, and how many
+/// Findings for every link in the navigation this gate writes, and how many
 /// links were judged.
-fn link_findings(
-    root: &Path,
-    pages: &[Page],
-    report: &mut Report,
-) -> Result<usize, GateError> {
-    let mut documents: Vec<String> = vec![SUMMARY.to_string()];
-    documents.extend(
-        pages
-            .iter()
-            .filter(|page| page.navigates())
-            .map(|page| format!("{DOCS}/{}", page.path)),
-    );
+///
+/// The scope is the two generated navigation documents and nothing else. Every
+/// other document's outbound paths belong to `docs-references`, which reads
+/// code spans, link targets and command inputs across every tracked document
+/// with one resolver; resolving them here as well gave one dead link two
+/// findings from two resolvers that disagreed about whether an untracked file
+/// counts as published. The navigation stays here because this gate writes it:
+/// a link is judged after the write, so a stale copy never blocks the
+/// regeneration that repairs it.
+fn navigation_link_findings(root: &Path, report: &mut Report) -> Result<usize, GateError> {
+    let documents: Vec<String> = vec![SUMMARY.to_string(), INDEX.to_string()];
 
     let mut sites: Vec<(String, u32, String, String)> = Vec::new();
     for document in &documents {

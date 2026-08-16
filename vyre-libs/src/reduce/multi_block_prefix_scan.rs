@@ -113,7 +113,7 @@ pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Pro
 // inclusive scan whose expected values are closed-form, so it checks real
 // arithmetic rather than merely running.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID_INCLUSIVE_SUM,
         || multi_block_prefix_scan_sum_u32("input", "output", 64),
         Some(|| {

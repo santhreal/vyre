@@ -72,7 +72,7 @@ fn f32s(floats: &[f32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         UNPACK_I4_OP_ID,
         || unpack_i4x8("packed_words", "out_lanes", 8),
         // `out_lanes` is a ReadWrite in/out buffer (not a backend-allocated `output`),
@@ -86,7 +86,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         I4_DOT_I32_OP_ID,
         || i4x8_dot_i32("lhs_packed", "rhs_packed", "out", 8),
         Some(|| vec![vec![u32s(&[0x7621_0F98]), u32s(&[0x7621_0F98])]]),
@@ -95,7 +95,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         I4_DOT_F32_SCALED_OP_ID,
         || i4x8_dot_f32_scaled("lhs_packed", "rhs_packed", "lhs_scale", "rhs_scale", "out", 8),
         Some(|| vec![vec![u32s(&[0x7621_0F98]), u32s(&[0x7621_0F98]), f32s(&[1.0]), f32s(&[1.0])]]),
@@ -104,7 +104,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-        vyre_foundation::operation::OperationRegistration::primitive(
+        vyre_foundation::operation::OperationRegistration::library(
             I4_MATVEC_F32_SCALED_OP_ID,
             || i4x8_matvec_f32_scaled("matrix_packed", "vector_packed", "matrix_scale", "out", 4, 8),
             Some(|| vec![vec![
@@ -117,7 +117,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-        vyre_foundation::operation::OperationRegistration::primitive(
+        vyre_foundation::operation::OperationRegistration::library(
             I4_BATCHED_MATVEC_F32_SCALED_OP_ID,
             || i4x8_batched_matvec_f32_scaled("matrix_packed", "vector_packed", "matrix_scale", "out", 2, 4, 8),
             Some(|| vec![vec![
@@ -130,7 +130,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-        vyre_foundation::operation::OperationRegistration::primitive(
+        vyre_foundation::operation::OperationRegistration::library(
             I4_BATCHED_MATMUL_F32_SCALED_OP_ID,
             || i4x8_batched_matmul_f32_scaled("lhs_packed", "rhs_packed", "lhs_scale", "rhs_scale", "out", 2, 4, 8),
             Some(|| vec![vec![
@@ -144,7 +144,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-        vyre_foundation::operation::OperationRegistration::primitive(
+        vyre_foundation::operation::OperationRegistration::library(
             I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID,
             || i4x8_batched_matmul_top1_f32_scaled("lhs_packed", "rhs_packed", "lhs_scale", "rhs_scale", "out_scores", 2, 4, 8),
             Some(|| vec![vec![

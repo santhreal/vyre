@@ -246,7 +246,7 @@ pub fn persistent_bfs_step(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         PERSISTENT_BFS_STEP_OP_ID,
         || persistent_bfs_step(ProgramGraphShape::new(4, 4), "frontier_out", "changed", 0xFFFF_FFFF),
         Some(|| {

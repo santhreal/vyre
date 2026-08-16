@@ -102,7 +102,7 @@ define_csr_frontier_step_cpu_ref! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         EXCLUDING_OP_ID,
         || csr_forward_traverse_excluding(
             ProgramGraphShape::new(4, 4),
@@ -133,7 +133,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || csr_forward_traverse(ProgramGraphShape::new(4, 4), "fin", "fout", 0xFFFF_FFFF),
         Some(|| {

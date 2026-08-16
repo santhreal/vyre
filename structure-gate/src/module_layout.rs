@@ -145,10 +145,7 @@ pub fn generic_module_name_failures(
             continue;
         }
         let path = module_path_of(file, crate_roots);
-        if path
-            .as_deref()
-            .is_some_and(|path| published.contains(path))
-        {
+        if path.as_deref().is_some_and(|path| published.contains(path)) {
             continue;
         }
         let published_note = path.map_or_else(String::new, |path| {
@@ -235,10 +232,8 @@ pub fn directory_stutter_failures(source_files: &[String]) -> Vec<String> {
 /// so the digits are part of one word rather than a sibling index.
 fn numbered_stem_of(name: &str) -> Option<&str> {
     let (stem, digits) = name.rsplit_once('_')?;
-    (!digits.is_empty()
-        && digits.bytes().all(|byte| byte.is_ascii_digit())
-        && !stem.is_empty())
-    .then_some(stem)
+    (!digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit()) && !stem.is_empty())
+        .then_some(stem)
 }
 
 /// The `<digits>_<digits>` tail of a name written for a ticket, or `None`.
@@ -350,7 +345,10 @@ mod tests {
         ]));
 
         assert_eq!(failures.len(), 1, "{failures:?}");
-        assert!(failures[0].contains("vyre-libs/src/rule/mod.rs"), "{failures:?}");
+        assert!(
+            failures[0].contains("vyre-libs/src/rule/mod.rs"),
+            "{failures:?}"
+        );
     }
 
     #[test]
@@ -407,8 +405,9 @@ mod tests {
 
             assert_eq!(failures.len(), 2, "{name}: {failures:?}");
             assert!(
-                failures.iter().all(|failure| failure
-                    .contains(&format!("vyre_libs::scan::{name}"))),
+                failures
+                    .iter()
+                    .all(|failure| failure.contains(&format!("vyre_libs::scan::{name}"))),
                 "{name}: {failures:?}"
             );
         }
@@ -469,8 +468,7 @@ mod tests {
 
     #[test]
     fn a_module_in_no_scanned_crate_is_still_reported() {
-        let failures =
-            generic_module_name_failures(&paths(&["stray/src/types/mod.rs"]), &[], &[]);
+        let failures = generic_module_name_failures(&paths(&["stray/src/types/mod.rs"]), &[], &[]);
 
         assert_eq!(failures.len(), 1, "{failures:?}");
         assert!(
@@ -484,7 +482,10 @@ mod tests {
         assert_eq!(judged_name_of("vyre-libs/src/lib.rs"), None);
         assert_eq!(judged_name_of("conform/vyre-conform/src/main.rs"), None);
         assert_eq!(judged_name_of("vyre-libs/src/scan/mod.rs"), Some("scan"));
-        assert_eq!(judged_name_of("vyre-libs/src/scan/window.rs"), Some("window"));
+        assert_eq!(
+            judged_name_of("vyre-libs/src/scan/window.rs"),
+            Some("window")
+        );
     }
 
     #[test]
@@ -595,12 +596,18 @@ mod tests {
 
     #[test]
     fn a_named_binary_and_its_own_modules_are_told_apart() {
-        assert_eq!(binary_name_of("xtask/src/bin/scaffold_rule.rs"), Some("scaffold_rule"));
+        assert_eq!(
+            binary_name_of("xtask/src/bin/scaffold_rule.rs"),
+            Some("scaffold_rule")
+        );
         assert_eq!(
             binary_name_of("xtask-registry/src/bin/vyre_new_op/main.rs"),
             Some("vyre_new_op")
         );
-        assert_eq!(binary_name_of("xtask-registry/src/bin/vyre_new_op/run.rs"), None);
+        assert_eq!(
+            binary_name_of("xtask-registry/src/bin/vyre_new_op/run.rs"),
+            None
+        );
         assert_eq!(binary_name_of("vyre-libs/src/scan/window.rs"), None);
         assert_eq!(judged_name_of("xtask/src/bin/scaffold_rule.rs"), None);
         assert_eq!(

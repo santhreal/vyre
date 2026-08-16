@@ -37,6 +37,10 @@ jobs:
       - name: Composition rules
         run: ./cargo_full run -p xtask -- gates --subset composition
 
+      # The external-IR extension demo is the only proof that a third party can
+      # extend the IR from outside this workspace, and presence proves nothing.
+      # `example-capability`, registered in this subset, builds every example as
+      # its own isolated crate against the committed lockfile.
       - name: Tree structure and hygiene
         run: ./cargo_full run -p xtask -- gates --subset structure
 
@@ -50,12 +54,6 @@ jobs:
       # so they live in a crate that depends on no vyre crate.
       - name: Workspace structure
         run: ./cargo_full run -p structure-gate
-
-      # The external-IR extension demo is the only proof that a third party can
-      # extend the IR from outside this workspace. Presence proves nothing, so
-      # this builds it as its own isolated crate against the committed lockfile.
-      - name: External IR extension demo builds standalone
-        run: bash scripts/check_external_ir_extension_ci.sh
 
       # bench-regression.yml times one case, which proves the runner works, not
       # that the registry still covers the dimensions the audit rows claim. This
@@ -130,6 +128,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
+      # [workspace.package].rust-version is the single owner of the MSRV, so the
+      # toolchain is installed from the value the gate validated instead of
+      # pinned a second time here, where a bump would leave the two disagreeing.
+      - name: Install the advertised MSRV toolchain
+        run: |
+          rustup toolchain install --profile minimal \
+            "$(./cargo_full run -q -p xtask --bin xtask -- feature-msrv --print-toolchain | head -1)"
+
       # Two classes, neither reachable from another workflow. Feature isolation:
       # strict.yml builds --all-features, a union in which a feature whose
       # prerequisites some other feature happens to enable compiles anyway, and
@@ -137,12 +143,9 @@ jobs:
       # built alone. MSRV: ci.yml's toolchain matrix is stable and nightly, so
       # nothing compiled this workspace on the version it publishes. The axis is
       # derived from tracked manifests, so a new feature or member joins it and
-      # fails here until it compiles. `--msrv` reads
-      # [workspace.package].rust-version, installs that toolchain when rustup
-      # does not carry it, and compiles the axis on it, so the manifest stays
-      # the single owner of the version.
+      # fails here until it compiles.
       - name: Feature-isolated MSRV sweep
-        run: ./cargo_full run -p xtask --bin xtask -- feature-isolation --sweep --msrv
+        run: ./cargo_full run -q -p xtask --bin xtask -- feature-msrv --sweep
 
   feature-isolation:
     name: Every feature compiles alone or records why it cannot
@@ -176,20 +179,19 @@ jobs:
       # sweep whose [[test]] required-features name a non-default feature is
       # skipped there, and strict.yml builds --all-targets without running
       # anything. These are the oracle-parity matrices, so a skipped one is
-      # unproven parity. Roster and per-crate features come from
-      # scripts/lib/sweep_targets.py, which reads tracked sources and each
-      # crate's own [[test]] entries, so a new sweep runs without an edit here
-      # and a stale [[test]] entry fails instead of reserving features for a
-      # target that cannot build.
+      # unproven parity. Roster and per-crate features are derived inside the
+      # gate from tracked sources and each crate's own [[test]] entries, so a
+      # new sweep runs without an edit here and a stale [[test]] entry fails
+      # instead of reserving features for a target that cannot build.
       - name: Sweep oracle matrices
-        run: bash scripts/run_sweep_oracle_matrix.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- oracle-sweeps --run --partition matrix
 
       # The volume waves are the same rule at 16k cases per target. Run as a
       # single shard of one: sharding exists so a developer can split the wall
       # time locally, and four hosted runners would each rebuild the workspace
       # to divide well under a minute of test time.
       - name: Volume oracle matrix waves
-        run: bash scripts/run_volume_sweep_shard.sh 0 1
+        run: ./cargo_full run -q -p xtask --bin xtask -- oracle-sweeps --run --partition volume --shard 0 --shards 1
 
   spirv-validation:
     name: Emitted SPIR-V is validated, not just shaped
@@ -212,4 +214,4 @@ jobs:
       # gate fails closed when the validator is missing rather than falling back
       # to a header check. No GPU: SPIR-V emission is pure computation.
       - name: Validated SPIR-V emission
-        run: bash scripts/check_spirv_parity_perf_gate.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- spirv-parity --validate

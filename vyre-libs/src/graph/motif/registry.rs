@@ -1,4 +1,4 @@
-//! Catalog entry for the motif primitive.
+//! Catalog entry for the motif operation.
 
 use crate::graph::program_graph::ProgramGraphShape;
 
@@ -7,7 +7,7 @@ use super::program::motif;
 use super::OP_ID;
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || motif(ProgramGraphShape::new(4, 4), &[MotifEdge { from: 0, to: 1, kind_mask: 1 }], "witness"),
         Some(|| {

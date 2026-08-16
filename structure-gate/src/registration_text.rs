@@ -125,7 +125,6 @@ fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str>
     None
 }
 
-
 /// Byte offset just past the struct literal that opens in `body`.
 ///
 /// Registration fields hold closures, so the first `}` is almost never the end

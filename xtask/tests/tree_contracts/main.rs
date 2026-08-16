@@ -19,6 +19,8 @@ mod workspace_sources;
 
 mod architecture_docs;
 mod canonical_first_workgroup_guard;
+mod cargo_invocation_resolution;
+mod ci_required_contexts;
 mod ci_workflow_references;
 mod cli_surface;
 mod crate_ownership_registry;
@@ -27,6 +29,7 @@ mod docs_manifest_completeness;
 mod exit_states_a_cause;
 mod feature_isolation;
 mod manifest_dependency_tables;
+mod msrv_toolchain;
 mod nested_byte_rows;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;

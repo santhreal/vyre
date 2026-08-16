@@ -1,35 +1,35 @@
 {
-  "source_fingerprint": "git:7a82c191b17971aaffcfc9cc7eadc593c612cf76:dirty=true:worktree=e6de91594202c0dfe68a5516ae7dbac8780ae56fcf46ede76d7be37a11392f80",
+  "source_fingerprint": "git:6f3d6a963ac241593362782370a2b48231e6c94c:dirty=true:worktree=401f1757506ae433c3460fcc3394460371561b86f1be9f61e3244508dbe63a1f",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 268,
+      "line": 277,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 270,
+      "line": 279,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 952,
+      "line": 660,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 998,
+      "line": 706,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 1000,
+      "line": 708,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -329,13 +329,13 @@
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 417,
+      "line": 463,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 480,
+      "line": 526,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
@@ -743,19 +743,19 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 245,
+      "line": 210,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 370,
+      "line": 335,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 376,
+      "line": 341,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },
@@ -779,7 +779,7 @@
     },
     {
       "path": "xtask-evidence/src/bench/release_benchmarks/cpu_sota_proof.rs",
-      "line": 279,
+      "line": 276,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: the 100x proof evidence is a JSON object.\")"
     },

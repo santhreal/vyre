@@ -1050,6 +1050,17 @@ boundary = "private"
 seam = "release-tooling"
 
 [[crate.dependency]]
+package = "structure-gate"
+purpose = "read whether a directory carries Rust source, and which directory owns a domain"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
+
+[[crate.dependency]]
 package = "vyre"
 purpose = "public lifecycle facade"
 features = []

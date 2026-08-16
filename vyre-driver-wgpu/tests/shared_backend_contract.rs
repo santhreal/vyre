@@ -124,7 +124,7 @@ fn concurrent_backend_acquisition_succeeds_on_every_thread() {
 #[test]
 fn only_the_device_acquisition_module_constructs_a_wgpu_instance() {
     const OWNER: &str = "runtime/device/acquire.rs";
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let root = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src");
     let mut sources = Vec::new();
     collect_rust_sources(&root, &mut sources);
     assert!(

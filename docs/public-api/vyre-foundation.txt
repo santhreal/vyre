@@ -387,7 +387,6 @@ pub const fn vyre_foundation::match_result::ByteRange::new(tag: u32, start: u32,
 pub const fn vyre_foundation::operation::OperationRegistration::category(&self) -> core::option::Option<&'static str>
 pub const fn vyre_foundation::operation::OperationRegistration::library(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::new(id: &'static str, tier: vyre_foundation::operation::OperationTier, build: core::option::Option<fn() -> vyre_foundation::ir::Program>, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::primitive(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::tolerance(&self) -> u32
 pub const fn vyre_foundation::operation::OperationRegistration::with_category(self, category: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
@@ -475,6 +474,7 @@ pub const vyre_foundation::lower::ProgramEffects::BUFFER_WRITE: Self
 pub const vyre_foundation::lower::ProgramEffects::GPU_DISPATCH: Self
 pub const vyre_foundation::lower::ProgramEffects::HOST_IO: Self
 pub const vyre_foundation::lower::ProgramEffects::TRAP: Self
+pub const vyre_foundation::operation::OperationTier::ALL: &'static [Self]
 pub const vyre_foundation::operation::TolerancePolicy::EXACT: Self
 pub const vyre_foundation::optimizer::PassAnalysis::RUN: Self
 pub const vyre_foundation::optimizer::PassAnalysis::SKIP: Self
@@ -544,6 +544,7 @@ pub enum vyre_foundation::ir::ProgramGraphError
 pub enum vyre_foundation::ir::ProgramGraphIdentityError
 pub enum vyre_foundation::ir::ShapeDim
 pub enum vyre_foundation::ir::ValueLifetime
+pub enum vyre_foundation::operation::IdNamespace<'a>
 pub enum vyre_foundation::operation::OperationRegistryError
 pub enum vyre_foundation::optimizer::CatalogLookupStatus
 pub enum vyre_foundation::optimizer::DerivedPassEdgeKind
@@ -1057,7 +1058,7 @@ pub fn vyre_foundation::operation::TargetId::eq(&self, other: &&str) -> bool
 pub fn vyre_foundation::operation::TargetId::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::operation::TargetId::from_owned(id: alloc::string::String) -> core::result::Result<Self, &'static str>
 pub fn vyre_foundation::operation::TargetId::serialize<S>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error> where S: serde_core::ser::Serializer
-pub fn vyre_foundation::operation::classify_operation_id(id: &str) -> vyre_foundation::operation::OperationTier
+pub fn vyre_foundation::operation::operation_id_namespace(id: &str) -> vyre_foundation::operation::IdNamespace<'_>
 pub fn vyre_foundation::optimizer::AdapterCaps::default() -> Self
 pub fn vyre_foundation::optimizer::AnalysisCache::clear(&mut self)
 pub fn vyre_foundation::optimizer::AnalysisCache::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -3295,6 +3296,9 @@ pub vyre_foundation::match_result::ByteRange::tag: u32
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::available: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::expected: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::field: &'static str
+pub vyre_foundation::operation::IdNamespace::External(&'a str)
+pub vyre_foundation::operation::IdNamespace::Unknown
+pub vyre_foundation::operation::IdNamespace::Workspace(&'a str)
 pub vyre_foundation::operation::OperationEffects::atomics: bool
 pub vyre_foundation::operation::OperationEffects::reads: bool
 pub vyre_foundation::operation::OperationEffects::synchronizes: bool
@@ -3312,13 +3316,15 @@ pub vyre_foundation::operation::OperationRegistration::tolerance: vyre_foundatio
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId::id: &'static str
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier
-pub vyre_foundation::operation::OperationRegistryError::InvalidTier::classified: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier::declared: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::InvalidTier::origin: &'static str
 pub vyre_foundation::operation::OperationRegistryError::InvalidVersion
 pub vyre_foundation::operation::OperationRegistryError::InvalidVersion::id: &'static str
 pub vyre_foundation::operation::OperationRegistryError::MissingSemantics
 pub vyre_foundation::operation::OperationRegistryError::MissingSemantics::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::UnknownNamespace
+pub vyre_foundation::operation::OperationRegistryError::UnknownNamespace::id: &'static str
 pub vyre_foundation::operation::OperationTier::External
 pub vyre_foundation::operation::OperationTier::Foundation
 pub vyre_foundation::operation::OperationTier::Intrinsic

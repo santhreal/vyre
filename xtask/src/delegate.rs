@@ -37,7 +37,7 @@ pub fn dispatcher() -> &'static Path {
             std::process::exit(1);
         });
         dispatcher_from(&current).unwrap_or_else(|| {
-            build(DISPATCHER_PACKAGE).unwrap_or_else(|error| {
+            build(&crate::checkout::checkout_root(), DISPATCHER_PACKAGE).unwrap_or_else(|error| {
                 eprintln!("{error}");
                 std::process::exit(1);
             })
@@ -59,7 +59,7 @@ fn dispatcher_from(current: &Path) -> Option<PathBuf> {
 /// the error. A child that cannot run is a `GateError` rather than a clean
 /// report: a gate that failed to execute has not judged the tree.
 pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report, GateError> {
-    let executable = build(package)?;
+    let executable = build(&ctx.root, package)?;
     let output = Command::new(&executable)
         .arg(name)
         .args(&ctx.args)
@@ -187,9 +187,8 @@ pub fn print_dispatch_help(
 /// A crate that does not compile is a gate that could not run, so the compiler
 /// diagnostics travel in the error rather than to this process's stderr: the
 /// caller may be the sweep, which renders every gate's outcome in one place.
-fn build(package: &str) -> Result<PathBuf, GateError> {
-    let root = crate::checkout::checkout_root();
-    let output = Command::new(crate::cargo_runner::runner(&root))
+fn build(root: &Path, package: &str) -> Result<PathBuf, GateError> {
+    let output = Command::new(crate::cargo_runner::binary(root))
         .args([
             "build",
             "--quiet",
@@ -199,6 +198,7 @@ fn build(package: &str) -> Result<PathBuf, GateError> {
             package,
             "--message-format=json",
         ])
+        .current_dir(root)
         .output()
         .map_err(|error| {
             GateError::new(

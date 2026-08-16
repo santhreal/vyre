@@ -10,7 +10,7 @@ use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::source_scan::{code_offsets, opaque_span, rust_sources_with_text};
+use crate::source_scan::{code_offsets, opaque_span, rust_sources_with_text, SourceText};
 
 /// Remove every `#[cfg(test)]`-gated item before a production-code scan.
 ///
@@ -188,7 +188,9 @@ fn compiles_with_test(predicate: &str) -> bool {
         return parts.is_empty() || parts.iter().any(|part| compiles_with_test(part));
     }
     if let Some(rest) = predicate.strip_prefix("not(") {
-        return arguments(rest).iter().all(|part| compiles_without_test(part));
+        return arguments(rest)
+            .iter()
+            .all(|part| compiles_without_test(part));
     }
     true
 }
@@ -200,7 +202,9 @@ fn compiles_with_test(predicate: &str) -> bool {
 fn compiles_without_test(predicate: &str) -> bool {
     let predicate = predicate.trim();
     if let Some(rest) = predicate.strip_prefix("all(") {
-        return arguments(rest).iter().any(|part| compiles_without_test(part));
+        return arguments(rest)
+            .iter()
+            .any(|part| compiles_without_test(part));
     }
     if let Some(rest) = predicate.strip_prefix("any(") {
         let parts = arguments(rest);
@@ -218,7 +222,7 @@ fn compiles_without_test(predicate: &str) -> bool {
 /// compiles without `test` and is not. A `not(..)` is read as satisfiable
 /// without `test`, so an exotic gate is judged production code rather than
 /// waved through.
-fn requires_test(predicate: &str) -> bool {
+pub(crate) fn requires_test(predicate: &str) -> bool {
     let predicate = predicate.trim();
     if let Some(rest) = predicate.strip_prefix("all(") {
         return arguments(rest).iter().any(|part| requires_test(part));
@@ -362,7 +366,12 @@ fn end_of_item(text: &str, from: usize) -> Option<usize> {
 pub fn test_gated_module_files(root: &Path) -> BTreeSet<String> {
     let mut declared = BTreeSet::new();
     let mut files = Vec::new();
-    for (file, text) in rust_sources_with_text(root) {
+    for source in rust_sources_with_text(root) {
+        // A refused read is over the 4 MiB ceiling, unopenable, or not UTF-8.
+        // None of those is a hand-written module declaration.
+        let SourceText::Read { path: file, text } = source else {
+            continue;
+        };
         let Some((parent, _)) = file.rsplit_once('/') else {
             continue;
         };

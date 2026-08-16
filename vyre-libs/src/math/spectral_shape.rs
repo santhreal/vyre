@@ -99,7 +99,7 @@ pub fn try_mp_edge_clip_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             mp_edge_clip("a", "b", "out", 4)

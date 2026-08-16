@@ -222,7 +222,7 @@ pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         CHAR_CLASS_OP_ID,
         || char_class("source", "classified", 3),
         Some(|| {

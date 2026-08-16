@@ -248,7 +248,7 @@ crate::plumbing::host::scratch::define_reserve_capacity!(
 );
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || sheaf_laplacian_eigenvalue("r", "v", "l", 4, 1, 4),
         Some(|| {
@@ -274,7 +274,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         POWER_ITERATION_PHASE_OP_ID,
         || {
             Program::wrapped(

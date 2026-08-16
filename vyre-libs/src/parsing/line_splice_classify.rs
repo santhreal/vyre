@@ -332,7 +332,7 @@ pub fn try_reference_line_splice_classify_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || line_splice_classify(256),
         Some(|| {

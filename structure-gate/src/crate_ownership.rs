@@ -46,8 +46,8 @@ impl Registry {
     /// is reported instead of defaulted.
     pub fn read(root: &Path) -> Result<Self, String> {
         let path = root.join(REGISTRY);
-        let text =
-            read_source_bounded(&path).map_err(|error| format!("cannot read {REGISTRY}: {error}"))?;
+        let text = read_source_bounded(&path)
+            .map_err(|error| format!("cannot read {REGISTRY}: {error}"))?;
         Self::parse(&text)
     }
 
@@ -68,7 +68,9 @@ impl Registry {
         let mut rows = Vec::with_capacity(entries.len());
         for entry in entries {
             let Some(package) = entry.get("package").and_then(Value::as_str) else {
-                return Err(format!("{REGISTRY} has a [[crate]] entry with no `package`"));
+                return Err(format!(
+                    "{REGISTRY} has a [[crate]] entry with no `package`"
+                ));
             };
             rows.push(CrateRow {
                 package: package.to_string(),

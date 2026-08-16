@@ -358,7 +358,7 @@ pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || ntt_butterfly_stage("data", "twiddles", 4, 0),
         Some(|| {

@@ -106,7 +106,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../scripts/crate_ownership.py"
+generator = "../xtask/src/gates/crate_registry.rs"
 nav = true
 
 [[page]]
@@ -132,7 +132,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../scripts/crate_ownership.py"
+generator = "../xtask/src/gates/crate_registry.rs"
 nav = true
 
 [[page]]
@@ -755,7 +755,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -768,7 +768,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -781,7 +781,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -794,7 +794,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -807,7 +807,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -820,7 +820,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -833,7 +833,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -846,7 +846,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -859,7 +859,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -872,7 +872,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -885,7 +885,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -898,7 +898,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -911,7 +911,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -924,7 +924,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -937,7 +937,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -950,7 +950,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -963,7 +963,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -976,7 +976,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -989,7 +989,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1002,7 +1002,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1015,7 +1015,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1028,7 +1028,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1041,7 +1041,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1054,7 +1054,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1067,7 +1067,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1080,7 +1080,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1093,7 +1093,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1106,7 +1106,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1119,7 +1119,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1132,7 +1132,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1145,7 +1145,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1158,7 +1158,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1171,7 +1171,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1184,5 +1184,5 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true

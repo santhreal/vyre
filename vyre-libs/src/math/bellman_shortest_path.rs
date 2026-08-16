@@ -381,7 +381,7 @@ pub fn cpu_ref_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             bellman_shortest_path(

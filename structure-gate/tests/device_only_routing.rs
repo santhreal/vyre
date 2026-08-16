@@ -45,7 +45,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use structure_gate::source_scan::{is_word_byte, matching_brace, rust_sources_with_text};
+use structure_gate::source_scan::{is_word_byte, matching_brace, rust_sources_with_text, SourceText};
 use structure_gate::workspace_root;
 
 /// Variant names that mark an enum as a routing enum.
@@ -258,9 +258,19 @@ pub enum PolicyRoute {
 }
 
 /// Every routing enum in the workspace, recognised by its own variants.
+///
+/// A source the walk cannot read is a failure rather than a gap: the rule
+/// covers the tree, and a file nothing judged is a file the rule does not
+/// cover.
 fn routing_enums(root: &Path) -> Vec<RoutingEnum> {
     let mut found = Vec::new();
-    for (relative, text) in rust_sources_with_text(root) {
+    for source in rust_sources_with_text(root) {
+        let (relative, text) = match source {
+            SourceText::Read { path, text } => (path, text),
+            SourceText::Unread { path, reason } => {
+                panic!("Fix: {path} {reason}, so no routing rule judged it")
+            }
+        };
         for (_, name, variants) in enums_in(&text) {
             let declared: BTreeSet<&str> = variants.iter().map(String::as_str).collect();
             if DEVICE_ROUTE_MARKERS

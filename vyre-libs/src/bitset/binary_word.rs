@@ -187,7 +187,7 @@ macro_rules! define_bitwise_binary_op {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::primitive(
+            vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("lhs", "rhs", "out", $inventory_words),
                 Some(|| {
@@ -380,7 +380,7 @@ macro_rules! define_bitwise_in_place_op {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::primitive(
+            vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("target", "operand", $inventory_words),
                 Some(|| {

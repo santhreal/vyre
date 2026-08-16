@@ -29,9 +29,9 @@ use std::path::Path;
 
 use toml::Value;
 
-use crate::crate_ownership::{REGISTRY as OWNERSHIP_REGISTRY, Registry};
-use crate::source_scan::mask_comments_and_strings;
 use crate::cfg_test::cfg_test_line_mask;
+use crate::crate_ownership::{Registry, REGISTRY as OWNERSHIP_REGISTRY};
+use crate::source_scan::mask_comments_and_strings;
 use crate::{read_source_bounded, relative, source_tree_files};
 
 /// The contract data, inside the directory of the crate that owns the rule.
@@ -450,9 +450,9 @@ pub fn contract_failures(root: &Path, neutrality: &Neutrality) -> Vec<String> {
         }
     }
     for interface in &contract.interfaces {
-        if !root.join(&interface.prefix).is_dir() {
+        if !crate::source_scan::carries_rust_source(&root.join(&interface.prefix)) {
             failures.push(format!(
-                "{DATA_FILE} allows `{}` under `{}`, which is not a directory in this checkout; point the row at the directory that reads the interface, or delete it",
+                "{DATA_FILE} allows `{}` under `{}`, which holds no Rust source in this checkout; point the row at the directory that reads the interface, or delete it",
                 interface.name, interface.prefix
             ));
             continue;
@@ -599,7 +599,7 @@ pub fn foreign_glob_reexport_failures(reexports: &[(String, String, u32, String)
 #[must_use]
 pub fn scan_foreign_glob_reexports(
     root: &Path,
-    crate_roots: &[crate::CrateRoot],
+    crate_roots: &[crate::module_layout::CrateRoot],
 ) -> Vec<(String, String, u32, String)> {
     let idents: BTreeSet<&str> = crate_roots.iter().map(|root| root.ident.as_str()).collect();
     let mut found = Vec::new();

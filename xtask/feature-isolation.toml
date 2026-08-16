@@ -1,800 +1,980 @@
-# Every feature selection this workspace judges.
+# Recorded compile outcome of every feature selection this workspace judges.
 #
 # The axis is derived from the tracked manifests at run time, never from this
 # file. The `feature` column spells the selection: `(none)` is the per-member
 # `--no-default-features` probe, `(default)` is the plain `cargo check -p`
 # build, a bare name is that one feature enabled alone, and a comma-joined
 # list is a selection a workspace edge asks of a sibling, with defaults kept
-# when the list opens with `(default)`. A selection with no row here, and a row
-# naming a selection no manifest declares, are each a failure.
+# when the list opens with `(default)`. A selection with no row here, a row
+# naming a selection no manifest declares, and a row whose outcome disagrees
+# with the sweep are each a failure.
 #
-# A row states no compile outcome. Whether a selection compiles is measured by
-# the run that compiles it and is never stored here, because a stored
-# measurement is stale the moment a feature edge moves. A sweep that leaves
-# part of the axis uncompiled reports the rest as unmeasured and fails, so a
-# bare row claims nothing and exempts nothing.
+# `outcome = "blocked"` needs a one-line technical constraint in `reason`.
+# A feature that merely needs another feature is not blocked: give it the
+# missing edge in its own [features] table so `--features x` enables what x
+# needs, which fixes the crate for a downstream consumer and not only for
+# this sweep.
 #
-# `outcome = "blocked"` exempts a selection that cannot compile, and needs a
-# one-line technical constraint in `reason`. A feature that merely needs
-# another feature is not blocked: give it the missing edge in its own
-# [features] table so `--features x` enables what x needs, which fixes the
-# crate for a downstream consumer and not only for this sweep.
-#
-# Declare the axis: `cargo run -p xtask --bin xtask -- feature-isolation --write`.
-# Measure it: `cargo run -p xtask --bin xtask -- feature-isolation --sweep`.
+# Regenerate: `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write`.
+# Record only what has no row yet: add `--only-unrecorded`.
+# Check agreement: `cargo run -p xtask --bin xtask -- feature-isolation`.
 
 [[pair]]
 member = "structure-gate"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "structure-gate"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre"
 feature = "cpu-parity"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre"
 feature = "cuda"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre"
 feature = "wgpu"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-aot"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-aot"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-aot"
 feature = "ptx"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-bench"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-bench"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-bench"
 feature = "cli"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-conform"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-conform"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-conform"
 feature = "gpu"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-conform-spec"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-conform-spec"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-debug"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-debug"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
 feature = "(default),libs-compositions"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
 feature = "(default),test-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
 feature = "libs-compositions"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
 feature = "test-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-cuda"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-cuda"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-cuda"
 feature = "cuda"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-metal"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-metal"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-reference"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-reference"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-spirv"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-spirv"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-spirv"
 feature = "spirv-val"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "matching-dfa"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "matching-nfa"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "matching-substring"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "math-linalg"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "math-scan"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "nn-attention"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "parity-testing"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "wgpu"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-metal"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-metal"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-naga"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-naga"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-ptx"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-ptx"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-ptx"
 feature = "nvrtc"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-spirv"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-spirv"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-foundation"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-foundation"
 feature = "(default),serde"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-foundation"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-foundation"
 feature = "serde"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),analysis,cpu-parity,full"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),bitset,cpu-parity,graph,nn-linear-4bit,predicate"
+feature = "(default),bitset,graph,nn-linear-4bit,predicate"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),cpu-parity,crypto-blake3,hash,matching,nn-attention,parsing"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),cpu-parity,graph-dispatch,test-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),device,graph-dispatch,scheduling"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),full"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),full,matching-regex"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),python-parser"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),reasoning"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "analysis"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "bitset"
-
-[[pair]]
-member = "vyre-libs"
-feature = "builder-ops"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "cat-a-builder-options"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "cpu-parity"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "crypto"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "crypto-blake3"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "decode"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "device"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "encoding"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "fixpoint"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "full"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "geom"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "go-parser"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "graph"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "graph-dispatch"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "hash"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "intern"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "label"
-
-[[pair]]
-member = "vyre-libs"
-feature = "llm"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "logical"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "matching"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "matching-dfa"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "matching-kernels"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "matching-nfa"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "matching-regex"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "matching-substring"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math-algebra"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math-broadcast"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math-dialect"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math-kernels"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math-linalg"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math-scan"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "math-succinct"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nfa"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-activation"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-attention"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-inference"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-kernels"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-linear"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-linear-4bit"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-moe"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "nn-norm"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "opt"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "parsing"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "parsing-kernels"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "predicate"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "python-parser"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "reasoning"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "reduce"
-
-[[pair]]
-member = "vyre-libs"
-feature = "representation"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "rule"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "scheduling"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "security"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "solvers"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "telemetry"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "test-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "text"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "topology"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "vfs"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
 feature = "visual"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-lints"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-lints"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-lower"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-lower"
 feature = "(default),test-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-lower"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-lower"
 feature = "test-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-macros"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-macros"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-megakernel"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-megakernel"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-pass-engine"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-pass-engine"
 feature = "(default),cpu-parity"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-pass-engine"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-pass-engine"
 feature = "all-solvers"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-pass-engine"
 feature = "cpu-parity"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-pass-engine"
 feature = "optimizer"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default),cpu-parity,hardware"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default),hardware"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default),inventory-registry"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "cpu-parity"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "cpu-parity,hardware"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "gpu"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "hardware"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "inventory-registry"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "vyre-foundation"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-reference"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-reference"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-reference"
 feature = "subgroup-ops"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "(default),cuda,metal,reference,spirv,wgpu"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "(default),cuda,operations,reference,spirv,wgpu"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "(default),operations,reference"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "cuda"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "metal"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "operations"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "reference"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "spirv"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-registry-link"
 feature = "wgpu"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "libs-compositions"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "megakernel-batch"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "remote-cache"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "subgroup-ops"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "uring-cmd-nvme"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-safetensors"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-safetensors"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-spec"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-spec"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-test-support"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-test-support"
 feature = "(default),ir-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-test-support"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-test-support"
 feature = "ir-fixtures"
+outcome = "compiles"
 
 [[pair]]
 member = "xtask"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "xtask"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "xtask-evidence"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "xtask-evidence"
 feature = "(none)"
+outcome = "compiles"
 
 [[pair]]
 member = "xtask-registry"
 feature = "(default)"
+outcome = "compiles"
 
 [[pair]]
 member = "xtask-registry"
 feature = "(none)"
+outcome = "compiles"

@@ -192,6 +192,13 @@ pub mod bitset;
 #[cfg(feature = "reduce")]
 pub mod reduce;
 
+/// Virtual filesystem DMA compositions: the `#include` hash resolver that
+/// turns asset identifiers into asynchronous block loads. Built from
+/// `Node::AsyncLoad` and `Node::AsyncWait`, so it composes existing IR and
+/// carries no hardware contract of its own.
+#[cfg(feature = "vfs")]
+pub mod vfs;
+
 /// Label to NodeSet resolver: turn a TagFamily bitmask into a NodeSet bitset.
 #[cfg(feature = "label")]
 pub mod label;
@@ -278,10 +285,6 @@ pub use plumbing::registration::signatures::{
 };
 /// Owner-local byte fixtures for semantic operation registrations and tests.
 pub(crate) mod fixture_bytes;
-/// Pre-sweep shader snapshot migration entries, collected via inventory.
-/// `pub(crate)` because the registry is an internal pre-sweep tool  -
-/// downstream dialects do not submit through this path.
-pub(crate) mod test_migration;
 
 /// Dispatcher doubles and program sequencing for this crate's own unit tests.
 #[cfg(test)]

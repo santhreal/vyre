@@ -711,7 +711,7 @@ pub fn cpu_ref_batched(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || path_reconstruct("parent", "target", "path_out", "path_len", 4),
         Some(|| {

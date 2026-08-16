@@ -36,7 +36,7 @@ pub fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_subset_of("lhs", "rhs", "out", 2),
         Some(|| {

@@ -56,7 +56,7 @@ pub const UTF8_CONT: u32 = 4;
 pub const UTF8_INVALID: u32 = 5;
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || utf8_validate("source", "classes", 8),
         Some(|| {

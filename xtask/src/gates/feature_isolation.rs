@@ -1030,7 +1030,7 @@ pub fn check_args(pair: &Pair) -> Vec<String> {
 
 /// Compile one pair once, on `toolchain` when one is named.
 ///
-/// The binary comes from [`crate::cargo_runner::runner`], which owns which
+/// The binary comes from [`crate::cargo_runner::binary`], which owns which
 /// cargo this tooling spawns and in which directory. A gate that resolves its
 /// own binary picks a different one from every other gate the moment the
 /// environment differs, and the environment differs on CI, where `CARGO` is
@@ -1274,7 +1274,7 @@ fn observe(
     toolchain: &str,
     report: &mut Report,
 ) -> Result<Vec<(Pair, Observation)>, GateError> {
-    let cargo = crate::cargo_runner::runner(root);
+    let cargo = crate::cargo_runner::binary(root);
     let cargo = cargo.to_string_lossy().into_owned();
     let mut observed = Vec::with_capacity(pairs.len());
     for (index, pair) in pairs.iter().enumerate() {

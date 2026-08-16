@@ -164,28 +164,49 @@ impl Gate for CiRequired {
             sections.len()
         ));
 
+        let blocking: BTreeSet<&str> = sections
+            .iter()
+            .map(|section| section.workflow.as_str())
+            .collect();
         for (line, workflow) in named_workflows(&document) {
-            if tree.exists(&format!(".github/workflows/{workflow}")) {
-                continue;
-            }
+            let live = tree.exists(&format!(".github/workflows/{workflow}"));
             let paused = tree.exists(&format!(".github/workflows-paused/{workflow}"));
-            if paused {
+            if !live && !paused {
                 report.find(Finding::at(
                     REQUIRED,
                     line,
-                    format!("`{workflow}` is named here and is paused, so it cannot run"),
-                    "restore the workflow under .github/workflows, or delete the row; this \
-                     document declares what must pass, and two of its rows named lanes that \
-                     had been parked for months while nothing went red",
+                    format!("`{workflow}` names a workflow file the checkout does not carry"),
+                    "name a workflow under .github/workflows or .github/workflows-paused, or \
+                     delete the row; a filename in prose was checked by nothing, so this \
+                     document promised two lanes that had been paused for months",
                 ));
                 continue;
             }
+            if paused && blocking.contains(workflow.as_str()) {
+                report.find(Finding::at(
+                    REQUIRED,
+                    line,
+                    format!("`{workflow}` is paused and is also named as a blocking section"),
+                    "restore the workflow, or move its contexts under the deep-gate heading; a \
+                     paused workflow cannot report a context branch protection waits for",
+                ));
+            }
+        }
+
+        for (workflow, line) in sweep_workflows(&tree)? {
+            if blocking.contains(workflow.as_str()) {
+                continue;
+            }
             report.find(Finding::at(
-                REQUIRED,
+                &format!(".github/workflows/{workflow}"),
                 line,
-                format!("`{workflow}` names a workflow file the checkout does not carry"),
-                "name a workflow under .github/workflows, or delete the row; a filename in \
-                 prose was checked by nothing",
+                format!(
+                    "`{workflow}` runs the gate sweep on a pull request and no section of \
+                     {REQUIRED} makes it blocking"
+                ),
+                "list the workflow's sweep jobs under a `## From `<workflow>`` heading in \
+                 .github/CI_REQUIRED.md; every registered gate is judged by this workflow, so \
+                 leaving it advisory lets a pull request merge with the whole registry red",
             ));
         }
 
@@ -210,16 +231,26 @@ impl Gate for CiRequired {
 
             let jobs = jobs(&text);
             for (line, context) in &section.contexts {
-                let Some(job) = jobs.iter().find(|job| {
-                    job.id == *context || job.name.as_deref() == Some(context.as_str())
-                }) else {
+                let Some(job) = jobs.iter().find(|job| job.reported() == context.as_str()) else {
+                    let display = jobs
+                        .iter()
+                        .find(|job| job.id == *context)
+                        .and_then(|job| job.name.clone());
+                    let message = match display {
+                        Some(name) => format!(
+                            "`{context}` is a job id in `{}` and that job reports as `{name}`",
+                            section.workflow
+                        ),
+                        None => format!("no job in `{}` reports as `{context}`", section.workflow),
+                    };
                     report.find(Finding::at(
                         REQUIRED,
                         *line,
-                        format!("no job in `{}` is named `{context}`", section.workflow),
-                        "name the job exactly as the required context, or correct the context; \
-                         branch protection matches on this string and a mismatch blocks every \
-                         merge on a check that never arrives",
+                        message,
+                        "name the required context exactly as the job reports it, which is the \
+                         job's `name:` when it declares one and the job id otherwise; branch \
+                         protection matches on this string and a mismatch blocks every merge on \
+                         a check that never arrives",
                     ));
                     continue;
                 };
@@ -229,6 +260,65 @@ impl Gate for CiRequired {
 
         Ok(report)
     }
+}
+
+/// Every workflow that runs the gate sweep on a pull request, with the line it
+/// runs it on.
+///
+/// Read from the workflow set rather than from a name, because the rule is that
+/// whichever workflow judges the registry on a change is the one branch
+/// protection has to wait for. A gate registered in a subset a workflow runs is
+/// exactly as binding as that workflow's status context, and a sweep nothing
+/// blocks on lets a pull request merge with every gate red.
+///
+/// A workflow that runs the sweep on a tag or on demand is not held to this: it
+/// judges a release rather than a change, and it reports no context a pull
+/// request could wait for.
+fn sweep_workflows(tree: &Tree) -> Result<Vec<(String, u32)>, GateError> {
+    let mut found = Vec::new();
+    for path in tree.paths() {
+        let relative = path.to_string_lossy();
+        let Some(name) = workflow_file(&relative) else {
+            continue;
+        };
+        let text = tree.read(path)?;
+        let triggers = text.split("\njobs:").next().unwrap_or(&text);
+        if !triggers.lines().any(|line| line.trim() == "pull_request:") {
+            continue;
+        }
+        if let Some((number, _)) = crate::gates::scan::numbered(&text)
+            .into_iter()
+            .find(|(_, line)| line.contains("xtask") && invokes_sweep(line))
+        {
+            found.push((name, number));
+        }
+    }
+    Ok(found)
+}
+
+/// The file name of a workflow, for a path that is one.
+fn workflow_file(relative: &str) -> Option<String> {
+    let name = relative.strip_prefix(".github/workflows/")?;
+    if name.contains('/') || !(name.ends_with(".yml") || name.ends_with(".yaml")) {
+        return None;
+    }
+    Some(name.to_string())
+}
+
+/// Whether one command line invokes the `gates` subcommand.
+fn invokes_sweep(line: &str) -> bool {
+    let mut rest = line;
+    while let Some(at) = rest.find("-- ") {
+        rest = &rest[at + 3..];
+        let token: String = rest
+            .chars()
+            .take_while(|character| character.is_ascii_alphanumeric() || *character == '-')
+            .collect();
+        if token == "gates" {
+            return true;
+        }
+    }
+    false
 }
 
 /// One `## From `<workflow>`` section of the required-context document.
@@ -408,6 +498,18 @@ struct Job {
     line: u32,
     /// Every line of the job, including its steps.
     body: String,
+}
+
+impl Job {
+    /// The status context this job reports, which is the display name when the
+    /// job declares one and the job id otherwise.
+    ///
+    /// Branch protection matches this string and nothing else, so a required
+    /// check named by job id where the job declares a `name:` waits for a
+    /// context that never arrives.
+    fn reported(&self) -> &str {
+        self.name.as_deref().unwrap_or(&self.id)
+    }
 }
 
 /// Every job a workflow declares.
@@ -653,11 +755,9 @@ mod tests {
 
     /// WHY: the live document is the payload of branch protection, so the rule
     /// has to hold on the tree it ships with. A rule that only passes on a
-    /// fixture proves the fixture. A paused file does not satisfy a name here:
-    /// the document declared two lanes that could not run, and nothing was red
-    /// for as long as nobody opened the other directory.
+    /// fixture proves the fixture.
     #[test]
-    fn the_live_required_document_names_only_workflows_that_run() {
+    fn the_live_required_document_names_only_workflows_that_exist() {
         let root = crate::checkout::checkout_root();
         let tree = Tree::open(&root).expect("Fix: the checkout must be listable");
         let document = tree
@@ -670,8 +770,9 @@ mod tests {
         );
         for (line, workflow) in named {
             assert!(
-                tree.exists(&format!(".github/workflows/{workflow}")),
-                "{REQUIRED}:{line} names `{workflow}`, which is not a workflow that runs"
+                tree.exists(&format!(".github/workflows/{workflow}"))
+                    || tree.exists(&format!(".github/workflows-paused/{workflow}")),
+                "{REQUIRED}:{line} names `{workflow}`, which is in neither workflow directory"
             );
         }
     }
@@ -714,5 +815,54 @@ mod tests {
             trigger_findings("demo.yml", WORKFLOW).is_empty(),
             "the live trigger shape is the passing one"
         );
+    }
+
+    /// WHY: the registry is only as binding as the status context that reports
+    /// it. `gates.yml` ran every registered gate on every pull request and was
+    /// named nowhere in the required document, so a pull request could merge
+    /// with the whole registry red. A release lane that runs the same sweep on a
+    /// tag is not a pull request context and is deliberately not held to this.
+    #[test]
+    fn a_pull_request_sweep_is_told_from_a_release_sweep() {
+        assert!(invokes_sweep("run: ./cargo_full run -p xtask -- gates --subset cat-a"));
+        assert!(invokes_sweep(
+            "run: ./cargo_full run -q -p xtask --bin xtask -- gates"
+        ));
+        assert!(
+            !invokes_sweep("run: ./cargo_full run -p xtask -- gate-canon"),
+            "one gate is not the sweep"
+        );
+        assert!(
+            !invokes_sweep("run: ./cargo_full test -- --nocapture"),
+            "a test argument is not a subcommand"
+        );
+        assert_eq!(
+            workflow_file(".github/workflows/gates.yml"),
+            Some("gates.yml".to_string())
+        );
+        assert_eq!(workflow_file(".github/workflows-paused/book.yml"), None);
+        assert_eq!(workflow_file(".github/workflows/actions/x/action.yml"), None);
+
+        let root = crate::checkout::checkout_root();
+        let tree = Tree::open(&root).expect("Fix: the checkout must be listable");
+        let document = tree
+            .read(REQUIRED)
+            .expect("Fix: the document must be readable");
+        let blocking: BTreeSet<String> = required_sections(&document)
+            .into_iter()
+            .map(|section| section.workflow)
+            .collect();
+        let sweeps = sweep_workflows(&tree).expect("Fix: the workflows must be readable");
+        assert!(
+            !sweeps.is_empty(),
+            "some workflow must run the sweep on a pull request"
+        );
+        for (workflow, line) in sweeps {
+            assert!(
+                blocking.contains(&workflow),
+                "{workflow}:{line} runs the sweep on a pull request and {REQUIRED} does not \
+                 make it blocking"
+            );
+        }
     }
 }

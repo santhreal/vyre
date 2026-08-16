@@ -122,11 +122,7 @@ pub(super) fn benchmark_artifact_is_reusable(
     else {
         return false;
     };
-    if !xtask::source_provenance::issues(
-        report_source_fingerprint,
-    )
-    .is_empty()
-    {
+    if !xtask::source_provenance::issues(report_source_fingerprint).is_empty() {
         return false;
     }
     let Some(report_source_tree_fingerprint) = report
@@ -303,13 +299,13 @@ const MAX_CHILD_OUTPUT_BYTES: usize = 4096;
 /// captured and only a failure carries its tail, which is the only case a reader
 /// needs it for.
 pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result<(), String> {
-    let runner = xtask::cargo_runner::runner(workspace_root);
-    let output = Command::new(&runner)
+    let runner = xtask::cargo_runner::binary(workspace_root);
+    let status = Command::new(&runner)
         .args(args)
         .current_dir(workspace_root)
         .output();
     let display = format!("{} {}", runner.display(), args.join(" "));
-    match output {
+    match status {
         Ok(output) if output.status.success() => Ok(()),
         Ok(output) => Err(format!(
             "Fix: `{display}` failed with {}: {}",
@@ -993,6 +989,9 @@ mod tests {
             "Fix: the child tail must stay within its byte bound, got {}",
             tail.len()
         );
-        assert!(tail.ends_with('o'), "Fix: the tail keeps what was said last.");
+        assert!(
+            tail.ends_with('o'),
+            "Fix: the tail keeps what was said last."
+        );
     }
 }
