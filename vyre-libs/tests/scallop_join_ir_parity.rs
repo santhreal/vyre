@@ -10,7 +10,7 @@
 //! reads `state[i*n+k]`/`join_rules[k*n+j]` by loop index, never a data-derived scatter target). The
 //! final state lands in `state` (binding 0). A wrong join index, a swapped state/next ping-pong, a
 //! non-monotone combine, or an off-by-one convergence check breaks the exact match.
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(all(feature = "math-kernels", feature = "fixpoint", feature = "cpu-parity"))]
 
 use vyre_reference::value::Value;
 

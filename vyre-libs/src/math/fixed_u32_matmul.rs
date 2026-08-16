@@ -80,9 +80,9 @@ pub(crate) fn try_fixed_u32_matmul(
             context.operation
         ));
     }
-    let lhs_cells = crate::operand_shape::matrix_cells(context.lhs_label, rows, shared)?;
-    let rhs_cells = crate::operand_shape::matrix_cells(context.rhs_label, shared, cols)?;
-    let out_cells = crate::operand_shape::matrix_cells(context.out_label, rows, cols)?;
+    let lhs_cells = crate::plumbing::operand::shape::matrix_cells(context.lhs_label, rows, shared)?;
+    let rhs_cells = crate::plumbing::operand::shape::matrix_cells(context.rhs_label, shared, cols)?;
+    let out_cells = crate::plumbing::operand::shape::matrix_cells(context.out_label, rows, cols)?;
     Ok(fixed_u32_matmul_program(
         context.op_id,
         lhs,

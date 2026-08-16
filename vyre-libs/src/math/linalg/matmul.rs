@@ -9,7 +9,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_reg
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::builder::{check_tensors, BuildOptions};
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::math::matmul";
 const OP_ID_BIAS: &str = "vyre-libs::math::matmul_bias";

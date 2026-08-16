@@ -2570,11 +2570,9 @@ pub fn vyre_libs::nn::attention::Softmax::with_region_generator(self, name: &'st
 pub fn vyre_libs::nn::attention::Softmax::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::nn::attention::Softmax::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::nn::attention::attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::nn::attention::attention_head_to_token(input: &str, output: &str, batch: u32, heads: u32, sequence: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
-pub fn vyre_libs::nn::attention::attention_head_to_token_typed(input: &str, output: &str, batch: u32, heads: u32, sequence: u32, head_dim: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs::nn::attention::attention_head_to_token(spec: vyre_libs::nn::attention::AttentionPermuteSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::nn::attention::attention_token_to_head(input: &str, output: &str, batch: u32, sequence: u32, heads: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
-pub fn vyre_libs::nn::attention::attention_token_to_head_typed(input: &str, output: &str, batch: u32, sequence: u32, heads: u32, head_dim: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs::nn::attention::attention_token_to_head(spec: vyre_libs::nn::attention::AttentionPermuteSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::chunked_gated_delta(spec: &vyre_libs::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>
 pub fn vyre_libs::nn::attention::flash_attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::flash_attention_2(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32, tile_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2582,8 +2580,7 @@ pub fn vyre_libs::nn::attention::flash_attention_2_reference(q: &str, k: &str, v
 pub fn vyre_libs::nn::attention::gqa_attention(q: &str, k: &str, v_buf: &str, output: &str, n_q_heads: u32, n_kv_heads: u32, seq_len: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal_typed(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
-pub fn vyre_libs::nn::attention::kv_cache_append(prior: &str, chunk: &str, next: &str, batch: u32, heads: u32, capacity: u32, chunk_len: u32, head_dim: u32, offset: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::KvCacheAppendError>
-pub fn vyre_libs::nn::attention::kv_cache_append_typed(prior: &str, chunk: &str, next: &str, batch: u32, heads: u32, capacity: u32, chunk_len: u32, head_dim: u32, offset: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::KvCacheAppendError>
+pub fn vyre_libs::nn::attention::kv_cache_append(spec: vyre_libs::nn::attention::KvCacheAppendSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::KvCacheAppendError>
 pub fn vyre_libs::nn::attention::mla_compress_kv(h: &str, w_dk: &str, c_out: &str, hidden_dim: u32, kv_lora_rank: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::mla_decode(q: &str, kv_cache: &str, kr_cache: &str, w_uk: &str, w_uv: &str, out: &str, seq_len: u32, num_heads: u32, head_dim: u32, kv_lora_rank: u32, qk_rope_head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::partial_rope(input: &str, cos_table: &str, sin_table: &str, output: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2601,16 +2598,13 @@ pub fn vyre_libs::nn::attention::turboquant_attention(q: &str, k_packed: &str, v
 pub fn vyre_libs::nn::attention_passes::attention_max_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_max_pass_bounded(q: &str, k: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::nn::attention_passes::attention_max_pass_with_bases(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_sum_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_sum_pass_bounded(q: &str, k: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_sum_pass_program(q: &str, k: &str, max_in: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::nn::attention_passes::attention_sum_pass_with_bases(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_write_pass(q: &str, k: &str, v: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, out: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_write_pass_bounded(q: &str, k: &str, v: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, out: &str, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr, value_base: vyre_foundation::ir_inner::model::generated::Expr, output_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_write_pass_bounded_typed(q: &str, k: &str, v: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, out: &str, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr, value_base: vyre_foundation::ir_inner::model::generated::Expr, output_base: vyre_foundation::ir_inner::model::generated::Expr, output_dtype: vyre_spec::data_type::DataType) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_passes::attention_write_pass_program(spec: vyre_libs::nn::attention_passes::AttentionWritePassProgramSpec<'_>) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::nn::attention_passes::attention_write_pass_with_bases(q: &str, k: &str, v: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, out: &str, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr, value_base: vyre_foundation::ir_inner::model::generated::Expr, output_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::attention_stability::bounded_exp_arg(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::nn::attention_stability::bounded_score(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::nn::attention_stability::direct_score_expr(q: &str, k: &str, row: u32, col: u32, dimension: u32, scale: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
@@ -4054,10 +4048,12 @@ pub struct vyre_libs::math::sparse_selector::SparseKernelSelectorEvidence
 pub struct vyre_libs::math::sparse_selector::SparseKernelSelectorRequest
 pub struct vyre_libs::math::tensor_train_decompose::TensorTrainCpuScratch
 pub struct vyre_libs::nn::attention::Attention
+pub struct vyre_libs::nn::attention::AttentionPermuteSpec<'a>
 pub struct vyre_libs::nn::attention::FlashAttentionBenchMetrics
 pub struct vyre_libs::nn::attention::FlashAttentionMemoryTraffic
 pub struct vyre_libs::nn::attention::FlashAttentionWorkPlan
 pub struct vyre_libs::nn::attention::GatedDeltaSpec<'a>
+pub struct vyre_libs::nn::attention::KvCacheAppendSpec<'a>
 pub struct vyre_libs::nn::attention::Softmax
 pub struct vyre_libs::nn::attention_passes::AttentionWritePassProgramSpec<'a>
 pub struct vyre_libs::nn::inference_graph::Ds4FlashConfig
@@ -5100,6 +5096,13 @@ pub vyre_libs::math::sparse_selector::SparseKernelWorkloadClass::SpmmLike
 pub vyre_libs::math::sparse_selector::SparseKernelWorkloadClass::SpmvLike
 pub vyre_libs::math::succinct::SuccinctBuildError::SuperblockCountOverflow
 pub vyre_libs::math::succinct::SuccinctBuildError::ZeroBlockWords
+pub vyre_libs::nn::attention::AttentionPermuteSpec::batch: u32
+pub vyre_libs::nn::attention::AttentionPermuteSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs::nn::attention::AttentionPermuteSpec::head_dim: u32
+pub vyre_libs::nn::attention::AttentionPermuteSpec::heads: u32
+pub vyre_libs::nn::attention::AttentionPermuteSpec::input: &'a str
+pub vyre_libs::nn::attention::AttentionPermuteSpec::output: &'a str
+pub vyre_libs::nn::attention::AttentionPermuteSpec::sequence: u32
 pub vyre_libs::nn::attention::FlashAttentionBenchMetrics::memory_traffic: vyre_libs::nn::attention::FlashAttentionMemoryTraffic
 pub vyre_libs::nn::attention::FlashAttentionBenchMetrics::non_matmul_flops: u64
 pub vyre_libs::nn::attention::FlashAttentionBenchMetrics::occupancy_proxy_bps: u32
@@ -5152,6 +5155,16 @@ pub vyre_libs::nn::attention::KvCacheAppendError::Range::chunk_len: u32
 pub vyre_libs::nn::attention::KvCacheAppendError::Range::offset: u32
 pub vyre_libs::nn::attention::KvCacheAppendError::UnsupportedDtype
 pub vyre_libs::nn::attention::KvCacheAppendError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs::nn::attention::KvCacheAppendSpec::batch: u32
+pub vyre_libs::nn::attention::KvCacheAppendSpec::capacity: u32
+pub vyre_libs::nn::attention::KvCacheAppendSpec::chunk: &'a str
+pub vyre_libs::nn::attention::KvCacheAppendSpec::chunk_len: u32
+pub vyre_libs::nn::attention::KvCacheAppendSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs::nn::attention::KvCacheAppendSpec::head_dim: u32
+pub vyre_libs::nn::attention::KvCacheAppendSpec::heads: u32
+pub vyre_libs::nn::attention::KvCacheAppendSpec::next: &'a str
+pub vyre_libs::nn::attention::KvCacheAppendSpec::offset: u32
+pub vyre_libs::nn::attention::KvCacheAppendSpec::prior: &'a str
 pub vyre_libs::nn::attention::RecurrentGatedDeltaError::ElementCountOverflow
 pub vyre_libs::nn::attention::RecurrentGatedDeltaError::EmptyShape
 pub vyre_libs::nn::attention::RecurrentGatedDeltaError::InvalidHeadGrouping

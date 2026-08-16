@@ -1,4 +1,4 @@
-//! Shape, index, buffer, and per-token numerics shared by the two gated delta
+//! Shape, buffer, and per-token numerics shared by the two gated delta
 //! schedules.
 //!
 //! [`recurrent_gated_delta`](super::gated_delta::recurrent_gated_delta) and
@@ -6,11 +6,14 @@
 //! address the same six tensors with the same flat layout and validate the same
 //! shape contract; only their schedules differ. Both used to carry a private
 //! copy of that math. The copies are merged here so a layout change cannot land
-//! in one schedule and miss the other.
+//! in one schedule and miss the other. The flat indices themselves come from
+//! [`super::layout`], which is what every layout move in this subtree is built
+//! from.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, UnOp};
 
 use super::gated_delta::RecurrentGatedDeltaError;
+use super::layout::{block_index, checked_elements, RowMajor};
 
 /// Buffer names, shape, and numerics for one gated delta build.
 ///
@@ -110,62 +113,47 @@ impl GatedDeltaSpec<'_> {
 
 /// Multiply `values`, rejecting a product that overflows `u32` indexing.
 pub(super) fn checked(values: &[u32]) -> Result<u32, RecurrentGatedDeltaError> {
-    values.iter().try_fold(1_u32, |product, value| {
-        product
-            .checked_mul(*value)
-            .ok_or(RecurrentGatedDeltaError::ElementCountOverflow)
-    })
+    checked_elements(values).ok_or(RecurrentGatedDeltaError::ElementCountOverflow)
 }
 
-/// Flat index into a `[batch, sequence, heads, dim]` query or key tensor,
-/// keyed off the enclosing `batch_index` and `key_head` bindings.
-pub(super) fn qk_index(sequence: u32, heads: u32, dim: u32, token: Expr, feature: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(
-            Expr::add(
-                Expr::mul(Expr::var("batch_index"), Expr::u32(sequence)),
-                token,
-            ),
-            Expr::u32(heads * dim),
-        ),
-        Expr::add(Expr::mul(Expr::var("key_head"), Expr::u32(dim)), feature),
-    )
-}
-
-/// Flat index into a `[batch, sequence, heads, dim]` value or output tensor,
-/// keyed off the enclosing `batch_index` and `value_head` bindings.
-pub(super) fn value_index(sequence: u32, heads: u32, dim: u32, token: Expr, feature: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(
-            Expr::add(
-                Expr::mul(Expr::var("batch_index"), Expr::u32(sequence)),
-                token,
-            ),
-            Expr::u32(heads * dim),
-        ),
-        Expr::add(Expr::mul(Expr::var("value_head"), Expr::u32(dim)), feature),
-    )
+/// Flat index into a `[batch, sequence, heads, dim]` activation tensor, keyed
+/// off the enclosing `batch_index` binding and the `head` binding named by the
+/// caller.
+///
+/// The head binding is the only position that differed between the query/key
+/// copy and the value/output copy of this index: the two tensors carry
+/// different head counts and different widths, but one layout.
+pub(super) fn activation_index(
+    head: &str,
+    sequence: u32,
+    heads: u32,
+    dim: u32,
+    token: Expr,
+    feature: Expr,
+) -> Expr {
+    RowMajor {
+        mid: sequence,
+        row: heads,
+        width: dim,
+    }
+    .index(Expr::var("batch_index"), token, Expr::var(head), feature)
 }
 
 /// Flat index into a `[batch, sequence, heads]` per-token scalar tensor.
 pub(super) fn scalar_index(sequence: u32, heads: u32, token: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(
-            Expr::add(
-                Expr::mul(Expr::var("batch_index"), Expr::u32(sequence)),
-                token,
-            ),
-            Expr::u32(heads),
-        ),
+    block_index(
+        block_index(Expr::var("batch_index"), sequence, token),
+        heads,
         Expr::var("value_head"),
     )
 }
 
 /// Flat index into the `[head, key_dim, value_dim]` matrix state.
 pub(super) fn state_index(key_dim: u32, value_dim: u32, key: Expr, value: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(Expr::var("head_index"), Expr::u32(key_dim * value_dim)),
-        Expr::add(Expr::mul(key, Expr::u32(value_dim)), value),
+    block_index(
+        Expr::var("head_index"),
+        key_dim * value_dim,
+        block_index(key, value_dim, value),
     )
 }
 

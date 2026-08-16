@@ -6,7 +6,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::prelude::MatmulBias;
 use crate::{
     builder::{check_tensors, BuildOptions},
-    tensor_ref::{TensorRef, TensorRefError},
+    plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
 
 use super::tiled::{linear_tiled, LINEAR_TILED_MIN_WORK, LINEAR_TILED_TILE};

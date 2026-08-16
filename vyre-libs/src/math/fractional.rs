@@ -78,7 +78,7 @@ pub fn try_grunwald_letnikov_kernel_into(
 ) -> Result<(), String> {
     let n = n as usize;
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "fractional calculus CPU helper",
@@ -135,7 +135,7 @@ pub fn try_kernel_to_fixed_16_16_into(
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
     if kernel.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             kernel.len() - out.len(),
             "fractional calculus CPU helper",
@@ -192,7 +192,7 @@ pub fn try_fractional_derivative_cpu_into(
     out: &mut Vec<f64>,
 ) -> Result<(), String> {
     if f.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             f.len() - out.len(),
             "fractional calculus CPU oracle",

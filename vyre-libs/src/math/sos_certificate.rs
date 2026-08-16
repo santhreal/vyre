@@ -159,7 +159,7 @@ pub fn try_sos_gram_construct_cpu_into(
         format!("sos_gram_construct CPU oracle m={m} overflows dense Gram indexing. Fix: shard the monomial basis.")
     })?;
     if cells > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             cells - out.len(),
             "SOS Gram CPU oracle",

@@ -3,7 +3,7 @@
 
 use vyre_foundation::ir::Expr;
 
-use crate::tensor_ref::TensorRefError;
+use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 #[derive(Copy, Clone)]
 pub(crate) struct MatrixShape {

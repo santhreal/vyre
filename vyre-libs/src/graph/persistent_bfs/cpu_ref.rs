@@ -157,13 +157,13 @@ pub(crate) fn try_cpu_ref_converged_into_with_scratch(
         frontier_in,
     )?;
     let words = layout.words;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         frontier_out,
         words,
         "persistent BFS CPU oracle",
         "frontier output",
     )?;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.step,
         words,
         "persistent BFS CPU oracle",

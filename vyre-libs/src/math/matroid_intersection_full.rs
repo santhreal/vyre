@@ -542,13 +542,13 @@ fn require_len(name: &str, got: usize, need: usize) -> Result<(), String> {
     }
 }
 
-crate::scratch::define_reserve_capacity!(
+crate::plumbing::host::scratch::define_reserve_capacity!(
     reserve_u32,
     u32,
     "matroid intersection CPU oracle"
 );
 
-crate::scratch::define_reserve_capacity!(
+crate::plumbing::host::scratch::define_reserve_capacity!(
     reserve_usize,
     usize,
     "matroid intersection CPU oracle"

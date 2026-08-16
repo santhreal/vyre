@@ -1,7 +1,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::builder::{
+use super::{
     build_indexed_map, strided_accumulate_child, INDEXED_MAP_OP_ID, STRIDED_ACCUMULATE_OP_ID,
 };
 

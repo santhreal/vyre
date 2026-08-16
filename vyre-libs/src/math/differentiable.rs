@@ -139,7 +139,7 @@ pub fn softmax_cpu_into(x: &[f64], out: &mut Vec<f64>) {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_softmax_cpu_into(x: &[f64], out: &mut Vec<f64>) -> Result<(), String> {
     if x.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             x.len() - out.len(),
             "differentiable math CPU oracle",
@@ -198,7 +198,7 @@ pub fn try_differentiable_argmax_cpu_into(
     out: &mut Vec<f64>,
 ) -> Result<(), String> {
     if x.len() > scaled.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             scaled,
             x.len() - scaled.len(),
             "differentiable math CPU oracle",

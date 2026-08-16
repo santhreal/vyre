@@ -221,7 +221,7 @@ pub fn try_csr_queue_split_low_forward_traverse_cpu(
         ));
     }
     let mut high_queue_probe: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut high_queue_probe,
         high_queue_capacity,
         "CSR queue split CPU oracle",

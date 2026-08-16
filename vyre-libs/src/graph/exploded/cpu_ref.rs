@@ -143,7 +143,7 @@ pub fn try_build_cpu_reference_into(
     // the edge-emit loops below.
     let slots_per_proc = layout.slots_per_proc as usize;
     let total_nodes = layout.total_nodes as usize;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.edges_flat,
         layout.max_col_count as usize,
         "exploded IFDS CPU reference",
@@ -160,7 +160,7 @@ pub fn try_build_cpu_reference_into(
     let in_space =
         |p: u32, b: u32, f: u32| p < num_procs && b < blocks_per_proc && f < facts_per_proc;
 
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.killed,
         total_nodes,
         "exploded IFDS CPU reference",
@@ -177,7 +177,7 @@ pub fn try_build_cpu_reference_into(
     let gen_offset_count = block_count
         .checked_add(1)
         .ok_or_else(|| "Fix: exploded IFDS block_count+1 overflows usize.".to_string())?;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.gen_offsets,
         gen_offset_count,
         "exploded IFDS CPU reference",
@@ -193,7 +193,7 @@ pub fn try_build_cpu_reference_into(
     for i in 1..scratch.gen_offsets.len() {
         scratch.gen_offsets[i] += scratch.gen_offsets[i - 1];
     }
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.gen_cursor,
         block_count,
         "exploded IFDS CPU reference",
@@ -204,7 +204,7 @@ pub fn try_build_cpu_reference_into(
         .gen_cursor
         .extend_from_slice(&scratch.gen_offsets[..block_count]);
     let gen_fact_count = scratch.gen_offsets[block_count];
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.gen_facts,
         gen_fact_count,
         "exploded IFDS CPU reference",
@@ -273,7 +273,7 @@ pub fn try_build_cpu_reference_into(
         ));
     }
     let row_ptr_len = layout.row_words;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         row_ptr,
         row_ptr_len,
         "exploded IFDS CPU reference",
@@ -296,7 +296,7 @@ pub fn try_build_cpu_reference_into(
             )
         })?;
     }
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut scratch.cursor,
         total_nodes,
         "exploded IFDS CPU reference",
@@ -306,7 +306,7 @@ pub fn try_build_cpu_reference_into(
     for &offset in &row_ptr[..total_nodes] {
         scratch.cursor.push(offset as usize);
     }
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         col_idx,
         scratch.edges_flat.len(),
         "exploded IFDS CPU reference",

@@ -665,19 +665,19 @@ pub fn try_cpu_ref_batched_with_scratch(
     let layout = validate_batched_path_reconstruct_layout(targets.len(), max_depth)?;
     let depth = max_depth as usize;
     scratch.clear();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         paths,
         layout.path_words,
         "path reconstruction CPU oracle",
         "batched path output",
     )?;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         lens,
         layout.target_count as usize,
         "path reconstruction CPU oracle",
         "batched length output",
     )?;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         scratch,
         depth,
         "path reconstruction CPU oracle",

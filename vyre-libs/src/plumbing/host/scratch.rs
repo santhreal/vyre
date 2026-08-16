@@ -66,7 +66,7 @@ macro_rules! define_reserve_capacity {
     ($name:ident, $item:ty, $owner:literal) => {
         #[cfg(any(test, feature = "cpu-parity"))]
         fn $name(out: &mut Vec<$item>, len: usize, name: &str) -> Result<(), String> {
-            crate::scratch::reserve_capacity(out, len, $owner, name)
+            crate::plumbing::host::scratch::reserve_capacity(out, len, $owner, name)
         }
     };
 }

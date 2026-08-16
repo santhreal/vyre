@@ -214,7 +214,7 @@ pub fn cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) -> Result<(), String> {
     if input.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             input.len() - out.len(),
             "prefix scan CPU oracle",

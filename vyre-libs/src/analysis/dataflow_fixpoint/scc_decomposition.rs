@@ -4,7 +4,7 @@
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::DataflowFixpointScratch;
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::scratch::reserve_vec_capacity_or_panic;
+use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into;
 

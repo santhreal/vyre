@@ -520,7 +520,7 @@ pub fn try_cpu_ref_into(
         edge_kind_mask,
         motif_edges,
     )?;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         participants,
         layout.output_words,
         "motif CPU oracle",

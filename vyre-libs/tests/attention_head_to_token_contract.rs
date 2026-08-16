@@ -5,12 +5,21 @@
 mod wire_words;
 use wire_words::f32_bytes as bytes;
 
-use vyre_libs::nn::attention::attention_head_to_token;
+use vyre::ir::DataType;
+use vyre_libs::nn::attention::{attention_head_to_token, AttentionPermuteSpec};
 use vyre_reference::value::Value;
 
 fn execute(input: &[f32], batch: u32, heads: u32, sequence: u32, dim: u32) -> Vec<f32> {
-    let program = attention_head_to_token("input", "output", batch, heads, sequence, dim)
-        .expect("Fix: valid attention layout fixture must build");
+    let program = attention_head_to_token(AttentionPermuteSpec {
+        input: "input",
+        output: "output",
+        batch,
+        heads,
+        sequence,
+        head_dim: dim,
+        dtype: DataType::F32,
+    })
+    .expect("Fix: valid attention layout fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -57,10 +66,19 @@ fn one_token_decode_preserves_concatenated_head_order() {
 /// Ensures empty shapes and hostile flattened counts fail before buffer creation.
 #[test]
 fn invalid_layout_dimensions_fail_closed() {
-    assert!(attention_head_to_token("i", "o", 0, 1, 1, 1)
+    let spec = |batch, heads| AttentionPermuteSpec {
+        input: "i",
+        output: "o",
+        batch,
+        heads,
+        sequence: 1,
+        head_dim: 1,
+        dtype: DataType::F32,
+    };
+    assert!(attention_head_to_token(spec(0, 1))
         .expect_err("Fix: zero batch must fail")
         .contains("nonzero"));
-    assert!(attention_head_to_token("i", "o", u32::MAX, 2, 1, 1)
+    assert!(attention_head_to_token(spec(u32::MAX, 2))
         .expect_err("Fix: flattened count overflow must fail")
         .contains("overflows"));
 }

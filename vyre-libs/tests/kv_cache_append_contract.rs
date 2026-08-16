@@ -5,8 +5,32 @@
 mod wire_words;
 use wire_words::{f32_bytes as bytes, f32_words_of as decode};
 
-use vyre_libs::nn::attention::{kv_cache_append, KvCacheAppendError};
+use vyre::ir::DataType;
+use vyre_libs::nn::attention::{kv_cache_append, KvCacheAppendError, KvCacheAppendSpec};
 use vyre_reference::value::Value;
+
+fn spec<'a>(
+    batch: u32,
+    heads: u32,
+    capacity: u32,
+    chunk_len: u32,
+    head_dim: u32,
+    offset: u32,
+    dtype: DataType,
+) -> KvCacheAppendSpec<'a> {
+    KvCacheAppendSpec {
+        prior: "prior",
+        chunk: "chunk",
+        next: "next",
+        batch,
+        heads,
+        capacity,
+        chunk_len,
+        head_dim,
+        offset,
+        dtype,
+    }
+}
 
 #[allow(clippy::too_many_arguments)]
 fn execute(
@@ -19,9 +43,15 @@ fn execute(
     dim: u32,
     offset: u32,
 ) -> Vec<f32> {
-    let program = kv_cache_append(
-        "prior", "chunk", "next", batch, heads, capacity, chunk_len, dim, offset,
-    )
+    let program = kv_cache_append(spec(
+        batch,
+        heads,
+        capacity,
+        chunk_len,
+        dim,
+        offset,
+        DataType::F32,
+    ))
     .expect("Fix: valid cache append fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -86,11 +116,11 @@ fn full_prefill_replaces_every_cache_element() {
 #[test]
 fn invalid_cache_transitions_fail_closed() {
     assert_eq!(
-        kv_cache_append("p", "c", "n", 0, 1, 1, 1, 1, 0),
+        kv_cache_append(spec(0, 1, 1, 1, 1, 0, DataType::F32)),
         Err(KvCacheAppendError::EmptyShape)
     );
     assert_eq!(
-        kv_cache_append("p", "c", "n", 1, 1, 4, 2, 1, 3),
+        kv_cache_append(spec(1, 1, 4, 2, 1, 3, DataType::F32)),
         Err(KvCacheAppendError::Range {
             offset: 3,
             chunk_len: 2,
@@ -98,7 +128,7 @@ fn invalid_cache_transitions_fail_closed() {
         })
     );
     assert_eq!(
-        kv_cache_append("p", "c", "n", u32::MAX, 2, 1, 1, 1, 0),
+        kv_cache_append(spec(u32::MAX, 2, 1, 1, 1, 0, DataType::F32)),
         Err(KvCacheAppendError::ElementCountOverflow)
     );
 }

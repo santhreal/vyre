@@ -979,7 +979,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `doc-claims` | In `contracts/doc_claims_manifest.toml`, change one `phrase` to text its document does not contain. | 0 to 1 |
 | `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |
 | `hot-path-owned-dispatch` | In `vyre-driver/src/backend/compiled_pipeline.rs`, make `dispatch` the required method and give `dispatch_borrowed` a default that copies each row with `to_vec`. | 0 to 2, one finding for the requirement and one for the copy it forces |
-| `hot-path-inventory` | In `vyre-libs/src/operation_catalog.rs`, serve `convergence_contract` by walking `inventory::iter` instead of probing the frozen index. | 0 to 1, quoting the statement that scans |
+| `hot-path-inventory` | In `vyre-libs/src/plumbing/registration/operation_catalog.rs`, serve `convergence_contract` by walking `inventory::iter` instead of probing the frozen index. | 0 to 1, quoting the statement that scans |
 | `hot-path-nested-rows` | In `vyre-driver/src/backend/vyre_backend.rs`, delete the `dispatch_borrowed_into` declaration. | 0 to 1, naming the returning method that is then the only shape offered |
 | `hot-path-nested-rows` | In `vyre-driver/src/backend/vyre_backend.rs`, replace the slot-preserving replacement in `dispatch_borrowed_into` with `*outputs = self.dispatch_borrowed(program, inputs, config)?;`. | 0 to 1, naming the slot the default replaces |
 | `hot-path-unbounded-read` | Add `fs::read_to_string(` to a file under `vyre-driver/src` outside the reviewed cache modules. | 1 to 3 |
