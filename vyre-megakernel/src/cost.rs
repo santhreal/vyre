@@ -13,6 +13,11 @@
 //! cliff rather than a slope: a group that needs twice the resident budget runs
 //! its traffic in two passes instead of one.
 //!
+//! What a launch costs is read off the device the request targets, not off the
+//! recorded floor, because the trade the first two terms make is launches
+//! against bytes and the answer differs by host. The floor prices a device that
+//! measured nothing.
+//!
 //! A group's shared scratch is the union of its members' declarations, not the
 //! sum of their totals. Fusion keeps one declaration per buffer name and takes
 //! the larger count, so two ops fused over one tile hold one tile in the
@@ -37,22 +42,28 @@ use crate::{
     DependencyKind, DeviceFacts,
 };
 
-/// Cost of one kernel launch.
+/// Cost of one kernel launch on a device that reports no measured overhead.
 ///
 /// `foundation.elementwise.add.1m` records `dispatch_ns` p50 4224
-/// (`vyre-bench/snapshots/07b0678d5f9ef8aeccda623e0012f0cd0b30d7fa.json`). It is
-/// the cheapest whole dispatch in any recorded snapshot, so no launch costs less
-/// than this and the launch term prices one at that floor.
-const LAUNCH_COST_NS: u64 = 4_224;
+/// (`vyre-bench/snapshots/59a7d71f36292424c99b7530da59f7361bfab607.json`). It is
+/// the cheapest whole dispatch in any recorded snapshot or baseline, so no
+/// launch costs less than this and a device that measured nothing is priced at
+/// that floor. A device that did measure is priced at its own figure by
+/// [`launch_cost_ns`].
+const LAUNCH_COST_FLOOR_NS: u64 = 4_224;
 
 /// Bytes of traffic one nanosecond moves.
 ///
-/// The same `foundation.elementwise.add.1m` dispatch moves 12 MB in and 4 MB out
-/// (`input_bytes` 12000000, `output_bytes` 4000000) inside those 4224 ns, which
-/// is 3.8 bytes per nanosecond. Dividing by 4 prices 16 MB of traffic at that
-/// dispatch's measured duration, and the same figure prices both the bytes a
-/// materialization writes and the bytes an occupancy loss moves a second time.
-const TRAFFIC_BYTES_PER_NS: u64 = 4;
+/// The same dispatch moves 12 MB in and 4 MB out (`bytes_read` 12000000,
+/// `bytes_written` 4000000) inside those 4224 ns, and the snapshot records the
+/// resulting rate directly as `device_gb_s_x1000` 3787878, which is 3788 bytes
+/// per nanosecond. The same figure prices both the bytes a materialization
+/// writes and the bytes an occupancy loss moves a second time.
+///
+/// The rate is the recorded one and carries no safety factor. A factor that
+/// nothing measured would reprice traffic against launches, and the ratio
+/// between those two terms is the whole question a fusion decision asks.
+const TRAFFIC_BYTES_PER_NS: u64 = 3_788;
 
 /// Reproducible components of the open compiler selection cost model.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,7 +176,7 @@ pub(crate) fn evaluate(
             occupancy_bytes.saturating_add(group_bytes.saturating_mul(passes.saturating_sub(1)));
     }
 
-    let launch_ns = launches.saturating_mul(LAUNCH_COST_NS);
+    let launch_ns = launches.saturating_mul(launch_cost_ns(device));
     let materialization_ns = materialized_bytes / TRAFFIC_BYTES_PER_NS;
     let occupancy_ns = occupancy_bytes / TRAFFIC_BYTES_PER_NS;
     let total = launch_ns
@@ -186,6 +197,25 @@ pub(crate) fn evaluate(
     }
 }
 
+/// Nanoseconds one kernel launch costs on `device`.
+///
+/// `DeviceFacts::per_launch_overhead_ns` is measured on the device the request
+/// targets, and `crate::artifact` already trades it against persistent setup to
+/// choose an execution mode. Pricing every launch at the recorded floor instead
+/// made the launch term a constant multiple of the group count, so a host whose
+/// launches cost five times the floor still had its fusions ranked as though
+/// they saved the floor. The term now moves with the device, which is what lets
+/// a persistent schedule outrank a per-op one on a host where launches are
+/// expensive and lose on one where they are not.
+///
+/// A device that reports zero measured nothing, so the recorded floor stands in.
+fn launch_cost_ns(device: DeviceFacts) -> u64 {
+    match device.per_launch_overhead_ns() {
+        0 => LAUNCH_COST_FLOOR_NS,
+        measured => measured,
+    }
+}
+
 /// Resident passes a group needs when it wants `demand` of a `budget`.
 ///
 /// A workgroup holds a fixed number of registers and a fixed shared-scratch
@@ -193,7 +223,7 @@ pub(crate) fn evaluate(
 /// target compiler spills, or the device schedules fewer workgroups, and the
 /// group's traffic moves once per pass instead of once. The recorded shape of that
 /// loss is `foundation.reduce.sum.1m`, which declares a 256-entry u32 workgroup
-/// tile and records `dispatch_ns` p50 44448 against 4224 for
+/// tile and records `dispatch_ns` p50 44448 against 9664 for
 /// `foundation.elementwise.add.1m` over the same element count with no scratch
 /// (`vyre-bench/baselines/rtx_5090/smoke_full_2026-04-30_11bccf28.json`), and
 /// `adversarial.register_exhaustion.u32_1024`, which holds 100 live variables
@@ -260,9 +290,14 @@ mod tests {
     /// though it launches twice and materializes the value between the launches.
     /// A cost model with only launch and traffic terms ranks the fused candidate
     /// first for every graph, which is what this test would have caught.
+    ///
+    /// The extra pass has to move more than one launch buys. At 3788 bytes per
+    /// nanosecond a launch at the recorded floor pays for 16 MB, so the value is
+    /// 64 MiB: the fused group moves its 128 MiB of traffic a second time, and
+    /// the unfused pair materializes 64 MiB and launches once more.
     #[test]
     fn occupancy_cliff_ranks_the_unfused_candidate_first() {
-        let facts = two_node_facts(96, 4 * 1024 * 1024);
+        let facts = two_node_facts(96, 64 * 1024 * 1024);
         let dependencies = dependencies();
         let device = device(128);
         let fused = CandidatePlan::from_edges(2, &facts.dataflow);
@@ -311,6 +346,47 @@ mod tests {
         assert!(
             fused.total < unfused.total,
             "fused {fused:?} unfused {unfused:?}"
+        );
+    }
+
+    /// WHY: the launch term decides how much occupancy a fusion is allowed to
+    /// cost, and what a launch costs is a property of the host. Pricing every
+    /// launch at the recorded floor made that trade the same everywhere, so a
+    /// host with cheap launches still fused past the point where the extra
+    /// resident pass costs more than the launch it saves.
+    ///
+    /// One set of facts, two devices differing only in measured launch
+    /// overhead, opposite winners. `evaluate` and the floor are crate-private,
+    /// and the flip is a property of the arithmetic rather than of any one
+    /// graph, so it is pinned here and the published `launch_ns` field is
+    /// pinned from `tests/selection_cost_contract.rs`.
+    #[test]
+    fn a_measured_launch_overhead_reranks_a_fusion_the_floor_accepts() {
+        let facts = two_node_facts(96, 4 * 1024 * 1024);
+        let dependencies = dependencies();
+        let fused_plan = CandidatePlan::from_edges(2, &facts.dataflow);
+        let unfused_plan = CandidatePlan::baseline(2);
+
+        let unmeasured = device(128);
+        let fused = evaluate(&fused_plan, &facts, &dependencies, unmeasured);
+        let unfused = evaluate(&unfused_plan, &facts, &dependencies, unmeasured);
+        assert_eq!(fused.launch_ns, LAUNCH_COST_FLOOR_NS);
+        assert_eq!(unfused.launch_ns, 2 * LAUNCH_COST_FLOOR_NS);
+        assert!(
+            fused.total < unfused.total,
+            "at the floor the saved launch outweighs the extra resident pass: \
+             fused {fused:?} unfused {unfused:?}"
+        );
+
+        let cheap_launches = device(128).with_launch_costs(512, 0);
+        let fused = evaluate(&fused_plan, &facts, &dependencies, cheap_launches);
+        let unfused = evaluate(&unfused_plan, &facts, &dependencies, cheap_launches);
+        assert_eq!(fused.launch_ns, 512, "the measured figure prices the launch");
+        assert_eq!(unfused.launch_ns, 1024);
+        assert!(
+            unfused.total < fused.total,
+            "a launch worth 512 ns does not pay for a second pass over 8 MiB: \
+             fused {fused:?} unfused {unfused:?}"
         );
     }
 
