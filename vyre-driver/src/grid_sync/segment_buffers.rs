@@ -6,8 +6,10 @@ use std::collections::{HashMap, HashSet};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Ident, MemoryKind, Node, Program};
 use vyre_foundation::visit::{for_each_node, node_operands};
 
-use super::barrier_split::{entry_sequence, try_split_on_grid_sync};
-use super::{reserve_grid_sync_hash_map, reserve_grid_sync_hash_set, reserve_grid_sync_vec};
+use super::{
+    entry_sequence, reserve_grid_sync_hash_map, reserve_grid_sync_hash_set, reserve_grid_sync_vec,
+    try_split_on_grid_sync,
+};
 use crate::backend::BackendError;
 
 pub(super) struct PlannedGridSyncSegment {

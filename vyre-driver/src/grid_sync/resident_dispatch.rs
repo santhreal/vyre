@@ -5,11 +5,10 @@ use std::collections::HashMap;
 
 use vyre_foundation::ir::{Ident, Program};
 
-use super::barrier_split::{contains_grid_sync, try_split_on_grid_sync};
 use super::segment_buffers::original_output_names;
 use super::{
-    elapsed_wall_ns, grid_sync_segment_error, reject_empty_grid_sync_split,
-    reserve_grid_sync_hash_map, reserve_grid_sync_vec,
+    contains_grid_sync, elapsed_wall_ns, grid_sync_segment_error, reject_empty_grid_sync_split,
+    reserve_grid_sync_hash_map, reserve_grid_sync_vec, try_split_on_grid_sync,
 };
 use crate::backend::{
     BackendError, DispatchConfig, OutputBuffers, ResidentDispatchStep, ResidentReadRange, Resource,
@@ -363,7 +362,7 @@ fn free_resident_program_resources(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid_sync::barrier_split::entry_sequence;
+    use crate::grid_sync::entry_sequence;
     use crate::grid_sync::test_programs::{
         apply_out_stores, cross_segment_store_program, grid_sync_chain,
     };

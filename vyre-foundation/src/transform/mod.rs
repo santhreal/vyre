@@ -35,3 +35,9 @@ pub mod autodiff;
 
 /// Collective communication rewrites shared by reference and GPU backends.
 pub mod collectives;
+
+/// Cutting a whole-grid fence into sequential dispatch segments.
+///
+/// One owner for the `Node::Barrier { GridSync }` walk, hoist, and segmentation,
+/// shared by the compile-time planner cut and the dispatch-time split.
+pub mod grid_sync_split;
