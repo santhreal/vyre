@@ -703,7 +703,13 @@ fn is_internal_phase_op(id: &str) -> bool {
 /// These operations emit pure, backend-neutral IR but have no lower registered
 /// composition unit. Keeping this list explicit prevents an arbitrary flat
 /// Tier-3 operation from bypassing the depth gate.
-const DECLARED_TIER3_LEAVES: [&str; 9] = [
+///
+/// The three decode codecs are leaves because one module owns each codec and one
+/// op id names it. Each was previously a `vyre-libs` builder wrapping a
+/// registered `vyre-primitives` child, so the child Region was the second
+/// module, not a lower composition unit; collapsing the pair left the emitting
+/// body with nothing under it to name.
+const DECLARED_TIER3_LEAVES: [&str; 12] = [
     "vyre-libs::nn::top_k",
     "vyre-libs::math::reduce_variance",
     "vyre-libs::nn::softmax_top_k",
@@ -713,6 +719,9 @@ const DECLARED_TIER3_LEAVES: [&str; 9] = [
     "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
     "vyre-libs::math::linalg::matmul_strassen_2x2",
     "vyre-libs::math::fft::fft_radix2",
+    "vyre-libs::decode::base64",
+    "vyre-libs::decode::hex",
+    "vyre-libs::decode::inflate_stored_block",
 ];
 
 fn is_declared_tier3_leaf(id: &str) -> bool {
@@ -745,6 +754,12 @@ fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
         report.find(Finding::new(
             format!("no directory `vyre-libs/src/{dir}` answers to the shared-plumbing row"),
             "delete the row: a plumbing row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
+        ));
+    }
+    for dir in dead_substrate_rows(&libs_src) {
+        report.find(Finding::new(
+            format!("no directory `vyre-libs/src/{dir}` answers to the kernel-substrate row"),
+            "delete the row: a substrate row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
         ));
     }
     for marker in PHASE_MARKERS {
@@ -1118,12 +1133,15 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
                     if other_name == dialect_name || other_name.is_empty() {
                         continue;
                     }
+                    if is_substrate_target(other_name) {
+                        continue;
+                    }
                     if use_path.imports_dialect(other_name) {
                         report.find(violation(format!(
                             "  ✗ {relative} line {}: `{}` → reaches into the `{other_name}` \
                              dialect. Fix: re-export the item from vyre-libs/src/prelude.rs and \
-                             import it as `crate::prelude::…`, or hoist the shared piece into \
-                             vyre-primitives.",
+                             import it as `crate::prelude::…`, or move the shared piece down into \
+                             the kernel substrate the dialects compose from.",
                             use_path.line,
                             use_path.segments.join("::")
                         )));
@@ -1158,6 +1176,59 @@ const SHARED_PLUMBING_DIRS: [&str; 1] = ["builder"];
 /// Shared-plumbing rows that name no directory under `libs_src`.
 fn dead_plumbing_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
     SHARED_PLUMBING_DIRS
+        .into_iter()
+        .filter(|dir| !libs_src.join(dir).is_dir())
+        .collect()
+}
+
+/// Directories under `vyre-libs/src` that hold the kernel substrate: the
+/// composition domains every dialect is built out of. A dialect naming one is
+/// composing, not reaching, so an edge into these is not a cross-dialect edge.
+///
+/// These are the domains that used to sit in `vyre-primitives` and were reached
+/// as `vyre_primitives::<domain>::…`. The path is now `crate::<domain>::…`
+/// because both ends live in `vyre-libs`; the edge itself is the same one, and
+/// the fix line that told a caller to hoist the shared piece into
+/// `vyre-primitives` no longer names a place a composition can go.
+///
+/// A substrate directory is still walked as a source dialect, so an edge the
+/// other way, from the substrate up into a dialect, is still flagged. That
+/// direction is a layering inversion and never legal.
+const KERNEL_SUBSTRATE_DIRS: [&str; 18] = [
+    "bitset",
+    "decode",
+    "fixpoint",
+    "geom",
+    "graph",
+    "hash",
+    "label",
+    "matching",
+    "math",
+    "nfa",
+    "nn",
+    "opt",
+    "parsing",
+    "predicate",
+    "reduce",
+    "text",
+    "topology",
+    "visual",
+];
+
+/// Whether an edge whose target is the directory `name` is composition rather
+/// than reach-through.
+///
+/// Only the target side of an edge is exempt. The substrate directory itself
+/// stays in the dialect set `list_dialect_dirs` returns, so its own files are
+/// still walked and an import from the substrate into a dialect is still a
+/// finding.
+fn is_substrate_target(name: &str) -> bool {
+    KERNEL_SUBSTRATE_DIRS.contains(&name)
+}
+
+/// Kernel-substrate rows that name no directory under `libs_src`.
+fn dead_substrate_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
+    KERNEL_SUBSTRATE_DIRS
         .into_iter()
         .filter(|dir| !libs_src.join(dir).is_dir())
         .collect()
@@ -1271,6 +1342,27 @@ fn read_text_bounded(path: &std::path::Path) -> io::Result<String> {
     xtask::output_arg::read_text_bounded(path, MAX_LEGO_AUDIT_SOURCE_BYTES, "lego audit")
 }
 
+/// Operations whose `composed_fraction` stepped down on purpose, and whose
+/// baseline therefore predates a deliberate shape change.
+///
+/// The trend check reads its baseline out of the previous release tag, which is
+/// history and cannot be edited. When a codec that was a thin `vyre-libs`
+/// wrapper around a registered `vyre-primitives` child collapses into one
+/// module with one op id, the wrapper's child Region goes with it: the op now
+/// emits its own IR instead of nesting a region that emitted it. Composition did
+/// not regress, it stopped being counted, and there is no shape the fix line
+/// asks for that would bring the number back without restoring the second
+/// module.
+///
+/// Each row is held to the condition it suppresses: a row whose op no longer
+/// regresses against the baseline is reported, so it cannot outlive the release
+/// that earned it.
+const INTENDED_COMPOSITION_COLLAPSES: [&str; 3] = [
+    "vyre-libs::decode::base64",
+    "vyre-libs::decode::hex",
+    "vyre-libs::decode::inflate_stored_block",
+];
+
 const COMPOSITION_REGRESSION_EPSILON: f64 = 1.0e-9;
 
 fn composition_regressed(old_fraction: f64, new_fraction: f64) -> bool {
@@ -1301,14 +1393,37 @@ fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
 
     let current = composition_fractions(ops);
     let mut flagged = 0usize;
+    let mut suppressed: Vec<&str> = Vec::new();
     for (op_id, old_fraction) in previous {
         let Some(new_fraction) = current.get(&op_id) else {
             continue;
         };
-        if composition_regressed(old_fraction, *new_fraction) {
-            report.find(violation(format!("  ✗ {op_id} composed_fraction regressed from {:.1}% to {:.1}%. Fix: restore Region composition or extract shared work to Tier 2.5.",
+        if !composition_regressed(old_fraction, *new_fraction) {
+            continue;
+        }
+        if let Some(row) = INTENDED_COMPOSITION_COLLAPSES
+            .iter()
+            .find(|row| **row == op_id)
+        {
+            suppressed.push(row);
+            report.note(format!(
+                "  • {op_id} composed_fraction stepped from {:.1}% to {:.1}% by design; the wrapper module and its child Region were collapsed into one op",
                 old_fraction * 100.0,
-                new_fraction * 100.0)));
+                new_fraction * 100.0
+            ));
+            continue;
+        }
+        report.find(violation(format!("  ✗ {op_id} composed_fraction regressed from {:.1}% to {:.1}%. Fix: restore Region composition or extract shared work to Tier 2.5.",
+            old_fraction * 100.0,
+            new_fraction * 100.0)));
+        flagged += 1;
+    }
+    for row in INTENDED_COMPOSITION_COLLAPSES {
+        if !suppressed.contains(&row) {
+            report.find(Finding::new(
+                format!("the intended-collapse row `{row}` suppresses no composed_fraction regression against `{baseline_name}`"),
+                DEAD_EXEMPTION_FIX,
+            ));
             flagged += 1;
         }
     }
@@ -2052,5 +2167,111 @@ mod dedup_contract_tests {
             vec![first],
             "the row whose directory went away is the one reported"
         );
+    }
+
+    /// WHY: the composition domains moved out of `vyre-primitives` into
+    /// `vyre-libs/src`, so an edge a dialect always had, and always spelled
+    /// `vyre_primitives::<domain>::…`, is now spelled `crate::<domain>::…`. The
+    /// reach-through audit read the new spelling as a cross-dialect edge and
+    /// produced 440 findings for edges nobody changed. The exemption is on the
+    /// target side only, which is the whole contract: composing downward onto
+    /// the substrate is legal, and importing upward out of the substrate into a
+    /// dialect is a layering inversion that must stay a finding.
+    ///
+    /// The tempting wrong fix is to drop the substrate directories out of
+    /// `list_dialect_dirs`. That silences the same 440 findings and also stops
+    /// walking the substrate as a source, so the inversion goes unaudited. This
+    /// test goes red on that fix.
+    ///
+    /// What this does not catch: a substrate row added for a directory that is
+    /// really a dialect. That judgement is the reviewer's and the row carries
+    /// it, exactly as a shared-plumbing row does.
+    #[test]
+    fn the_substrate_is_an_exempt_target_and_still_an_audited_source() {
+        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+        let substrate = KERNEL_SUBSTRATE_DIRS[0];
+        let dialect = "solvers";
+        assert!(
+            !KERNEL_SUBSTRATE_DIRS.contains(&dialect),
+            "the control directory must not itself be substrate"
+        );
+        for dir in [substrate, dialect] {
+            std::fs::create_dir(libs_src.path().join(dir)).expect("directory");
+        }
+
+        assert!(
+            is_substrate_target(substrate),
+            "a dialect composing onto the substrate is not reaching through"
+        );
+        assert!(
+            !is_substrate_target(dialect),
+            "a dialect naming another dialect is still reaching through"
+        );
+
+        let (dialects, errors) = list_dialect_dirs(libs_src.path());
+        assert!(errors.is_empty(), "the temporary tree reads cleanly");
+        let mut names = dialects
+            .iter()
+            .filter_map(|path| path.file_name().and_then(|name| name.to_str()))
+            .collect::<Vec<_>>();
+        names.sort_unstable();
+        let mut expected = vec![substrate, dialect];
+        expected.sort_unstable();
+        assert_eq!(
+            names, expected,
+            "the substrate is still walked as a source dialect, so an import out of it into a dialect is still audited"
+        );
+    }
+
+    /// WHY: the kernel-substrate list is consumed by a directory filter, the
+    /// same shape as the shared-plumbing list, so a row naming a directory that
+    /// moved or was renamed suppresses nothing and reads as a reviewed
+    /// exemption. Both directions are proved against a tree the check is handed.
+    #[test]
+    fn a_substrate_row_without_a_directory_behind_it_is_dead() {
+        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+
+        assert_eq!(
+            dead_substrate_rows(libs_src.path()),
+            KERNEL_SUBSTRATE_DIRS.to_vec(),
+            "every row is dead against a tree that holds none of them"
+        );
+
+        for dir in KERNEL_SUBSTRATE_DIRS {
+            std::fs::create_dir(libs_src.path().join(dir)).expect("substrate directory");
+        }
+        assert_eq!(
+            dead_substrate_rows(libs_src.path()),
+            Vec::<&str>::new(),
+            "no row is dead once every one of them names a directory"
+        );
+
+        let first = KERNEL_SUBSTRATE_DIRS[0];
+        std::fs::remove_dir(libs_src.path().join(first)).expect("remove one substrate directory");
+        assert_eq!(
+            dead_substrate_rows(libs_src.path()),
+            vec![first],
+            "the row whose directory went away is the one reported"
+        );
+    }
+
+    /// WHY: an op whose composed_fraction dropped to zero on purpose composes
+    /// nothing, so checks 6 and 8 flag it as a non-leaf with no child Region and
+    /// as an island. Exempting it from the trend check alone moves the finding
+    /// rather than closing it, and the next reader sees a collapse row and
+    /// assumes the collapse is accounted for everywhere. The two tables must
+    /// agree, which is the invariant a new collapse row goes red on.
+    ///
+    /// What this does not catch: a declared leaf that is not a collapse. That
+    /// direction is legal, because an op can be a leaf without ever having had a
+    /// higher baseline.
+    #[test]
+    fn every_intended_collapse_is_also_a_declared_leaf() {
+        for row in INTENDED_COMPOSITION_COLLAPSES {
+            assert!(
+                is_declared_tier3_leaf(row),
+                "`{row}` composes nothing by design, so it must also be a declared Tier-3 leaf or checks 6 and 8 flag it"
+            );
+        }
     }
 }

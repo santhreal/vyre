@@ -652,7 +652,15 @@ fn category_from_id(id: &str) -> String {
 fn feature_route(id: &str, category: &str) -> Vec<String> {
     if id.starts_with("vyre-primitives::") {
         let domain = id.split("::").nth(1).unwrap_or(category);
-        let feature = if domain == "vfs" { "parsing" } else { domain };
+        // `vfs` is the one module in the intrinsic crate whose gate is not its own
+        // name: `pub mod vfs` sits behind `vyre-foundation`, because the resolver
+        // builds a Program and needs the IR types. Every other module there is
+        // gated by the feature it is named for.
+        let feature = if domain == "vfs" {
+            "vyre-foundation"
+        } else {
+            domain
+        };
         return vec![feature.to_string(), "inventory-registry".to_string()];
     }
     let feature = match category {

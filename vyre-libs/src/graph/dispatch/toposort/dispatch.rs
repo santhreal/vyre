@@ -154,11 +154,12 @@ fn refresh_toposort_inputs(
 }
 
 fn map_toposort_csr_error(error: ToposortCsrError) -> DispatchError {
+    // `ToposortCsrError` is `#[non_exhaustive]`, which stops another crate from
+    // matching it without a wildcard. Both ends live in `vyre-libs` now, so a
+    // new variant fails this match at compile time instead of falling into a
+    // catch-all that reported the variant name to the caller as a backend error.
     match error {
         ToposortCsrError::BadCsr { message } => DispatchError::BadInputs(message),
         ToposortCsrError::BadOrder { message } => DispatchError::BackendError(message),
-        other => DispatchError::BackendError(format!(
-            "Fix: topo_order_csr_via received unknown primitive CSR validation error: {other:?}."
-        )),
     }
 }

@@ -722,9 +722,13 @@ pub fn required_workgroups(program: &Program) -> u32 {
 ///
 /// The convergence-flag width is the contract a caller has to satisfy when it
 /// uploads that buffer, and it differs by route: one shared word below the
-/// routing threshold, one word per iteration above it. Panics when the name is
-/// absent, because a program that does not declare the buffer a test is asking
-/// about is a defect in the emission rather than a zero-width buffer.
+/// routing threshold, one word per iteration above it.
+///
+/// # Panics
+///
+/// Panics when `buffer` names no declared buffer. A program that does not
+/// declare the buffer a caller is asking about is a defect in the emission
+/// rather than a zero-width buffer.
 #[must_use]
 pub fn declared_words(program: &Program, buffer: &str) -> u32 {
     program
