@@ -96,6 +96,20 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
     })
 }
 
+/// Whether the argument vector asks the dispatcher itself for help.
+///
+/// Only a leading `--help` does. A `--help` after a subcommand belongs to that
+/// gate, which answers it in its report: reading it here printed the dispatch
+/// roster on stdout instead, which is not a `Report`, so the parent failed the
+/// gate for breaking the protocol rather than showing its usage.
+#[must_use]
+pub fn dispatch_help_requested(args: &[String]) -> bool {
+    match args.first() {
+        None => false,
+        Some(first) => first == "--help" || first == "-h",
+    }
+}
+
 /// Run a delegated binary's `main`: help, then the one gate it was asked for.
 ///
 /// Both delegated crates are entered the same way, because `xtask` enters them
@@ -108,11 +122,7 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
 /// so a converted gate returns everything it has to say and prints none of it.
 pub fn run_delegated_main(package: &str, purpose: &str, gates: &[&dyn Gate]) -> ! {
     let args: Vec<String> = std::env::args().collect();
-    if args
-        .iter()
-        .skip(1)
-        .any(|argument| argument == "--help" || argument == "-h")
-    {
+    if dispatch_help_requested(&args[1..]) {
         print_dispatch_help(package, purpose, gates.iter().map(|gate| gate.name()));
         std::process::exit(0);
     }
@@ -291,6 +301,26 @@ mod tests {
             executable_from(stdout, "xtask-registry"),
             Some(PathBuf::from("/t/xtask-registry"))
         );
+    }
+
+    /// WHY: `xtask <gate> --help` hands the child `<gate> --help`, and reading
+    /// any `--help` in the vector printed the dispatch roster on stdout. The
+    /// parent then failed the gate for printing instead of returning a report,
+    /// so a gate could not answer `--help` at all.
+    #[test]
+    fn only_a_leading_help_flag_asks_the_dispatcher() {
+        let args = |tokens: &[&str]| -> Vec<String> {
+            tokens.iter().map(|token| (*token).to_string()).collect()
+        };
+
+        assert!(dispatch_help_requested(&args(&["--help"])));
+        assert!(dispatch_help_requested(&args(&["-h"])));
+        assert!(!dispatch_help_requested(&args(&[])));
+        assert!(!dispatch_help_requested(&args(&[
+            "release-benchmarks",
+            "--help"
+        ])));
+        assert!(!dispatch_help_requested(&args(&["release-benchmarks"])));
     }
 
     /// WHY: a successful build that produced no binary for the named package is

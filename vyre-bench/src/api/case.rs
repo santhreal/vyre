@@ -206,6 +206,30 @@ pub struct BenchContext {
     pub include_baseline_outputs: bool,
 }
 
+/// Build the validated compile request for one benchmark program against the
+/// device the measurement runs on.
+///
+/// Capabilities come from the probed backend, so a program that uses subgroup
+/// intrinsics compiles on a device that has them. A capability-free request
+/// rejects such a program during validation and the case never reaches the
+/// device.
+pub(crate) fn benchmark_compile_request(
+    prog: &vyre::ir::Program,
+    profile: vyre_driver::DeviceProfile,
+) -> Result<vyre::compiler::ValidatedCompileRequest, vyre_driver::BackendError> {
+    let graph = vyre::ir::ProgramGraph::from_program("benchmark", prog.clone())
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+    vyre::compiler::CompileRequest::new(
+        graph,
+        vyre::compiler::ExternalFacts::new(vyre::compiler::Digest([0; 32]), BTreeMap::new()),
+        profile.compile_facts(),
+        vyre::compiler::SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000),
+        64 * 1024 * 1024,
+    )
+    .validate()
+    .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
+}
+
 impl BenchContext {
     pub(crate) fn artifact_session_for(
         &self,
@@ -223,17 +247,7 @@ impl BenchContext {
             return Ok(Arc::clone(session));
         }
 
-        let graph = vyre::ir::ProgramGraph::from_program("benchmark", prog.clone())
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        let request = vyre::compiler::CompileRequest::new(
-            graph,
-            vyre::compiler::ExternalFacts::new(vyre::compiler::Digest([0; 32]), BTreeMap::new()),
-            vyre::compiler::DeviceFacts::unknown(),
-            vyre::compiler::SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000),
-            64 * 1024 * 1024,
-        )
-        .validate()
-        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let request = benchmark_compile_request(prog, self.preferred_backend.device_profile())?;
         let session = Arc::new(
             vyre_runtime::artifact_admission::ArtifactSession::compile_with_materializer(
                 self.preferred_registration,
@@ -941,6 +955,59 @@ mod tests {
         assert!(
             error.to_string().contains("exceeded ULP budget"),
             "Fix: over-budget f32 mismatch should be actionable: {error}"
+        );
+    }
+
+    fn subgroup_program() -> vyre::ir::Program {
+        use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+        Program::wrapped(
+            vec![BufferDecl::storage(
+                "out",
+                0,
+                BufferAccess::ReadWrite,
+                DataType::U32,
+            )],
+            [64, 1, 1],
+            vec![Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::subgroup_add(Expr::u32(1)),
+            )],
+        )
+    }
+
+    fn device_profile(subgroup_ops: bool) -> vyre_driver::DeviceProfile {
+        let mut profile = vyre_driver::DeviceProfile::conservative("test");
+        profile.max_invocations_per_workgroup = 256;
+        profile.supports_subgroup_ops = subgroup_ops;
+        profile.has_subgroup_shuffle = subgroup_ops;
+        profile
+    }
+
+    /// WHY: the harness compiled every benchmark program against capability-free
+    /// device facts, so any case that uses a subgroup intrinsic failed
+    /// validation with V041 on a device that has subgroup ops and was recorded
+    /// as a failed case instead of a measurement. The facts must come from the
+    /// probed backend.
+    #[test]
+    fn a_subgroup_program_compiles_against_a_subgroup_capable_device() {
+        benchmark_compile_request(&subgroup_program(), device_profile(true))
+            .expect("Fix: a subgroup program must validate against a subgroup-capable device");
+    }
+
+    /// WHY: the same request must still fail closed on a device without the
+    /// capability, so the fix does not turn validation off.
+    #[test]
+    fn a_subgroup_program_is_refused_on_a_device_without_subgroup_ops() {
+        let profile = device_profile(false);
+        assert!(!profile.supports_subgroup_ops);
+
+        let Err(error) = benchmark_compile_request(&subgroup_program(), profile) else {
+            panic!("Fix: a device without subgroup ops must refuse a subgroup program");
+        };
+        assert!(
+            error.to_string().contains("V041"),
+            "Fix: the refusal must name the capability rule: {error}"
         );
     }
 }
