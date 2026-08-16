@@ -21,13 +21,14 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
-};
+use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::cost::CostBreakdown;
 use vyre_megakernel::{compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
+
+use graph_fixtures::{copy_program, producer_consumer_pair};
+
+mod graph_fixtures;
 
 /// The floor the cost model prices a launch at when the device measured none.
 ///
@@ -41,74 +42,12 @@ const LAUNCH_COST_FLOOR_NS: u64 = 4_224;
 /// measurement.
 const MEASURED_LAUNCH_NS: u64 = 20_000;
 
-fn invocation_contract() -> ValueContract {
-    ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Symbol("items".into())],
-        access: BufferAccess::ReadWrite,
-        lifetime: ValueLifetime::Invocation,
-    }
-}
-
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::load(input, Expr::u32(0)),
-        )],
-    )
-}
-
-/// A producer and a consumer joined by one invocation-scoped value.
+/// A producer and a consumer that each copy one element.
 fn pair() -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let input = graph
-        .add_external_value("input", invocation_contract())
-        .unwrap();
-    let (_, intermediate) = graph
-        .add_node(
-            "producer",
-            copy_program("input", "intermediate"),
-            vec![GraphInput {
-                buffer: "input".into(),
-                value: input,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "intermediate".into(),
-                name: "intermediate".into(),
-                contract: invocation_contract(),
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    graph
-        .add_node(
-            "consumer",
-            copy_program("intermediate", "output"),
-            vec![GraphInput {
-                buffer: "intermediate".into(),
-                value: intermediate[0],
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "output".into(),
-                name: "output".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    graph
+    producer_consumer_pair(
+        copy_program("input", "intermediate"),
+        copy_program("intermediate", "output"),
+    )
 }
 
 fn cost_for(device: DeviceFacts) -> CostBreakdown {

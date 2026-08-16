@@ -19,6 +19,10 @@ use vyre_megakernel::{
     DeviceFacts, Digest, ExternalFacts, SearchBudget,
 };
 
+use graph_fixtures::copy_program;
+
+mod graph_fixtures;
+
 const LIMIT: u64 = 1_000_000;
 
 fn diagnostic_path(error: &CompileError) -> Option<&str> {
@@ -36,21 +40,6 @@ fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
         access,
         lifetime,
     }
-}
-
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::load(input, Expr::u32(0)),
-        )],
-    )
 }
 
 fn add_program(left: &str, right: &str, output: &str) -> Program {
