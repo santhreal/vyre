@@ -31,7 +31,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `check_select1` | `vyre-libs/examples/check_select1.rs` | None | `./cargo_full test -p vyre-libs --example check_select1` |
+| `example` | `select1_optimizer_parity` | `vyre-libs/examples/select1_optimizer_parity.rs` | None | `./cargo_full test -p vyre-libs --example select1_optimizer_parity` |
 | `lib` | `vyre_libs` | `vyre-libs/src/lib.rs` | None | `./cargo_full test -p vyre-libs` |
 | `test` | `ac_count_suffix3_naga_validation` | `vyre-libs/tests/ac_count_suffix3_naga_validation.rs` | None | `./cargo_full test -p vyre-libs --test ac_count_suffix3_naga_validation` |
 | `test` | `adversarial` | `vyre-libs/tests/adversarial.rs` | None | `./cargo_full test -p vyre-libs --test adversarial` |

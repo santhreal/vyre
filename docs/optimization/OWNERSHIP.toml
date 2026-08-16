@@ -286,7 +286,6 @@ write = [
   "vyre-libs/src/security/**",
   "vyre-libs/src/analysis/**",
   "vyre-foundation/src/pass_substrate/**",
-  "vyre-foundation/src/transform/compiler/dataflow_fixpoint.rs",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs security",

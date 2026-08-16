@@ -32,11 +32,6 @@
 #[non_exhaustive] pub enum vyre_foundation::serial::EnvelopeError
 #[non_exhaustive] pub enum vyre_foundation::serial::text::TextParseError
 #[non_exhaustive] pub enum vyre_foundation::transform::autodiff::AutodiffError
-#[non_exhaustive] pub enum vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError
-#[non_exhaustive] pub enum vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError
-#[non_exhaustive] pub enum vyre_foundation::transform::compiler::string_interner::StringInternerError
-#[non_exhaustive] pub enum vyre_foundation::transform::compiler::typed_arena::TypedArenaError
-#[non_exhaustive] pub enum vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError
 #[non_exhaustive] pub enum vyre_foundation::transform::parallelism::DispatchGroup
 #[non_exhaustive] pub enum vyre_foundation::validate::ValidationLocation
 #[non_exhaustive] pub enum vyre_foundation::validate::ValidationPhase
@@ -151,7 +146,6 @@ impl inventory::Collect for vyre_foundation::extension::OpaqueExprResolver
 impl inventory::Collect for vyre_foundation::extension::OpaqueNodeResolver
 impl inventory::Collect for vyre_foundation::operation::OperationRegistration
 impl inventory::Collect for vyre_foundation::optimizer::ProgramPassRegistration
-impl inventory::Collect for vyre_foundation::transform::compiler::shader_provider::CompilerPrimitiveShader
 impl serde_core::ser::Serialize for vyre_foundation::operation::TargetId
 impl vyre_foundation::IrError
 impl vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
@@ -326,9 +320,6 @@ impl vyre_foundation::serial::text::TextParseError
 impl vyre_foundation::serial::wire::encode::WireEncodeErr
 impl vyre_foundation::transform::collectives::CollectiveOpCounts
 impl vyre_foundation::transform::collectives::CollectiveTransportPlan
-impl vyre_foundation::transform::compiler::shader_provider::InventoryShaderProvider
-impl vyre_foundation::transform::compiler::string_interner::StringInterner
-impl vyre_foundation::transform::compiler::typed_arena::TypedArena
 impl vyre_foundation::validate::ValidationCode
 impl vyre_foundation::validate::ValidationError
 impl vyre_foundation::validate::ValidationPhase
@@ -440,9 +431,6 @@ pub const fn vyre_foundation::optimizer::rewrite_proof::ProofExpr::bool(value: b
 pub const fn vyre_foundation::optimizer::rewrite_proof::ProofExpr::bv(value: u64, bits: u32) -> Self
 pub const fn vyre_foundation::optimizer::rewrite_proof::ProofExpr::sort(&self) -> vyre_foundation::optimizer::rewrite_proof::ProofSort
 pub const fn vyre_foundation::serial::wire::encode::WireEncodeErr::static_msg(msg: &'static str) -> Self
-pub const fn vyre_foundation::transform::compiler::typed_arena::TypedArena::new(capacity_bytes: u32) -> Self
-pub const fn vyre_foundation::transform::compiler::typed_arena::TypedArena::reset(&mut self)
-pub const fn vyre_foundation::transform::compiler::typed_arena::TypedArena::used_bytes(&self) -> u32
 pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyre_foundation::validate::ValidationLocation
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
 pub const fn vyre_foundation::validate::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
@@ -523,22 +511,6 @@ pub const vyre_foundation::serial::wire::framing::MIN_SUPPORTED_WIRE_FORMAT_VERS
 pub const vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::MAGIC: [u8; 4]
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::VERSION: u32
-pub const vyre_foundation::transform::compiler::dataflow_fixpoint::LAWS: &[vyre_spec::algebraic_law::AlgebraicLaw]
-pub const vyre_foundation::transform::compiler::dataflow_fixpoint::WORKGROUP_SIZE: [u32; 3]
-pub const vyre_foundation::transform::compiler::recursive_descent::LAWS: &[vyre_spec::algebraic_law::AlgebraicLaw]
-pub const vyre_foundation::transform::compiler::recursive_descent::WORKGROUP_SIZE: [u32; 3]
-pub const vyre_foundation::transform::compiler::string_interner::EMPTY_STRING_ID: u32
-pub const vyre_foundation::transform::compiler::string_interner::LAWS: &[vyre_spec::algebraic_law::AlgebraicLaw]
-pub const vyre_foundation::transform::compiler::string_interner::WORKGROUP_SIZE: [u32; 3]
-pub const vyre_foundation::transform::compiler::typed_arena::ALLOC_OVERFLOW_SENTINEL: u32
-pub const vyre_foundation::transform::compiler::typed_arena::BUMP_CURSOR_WORD_OFFSET: u32
-pub const vyre_foundation::transform::compiler::typed_arena::CAPACITY_WORD_OFFSET: u32
-pub const vyre_foundation::transform::compiler::typed_arena::INPUTS: &[vyre_spec::data_type::DataType]
-pub const vyre_foundation::transform::compiler::typed_arena::LAWS: &[vyre_spec::algebraic_law::AlgebraicLaw]
-pub const vyre_foundation::transform::compiler::typed_arena::WORKGROUP_SIZE: [u32; 3]
-pub const vyre_foundation::transform::compiler::visitor_walk::LAWS: &[vyre_spec::algebraic_law::AlgebraicLaw]
-pub const vyre_foundation::transform::compiler::visitor_walk::VISIT_STACK_EMPTY: u32
-pub const vyre_foundation::transform::compiler::visitor_walk::WORKGROUP_SIZE: [u32; 3]
 pub const vyre_foundation::validate::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::validate::DEFAULT_MAX_EXPR_DEPTH: usize
 pub const vyre_foundation::validate::DEFAULT_MAX_NESTING_DEPTH: usize
@@ -2189,31 +2161,6 @@ pub fn vyre_foundation::transform::collectives::SingleRankCollectiveError::fmt(&
 pub fn vyre_foundation::transform::collectives::collective_transport_plan(program: &vyre_foundation::ir::Program) -> vyre_foundation::transform::collectives::CollectiveTransportPlan
 pub fn vyre_foundation::transform::collectives::lower_single_rank_collectives(program: &vyre_foundation::ir::Program) -> core::result::Result<core::option::Option<vyre_foundation::ir::Program>, vyre_foundation::transform::collectives::SingleRankCollectiveError>
 pub fn vyre_foundation::transform::collectives::requires_collective_transport(program: &vyre_foundation::ir::Program) -> bool
-pub fn vyre_foundation::transform::compiler::dataflow_fixpoint::compute_fixpoint(initial_state: &[u32], transfer: &[u32], successor_offsets: &[u32], successors: &[u32], max_iterations: u32) -> core::result::Result<vyre_foundation::transform::compiler::dataflow_fixpoint::FixpointResult, vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError>
-pub fn vyre_foundation::transform::compiler::dataflow_fixpoint::relax_step_program(state: &str, transfer: &str, successor_offsets: &str, successors: &str, changed_flag: &str) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::transform::compiler::dataflow_fixpoint::source() -> core::option::Option<&'static str>
-pub fn vyre_foundation::transform::compiler::dataflow_fixpoint::validate_graph(node_count: usize, transfer: &[u32], offsets: &[u32], successors: &[u32]) -> core::result::Result<(), vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError>
-pub fn vyre_foundation::transform::compiler::recursive_descent::consume_step_program(tokens: &str, transition_table: &str, state: &str, output: &str, out_count: &str, reject_flag: &str, alpha_size: u32, reject_state: u32, token_count: u32) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::transform::compiler::recursive_descent::parse(tokens: &[u32], transitions: &[vyre_foundation::transform::compiler::recursive_descent::Transition], start_state: u32, accept_state: u32, max_stack: usize, max_callbacks: usize) -> core::result::Result<vyre_foundation::transform::compiler::recursive_descent::ParseResult, vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError>
-pub fn vyre_foundation::transform::compiler::recursive_descent::source() -> core::option::Option<&'static str>
-pub fn vyre_foundation::transform::compiler::shader_provider::InventoryShaderProvider::source(op: &str) -> core::option::Option<&'static str>
-pub fn vyre_foundation::transform::compiler::shader_provider::source(op: &str) -> core::option::Option<&'static str>
-pub fn vyre_foundation::transform::compiler::string_interner::StringInterner::intern(&mut self, input: &[u8]) -> core::result::Result<u32, vyre_foundation::transform::compiler::string_interner::StringInternerError>
-pub fn vyre_foundation::transform::compiler::string_interner::StringInterner::lookup(&self, id: u32) -> core::option::Option<&[u8]>
-pub fn vyre_foundation::transform::compiler::string_interner::StringInterner::new(slot_capacity: usize, byte_capacity: usize) -> Self
-pub fn vyre_foundation::transform::compiler::string_interner::fnv1a32(bytes: &[u8]) -> u32
-pub fn vyre_foundation::transform::compiler::string_interner::fnv1a_program(input: &str, out: &str, len: u32) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::transform::compiler::string_interner::intern_all(inputs: &[&[u8]], slot_capacity: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::transform::compiler::string_interner::StringInternerError>
-pub fn vyre_foundation::transform::compiler::string_interner::source() -> core::option::Option<&'static str>
-pub fn vyre_foundation::transform::compiler::typed_arena::TypedArena::alloc(&mut self, size_bytes: u32) -> core::result::Result<u32, vyre_foundation::transform::compiler::typed_arena::TypedArenaError>
-pub fn vyre_foundation::transform::compiler::typed_arena::align_words(size_bytes: u32) -> core::result::Result<u32, vyre_foundation::transform::compiler::typed_arena::TypedArenaError>
-pub fn vyre_foundation::transform::compiler::typed_arena::alloc_program(arena: &str, out_offset: &str, size_words: u32) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::transform::compiler::typed_arena::source() -> core::option::Option<&'static str>
-pub fn vyre_foundation::transform::compiler::visitor_walk::index(value: u32) -> core::result::Result<usize, vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError>
-pub fn vyre_foundation::transform::compiler::visitor_walk::postorder(root: u32, child_offsets: &[u32], children: &[u32], max_stack: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError>
-pub fn vyre_foundation::transform::compiler::visitor_walk::source() -> core::option::Option<&'static str>
-pub fn vyre_foundation::transform::compiler::visitor_walk::validate_tree(node_count: usize, offsets: &[u32], children: &[u32]) -> core::result::Result<(), vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError>
-pub fn vyre_foundation::transform::compiler::visitor_walk::visit_step_program(child_offsets: &str, children: &str, stack: &str, post_order: &str, post_count: &str) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::transform::inline::default_resolver(op_id: &str) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::IrResult<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::IrResult<vyre_foundation::ir::Program>
@@ -2513,14 +2460,6 @@ pub mod vyre_foundation::transform
 pub mod vyre_foundation::transform::autodiff
 pub mod vyre_foundation::transform::autodiff::rules
 pub mod vyre_foundation::transform::collectives
-pub mod vyre_foundation::transform::compiler
-pub mod vyre_foundation::transform::compiler::buffer_layouts
-pub mod vyre_foundation::transform::compiler::dataflow_fixpoint
-pub mod vyre_foundation::transform::compiler::recursive_descent
-pub mod vyre_foundation::transform::compiler::shader_provider
-pub mod vyre_foundation::transform::compiler::string_interner
-pub mod vyre_foundation::transform::compiler::typed_arena
-pub mod vyre_foundation::transform::compiler::visitor_walk
 pub mod vyre_foundation::transform::inline
 pub mod vyre_foundation::transform::parallelism
 pub mod vyre_foundation::transform::rewrite_walk
@@ -2721,19 +2660,6 @@ pub struct vyre_foundation::transform::autodiff::rules::AdjointContrib
 pub struct vyre_foundation::transform::collectives::CollectiveOpCounts
 pub struct vyre_foundation::transform::collectives::CollectiveTransportPlan
 pub struct vyre_foundation::transform::collectives::SingleRankCollectiveError
-pub struct vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointOp
-pub struct vyre_foundation::transform::compiler::dataflow_fixpoint::FixpointResult
-pub struct vyre_foundation::transform::compiler::recursive_descent::ParseResult
-pub struct vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentOp
-pub struct vyre_foundation::transform::compiler::recursive_descent::Transition
-pub struct vyre_foundation::transform::compiler::shader_provider::CompilerPrimitiveShader
-pub struct vyre_foundation::transform::compiler::shader_provider::InventoryShaderProvider
-pub struct vyre_foundation::transform::compiler::string_interner::Entry
-pub struct vyre_foundation::transform::compiler::string_interner::StringInterner
-pub struct vyre_foundation::transform::compiler::string_interner::StringInternerOp
-pub struct vyre_foundation::transform::compiler::typed_arena::TypedArena
-pub struct vyre_foundation::transform::compiler::typed_arena::TypedArenaOp
-pub struct vyre_foundation::transform::compiler::visitor_walk::VisitorWalkOp
 pub struct vyre_foundation::transform::inline::InlineCtx
 pub struct vyre_foundation::validate::BackendCapabilities
 pub struct vyre_foundation::validate::LimitState
@@ -3990,65 +3916,6 @@ pub vyre_foundation::transform::autodiff::rules::AdjointContrib::adjoint: vyre_f
 pub vyre_foundation::transform::autodiff::rules::AdjointContrib::child: vyre_foundation::ir::Expr
 pub vyre_foundation::transform::collectives::CollectiveTransportKind::LocalSingleRank
 pub vyre_foundation::transform::collectives::CollectiveTransportKind::MultiRankTransport
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::DidNotConverge
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::DidNotConverge::max_iterations: u32
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::InvalidOffset
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::InvalidSuccessor
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::InvalidSuccessor::node_count: usize
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::InvalidSuccessor::successor: u32
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::NodeIndexOverflow
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::OffsetLength
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::OffsetLength::expected: usize
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::OffsetLength::got: usize
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::OffsetOverflow
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::TransferLength
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::TransferLength::expected: usize
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::DataflowFixpointError::TransferLength::got: usize
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::FixpointResult::iterations: u32
-pub vyre_foundation::transform::compiler::dataflow_fixpoint::FixpointResult::state: alloc::vec::Vec<u32>
-pub vyre_foundation::transform::compiler::recursive_descent::ParseResult::callbacks: alloc::vec::Vec<u32>
-pub vyre_foundation::transform::compiler::recursive_descent::ParseResult::consumed: u32
-pub vyre_foundation::transform::compiler::recursive_descent::ParseResult::final_state: u32
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::CallbackOverflow
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::CallbackOverflow::max_callbacks: usize
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::NoTransition
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::NoTransition::state: u32
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::NoTransition::token: u32
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::NotAccepted
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::NotAccepted::accept_state: u32
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::NotAccepted::state: u32
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::StackOverflow
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::StackOverflow::max_stack: usize
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::StackUnderflow
-pub vyre_foundation::transform::compiler::recursive_descent::RecursiveDescentError::TokenOverflow
-pub vyre_foundation::transform::compiler::recursive_descent::Transition::callback: u32
-pub vyre_foundation::transform::compiler::recursive_descent::Transition::next_state: u32
-pub vyre_foundation::transform::compiler::recursive_descent::Transition::push_state: u32
-pub vyre_foundation::transform::compiler::recursive_descent::Transition::state: u32
-pub vyre_foundation::transform::compiler::recursive_descent::Transition::token_kind: u32
-pub vyre_foundation::transform::compiler::shader_provider::CompilerPrimitiveShader::op: &'static str
-pub vyre_foundation::transform::compiler::shader_provider::CompilerPrimitiveShader::source: fn() -> &'static str
-pub vyre_foundation::transform::compiler::string_interner::StringInternerError::BytePoolFull
-pub vyre_foundation::transform::compiler::string_interner::StringInternerError::IndexOverflow
-pub vyre_foundation::transform::compiler::string_interner::StringInternerError::TableFull
-pub vyre_foundation::transform::compiler::typed_arena::TypedArenaError::OffsetOverflow
-pub vyre_foundation::transform::compiler::typed_arena::TypedArenaError::OutOfSpace
-pub vyre_foundation::transform::compiler::typed_arena::TypedArenaError::OutOfSpace::available_words: u32
-pub vyre_foundation::transform::compiler::typed_arena::TypedArenaError::OutOfSpace::requested_words: u32
-pub vyre_foundation::transform::compiler::typed_arena::TypedArenaError::SizeOverflow
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::Cycle
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::Cycle::node: u32
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::EmptyOffsets
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::IndexOverflow
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::InvalidChild
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::InvalidChild::child: u32
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::InvalidChild::node_count: usize
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::InvalidOffset
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::InvalidRoot
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::InvalidRoot::node_count: usize
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::InvalidRoot::root: u32
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::StackOverflow
-pub vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError::StackOverflow::max_stack: usize
 pub vyre_foundation::transform::inline::UnresolvedCalls::Keep
 pub vyre_foundation::transform::inline::UnresolvedCalls::Reject
 pub vyre_foundation::transform::parallelism::DispatchGroup::Parallel

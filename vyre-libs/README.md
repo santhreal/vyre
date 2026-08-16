@@ -127,10 +127,10 @@ Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs/examples/check_select1.rs`:
+Run the checked-in behavior from `vyre-libs/examples/select1_optimizer_parity.rs`:
 
 ```console
-./cargo_full run -p vyre-libs --example check_select1
+./cargo_full run -p vyre-libs --example select1_optimizer_parity
 ```
 
 ### Features

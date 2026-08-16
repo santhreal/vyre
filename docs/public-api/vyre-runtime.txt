@@ -799,6 +799,7 @@ pub fn vyre_runtime::uring::AsyncUringStream<'a>::inflight(&self) -> u32
 pub fn vyre_runtime::uring::AsyncUringStream<'a>::new(ring_state: vyre_runtime::uring::IoUringState, gpu_buffer: vyre_runtime::uring::GpuMappedBuffer<'a>, megakernel_tail: &'a core::sync::atomic::AtomicU32) -> Self
 pub fn vyre_runtime::uring::AsyncUringStream<'a>::poll(&mut self) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::AsyncUringStream<'a>::replace_buffer(&mut self, gpu_buffer: vyre_runtime::uring::GpuMappedBuffer<'a>)
+pub fn vyre_runtime::uring::AsyncUringStream<'a>::submission_entries(&self) -> u32
 pub fn vyre_runtime::uring::AsyncUringStream<'a>::wait_for_completion(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::GpuDirectCapability::is_available(&self) -> bool
 pub fn vyre_runtime::uring::GpuDirectCapability::probe() -> Self
@@ -813,6 +814,7 @@ pub fn vyre_runtime::uring::IoUringState::new(entries: u32) -> core::result::Res
 pub fn vyre_runtime::uring::IoUringState::register_buffers(&self, iovecs: &[vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::IoUringState::register_files(&self, fds: &[i32]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::IoUringState::sq_needs_wakeup(&self) -> bool
+pub fn vyre_runtime::uring::IoUringState::submission_entries(&self) -> u32
 pub fn vyre_runtime::uring::IoUringState::uses_sqpoll(&self) -> bool
 pub fn vyre_runtime::uring::IoUringState::wake_sqpoll(&self) -> core::result::Result<i32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::megakernel_io_queue(&self) -> &vyre_runtime::resident_work_queue::io::ResidentIoQueue

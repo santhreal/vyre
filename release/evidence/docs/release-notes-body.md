@@ -554,6 +554,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   admitting a narrower integer there is red until both arms dispatch it;
   enumerating the `DataType` enum instead would demand a case for the sub-byte
   quantization storage families that predicate deliberately excludes.
+- Every dispatch trait requires the borrowed-row form and defaults the owned
+  one over it. `vyre_driver::VyreBackend::dispatch_borrowed`,
+  `vyre_driver::backend::CompiledPipeline::dispatch_borrowed` and the
+  C-preprocess `ProgramOracle` are now the methods an implementor writes;
+  `dispatch` is a default that borrows the rows it was handed. It was the other
+  way around, so a backend that binds caller memory received rows it had to own
+  first and `clone_borrowed_inputs_for_dispatch` copied every input byte on the
+  path whose purpose is not to. That helper is deleted, the four backends that
+  carried a reverse shell of the same body no longer declare one, and the
+  oracle's owned entry point is gone rather than kept as a second door. The
+  inherent `dispatch` methods the wgpu, CUDA, SPIR-V and reference backends
+  published leave the public surface with it.
 - The vyre-bench duplication pin records the measured tree: 2485 to 2179
   duplicated lines, with total_lines corrected from 37430 to the measured
   37504.
@@ -2378,6 +2390,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   hand. Every caller in the workspace already spelled `uring::X`, so the
   submodules are private and the ABI items, `get_sqe`, and `peek_cqe` are
   `pub(crate)`.
+- `vyre_runtime::uring::IoUringState::submission_entries` and
+  `AsyncUringStream::submission_entries` publish the submission entries the
+  kernel allocated for a ring, and `UringPump::new` sizes its iovec scratch,
+  free list and pending queue to that number. A submission needs a
+  submission-queue slot, so the ring depth is the hard bound on anything
+  tracking one submission each; the three queues previously started empty and
+  grew during a scan.
 - The validation rule registry is one table in
   `vyre-foundation/src/validate/catalog.rs`, carrying each code's phase,
   invariant and corrective action. `docs/generated/error-codes.toml` is
@@ -2567,6 +2586,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   semantic pass registration generators. Test-only operation registration,
   algebraic-law derive, no-op builder marker, and generated decoder stubs are
   gone.
+- `vyre_foundation::transform::compiler` is deleted, with the
+  `dataflow_fixpoint`, `recursive_descent`, `string_interner`, `typed_arena`
+  and `visitor_walk` specs it held. Each published a workgroup size, an
+  algebraic-law list and a Program builder that no backend lowered and no
+  operation registered, so the module was 1736 lines of spec whose only reader
+  was the gate that checked the specs against each other. The
+  `security_dataflow` optimization lane no longer claims write scope over the
+  deleted fixpoint file.
 - `vyre_conform::fp_parity` is gone. It re-exported eleven names from
   `vyre_foundation::fp_parity` verbatim and added nothing, so the parity policy
   had two paths and a reader could not tell which was the owner. Every caller
