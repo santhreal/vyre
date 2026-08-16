@@ -24,6 +24,7 @@ struct HygieneMatrixArtifact {
     intake_summary: Vec<HygieneIntakeSummary>,
     threshold_policy: ThresholdPolicyArtifact,
     structural_gates: StructuralGateArtifact,
+    panic_budget: PanicBudgetArtifact,
     finding_classes: Vec<HygieneFindingClass>,
     release_blocker_count: usize,
     findings: Vec<HygieneFinding>,
@@ -213,6 +214,8 @@ const THRESHOLD_POLICY_ARTIFACT: &str = "release/evidence/hygiene/threshold-poli
 const THRESHOLD_POLICY_OWNER_LANE: &str = "testing_evidence";
 const STRUCTURAL_GATE_SCHEMA_VERSION: u32 = 1;
 const STRUCTURAL_GATE_SOURCE: &str = "docs/testing/STRUCTURAL_GATES.toml";
+const PANIC_BUDGET_SCHEMA_VERSION: u32 = 1;
+const PANIC_BUDGET_SOURCE: &str = "docs/testing/PANIC_BUDGET.toml";
 const THRESHOLD_SUFFIXES: &[&str] = &[
     "_THRESHOLD",
     "_LIMIT",
@@ -267,6 +270,178 @@ struct StructuralGateTomlRow {
     file: String,
     test: String,
     reason: String,
+}
+
+/// The recorded ceiling on panics that fail closed without saying so.
+///
+/// A panicking call in production code is acceptable when failing closed IS the
+/// contract and the contract is written down, which is what
+/// [`has_documented_panic_contract`] reads. A panicking call on a hot path is a
+/// release blocker whatever its documentation says. Between those two sits the
+/// population this ratchet bounds: a panic that is neither documented nor on the
+/// release surface, which for most of this repository's history was bounded by
+/// nothing. The deleted `check_no_raw_unwrap` script tried to bound it at zero
+/// and could never be turned on, because zero declares the documented-panic
+/// convention a violation.
+///
+/// A ceiling per crate rather than one number for the tree, because the crate is
+/// who fixes it. Over the ceiling is a blocker: that is new debt. Under it with
+/// the count still above zero is a note carrying the number to write, because a
+/// gate that fails on the improvement it exists to encourage is a gate somebody
+/// switches off, which is how the deleted `check_proptest_coverage` floor died.
+/// A crate that reaches zero while its row still permits panics IS a blocker,
+/// since that row is the only thing standing between a closed class and the next
+/// panic added to that crate. So a ceiling only ever moves down.
+#[derive(Debug, Clone, Serialize)]
+struct PanicBudgetArtifact {
+    schema_version: u32,
+    source: &'static str,
+    rows: Vec<PanicBudgetRow>,
+    unrecorded: Vec<String>,
+    notes: Vec<String>,
+    blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct PanicBudgetRow {
+    crate_name: String,
+    ceiling: usize,
+    measured: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct PanicBudgetDocument {
+    schema: u32,
+    #[serde(default)]
+    crate_budget: Vec<PanicBudgetTomlRow>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PanicBudgetTomlRow {
+    name: String,
+    ceiling: usize,
+}
+
+/// Whether a classified finding is a panic that nothing else answers for.
+///
+/// Read off the classification rather than re-scanning, so the population is the
+/// one the artifact records. A documented contract is a different pattern by the
+/// time it reaches here, and a hot-path panic is already a release blocker, so
+/// neither is counted twice.
+fn is_unbounded_panic(class: &HygieneFindingClass) -> bool {
+    matches!(class.pattern, "panic_macro" | "unwrap_call" | "expect_call")
+        && !class.release_blocker
+        && matches!(class.surface, "production" | "release_tooling")
+}
+
+/// The crate a scanned path belongs to.
+///
+/// The first path component, which is the crate directory for every workspace
+/// member and the containing directory for the two nested ones. Derived from the
+/// path so a new crate needs no edit here to be counted.
+fn crate_of_path(path: &str) -> String {
+    path.replace('\\', "/")
+        .split('/')
+        .next()
+        .unwrap_or_default()
+        .to_string()
+}
+
+/// Hold the undocumented panic population to the recorded per-crate ceiling.
+///
+/// Every failure path returns a blocker rather than an empty budget, because a
+/// budget that could not be read must not read as a tree that owes nothing.
+fn collect_panic_budget(
+    vyre_root: &Path,
+    classes: &[HygieneFindingClass],
+) -> PanicBudgetArtifact {
+    let mut measured = BTreeMap::<String, usize>::new();
+    for class in classes.iter().filter(|class| is_unbounded_panic(class)) {
+        let relative = relative_to_vyre(vyre_root, Path::new(&class.path));
+        *measured.entry(crate_of_path(&relative)).or_insert(0) += 1;
+    }
+
+    let mut artifact = PanicBudgetArtifact {
+        schema_version: PANIC_BUDGET_SCHEMA_VERSION,
+        source: PANIC_BUDGET_SOURCE,
+        rows: Vec::new(),
+        unrecorded: Vec::new(),
+        notes: Vec::new(),
+        blockers: Vec::new(),
+    };
+
+    let path = vyre_root.join(PANIC_BUDGET_SOURCE);
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(error) => {
+            artifact.blockers.push(format!(
+                "{PANIC_BUDGET_SOURCE} could not be read ({error}), so {} undocumented panic(s) outside the release surface are bounded by nothing",
+                measured.values().sum::<usize>()
+            ));
+            return artifact;
+        }
+    };
+    let document = match toml::from_str::<PanicBudgetDocument>(&text) {
+        Ok(document) => document,
+        Err(error) => {
+            artifact
+                .blockers
+                .push(format!("{PANIC_BUDGET_SOURCE} is not readable as a panic budget: {error}"));
+            return artifact;
+        }
+    };
+    if document.schema != PANIC_BUDGET_SCHEMA_VERSION {
+        artifact.blockers.push(format!(
+            "{PANIC_BUDGET_SOURCE} declares schema {} against {PANIC_BUDGET_SCHEMA_VERSION}",
+            document.schema
+        ));
+        return artifact;
+    }
+
+    let mut ceilings = BTreeMap::<String, usize>::new();
+    for row in document.crate_budget {
+        if let Some(previous) = ceilings.insert(row.name.clone(), row.ceiling) {
+            artifact.blockers.push(format!(
+                "{PANIC_BUDGET_SOURCE} records {} twice, at {previous} and {}, so one ceiling is unread",
+                row.name, row.ceiling
+            ));
+        }
+    }
+
+    for (crate_name, count) in &measured {
+        match ceilings.get(crate_name) {
+            Some(ceiling) if count > ceiling => artifact.blockers.push(format!(
+                "{crate_name} carries {count} undocumented panic(s) outside the release surface against a ceiling of {ceiling}: document the contract in a `# Panics` section, return an error instead, or delete the panic"
+            )),
+            Some(ceiling) if count < ceiling => artifact.notes.push(format!(
+                "{crate_name} carries {count} undocumented panic(s) against a ceiling of {ceiling}: lower the ceiling in {PANIC_BUDGET_SOURCE} to {count}, because a ceiling above the tree covers the next panic added to it"
+            )),
+            Some(_) => {}
+            None => {
+                artifact.unrecorded.push(crate_name.clone());
+                artifact.blockers.push(format!(
+                    "{crate_name} carries {count} undocumented panic(s) outside the release surface and {PANIC_BUDGET_SOURCE} records no ceiling for it"
+                ));
+            }
+        }
+    }
+    for (crate_name, ceiling) in &ceilings {
+        if !measured.contains_key(crate_name) && *ceiling > 0 {
+            artifact.blockers.push(format!(
+                "{PANIC_BUDGET_SOURCE} records a ceiling of {ceiling} for {crate_name}, which now carries none: lower the row to 0, because the ceiling is what stands between the crate and the next panic added to it"
+            ));
+        }
+    }
+
+    artifact.rows = ceilings
+        .into_iter()
+        .map(|(crate_name, ceiling)| PanicBudgetRow {
+            measured: measured.get(&crate_name).copied().unwrap_or_default(),
+            crate_name,
+            ceiling,
+        })
+        .collect();
+    artifact
 }
 
 /// Read the structural-gate registry, or report why it could not be trusted.
@@ -431,6 +606,7 @@ impl Gate for HygieneMatrix {
         let hot_paths = load_hot_path_files(&root);
         let mut structural_gates = load_structural_gates(&root);
         let finding_classes = classify_findings(&root, &findings, &hot_paths, &structural_gates);
+        let panic_budget = collect_panic_budget(&root, &finding_classes);
         structural_gates.blockers.extend(stale_declaration_blockers(
             &root,
             &structural_gates.declarations,
@@ -463,14 +639,16 @@ impl Gate for HygieneMatrix {
         };
         blockers.extend(threshold_policy.blockers.iter().cloned());
         blockers.extend(structural_gates.blockers.iter().cloned());
+        blockers.extend(panic_budget.blockers.iter().cloned());
         for blocker in threshold_policy
             .blockers
             .iter()
             .chain(structural_gates.blockers.iter())
+            .chain(panic_budget.blockers.iter())
         {
             inspection.find(Finding::new(
                 blocker.clone(),
-                "declare the threshold or the structural gate the blocker names, or delete the stale declaration",
+                "declare the threshold, the structural gate or the panic ceiling the blocker names, or delete the stale declaration",
             ));
         }
         let scan_note = format!(
@@ -481,7 +659,7 @@ impl Gate for HygieneMatrix {
         let classification_summary = classification_summary(&finding_classes);
         let intake_summary = hygiene_intake_summary(&finding_classes);
         let matrix = HygieneMatrixArtifact {
-            schema_version: 5,
+            schema_version: 6,
             scanned_roots,
             scanned_files,
             release_surface_coverage,
@@ -490,6 +668,7 @@ impl Gate for HygieneMatrix {
             intake_summary,
             threshold_policy,
             structural_gates,
+            panic_budget,
             finding_classes,
             release_blocker_count,
             findings,
@@ -500,6 +679,9 @@ impl Gate for HygieneMatrix {
         declare_sibling_artifacts(&mut inspection, &matrix);
         let mut report = crate::artifact_gate::settle_inspection(ctx, self.name(), inspection);
         report.note(scan_note);
+        for note in &matrix.panic_budget.notes {
+            report.note(note.clone());
+        }
         Ok(report)
     }
 }
@@ -3884,5 +4066,79 @@ pub fn undocumented() {
                 "`{not_exempt}` is not xtask source and must keep the read cap"
             );
         }
+    }
+
+    /// WHY: a panic that is neither documented nor on a hot path was bounded by
+    /// nothing, and the answer has to fail in three directions or it is an
+    /// allowlist. Over the ceiling is new debt, a crate with no row at all is a
+    /// crate nobody decided about, and a ceiling left above a crate that reached
+    /// zero is what covers the next panic added there. Improvement short of zero
+    /// is a note, because a gate that fails on the improvement it asks for is a
+    /// gate somebody switches off.
+    #[test]
+    fn the_panic_ceiling_fails_over_unrecorded_and_stale_and_only_notes_slack() {
+        let (_directory, root) = crate::gates::fixture_checkout::checkout(&[(
+            "docs/testing/PANIC_BUDGET.toml",
+            "schema = 1\n\n[[crate_budget]]\nname = \"over\"\nceiling = 1\n\n[[crate_budget]]\nname = \"slack\"\nceiling = 3\n\n[[crate_budget]]\nname = \"stale\"\nceiling = 2\n",
+        )]);
+        let class = |path: &str, pattern: &'static str, surface: &'static str, blocker: bool| {
+            HygieneFindingClass {
+                path: root.join(path).display().to_string(),
+                line: 1,
+                pattern,
+                owner_lane: "testing_evidence",
+                surface,
+                risk: if blocker { "release_blocker" } else { "informational" },
+                hot_path: blocker,
+                release_blocker: blocker,
+            }
+        };
+        let classes = vec![
+            class("over/src/a.rs", "panic_macro", "production", false),
+            class("over/src/b.rs", "unwrap_call", "production", false),
+            class("slack/src/a.rs", "expect_call", "release_tooling", false),
+            class("unrecorded/src/a.rs", "expect_call", "production", false),
+            // Neither of these is this ratchet's population: one is documented,
+            // the other is already a release blocker and counted as one.
+            class("over/src/c.rs", "documented_panic_contract", "production", false),
+            class("over/src/d.rs", "panic_macro", "production", true),
+        ];
+
+        let budget = collect_panic_budget(&root, &classes);
+        let blockers = budget.blockers.join("\n");
+        assert!(
+            blockers.contains("over carries 2 undocumented panic(s)")
+                && blockers.contains("ceiling of 1"),
+            "over the ceiling has to block: {blockers}"
+        );
+        assert!(
+            blockers.contains("unrecorded carries 1")
+                && blockers.contains("records no ceiling for it"),
+            "a crate with no row has to block: {blockers}"
+        );
+        assert!(
+            blockers.contains("ceiling of 2 for stale, which now carries none"),
+            "a ceiling above a crate that reached zero has to block: {blockers}"
+        );
+        assert_eq!(
+            budget.notes.len(),
+            1,
+            "slack is one note, not a blocker: {:?}",
+            budget.notes
+        );
+        assert!(
+            budget.notes[0].contains("slack carries 1") && budget.notes[0].contains("to 1"),
+            "the note carries the number to write: {:?}",
+            budget.notes
+        );
+        assert_eq!(
+            budget
+                .rows
+                .iter()
+                .map(|row| (row.crate_name.as_str(), row.ceiling, row.measured))
+                .collect::<Vec<_>>(),
+            [("over", 1, 2), ("slack", 3, 1), ("stale", 2, 0)],
+            "every recorded row carries what the tree measured against it"
+        );
     }
 }

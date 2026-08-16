@@ -121,9 +121,15 @@ pub fn witness(entry: &SemanticOperation) -> LensOutcome {
         };
     };
 
-    let program = entry
-        .program()
-        .expect("Fix: conformance operation must provide a neutral builder");
+    let Some(program) = entry.program() else {
+        return LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: no neutral builder  -  witness lens has no program to run. Fix: register a builder.",
+                entry.id
+            ),
+        };
+    };
     let cases = test_inputs();
     let expected = expected_fn();
     if cases.is_empty() {
@@ -206,9 +212,15 @@ pub fn cpu_vs_backend(
         };
     };
 
-    let program = entry
-        .program()
-        .expect("Fix: conformance operation must provide a neutral builder");
+    let Some(program) = entry.program() else {
+        return LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: no neutral builder  -  byte-identity lens has no program to run. Fix: register a builder.",
+                entry.id
+            ),
+        };
+    };
 
     let cases = test_inputs();
     if cases.is_empty() {
@@ -288,9 +300,15 @@ fn prepare_iterative_lens(
             ),
         });
     };
-    let program = entry
-        .program()
-        .expect("Fix: conformance operation must provide a neutral builder");
+    let Some(program) = entry.program() else {
+        return Err(LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: no neutral builder - {lens_name} lens has no program to run. Fix: register a builder.",
+                entry.id
+            ),
+        });
+    };
     let config = dispatch_config_for(&program).map_err(|detail| LensOutcome::Fail {
         case_index: 0,
         detail,

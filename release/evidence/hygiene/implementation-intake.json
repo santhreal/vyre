@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:faa8731f525cc2b9626f2601372c1eb1eb308327:dirty=true:worktree=8c12e19ae94a270ecdba06f9a0f5ce0a01d7e27b7653ed4d3c68734e925a1064",
+  "source_fingerprint": "git:c2220f70ccb82031dae01c59296467b0201649d1:dirty=true:worktree=fa69ded727def3b6fdd1d735a2e772976e84f4fdcebe3569f4d1da5ec762d7ea",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -19,7 +19,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 10
+      "count": 12
     },
     {
       "owner_lane": "coordination",
@@ -28,7 +28,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 14
+      "count": 5
     },
     {
       "owner_lane": "coordination",
@@ -64,7 +64,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 18
+      "count": 19
     },
     {
       "owner_lane": "coordination",
@@ -109,7 +109,16 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 8
+      "count": 2
+    },
+    {
+      "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "panic_macro",
+      "release_blocker": false,
+      "count": 1
     },
     {
       "owner_lane": "driver_shared",
@@ -163,7 +172,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 15
+      "count": 8
     },
     {
       "owner_lane": "lower_emit",
@@ -208,7 +217,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 7
+      "count": 6
     },
     {
       "owner_lane": "scan_static",
@@ -258,15 +267,6 @@
     {
       "owner_lane": "testing_evidence",
       "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
@@ -280,7 +280,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 1
+      "count": 5
     },
     {
       "owner_lane": "testing_evidence",
@@ -289,7 +289,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 18
+      "count": 14
     },
     {
       "owner_lane": "testing_evidence",
