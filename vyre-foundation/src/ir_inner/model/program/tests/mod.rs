@@ -15,8 +15,8 @@ thread_local! {
 use super::Program;
 use crate::error::IrError;
 use crate::ir::{Expr, Ident, Node};
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::DataType;
+use crate::ir_inner::model::program::BufferDecl;
 use crate::visit::collect_call_op_ids;
 
 fn sample_body() -> Vec<Node> {

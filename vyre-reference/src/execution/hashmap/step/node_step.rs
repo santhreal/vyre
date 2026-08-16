@@ -245,12 +245,26 @@ pub(crate) fn step_nodes_frame<'a>(
         }
         Node::TileDecl { name, tile } => {
             let elements = vec![Value::Float(0.0); tile.element_count()];
-            invocation.locals.bind(name.as_str(), Value::Array(elements))?;
+            invocation
+                .locals
+                .bind(name.as_str(), Value::Array(elements))?;
         }
-        Node::TileLoad { tile, tile_type, buffer, origin, layout } => {
+        Node::TileLoad {
+            tile,
+            tile_type,
+            buffer,
+            origin,
+            layout,
+        } => {
             let mut origin_coords = Vec::with_capacity(origin.len());
             for expr in origin {
-                let v = eval_expr(expr, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                let v = eval_expr(
+                    expr,
+                    invocation,
+                    memory,
+                    #[cfg(feature = "subgroup-ops")]
+                    snapshots,
+                )?;
                 let coord = v.try_as_u32().ok_or_else(|| {
                     ReferenceError::new("tile load origin coord must be u32".to_string())
                 })?;
@@ -312,12 +326,24 @@ pub(crate) fn step_nodes_frame<'a>(
                     }
                 }
             }
-            invocation.locals.bind(tile.as_str(), Value::Array(elements))?;
+            invocation
+                .locals
+                .bind(tile.as_str(), Value::Array(elements))?;
         }
-        Node::TileStore { buffer, origin, tile } => {
+        Node::TileStore {
+            buffer,
+            origin,
+            tile,
+        } => {
             let mut origin_coords = Vec::with_capacity(origin.len());
             for expr in origin {
-                let v = eval_expr(expr, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                let v = eval_expr(
+                    expr,
+                    invocation,
+                    memory,
+                    #[cfg(feature = "subgroup-ops")]
+                    snapshots,
+                )?;
                 let coord = v.try_as_u32().ok_or_else(|| {
                     ReferenceError::new("tile store origin coord must be u32".to_string())
                 })?;
@@ -338,13 +364,18 @@ pub(crate) fn step_nodes_frame<'a>(
             }
         }
         Node::TileMatmul { acc, a, b } => {
-            let acc_val = invocation.locals.local(acc.as_str()).unwrap_or(Value::Array(Vec::new()));
-            let a_val = invocation.locals.local(a.as_str()).ok_or_else(|| {
-                ReferenceError::new(format!("tile `{a}` not found for matmul"))
-            })?;
-            let b_val = invocation.locals.local(b.as_str()).ok_or_else(|| {
-                ReferenceError::new(format!("tile `{b}` not found for matmul"))
-            })?;
+            let acc_val = invocation
+                .locals
+                .local(acc.as_str())
+                .unwrap_or(Value::Array(Vec::new()));
+            let a_val = invocation
+                .locals
+                .local(a.as_str())
+                .ok_or_else(|| ReferenceError::new(format!("tile `{a}` not found for matmul")))?;
+            let b_val = invocation
+                .locals
+                .local(b.as_str())
+                .ok_or_else(|| ReferenceError::new(format!("tile `{b}` not found for matmul")))?;
 
             let a_elems = match a_val {
                 Value::Array(e) => e,
@@ -383,20 +414,36 @@ pub(crate) fn step_nodes_frame<'a>(
                     for p in 0..k {
                         let a_idx = i * k + p;
                         let b_idx = p * n + j;
-                        let a_num = a_elems.get(a_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
-                        let b_num = b_elems.get(b_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
+                        let a_num = a_elems
+                            .get(a_idx)
+                            .and_then(|v| v.try_as_f64())
+                            .unwrap_or(0.0);
+                        let b_num = b_elems
+                            .get(b_idx)
+                            .and_then(|v| v.try_as_f64())
+                            .unwrap_or(0.0);
                         sum += a_num * b_num;
                     }
                     let acc_idx = i * n + j;
-                    let prev = acc_elems.get(acc_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
+                    let prev = acc_elems
+                        .get(acc_idx)
+                        .and_then(|v| v.try_as_f64())
+                        .unwrap_or(0.0);
                     if acc_idx < acc_elems.len() {
                         acc_elems[acc_idx] = Value::Float(prev + sum);
                     }
                 }
             }
-            invocation.locals.assign(acc.as_str(), Value::Array(acc_elems))?;
+            invocation
+                .locals
+                .assign(acc.as_str(), Value::Array(acc_elems))?;
         }
-        Node::TileReduce { out, tile, op, axis } => {
+        Node::TileReduce {
+            out,
+            tile,
+            op,
+            axis,
+        } => {
             let tile_val = invocation.locals.local(tile.as_str()).ok_or_else(|| {
                 ReferenceError::new(format!("tile `{tile}` not found for reduce"))
             })?;
@@ -405,7 +452,9 @@ pub(crate) fn step_nodes_frame<'a>(
                 s => vec![s],
             };
             if elements.is_empty() {
-                invocation.locals.bind(out.as_str(), Value::Array(vec![Value::Float(0.0)]))?;
+                invocation
+                    .locals
+                    .bind(out.as_str(), Value::Array(vec![Value::Float(0.0)]))?;
             } else {
                 let reduce_slice = |slice: &[Value]| -> f64 {
                     if slice.is_empty() {
@@ -419,9 +468,15 @@ pub(crate) fn step_nodes_frame<'a>(
                             vyre_foundation::ir::SubgroupReduceOp::Mul => acc * val,
                             vyre_foundation::ir::SubgroupReduceOp::Min => acc.min(val),
                             vyre_foundation::ir::SubgroupReduceOp::Max => acc.max(val),
-                            vyre_foundation::ir::SubgroupReduceOp::And => ((acc as u64) & (val as u64)) as f64,
-                            vyre_foundation::ir::SubgroupReduceOp::Or => ((acc as u64) | (val as u64)) as f64,
-                            vyre_foundation::ir::SubgroupReduceOp::Xor => ((acc as u64) ^ (val as u64)) as f64,
+                            vyre_foundation::ir::SubgroupReduceOp::And => {
+                                ((acc as u64) & (val as u64)) as f64
+                            }
+                            vyre_foundation::ir::SubgroupReduceOp::Or => {
+                                ((acc as u64) | (val as u64)) as f64
+                            }
+                            vyre_foundation::ir::SubgroupReduceOp::Xor => {
+                                ((acc as u64) ^ (val as u64)) as f64
+                            }
                             _ => acc + val,
                         };
                     }
@@ -448,7 +503,8 @@ pub(crate) fn step_nodes_frame<'a>(
                 } else if *axis == 0 && rows > 0 && cols > 0 && rows * cols == total {
                     let mut res = Vec::with_capacity(cols);
                     for c in 0..cols {
-                        let col_vals: Vec<Value> = (0..rows).map(|r| elements[r * cols + c].clone()).collect();
+                        let col_vals: Vec<Value> =
+                            (0..rows).map(|r| elements[r * cols + c].clone()).collect();
                         res.push(Value::Float(reduce_slice(&col_vals)));
                     }
                     res
@@ -456,7 +512,9 @@ pub(crate) fn step_nodes_frame<'a>(
                     vec![Value::Float(reduce_slice(&elements))]
                 };
 
-                invocation.locals.bind(out.as_str(), Value::Array(out_vec))?;
+                invocation
+                    .locals
+                    .bind(out.as_str(), Value::Array(out_vec))?;
             }
         }
         Node::TileElementwise { out, inputs, body } => {
@@ -477,27 +535,47 @@ pub(crate) fn step_nodes_frame<'a>(
             for idx in 0..max_len {
                 invocation.locals.push_scope();
                 for (i, input) in inputs.iter().enumerate() {
-                    let elem = input_arrays[i].get(idx).cloned().unwrap_or(Value::Float(0.0));
+                    let elem = input_arrays[i]
+                        .get(idx)
+                        .cloned()
+                        .unwrap_or(Value::Float(0.0));
                     invocation.locals.bind(input.as_str(), elem)?;
                 }
                 for child in body {
                     match child {
                         Node::Let { name, value } => {
-                            let v = eval_expr(value, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                            let v = eval_expr(
+                                value,
+                                invocation,
+                                memory,
+                                #[cfg(feature = "subgroup-ops")]
+                                snapshots,
+                            )?;
                             invocation.locals.bind(name.as_str(), v)?;
                         }
                         Node::Assign { name, value } => {
-                            let v = eval_expr(value, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                            let v = eval_expr(
+                                value,
+                                invocation,
+                                memory,
+                                #[cfg(feature = "subgroup-ops")]
+                                snapshots,
+                            )?;
                             invocation.locals.assign(name.as_str(), v)?;
                         }
                         _ => {}
                     }
                 }
-                let out_val = invocation.locals.local(out.as_str()).unwrap_or(Value::Float(0.0));
+                let out_val = invocation
+                    .locals
+                    .local(out.as_str())
+                    .unwrap_or(Value::Float(0.0));
                 out_elems.push(out_val);
                 invocation.locals.pop_scope();
             }
-            invocation.locals.bind(out.as_str(), Value::Array(out_elems))?;
+            invocation
+                .locals
+                .bind(out.as_str(), Value::Array(out_elems))?;
         }
         Node::Opaque(extension) => {
             return Err(ReferenceError::new(format!(

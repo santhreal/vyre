@@ -109,4 +109,3 @@ pub fn emit_with_options(
     }
     emitter::emit_text(desc, options)
 }
-

@@ -27,9 +27,7 @@ impl Gate for PrintComposition {
     }
 
     fn usage(&self) -> &'static [&'static str] {
-        &[
-            "--op-id ID narrows the walk to one registered operation",
-        ]
+        &["--op-id ID narrows the walk to one registered operation"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

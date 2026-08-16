@@ -15,9 +15,9 @@
 #![cfg(feature = "math")]
 
 use vyre_libs::math::dp_clip::dp_clip_per_sample;
-use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 
 /// A signed half-integer gradient in {-3, -2.5, …, 3}.
 fn signed_grad(state: &mut u32) -> f64 {

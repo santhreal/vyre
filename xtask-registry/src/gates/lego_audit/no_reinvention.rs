@@ -122,5 +122,4 @@ mod tests {
             "Fix: the duplicate analysis must judge every registration that carries a program and no registration that does not"
         );
     }
-
 }

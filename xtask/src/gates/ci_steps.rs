@@ -167,7 +167,11 @@ pub fn packages(tree: &Tree) -> Result<BTreeMap<String, Package>, GateError> {
     let mut packages = BTreeMap::new();
     for member in tree.member_manifests()? {
         let mut features: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        if let Some(table) = member.manifest.get("features").and_then(toml::Value::as_table) {
+        if let Some(table) = member
+            .manifest
+            .get("features")
+            .and_then(toml::Value::as_table)
+        {
             for (name, value) in table {
                 let edges = value
                     .as_array()
@@ -534,7 +538,9 @@ fn read_command(origin: &str, line: usize, command: &str) -> Option<Step> {
 
 /// A token without the quoting a YAML command puts around it.
 fn strip_quotes(value: &str) -> String {
-    value.trim_matches(|character| character == '"' || character == '\'').to_string()
+    value
+        .trim_matches(|character| character == '"' || character == '\'')
+        .to_string()
 }
 
 /// A token a generator or a matrix fills in, which the text does not carry.
@@ -715,10 +721,7 @@ fn run_findings(
             if bins.is_some_and(|bins| bins.contains_key(binary)) {
                 return Vec::new();
             }
-            format!(
-                "`{}` ships no binary `{binary}`",
-                package.name
-            )
+            format!("`{}` ships no binary `{binary}`", package.name)
         }
         (Some(package), None) => {
             let bins = package.targets.get(&Kind::Bin).map_or(0, BTreeMap::len);
@@ -844,7 +847,10 @@ fn collect_step_files(
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let Some(name) = path.file_name().map(|name| name.to_string_lossy().into_owned()) else {
+        let Some(name) = path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+        else {
             continue;
         };
         let named = format!("{origin}/{name}");
@@ -1023,9 +1029,8 @@ mod tests {
         let packages = set(vec![with_test(package("vyre-primitives"), "other", &[])]);
         let found = findings(folded, &packages);
         assert!(
-            messages(&found).contains(
-                "`--test registry_oob_clean`, which vyre-primitives does not carry"
-            ),
+            messages(&found)
+                .contains("`--test registry_oob_clean`, which vyre-primitives does not carry"),
             "{}",
             messages(&found)
         );
@@ -1037,8 +1042,12 @@ mod tests {
     #[test]
     fn a_selector_the_tree_cannot_satisfy_fails() {
         let packages = set(vec![with_test(package("vyre-libs"), "sweep", &[])]);
-        let step = read_command("conform.yml", 35, "cargo test -p vyre-primitives --features all-lego --test sweep")
-            .expect("a cargo command");
+        let step = read_command(
+            "conform.yml",
+            35,
+            "cargo test -p vyre-primitives --features all-lego --test sweep",
+        )
+        .expect("a cargo command");
         let found = findings(&step, &packages);
         assert!(
             messages(&found).contains("`-p vyre-primitives`, which is not a workspace member"),
@@ -1046,8 +1055,12 @@ mod tests {
             messages(&found)
         );
 
-        let step = read_command("conform.yml", 35, "cargo test -p vyre-libs --features all-lego --test sweep")
-            .expect("a cargo command");
+        let step = read_command(
+            "conform.yml",
+            35,
+            "cargo test -p vyre-libs --features all-lego --test sweep",
+        )
+        .expect("a cargo command");
         let found = findings(&step, &packages);
         assert!(
             messages(&found).contains("`--features all-lego`, which vyre-libs does not declare"),
@@ -1077,7 +1090,9 @@ mod tests {
         libs.features
             .insert("default".to_string(), vec!["graph".to_string()]);
         let mut without_default = with_test(package("vyre-libs"), "sweep", &["graph"]);
-        without_default.features.insert("graph".to_string(), Vec::new());
+        without_default
+            .features
+            .insert("graph".to_string(), Vec::new());
 
         let skipped = findings(
             &read_command("ci.yml", 60, "cargo test -p vyre-libs --test sweep").expect("a command"),
@@ -1098,8 +1113,12 @@ mod tests {
         let mut named = with_test(package("vyre-libs"), "sweep", &["graph"]);
         named.features.insert("graph".to_string(), Vec::new());
         let by_flag = findings(
-            &read_command("ci.yml", 60, "cargo test -p vyre-libs --features graph --test sweep")
-                .expect("a command"),
+            &read_command(
+                "ci.yml",
+                60,
+                "cargo test -p vyre-libs --features graph --test sweep",
+            )
+            .expect("a command"),
             &set(vec![named]),
         );
         assert!(by_flag.is_empty(), "{}", messages(&by_flag));
@@ -1107,8 +1126,12 @@ mod tests {
         let mut every = with_test(package("vyre-libs"), "sweep", &["graph"]);
         every.features.insert("graph".to_string(), Vec::new());
         let by_all = findings(
-            &read_command("ci.yml", 60, "cargo test -p vyre-libs --all-features --test sweep")
-                .expect("a command"),
+            &read_command(
+                "ci.yml",
+                60,
+                "cargo test -p vyre-libs --all-features --test sweep",
+            )
+            .expect("a command"),
             &set(vec![every]),
         );
         assert!(by_all.is_empty(), "{}", messages(&by_all));
@@ -1142,8 +1165,12 @@ mod tests {
     /// matrix in the file.
     #[test]
     fn a_matrix_expression_is_not_a_selector_the_tree_can_refuse() {
-        let step = read_command("bench.yml", 20, "cargo test -p ${{ matrix.package }} --test ${{ matrix.suite }}")
-            .expect("a command");
+        let step = read_command(
+            "bench.yml",
+            20,
+            "cargo test -p ${{ matrix.package }} --test ${{ matrix.suite }}",
+        )
+        .expect("a command");
         assert!(findings(&step, &BTreeMap::new()).is_empty());
     }
 
@@ -1155,8 +1182,12 @@ mod tests {
     fn a_cargo_run_that_resolves_to_no_single_binary_fails() {
         let two = with_bins(package("xtask"), &["xtask", "publishable_packages"]);
         let ambiguous = findings(
-            &read_command("scripts/release.sh", 4, "./cargo_full run -p xtask -- gates")
-                .expect("a command"),
+            &read_command(
+                "scripts/release.sh",
+                4,
+                "./cargo_full run -p xtask -- gates",
+            )
+            .expect("a command"),
             &set(vec![two]),
         );
         assert!(
@@ -1168,8 +1199,12 @@ mod tests {
         let mut declared = with_bins(package("xtask"), &["xtask", "publishable_packages"]);
         declared.default_run = Some("xtask".to_string());
         let resolved = findings(
-            &read_command("scripts/release.sh", 4, "./cargo_full run -p xtask -- gates")
-                .expect("a command"),
+            &read_command(
+                "scripts/release.sh",
+                4,
+                "./cargo_full run -p xtask -- gates",
+            )
+            .expect("a command"),
             &set(vec![declared]),
         );
         assert!(resolved.is_empty(), "{}", messages(&resolved));
@@ -1212,7 +1247,11 @@ mod tests {
             steps: Vec::new(),
         }];
         let found = scan_findings(WORKFLOWS, true, &unreadable);
-        assert!(messages(&found).contains("cannot be read"), "{}", messages(&found));
+        assert!(
+            messages(&found).contains("cannot be read"),
+            "{}",
+            messages(&found)
+        );
 
         let empty = scan_findings(WORKFLOWS, true, &[]);
         assert!(
@@ -1282,7 +1321,11 @@ mod tests {
         let mut found = Vec::new();
         for (directory, extensions) in SOURCES {
             let scan = read_steps(&root, directory, extensions);
-            found.extend(scan_findings(directory, root.join(directory).is_dir(), &scan));
+            found.extend(scan_findings(
+                directory,
+                root.join(directory).is_dir(),
+                &scan,
+            ));
             for scanned in &scan {
                 for step in &scanned.steps {
                     found.extend(findings(step, &resolved));

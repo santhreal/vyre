@@ -6,17 +6,16 @@
 //! `vyre-spec`, `vyre-macros`, and lightweight third-party data crates.
 //! It never knows about concrete driver APIs, a dialect, or a backend.
 
-
 extern crate self as vyre;
 
 /// Shared structured diagnostic protocol.
 pub mod diagnostics;
 /// Shared floating-point parity policy and typed buffer comparison.
 pub mod fp_parity;
-/// Canonical semantic operation registration and target facet views.
-pub mod operation;
 /// Target-neutral launch geometry requirements and lowering strategy.
 pub mod geometry;
+/// Canonical semantic operation registration and target facet views.
+pub mod operation;
 pub use geometry::{
     CooperativeWidth, ElementPolicy, GeometryLoweringError, GeometryRequirements, GeometryStrategy,
     LaunchGeometry, Uniformity,
@@ -42,7 +41,6 @@ pub mod ir {
     pub use crate::ir_inner::model::node_kind::{
         EvalError, InterpCtx, NodeId, NodeStorage, OpId, RegionId, Value, VarId,
     };
-    pub use crate::ir_inner::model::tile::{Layout, Residency, Tile};
     pub use crate::ir_inner::model::program::{
         BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, Scope,
         ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION, PORTABLE_WORKGROUP_INVOCATIONS,
@@ -55,6 +53,7 @@ pub mod ir {
     pub use crate::ir_inner::model::program_graph_identity::{
         ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
     };
+    pub use crate::ir_inner::model::tile::{Layout, Residency, Tile};
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.
     pub mod stats {
@@ -68,11 +67,11 @@ pub mod ir {
             NODE_KIND_TILE_MATMUL, NODE_KIND_TILE_REDUCE, NODE_KIND_TILE_STORE, NODE_KIND_TRAP,
         };
     }
-    pub use crate::ir_inner::model::program::ProgramStats;
     pub use crate::ir_inner::model::op_signature::{
         AtomicOp, BinOp, BufferAccess, CollectiveOp, CommGroup, Convention, DataType, OpSignature,
         SubgroupReduceOp, UnOp,
     };
+    pub use crate::ir_inner::model::program::ProgramStats;
     pub use crate::memory_model::MemoryOrdering;
 }
 

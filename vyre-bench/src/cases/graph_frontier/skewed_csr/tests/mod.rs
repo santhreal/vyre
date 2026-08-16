@@ -137,8 +137,7 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
 
 #[test]
 fn skewed_csr_graph_row_striding_requires_wide_rows() {
-    let lanes =
-        vyre_libs::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
+    let lanes = vyre_libs::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
     assert_eq!(
         queue_traverse_plan::ROW_STRIDED_MIN_DEGREE,
         lanes.saturating_mul(lanes)

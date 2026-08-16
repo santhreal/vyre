@@ -1,17 +1,17 @@
 //! Generated live CUDA/reference differential matrix for data-dependent control semantics.
 
-mod harness;
 #[path = "harness/generated_control_values.rs"]
 mod generated_control_values;
+mod harness;
 
+use generated_control_values::{
+    generated_f32_values, generated_i32_values, generated_u32_values, MAX_F32_ULP,
+};
 use harness::{
     assert_f32_matrix_sweep, assert_u32_matrix_sweep, bool_bytes, f32_bytes,
     generated_lane_program, generated_mixed_bool_values as generated_bool_values,
     guarded_generated_store, i32_bytes, live_backend, u32_bytes, GeneratedMatrixCase,
     GENERATED_LANE_COUNT as LANE_COUNT,
-};
-use generated_control_values::{
-    generated_f32_values, generated_i32_values, generated_u32_values, MAX_F32_ULP,
 };
 use vyre_foundation::ir::{DataType, Expr, Node, Program};
 

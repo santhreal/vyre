@@ -1,10 +1,10 @@
 use super::{BidirectionalGpuScratch, CachedBidirectionalProgram};
-use vyre_foundation::ir::Program;
 use crate::graph::csr_bidirectional::{
     plan_csr_bidirectional_step, CsrBidirectionalDispatchPlan, CsrBidirectionalStaticInputKey,
     CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER, CSR_BIDIRECTIONAL_NODES_BUFFER,
     CSR_BIDIRECTIONAL_NODE_TAGS_BUFFER,
 };
+use vyre_foundation::ir::Program;
 
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,

@@ -10,11 +10,11 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use vyre_foundation::ir::Node;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(test)]
 use crate::math::conv1d::cpu_conv1d;
 use crate::math::conv1d::{conv1d_node, conv1d_program, gaussian_weights, pack_params};
+use vyre_foundation::ir::Node;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned scratch for latency-trace smoothing dispatches.
 #[derive(Debug, Default)]

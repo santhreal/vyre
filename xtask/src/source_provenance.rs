@@ -193,7 +193,14 @@ const DIRTY_STATUS_ARGS: &[&str] = &[
 fn dirty_worktree_digest(root: &Path, status: &[u8]) -> Option<String> {
     let diff = git_bytes(
         root,
-        &["diff", "--binary", "HEAD", "--", ".", ":!release/evidence/**"],
+        &[
+            "diff",
+            "--binary",
+            "HEAD",
+            "--",
+            ".",
+            ":!release/evidence/**",
+        ],
     )
     .ok()?;
     let untracked = git_bytes(
@@ -397,5 +404,4 @@ mod tests {
         assert!(issues("git:abc:dirty=false").is_empty());
         assert!(issues(&format!("git:abc:dirty=true:worktree={}", "a".repeat(64))).is_empty());
     }
-
 }

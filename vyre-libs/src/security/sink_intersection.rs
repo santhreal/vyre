@@ -2,10 +2,10 @@
 //! a sink-family bitset. Used by rules that want a fractional
 //! confidence ("X% of nodes reachable from source landed in sinks").
 
-use vyre_foundation::ir::Program;
 use crate::bitset::and::bitset_and;
 use crate::bitset::bitset_words;
 use crate::reduce::count::reduce_count;
+use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::fuse_security_flow;
 
@@ -41,9 +41,7 @@ pub fn sink_intersection(
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_ref(query_set: &[u32], sink_set: &[u32]) -> u32 {
-    crate::reduce::count::cpu_ref(&crate::bitset::and::cpu_ref(
-        query_set, sink_set,
-    ))
+    crate::reduce::count::cpu_ref(&crate::bitset::and::cpu_ref(query_set, sink_set))
 }
 
 /// Soundness marker for [`sink_intersection`].

@@ -395,7 +395,8 @@ fn the_synthetic_opaque_extension_round_trips_through_the_wire() {
         .expect("Fix: the coverage bundle must register test_inputs."))();
     let expected_cases = (entry
         .expected_output
-        .expect("Fix: the coverage bundle must register expected_output."))();
+        .expect("Fix: the coverage bundle must register expected_output."))(
+    );
     let input_plan = WitnessInputPlan::for_program(&decoded)
         .expect("Fix: the decoded coverage bundle must yield a witness input plan.");
     let grid_config = dispatch_grid::config_for_program(&decoded)

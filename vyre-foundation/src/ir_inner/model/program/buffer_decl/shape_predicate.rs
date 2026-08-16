@@ -135,8 +135,8 @@ impl ShapePredicate {
 #[cfg(test)]
 mod shape_predicate_tests {
     use super::*;
-    use crate::ir_inner::model::program::BufferDecl;
     use crate::ir_inner::model::op_signature::DataType;
+    use crate::ir_inner::model::program::BufferDecl;
 
     #[test]
     fn at_least_holds_when_count_meets_minimum() {

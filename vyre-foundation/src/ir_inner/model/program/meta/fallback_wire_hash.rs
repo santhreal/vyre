@@ -159,7 +159,12 @@ impl NodeSink for FallbackWireHasher<'_> {
                 h.update(a.as_bytes());
                 h.update(b.as_bytes());
             }
-            Node::TileReduce { out, tile, op, axis } => {
+            Node::TileReduce {
+                out,
+                tile,
+                op,
+                axis,
+            } => {
                 h.update(b"n:TileReduce\0");
                 h.update(out.as_bytes());
                 h.update(tile.as_bytes());

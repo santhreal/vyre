@@ -50,10 +50,10 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::math::mori_zwanzig::mz_project_step;
 #[cfg(test)]
 use crate::math::mori_zwanzig::mz_project_step_cpu_into;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for fixed-point Mori-Zwanzig projection.
 #[derive(Debug, Default)]

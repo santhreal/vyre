@@ -17,11 +17,11 @@
 #![cfg(feature = "math")]
 
 use vyre_libs::math::score_denoise::score_denoise_step;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
+use vyre_reference::value::Value;
 use vyre_test_support::fixed_point::{
     fixed_mul, signed_fixed_18 as signed_fixed, to_fixed, xorshift32 as xorshift,
 };
-use vyre_primitives::wire::pack_u32_slice as pack_u32;
-use vyre_reference::value::Value;
 
 /// Exact u32 oracle for the denoise blend: `out[t] = α·x[t] + β·score[t] + σ·noise[t]` in 16.16.
 fn denoise_fixed(

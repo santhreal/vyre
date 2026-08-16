@@ -34,7 +34,8 @@ pub static GATES: &[&dyn crate::gate::Gate] = &[
     &version_matrix::VersionMatrixGate,
     &crate::gate::Delegated {
         name: "backend-matrix",
-        help: "Hold the CUDA-first, WGPU-fallback backend policy to the tree and the recorded probe.",
+        help:
+            "Hold the CUDA-first, WGPU-fallback backend policy to the tree and the recorded probe.",
         package: "xtask-evidence",
         generates: true,
     },

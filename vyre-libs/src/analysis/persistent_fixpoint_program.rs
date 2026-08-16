@@ -1,9 +1,9 @@
 //! Persistent-fixpoint Program builder for runtime and driver scheduling loops.
 
-use vyre_foundation::ir::{Node, Program};
 use crate::fixpoint::persistent_fixpoint::{
     fixpoint_route, routed_persistent_fixpoint, FixpointRoute, FixpointState,
 };
+use vyre_foundation::ir::{Node, Program};
 
 /// Build a persistent-fixpoint Program around a caller-supplied transfer body.
 ///
@@ -67,10 +67,10 @@ pub fn persistent_fixpoint_program_route(words: u32, max_iterations: u32) -> Fix
 #[cfg(test)]
 mod tests {
     use super::persistent_fixpoint_program;
-    use vyre_foundation::ir::{Expr, Node, Program};
     use crate::fixpoint::persistent_fixpoint::{
         declared_words, persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
     };
+    use vyre_foundation::ir::{Expr, Node, Program};
 
     /// The wrapper declares the three buffers the caller named and no others.
     #[test]

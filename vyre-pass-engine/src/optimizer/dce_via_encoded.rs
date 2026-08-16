@@ -198,12 +198,12 @@ fn write_padded_one_u32_bytes(out: &mut Vec<u8>, buf: &[u32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_driver_reference::ReferenceEvalDispatcher;
     use vyre_foundation::ir::{Expr, Node, Program};
     use vyre_foundation::optimizer::fingerprint_program;
     use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as oracle_cpu_dce;
     use vyre_foundation::program_dispatch::DispatchError;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_driver_reference::ReferenceEvalDispatcher;
 
     fn wrapped_program(entry: Vec<Node>) -> Program {
         Program::wrapped(Vec::new(), [1, 1, 1], entry)

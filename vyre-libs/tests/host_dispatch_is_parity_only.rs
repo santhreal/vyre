@@ -113,7 +113,10 @@ fn the_judgement_admits_the_oracle_and_the_parity_gate_and_nothing_else() {
 /// [`implementors`], because a path cannot say it.
 fn is_host_dispatcher_offender(path: &str) -> bool {
     let path = Path::new(path);
-    if ORACLE_CRATES.iter().any(|crate_dir| path.starts_with(crate_dir)) {
+    if ORACLE_CRATES
+        .iter()
+        .any(|crate_dir| path.starts_with(crate_dir))
+    {
         return false;
     }
     !path

@@ -413,7 +413,8 @@ fn run_sinkhorn(
 ) -> (Vec<u32>, Vec<u32>) {
     use vyre_reference::value::Value;
 
-    let to_value = |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+    let to_value =
+        |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
     let inputs = vec![
         to_value(u_curr),
         to_value(&vec![0_u32; u_curr.len()]),

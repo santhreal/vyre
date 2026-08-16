@@ -12,10 +12,10 @@
 #![cfg(feature = "matching-dfa")]
 #![allow(deprecated)]
 mod wire_words;
-use wire_words::{decode_u32_words, u32_bytes};
-use vyre_libs::scan::aho_corasick;
 use vyre_libs::matching::{dfa_compile, CompiledDfa};
+use vyre_libs::scan::aho_corasick;
 use vyre_reference::value::Value;
+use wire_words::{decode_u32_words, u32_bytes};
 
 /// Reference oracle: walk the DFA byte-by-byte, emit accept[state] at each
 /// offset. This is the oracle the vyre IR must match.

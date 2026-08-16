@@ -128,7 +128,9 @@ pub(super) fn write_composition_baseline(root: &std::path::Path, ops: &[OpInfo])
     Ok(())
 }
 
-pub(super) fn current_composition_baseline(root: &std::path::Path) -> Option<BTreeMap<String, f64>> {
+pub(super) fn current_composition_baseline(
+    root: &std::path::Path,
+) -> Option<BTreeMap<String, f64>> {
     let text = std::fs::read_to_string(root.join(COMPOSITION_BASELINE_PATH)).ok()?;
     parse_composition_baseline(&text)
 }

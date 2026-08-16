@@ -90,8 +90,8 @@ pub fn analyze_fusion_pair(
     if value.consumers.len() != 1 {
         return FusionDecision::Rejected(FusionRejectionReason::MultipleConsumers);
     }
-    let pinned = pins_workgroup_geometry(&producer.program)
-        || pins_workgroup_geometry(&consumer.program);
+    let pinned =
+        pins_workgroup_geometry(&producer.program) || pins_workgroup_geometry(&consumer.program);
     if producer.program.workgroup_size != consumer.program.workgroup_size {
         if pinned {
             return FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary);

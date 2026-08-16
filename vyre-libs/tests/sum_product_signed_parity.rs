@@ -35,11 +35,11 @@ use vyre_libs::graph::sum_product_circuit::{
     sum_product_depths, sum_product_evaluate, sum_product_evaluate_leveled, KIND_LEAF,
     KIND_PRODUCT, KIND_SUM,
 };
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
+use vyre_reference::value::Value;
 use vyre_test_support::fixed_point::{
     fixed_mul, signed_fixed_18 as signed_fixed, to_fixed, FIXED_ONE,
 };
-use vyre_primitives::wire::pack_u32_slice as pack_u32;
-use vyre_reference::value::Value;
 
 /// Flat CSR-style circuit buffers.
 struct Circuit {

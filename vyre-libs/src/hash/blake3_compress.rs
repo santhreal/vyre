@@ -18,10 +18,10 @@
 //! Migration 3 moved this op from `vyre-libs::crypto::blake3_compress`
 //! to `vyre-libs::hash::blake3_compress`.
 
+use crate::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use crate::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
 
 use crate::buffer_names::scoped_generic_name;
 

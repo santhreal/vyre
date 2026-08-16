@@ -51,10 +51,10 @@ use crate::dispatch_buffers::{
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::topology::vietoris_rips::extract_edges_cpu;
 use crate::topology::vietoris_rips::vietoris_rips_edge_filter;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Reusable buffers for loop-topology filtration sweeps.
 #[derive(Debug, Default)]

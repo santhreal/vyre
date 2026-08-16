@@ -63,7 +63,10 @@ fn release_workload_table_names_live_cases_and_restates_no_threshold() {
         let [_family, case_cell, owner] = cells.as_slice() else {
             continue;
         };
-        let Some(case_id) = case_cell.strip_prefix('`').and_then(|id| id.strip_suffix('`')) else {
+        let Some(case_id) = case_cell
+            .strip_prefix('`')
+            .and_then(|id| id.strip_suffix('`'))
+        else {
             continue;
         };
         rows += 1;

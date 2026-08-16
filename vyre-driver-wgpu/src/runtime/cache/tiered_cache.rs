@@ -532,7 +532,9 @@ mod tests {
     #[test]
     fn get_returns_entry_after_insert() {
         let mut cache = TieredCache::new(vec![CacheTier::new("L1", 1024)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
         let entry = cache.get(1).expect("Fix: an inserted key must be gettable");
         assert_eq!(entry.key, 1);
         assert_eq!(entry.size, 100);
@@ -548,8 +550,12 @@ mod tests {
     #[test]
     fn insert_replaces_existing_key() {
         let mut cache = TieredCache::new(vec![CacheTier::new("L1", 1024)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
-        cache.insert(1, 200).expect("Fix: replacing a key must insert");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
+        cache
+            .insert(1, 200)
+            .expect("Fix: replacing a key must insert");
         let entry = cache.get(1).expect("Fix: a replaced key must be gettable");
         assert_eq!(entry.size, 200);
     }
@@ -558,7 +564,9 @@ mod tests {
     fn promote_moves_to_higher_tier() {
         let mut cache =
             TieredCache::new(vec![CacheTier::new("L1", 1024), CacheTier::new("L2", 1024)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
         for _ in 0..LruPolicy::DEFAULT_THRESHOLD {
             cache.record_access(1);
         }
@@ -571,7 +579,9 @@ mod tests {
     fn demote_moves_to_lower_tier() {
         let mut cache =
             TieredCache::new(vec![CacheTier::new("L1", 1024), CacheTier::new("L2", 1024)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
         for _ in 0..LruPolicy::DEFAULT_THRESHOLD {
             cache.record_access(1);
         }
@@ -584,8 +594,12 @@ mod tests {
     #[test]
     fn make_room_evicts_coldest() {
         let mut cache = TieredCache::new(vec![CacheTier::new("L1", 200)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
-        cache.insert(2, 100).expect("Fix: an entry that fits must insert");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
+        cache
+            .insert(2, 100)
+            .expect("Fix: an entry that fits must insert");
         // Touch key 1 so key 2 is coldest.
         cache.record_access(1);
         cache
@@ -603,8 +617,12 @@ mod tests {
         tracker.record(1);
         tracker.record(2);
         tracker.record(1);
-        let stats1 = tracker.stats(1).expect("Fix: a recorded key must have stats");
-        let stats2 = tracker.stats(2).expect("Fix: a recorded key must have stats");
+        let stats1 = tracker
+            .stats(1)
+            .expect("Fix: a recorded key must have stats");
+        let stats2 = tracker
+            .stats(2)
+            .expect("Fix: a recorded key must have stats");
         // A higher tick is more recent.
         assert!(stats1.last_access > stats2.last_access);
         assert_eq!(stats1.frequency, 2);
@@ -615,8 +633,12 @@ mod tests {
     fn promote_without_eviction_keeps_both_keys() {
         let mut cache =
             TieredCache::new(vec![CacheTier::new("L1", 200), CacheTier::new("L2", 200)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
-        cache.insert(2, 100).expect("Fix: an entry that fits must insert");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
+        cache
+            .insert(2, 100)
+            .expect("Fix: an entry that fits must insert");
         for _ in 0..LruPolicy::DEFAULT_THRESHOLD {
             cache.record_access(1);
         }
@@ -628,11 +650,17 @@ mod tests {
     #[test]
     fn an_insert_past_the_tier_budget_evicts_the_coldest_key() {
         let mut cache = TieredCache::new(vec![CacheTier::new("L1", 250)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
-        cache.insert(2, 100).expect("Fix: 200 bytes fit in a 250-byte tier");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
+        cache
+            .insert(2, 100)
+            .expect("Fix: 200 bytes fit in a 250-byte tier");
         // Touch 1 so it is hottest and 2 is the eviction candidate.
         cache.record_access(1);
-        cache.insert(3, 100).expect("Fix: an insert that needs room must evict and insert");
+        cache
+            .insert(3, 100)
+            .expect("Fix: an insert that needs room must evict and insert");
         assert!(cache.get(1).is_some());
         assert!(cache.get(2).is_none());
         assert!(cache.get(3).is_some());
@@ -645,8 +673,12 @@ mod tests {
     #[test]
     fn a_replacement_releases_the_bytes_of_the_entry_it_replaced() {
         let mut cache = TieredCache::new(vec![CacheTier::new("L1", 1024)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
-        cache.insert(1, 200).expect("Fix: replacing a key must insert");
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
+        cache
+            .insert(1, 200)
+            .expect("Fix: replacing a key must insert");
         let entry = cache.get(1).expect("Fix: a replaced key must be gettable");
         assert_eq!(entry.size, 200);
         assert_eq!(
@@ -668,15 +700,23 @@ mod tests {
     /// tier that can never fit another entry.
     #[test]
     fn a_promote_into_a_full_tier_evicts_that_tiers_coldest_key() {
-        let mut cache = TieredCache::new(vec![CacheTier::new("L1", 400), CacheTier::new("L2", 100)]);
-        cache.insert(1, 100).expect("Fix: an entry that fits must insert");
-        cache.insert(2, 100).expect("Fix: an entry that fits must insert");
+        let mut cache =
+            TieredCache::new(vec![CacheTier::new("L1", 400), CacheTier::new("L2", 100)]);
+        cache
+            .insert(1, 100)
+            .expect("Fix: an entry that fits must insert");
+        cache
+            .insert(2, 100)
+            .expect("Fix: an entry that fits must insert");
         for _ in 0..LruPolicy::DEFAULT_THRESHOLD {
             cache.record_access(2);
         }
         cache.promote(2).expect("Fix: a hot key must promote");
         assert_eq!(
-            cache.get(2).expect("Fix: a promoted key must be gettable").tier,
+            cache
+                .get(2)
+                .expect("Fix: a promoted key must be gettable")
+                .tier,
             1,
             "Fix: the second tier has to be full before the eviction path is reached."
         );
@@ -687,7 +727,10 @@ mod tests {
         cache.promote(1).expect("Fix: a hot key must promote");
 
         assert_eq!(
-            cache.get(1).expect("Fix: a promoted key must be gettable").tier,
+            cache
+                .get(1)
+                .expect("Fix: a promoted key must be gettable")
+                .tier,
             1,
             "Fix: a promote into a full tier must evict and move, not leave the key where it was."
         );

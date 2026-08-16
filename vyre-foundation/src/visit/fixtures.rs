@@ -276,13 +276,20 @@ pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
             .boxed(),
         // Tile leaf nodes (no body).
         (arb_ident(), arb_buffer_name(), arb_expr())
-            .prop_map(|(tile, buffer, origin)| Node::tile_load(
-                tile.clone(),
-                Tile::new(DataType::F32, vec![16, 16], Layout::RowMajor, Residency::Register),
-                buffer,
-                vec![origin],
-                Layout::RowMajor,
-            ))
+            .prop_map(|(tile, buffer, origin)| {
+                Node::tile_load(
+                    tile.clone(),
+                    Tile::new(
+                        DataType::F32,
+                        vec![16, 16],
+                        Layout::RowMajor,
+                        Residency::Register,
+                    ),
+                    buffer,
+                    vec![origin],
+                    Layout::RowMajor,
+                )
+            })
             .boxed(),
         (arb_buffer_name(), arb_expr(), arb_ident())
             .prop_map(|(buffer, origin, tile)| Node::tile_store(buffer, vec![origin], tile))
@@ -294,10 +301,17 @@ pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
             .prop_map(|(out, tile)| Node::tile_reduce(out, tile, SubgroupReduceOp::Add, 0))
             .boxed(),
         arb_ident()
-            .prop_map(|name| Node::tile_decl(
-                name,
-                Tile::new(DataType::F32, vec![16, 16], Layout::RowMajor, Residency::Register),
-            ))
+            .prop_map(|name| {
+                Node::tile_decl(
+                    name,
+                    Tile::new(
+                        DataType::F32,
+                        vec![16, 16],
+                        Layout::RowMajor,
+                        Residency::Register,
+                    ),
+                )
+            })
             .boxed(),
     ]);
 

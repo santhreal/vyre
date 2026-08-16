@@ -110,8 +110,7 @@ fn a_name_bound_by_two_sibling_loops_stays_put() {
 fn a_load_from_a_writable_buffer_stays_put() {
     let program = Program::wrapped(
         vec![
-            BufferDecl::storage("scratch", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(4),
+            BufferDecl::storage("scratch", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4),
             BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(4),
         ],
         [1, 1, 1],

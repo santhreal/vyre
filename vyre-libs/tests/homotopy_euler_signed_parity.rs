@@ -17,9 +17,9 @@
 #![cfg(feature = "opt")]
 
 use vyre_libs::opt::homotopy::homotopy_euler_predictor;
-use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 
 /// Exact u32 16.16 oracle: `x_pred[t] = x_curr[t] + fixed_mul(dt, v[t])`.
 fn euler_fixed(x_curr: &[u32], v: &[u32], dt: u32) -> Vec<u32> {

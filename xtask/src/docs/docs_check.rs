@@ -91,7 +91,8 @@ const ACTIVE_STATUSES: [&str; 2] = ["current", "generated"];
 /// of how work here is produced.
 const EXTERNAL_AUDIENCES: [&str; 2] = ["extension", "user"];
 /// How to regenerate what this gate owns.
-const REGENERATE: &str = "regenerate the navigation with `./cargo_full run --bin xtask -- docs-check --write`";
+const REGENERATE: &str =
+    "regenerate the navigation with `./cargo_full run --bin xtask -- docs-check --write`";
 
 /// One `[[page]]` row of the manifest.
 struct Page {
@@ -230,10 +231,7 @@ type Manifest = (BTreeMap<String, String>, Vec<Page>);
 /// A manifest that does not parse is a gate that could not run. A manifest that
 /// parses and declares the wrong shape is a finding: the tree is wrong, not the
 /// gate.
-fn load_manifest(
-    root: &Path,
-    report: &mut Report,
-) -> Result<Option<Manifest>, GateError> {
+fn load_manifest(root: &Path, report: &mut Report) -> Result<Option<Manifest>, GateError> {
     let text = read_text(root, MANIFEST)?;
     let document: toml::Table = toml::from_str(&text).map_err(|error| {
         GateError::new(
@@ -283,7 +281,10 @@ fn load_manifest(
             ));
             continue;
         }
-        if owners.insert(id.to_string(), authority.to_string()).is_some() {
+        if owners
+            .insert(id.to_string(), authority.to_string())
+            .is_some()
+        {
             report.find(Finding::in_file(
                 MANIFEST,
                 format!("duplicate documentation owner: {id}"),
@@ -340,10 +341,7 @@ fn published_pages(root: &Path, docs: &Path) -> Result<BTreeSet<String>, GateErr
             found.insert(relative);
         }
     }
-    let candidates: BTreeSet<String> = found
-        .iter()
-        .map(|page| format!("{DOCS}/{page}"))
-        .collect();
+    let candidates: BTreeSet<String> = found.iter().map(|page| format!("{DOCS}/{page}")).collect();
     let ignored = ignored_paths(root, &candidates)?;
     Ok(found
         .into_iter()
@@ -468,7 +466,10 @@ fn page_findings(docs: &Path, owners: &BTreeMap<String, String>, page: &Page) ->
         );
     } else if page.authority != "self" && !docs.join(&page.authority).exists() {
         find(
-            format!("{path}: authority source does not exist: {}", page.authority),
+            format!(
+                "{path}: authority source does not exist: {}",
+                page.authority
+            ),
             "point the page at a source that exists, or make the page its own authority",
         );
     }
@@ -634,10 +635,7 @@ fn contains_word(haystack: &str, needle: &str, case_sensitive: bool) -> bool {
     let (haystack, needle) = if case_sensitive {
         (haystack.to_string(), needle.to_string())
     } else {
-        (
-            haystack.to_ascii_lowercase(),
-            needle.to_ascii_lowercase(),
-        )
+        (haystack.to_ascii_lowercase(), needle.to_ascii_lowercase())
     };
     let mut at = 0;
     while let Some(found) = haystack[at..].find(&needle) {
@@ -759,9 +757,7 @@ fn markdown_links(content: &str) -> Vec<(u32, String)> {
             }
             let start = close + 2;
             let mut end = start;
-            while end < bytes.len()
-                && !matches!(bytes[end], b')' | b'(' | b' ' | b'\t')
-            {
+            while end < bytes.len() && !matches!(bytes[end], b')' | b'(' | b' ' | b'\t') {
                 end += 1;
             }
             if end >= bytes.len() || bytes[end] != b')' || end == start {
@@ -821,7 +817,10 @@ fn normalize(path: &str) -> String {
 /// Outside a work tree there is no ignore data, so nothing is excluded. A
 /// `git check-ignore` that fails for any other reason is a gate that could not
 /// run: reporting every link as published would be worse than saying so.
-fn ignored_paths(root: &Path, candidates: &BTreeSet<String>) -> Result<BTreeSet<String>, GateError> {
+fn ignored_paths(
+    root: &Path,
+    candidates: &BTreeSet<String>,
+) -> Result<BTreeSet<String>, GateError> {
     if candidates.is_empty() || !is_work_tree(root) {
         return Ok(BTreeSet::new());
     }
@@ -906,9 +905,7 @@ fn render_summary(pages: &[Page]) -> String {
             continue;
         };
         let mut members = members.clone();
-        members.sort_by(|left, right| {
-            (&left.title, &left.path).cmp(&(&right.title, &right.path))
-        });
+        members.sort_by(|left, right| (&left.title, &left.path).cmp(&(&right.title, &right.path)));
         lines.extend([String::new(), format!("# {section}"), String::new()]);
         for page in members {
             lines.push(format!("- [{}]({})", page.title, page.path));
@@ -991,7 +988,6 @@ fn read_text(root: &Path, relative: &str) -> Result<String, GateError> {
         )
     })
 }
-
 
 #[cfg(test)]
 mod tests {

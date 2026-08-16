@@ -186,10 +186,7 @@ enum TripleResult {
 /// declares in its own configuration or the answer is about a build nobody runs.
 fn check_triple(root: &Path, triple: &str) -> TripleResult {
     let mut command = xtask::cargo_runner::command(root);
-    command
-        .arg("check")
-        .arg("--target")
-        .arg(triple);
+    command.arg("check").arg("--target").arg(triple);
     for crate_name in PRODUCT_CRATES {
         command.arg("-p").arg(crate_name);
     }

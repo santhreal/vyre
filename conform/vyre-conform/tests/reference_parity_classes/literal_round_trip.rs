@@ -189,9 +189,8 @@ fn a_bundle_written_under_an_earlier_schema_is_refused_by_version() {
         .expect("Fix: the bundle body must be readable as the format it is written in.");
     let stale = TARGET_MODULE_BUNDLE_SCHEMA_VERSION - 1;
     body["schema_version"] = serde_json::json!(stale);
-    let stale_bytes = sealed(
-        &serde_json::to_vec(&body).expect("Fix: the edited bundle body must re-encode."),
-    );
+    let stale_bytes =
+        sealed(&serde_json::to_vec(&body).expect("Fix: the edited bundle body must re-encode."));
 
     let error = TargetModuleBundle::from_bytes(&stale_bytes)
         .expect_err("Fix: a bundle from an earlier schema must be refused, not reinterpreted: its fields were written under a different encoding.")

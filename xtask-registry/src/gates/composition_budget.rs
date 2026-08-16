@@ -236,11 +236,7 @@ mod tests {
     #[test]
     fn a_phase_wrapper_naming_its_own_operation_composes_nothing() {
         let measured = counts(
-            vec![region(
-                "anonymous::phase",
-                Some("owner::op"),
-                work(),
-            )],
+            vec![region("anonymous::phase", Some("owner::op"), work())],
             &["owner::op"],
         );
 
@@ -267,10 +263,7 @@ mod tests {
     /// crediting it would report every operation as composed of itself.
     #[test]
     fn an_entry_region_is_not_composition() {
-        let measured = counts(
-            vec![region("owner::op", None, work())],
-            &["owner::op"],
-        );
+        let measured = counts(vec![region("owner::op", None, work())], &["owner::op"]);
 
         assert_eq!(measured.composed_nodes, 0);
     }

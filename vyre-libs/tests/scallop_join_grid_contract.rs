@@ -82,7 +82,15 @@ fn wide_fixpoint_writes_every_word_of_every_cell() {
     // reachable word to all-ones and no word can match its seed afterwards.
     let join_rules = vec![u32::MAX; total_words];
 
-    let program = scallop_join("state", "next", "join_rules", "changed", n, w, max_iterations);
+    let program = scallop_join(
+        "state",
+        "next",
+        "join_rules",
+        "changed",
+        n,
+        w,
+        max_iterations,
+    );
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -132,7 +140,15 @@ fn grid_sync_fences_split_into_dispatch_segments() {
     let n = 32u32;
     let max_iterations = 3u32;
     for w in [1u32, 4] {
-        let program = scallop_join("state", "next", "join_rules", "changed", n, w, max_iterations);
+        let program = scallop_join(
+            "state",
+            "next",
+            "join_rules",
+            "changed",
+            n,
+            w,
+            max_iterations,
+        );
         assert!(
             contains_grid_sync(&program),
             "n={n} w={w}: a matrix wider than one workgroup must fence across the grid"

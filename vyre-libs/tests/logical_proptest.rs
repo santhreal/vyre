@@ -4,9 +4,9 @@
 #![allow(deprecated)]
 
 mod wire_words;
-use wire_words::u32_bytes as bytes;
 use proptest::prelude::*;
 use vyre_reference::value::Value;
+use wire_words::u32_bytes as bytes;
 
 fn run(program: &vyre::Program, a: &[u32; 4], b: &[u32; 4]) -> [u32; 4] {
     let outputs = vyre_reference::reference_eval(

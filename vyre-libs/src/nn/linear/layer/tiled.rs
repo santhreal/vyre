@@ -3,8 +3,8 @@
 use vyre_foundation::composition::{tag_program, trap_program, wrap_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::prelude::MatmulBiasTiled;
 use crate::plumbing::operand::tensor_ref::TensorRef;
+use crate::prelude::MatmulBiasTiled;
 
 use super::builder::linear;
 

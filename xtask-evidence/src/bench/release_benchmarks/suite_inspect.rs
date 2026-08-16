@@ -4,13 +4,13 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use super::evidence_schema::{
-    BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField,
-    HardwareUnavailableReason,
-};
 use super::artifact_metrics::{
     first_metric_p50, read_benchmark_report, read_text_bounded, record_observed_metric_percentile,
     record_required_metric_percentile, report_cases, WallClockMinima,
+};
+use super::evidence_schema::{
+    BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField,
+    HardwareUnavailableReason,
 };
 use super::release_thresholds::{
     MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR,
@@ -588,12 +588,7 @@ pub(super) fn inspect_backend_suite_artifact(
         blockers.push("artifact has no source_tree_fingerprint provenance".to_string());
     }
     match &source_fingerprint {
-        Some(fingerprint)
-            if !xtask::source_provenance::issues(
-                fingerprint,
-            )
-            .is_empty() =>
-        {
+        Some(fingerprint) if !xtask::source_provenance::issues(fingerprint).is_empty() => {
             blockers.push(format!(
                 "source_fingerprint `{fingerprint}` is not release-grade provenance"
             ));
@@ -611,8 +606,9 @@ pub(super) fn inspect_backend_suite_artifact(
             "artifact was measured by a `{profile}` build, so its baseline carries the cost of an \
              unoptimized harness"
         )),
-        None => blockers
-            .push("artifact does not name the build profile that measured it".to_string()),
+        None => {
+            blockers.push("artifact does not name the build profile that measured it".to_string())
+        }
     }
     if let (Some((field, fingerprint)), Some(current_fingerprint)) = (
         crate::bench::benchmark_evidence_semantics::report_freshness_fingerprint(&report),

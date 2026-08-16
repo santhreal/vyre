@@ -28,10 +28,10 @@
 //! seeds the same transition table at the same origins and must produce the
 //! byte-identical match set this walk defines.
 
+use crate::matching::CompiledDfa;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::ByteRange;
-use crate::matching::CompiledDfa;
 
 use crate::scan::builders::append_match;
 use crate::scan::classic_ac::bounded_ranges::{

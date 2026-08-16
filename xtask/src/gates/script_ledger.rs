@@ -363,7 +363,10 @@ impl Gate for ScriptLedger {
                 report.find(Finding::at(
                     LEDGER,
                     row.line,
-                    format!("the row for `{}` says {claim} and the script {truth}", row.path),
+                    format!(
+                        "the row for `{}` says {claim} and the script {truth}",
+                        row.path
+                    ),
                     "state what the tree holds, and name the gate that took the assertions",
                 ));
                 continue;
@@ -376,7 +379,11 @@ impl Gate for ScriptLedger {
                         "the heading for `{}` is {} and the script {}",
                         row.path,
                         if row.quoted { "quoted" } else { "unquoted" },
-                        if present { "is tracked" } else { "is not tracked" }
+                        if present {
+                            "is tracked"
+                        } else {
+                            "is not tracked"
+                        }
                     ),
                     "quote the heading path of a tracked script and leave a departed one unquoted",
                 ));

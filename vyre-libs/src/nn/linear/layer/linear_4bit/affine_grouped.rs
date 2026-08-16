@@ -6,11 +6,11 @@ use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::affine_grouped_weight_reuse::linear_4bit_affine_grouped_weight_reuse;
 use super::grouped_layout::{
-    affine_grouped_buffers, affine_grouped_output_extent, broadcast_from_lane0,
-    dequantized_weight, lane_decomposition, packed_column_index, push_group_affine_terms,
-    push_lane0_sidecar_loads, push_packed_word_fetch, push_warp_reduction_store,
-    AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP,
-    AFFINE_GROUPED_WARPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
+    affine_grouped_buffers, affine_grouped_output_extent, broadcast_from_lane0, dequantized_weight,
+    lane_decomposition, packed_column_index, push_group_affine_terms, push_lane0_sidecar_loads,
+    push_packed_word_fetch, push_warp_reduction_store, AFFINE_GROUPED_LANES_PER_OUTPUT,
+    AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP, AFFINE_GROUPED_WARPS_PER_WORKGROUP,
+    AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
 };
 
 /// Build a fused affine INT4 linear Program:

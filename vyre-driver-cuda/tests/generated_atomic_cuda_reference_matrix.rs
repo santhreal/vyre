@@ -1,19 +1,19 @@
 //! Generated live CUDA/reference differential matrix for atomic memory semantics.
 
-mod harness;
 #[path = "harness/generated_atomic_matrix.rs"]
 mod generated_atomic_matrix;
+mod harness;
 
-use harness::{
-    assert_u32_output_lanes, cuda_reference_outputs, live_backend, u32_bytes,
-    GENERATED_LANE_COUNT as LANE_COUNT,
-};
 use generated_atomic_matrix::{
     assert_two_u32_output_buffers, atomic_compare_exchange_return_value_program,
     atomic_compare_exchange_single_writer_program, atomic_exchange_single_writer_program,
     atomic_reduction_program, atomic_return_value_program, generated_atomic_values,
     generated_exchange_initial_values, generated_old_sentinel_values, ATOMIC_REDUCTION_CASES,
     ATOMIC_RETURN_CASES, BUCKET_COUNT,
+};
+use harness::{
+    assert_u32_output_lanes, cuda_reference_outputs, live_backend, u32_bytes,
+    GENERATED_LANE_COUNT as LANE_COUNT,
 };
 
 #[test]

@@ -4,8 +4,8 @@
 
 use crate::EmitError;
 use naga::{BinaryOperator, Literal, ScalarKind, UnaryOperator};
-use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_lower::{KernelBody, KernelOpKind, LiteralValue};
 
 pub(super) fn naga_literal(literal: &LiteralValue) -> Result<Literal, EmitError> {
@@ -172,9 +172,9 @@ fn barrier_body_spaces(body: &KernelBody) -> (bool, bool) {
     let mut workgroup = false;
     for op in &body.ops {
         match op.kind {
-            KernelOpKind::LoadGlobal
-            | KernelOpKind::StoreGlobal
-            | KernelOpKind::Atomic { .. } => storage = true,
+            KernelOpKind::LoadGlobal | KernelOpKind::StoreGlobal | KernelOpKind::Atomic { .. } => {
+                storage = true
+            }
             KernelOpKind::LoadShared | KernelOpKind::StoreShared => workgroup = true,
             _ => {}
         }

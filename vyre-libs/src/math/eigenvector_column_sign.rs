@@ -15,6 +15,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
+use crate::builder::cooperative::{for_each_index, LANES};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -24,15 +25,21 @@ pub const OP_ID: &str = "vyre-primitives::math::eigenvector_column_sign";
 /// Magnitude below which a component cannot decide its column's sign.
 pub const EIGENVECTOR_SIGN_EPSILON: f32 = 1.0e-6;
 
-/// Emit the pass that flips every column whose first significant component is negative.
+/// Emit the pass that flips every column whose first significant component is
+/// negative.
+///
+/// A column decides its own sign and rewrites only itself, so `lanes` of them
+/// are canonicalized at a time and the walk needs `local` bound to the lane id.
+/// `lanes` is the width of the program the nodes end up in: a program that
+/// declares fewer leaves columns unread.
 #[must_use]
-pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
+pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32, lanes: u32) -> Vec<Node> {
     let cell =
         |row: &str, col: &str| Expr::add(Expr::mul(Expr::var(row), Expr::u32(n)), Expr::var(col));
-    vec![Node::loop_for(
+    vec![for_each_index(
+        n,
+        lanes,
         "ecs_col",
-        Expr::u32(0),
-        Expr::u32(n),
         vec![
             Node::let_bind("ecs_sign", Expr::f32(1.0)),
             Node::let_bind("ecs_found", Expr::u32(0)),
@@ -92,11 +99,16 @@ pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
 
 /// Emit [`eigenvector_column_sign_body`] as a child region of `parent_op_id`.
 #[must_use]
-pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n: u32) -> Node {
+pub fn eigenvector_column_sign_region(
+    parent_op_id: &str,
+    eigenvectors: &str,
+    n: u32,
+    lanes: u32,
+) -> Node {
     wrap_child_region(
         OP_ID,
         Ident::from(parent_op_id),
-        eigenvector_column_sign_body(eigenvectors, n),
+        eigenvector_column_sign_body(eigenvectors, n, lanes),
     )
 }
 
@@ -113,19 +125,15 @@ pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
             return trap_program(OP_ID, Some((eigenvectors, DataType::F32)), message);
         }
     };
+    let mut body = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+    body.extend(eigenvector_column_sign_body(eigenvectors, n, LANES));
     Program::wrapped(
         vec![
             BufferDecl::storage(eigenvectors, 0, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(cells),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                eigenvector_column_sign_body(eigenvectors, n),
-            )],
-        )],
+        [LANES, 1, 1],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -179,6 +187,34 @@ mod tests {
             errors.is_empty(),
             "Fix: the column-sign pass must validate, got {:?}.",
             errors
+        );
+    }
+
+    #[test]
+    fn sign_pass_dispatches_declared_lanes() {
+        let program = eigenvector_column_sign("evec", 4);
+        assert_eq!(
+            program.workgroup_size(),
+            [LANES, 1, 1],
+            "Fix: eigenvector_column_sign must dispatch LANES cooperative lanes."
+        );
+    }
+
+    #[test]
+    fn sign_pass_binds_local_id() {
+        let program = eigenvector_column_sign("evec", 4);
+        let has_local_binding = program.entry().iter().any(|node| match node {
+            Node::Region { body, .. } => body.iter().any(|inner| match inner {
+                Node::Let { name, value } => {
+                    name == "local" && matches!(value, Expr::LocalId { axis: 0 })
+                }
+                _ => false,
+            }),
+            _ => false,
+        });
+        assert!(
+            has_local_binding,
+            "Fix: eigenvector_column_sign must bind `local` to LocalId {{ axis: 0 }}."
         );
     }
 }

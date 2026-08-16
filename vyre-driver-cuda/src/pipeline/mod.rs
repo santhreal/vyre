@@ -535,8 +535,9 @@ mod tests {
                     .remember(&[input.as_slice()], &outputs)
                     .expect("Fix: direct materialized cache remember must fit");
                 let mut prebuilt = MaterializedPipelineOutputCache::default();
-                let entry = MaterializedPipelineOutputCacheEntry::new(&[input.as_slice()], &outputs)
-                    .expect("Fix: prebuilt materialized cache entry construction must fit");
+                let entry =
+                    MaterializedPipelineOutputCacheEntry::new(&[input.as_slice()], &outputs)
+                        .expect("Fix: prebuilt materialized cache entry construction must fit");
                 prebuilt
                     .remember_entry(entry)
                     .expect("Fix: prebuilt materialized cache entry insertion must fit");
@@ -711,8 +712,9 @@ mod tests {
                 let envelope_key = exact_input_key(inputs)
                     .expect("Fix: shared exact-input envelope must key the declared tuple");
 
-                let entry = MaterializedPipelineOutputCacheEntry::new(inputs, &outputs)
-                    .expect("Fix: materialized cache entry construction must fit the declared tuple");
+                let entry = MaterializedPipelineOutputCacheEntry::new(inputs, &outputs).expect(
+                    "Fix: materialized cache entry construction must fit the declared tuple",
+                );
                 assert_eq!(
                     entry.input_key(),
                     &envelope_key,
@@ -739,9 +741,13 @@ mod tests {
                     .remember(inputs, &outputs)
                     .expect("Fix: materialized cache remember must fit the declared tuple");
 
-                let domain_key =
-                    domain_separated_exact_input_key(b"vyre.cuda.optimizer.static-upload.v1", 0, 0, inputs)
-                        .expect("Fix: domain-separated key must fit the declared tuple");
+                let domain_key = domain_separated_exact_input_key(
+                    b"vyre.cuda.optimizer.static-upload.v1",
+                    0,
+                    0,
+                    inputs,
+                )
+                .expect("Fix: domain-separated key must fit the declared tuple");
 
                 assert!(
                     cache.snapshot_with_key(inputs, &domain_key).is_none(),

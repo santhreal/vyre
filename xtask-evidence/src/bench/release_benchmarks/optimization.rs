@@ -9,13 +9,13 @@ use crate::bench::benchmark_evidence_semantics::{
     cuda_release_axes_source_artifact_issues, COLD_PIPELINE_BUILD_METRICS, SCAN_THROUGHPUT_METRICS,
 };
 
-use super::evidence_schema::{
-    OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
-    OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
-};
 use super::artifact_metrics::{
     read_benchmark_report, read_text_bounded, report_cases, suite_metric_percentile,
     WallClockMinima,
+};
+use super::evidence_schema::{
+    OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
+    OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
 };
 use super::metrics::{
     max_first_available_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50,

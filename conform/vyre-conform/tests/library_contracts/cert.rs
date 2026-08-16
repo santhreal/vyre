@@ -1,8 +1,8 @@
 //! `cert` contracts over the public `vyre_conform` surface.
 
-use vyre_conform_spec::Certificate;
 use vyre::ir::OpId;
 use vyre_conform::cert::*;
+use vyre_conform_spec::Certificate;
 
 #[test]
 fn round_trips_through_json() {
@@ -86,5 +86,7 @@ fn verify_structural_accepts_real_cert() {
         pubkey: &key,
     };
     let cert = issue_certificate(input).unwrap();
-    verify_structural(&cert).expect("Fix: issued cert must pass structural verify; restore this invariant before continuing.");
+    verify_structural(&cert).expect(
+        "Fix: issued cert must pass structural verify; restore this invariant before continuing.",
+    );
 }
