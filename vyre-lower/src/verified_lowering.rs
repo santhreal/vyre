@@ -7,7 +7,7 @@
 
 use crate::descriptor::KernelDescriptor;
 use crate::lower::lower;
-use crate::{canonicalize, verify, VerifyFailure};
+use crate::{verify_descriptor, VerifyFailure};
 use std::fmt;
 use vyre_foundation::ir::Program;
 
@@ -91,19 +91,22 @@ pub fn lower_verified(program: &Program) -> Result<VerifiedLowering, LowerVerifi
             "KernelDescriptor lowering failed after semantic Program optimization: {error}. Fix: add the missing neutral descriptor mapping before any concrete backend emits this Program."
         ))
     })?;
-    if let Err(errors) = verify::verify(&descriptor) {
-        return Err(LowerVerifiedError::new(format!(
-            "KernelDescriptor verification failed after semantic Program optimization: {}. Fix: repair the neutral lowering mapping before descriptor canonicalization.",
-            format_verify_failure(&VerifyFailure::Input(errors))
-        )));
-    }
-    let descriptor = canonicalize::canonicalize_for_emit(&descriptor);
-    if let Err(errors) = verify::verify(&descriptor) {
-        return Err(LowerVerifiedError::new(format!(
-            "KernelDescriptor verification failed after bounded representation canonicalization: {}. Fix: repair vyre-lower canonicalization so every emitter receives valid neutral lower IR.",
-            format_verify_failure(&VerifyFailure::Output(errors))
-        )));
-    }
+    let descriptor = verify_descriptor(&descriptor).map_err(|failure| {
+        let (stage, fix) = match failure {
+            VerifyFailure::Input(_) => (
+                "after semantic Program optimization",
+                "Fix: repair the neutral lowering mapping before descriptor canonicalization.",
+            ),
+            VerifyFailure::Output(_) => (
+                "after bounded representation canonicalization",
+                "Fix: repair vyre-lower canonicalization so every emitter receives valid neutral lower IR.",
+            ),
+        };
+        LowerVerifiedError::new(format!(
+            "KernelDescriptor verification failed {stage}: {}. {fix}",
+            format_verify_failure(&failure)
+        ))
+    })?;
     Ok(VerifiedLowering {
         program,
         descriptor,
@@ -111,18 +114,18 @@ pub fn lower_verified(program: &Program) -> Result<VerifiedLowering, LowerVerifi
 }
 
 fn format_verify_failure(error: &VerifyFailure) -> String {
+    use std::fmt::Write as _;
+
     let stage = match error {
         VerifyFailure::Input(_) => "input",
         VerifyFailure::Output(_) => "output",
     };
-    let mut out = format!("{stage} descriptor invalid");
+    let mut out = String::with_capacity(64);
+    out.push_str(stage);
+    out.push_str(" descriptor invalid");
     for (index, err) in error.errors().iter().take(4).enumerate() {
-        if index == 0 {
-            out.push_str(": ");
-        } else {
-            out.push_str("; ");
-        }
-        out.push_str(&format!("{err:?}"));
+        out.push_str(if index == 0 { ": " } else { "; " });
+        let _ = write!(out, "{err:?}");
     }
     if error.errors().len() > 4 {
         out.push_str("; ...");
