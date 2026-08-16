@@ -32,6 +32,7 @@ use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOpera
 use vyre_libs::math::eigenvector_column_sign::EIGENVECTOR_SIGN_EPSILON;
 use vyre_libs::math::symmetric_eigen_jacobi::OP_ID;
 use vyre_primitives::wire::decode_f32_le_bytes_all as unpack_f32;
+use vyre_reference::is_reference_input;
 use vyre_reference::value::Value;
 
 /// Order of the registered witness matrix.
@@ -71,11 +72,20 @@ fn registry_entry_ships_both_fixtures_with_the_program_buffer_shape() {
     );
 
     let program = entry.program().expect("registration must build a program");
-    let buffers = program.buffers();
+    // The fixture ABI is the interpreter's input ABI, not the declaration list: workgroup scratch
+    // is per-workgroup storage the harness never binds, so a program that reduces through scratch
+    // declares more buffers than it takes fixtures for. `is_reference_input` is the predicate
+    // `reference_eval` itself uses, re-exported so a test cannot drift from it.
+    let buffers: Vec<_> = program
+        .buffers()
+        .iter()
+        .filter(|buffer| is_reference_input(buffer))
+        .cloned()
+        .collect();
     assert_eq!(
         inputs[0].len(),
         buffers.len(),
-        "test_inputs must carry one entry per declared buffer, in declaration order"
+        "test_inputs must carry one entry per bound buffer, in declaration order"
     );
     let writable = buffers
         .iter()

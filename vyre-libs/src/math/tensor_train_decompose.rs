@@ -12,7 +12,9 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
-use crate::math::symmetric_eigen_jacobi::jacobi_eigen_region;
+use crate::math::symmetric_eigen_jacobi::{
+    jacobi_eigen_region, jacobi_scratch_buffers, JACOBI_TILE,
+};
 
 /// `row * cols + col` flat index for a row-major matrix.
 fn tt_idx(row: Expr, cols: u32, col: Expr) -> Expr {
@@ -105,10 +107,10 @@ pub fn tensor_train_decompose_step(
     let m = input_rows;
     let n = rem;
     let neg_big = Expr::f32(-1.0e30);
-    let mut body: Vec<Node> = Vec::new();
+    let mut gram: Vec<Node> = Vec::new();
 
     // 1. Gram matrix G[ca,cb] = Σ_row M[row,ca]·M[row,cb].
-    body.push(Node::loop_for(
+    gram.push(Node::loop_for(
         "tt_ca",
         Expr::u32(0),
         Expr::u32(n),
@@ -148,16 +150,9 @@ pub fn tensor_train_decompose_step(
         )],
     ));
 
-    // 2. Eigendecompose the Gram matrix. ONE-PLACE: `symmetric_eigen_jacobi` owns the only
-    // Program-emitting spelling of the symmetric Jacobi eigendecomposition in this crate, and
-    // the child region records that composition edge in the IR rather than leaving the nodes
-    // spliced in bare where no audit can distinguish them from a hand-rolled eigensolve.
-    body.push(jacobi_eigen_region(
-        OP_ID, "tt_ata", "tt_evec", "tt_eval", n,
-    ));
-
     // 3. Truncated SVD: r_next largest eigenpairs → core U and remainder S·Vᵀ.
-    body.push(Node::loop_for(
+    let mut svd: Vec<Node> = Vec::new();
+    svd.push(Node::loop_for(
         "tt_rank",
         Expr::u32(0),
         Expr::u32(r_next),
@@ -254,27 +249,44 @@ pub fn tensor_train_decompose_step(
         ],
     ));
 
+    // Lane 0 of the first workgroup owns the two serial phases; the eigensolve is cooperative and
+    // guards itself, so the barriers that separate the three stay uniform. A guard around the whole
+    // body would put the eigensolve's barriers inside a non-uniform branch, which the reference
+    // rejects and a backend deadlocks on.
+    let serial = Expr::and(
+        Expr::is_first_workgroup(),
+        Expr::eq(Expr::LocalId { axis: 0 }, Expr::u32(0)),
+    );
+    let mut buffers = vec![
+        BufferDecl::storage(input_matrix, 0, BufferAccess::ReadOnly, DataType::F32)
+            .with_count(input_count),
+        BufferDecl::storage(u_out, 1, BufferAccess::ReadWrite, DataType::F32).with_count(u_count),
+        BufferDecl::storage(rem_out, 2, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(rem_count),
+        BufferDecl::storage("tt_ata", 3, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(gram_count),
+        BufferDecl::storage("tt_evec", 4, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(gram_count),
+        BufferDecl::storage("tt_eval", 5, BufferAccess::ReadWrite, DataType::F32).with_count(n),
+    ];
+    buffers.extend(jacobi_scratch_buffers());
     Program::wrapped(
-        vec![
-            BufferDecl::storage(input_matrix, 0, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(input_count),
-            BufferDecl::storage(u_out, 1, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(u_count),
-            BufferDecl::storage(rem_out, 2, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(rem_count),
-            BufferDecl::storage("tt_ata", 3, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(gram_count),
-            BufferDecl::storage("tt_evec", 4, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(gram_count),
-            BufferDecl::storage("tt_eval", 5, BufferAccess::ReadWrite, DataType::F32).with_count(n),
-        ],
-        [1, 1, 1],
+        buffers,
+        [JACOBI_TILE, 1, 1],
         vec![wrap_anonymous_region(
             OP_ID,
-            vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                body,
-            )],
+            vec![
+                Node::if_then(serial.clone(), gram),
+                Node::barrier(),
+                // 2. Eigendecompose the Gram matrix. ONE-PLACE: `symmetric_eigen_jacobi` owns the
+                // only Program-emitting spelling of the symmetric Jacobi eigendecomposition in this
+                // crate, and the child region records that composition edge in the IR rather than
+                // leaving the nodes spliced in bare where no audit can distinguish them from a
+                // hand-rolled eigensolve.
+                jacobi_eigen_region(OP_ID, "tt_ata", "tt_evec", "tt_eval", n),
+                Node::barrier(),
+                Node::if_then(serial, svd),
+            ],
         )],
     )
 }
@@ -826,12 +838,29 @@ mod tests {
         use vyre_foundation::ir::{BufferAccess, DataType};
         let p = tensor_train_decompose_step("in", "u", "rem", 1, 2, 4, 1);
         // input_matrix (RO) + u_out/rem_out (RW outputs) + tt_ata/tt_evec/tt_eval (RW f32 scratch
-        // for the Gram matrix, eigenvectors, eigenvalues) = 6 buffers, all f32.
-        assert_eq!(p.buffers.len(), 6);
-        assert!(p.buffers.iter().all(|b| b.element() == DataType::F32));
-        assert_eq!(p.buffers[0].access(), BufferAccess::ReadOnly);
-        assert!(p.buffers[1..]
+        // for the Gram matrix, eigenvectors, eigenvalues) = 6 bound buffers, all f32, plus the two
+        // workgroup scratch buffers the composed eigensolve reduces its pivot through.
+        let bound: Vec<_> = p
+            .buffers
+            .iter()
+            .filter(|b| b.access() != BufferAccess::Workgroup)
+            .collect();
+        assert_eq!(bound.len(), 6);
+        assert!(bound.iter().all(|b| b.element() == DataType::F32));
+        assert_eq!(bound[0].access(), BufferAccess::ReadOnly);
+        assert!(bound[1..]
             .iter()
             .all(|b| b.access() == BufferAccess::ReadWrite));
+        let scratch: Vec<_> = p
+            .buffers
+            .iter()
+            .filter(|b| b.access() == BufferAccess::Workgroup)
+            .collect();
+        assert_eq!(
+            scratch.len(),
+            2,
+            "the eigensolve's pivot reduces through workgroup scratch, which is never mapped, so \
+             the step's mapped outputs are still exactly the six bound buffers"
+        );
     }
 }

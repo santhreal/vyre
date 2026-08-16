@@ -17,8 +17,8 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
+pub(crate) mod cooperative;
 pub(crate) mod elementwise;
-pub(crate) mod tiled_reduce;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
@@ -30,6 +30,7 @@ pub mod range_ordering;
 /// composes them without asking for their registrations.
 #[cfg(feature = "builder-ops")]
 mod registrations;
+pub(crate) mod tiled_reduce;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
@@ -415,11 +416,7 @@ fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> Node
 }
 
 fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec<Node>) -> Node {
-    wrap_child_region(
-        child_op_id,
-        Ident::from(parent_op_id),
-        body,
-    )
+    wrap_child_region(child_op_id, Ident::from(parent_op_id), body)
 }
 
 /// Tensor-ref elementwise binary builder, used by `math::avg_floor`,
@@ -445,12 +442,14 @@ where
     )?;
 
     if a.shape != b.shape || a.shape != out.shape {
-        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-            name: "elementwise_binary".into(),
-            found: vec![],
-            expected: vec![],
-            op: op_id,
-        });
+        return Err(
+            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
+                name: "elementwise_binary".into(),
+                found: vec![],
+                expected: vec![],
+                op: op_id,
+            },
+        );
     }
 
     let a_count = a.element_count().ok_or_else(|| {
@@ -466,12 +465,14 @@ where
         }
     })?;
     if out_count < a_count {
-        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-            name: out.name_str().to_string(),
-            found: out.shape.to_vec(),
-            expected: a.shape.to_vec(),
-            op: op_id,
-        });
+        return Err(
+            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
+                name: out.name_str().to_string(),
+                found: out.shape.to_vec(),
+                expected: a.shape.to_vec(),
+                op: op_id,
+            },
+        );
     }
 
     let n = a_count;
@@ -551,12 +552,14 @@ where
     )?;
 
     if a.shape != out.shape {
-        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-            name: "elementwise_unary".into(),
-            found: vec![],
-            expected: vec![],
-            op: op_id,
-        });
+        return Err(
+            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
+                name: "elementwise_unary".into(),
+                found: vec![],
+                expected: vec![],
+                op: op_id,
+            },
+        );
     }
 
     let n = a.element_count().ok_or_else(|| {

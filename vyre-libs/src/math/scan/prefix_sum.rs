@@ -6,7 +6,6 @@
 //! the multi-block chain. The primitives own the two bodies and neither of them
 //! chooses.
 
-
 use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
 use crate::plumbing::program::attribution::attribute_child_nodes;
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
@@ -159,7 +158,12 @@ mod tests {
     fn prefix_sum_boundary_large_path_is_parallel_multi_block() {
         let program = scan_prefix_sum("input", "output", 1025);
         assert_top_region_generator(&program, OP_ID);
-        assert_eq!(program.workgroup_size(), [1024, 1, 1]);
+        // The width is owned by `multi_block_prefix_scan`, which declares the portable invocation
+        // floor. Restating a number here would pin the test to a width the scan no longer uses.
+        assert_eq!(
+            program.workgroup_size(),
+            [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1]
+        );
         assert!(
             !contains_loop(&program),
             "large scan_prefix_sum must not route through a serial per-element loop"
@@ -179,7 +183,11 @@ mod tests {
         for n in 1025..=4097 {
             let program = scan_prefix_sum("input", "output", n);
             assert_top_region_generator(&program, OP_ID);
-            assert_eq!(program.workgroup_size(), [1024, 1, 1], "n={n}");
+            assert_eq!(
+                program.workgroup_size(),
+                [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1],
+                "n={n}"
+            );
             assert!(
                 !contains_loop(&program),
                 "n={n}: large scan_prefix_sum must not emit a serial loop"
