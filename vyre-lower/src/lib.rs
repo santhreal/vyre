@@ -213,9 +213,7 @@ fn build_full_report_fix_text(verification: &verify::VerifyResult) -> String {
 fn push_verify_fix_text(result: &verify::VerifyResult, messages: &mut Vec<String>) {
     if let Err(errs) = result {
         if errs.is_empty() {
-            messages.push(format!(
-                "Fix: descriptor verification returned an empty error list; treat this as a verifier contract bug and preserve the descriptor for triage."
-            ));
+            messages.push("Fix: descriptor verification returned an empty error list; treat this as a verifier contract bug and preserve the descriptor for triage.".to_string());
         } else {
             messages.push(format!(
                 "Fix: descriptor verification failed with {} error(s); repair the descriptor before emission. First error: {:?}",

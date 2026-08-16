@@ -1,6 +1,6 @@
 //! Artifact execution, resident work queues, resource residency, and zero-copy IO.
 //!
-//! Runtime construction starts from an authenticated [`ArtifactSession`].
+//! Runtime construction starts from an authenticated [`artifact_admission::ArtifactSession`].
 //! Immutable compiler artifacts are materialized through registered target
 //! devices; runtime policy owns bindings, retained state, queueing, recovery,
 //! resource residency, IO, and telemetry.

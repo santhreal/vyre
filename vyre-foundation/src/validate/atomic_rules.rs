@@ -61,9 +61,7 @@ pub(crate) fn validate_atomic(
     format!(
             "atomic `{op:?}` on buffer `{buffer}` uses invalid memory ordering `{ordering:?}`"
         ),
-    format!(
-            "use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations."
-        )
+    "use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations.".to_string()
 ));
     }
     // VAL-001: the atomic index must be u32. target-text `atomicLoad`/`atomicStore`
@@ -76,7 +74,7 @@ pub(crate) fn validate_atomic(
                 ValidationPhase::Memory,
                 ValidationLocation::Program,
                 format!("atomic index on buffer `{buffer}` has type `{index_ty}`, must be `u32`"),
-                format!("cast the index to U32 before the atomic operation."),
+                "cast the index to U32 before the atomic operation.".to_string(),
             ));
         }
     }
@@ -97,9 +95,7 @@ pub(crate) fn validate_atomic(
     format!(
                     "atomic `{op:?}` on workgroup buffer `{buffer}` is rejected by the current memory model"
                 ),
-    format!(
-                    "use a storage ReadWrite buffer for atomics."
-                )
+    "use a storage ReadWrite buffer for atomics.".to_string()
 ));
             }
             BufferAccess::ReadOnly => {
@@ -130,7 +126,7 @@ pub(crate) fn validate_atomic(
                     format!(
                     "atomic `{op:?}` targets unsupported buffer access `{other:?}` on `{buffer}`"
                 ),
-                    format!("use BufferAccess::ReadWrite storage buffers for atomics."),
+                    "use BufferAccess::ReadWrite storage buffers for atomics.".to_string(),
                 ));
             }
         }
@@ -142,7 +138,7 @@ pub(crate) fn validate_atomic(
                 format!(
                     "operation on buffer `{buffer}` with element type `bytes` is not supported"
                 ),
-                format!("use a typed buffer."),
+                "use a typed buffer.".to_string(),
             ));
         }
         if buf.element != DataType::U32 {
@@ -164,7 +160,7 @@ pub(crate) fn validate_atomic(
                     ValidationPhase::Memory,
                     ValidationLocation::Program,
                     format!("atomic value type `{val_ty}` does not match required `u32`"),
-                    format!("ensure the atomic operand is U32."),
+                    "ensure the atomic operand is U32.".to_string(),
                 ));
             }
         }
@@ -181,9 +177,7 @@ pub(crate) fn validate_atomic(
     format!(
                             "compare-exchange expected type `{expected_ty}` does not match required `u32`"
                         ),
-    format!(
-                            "ensure Expr::Atomic.expected is U32."
-                        )
+    "ensure Expr::Atomic.expected is U32.".to_string()
 ));
                     }
                 }
@@ -210,7 +204,7 @@ pub(crate) fn validate_atomic(
             ValidationPhase::Memory,
             ValidationLocation::Program,
             format!("atomic on unknown buffer `{buffer}`"),
-            format!("declare it in Program::buffers."),
+            "declare it in Program::buffers.".to_string(),
         ));
     }
 }

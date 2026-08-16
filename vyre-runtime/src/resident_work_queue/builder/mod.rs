@@ -165,7 +165,7 @@ pub fn build_program_sharded_once_slots_control_report_shared(
 
 /// Build the megakernel IR without the IO polling sidecar.
 ///
-/// This is the dispatch path for host-provided [`super::ResidentWorkItem`]
+/// This is the dispatch path for host-provided [`crate::resident_work_queue::planner::ResidentWorkItem`]
 /// queues. It keeps the executable kernel free of `AsyncLoad` nodes until the
 /// runtime scheduler owns a concrete async-lowering pass.
 #[must_use]

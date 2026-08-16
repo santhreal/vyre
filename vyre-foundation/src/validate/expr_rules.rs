@@ -62,7 +62,7 @@ pub(crate) fn validate_expr(
                     ValidationPhase::Expression,
                     ValidationLocation::Program,
                     format!("buflen of unknown buffer `{buffer}`"),
-                    format!("declare it in Program::buffers."),
+                    "declare it in Program::buffers.".to_string(),
                 ));
             }
         }
@@ -73,7 +73,7 @@ pub(crate) fn validate_expr(
                     ValidationPhase::Expression,
                     ValidationLocation::Program,
                     format!("invocation/workgroup ID axis {axis} out of range"),
-                    format!("use 0 (x), 1 (y), or 2 (z)."),
+                    "use 0 (x), 1 (y), or 2 (z).".to_string(),
                 ));
             }
         }
@@ -126,9 +126,7 @@ pub(crate) fn validate_expr(
                                 },
                             }, format!(
                                 "Fma requires three f32 operands. Fma operand `{slot}` has type `{ty}`, must be `f32`"
-                            ), format!(
-                                "cast the operand to F32 before Fma, or use the integer mul/add form explicitly."
-                            )));
+                            ), "cast the operand to F32 before Fma, or use the integer mul/add form explicitly.".to_string()));
                     }
                 }
             }
@@ -153,7 +151,7 @@ pub(crate) fn validate_expr(
                         ValidationPhase::Expression,
                         ValidationLocation::Program,
                         format!("Select branches have mismatched types: true=`{t}`, false=`{f}`"),
-                        format!("cast both branches to the same type before Select."),
+                        "cast both branches to the same type before Select.".to_string(),
                     ));
                 }
             }
@@ -239,9 +237,7 @@ pub(crate) fn validate_expr(
                 {
                     report.errors.push(err("V047", ValidationPhase::Expression, ValidationLocation::Program, format!(
                         "subgroup `{op:?}` is a bitwise reduction and rejects f32 operands (its value has type `f32`)"
-                    ), format!(
-                        "use an integer operand (u32/i32) for And/Or/Xor, or use Add/Mul/Min/Max for a float reduction."
-                    )));
+                    ), "use an integer operand (u32/i32) for And/Or/Xor, or use Add/Mul/Min/Max for a float reduction.".to_string()));
                 }
             }
         }
@@ -320,7 +316,7 @@ pub(crate) fn validate_output_markers(buffers: &[BufferDecl], errors: &mut Vec<V
             ValidationPhase::Expression,
             ValidationLocation::Program,
             format!("program declares {outputs} output buffers"),
-            format!("mark at most one result buffer with BufferDecl::output(...)."),
+            "mark at most one result buffer with BufferDecl::output(...).".to_string(),
         ));
     }
 }

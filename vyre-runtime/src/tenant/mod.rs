@@ -14,7 +14,7 @@
 //! Every tenant owns an opcode range `[base, base + cap)` where the
 //! whole range sits inside the user-extension space reserved by
 //! `vyre_runtime::megakernel::protocol::opcode` (≥ `0x4000_0000`).
-//! When [`TenantRegistry::register`] returns a [`TenantHandle`],
+//! When [`crate::tenant::TenantRegistry::register`] returns a [`crate::tenant::TenantHandle`],
 //! callers publish into slot args `[rule_local_opcode, ...]` and
 //! the registry maps that to `(tenant_base + rule_local_opcode)`
 //! before writing into the ring. A tenant that tries to publish an
@@ -25,7 +25,7 @@
 //! Unregistering a tenant revokes future publishes but does NOT
 //! revoke in-flight slots  -  the GPU is still going to execute any
 //! slot it already CAS-claimed. Callers that need hard draining
-//! drive [`TenantHandle::quiesce`] which spins on the megakernel
+//! drive [`crate::tenant::TenantHandle::quiesce`] which spins on the megakernel
 //! DONE_COUNT until every slot the tenant published has been
 //! acknowledged.
 //!

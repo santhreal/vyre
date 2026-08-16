@@ -78,7 +78,7 @@ pub(super) struct TenantState {
     pub(super) label: String,
 }
 
-/// Stable handle returned by [`TenantRegistry::register`]. Clones
+/// Stable handle returned by [`crate::tenant::TenantRegistry::register`]. Clones
 /// share the same underlying state, so multiple producer threads
 /// inside one tenant can publish through their own handles.
 #[derive(Clone)]

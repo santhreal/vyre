@@ -102,7 +102,7 @@ pub enum TenantError {
         /// Current reserved count.
         used: u64,
     },
-    /// Protocol error bubbled up from [`ResidentWorkQueue::publish_slot`].
+    /// Protocol error bubbled up from [`crate::resident_work_queue::ResidentWorkQueue::publish_slot`].
     #[error("{0}")]
     Pipeline(#[from] PipelineError),
 }
