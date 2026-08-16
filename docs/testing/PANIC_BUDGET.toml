@@ -1,0 +1,60 @@
+# The per-crate ceiling on panics that fail closed without saying so.
+#
+# `cargo xtask hygiene-matrix` classifies every panicking call it finds. A call
+# whose function documents a `# Panics` section is a documented contract and is
+# not counted here. A call on a file listed in `docs/optimization/HOT_PATHS.toml`
+# is a release blocker whatever its documentation says. What is left is a panic
+# that is neither documented nor on the release surface, and until this file
+# existed nothing bounded it.
+#
+# The ceiling is per crate because the crate is who fixes it, and it is checked
+# in both directions. A crate over its ceiling fails: document the contract,
+# return an error, or delete the panic. A crate under its ceiling also fails,
+# with the count to write here, because a ceiling above the tree covers the next
+# panic added to that crate instead of reporting it. So the numbers only move
+# down.
+#
+# A crate carrying such a panic with no row fails, and a row for a crate that
+# carries none fails as stale. Both halves come from the same scan, so neither
+# side can go quietly out of date.
+#
+# Three ways to spend a number down, in the order to try them. Return a `Result`
+# and let the caller decide, which is right whenever the caller can do anything
+# about it. Write the `# Panics` section, which is right when failing closed IS
+# the contract, and moves the site into the documented population instead.
+# Delete the call, which is right when the value cannot be absent and the code
+# says so through the type.
+
+schema = 1
+
+# Measured 2026-08-15 by `cargo xtask hygiene-matrix`. `conform` reached zero in
+# the same change: the three sites were `expect` on a missing neutral builder in
+# a lens that already had a failure channel, and they now return that failure.
+
+[[crate_budget]]
+name = "vyre-driver"
+ceiling = 3
+
+[[crate_budget]]
+name = "vyre-foundation"
+ceiling = 2
+
+[[crate_budget]]
+name = "vyre-libs"
+ceiling = 5
+
+[[crate_budget]]
+name = "vyre-primitives"
+ceiling = 1
+
+[[crate_budget]]
+name = "vyre-runtime"
+ceiling = 4
+
+[[crate_budget]]
+name = "xtask"
+ceiling = 12
+
+[[crate_budget]]
+name = "xtask-evidence"
+ceiling = 8

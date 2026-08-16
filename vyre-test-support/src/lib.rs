@@ -31,7 +31,6 @@
 //! The enumeration is feature-independent: it reads source files as TEXT and
 //! never compiles them, so it reports the same builder set whichever features
 //! the runner selects.
-#![forbid(unsafe_code)]
 
 /// Declare this crate's registry/coverage closure gate.
 ///

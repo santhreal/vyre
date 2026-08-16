@@ -207,7 +207,7 @@ name = "lint-expect-fix"
 findings = 0
 
 [[gate]]
-name = "lint-missing-docs-override"
+name = "lint-one-policy"
 findings = 0
 
 [[gate]]
@@ -340,6 +340,10 @@ findings = 0
 
 [[gate]]
 name = "single-backlog"
+findings = 0
+
+[[gate]]
+name = "source-include-module"
 findings = 0
 
 [[gate]]

@@ -21,8 +21,12 @@
 //!
 //! 1. it dispatches on a node (`match node {`, or the `&`/`*`/`.as_ref()` forms),
 //! 2. it has a top-level `_ =>` arm, and
-//! 3. it destructures a child-body field (`then`, `otherwise`, `body`, `nodes`)
-//!    out of a `Node::` pattern and recurses on it.
+//! 3. it binds a child body out of a `Node::` pattern and recurses on it.
+//!
+//! The child slots are read from the `Node` enum at run time, both the named
+//! fields whose type holds nodes and the variants that carry their body in a
+//! tuple position, so a variant added under a new field name is scanned for on
+//! the same run that declares it.
 //!
 //! Together those mean the block derives child structure itself and then declares,
 //! through the catch-all, that every variant it was not told about is a leaf. Add
@@ -60,6 +64,7 @@
 //! fixtures derived from `EXPR_VARIANT_NAMES` at run time.
 
 use std::collections::BTreeSet;
+use std::fs;
 use std::path::Path;
 
 use structure_gate::source_scan::{
@@ -67,13 +72,14 @@ use structure_gate::source_scan::{
 };
 use structure_gate::workspace_root;
 
-/// Field names that hold child nodes on some `Node` variant.
+/// Where `Node` is declared, relative to the workspace root.
 ///
-/// Read off the three owners in `vyre-foundation/src/transform/visit/mod.rs` and
-/// `rewrite_walk.rs`. A `Node` variant that gains a body slot under a new field
-/// name has to be added here, and the owners fail to compile until somebody
-/// looks at them, which is when that happens.
-const CHILD_BODY_FIELDS: [&str; 4] = ["then", "otherwise", "body", "nodes"];
+/// The child slot vocabulary is read out of this file at run time rather than
+/// written down here. A list of field names in a test file goes stale the moment
+/// a variant arrives under a new name, and a scanner with a stale vocabulary
+/// reports nothing while looking like it passed, which is the failure this whole
+/// file exists to prevent.
+const NODE_ENUM_SOURCE: &str = "vyre-foundation/src/ir_inner/model/generated.rs";
 
 /// Call paths that mean "somebody else enumerated the variants for me".
 const OWNER_CALLS: [&str; 5] = [
@@ -459,6 +465,7 @@ fn every_waiver_names_an_owner_and_a_reason() {
 /// happens to be clean cannot make this pass by measuring nothing.
 #[test]
 fn the_scanner_reports_the_defect_and_not_its_correct_neighbours() {
+    let slots = declared_child_slots(&workspace_root());
     let defect = "\
 fn walk(node: &Node) -> bool {
     match node {
@@ -472,7 +479,7 @@ fn walk(node: &Node) -> bool {
 }
 ";
     assert_eq!(
-        blocks_in(defect).len(),
+        blocks_in(defect, &slots).len(),
         1,
         "Fix: the scanner stopped seeing a hand-written descent with a catch-all"
     );
@@ -487,7 +494,7 @@ fn walk(node: &Node) -> bool {
 }
 ";
     assert!(
-        blocks_in(routed).is_empty(),
+        blocks_in(routed, &slots).is_empty(),
         "Fix: the scanner reports a walk that already takes its children from the owner, which \
          is the shape it exists to encourage"
     );
@@ -502,7 +509,7 @@ fn walk(node: &Node) -> bool {
 }
 ";
     assert!(
-        blocks_in(exhaustive).is_empty(),
+        blocks_in(exhaustive, &slots).is_empty(),
         "Fix: the scanner reports an exhaustive descent. Exhaustive is the safe shape: adding a \
          variant fails to compile there, which is the outcome this gate wants"
     );
@@ -516,17 +523,168 @@ fn rewrite(node: &Node) -> Option<Node> {
 }
 ";
     assert!(
-        blocks_in(decision_only).is_empty(),
+        blocks_in(decision_only, &slots).is_empty(),
         "Fix: the scanner reports a pass that reads a child body to make a decision without \
          recursing. That is not a descent and flagging it is how the previous ratchet died"
     );
 }
 
+/// The vocabulary comes from the enum, and it comes back complete.
+///
+/// Read against the tree because that is the vocabulary the scan above runs
+/// with. The assertion is that every child slot the enum declares is a slot the
+/// owner walk destructures, which is the same population from two independent
+/// readings: the parser reads the declaration, `child_bodies` states the
+/// decision. A slot in the enum that the owner does not name is a body no
+/// traversal reaches, and a name in the parser's output that is not a slot means
+/// the parser is reading types it should not.
+#[test]
+fn the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks() {
+    let root = workspace_root();
+    let slots = declared_child_slots(&root);
+    let owner = root.join("vyre-foundation/src/visit/node_parts.rs");
+    let text = fs::read_to_string(&owner).expect("the owner of child bodies is readable");
+    let source = mask_comments_and_strings(&text);
+    let open = source
+        .find("fn child_bodies(")
+        .and_then(|at| source[at..].find('{').map(|brace| at + brace))
+        .expect("child_bodies has a body");
+    let end = matching_brace(source.as_bytes(), open).expect("child_bodies closes");
+    let body = &source[open..end];
+
+    let bound = child_body_binders(body, &slots);
+    let unnamed: Vec<&String> = slots
+        .fields
+        .iter()
+        .filter(|field| !bound.contains(*field))
+        .collect();
+    assert!(
+        unnamed.is_empty(),
+        "Fix: `Node` declares child bodies {unnamed:?} that `child_bodies` does not hand back, so \
+         no traversal in the workspace reaches them and the scan cannot tell a walk that misses \
+         them from one that does not. Add the slot to the owner in \
+         vyre-foundation/src/visit/node_parts.rs."
+    );
+    let missing_tuple: Vec<&String> = slots
+        .tuple_variants
+        .iter()
+        .filter(|variant| !body.contains(&format!("Node::{variant}(")))
+        .collect();
+    assert!(
+        missing_tuple.is_empty(),
+        "Fix: `Node` carries a tuple body on {missing_tuple:?} that `child_bodies` does not \
+         destructure"
+    );
+}
+
+/// A variant that arrives with a child body under a new name is scanned for.
+///
+/// WHY: the vocabulary used to be four names written in this file. Under that
+/// version a variant carrying its body as `arms` was invisible: a hand-written
+/// descent over `arms` bound a field the scanner did not know, the block was not
+/// reported, and the roster below stayed green while the descent it exists to
+/// find was in the tree. The declaration and a descent over it are both injected
+/// here, so the proof does not depend on anyone adding a variant.
+#[test]
+fn a_variant_declaring_a_child_body_under_a_new_name_is_scanned_for() {
+    let declaration = "\
+vyre_macros::vyre_ast_registry! {
+    Node {
+        Return,
+        Loop { var: Ident, body: Vec<Node> },
+        Block(Vec<Node>),
+        Speculate { guard: Expr, arms: Vec<Node> },
+        Opaque(Arc<dyn NodeExtension>),
+    }
+}
+";
+    let slots = child_slots(declaration);
+    assert!(
+        slots.fields.contains("arms"),
+        "Fix: the parser missed a declared child body: {slots:?}"
+    );
+    assert!(
+        !slots.fields.contains("guard") && !slots.fields.contains("var"),
+        "Fix: the parser took an operand for a child body: {slots:?}"
+    );
+    assert_eq!(
+        slots.tuple_variants,
+        BTreeSet::from(["Block".to_string()]),
+        "Fix: an opaque extension is not a child body and a tuple body is"
+    );
+
+    let descent = "\
+fn walk(node: &Node) -> bool {
+    match node {
+        Node::Speculate { arms, .. } => arms.iter().any(walk),
+        _ => false,
+    }
+}
+";
+    assert_eq!(
+        blocks_in(descent, &slots).len(),
+        1,
+        "Fix: a hand-written descent over a newly declared child body is not reported, so the \
+         roster below cannot see it"
+    );
+    assert!(
+        blocks_in(descent, &ChildSlots::default()).is_empty(),
+        "Fix: the scanner reports without a vocabulary, so it is not the declaration it reads"
+    );
+
+    let renamed = "\
+fn walk(node: &Node) -> bool {
+    match node {
+        Node::Speculate { arms: taken, .. } => taken.iter().any(walk),
+        _ => false,
+    }
+}
+";
+    assert_eq!(
+        blocks_in(renamed, &slots).len(),
+        1,
+        "Fix: a pattern that renames the field it binds escapes the scan"
+    );
+
+    let tuple = "\
+fn walk(node: &Node) -> bool {
+    match node {
+        Node::Block(inner) => inner.iter().any(walk),
+        _ => false,
+    }
+}
+";
+    assert_eq!(
+        blocks_in(tuple, &slots).len(),
+        1,
+        "Fix: a tuple body binds under whatever the pattern calls it, and the scan has to follow \
+         the binder rather than a field name"
+    );
+
+    let constructed = "\
+fn rebuild(node: &Node) -> Node {
+    match node {
+        Node::Return => Node::Block(vec![]),
+        _ => {
+            let rebuilt = collect(node);
+            Node::Block(rebuilt)
+        }
+    }
+}
+";
+    assert!(
+        blocks_in(constructed, &slots).is_empty(),
+        "Fix: constructing a node is not destructuring one, and reporting a rebuild that never \
+         reads a child body is how the previous ratchet died"
+    );
+}
+
 /// Every reported block in the tree, ordered.
 fn scan(root: &Path) -> Vec<Site> {
+    let slots = declared_child_slots(root);
     let mut sites = Vec::new();
     for (relative, text) in rust_sources_with_text(root) {
-        for line in blocks_in(&text) {
+        for line in blocks_in(&text, &slots) {
             sites.push(Site {
                 path: relative.clone(),
                 line,
@@ -537,8 +695,38 @@ fn scan(root: &Path) -> Vec<Site> {
     sites
 }
 
+/// The child slots `Node` declares, read from the enum in the tree at `root`.
+///
+/// # Panics
+///
+/// Panics when the enum cannot be read or declares no child slot at all. A
+/// scanner with an empty vocabulary reports nothing and every assertion built on
+/// it passes, so a vocabulary that came back empty is a failure and not a clean
+/// tree.
+fn declared_child_slots(root: &Path) -> ChildSlots {
+    let path = root.join(NODE_ENUM_SOURCE);
+    let text = fs::read_to_string(&path).unwrap_or_else(|error| {
+        panic!(
+            "Fix: the `Node` enum is the scanner's vocabulary and {} could not be read: {error}. \
+             If the enum moved, point NODE_ENUM_SOURCE at its new home.",
+            path.display()
+        )
+    });
+    let slots = child_slots(&text);
+    assert!(
+        !slots.fields.is_empty() && !slots.tuple_variants.is_empty(),
+        "Fix: no child slot was read out of {}, so the scan below measures nothing. `Node` holds \
+         named body fields and at least one tuple body, and the parser found fields {:?} and \
+         tuple variants {:?}.",
+        path.display(),
+        slots.fields,
+        slots.tuple_variants
+    );
+    slots
+}
+
 /// Opening line of every reported block in `text`.
-fn blocks_in(text: &str) -> Vec<usize> {
+fn blocks_in(text: &str, slots: &ChildSlots) -> Vec<usize> {
     let source = mask_comments_and_strings(text);
     let bytes = source.as_bytes();
     let mut reported = Vec::new();
@@ -555,9 +743,9 @@ fn blocks_in(text: &str) -> Vec<usize> {
             continue;
         };
         let body = &source[brace + 1..end];
+        let binders = child_body_binders(body, slots);
         if has_top_level_wildcard_arm(body)
-            && destructures_a_child_body(body)
-            && recurses_on_a_child_body(body)
+            && recurses_on_a_binder(body, &binders)
             && !OWNER_CALLS.iter().any(|call| body.contains(call))
         {
             reported.push(source[..start].matches('\n').count() + 1);
@@ -621,44 +809,244 @@ fn has_top_level_wildcard_arm(body: &str) -> bool {
     false
 }
 
-/// True when some `Node::` pattern in `body` binds a child-body field.
-fn destructures_a_child_body(body: &str) -> bool {
+/// The child slots `Node` declares.
+///
+/// A named field is reported by its own name because a pattern binds it by that
+/// name. A tuple body has no field name, so the variant is recorded instead and
+/// the binder is read off the pattern at the site.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct ChildSlots {
+    fields: BTreeSet<String>,
+    tuple_variants: BTreeSet<String>,
+}
+
+/// The child slots declared by the `Node` enum in `text`.
+fn child_slots(text: &str) -> ChildSlots {
+    let source = mask_comments_and_strings(text);
+    let mut slots = ChildSlots::default();
+    let Some(open) = enum_body_open(&source, "Node") else {
+        return slots;
+    };
+    let Some(end) = matching_brace(source.as_bytes(), open) else {
+        return slots;
+    };
+    for variant in top_level_parts(&source[open + 1..end]) {
+        let variant = variant.trim();
+        let name_length = variant
+            .bytes()
+            .take_while(|byte| is_word_byte(*byte))
+            .count();
+        let (name, rest) = variant.split_at(name_length);
+        let rest = rest.trim_start();
+        if let Some(fields) = delimited(rest, b'{', b'}') {
+            for field in top_level_parts(fields) {
+                let Some((field_name, kind)) = field.split_once(':') else {
+                    continue;
+                };
+                if holds_a_node(kind) {
+                    slots.fields.insert(field_name.trim().to_string());
+                }
+            }
+        } else if let Some(kinds) = delimited(rest, b'(', b')') {
+            if top_level_parts(kinds).into_iter().any(holds_a_node) {
+                slots.tuple_variants.insert(name.to_string());
+            }
+        }
+    }
+    slots
+}
+
+/// Offset of the `{` opening the body of `enum_name`, else `None`.
+fn enum_body_open(source: &str, enum_name: &str) -> Option<usize> {
+    let bytes = source.as_bytes();
     let mut cursor = 0;
-    while let Some(offset) = body[cursor..].find("Node::") {
+    while let Some(offset) = source[cursor..].find(enum_name) {
         let start = cursor + offset;
-        cursor = start + "Node::".len();
-        let Some(open) = body[cursor..].find('{') else {
-            break;
-        };
-        let Some(close) = body[cursor + open..].find('}') else {
-            break;
-        };
-        // Only a pattern, not a construction: a construction has an `=>` or a
-        // `return` between the variant name and its brace on the same arm.
-        let fields = &body[cursor + open + 1..cursor + open + close];
-        if fields.split(',').any(|field| {
-            let name = field.split(':').next().unwrap_or("").trim();
-            CHILD_BODY_FIELDS.contains(&name)
-        }) {
+        cursor = start + enum_name.len();
+        let before_is_word = start
+            .checked_sub(1)
+            .is_some_and(|previous| is_word_byte(bytes[previous]));
+        if before_is_word {
+            continue;
+        }
+        let tail = &source[cursor..];
+        let head = tail.trim_start();
+        if head.starts_with('{') {
+            return Some(cursor + (tail.len() - head.len()));
+        }
+    }
+    None
+}
+
+/// The inside of `text` when it opens with `open`, else `None`.
+fn delimited(text: &str, open: u8, close: u8) -> Option<&str> {
+    if text.as_bytes().first() != Some(&open) {
+        return None;
+    }
+    let end = matching_delimiter(text.as_bytes(), 0, open, close)?;
+    Some(&text[1..end])
+}
+
+/// Index of the delimiter closing the one at `at`.
+fn matching_delimiter(bytes: &[u8], at: usize, open: u8, close: u8) -> Option<usize> {
+    let mut depth = 0usize;
+    for (index, byte) in bytes.iter().enumerate().skip(at) {
+        if *byte == open {
+            depth += 1;
+        } else if *byte == close {
+            depth -= 1;
+            if depth == 0 {
+                return Some(index);
+            }
+        }
+    }
+    None
+}
+
+/// `text` split on the commas that sit outside every bracket.
+///
+/// A type argument list carries its own commas, so splitting on every comma
+/// reads `Vec<Node>` as two fields and loses the field it was reading.
+fn top_level_parts(text: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut depth = 0i32;
+    let mut start = 0;
+    for (index, byte) in text.bytes().enumerate() {
+        match byte {
+            b'{' | b'(' | b'[' | b'<' => depth += 1,
+            b'}' | b')' | b']' | b'>' => depth -= 1,
+            b',' if depth == 0 => {
+                parts.push(&text[start..index]);
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&text[start..]);
+    parts
+        .into_iter()
+        .filter(|part| !part.trim().is_empty())
+        .collect()
+}
+
+/// Whether a declared type holds `Node` values.
+///
+/// Matched as a whole word, so `Arc<dyn NodeExtension>` is not a child body. An
+/// extension node hides its own contents behind a trait object and the owner
+/// walks report it as opaque rather than as a body slot.
+fn holds_a_node(kind: &str) -> bool {
+    let bytes = kind.as_bytes();
+    let mut cursor = 0;
+    while let Some(offset) = kind[cursor..].find("Node") {
+        let start = cursor + offset;
+        cursor = start + "Node".len();
+        let before_is_word = start
+            .checked_sub(1)
+            .is_some_and(|previous| is_word_byte(bytes[previous]));
+        let after_is_word = bytes.get(cursor).copied().is_some_and(is_word_byte);
+        if !before_is_word && !after_is_word {
             return true;
         }
     }
     false
 }
 
-/// True when a child-body binder in `body` is iterated or handed to a call.
-fn recurses_on_a_child_body(body: &str) -> bool {
-    CHILD_BODY_FIELDS.iter().any(|field| {
+/// Every name a `Node::` pattern in `body` binds a child body to.
+///
+/// A named field binds under its own name unless the pattern renames it, and a
+/// tuple body binds under whatever the pattern calls it, which is why the tuple
+/// variants are carried separately: `Node::Block(nodes)` and
+/// `Node::Block(inner)` are the same descent under two binder names.
+fn child_body_binders(body: &str, slots: &ChildSlots) -> BTreeSet<String> {
+    let mut binders = BTreeSet::new();
+    let mut cursor = 0;
+    while let Some(offset) = body[cursor..].find("Node::") {
+        let start = cursor + offset;
+        cursor = start + "Node::".len();
+        let rest = &body[cursor..];
+        let name_length = rest.bytes().take_while(|byte| is_word_byte(*byte)).count();
+        let (variant, tail) = rest.split_at(name_length);
+        let head = tail.trim_start();
+        let inside = match head.as_bytes().first() {
+            Some(b'{') => delimited(head, b'{', b'}'),
+            Some(b'(') => delimited(head, b'(', b')'),
+            _ => None,
+        };
+        let Some(inside) = inside else {
+            continue;
+        };
+        if !is_a_pattern(&head[inside.len() + 2..]) {
+            continue;
+        }
+        if head.starts_with('{') {
+            for field in top_level_parts(inside) {
+                let (name, renamed) = match field.split_once(':') {
+                    Some((name, renamed)) => (name.trim(), Some(renamed)),
+                    None => (field.trim(), None),
+                };
+                if !slots.fields.contains(name) {
+                    continue;
+                }
+                let bound = renamed.map_or(name, |renamed| renamed.trim());
+                if let Some(binder) = binder_name(bound) {
+                    binders.insert(binder);
+                }
+            }
+        } else if slots.tuple_variants.contains(variant) {
+            for position in top_level_parts(inside) {
+                if let Some(binder) = binder_name(position) {
+                    binders.insert(binder);
+                }
+            }
+        }
+    }
+    binders
+}
+
+/// Whether what follows a `Node::` form makes it a pattern rather than a value.
+///
+/// A pattern is followed by the arrow, another alternative, or a guard; a
+/// constructed node is followed by the punctuation of the expression it sits in.
+/// Without the distinction a rebuild that constructs `Node::Block(rebuilt)` and
+/// iterates `rebuilt` reads as a hand-written descent.
+fn is_a_pattern(after: &str) -> bool {
+    let after = after.trim_start();
+    after.starts_with("=>")
+        || after.starts_with('|')
+        || after.starts_with(')')
+        || after.starts_with("if ")
+}
+
+/// The identifier a pattern position binds, if it binds one.
+fn binder_name(position: &str) -> Option<String> {
+    let name = position
+        .trim()
+        .trim_start_matches("ref ")
+        .trim_start_matches("mut ")
+        .trim_start_matches('&')
+        .trim();
+    if name.is_empty() || name == "_" || name == ".." {
+        return None;
+    }
+    if !name.bytes().all(is_word_byte) {
+        return None;
+    }
+    Some(name.to_string())
+}
+
+/// True when `body` iterates a bound child body or hands it to a call.
+fn recurses_on_a_binder(body: &str, binders: &BTreeSet<String>) -> bool {
+    binders.iter().any(|binder| {
         let iterated = [
-            format!("{field}.iter()"),
-            format!("{field}.iter_mut()"),
-            format!("in {field}"),
-            format!("in &{field}"),
-            format!("in {field}.iter()"),
-            format!("({field})"),
-            format!("(&{field})"),
-            format!("({field},"),
-            format!("(&{field},"),
+            format!("{binder}.iter()"),
+            format!("{binder}.iter_mut()"),
+            format!("in {binder}"),
+            format!("in &{binder}"),
+            format!("in {binder}.iter()"),
+            format!("({binder})"),
+            format!("(&{binder})"),
+            format!("({binder},"),
+            format!("(&{binder},"),
         ];
         iterated.iter().any(|form| body.contains(form.as_str()))
     })

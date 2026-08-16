@@ -85,41 +85,91 @@ impl Gate for ExpectHasFix {
     }
 }
 
-/// No crate turns the documentation floor off for itself.
-pub struct MissingDocsOverride;
+/// The lint policy is declared once, in the workspace manifest.
+///
+/// Two things make a member diverge, and this reports both. A manifest that
+/// declares its own `[lints.*]` table replaces the inherited policy wholesale
+/// for that tool, which is how `vyre-driver-metal` allowed `unsafe_code`
+/// crate-wide outside the reviewed budget and `vyre-grammar-gen` held
+/// `missing_docs` at `warn` while the workspace denied it. A crate-root
+/// `#![allow(...)]`, `#![deny(...)]` or `#![forbid(...)]` does the same thing one
+/// lint at a time, and it wins over the manifest, so a suppression there is
+/// invisible in the table a reader consults to learn the policy.
+///
+/// The member set is read from the workspace manifest at run time, so a crate
+/// added to the workspace is held to this from its first commit. A hardcoded
+/// roster is what let 41 of 42 members ignore the table.
+///
+/// One exception: `#![allow(unsafe_code)]`, alone in its attribute. FFI crates
+/// need it, `unsafe_code = "deny"` in the workspace table is what makes the
+/// override visible, and `lint-unsafe-budget` already holds the resulting file
+/// set to a reviewed list. A module-scoped `#[allow]` on a generated module is
+/// also untouched: it names the item it covers, which is the narrow form this
+/// rule asks for. This gate subsumes the crate-root `allow(missing_docs)` check
+/// that used to stand beside it, which read one lint out of that population.
+pub struct OneLintPolicy;
 
-impl Gate for MissingDocsOverride {
+impl Gate for OneLintPolicy {
     fn name(&self) -> &'static str {
-        "lint-missing-docs-override"
+        "lint-one-policy"
     }
 
     fn help(&self) -> &'static str {
-        "crate-root allow(missing_docs) overrides of the workspace deny floor"
+        "members that do not inherit the workspace lint policy, or override it at their crate root"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
-        let roots: Vec<PathBuf> = tree
-            .paths()
-            .iter()
-            .filter(|path| path.ends_with("src/lib.rs"))
-            .cloned()
-            .collect();
-        report.note(format!("scanned {} crate root(s)", roots.len()));
-        for file in &roots {
-            let text = tree.read(file)?;
-            for (number, line) in scan::numbered(&text) {
-                if !is_inner_allow_of(line, "missing_docs") {
+        let members = tree.members()?;
+        report.note(format!("{} workspace member(s)", members.len()));
+        for member in &members {
+            let manifest_path = format!("{member}/Cargo.toml");
+            let manifest = tree.read_toml(&manifest_path)?;
+            match manifest.get("lints").and_then(toml::Value::as_table) {
+                None => report.find(Finding::in_file(
+                    &manifest_path,
+                    "member declares no lint policy at all",
+                    "add `[lints]` with `workspace = true`; the workspace table is the policy \
+                     and a member outside it is judged by nothing",
+                )),
+                Some(table) => {
+                    if table.get("workspace").and_then(toml::Value::as_bool) != Some(true) {
+                        report.find(Finding::in_file(
+                            &manifest_path,
+                            "member does not inherit the workspace lint policy",
+                            "set `workspace = true` under `[lints]`",
+                        ));
+                    }
+                    for key in table.keys().filter(|key| key.as_str() != "workspace") {
+                        report.find(Finding::in_file(
+                            &manifest_path,
+                            format!("member declares its own `[lints.{key}]` table"),
+                            "delete the table and inherit; promote an entry the whole tree needs \
+                             into `[workspace.lints]` with the justification comment that table \
+                             uses, or narrow it to the item that needs it",
+                        ));
+                    }
+                }
+            }
+            for root in [
+                format!("{member}/src/lib.rs"),
+                format!("{member}/src/main.rs"),
+            ] {
+                if !tree.exists(&root) {
                     continue;
                 }
-                report.find(Finding::at(
-                    file.clone(),
-                    number,
-                    "crate root disables the workspace missing_docs floor",
-                    "delete the inner attribute and document the public items the lint names; \
-                     a module-scoped allow on a generated module is the narrow form",
-                ));
+                let text = tree.read(&root)?;
+                for (number, attribute) in inner_lint_attributes(&text) {
+                    report.find(Finding::at(
+                        root.clone(),
+                        number,
+                        format!("crate root sets a lint level: {attribute}"),
+                        "delete the attribute; the workspace table owns every level, and the \
+                         only crate-root exception is `#![allow(unsafe_code)]` alone, reviewed \
+                         through xtask/unsafe-budget.txt",
+                    ));
+                }
             }
         }
         Ok(report)
@@ -361,14 +411,64 @@ fn comment_body(line: &str) -> Option<&str> {
     )
 }
 
-/// Whether a line is a crate-root `#![allow(...)]` naming a lint.
-fn is_inner_allow_of(line: &str, lint: &str) -> bool {
-    let trimmed = line.trim_start();
-    let Some(rest) = trimmed.strip_prefix("#![allow(") else {
-        return false;
-    };
-    let end = rest.find(')').unwrap_or(rest.len());
-    rest[..end].contains(lint)
+/// Every crate-root inner attribute that sets a lint level, with its line.
+///
+/// The attribute may span lines, and it is the level word that matters rather
+/// than the lint names after it, so the scan reads the leading path of each
+/// `#![...]` and keeps the ones that are a level. `cfg_attr` is read too: the
+/// levels it carries apply on the configurations it names, and a `deny` behind
+/// `not(test)` is still policy declared outside the table.
+///
+/// `#![allow(unsafe_code)]` alone is the one accepted form, so an attribute that
+/// bundles it with other lints is reported: the reviewed budget names files, and
+/// a bundle makes the file's exception ambiguous.
+fn inner_lint_attributes(text: &str) -> Vec<(u32, String)> {
+    const LEVELS: [&str; 5] = ["allow", "warn", "deny", "forbid", "expect"];
+    let lines: Vec<&str> = text.lines().collect();
+    let mut found = Vec::new();
+    let mut index = 0usize;
+    while index < lines.len() {
+        let trimmed = lines[index].trim_start();
+        if !trimmed.starts_with("#![") {
+            index += 1;
+            continue;
+        }
+        let start = index;
+        let mut attribute = String::new();
+        let mut depth = 0i32;
+        loop {
+            let line = lines[index].trim();
+            if !attribute.is_empty() {
+                attribute.push(' ');
+            }
+            attribute.push_str(line);
+            depth += i32::try_from(line.matches('(').count()).unwrap_or(0)
+                - i32::try_from(line.matches(')').count()).unwrap_or(0);
+            index += 1;
+            if depth <= 0 || index >= lines.len() {
+                break;
+            }
+        }
+        let body = attribute.trim_start_matches("#![");
+        let path = body
+            .split(|character: char| !is_attribute_path_byte(character))
+            .next()
+            .unwrap_or_default();
+        let is_level = LEVELS.contains(&path);
+        let carries_level = path == "cfg_attr"
+            && LEVELS
+                .iter()
+                .any(|level| body.contains(&format!("{level}(")));
+        if (is_level || carries_level) && attribute != "#![allow(unsafe_code)]" {
+            found.push((u32::try_from(start + 1).unwrap_or(u32::MAX), attribute));
+        }
+    }
+    found
+}
+
+/// Whether `character` can appear in an attribute's leading path.
+fn is_attribute_path_byte(character: char) -> bool {
+    character.is_ascii_alphanumeric() || character == '_'
 }
 
 #[cfg(test)]
@@ -376,21 +476,36 @@ mod tests {
     use super::*;
     use crate::gates::fixture_checkout::checkout;
 
-    /// WHY: the floor is crate-wide, and the narrow module-scoped form on a
-    /// generated module is deliberately allowed. A check that could not tell the
-    /// two apart would either miss the override or forbid the generated module.
+    /// WHY: the policy is crate-wide, and three neighbours of the defect must
+    /// stay unreported: the module-scoped `#[allow]` on a generated module, the
+    /// reviewed `#![allow(unsafe_code)]`, and an inner attribute that is not a
+    /// lint level at all. A scanner that could not tell them apart would either
+    /// miss the multi-line blankets, which is the shape every crate used, or
+    /// forbid `#![no_std]`.
     #[test]
-    fn only_the_crate_root_form_disables_the_floor() {
-        assert!(is_inner_allow_of("#![allow(missing_docs)]", "missing_docs"));
-        assert!(is_inner_allow_of(
-            "  #![allow(dead_code, missing_docs)]",
-            "missing_docs"
-        ));
-        assert!(!is_inner_allow_of("#[allow(missing_docs)]", "missing_docs"));
-        assert!(!is_inner_allow_of(
-            "#![allow(dead_code)] // missing_docs stays denied",
-            "missing_docs"
-        ));
+    fn a_crate_root_level_is_told_apart_from_its_neighbours() {
+        let found = inner_lint_attributes(
+            "#![no_std]\n\
+             #![allow(unsafe_code)]\n\
+             #![warn(missing_docs)]\n\
+             #[allow(missing_docs)]\n\
+             #![allow(\n    clippy::type_complexity,\n    clippy::let_and_return\n)]\n\
+             #![cfg_attr(not(test), deny(clippy::panic))]\n",
+        );
+        assert_eq!(
+            found,
+            vec![
+                (3, "#![warn(missing_docs)]".to_string()),
+                (
+                    5,
+                    "#![allow( clippy::type_complexity, clippy::let_and_return )]".to_string()
+                ),
+                (
+                    9,
+                    "#![cfg_attr(not(test), deny(clippy::panic))]".to_string()
+                ),
+            ]
+        );
     }
 
     /// WHY: a SAFETY comment that says TODO promises a justification that does
@@ -558,5 +673,77 @@ mod tests {
             "the note counts the surface: {:?}",
             report.notes
         );
+    }
+
+    /// WHY: this is the rule that has to fail on the state the workspace was in,
+    /// where one member of 42 inherited the table and the rest declared their own
+    /// policy or overrode it at the crate root. Both defects are injected here
+    /// against a member that inherits correctly, and the member roster comes from
+    /// the fixture's own workspace manifest, so a crate added to the workspace is
+    /// judged without an edit to this gate.
+    #[test]
+    fn a_member_outside_the_workspace_policy_is_reported_and_an_inheriting_one_is_not() {
+        let (_directory, root) = checkout(&[
+            (
+                "Cargo.toml",
+                "[workspace]\nmembers = [\"inheriting\", \"own-table\", \"root-override\"]\n\n[workspace.lints.rust]\nmissing_docs = \"deny\"\n",
+            ),
+            (
+                "inheriting/Cargo.toml",
+                "[package]\nname = \"inheriting\"\n\n[lints]\nworkspace = true\n",
+            ),
+            (
+                "inheriting/src/lib.rs",
+                "//! An inheriting member.\n\n#![allow(unsafe_code)]\n",
+            ),
+            (
+                "own-table/Cargo.toml",
+                "[package]\nname = \"own-table\"\n\n[lints.rust]\nmissing_docs = \"warn\"\n",
+            ),
+            ("own-table/src/lib.rs", "//! A member with its own table.\n"),
+            (
+                "root-override/Cargo.toml",
+                "[package]\nname = \"root-override\"\n\n[lints]\nworkspace = true\n",
+            ),
+            (
+                "root-override/src/lib.rs",
+                "//! A member that overrides at its root.\n\n#![allow(missing_docs)]\n",
+            ),
+        ]);
+
+        let report = OneLintPolicy
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        assert_eq!(
+            reported_files(&report),
+            [
+                "own-table/Cargo.toml",
+                "own-table/Cargo.toml",
+                "root-override/src/lib.rs"
+            ],
+            "the divergent member is reported twice, once for the missing inheritance and once \
+             for the table it declared instead, and the crate-root override is reported once: \
+             {:?}",
+            report
+                .findings
+                .iter()
+                .map(|finding| finding.message.clone())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// The files a report names, in the order it named them.
+    fn reported_files(report: &Report) -> Vec<String> {
+        report
+            .findings
+            .iter()
+            .map(|finding| {
+                finding
+                    .file
+                    .as_ref()
+                    .map(|path| path.display().to_string())
+                    .unwrap_or_default()
+            })
+            .collect()
     }
 }

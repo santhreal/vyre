@@ -127,13 +127,35 @@ fn try_extract_tail(then: &[Node], otherwise: &[Node]) -> Option<(Vec<Node>, Vec
 ///
 /// This is a safety veto: `true` refuses the sink. The recognised forms are the
 /// pure ones a duplicable tail is built from (a `Let`, or a `Block` of such);
-/// every other form answers `true`, so an unrecognised statement costs one
+/// every other variant answers `true`, so an unrecognised statement costs one
 /// missed duplication instead of sinking code past a read of an arm-bound name.
+///
+/// Every variant is named, with no catch-all arm, for the reason
+/// [`node_is_observably_free`] names them: a catch-all would answer for a variant
+/// that nests bodies by never looking inside it, and a refusal nobody decided on
+/// reads like one somebody did.
 fn node_reads_any(node: &Node, names: &FxHashSet<Ident>) -> bool {
     match node {
         Node::Let { value, .. } => expr_reads_any(value, names),
-        Node::Block(body) => body.iter().any(|n| node_reads_any(n, names)),
-        _ => true,
+        Node::Block(body) => body.iter().any(|node| node_reads_any(node, names)),
+        Node::Store { .. }
+        | Node::Assign { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => true,
     }
 }
 

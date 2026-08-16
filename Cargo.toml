@@ -167,6 +167,56 @@ manual_slice_size_calculation = "allow"
 manual_c_str_literals = "allow"
 erasing_op = "allow"
 identity_op = "allow"
+# Entries below arrived from crate-root `#![allow(...)]` blankets, one per
+# crate, that this table now owns. Only lints that warn by default were
+# promoted: the pedantic and restriction names those blankets also listed were
+# inert, because no member enables those groups, and a suppression of a lint
+# nothing raises reads as a rule.
+# A module reached from two parents is how a shared contract-case body is
+# compiled by two targets.
+duplicate_mod = "allow"
+# Generated operation wrappers replay the derive attributes of what they wrap.
+duplicated_attributes = "allow"
+# `mod x` inside `x.rs` is the module layout every dialect and sub-dialect uses.
+module_inception = "allow"
+# GPU buffer layout types (bind-group slot tuples) are inherently complex.
+type_complexity = "allow"
+# Internal helpers with stdlib-adjacent names read better than a trait impl
+# nobody calls through the trait.
+should_implement_trait = "allow"
+# Explicit clones on Copy values document ownership intent in serial layers.
+clone_on_copy = "allow"
+# A recursion parameter carried for the recursive call only is the shape of
+# every IR walk in the tree.
+only_used_in_recursion = "allow"
+# `Result<T, ()>` keeps a fallible internal API forward-compatible with the
+# error type it will carry.
+result_unit_err = "allow"
+# `&Vec<T>` in an internal signature matches the storage the caller holds.
+ptr_arg = "allow"
+# A contract-case module sits at the end of the file it tests, after the items
+# it drives.
+items_after_test_module = "allow"
+# Asserting a constant is how a shape contract is pinned beside the constant.
+assertions_on_constants = "allow"
+# Predicate-heavy admission checks are written for domain clarity.
+overly_complex_bool_expr = "allow"
+filter_map_bool_then = "allow"
+# `push_str` with a one-character literal keeps emitters symmetric with their
+# multi-character neighbours.
+single_char_add_str = "allow"
+# `for x in it { if let Some(y) = x }` documents the two conditions separately.
+manual_flatten = "allow"
+explicit_counter_loop = "allow"
+# `x.max(lo).min(hi)` keeps the bound order visible in dimension math.
+manual_clamp = "allow"
+# A blank line between a doc comment and its item separates prose from code.
+empty_line_after_doc_comments = "allow"
+# A named binding before the tail expression documents what is returned.
+let_and_return = "allow"
+# An FFI wrapper's safety contract is stated at the call site, beside the
+# invariant, rather than in a section on the wrapper.
+missing_safety_doc = "allow"
 
 [workspace.lints.rust]
 # `drop(perf_scope.finish())` documents measurement lifecycle intent. This is

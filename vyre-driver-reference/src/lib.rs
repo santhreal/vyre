@@ -1,5 +1,3 @@
-#![forbid(unsafe_code)]
-
 //! Registry adapter that exposes `vyre-reference` as a `VyreBackend`, and the
 //! `ProgramDispatcher` bridge parity suites dispatch through.
 

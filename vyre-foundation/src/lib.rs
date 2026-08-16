@@ -6,14 +6,6 @@
 //! `vyre-spec`, `vyre-macros`, and lightweight third-party data crates.
 //! It never knows about concrete driver APIs, a dialect, or a backend.
 
-#![allow(
-    clippy::duplicate_mod,
-    clippy::too_many_arguments,
-    clippy::double_must_use,
-    clippy::module_inception,
-    clippy::should_implement_trait,
-    clippy::type_complexity
-)]
 
 extern crate self as vyre;
 

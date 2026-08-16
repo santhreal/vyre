@@ -11,8 +11,6 @@
 //! Device admission, materialization, submission, queues, residency, and recovery
 //! are consumers of this compiler product and do not alter artifact identity.
 
-#![forbid(unsafe_code)]
-
 mod artifact;
 mod candidate;
 /// Open, reproducible whole-program candidate cost model.

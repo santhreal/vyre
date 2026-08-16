@@ -96,3 +96,8 @@ required-features = ["optimizer"]
 name = "cross_scope_cse_still_fires"
 path = "tests/cross_scope_cse_still_fires.rs"
 required-features = ["optimizer"]
+
+[[test]]
+name = "encoded_rewrite_walk_contract"
+path = "tests/encoded_rewrite_walk_contract.rs"
+required-features = ["optimizer"]

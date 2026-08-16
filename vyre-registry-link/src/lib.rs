@@ -27,7 +27,6 @@
 //! so a narrower consumer states its set instead of silently accepting a shorter
 //! registry.
 
-#![forbid(unsafe_code)]
 
 pub mod backend;
 #[cfg(feature = "operations")]

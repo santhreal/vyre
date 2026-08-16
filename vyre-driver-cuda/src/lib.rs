@@ -14,7 +14,6 @@
 //!    Program ─► PTX emitter ─► cuModuleLoadData ─► cuLaunchKernel
 //! ```
 //!
-#![deny(missing_docs)]
 // CUDA driver bindings (`cudarc::driver::sys::cu*`) are inherently unsafe FFI;
 // every call site is the boundary between safe vyre code and the CUDA driver
 // API. Allow `unsafe` here so the rest of the workspace can keep

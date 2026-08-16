@@ -1,9 +1,3 @@
-#![forbid(unsafe_code)]
-#![allow(
-    clippy::only_used_in_recursion,
-    clippy::comparison_chain,
-    clippy::ptr_arg
-)]
 //! Pure Rust reference interpreter for vyre IR programs.
 //!
 //! This module is the executable specification for IR semantics. It is

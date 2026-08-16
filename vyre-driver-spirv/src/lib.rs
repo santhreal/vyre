@@ -20,8 +20,6 @@
 // `unsafe_code = "deny"` while this backend wraps ash properly with
 // per-call Safety: comments.
 #![allow(unsafe_code)]
-#![deny(rust_2018_idioms)]
-#![deny(missing_docs)]
 
 /// Canonical lowering and emitter adapter.
 pub(crate) mod backend;

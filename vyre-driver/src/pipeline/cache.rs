@@ -1,13 +1,12 @@
 //! Shared persistent cache for backend compiled-pipeline blobs.
 
 use super::hashing::{
-    dispatch_policy_cache_digest, dispatch_policy_cache_string, hex_encode,
-    normalized_program_cache_digest, try_normalized_program_cache_digest,
+    dispatch_policy_cache_digest, hex_encode, try_normalized_program_cache_digest,
     PipelineDeviceFingerprint,
 };
 use super::CURRENT_PIPELINE_CACHE_KEY_VERSION;
 use crate::backend::DispatchConfig;
-use std::sync::{Arc, MutexGuard};
+use std::sync::MutexGuard;
 use vyre_foundation::ir::Program;
 use vyre_spec::BackendId;
 
@@ -606,6 +605,7 @@ impl PipelineCacheMissReason {
 #[cfg(test)]
 mod pipeline_cache_key_tests {
     use super::*;
+    use std::sync::Arc;
 
     fn hash32(byte: u8) -> [u8; 32] {
         [byte; 32]

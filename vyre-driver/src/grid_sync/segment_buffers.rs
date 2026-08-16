@@ -315,9 +315,7 @@ fn collect_segment_expr_targets(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid_sync::test_programs::{cross_segment_store_program, region};
-    use vyre_foundation::ir::DataType;
-    use vyre_foundation::ir::MemoryOrdering;
+    use crate::grid_sync::test_programs::cross_segment_store_program;
 
     #[test]
     fn split_keeps_multi_segment_output_as_readwrite_accumulator() {

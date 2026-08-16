@@ -127,7 +127,12 @@ pub static SUBSETS: &[Subset] = &[
     Subset {
         name: "source-rules",
         help: "What every tracked source file must be: compiled by a target, parseable, and inside its size cap",
-        gates: &["source-reachability", "source-parses", "file-size"],
+        gates: &[
+            "source-reachability",
+            "source-include-module",
+            "source-parses",
+            "file-size",
+        ],
     },
     Subset {
         name: "hot-path-rules",
@@ -147,7 +152,7 @@ pub static SUBSETS: &[Subset] = &[
         help: "Lint hygiene, unsafe justification and property-test coverage",
         gates: &[
             "lint-expect-fix",
-            "lint-missing-docs-override",
+            "lint-one-policy",
             "lint-unsafe-budget",
             "lint-unsafe-justification",
             "proptest-coverage",

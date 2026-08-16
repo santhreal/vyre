@@ -1,15 +1,3 @@
-#![deny(missing_docs)]
-#![forbid(unsafe_code)]
-#![cfg_attr(
-    not(test),
-    deny(
-        clippy::unwrap_used,
-        clippy::expect_used,
-        clippy::todo,
-        clippy::unimplemented,
-        clippy::panic
-    )
-)]
 //! vyre-spec is the machine-checkable frozen data contract for the vyre GPU
 //! compute IR. Any backend may depend on vyre-spec alone to prove conformance
 //! without depending on vyre itself.

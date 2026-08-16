@@ -1,4 +1,4 @@
-#![allow(missing_docs)]
+//! Command-line entry point for the vyre benchmark runner.
 
 #[cfg(test)]
 use vyre_bench::probes;

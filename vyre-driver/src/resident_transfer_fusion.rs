@@ -522,7 +522,7 @@ mod tests {
 
     use super::{
         fuse_resident_transfer_intervals, fuse_resident_upload_copies, push_resident_upload_copy,
-        ResidentTransferInterval, ResidentUploadBytes, ResidentUploadCopy,
+        ResidentTransferInterval, ResidentUploadCopy,
     };
     use crate::resident_transfer_fixtures::{
         assert_fused_transfers_preserve_requests, assert_upload_fusion_preserves_ordered_writes,
