@@ -14,8 +14,10 @@
 //! exact equality against the empty set so the failure names the file and the
 //! type instead of a count.
 //!
-//! Two things are allowed to implement one and are not offenders. `vyre-reference`
-//! is the parity oracle and exists to execute on the host. Anything behind
+//! Two things are allowed to implement one and are not offenders. The oracle
+//! crates exist to execute on the host: `vyre-reference` is the interpreter and
+//! `vyre-driver-reference` is the `ProgramDispatcher` in front of it, which is
+//! the single seam every parity suite dispatches through. Anything behind
 //! `#[cfg(test)]` or the `cpu-parity` feature is a comparison arm that never
 //! reaches a default build. Everything else fails.
 //!
@@ -29,8 +31,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-/// Crate directory permitted to execute a Program on the host.
-const ORACLE_CRATE: &str = "vyre-reference";
+/// Crate directories permitted to execute a Program on the host.
+const ORACLE_CRATES: &[&str] = &["vyre-reference", "vyre-driver-reference"];
 
 /// Cargo features that mark a parity-only build, never a default one.
 const PARITY_FEATURES: &[&str] = &["cpu-parity"];
@@ -57,9 +59,10 @@ fn no_production_crate_outside_the_oracle_ships_a_host_dispatcher() {
         offending,
         BTreeSet::new(),
         "Fix: a host `ProgramDispatcher` is reachable from a default build. Vyre \
-         executes on a device: move the implementation into `{ORACLE_CRATE}`, or \
-         gate its module on `#[cfg(any(test, feature = \"cpu-parity\"))]` so it \
-         cannot be constructed by a consumer. Offenders: {offenders:?}"
+         executes on a device: move the implementation into one of \
+         {ORACLE_CRATES:?}, or gate its module on \
+         `#[cfg(any(test, feature = \"cpu-parity\"))]` so it cannot be \
+         constructed by a consumer. Offenders: {offenders:?}"
     );
 }
 
@@ -82,10 +85,12 @@ fn the_walk_actually_reaches_the_dispatchers_it_judges() {
 /// rule and not for today's tree.
 #[test]
 fn the_judgement_admits_the_oracle_and_the_parity_gate_and_nothing_else() {
-    assert!(
-        !is_host_dispatcher_offender("vyre-reference/src/dispatcher.rs"),
-        "the parity oracle crate exists to execute on the host"
-    );
+    for oracle in ORACLE_CRATES {
+        assert!(
+            !is_host_dispatcher_offender(&format!("{oracle}/src/dispatcher.rs")),
+            "the parity oracle crate {oracle} exists to execute on the host"
+        );
+    }
     assert!(
         !is_host_dispatcher_offender("vyre-libs/src/graph/dispatch/tests/mod.rs"),
         "a test module never reaches a default build"
@@ -108,7 +113,7 @@ fn the_judgement_admits_the_oracle_and_the_parity_gate_and_nothing_else() {
 /// [`implementors`], because a path cannot say it.
 fn is_host_dispatcher_offender(path: &str) -> bool {
     let path = Path::new(path);
-    if path.starts_with(ORACLE_CRATE) {
+    if ORACLE_CRATES.iter().any(|crate_dir| path.starts_with(crate_dir)) {
         return false;
     }
     !path
