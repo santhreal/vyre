@@ -1,3 +1,6 @@
+mod wire_words;
+use wire_words::hostile_bytes;
+
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
@@ -5,16 +8,6 @@
 
 use vyre_libs::hash::crc32;
 
-fn hostile_bytes(seed: u32) -> Vec<u8> {
-    let len = 1 + (seed as usize % 512);
-    let mut v = Vec::with_capacity(len);
-    let mut s = seed as u64 ^ 0xDEAD_BEEF_CAFE_BABE;
-    for _ in 0..len {
-        s = s.wrapping_mul(6364136223846793005).wrapping_add(1);
-        v.push(s as u8);
-    }
-    v
-}
 
 fn oracle_crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;

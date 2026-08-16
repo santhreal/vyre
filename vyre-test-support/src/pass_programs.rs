@@ -21,7 +21,59 @@
 //! rewrote the operator it was not asked about, and the rewrites here are exactly
 //! specified: `1 + a` becomes `a + 1` and nothing else.
 
-use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+/// A program that copies one element from `input` to `output`.
+#[must_use]
+pub fn copy_program(input: &str, output: &str) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            output,
+            Expr::u32(0),
+            Expr::load(input, Expr::u32(0)),
+        )],
+    )
+}
+
+/// A program that adds single-element u32 values from `left` and `right` into `output`.
+#[must_use]
+pub fn add_program(left: &str, right: &str, output: &str) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(left, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(right, 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(output, 2, BufferAccess::ReadWrite, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            output,
+            Expr::u32(0),
+            Expr::add(
+                Expr::load(left, Expr::u32(0)),
+                Expr::load(right, Expr::u32(0)),
+            ),
+        )],
+    )
+}
+
+/// The one-workgroup over-fire dispatch floor shared by every over-fire gate: the
+/// largest declared buffer element count plus one whole workgroup of lanes.
+#[must_use]
+pub fn overfire_grid(program: &Program) -> u32 {
+    let workgroup_lanes = program.workgroup_size()[0].max(1);
+    let max_count = program
+        .buffers()
+        .iter()
+        .map(BufferDecl::count)
+        .max()
+        .unwrap_or(0);
+    max_count.saturating_add(workgroup_lanes)
+}
 
 /// A buffer-free program holding just `entry`, the shape every optimizer pass
 /// suite feeds in.

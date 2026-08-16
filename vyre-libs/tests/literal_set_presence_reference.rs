@@ -10,7 +10,7 @@
 #![cfg(all(feature = "matching-substring", feature = "cpu-parity"))]
 
 mod wire_words;
-use wire_words::decode_u32_words as decode_u32;
+use wire_words::{decode_u32_words as decode_u32, Lcg};
 
 use std::collections::BTreeSet;
 
@@ -23,23 +23,6 @@ use vyre_libs::scan::classic_ac::{
 use vyre_libs::scan::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
 
-struct Lcg(u64);
-impl Lcg {
-    fn next_u32(&mut self) -> u32 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (self.0 >> 33) as u32
-    }
-    fn below(&mut self, n: u32) -> u32 {
-        if n == 0 {
-            0
-        } else {
-            self.next_u32() % n
-        }
-    }
-}
 
 /// Small alphabet so literals collide and the DFA / prefilter actually exercise
 /// shared prefixes, suffix2/suffix3 candidate gating, and overlapping matches.

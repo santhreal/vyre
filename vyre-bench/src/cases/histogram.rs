@@ -3,17 +3,16 @@
 use crate::cases::micro::{MicroCase, MicroWork};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-pub(crate) static HISTOGRAM: MicroCase = MicroCase {
-    id: "foundation.histogram.u32_256.1m",
-    name: "Histogram U32 256-bin 1M",
-    summary: "Atomic 256-bin histogram over 1M u32 values",
-    tags: &["memory-bound", "atomics", "histogram"],
-    contract: None,
+pub(crate) static HISTOGRAM: MicroCase = MicroCase::new(
+    "foundation.histogram.u32_256.1m",
+    "Histogram U32 256-bin 1M",
+    "Atomic 256-bin histogram over 1M u32 values",
+    &["memory-bound", "atomics", "histogram"],
     program,
     fixture,
     reference,
-    work: MicroWork::Flops(1_000_000),
-};
+    MicroWork::Flops(1_000_000),
+);
 
 fn program() -> Program {
     let count = 1_000_000u32;

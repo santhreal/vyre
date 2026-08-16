@@ -24,98 +24,6 @@ use super::{
 /// suffix3 gate's three mask buffers.
 const FIRST_REGION_BINDING: u32 = FIRST_GATE_BINDING + PrefilterWidth::Suffix3.mask_count();
 
-/// Build a bounded-window AC ranges program with byte, suffix2, and suffix3
-/// candidate filters before match-emitting replay.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_suffix3_prefilter_program(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
-    match_count: &str,
-    candidate_end_mask: &str,
-    candidate_suffix2_mask: &str,
-    candidate_suffix3_bloom: &str,
-    matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    max_matches: u32,
-    max_pattern_len: u32,
-) -> Program {
-    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        haystack_len,
-        match_count,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
-        matches,
-        state_count,
-        output_records_len,
-        pattern_count,
-        max_matches,
-        max_pattern_len,
-        true,
-    )
-}
-
-/// Variant of [`classic_ac_bounded_ranges_suffix3_prefilter_program`] with
-/// explicit control over subgroup match-append coalescing.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
-    match_count: &str,
-    candidate_end_mask: &str,
-    candidate_suffix2_mask: &str,
-    candidate_suffix3_bloom: &str,
-    matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    max_matches: u32,
-    max_pattern_len: u32,
-    use_subgroup_coalesce: bool,
-) -> Program {
-    super::ranges_scan_program(
-        PrefilterGate::suffix3(
-            candidate_end_mask,
-            candidate_suffix2_mask,
-            candidate_suffix3_bloom,
-        ),
-        AcInputBindings::new(
-            [
-                haystack,
-                transitions,
-                output_offsets,
-                output_records,
-                pattern_lengths,
-                haystack_len,
-            ],
-            state_count,
-            output_records_len,
-            pattern_count,
-        ),
-        match_count,
-        matches,
-        max_matches,
-        max_pattern_len,
-        use_subgroup_coalesce,
-    )
-}
 
 /// Number of u32 words a presence bitmap needs for `pattern_count` patterns.
 #[must_use]
@@ -361,7 +269,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
 /// scan that writes BOTH the per-region presence bitmap (binding 6, `atomic_or`, like
 /// [`classic_ac_bounded_ranges_suffix3_presence_by_region_program`]) AND the
 /// `(pattern_id, start, end)` match triples (bindings 12 `match_count` + 13 `matches`,
-/// like [`classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce`]).
+/// [`build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce`]).
 ///
 /// Bindings 0-11 are byte-identical to the presence-by-region program (so an
 /// integration can share every uploaded static table and the `region_starts`/

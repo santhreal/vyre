@@ -25,21 +25,7 @@ pub(crate) fn invocation_contract() -> ValueContract {
     }
 }
 
-/// A program that copies one element from `input` to `output`.
-pub(crate) fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::load(input, Expr::u32(0)),
-        )],
-    )
-}
+pub(crate) use vyre_test_support::pass_programs::{add_program, copy_program};
 
 /// A producer and a consumer joined by one invocation-scoped value.
 ///

@@ -88,16 +88,7 @@ pub(crate) fn single_lane_artifact(access: BufferAccess, facts_seed: u8) -> Arti
             vec![store_one_output(access)],
         )
         .expect("single-lane fixture graph must accept its one node");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([facts_seed; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .expect("single-lane fixture request must validate");
-    vyre_megakernel::compile(&request).expect("single-lane fixture must compile")
+    super::artifact_fixtures::compile_graph(graph, facts_seed)
 }
 
 /// Program that reads one U32 lane and writes it to another buffer.
@@ -164,16 +155,7 @@ pub(crate) fn two_stage_artifact(access: BufferAccess) -> Artifact {
             vec![store_one_output(access)],
         )
         .expect("two-stage fixture graph must accept its consumer");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .expect("two-stage fixture request must validate");
-    vyre_megakernel::compile(&request).expect("two-stage fixture must compile")
+    super::artifact_fixtures::compile_graph(graph, 0)
 }
 
 /// The registration a backend publishes, proven reachable by both registry routes.

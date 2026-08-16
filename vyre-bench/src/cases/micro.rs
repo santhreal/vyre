@@ -47,6 +47,31 @@ pub(crate) struct MicroCase {
 }
 
 impl MicroCase {
+    pub(crate) const fn new(
+        id: &'static str,
+        name: &'static str,
+        summary: &'static str,
+        tags: &'static [&'static str],
+        program: fn() -> Program,
+        fixture: fn() -> Vec<Vec<u8>>,
+        reference: fn(&[Vec<u8>]) -> Vec<Vec<u8>>,
+        work: MicroWork,
+    ) -> Self {
+        Self {
+            id,
+            name,
+            summary,
+            tags,
+            contract: None,
+            program,
+            fixture,
+            reference,
+            work,
+        }
+    }
+}
+
+impl MicroCase {
     /// Metrics for the measured GPU sample.
     fn measured_metrics(
         &self,

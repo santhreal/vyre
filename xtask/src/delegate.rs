@@ -203,6 +203,21 @@ pub fn print_dispatch_help(
     }
 }
 
+/// Assert that a delegated crate's table matches xtask assignment and has no usage gaps.
+pub fn assert_delegated_crate_contracts(
+    package: &str,
+    gates: &[(&'static str, &'static dyn crate::gate::GateBehavior)],
+) {
+    assert_eq!(
+        crate::subcommands::delegate_table_problems(package, gates),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        crate::gate::usage_gaps_delegated(gates),
+        Vec::<String>::new()
+    );
+}
+
 /// Build one delegated crate and return the path of the binary cargo produced.
 ///
 /// A crate that does not compile is a gate that could not run, so the compiler

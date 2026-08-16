@@ -247,7 +247,7 @@ impl IrCounters {
 }
 
 #[inline]
-fn mark_datatype_bits(ty: &DataType, bits: &mut u32) {
+pub(crate) fn mark_datatype_bits(ty: &DataType, bits: &mut u32) {
     match ty {
         DataType::F16 => *bits |= CAP_F16,
         DataType::BF16 => *bits |= CAP_BF16,
@@ -543,7 +543,7 @@ fn walk_expr(
     }
 }
 
-fn is_subgroup_intrinsic_id(op_id: &str) -> bool {
+pub(crate) fn is_subgroup_intrinsic_id(op_id: &str) -> bool {
     const MARKERS: &[&str] = &[
         "subgroup_",
         "::subgroup::",

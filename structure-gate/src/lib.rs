@@ -716,18 +716,13 @@ fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
         .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", manifest.display()));
     let table: toml::Table = toml::from_str(&text)
         .unwrap_or_else(|error| panic!("Fix: parse {}: {error}", manifest.display()));
-    Value::Table(table)
-        .get("workspace")
-        .and_then(|workspace| workspace.get(key))
-        .and_then(Value::as_array)
-        .map(|entries| {
-            entries
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
+    let Some(ws) = table.get("workspace").and_then(Value::as_table) else {
+        return Vec::new();
+    };
+    let Some(arr) = ws.get(key).and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    arr.iter().filter_map(|e| e.as_str().map(str::to_string)).collect()
 }
 
 /// This crate's own sources. Its tests carry example registrations that name

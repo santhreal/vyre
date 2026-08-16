@@ -1,3 +1,6 @@
+mod wire_words;
+use wire_words::{lcg_u32 as lcg, ramp};
+
 //! Handwritten oracle matrix for `reduce::segment_reduce` (per-segment sum).
 //!
 //! Compares production `cpu_ref` / `cpu_ref_into` against an independent
@@ -153,21 +156,4 @@ fn random_valid_offsets(seed: u64, len: usize, seg_count: usize) -> Vec<u32> {
     cuts.into_iter().map(|v| v as u32).collect()
 }
 
-fn ramp(len: usize, start: u32) -> Vec<u32> {
-    (0..len)
-        .map(|idx| start.wrapping_add((idx as u32).wrapping_mul(0x9E37_79B9)))
-        .collect()
-}
 
-fn lcg(seed: u32, len: usize) -> Vec<u32> {
-    let mut state = seed;
-    (0..len)
-        .map(|idx| {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223)
-                .rotate_left((idx % 31) as u32);
-            state ^ (idx as u32).wrapping_mul(0x85EB_CA6B)
-        })
-        .collect()
-}
