@@ -1,4 +1,13 @@
 //! Contracts for the subset construction and the dedup table.
+//!
+//! This suite is inline rather than in the crate's `tests/` directory because
+//! the surface it pins is unreachable from outside the crate. `nfa_to_dfa` is
+//! `pub(crate)`, and the state-set half of the contract lives in
+//! [`super::state_set`], a module this one re-exports nothing from:
+//! `build_epsilon_closures`, `closure_of_set`, `for_each_set_bit`, `set_bit`,
+//! `test_bit`, `EMPTY_SET` and `LANES` have no path an integration test can
+//! name. Moving the suite out would mean widening that visibility for the
+//! test's benefit, which is a worse trade than the placement exception.
 
 use crate::matching::dfa_compile::CompiledDfa;
 

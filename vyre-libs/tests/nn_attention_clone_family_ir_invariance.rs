@@ -230,11 +230,11 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 const EXPECTED: [(&str, &str); 26] = [
     (
         "recurrent_gated_delta/f32",
-        "8d6a5194770b4b70680793d431b9876ad49f855cc9d0c42b2af4142bb941b0ed",
+        "8387ffb5519b5511c4010e0bd4aaa2f16bcfdef01bc62f64021787a9f7ee57d0",
     ),
     (
         "recurrent_gated_delta/f16",
-        "d91721b7fb4ea4ba4a28f6606879b65cd260710ee9aa8116f6adad1987b99a5c",
+        "be4a063969c04ab43cde5f71e3865f896ea9498362872c57cc0dda4776a8b38f",
     ),
     (
         "chunked_gated_delta/f32",
@@ -258,7 +258,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "layer_norm",
-        "5cc4d4c537072eb8f99ff971606ef940de385fc9b817b9700cb2d56105ec4b33",
+        "98cd1147a7700f409442ef5fa9462e6f6edeb72eebbab076a165b332260698a8",
     ),
     (
         "flash_attention",
@@ -326,7 +326,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "turboquant_attention",
-        "a764e7aa79e16b2ecbbc9cde4bad5cc505fc10f1cf6369eceebf3198c45d2bb9",
+        "47eb3d2ccb3c09f4da74db11285a0d18e3f807db048d085a316da19954430a17",
     ),
     (
         "mla_compress_kv",
