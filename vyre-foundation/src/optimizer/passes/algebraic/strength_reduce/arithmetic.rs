@@ -504,8 +504,10 @@ pub(super) fn compute_div_magic(d: u32) -> DivMagic {
     }
 }
 
-/// How many times the Granlund-Montgomery sequence for `/ d` writes its
-/// dividend. The fixup form reads `n` again to correct the truncated product.
+/// How many times the Granlund-Montgomery sequence for `/ d` reads its
+/// dividend. The fixup form reads `n` three times: twice through `t`
+/// (`t = mulhi(n, M)` appearing as the left term in the sum and inside `n - t`)
+/// and once directly in `n - t`.
 ///
 /// A divisor outside the transform's domain reads it once, because the
 /// sequence is never built for one; `compute_div_magic` divides by `d` and
@@ -515,7 +517,7 @@ pub(super) fn div_operand_copies(d: u32) -> u32 {
         return 1;
     }
     if compute_div_magic(d).needs_fixup {
-        2
+        3
     } else {
         1
     }
@@ -634,5 +636,86 @@ mod tests {
             let half = (n.wrapping_sub(t)) >> 1;
             (t.wrapping_add(half)) >> magic.shift.saturating_sub(1)
         }
+    }
+
+    #[test]
+    fn div_operand_copies_matches_exact_dividend_evaluations() {
+        for d in 0..=1000 {
+            let copies = div_operand_copies(d);
+            if d <= 1 || d.is_power_of_two() {
+                assert_eq!(copies, 1, "d={d} outside transform domain must return 1");
+            } else {
+                let magic = compute_div_magic(d);
+                if magic.needs_fixup {
+                    assert_eq!(copies, 3, "d={d} with fixup must report 3 dividend copies");
+                } else {
+                    assert_eq!(copies, 1, "d={d} without fixup must report 1 dividend copy");
+                }
+            }
+        }
+        for d in [3, 7, 10, 127, 255, 1000, 65535, 0x7FFF_FFFF, u32::MAX - 1] {
+            let copies = div_operand_copies(d);
+            if d <= 1 || d.is_power_of_two() {
+                assert_eq!(copies, 1);
+            } else {
+                let magic = compute_div_magic(d);
+                if magic.needs_fixup {
+                    assert_eq!(copies, 3, "extreme d={d} with fixup must report 3 copies");
+                } else {
+                    assert_eq!(copies, 1, "extreme d={d} without fixup must report 1 copy");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn granlund_montgomery_duplication_budget_enforcement() {
+        // Fixup divisors (e.g. 7, 14, 25, 27) vs non-fixup divisors (e.g. 3, 5, 6, 9)
+        assert!(compute_div_magic(7).needs_fixup);
+        assert!(compute_div_magic(14).needs_fixup);
+        assert!(!compute_div_magic(3).needs_fixup);
+        assert!(!compute_div_magic(5).needs_fixup);
+
+        let leaf_dividend = Expr::var("x"); // cost 1
+        let two_node_dividend = Expr::negate(Expr::var("x")); // cost 2
+        let three_node_dividend = Expr::add(Expr::var("x"), Expr::var("y")); // cost 3
+        // Non-fixup divisor (copies = 1):
+        // 1 copy adds 0 extra nodes, so leaf, 2-node, and 3-node dividends all succeed.
+        assert!(
+            granlund_montgomery_div(&leaf_dividend, 3).is_some(),
+            "non-fixup division of leaf must succeed"
+        );
+        assert!(
+            granlund_montgomery_div(&two_node_dividend, 3).is_some(),
+            "non-fixup division of 2-node expr must succeed (no duplication)"
+        );
+        assert!(
+            granlund_montgomery_div(&three_node_dividend, 3).is_some(),
+            "non-fixup division of 3-node expr must succeed (no duplication)"
+        );
+
+        // Fixup divisor (copies = 3, extra = 2):
+        // Leaf (cost 1): 1 * 2 = 2 <= MAX_DUPLICATED_NODES (2) -> allowed
+        assert!(
+            granlund_montgomery_div(&leaf_dividend, 7).is_some(),
+            "fixup division of single leaf variable must succeed within duplication budget"
+        );
+
+        // 2-node dividend (cost 2): 2 * 2 = 4 > MAX_DUPLICATED_NODES (2) -> rejected
+        // (With the stale copies = 2 bug, cost 2 * 1 = 2 would incorrectly pass).
+        assert!(
+            granlund_montgomery_div(&two_node_dividend, 7).is_none(),
+            "fixup division of 2-node expr must be rejected because 3 copies exceed duplication budget"
+        );
+        assert!(
+            granlund_montgomery_div(&two_node_dividend, 14).is_none(),
+            "fixup division of 2-node expr must be rejected for all fixup divisors"
+        );
+
+        // 3-node dividend (cost 3): 3 * 2 = 6 > MAX_DUPLICATED_NODES (2) -> rejected
+        assert!(
+            granlund_montgomery_div(&three_node_dividend, 7).is_none(),
+            "fixup division of 3-node expr must be rejected"
+        );
     }
 }

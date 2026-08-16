@@ -28,7 +28,8 @@ pub const MAGIC: &[u8; 4] = b"VYRE";
 /// [`crate::error::IrError::VersionMismatch`]) and a reserved
 /// dialect-manifest section after the header for rev-3+ readers. Rev
 /// 2 was never released; versions go 1 to 3 directly.
-pub const WIRE_FORMAT_VERSION: u16 = 6;
+/// Rev 7 adds Tile values and tile operation node variants.
+pub const WIRE_FORMAT_VERSION: u16 = 7;
 
 /// Oldest schema version this decoder reads.
 ///

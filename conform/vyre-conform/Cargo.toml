@@ -65,7 +65,7 @@ vyre-reference = { workspace = true }
 # every submitting crate and asserts each one reached the registry. Naming a
 # submitting crate here for link effect alone is what left readers judging a
 # partial registry.
-vyre-registry-link = { workspace = true, features = ["operations", "reference"] }
+vyre-registry-link = { workspace = true, default-features = false, features = ["operations", "reference"] }
 vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
 

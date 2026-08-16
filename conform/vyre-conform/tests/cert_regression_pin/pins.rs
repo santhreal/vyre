@@ -47,39 +47,38 @@ pub(crate) const VERIFYING_KEY_HEX: &str =
 
 // --- trivial const ---
 pub(crate) const TRIVIAL_CONST_BUNDLE_BLAKE3: &str =
-    "22325167b0cb84193a1d5cfe581e9e2f95fd5721a5cf3f4fd2fdd80d49dcf062";
+    "be566351414e368a5e41dfb7850692326ae5aeec4287d412b6575be5594ab45d";
 pub(crate) const TRIVIAL_CONST_WIRE_LEN: usize = 197;
 pub(crate) const TRIVIAL_CONST_SIG_HEX: &str =
-    "16265ad4942775a2e05c8898037f0133219cd52e4ef69b75b2177f34303bbf8b281f9cca6df3619adf08cf911534c74d0b5ec7e156913622c11c43cd4fd54e0c";
+    "260a5b784f180fc4990c7c38f3f662141cab6cf8c940f4f29c4536bcbc5a065ca23492c045d99ef23f0b52d12c1630b2d9000d13198102b28572bbeb08af7a03";
 
 // --- 1-op add ---
 pub(crate) const ONE_OP_ADD_BUNDLE_BLAKE3: &str =
-    "c202412743128a5f2b944de76a272503b4244e3b009b440613e74cef56cd22ed";
+    "98c84692dec52b46d16b4766664277a7df006cfe28f09b317ce687b566c0bcf0";
 pub(crate) const ONE_OP_ADD_WIRE_LEN: usize = 204;
 pub(crate) const ONE_OP_ADD_SIG_HEX: &str =
-    "56f0e605dbaec7a4934e53407aba9ca50f997b2163e19fb3ac939b6005103876a44ac0bd02b28cd91e643a33fd302274437725af96105029734a9fff5862e609";
+    "ef679e5a4b8997bd066a99b22283eef6147eb3b6bcd1a19b568060162b7a3e4eec6c2f7cc2349b6b155b22024838ea5dc3155d8464bf3837edeed4956d116804";
 
 // --- loop-add ---
 pub(crate) const LOOP_ADD_BUNDLE_BLAKE3: &str =
-    "42042606253dd42ac84317e40997166aa3fb704c4a05ead4cce851f312ee6b4e";
+    "73b09f2cdf249b2ed6d40ce24e9c54771fa774373f51a753946f519e665798a9";
 pub(crate) const LOOP_ADD_WIRE_LEN: usize = 257;
 pub(crate) const LOOP_ADD_SIG_HEX: &str =
-    "8b1ec6c68ab1c73d4898ef4f62eb2a12f1e84e5bce6984a180d396e6f9964de857ac30136b1cb13b02180694dc607ad1cf63b9e6566cb5a936536bf3db9b450e";
+    "6d6b070e4a592689b1330bd8c942acc97e9c119dd4bb8c7f53622340ba2b1838f9ca5b70dad69b35ba5029214a166edf84492b986ab235d62bc034ec44fba203";
 
 // --- composed nested ---
 pub(crate) const COMPOSED_NESTED_BUNDLE_BLAKE3: &str =
-    "17fe6fe62d2b37144bf29d8994412572e7b7a6dbf0f93c137b89dc413b496983";
+    "d411a26526ab5eb50f70c3ff94ca9761fbfdfc0cd1a0430030a52b0bf0893d49";
 pub(crate) const COMPOSED_NESTED_WIRE_LEN: usize = 200;
 pub(crate) const COMPOSED_NESTED_SIG_HEX: &str =
-    "6a95ae84033e4cdef26ca8fa6211c333c6d7ddae183968406f6bf01c561b4123e65a74e7527d1745c59615d38f7603c259e905a6b4d4cd4d0d5de25e8c9f0b03";
+    "5d045ba6b76c30cb4cecf46dee0bad808ff130a072c990ba7d9e1f1b1a7c22143a050fdfe88ff47533d9028be2ba2220bb926c7239df7a833bdc69a3726fe708";
 
 // --- region-chain with intrinsic + dialect op ---
 pub(crate) const REGION_CHAIN_BUNDLE_BLAKE3: &str =
-    "20833f6b55d44af16092bd1eab94eb5a522ce1b495dab15f7d08500800fc02e8";
+    "c36b7bee0f307bc97b9b42b3e0da4a3a80aeb2f843880a41a9acf9a993c23827";
 pub(crate) const REGION_CHAIN_WIRE_LEN: usize = 325;
 pub(crate) const REGION_CHAIN_SIG_HEX: &str =
-    "3136779bcee25a5acd434a7bdc9c76779994a4128712ee3f6cadfbfba00708f56eafe068d1eb9a89b09eb82c575eb659a24e07be6a6482c680d3ecaeafeb250a";
-
+    "f44960073a844f264a728336712dcf13924f9ef50786a952dccfd2e6f3f2f905a1a3a31e3161b886ba6e430298697ecd8401efea69d8f82556049b566149f903";
 // ---------------------------------------------------------------------------
 // Sign a bundle cert with the deterministic key.
 // ---------------------------------------------------------------------------

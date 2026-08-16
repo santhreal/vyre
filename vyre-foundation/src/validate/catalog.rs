@@ -89,20 +89,20 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
     ValidationRule {
         code: "V020",
         phase: ValidationPhase::Expression,
-        invariant: "Call to non-inlinable op",
-        corrective_action: "Lower this op through its dedicated backend path or rewrite the caller with explicit IR.",
+        invariant: "Call argument count mismatches callee signature input count",
+        corrective_action: "Pass exactly the number of arguments declared by the op signature.",
     },
     ValidationRule {
         code: "V021",
         phase: ValidationPhase::Expression,
-        invariant: "Call argument count mismatches callee's ReadOnly/Uniform input count",
-        corrective_action: "Pass exactly one argument per input buffer in binding order.",
+        invariant: "Call signature uses unknown or unsupported type spelling",
+        corrective_action: "Register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer.",
     },
     ValidationRule {
         code: "V022",
         phase: ValidationPhase::Expression,
-        invariant: "Program or callee declares too many outputs",
-        corrective_action: "Mark at most one result buffer with `BufferDecl::output(...)`.",
+        invariant: "Call argument type mismatches callee parameter type, or program declares too many outputs",
+        corrective_action: "Cast or rewrite the argument to match the registered op signature, and declare at most one output buffer.",
     },
     ValidationRule {
         code: "V023",
@@ -625,6 +625,30 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         phase: ValidationPhase::Memory,
         invariant: "async transfer writes into non-writable buffer `…`",
         corrective_action: "Declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup, or name a storage tier the dispatch does not bind.",
+    },
+    ValidationRule {
+        code: "V135",
+        phase: ValidationPhase::Node,
+        invariant: "Tile operation violates residency or hardware limits",
+        corrective_action: "Validate with BackendCapabilities supporting sufficient shared memory and register limits, or adjust tile parameters.",
+    },
+    ValidationRule {
+        code: "V136",
+        phase: ValidationPhase::Node,
+        invariant: "Tile store operation references invalid or incompatible buffer",
+        corrective_action: "Declare the buffer before storing tiles to it.",
+    },
+    ValidationRule {
+        code: "V137",
+        phase: ValidationPhase::Node,
+        invariant: "Matrix multiplication tile operation requires tensor core instruction support",
+        corrective_action: "Validate with BackendCapabilities supporting tensor cores or lower to scalar operations.",
+    },
+    ValidationRule {
+        code: "V138",
+        phase: ValidationPhase::Node,
+        invariant: "Tile load operation references invalid or incompatible buffer",
+        corrective_action: "Declare the buffer before loading tiles from it.",
     },
 ];
 

@@ -197,6 +197,9 @@ fn collect_touched_buffers(
         for operand in crate::visit::node_operands(node).into_iter().flatten() {
             collect_buffers_in_expr(operand, out);
         }
+        for operand in crate::visit::node_variadic_operands(node) {
+            collect_buffers_in_expr(operand, out);
+        }
     });
 }
 

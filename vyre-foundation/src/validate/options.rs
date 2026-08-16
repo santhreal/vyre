@@ -36,6 +36,14 @@ pub struct BackendCapabilities {
     pub has_transcendental_polynomial_emit: bool,
     /// Maximum supported integer width for native operations.
     pub max_native_int_width: u32,
+    /// Maximum workgroup shared memory in bytes.
+    pub max_shared_memory_bytes: u32,
+    /// Maximum registers per thread.
+    pub regs_per_thread_max: u32,
+    /// Target subgroup size.
+    pub subgroup_size: u32,
+    /// Target supports tensor-core matrix instructions.
+    pub supports_tensor_cores: bool,
 }
 
 /// Capability view supplied by a concrete backend during validation.
@@ -71,6 +79,30 @@ pub trait BackendValidationCapabilities {
         false
     }
 
+    /// Return maximum shared memory bytes per workgroup on this target.
+    #[inline]
+    fn max_shared_memory_bytes(&self) -> u32 {
+        0
+    }
+
+    /// Return maximum registers per invocation on this target.
+    #[inline]
+    fn regs_per_thread_max(&self) -> u32 {
+        0
+    }
+
+    /// Return subgroup size on this target.
+    #[inline]
+    fn validation_subgroup_size(&self) -> u32 {
+        32
+    }
+
+    /// Return whether this target supports tensor-core matrix instructions.
+    #[inline]
+    fn supports_tensor_cores(&self) -> bool {
+        false
+    }
+
     /// Export backend capabilities in a version-stable value object.
     #[must_use]
     #[inline]
@@ -80,6 +112,10 @@ pub trait BackendValidationCapabilities {
             supports_indirect_dispatch: self.supports_indirect_dispatch(),
             supports_specialization_constants: self.supports_specialization_constants(),
             supports_distributed_collectives: self.supports_distributed_collectives(),
+            max_shared_memory_bytes: self.max_shared_memory_bytes(),
+            regs_per_thread_max: self.regs_per_thread_max(),
+            subgroup_size: self.validation_subgroup_size(),
+            supports_tensor_cores: self.supports_tensor_cores(),
             ..BackendCapabilities::default()
         }
     }

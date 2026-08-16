@@ -1,6 +1,7 @@
 //! Attention sub-dialect: softmax + scaled dot-product + GQA + RoPE + MLA.
 pub(crate) mod flash_attention;
 pub(crate) mod flash_attention_2;
+pub mod fused_tile_attention;
 mod gated_delta;
 mod gated_delta_chunked;
 mod gated_delta_spec;
@@ -18,6 +19,7 @@ pub(crate) mod turboquant;
 
 pub use flash_attention::flash_attention;
 pub use flash_attention_2::flash_attention_2;
+pub use fused_tile_attention::fused_tile_attention;
 pub use gated_delta::{recurrent_gated_delta, RecurrentGatedDeltaError};
 pub use gated_delta_chunked::chunked_gated_delta;
 pub use gated_delta_spec::GatedDeltaSpec;
