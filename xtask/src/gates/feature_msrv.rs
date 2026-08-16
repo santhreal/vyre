@@ -45,6 +45,13 @@ impl Gate for FeatureMsrv {
         "Hold the advertised rust-version to a compile of every declared feature selection; --sweep compiles, --print-toolchain writes the validated version for a workflow to install"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--sweep compiles each declared selection on the advertised MSRV",
+            "--print-toolchain writes the validated MSRV version for workflow installation",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let manifest = tree.read_toml(ROOT_MANIFEST)?;
@@ -71,7 +78,6 @@ impl Gate for FeatureMsrv {
         }
         if ctx.has("--print-toolchain") {
             println!("{version}");
-            report.note(format!("advertised rust-version {version}"));
             return Ok(report);
         }
 
