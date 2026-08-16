@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_megakernel::{compile, Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget};
@@ -45,12 +45,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Compile `program` as the single node of a one-node graph.
 ///
-/// Every buffer the program declares becomes an external value carrying that
-/// buffer's own element type, count, and access, so the graph contract cannot
-/// disagree with the program it wraps.
+/// Every storage buffer the program declares becomes an external value carrying
+/// that buffer's own element type, count, and access, so the graph contract
+/// cannot disagree with the program it wraps. Workgroup-local memory is not an
+/// external value: it is scratch the program allocates per dispatch, and the
+/// graph wire format has no way to name it.
 fn compile_artifact(program: &Program) -> Result<Artifact, Box<dyn std::error::Error>> {
     let mut graph = ProgramGraph::new();
     for buffer in program.buffers() {
+        if buffer.access() == BufferAccess::Workgroup {
+            continue;
+        }
         graph.add_external_value(
             buffer.name(),
             ValueContract {
