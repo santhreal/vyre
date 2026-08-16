@@ -2871,6 +2871,30 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-primitives::graph::dominator_tree_depth"
+tier = "intrinsic"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph", "inventory-registry"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::graph::dominator_tree_intersect_step"
+tier = "intrinsic"
+category = "graph"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["graph", "inventory-registry"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-primitives::graph::functor_apply"
 tier = "intrinsic"
 category = "graph"

@@ -79,6 +79,8 @@ operations = [
   "vyre-primitives::graph::csr_queue_strided_forward_traverse",
   "vyre-primitives::graph::dominator_frontier",
   "vyre-primitives::graph::dominator_tree",
+  "vyre-primitives::graph::dominator_tree_depth",
+  "vyre-primitives::graph::dominator_tree_intersect_step",
   "vyre-primitives::graph::functor_apply",
   "vyre-primitives::graph::monoidal_compose",
   "vyre-primitives::graph::motif",
