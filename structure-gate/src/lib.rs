@@ -90,7 +90,6 @@ const ALLOWED_MEMBERS: &[&str] = &[
     "vyre-emit-ptx",
     "vyre-emit-spirv",
     "vyre-foundation",
-    "vyre-grammar-gen",
     "vyre-libs",
     "vyre-lints",
     "vyre-lower",

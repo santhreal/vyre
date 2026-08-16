@@ -20,8 +20,8 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 /// The reference interpreter DEFINES OOB loads as zero-fill and OOB stores as a
 /// no-op (see the module docstring) so its output stays deterministic. That
 /// silent absorption is exactly what MASKS a GPU/CPU parity hazard: an IR program
-/// with an ungated data-derived index "works" here but a real GPU (CUDA does no
-/// bounds-checking) reads garbage / corrupts memory. This report surfaces the
+/// with an ungated data-derived index "works" here but a real GPU, which does no
+/// bounds-checking, reads garbage / corrupts memory. This report surfaces the
 /// masking so a test can assert a program NEVER relies on it, a correctly-gated
 /// program handles an out-of-contract index with explicit control flow and thus
 /// records ZERO OOB accesses even on hostile input.

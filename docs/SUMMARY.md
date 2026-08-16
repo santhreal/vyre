@@ -29,7 +29,6 @@
 - [Testing `vyre-emit-ptx`](testing/vyre-emit-ptx.md)
 - [Testing `vyre-emit-spirv`](testing/vyre-emit-spirv.md)
 - [Testing `vyre-foundation`](testing/vyre-foundation.md)
-- [Testing `vyre-grammar-gen`](testing/vyre-grammar-gen.md)
 - [Testing `vyre-libs`](testing/vyre-libs.md)
 - [Testing `vyre-lints`](testing/vyre-lints.md)
 - [Testing `vyre-lower`](testing/vyre-lower.md)

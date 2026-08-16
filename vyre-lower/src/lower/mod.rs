@@ -36,7 +36,7 @@ const MAX_NESTING_DEPTH: usize = 64;
 /// First slot value reserved for `MemoryClass::Shared` / `MemoryClass::Scratch`
 /// bindings. Host-bound bindings (`Global`/`Constant`/`Uniform`) use slots
 /// 0..WORKGROUP_SLOT_BASE so that backend bind-group layouts (capped at 1000
-/// bindings on wgpu) never see a Shared slot. Any rewrite that allocates
+/// bindings on a portable backend) never see a Shared slot. Any rewrite that allocates
 /// new Shared/Scratch bindings must seed its `next_slot` cursor at or above
 /// this constant to avoid colliding with host slots in `BindingLayout.slots`.
 pub const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
@@ -47,8 +47,7 @@ pub const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
 ///
 /// This is the single place a `Program` becomes something an emitter can read.
 /// Every concrete backend consumes only the resulting [`KernelDescriptor`], and
-/// `vyre-driver-cuda/src/codegen/descriptor_gate.rs` plus
-/// `vyre-driver-wgpu/src/emit/descriptor_gate.rs` exist to keep it that way:
+/// each device backend's own descriptor gate exists to keep it that way:
 /// backends may analyze or emit descriptors but must not host a parallel
 /// Program-to-descriptor lowering, because a second one would let a Program
 /// field reach generated code without passing through here.
@@ -63,7 +62,7 @@ pub const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
 /// identity in `Program::try_normalized_cache_digest`, should derive its input
 /// set from this list rather than sampling program fields and checking whether
 /// the output changed. Sampling is how the ungated `element_count` read in
-/// `vyre-emit-ptx`'s `async_copy.rs` was missed: a fixture without an async
+/// the primary binary emitter's async-copy path was missed: a fixture without an async
 /// copy makes a storage buffer's `count` look irrelevant to emitted text.
 ///
 /// # Errors

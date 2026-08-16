@@ -504,7 +504,7 @@ fn static_byte_len(buffer: &BufferDecl) -> Result<Option<usize>, BackendError> {
 /// it on this dispatch. This function is the ONE rule for deriving that count,
 /// `byte_len` divided by the element width, sub-byte element types included.
 ///
-/// The CPU reference, CUDA, and WGPU all size runtime-sized writable buffers
+/// The CPU reference and both device backends size runtime-sized writable buffers
 /// through this rule, so a countless declaration reads back the same element
 /// count on every backend. A second copy of this arithmetic is how the three
 /// paths drifted into returning 4 words, 1 word, and 0 words for one program.

@@ -1,21 +1,17 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use vyre_driver::materialize::{self, ExecutableModule, InstanceCore, MaterializerDevice};
+use vyre_driver::materialize::{
+    self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
+};
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, Completion, DeviceIdentity,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DeviceIdentity,
     DispatchConfig, ResidentOwner, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, TargetPayload, TargetPayloadFormat};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
-
-/// Rejection for a dispatch that skipped a declared output slot.
-fn omitted_output(output_index: usize, name: &str) -> BackendError {
-    materialize::omitted_output("SPIR-V target module", output_index, name)
-}
 
 /// First word of every well-formed SPIR-V module.
 const SPIRV_MAGIC: u32 = 0x0723_0203;
@@ -91,61 +87,51 @@ impl ArtifactInstance for SpirvArtifactInstance {
     vyre_driver::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        self.core.submit_host_only(
-            &bindings,
-            "SPIR-V artifact resident binding",
-            |state, invocation_grid| self.execute(state, invocation_grid),
-        )
+        self.submit_host_only(&bindings, "SPIR-V artifact resident binding")
     }
 }
 
-impl SpirvArtifactInstance {
-    fn execute(
+impl MaterializedInstance for SpirvArtifactInstance {
+    type Module = SpirvExecutableModule;
+
+    fn core(&self) -> &InstanceCore {
+        &self.core
+    }
+
+    fn modules(&self) -> &[Self::Module] {
+        &self.modules
+    }
+
+    fn module_label(&self) -> &'static str {
+        "SPIR-V target module"
+    }
+
+    fn dispatch(
         &self,
-        state: BTreeMap<ArtifactValueId, Vec<u8>>,
-        invocation_grid: Option<[u32; 3]>,
-    ) -> Result<Completion, BackendError> {
-        self.core.execute_modules(
-            &self.modules,
-            state,
-            invocation_grid,
-            omitted_output,
-            |module, plan, config, state| {
-                let inputs = self.core.gather_inputs(
-                    plan,
-                    &module.program,
-                    state,
-                    materialize::unbound_input,
-                )?;
-                let started = Instant::now();
-                // SAFETY: `native` owns a live Vulkan device for the entire instance;
-                // words were validated as aligned SPIR-V and Program metadata came
-                // from the authenticated neutral artifact.
-                let outputs = unsafe {
-                    vulkan::dispatch_program(
-                        &self.native,
-                        &module.program,
-                        &module.words,
-                        &inputs,
-                        config,
-                    )
-                }?;
-                Ok(TimedDispatchResult {
-                    outputs,
-                    wall_ns: u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
-                        BackendError::DispatchFailed {
-                            code: None,
-                            message:
-                                "SPIR-V dispatch duration overflowed a 64-bit nanosecond count"
-                                    .to_string(),
-                        }
-                    })?,
-                    device_ns: None,
-                    enqueue_ns: None,
-                    wait_ns: None,
-                })
-            },
-        )
+        module: &Self::Module,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        let started = Instant::now();
+        // SAFETY: `native` owns a live Vulkan device for the entire instance;
+        // words were validated as aligned SPIR-V and Program metadata came
+        // from the authenticated neutral artifact.
+        let outputs = unsafe {
+            vulkan::dispatch_program(&self.native, &module.program, &module.words, inputs, config)
+        }?;
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
+                BackendError::DispatchFailed {
+                    code: None,
+                    message: "SPIR-V dispatch duration overflowed a 64-bit nanosecond count"
+                        .to_string(),
+                }
+            })?,
+            device_ns: None,
+            enqueue_ns: None,
+            wait_ns: None,
+        })
     }
 }
 

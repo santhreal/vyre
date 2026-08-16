@@ -6,7 +6,7 @@ together, then regenerate this file.
 
 ## Workspace dependency graph
 
-The workspace contains 35 crates. An arrow points from a crate to
+The workspace contains 34 crates. An arrow points from a crate to
 an internal normal or build dependency. Development dependencies are excluded.
 
 ```mermaid
@@ -29,35 +29,34 @@ graph TD
   C15["vyre-emit-ptx"]
   C16["vyre-emit-spirv"]
   C17["vyre-foundation"]
-  C18["vyre-grammar-gen"]
-  C19["vyre-libs"]
-  C20["vyre-lints"]
-  C21["vyre-lower"]
-  C22["vyre-macros"]
-  C23["vyre-megakernel"]
-  C24["vyre-pass-engine"]
-  C25["vyre-primitives"]
-  C26["vyre-reference"]
-  C27["vyre-registry-link"]
-  C28["vyre-runtime"]
-  C29["vyre-safetensors"]
-  C30["vyre-spec"]
-  C31["vyre-test-support"]
-  C32["xtask"]
-  C33["xtask-evidence"]
-  C34["xtask-registry"]
+  C18["vyre-libs"]
+  C19["vyre-lints"]
+  C20["vyre-lower"]
+  C21["vyre-macros"]
+  C22["vyre-megakernel"]
+  C23["vyre-pass-engine"]
+  C24["vyre-primitives"]
+  C25["vyre-reference"]
+  C26["vyre-registry-link"]
+  C27["vyre-runtime"]
+  C28["vyre-safetensors"]
+  C29["vyre-spec"]
+  C30["vyre-test-support"]
+  C31["xtask"]
+  C32["xtask-evidence"]
+  C33["xtask-registry"]
   C1 --> C7
   C1 --> C8
   C1 --> C12
   C1 --> C17
-  C1 --> C23
-  C1 --> C28
-  C1 --> C30
+  C1 --> C22
+  C1 --> C27
+  C1 --> C29
   C2 --> C7
   C2 --> C17
-  C2 --> C23
-  C2 --> C25
-  C2 --> C30
+  C2 --> C22
+  C2 --> C24
+  C2 --> C29
   C3 --> C1
   C3 --> C7
   C3 --> C8
@@ -65,127 +64,126 @@ graph TD
   C3 --> C12
   C3 --> C15
   C3 --> C17
-  C3 --> C19
-  C3 --> C21
+  C3 --> C18
+  C3 --> C20
+  C3 --> C24
   C3 --> C25
   C3 --> C26
   C3 --> C27
-  C3 --> C28
-  C3 --> C30
-  C3 --> C32
+  C3 --> C29
+  C3 --> C31
   C4 --> C1
   C4 --> C5
   C4 --> C7
   C4 --> C8
   C4 --> C12
   C4 --> C17
-  C4 --> C19
-  C4 --> C23
+  C4 --> C18
+  C4 --> C22
+  C4 --> C24
   C4 --> C25
   C4 --> C26
   C4 --> C27
-  C4 --> C28
-  C4 --> C30
-  C5 --> C30
+  C4 --> C29
+  C5 --> C29
   C6 --> C1
   C6 --> C14
   C6 --> C17
-  C6 --> C19
-  C6 --> C21
-  C6 --> C25
+  C6 --> C18
+  C6 --> C20
+  C6 --> C24
   C7 --> C17
-  C7 --> C19
-  C7 --> C23
-  C7 --> C30
+  C7 --> C18
+  C7 --> C22
+  C7 --> C29
   C8 --> C7
   C8 --> C15
   C8 --> C17
-  C8 --> C19
-  C8 --> C21
+  C8 --> C18
+  C8 --> C20
+  C8 --> C22
   C8 --> C23
-  C8 --> C24
-  C8 --> C30
+  C8 --> C29
   C9 --> C7
   C9 --> C13
   C9 --> C17
-  C9 --> C21
-  C9 --> C23
+  C9 --> C20
+  C9 --> C22
   C10 --> C7
   C10 --> C17
-  C10 --> C26
+  C10 --> C25
   C11 --> C7
   C11 --> C16
   C11 --> C17
-  C11 --> C21
-  C11 --> C23
-  C11 --> C30
+  C11 --> C20
+  C11 --> C22
+  C11 --> C29
   C12 --> C7
   C12 --> C14
   C12 --> C17
-  C12 --> C19
-  C12 --> C21
+  C12 --> C18
+  C12 --> C20
+  C12 --> C22
   C12 --> C23
-  C12 --> C24
-  C12 --> C30
+  C12 --> C29
   C13 --> C14
   C13 --> C17
-  C13 --> C21
+  C13 --> C20
   C14 --> C17
-  C14 --> C21
+  C14 --> C20
   C15 --> C17
-  C15 --> C21
+  C15 --> C20
   C16 --> C14
-  C16 --> C21
-  C17 --> C22
-  C17 --> C30
-  C18 --> C30
-  C19 --> C17
-  C19 --> C25
-  C19 --> C30
-  C21 --> C17
+  C16 --> C20
+  C17 --> C21
+  C17 --> C29
+  C18 --> C17
+  C18 --> C24
+  C18 --> C29
+  C20 --> C17
+  C22 --> C17
+  C22 --> C20
   C23 --> C17
-  C23 --> C21
+  C23 --> C18
+  C23 --> C24
   C24 --> C17
-  C24 --> C19
-  C24 --> C25
+  C24 --> C29
   C25 --> C17
-  C25 --> C30
+  C25 --> C24
+  C25 --> C29
+  C26 --> C7
+  C26 --> C8
+  C26 --> C9
+  C26 --> C10
+  C26 --> C11
+  C26 --> C12
   C26 --> C17
-  C26 --> C25
-  C26 --> C30
+  C26 --> C18
+  C26 --> C24
   C27 --> C7
-  C27 --> C8
-  C27 --> C9
-  C27 --> C10
-  C27 --> C11
-  C27 --> C12
   C27 --> C17
-  C27 --> C19
-  C27 --> C25
-  C28 --> C7
-  C28 --> C17
-  C28 --> C19
-  C28 --> C23
-  C28 --> C25
+  C27 --> C18
+  C27 --> C22
+  C27 --> C24
+  C30 --> C0
+  C30 --> C17
+  C30 --> C29
   C31 --> C0
-  C31 --> C17
-  C31 --> C30
-  C32 --> C0
-  C33 --> C3
+  C32 --> C3
+  C32 --> C7
+  C32 --> C17
+  C32 --> C26
+  C32 --> C31
+  C33 --> C1
   C33 --> C7
   C33 --> C17
-  C33 --> C27
-  C33 --> C32
-  C34 --> C1
-  C34 --> C7
-  C34 --> C17
-  C34 --> C19
-  C34 --> C23
-  C34 --> C25
-  C34 --> C26
-  C34 --> C27
-  C34 --> C30
-  C34 --> C32
+  C33 --> C18
+  C33 --> C22
+  C33 --> C24
+  C33 --> C25
+  C33 --> C26
+  C33 --> C29
+  C33 --> C31
 ```
 
 ## Dependency contracts
@@ -284,7 +282,6 @@ graph TD
 | `vyre-emit-spirv` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
 | `vyre-foundation` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-foundation` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-grammar-gen` | `vyre-spec` | C11 token ids, the wire contract between the emitted tables and the GPU parser that decodes them | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-libs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-libs` | `vyre-primitives` | reusable semantic Program builders | `graph`, `inventory-registry`, `text` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |

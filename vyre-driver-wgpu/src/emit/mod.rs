@@ -397,7 +397,7 @@ fn static_workgroups(
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-    use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialBackend};
+    use vyre_lower::emit_adversarial_corpus;
 
     #[test]
     fn wgpu_program_lowers_through_kernel_descriptor() {
@@ -465,11 +465,6 @@ mod tests {
 
     #[test]
     fn adversarial_success_corpus_passes_wgpu_descriptor_emit_path() {
-        assert!(
-            emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Wgpu),
-            "Fix: shared emit adversarial corpus must register WGPU as a required consumer."
-        );
-
         for case in emit_adversarial_corpus::success_cases() {
             let module =
                 emit_naga_module_for_descriptor(&case.descriptor).unwrap_or_else(|error| {

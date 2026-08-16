@@ -69,6 +69,18 @@ impl Finding {
         }
     }
 
+    /// The file this finding names, displayable, empty when it names none.
+    ///
+    /// A finding with no file is about the tree rather than a place in it, and
+    /// every reader of the field wanted one string covering both cases.
+    #[must_use]
+    pub fn named_file(&self) -> String {
+        self.file
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_default()
+    }
+
     /// Rewrite an absolute path as a path relative to the checkout root, so two
     /// checkouts of the same tree report the same finding text.
     #[must_use]
@@ -140,6 +152,12 @@ impl Report {
     #[must_use]
     pub fn count(&self) -> usize {
         self.findings.len()
+    }
+
+    /// The file each finding names, in the order the gate found them.
+    #[must_use]
+    pub fn named_files(&self) -> Vec<String> {
+        self.findings.iter().map(Finding::named_file).collect()
     }
 }
 

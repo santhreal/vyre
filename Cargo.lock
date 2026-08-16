@@ -3596,7 +3596,6 @@ dependencies = [
  "vyre-driver",
  "vyre-emit-naga",
  "vyre-foundation",
- "vyre-grammar-gen",
  "vyre-libs",
  "vyre-lower",
  "vyre-megakernel",
@@ -3701,20 +3700,6 @@ dependencies = [
  "vyre-reference",
  "vyre-spec",
  "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-grammar-gen"
-version = "0.7.2"
-dependencies = [
- "blake3",
- "clap",
- "proptest",
- "regex",
- "regex-automata",
- "serde",
- "serde_json",
- "vyre-spec",
 ]
 
 [[package]]

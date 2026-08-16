@@ -1,7 +1,7 @@
 //! Backend-neutral fallible output-slot vector management.
 //!
-//! CUDA, WGPU, and future native backends all resize caller-owned output slot
-//! vectors on hot dispatch paths. The policy is identical: preserve existing
+//! Every device backend resizes caller-owned output slot vectors on hot
+//! dispatch paths. The policy is identical: preserve existing
 //! slots where possible, grow fallibly, initialize new slots from a caller
 //! factory, and truncate stale slots. Keeping that policy here prevents
 //! backend-local allocation drift.

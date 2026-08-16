@@ -5,13 +5,13 @@
 //! scratch. The policy is deterministic, allocation-free, and validates byte
 //! pressure before a backend reaches an API-specific allocation path.
 //!
-//! One rule used to live only in the CUDA copy of this policy: a `FusedWave`
+//! One rule used to live only in one backend's copy of this policy: a `FusedWave`
 //! runs dependency-ordered waves inside a single launch, so it needs a barrier
 //! across every resident block, and a device without one cannot run the plan at
 //! all. The neutral policy did not know that, so for the same wave it answered
-//! `FusedWave` where the CUDA fork answered a per-launch topology, and any
+//! `FusedWave` where that fork answered a per-launch topology, and any
 //! backend that had not written the check itself would have been handed an
-//! unlaunchable plan. The check is a property of the device, not of CUDA, so it
+//! unlaunchable plan. The check is a property of the device, not of one backend, so it
 //! is [`crate::megakernel_execution::MegakernelDeviceCapabilities`] here and every backend inherits it.
 
 const WARP_SPARSE_DENSITY: f64 = 0.03125;

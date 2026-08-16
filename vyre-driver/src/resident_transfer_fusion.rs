@@ -3,8 +3,8 @@
 //! Resident GPU resources are long-lived allocation handles with byte-addressed
 //! transfer intervals. Backends can fuse overlapping or adjacent device-to-host
 //! readback intervals without changing caller-visible output slices. This module
-//! owns that pure interval policy so CUDA, WGPU, and future backends do not
-//! carry divergent coalescing logic.
+//! owns that pure interval policy so no backend carries divergent coalescing
+//! logic.
 
 use smallvec::SmallVec;
 
