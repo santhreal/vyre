@@ -4199,6 +4199,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and the consumer boundary went through that compiled-in path and now ask the
   helper. `ConsumerBoundaryScan::for_crate` takes the crate directory as a
   path.
+- The workspace cargo runner no longer exports a workstation-specific target
+  directory, so hosted CI and new checkouts use their own writable Cargo
+  configuration.
 - Two CI jobs named cargo test targets that do not exist and would have failed
   with `no test target named` on the first run that reached them. The
   architecture gate ran `--test architecture_docs --test
