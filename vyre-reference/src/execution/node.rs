@@ -535,6 +535,7 @@ fn eval_barrier(invocation: &mut Invocation<'_>) -> Result<(), crate::ReferenceE
     Ok(())
 }
 
+// Inline: covers the crate-private `step`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

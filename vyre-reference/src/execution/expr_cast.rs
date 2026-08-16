@@ -196,6 +196,7 @@ fn widen_to_words(value: &Value, words: usize) -> Vec<u8> {
     bytes
 }
 
+// Inline: covers the crate-private `cast_value` and `spec_output_value`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

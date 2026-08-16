@@ -97,5 +97,6 @@ pub fn verify(desc: &KernelDescriptor) -> VerifyResult {
     }
 }
 
+// Inline: covers the crate-private `verify` module, which no integration test can reach.
 #[cfg(test)]
 mod tests;

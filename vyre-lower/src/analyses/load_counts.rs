@@ -39,6 +39,7 @@ pub(crate) fn count_global_loads_by_slot<F>(
 /// helpers, doc comment included, so the op shape this traversal reads was
 /// stated twice and could drift on one side only. The shape belongs with the
 /// traversal that defines it.
+// Inline: supplies fixtures to the crate-private analysis tests that stay inline.
 #[cfg(test)]
 pub(crate) mod fixtures {
     use crate::descriptor_builder::{body, descriptor, lit, load_global};
@@ -65,6 +66,7 @@ pub(crate) mod fixtures {
     }
 }
 
+// Inline: covers the crate-private `count_global_loads_by_slot`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use rustc_hash::FxHashMap;

@@ -34,6 +34,11 @@ smallvec.workspace = true
 imbl = { workspace = true }
 
 [dev-dependencies]
+# The crate's own integration tests reach `descriptor_builder`,
+# `artifact_golden` and `program_stability_corpus`, which are gated behind
+# `test-fixtures`. A `cfg(test)` gate covers unit tests only, so the feature is
+# turned on for this crate's test targets here.
+vyre-lower = { path = ".", features = ["test-fixtures"] }
 vyre-test-support.workspace = true
 serde_json = { workspace = true }
 toml = { workspace = true }

@@ -104,6 +104,7 @@ pub fn resolve_copy_alias(mut id: u32, copy_aliases: &FxHashMap<u32, u32>) -> u3
     id
 }
 
+// Inline: covers the crate-private `has_single_reaching_def` and `reaching_defs`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

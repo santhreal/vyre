@@ -185,6 +185,7 @@ fn gcd_u32(a: u32, b: u32) -> u32 {
     a
 }
 
+// Inline: covers the crate-private `analyze` and `gcd_u32`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

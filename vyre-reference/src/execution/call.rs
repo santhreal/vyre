@@ -236,6 +236,7 @@ fn output_data_type(outputs: &[TypedParam]) -> DataType {
         })
 }
 
+// Inline: covers the crate-private `ParamEncoding` and `declared_width`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::{declared_width, param_encoding, ParamEncoding};

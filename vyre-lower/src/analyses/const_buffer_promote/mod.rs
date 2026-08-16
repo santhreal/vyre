@@ -129,6 +129,7 @@ pub fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> ConstB
     }
 }
 
+// Inline: covers the crate-private `analyze` and `fits_in_budget`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

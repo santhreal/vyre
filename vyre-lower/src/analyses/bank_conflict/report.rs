@@ -104,6 +104,7 @@ impl BankConflictReport {
     }
 }
 
+// Inline: covers the crate-private `critical_count` and `problematic_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

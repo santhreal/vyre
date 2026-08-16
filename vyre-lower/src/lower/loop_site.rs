@@ -22,6 +22,7 @@ pub(crate) fn find_loop(body: &KernelBody) -> Option<(&KernelBody, &KernelOp)> {
     body.child_bodies.iter().find_map(find_loop)
 }
 
+// Inline: covers the crate-private `find_loop`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::find_loop;

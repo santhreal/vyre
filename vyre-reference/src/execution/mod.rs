@@ -325,6 +325,7 @@ fn duplicate_node_error(id: NodeId) -> crate::ReferenceError {
     ))
 }
 
+// Inline: covers the crate-private `missing_node_error`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -422,6 +422,7 @@ fn ir_to_conform_type(ty: IrDataType) -> DataType {
     }
 }
 
+// Inline: covers the crate-private `Buffer` and `atomic_store`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

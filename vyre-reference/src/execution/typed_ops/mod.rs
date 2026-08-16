@@ -544,6 +544,7 @@ fn unop_bool(op: &UnOp, value: bool) -> Result<Value, crate::ReferenceError> {
     }
 }
 
+// Inline: covers the crate-private `eval_binop` and `eval_unop`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -106,6 +106,7 @@ fn is_pure_movable(kind: &KernelOpKind) -> bool {
     )
 }
 
+// Inline: covers the crate-private `canonicalize_for_emit`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

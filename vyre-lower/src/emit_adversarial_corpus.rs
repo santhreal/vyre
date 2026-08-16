@@ -678,6 +678,7 @@ pub fn case_by_id(id: &str) -> Option<EmitAdversarialCase> {
     corpus().into_iter().find(|case| case.id == id)
 }
 
+// Inline: covers items in the crate-private `verify` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

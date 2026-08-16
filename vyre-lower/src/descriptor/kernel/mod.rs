@@ -276,5 +276,6 @@ impl<'a> Iterator for KernelOpsIter<'a> {
     }
 }
 
+// Inline: covers the crate-private `descriptor::kernel` module, which no integration test can reach.
 #[cfg(test)]
 mod tests;

@@ -104,6 +104,7 @@ fn zero_word() -> Vec<u8> {
     vec![0; 4]
 }
 
+// Inline: covers the crate-private `binary_bits` and `clz_bits`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

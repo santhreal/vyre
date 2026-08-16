@@ -530,6 +530,7 @@ fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError
         })
 }
 
+// Inline: covers the crate-private `eval`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
 

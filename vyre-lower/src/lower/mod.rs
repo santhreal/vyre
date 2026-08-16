@@ -108,6 +108,7 @@ struct LowerCtx {
     active_carriers: Vec<FxHashSet<Ident>>,
 }
 
+// Inline: covers the crate-private `MAX_NESTING_DEPTH` and `lower`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::{lower, MAX_NESTING_DEPTH};

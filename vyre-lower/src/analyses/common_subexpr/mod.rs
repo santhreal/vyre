@@ -176,6 +176,7 @@ fn is_bit_exact_commutative_binop(bin_op: BinOp) -> bool {
     )
 }
 
+// Inline: covers the crate-private `analyze` and `ops_eliminable`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
