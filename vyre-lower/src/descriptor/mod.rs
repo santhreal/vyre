@@ -139,11 +139,14 @@ pub enum LiteralValue {
 /// which is exact for every f32 including each NaN payload, and reads back
 /// through `f32::from_bits`.
 ///
-/// `deserialize_any` makes this require a self-describing format. Every format
-/// a descriptor travels through today is one. A compact format that cannot
-/// answer `deserialize_any` refuses here by name instead of guessing, which is
-/// the decision that format needs anyway: it can carry all 32 bits as a number
-/// and wants no escape at all.
+/// The escape is asked for only where the format is self-describing and the
+/// plain encoding is lossy. A compact format cannot answer `deserialize_any`,
+/// and three shipped paths use one: `vyre-debug` decodes a dumped descriptor
+/// with bincode, the wgpu emitter writes that dump, and the metal emitter
+/// hashes a descriptor through the same encoding. Such a format carries all 32
+/// bits in a number and wants no escape at all, so it reads and writes exactly
+/// what the derived impl did, byte for byte: a descriptor hash keeps its value
+/// and a dumped descriptor stays readable across this change.
 mod literal_f32 {
     use std::fmt;
 
@@ -155,13 +158,16 @@ mod literal_f32 {
     const BITS_PREFIX: &str = "0x";
 
     pub(super) fn serialize<S: Serializer>(value: &f32, serializer: S) -> Result<S::Ok, S::Error> {
-        if value.is_finite() {
+        if value.is_finite() || !serializer.is_human_readable() {
             return serializer.serialize_f32(*value);
         }
         serializer.serialize_str(&format!("{BITS_PREFIX}{:08x}", value.to_bits()))
     }
 
     pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f32, D::Error> {
+        if !deserializer.is_human_readable() {
+            return deserializer.deserialize_f32(LiteralVisitor);
+        }
         deserializer.deserialize_any(LiteralVisitor)
     }
 
