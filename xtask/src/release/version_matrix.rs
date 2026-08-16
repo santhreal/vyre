@@ -102,7 +102,7 @@ crate::artifact_gate! {
     /// Holds the version-story evidence to the manifests, lockfile and release docs.
     VersionMatrixGate,
     name: "version-matrix",
-    help: "Regenerate release/evidence/version/version-matrix.json and release-tag-plan.json from \
+    help: "Regenerate release/evidence/version/version-matrix.json and release/evidence/version/release-tag-plan.json from \
        the workspace manifests, Cargo.lock and the release docs, and report each line the \
        committed copies disagree on. Proves every publishable crate carries the version the \
        release train declares, that every required release package is present at its expected \
@@ -741,7 +741,9 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_bare_release_tag_command, release_note_version_issues};
+    use super::{
+        is_bare_release_tag_command, release_note_version_issues, MATRIX, TAG_PLAN,
+    };
 
     /// The tag gate rejects every supported command form for the active bare final tag.
     #[test]
@@ -808,5 +810,18 @@ mod tests {
                 "Fix: the active release story must not report a contradiction for `{line}`"
             );
         }
+    }
+
+    #[test]
+    fn authoritative_descriptor_declares_exact_version_matrix_artifacts() {
+        let descriptor = crate::gate_metadata::descriptor_by_name("version-matrix");
+        let mut expected: Vec<&str> = vec![MATRIX, TAG_PLAN];
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "version-matrix gate descriptor must declare exactly the canonical version evidence artifacts"
+        );
     }
 }
