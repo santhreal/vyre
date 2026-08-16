@@ -318,7 +318,3 @@ impl<'a> UringCompletionPump<'a> {
         Err(PipelineError::NotLinux)
     }
 }
-pub use safetensors_transfer::{
-    select_transfer_path, DeviceTransferCapabilities, PathSelectionDecision, SafetensorTransferPath,
-    TransferDescriptor, TransferError, TransferLifecycleEngine, TransferState,
-};

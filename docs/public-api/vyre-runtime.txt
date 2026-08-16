@@ -353,9 +353,6 @@ pub const vyre_runtime::tenant::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::tenant::TENANT_ID_MAX: u32
 pub const vyre_runtime::tenant::TENANT_OPCODE_BASE: u32
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
-pub enum vyre_runtime::SafetensorTransferPath
-pub enum vyre_runtime::TransferError
-pub enum vyre_runtime::TransferState
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::expert_scheduling::ExpertSchedulingError
@@ -900,7 +897,6 @@ pub fn vyre_runtime::scheduler::WorkStealingScheduler::partition_into(&self, tot
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::reset_unit_cursor(&self)
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::try_partition(&self, total_len: usize) -> core::result::Result<alloc::vec::Vec<vyre_runtime::scheduler::Shard>, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::try_partition_into(&self, total_len: usize, out: &mut alloc::vec::Vec<vyre_runtime::scheduler::Shard>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::select_transfer_path(caps: &vyre_runtime::safetensors_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::safetensors_transfer::PathSelectionDecision
 pub fn vyre_runtime::tenant::TenantHandle::base_opcode(&self) -> u32
 pub fn vyre_runtime::tenant::TenantHandle::drained_count(&self) -> u64
 pub fn vyre_runtime::tenant::TenantHandle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1028,10 +1024,6 @@ pub mod vyre_runtime::safetensors_transfer
 pub mod vyre_runtime::scheduler
 pub mod vyre_runtime::tenant
 pub mod vyre_runtime::uring
-pub struct vyre_runtime::DeviceTransferCapabilities
-pub struct vyre_runtime::PathSelectionDecision
-pub struct vyre_runtime::TransferDescriptor
-pub struct vyre_runtime::TransferLifecycleEngine
 pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -1199,13 +1191,6 @@ pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
 pub unsafe fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, nvme_fd: i32, namespace_id: u32, starting_lba: u64, blocks: u32, bytes_per_block: u32, slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::UringResidentQueuePump<'a>::submit_file_scan(&mut self, fd: i32, file_offset: u64, len: u32, chunk_idx: u32, slot_idx: u32, tenant_id: u32, opcode: u32, args: [u32; 3]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub vyre_runtime::DeviceTransferCapabilities::max_transfer_queue_depth: usize
-pub vyre_runtime::DeviceTransferCapabilities::required_direct_alignment_bytes: u64
-pub vyre_runtime::DeviceTransferCapabilities::supports_direct_storage: bool
-pub vyre_runtime::DeviceTransferCapabilities::supports_pinned_host_memory: bool
-pub vyre_runtime::PathSelectionDecision::is_zero_copy: bool
-pub vyre_runtime::PathSelectionDecision::reason: &'static str
-pub vyre_runtime::PathSelectionDecision::selected_path: vyre_runtime::safetensors_transfer::SafetensorTransferPath
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
 pub vyre_runtime::PipelineError::DrainIncomplete
 pub vyre_runtime::PipelineError::DrainIncomplete::claimed: u32
@@ -1221,49 +1206,6 @@ pub vyre_runtime::PipelineError::NvmePassthroughDisabled
 pub vyre_runtime::PipelineError::QueueFull
 pub vyre_runtime::PipelineError::QueueFull::fix: &'static str
 pub vyre_runtime::PipelineError::QueueFull::queue: &'static str
-pub vyre_runtime::SafetensorTransferPath::DirectStorage
-pub vyre_runtime::SafetensorTransferPath::RegisteredHostMemory
-pub vyre_runtime::SafetensorTransferPath::StagedUpload
-pub vyre_runtime::TransferDescriptor::content_digest: [u8; 32]
-pub vyre_runtime::TransferDescriptor::destination_resource: alloc::string::String
-pub vyre_runtime::TransferDescriptor::device_generation: u64
-pub vyre_runtime::TransferDescriptor::file_identity: [u8; 32]
-pub vyre_runtime::TransferDescriptor::length: u64
-pub vyre_runtime::TransferDescriptor::offset: u64
-pub vyre_runtime::TransferDescriptor::path: vyre_runtime::safetensors_transfer::SafetensorTransferPath
-pub vyre_runtime::TransferDescriptor::tensor_name: alloc::string::String
-pub vyre_runtime::TransferError::AlignmentFailure
-pub vyre_runtime::TransferError::AlignmentFailure::offset: u64
-pub vyre_runtime::TransferError::AlignmentFailure::required_alignment: u64
-pub vyre_runtime::TransferError::DeviceLoss
-pub vyre_runtime::TransferError::DeviceLoss::actual_gen: u64
-pub vyre_runtime::TransferError::DeviceLoss::device_id: u32
-pub vyre_runtime::TransferError::DeviceLoss::expected_gen: u64
-pub vyre_runtime::TransferError::DigestMismatch
-pub vyre_runtime::TransferError::DigestMismatch::tensor_name: alloc::string::String
-pub vyre_runtime::TransferError::FileReplaced
-pub vyre_runtime::TransferError::FileReplaced::tensor_name: alloc::string::String
-pub vyre_runtime::TransferError::PartialUploadCleanedUp
-pub vyre_runtime::TransferError::PartialUploadCleanedUp::bytes_reverted: u64
-pub vyre_runtime::TransferError::QueueBackpressure
-pub vyre_runtime::TransferError::QueueBackpressure::max_depth: usize
-pub vyre_runtime::TransferError::QueueBackpressure::queue_depth: usize
-pub vyre_runtime::TransferError::ShortRead
-pub vyre_runtime::TransferError::ShortRead::actual: u64
-pub vyre_runtime::TransferError::ShortRead::expected: u64
-pub vyre_runtime::TransferError::ShortRead::tensor_name: alloc::string::String
-pub vyre_runtime::TransferError::Truncation
-pub vyre_runtime::TransferError::Truncation::file_len: u64
-pub vyre_runtime::TransferError::Truncation::required_end: u64
-pub vyre_runtime::TransferState::Cancelled
-pub vyre_runtime::TransferState::Completed
-pub vyre_runtime::TransferState::Completed::completion_event: u64
-pub vyre_runtime::TransferState::Failed
-pub vyre_runtime::TransferState::Failed::error: vyre_runtime::safetensors_transfer::TransferError
-pub vyre_runtime::TransferState::InProgress
-pub vyre_runtime::TransferState::InProgress::bytes_transferred: u64
-pub vyre_runtime::TransferState::Initiated
-pub vyre_runtime::TransferState::Validating
 pub vyre_runtime::UringPollState::Completed(u32)
 pub vyre_runtime::UringPollState::Detached
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
