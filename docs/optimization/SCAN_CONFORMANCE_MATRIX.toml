@@ -15,41 +15,41 @@ no_refusal_code = "VYRE_SCAN_NO_REFUSAL_PATH"
 [[row]]
 semantics = "leftmost_semantics"
 engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
-evidence_path = "xtask-registry/src/release/conformance_matrix.rs"
+evidence_path = "xtask-registry/src/release/conformance_matrix/scan_matrix.rs"
 unsupported_diagnostic_code = "VYRE_SCAN_NO_REFUSAL_PATH"
 
 [[row]]
 semantics = "overlapping_matches"
 engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
-evidence_path = "xtask-registry/src/release/conformance_matrix.rs"
+evidence_path = "xtask-registry/src/release/conformance_matrix/scan_matrix.rs"
 unsupported_diagnostic_code = "VYRE_SCAN_NO_REFUSAL_PATH"
 
 [[row]]
 semantics = "capture_groups"
 engine_support = { cpu_ref = "supported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", rust_regex = "supported", hyperscan = "unsupported", vectorscan = "unsupported" }
-evidence_path = "xtask-registry/src/release/conformance_matrix.rs"
+evidence_path = "xtask-registry/src/release/conformance_matrix/scan_matrix.rs"
 unsupported_diagnostic_code = "VYRE_SCAN_CAPTURE_EXTRACTION_REQUIRES_VERIFIER"
 
 [[row]]
 semantics = "byte_mode"
 engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
-evidence_path = "xtask-registry/src/release/conformance_matrix.rs"
+evidence_path = "xtask-registry/src/release/conformance_matrix/scan_matrix.rs"
 unsupported_diagnostic_code = "VYRE_SCAN_NO_REFUSAL_PATH"
 
 [[row]]
 semantics = "unicode_mode"
 engine_support = { cpu_ref = "supported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", rust_regex = "supported", hyperscan = "unsupported", vectorscan = "unsupported" }
-evidence_path = "xtask-registry/src/release/conformance_matrix.rs"
+evidence_path = "xtask-registry/src/release/conformance_matrix/scan_matrix.rs"
 unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
 
 [[row]]
 semantics = "streaming_chunks"
 engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
-evidence_path = "xtask-registry/src/release/conformance_matrix.rs"
+evidence_path = "xtask-registry/src/release/conformance_matrix/scan_matrix.rs"
 unsupported_diagnostic_code = "VYRE_SCAN_NO_REFUSAL_PATH"
 
 [[row]]
 semantics = "unsupported_constructs"
 engine_support = { cpu_ref = "supported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", rust_regex = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported" }
-evidence_path = "xtask-registry/src/release/conformance_matrix.rs"
+evidence_path = "xtask-registry/src/release/conformance_matrix/scan_matrix.rs"
 unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE"

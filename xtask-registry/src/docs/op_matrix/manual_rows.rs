@@ -38,7 +38,7 @@ approximation_policy = "exact"
 verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "native", wgpu = "native", metal = "native", hyperscan = "native", vectorscan = "native", rust_regex = "native", dpu = "unsupported", fpga = "unsupported" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -52,7 +52,7 @@ approximation_policy = "none"
 verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "unsupported", fpga = "unsupported" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -66,7 +66,7 @@ approximation_policy = "broader-prefilter-plus-verifier"
 verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "host-reference", cuda = "prefilter", wgpu = "prefilter", metal = "prefilter", hyperscan = "prefilter", vectorscan = "prefilter", rust_regex = "unsupported", dpu = "unsupported", fpga = "prefilter" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -80,7 +80,7 @@ approximation_policy = "hardware-rule-database"
 verifier_required = false
 accelerator_only = true
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "external-accelerator", fpga = "external-accelerator" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -94,7 +94,7 @@ approximation_policy = "whole-match-accelerator-plus-capture-verifier"
 verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "verifier", wgpu = "verifier", metal = "verifier", hyperscan = "verifier", vectorscan = "verifier", rust_regex = "native", dpu = "unsupported", fpga = "verifier" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 bench_targets = []
 
 "#;

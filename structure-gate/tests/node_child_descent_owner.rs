@@ -184,7 +184,7 @@ const WAIVERS: &[Waiver] = &[
         reason: "barrier planning; a missed nested barrier is a race, highest-priority conversion",
     },
     Waiver {
-        path: "xtask-registry/src/docs/operation_schema.rs",
+        path: "xtask-registry/src/docs/operation_schema/composition.rs",
         owner: "ToolingFrontend",
         reason: "tooling walk over IR for documentation generation",
     },
