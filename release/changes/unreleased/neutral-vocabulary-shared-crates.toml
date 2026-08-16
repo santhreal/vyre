@@ -1,3 +1,2 @@
 category = "Changed"
-text = "Shared crates describe launch planning, bitset compression, frontier encoding and scan admission in neutral terms instead of naming one vendor backend.
-"
+text = "Shared crates describe launch planning, bitset compression, frontier encoding and scan admission in neutral terms instead of naming one vendor backend."

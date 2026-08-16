@@ -1,3 +1,2 @@
 category = "Fixed"
-text = "The shared gate fixture checkout states the corrective action when a temporary directory or git is unavailable, and the recorded backend feature-marker matrix matches what the tree produces.
-"
+text = "The shared gate fixture checkout states the corrective action when a temporary directory or git is unavailable, and the recorded backend feature-marker matrix matches what the tree produces."
