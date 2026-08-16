@@ -8,11 +8,14 @@
 #![forbid(unsafe_code)]
 
 vyre_test_support::registry_closure_gate! {
-    // Under the current population by enough room that consolidating one step
-    // builder does not need this line edited, and high enough that a parser
+    // Measured floor: 2 tracked builders on 2026-08-15, down from 4. The two
+    // that left were in `src/transform/compiler/`, deleted in dddd1eec08 as
+    // compiler primitive specs nothing lowered; their IR construction is gone
+    // from the tree, so there is nothing left for a test to pin. Lowering this
+    // line is legitimate only for that reason: it is high enough that a parser
     // regression which drops most of the tree fails instead of reporting a
     // clean sweep of a nearly empty set.
-    floor: 4,
+    floor: 2,
     // Empty, and it must stay that way by fixing builders rather than listing
     // them: the enumerator's stale and now-covered guards make this list
     // only-shrinkable, so anything added here is a debt with no scheduled payer.

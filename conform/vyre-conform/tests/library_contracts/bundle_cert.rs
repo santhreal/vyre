@@ -1,8 +1,8 @@
 //! `bundle_cert` contracts over the public `vyre_conform` surface.
 
-use vyre_conform_spec::ConformanceCase;
-use vyre_conform::bundle_cert::*;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_conform::{issue_bundle_cert, verify_bundle_against_reference, BundleCertError};
+use vyre_conform_spec::ConformanceCase;
 use vyre_primitives::wire::pack_u32_slice as bytes_u32;
 
 /// Smallest non-trivial Program we can dispatch on the reference:
@@ -12,10 +12,8 @@ use vyre_primitives::wire::pack_u32_slice as bytes_u32;
 fn copy_first_program() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
-            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![Node::store(
@@ -30,8 +28,7 @@ fn output_first_copy_program() -> Program {
     Program::wrapped(
         vec![
             BufferDecl::output("output", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![Node::store(
@@ -212,10 +209,8 @@ fn verify_catches_bundle_drift() {
 
     let drifted = Program::wrapped(
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
-            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(2),
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(2),
         ],
         [1, 1, 1],
         vec![Node::store(

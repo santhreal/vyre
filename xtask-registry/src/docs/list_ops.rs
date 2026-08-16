@@ -3,7 +3,8 @@
 use xtask::gate::{Gate, GateCtx, GateError, Report};
 use xtask::toml_text::{array, quote};
 
-use crate::docs::operation_schema::{self, OperationRecord};
+use crate::docs::operation_schema::assemble;
+use crate::docs::operation_schema::schema::OperationRecord;
 
 /// Holds the schema-derived operation inventory to the live registry.
 pub struct ListOps;
@@ -22,7 +23,7 @@ impl Gate for ListOps {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let schema = operation_schema::build().map_err(|errors| {
+        let schema = assemble::build().map_err(|errors| {
             GateError::new(
                 format!(
                     "the canonical operation schema does not build: {}",

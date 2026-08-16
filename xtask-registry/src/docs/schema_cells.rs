@@ -5,7 +5,7 @@
 //! both renders identically, so each cell has one renderer here and the views
 //! only choose which cells to emit and in which order.
 
-use crate::docs::operation_schema::{OperationRecord, TypedParameter};
+use crate::docs::operation_schema::schema::{OperationRecord, TypedParameter};
 
 /// The signature column: buffer bindings for program operations, an arrow form
 /// for value operations.

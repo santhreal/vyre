@@ -3,7 +3,7 @@
 //! Drives a transfer program and a `bitset_fixpoint` program in a loop
 //! until the changed flag clears.
 
-use crate::lens::fixpoint_current_score;
+use crate::lens::fixpoint::current_score;
 use vyre::ir::{BufferAccess, Program};
 use vyre_driver::BackendRegistration;
 use vyre_reference::value::Value;
@@ -222,7 +222,7 @@ fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), Conver
         if decl.count() != next_count {
             continue;
         }
-        let score = fixpoint_current_score(decl.name(), next);
+        let score = current_score(decl.name(), next);
         if score < best_score {
             best_score = score;
             current_decl = Some(decl);

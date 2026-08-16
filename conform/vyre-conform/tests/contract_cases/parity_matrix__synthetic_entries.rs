@@ -1,3 +1,4 @@
+use super::parity_matrix_entries::{FixtureCases, SyntheticOpaqueExpr, UnifiedEntry};
 use super::*;
 
 /// Op id of the callee the expr-variant bundle calls.
@@ -6,6 +7,19 @@ use super::*;
 /// and its semantic owner must be registered. Validation rejects an unknown
 /// identity with V016 before the unreachable branch reaches execution.
 const SYNTHETIC_CALLEE_OP_ID: &str = "vyre_conform::synthetic_callee";
+
+/// The callee takes a whole buffer, which is what makes `Expr::BufferRef`
+/// legal at the call site.
+///
+/// `Expr::BufferRef` is a real IR variant and a value nothing else can consume:
+/// `vyre_foundation::validate::expr_rules` rejects it everywhere except a call
+/// argument declared `buffer<T>`. So the only program that can carry the variant
+/// is one that calls an op whose signature declares a buffer parameter.
+const SYNTHETIC_CALLEE_INPUTS: &[vyre_foundation::dialect_lookup::TypedParam] =
+    &[vyre_foundation::dialect_lookup::TypedParam {
+        name: "source",
+        ty: "buffer<u32>",
+    }];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::new(
@@ -16,7 +30,7 @@ inventory::submit! {
         None,
     )
     .with_signature(vyre_foundation::dialect_lookup::Signature {
-        inputs: &[],
+        inputs: SYNTHETIC_CALLEE_INPUTS,
         outputs: &[],
         attrs: &[],
         bytes_extraction: false,
@@ -27,7 +41,7 @@ inventory::submit! {
 pub(crate) fn synthetic_entries() -> Vec<UnifiedEntry> {
     vec![UnifiedEntry {
         id: "vyre-conform::synthetic::expr_variant_contract_bundle",
-        build: Some(synthetic_expr_variant_contract_program),
+        build: synthetic_expr_variant_contract_program,
         test_inputs: Some(synthetic_scalar_inputs),
         expected_output: Some(synthetic_zero_output),
     }]
@@ -47,7 +61,7 @@ fn synthetic_expr_variant_contract_program() -> Program {
                         "call",
                         Expr::Call {
                             op_id: SYNTHETIC_CALLEE_OP_ID.into(),
-                            args: vec![],
+                            args: vec![Expr::buffer_ref("out")],
                         },
                     ),
                     Node::let_bind(
@@ -80,11 +94,7 @@ pub(crate) fn expr_variant_rows(
 ) -> BTreeMap<&'static str, Vec<&'static str>> {
     let mut rows = BTreeMap::<&'static str, BTreeSet<&'static str>>::new();
     for entry in entries {
-        let variants = expr_variants_in_program(
-            entry
-                .program()
-                .expect("Fix: conformance operation must provide a neutral builder"),
-        );
+        let variants = expr_variants_in_program(entry.program());
         for variant in variants {
             rows.entry(variant).or_default().insert(entry.id);
         }
