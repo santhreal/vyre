@@ -648,9 +648,9 @@ mod tests {
             named_workflows(document),
             vec![
                 (5, "ci.yml".to_string()),
-                (9, "fuzz.yml".to_string()),
-                (10, "gone.yml".to_string()),
-                (10, "also-gone.yaml".to_string()),
+                (10, "fuzz.yml".to_string()),
+                (11, "gone.yml".to_string()),
+                (11, "also-gone.yaml".to_string()),
             ]
         );
     }

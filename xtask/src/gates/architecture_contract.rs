@@ -590,11 +590,17 @@ fn judge_lanes(
                     ));
                     continue;
                 }
-                let matched = tree
-                    .paths()
-                    .iter()
-                    .any(|path| glob_match(pattern, path.to_string_lossy().as_ref()))
-                    || tree.exists(pattern);
+                // A lane entry names a path scope, so `vyre-driver-*` covers the
+                // files under every directory it matches as well as a file of
+                // that name. Requiring the glob to match a whole path would
+                // report every entry written as a directory, which is most of
+                // them, and reporting a coherent registry is how a rule gets
+                // switched off.
+                let subtree = format!("{}/**", pattern.trim_end_matches('/'));
+                let matched = tree.paths().iter().any(|path| {
+                    let path = path.to_string_lossy();
+                    glob_match(pattern, path.as_ref()) || glob_match(&subtree, path.as_ref())
+                }) || tree.exists(pattern);
                 if !matched {
                     findings.push(Finding::in_file(
                         LANES,
@@ -688,5 +694,33 @@ mod tests {
     #[test]
     fn a_required_token_survives_a_reflowed_paragraph() {
         assert!(normalize_whitespace("the\n  live\tregistry").contains("the live registry"));
+    }
+
+    /// WHY: a lane entry names a path scope, and most are written as a directory
+    /// or a directory glob. Requiring the pattern to match a whole path reported
+    /// `vyre-driver-*` as matching nothing while two driver crates were sitting
+    /// in the tree, and a rule that reports a coherent registry gets switched
+    /// off. The absent case must still fail, or the rule covers nothing.
+    #[test]
+    fn a_lane_entry_may_name_a_directory_or_a_directory_glob() {
+        let listed = ["vyre-driver-cuda/src/lib.rs", "vyre-libs/src/scan/dfa.rs"];
+        for pattern in ["vyre-driver-*", "vyre-libs", "vyre-libs/src/scan/**"] {
+            let subtree = format!("{}/**", pattern.trim_end_matches('/'));
+            assert!(
+                listed
+                    .iter()
+                    .any(|path| glob_match(pattern, path) || glob_match(&subtree, path)),
+                "`{pattern}` names a scope two listed files sit inside"
+            );
+        }
+        for pattern in ["vyre-deleted", "vyre-driver-*/tests/**"] {
+            let subtree = format!("{pattern}/**");
+            assert!(
+                !listed
+                    .iter()
+                    .any(|path| glob_match(pattern, path) || glob_match(&subtree, path)),
+                "`{pattern}` names a scope nothing is inside"
+            );
+        }
     }
 }
