@@ -153,12 +153,12 @@ deep-frontend run that takes ~10 s for trivial inputs.
 Top-level CLI:
 
 ```
-vyre_dbg failure-trace --kdesc /tmp/c11_annotate.kdesc.bin
+vyre_dbg failure-trace --kdesc out/annotate.kdesc.bin
 ```
 
 Loads the descriptor, runs `emit_optimized`, validates, and on
 failure prints the full failure-trace report. With
-`--bind-result-log /tmp/bind_log.bin` the report includes vyre-op-id
+`--bind-result-log out/bind_log.bin` the report includes vyre-op-id
 correlation. Default output is human-readable; `--json` for
 machine-readable.
 

@@ -1,32 +1,40 @@
 # Script assertion ledger
 
-`scripts/` holds 36 tracked files: 26 shell scripts and 10 Python scripts.
-Each one is recorded below with its assertions, what makes it exit nonzero, every
+`scripts/` holds 25 tracked files: 19 shell scripts and 6 Python scripts. Each
+one is recorded below with its assertions, what makes it exit nonzero, every
 caller found in the tree, whether the files it reads still exist, and the gate
-that owns its assertions after the port. The rows carry 148 assertions and
-35 findings.
+that owns its assertions after the port. A row is kept after its script leaves
+the tree, so the port it records stays checkable against the gate that carries
+it. The rows carry 148 assertions and 35 findings.
 
-A script leaves this document by being deleted: its rule belongs to a registered
-gate, so the row is a record of a port that is finished, not of a file that still
-runs. The ledger is empty when the registry owns every rule.
+A row whose script has left the tree records a port that is finished: the rule
+it names belongs to a registered gate, and the row is how that claim stays
+checkable. Every rule is in the registry once no row names a tracked file.
 
 ## Totals
 
-- Files: 36. Assertions: 148. Findings: 35.
-- Files whose subject is partly or wholly gone: 2.
-- Files nothing invokes: 12.
+- Rows: 36. Assertions: 148. Findings: 35.
+- Tracked files: 25. Rows whose script has left the tree: 11.
+- Tracked files whose subject is partly or wholly gone: 0.
+- Tracked files nothing invokes: 8.
 
-### Subject gone
+### Left the tree
 
+- `scripts/architecture_docs.py`
 - `scripts/bench/cross_backend_comparison.sh`
-- `scripts/final-launch.sh`
+- `scripts/bench_smoke.sh`
+- `scripts/check_bench_baselines.sh`
+- `scripts/check_bench_smoke_runtime.sh`
+- `scripts/check_deep_bench_coverage.sh`
+- `scripts/check_docs_references.py`
+- `scripts/check_public_api_snapshot.sh`
+- `scripts/docs.sh`
+- `scripts/lib/check_deep_bench_coverage.py`
+- `scripts/public_api_snapshot_inventory.py`
 
 ### Nothing invokes it
 
 - `scripts/apply-branch-protection.sh`
-- `scripts/bench/cross_backend_comparison.sh`
-- `scripts/bench_smoke.sh`
-- `scripts/check_bench_baselines.sh`
 - `scripts/check_metal_macbook.sh`
 - `scripts/check_signed_conformance_certificate.sh`
 - `scripts/crate_ownership.py`
@@ -34,7 +42,6 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/final-launch.sh`
 - `scripts/install_wire_precommit_hook.sh`
 - `scripts/testing_guides.py`
-- `scripts/wire_ci_local.sh`
 
 ## Rows
 
@@ -59,9 +66,9 @@ Exits nonzero on:
 
 ### `scripts/architecture_docs.py`
 
-Subject: present: the one document it validates, docs/ARCHITECTURE.md, is tracked, as are docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/optimization/OWNERSHIP.toml, docs/CRATE_OWNERSHIP.toml, release/release-train.toml and the backend evidence. CURRENT_DOCS carried five documents and an RFC when this row was written; four of the six were deleted and the list was trimmed to the survivor, so the assertions below that name a second document no longer apply.
+Subject: gone: the script is not in the tree. docs/ARCHITECTURE.md, docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/optimization/OWNERSHIP.toml, docs/CRATE_OWNERSHIP.toml and release/release-train.toml are tracked, and the gates below read them.
 
-Invoked by: architectural-invariants.yml, xtask/tests/tree_contracts/architecture_docs.rs; version-coupled by xtask-registry/src/docs/operation_schema.rs and cited by docs/optimization/OWNERSHIP.toml and xtask/src/release/conformance_workflows.rs.
+Invoked by: nothing; architectural-invariants.yml runs `architecture-contract` and `docs-references` in its place, and xtask/tests/tree_contracts/architecture_docs.rs holds the same documents.
 
 Gate: xtask/src/gates/manifest_contract.rs takes the workspace, schema, backend evidence and lane assertions; xtask/src/gates/doc_contract.rs takes the five documents, their tokens, their dates and their forbidden patterns, and reports each missing document as one finding.
 
@@ -87,15 +94,15 @@ Findings:
 
 - architectural-invariants.yml fails on every tree today. read_text on docs/ARCHITECTURE.md raises before any live authority is read, so the six assertions that would still pass never run. Splitting them across two gates is what makes the surviving ones reachable again.
 - validate raises on the first failure, so a tree with ten violations reports one. The gate collects findings instead, which is also what makes the pinned count meaningful.
-- OPERATION_SCHEMA_VERSION = 4 is duplicated here and in xtask-registry/src/docs/operation_schema.rs. The gate reads the Rust constant instead of restating the number.
+- OPERATION_SCHEMA_VERSION = 4 is duplicated here and in xtask-registry/src/docs/operation_schema/mod.rs. The gate reads the Rust constant instead of restating the number.
 
 ### `scripts/bench/cross_backend_comparison.sh`
 
-Subject: gone: it wrapped a registered subcommand whose table now lives in the committed release evidence.
+Subject: gone: the script is not in the tree, and it wrapped a registered subcommand whose table now lives in the committed release evidence.
 
 Invoked by: nothing; the path appeared in .gitignore only, and that stanza is gone too.
 
-Gate: reported: it asserts nothing and its output directory is no longer published.
+Gate: `bench-crossback` derives the cross-backend comparison from the committed release benchmark evidence and holds the recorded table to it.
 
 Assertions:
 
@@ -112,11 +119,11 @@ Findings:
 
 ### `scripts/bench_smoke.sh`
 
-Subject: present.
+Subject: gone: the script is not in the tree.
 
-Invoked by: nothing; named in CONTRIBUTING.md.
+Invoked by: nothing.
 
-Gate: xtask/src/gates/bench_contract.rs already runs the smoke suite under a budget, so this wrapper carries no assertion of its own.
+Gate: xtask/src/gates/bench.rs runs the smoke suite under a budget as `bench-smoke-runtime`, so this wrapper carried no assertion of its own.
 
 Assertions:
 
@@ -128,11 +135,11 @@ Exits nonzero on:
 
 ### `scripts/check_bench_baselines.sh`
 
-Subject: present.
+Subject: gone: the script is not in the tree.
 
 Invoked by: nothing; named in benches/RESULTS.md and the changelog only.
 
-Gate: xtask/src/gates/bench_contract.rs.
+Gate: xtask/src/gates/bench.rs, as `bench-baselines`.
 
 Assertions:
 
@@ -152,11 +159,11 @@ Findings:
 
 ### `scripts/check_bench_smoke_runtime.sh`
 
-Subject: present.
+Subject: gone: the script is not in the tree.
 
-Invoked by: bench-regression.yml.
+Invoked by: nothing; bench-regression.yml runs `bench-smoke-runtime` in its place.
 
-Gate: xtask/src/gates/bench_contract.rs.
+Gate: xtask/src/gates/bench.rs, as `bench-smoke-runtime`.
 
 Assertions:
 
@@ -182,7 +189,7 @@ Subject: present.
 
 Invoked by: gpu-parity.yml.
 
-Gate: xtask/src/gates/gpu_parity.rs.
+Gate: none in the registry; gpu-parity.yml runs the script.
 
 Assertions:
 
@@ -200,11 +207,11 @@ Exits nonzero on:
 
 ### `scripts/check_deep_bench_coverage.sh`
 
-Subject: present.
+Subject: gone: the script is not in the tree.
 
-Invoked by: gates.yml.
+Invoked by: nothing; gates.yml runs `bench-coverage` in its place.
 
-Gate: xtask/src/gates/bench_contract.rs.
+Gate: xtask/src/gates/bench.rs, as `bench-coverage`.
 
 Assertions:
 
@@ -216,11 +223,11 @@ Exits nonzero on:
 
 ### `scripts/check_docs_references.py`
 
-Subject: present: docs carries 41 tracked Markdown documents again, plus root Markdown, .github Markdown and the crate READMEs.
+Subject: gone: the script is not in the tree. The documents it read are tracked: docs Markdown, root Markdown, .github Markdown and the crate READMEs.
 
-Invoked by: xtask/tests/docs_references.rs.
+Invoked by: nothing; xtask/tests/docs_references.rs and architectural-invariants.yml exercise the `docs-references` gate in its place.
 
-Gate: xtask/src/gates/doc_contract.rs.
+Gate: xtask/src/gates/docs_references.rs.
 
 Assertions:
 
@@ -236,7 +243,7 @@ Subject: present.
 
 Invoked by: gates.yml.
 
-Gate: xtask/src/gates/example_contract.rs.
+Gate: none in the registry; gates.yml runs the script.
 
 Assertions:
 
@@ -258,7 +265,7 @@ Subject: present.
 
 Invoked by: gates.yml.
 
-Gate: xtask/src/gates/feature_msrv.rs.
+Gate: none in the registry; gates.yml runs the script.
 
 Assertions:
 
@@ -274,7 +281,7 @@ Subject: present.
 
 Invoked by: nothing; the path appears as a string in vyre-bench/src/cli/bundle.rs.
 
-Gate: xtask/src/gates/metal_remote.rs.
+Gate: none in the registry, and nothing invokes the script.
 
 Assertions:
 
@@ -305,11 +312,11 @@ Findings:
 
 ### `scripts/check_public_api_snapshot.sh`
 
-Subject: present (docs/public-api/*.txt survive; they are .txt, not the deleted mdbook).
+Subject: gone: the script is not in the tree; docs/public-api/*.txt are tracked.
 
-Invoked by: public-api.yml.
+Invoked by: nothing; public-api.yml runs `public-api-snapshot` in its place.
 
-Gate: xtask/src/gates/public_api.rs, with --refresh becoming ctx.write on a generating gate.
+Gate: xtask/src/gates/public_api.rs, as `public-api-snapshot`, with --refresh becoming ctx.write on a generating gate.
 
 Assertions:
 
@@ -342,7 +349,7 @@ Subject: present.
 
 Invoked by: nothing; named in conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs.
 
-Gate: xtask/src/gates/release_contract.rs.
+Gate: none in the registry; conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs holds the script to the sharded all-backend proof it must run.
 
 Assertions:
 
@@ -362,7 +369,7 @@ Subject: present.
 
 Invoked by: gates.yml.
 
-Gate: xtask/src/gates/gpu_parity.rs.
+Gate: none in the registry; gates.yml runs the script.
 
 Assertions:
 
@@ -380,7 +387,7 @@ Subject: present: docs/CRATE_OWNERSHIP.toml and both generated documents, docs/C
 
 Invoked by: nothing directly; consumed by xtask/src/gates/check_tier_deps.rs and xtask/src/gates/layering.rs, and named as the generator of docs/CRATE_GRAPH.md and docs/OWNERSHIP.md.
 
-Gate: xtask/src/gates/ownership_registry.rs.
+Gate: xtask/tests/tree_contracts/crate_ownership_registry.rs runs the generator and holds the registry shape; xtask/src/gates/check_tier_deps.rs and xtask/src/gates/layering.rs read the registry it writes.
 
 Assertions:
 
@@ -448,11 +455,11 @@ Findings:
 
 ### `scripts/docs.sh`
 
-Subject: present.
+Subject: gone: the script is not in the tree.
 
-Invoked by: docs-ci.yml.
+Invoked by: nothing; docs-ci.yml runs `workspace-docs` in its place.
 
-Gate: xtask/src/gates/rustdoc.rs.
+Gate: xtask/src/gates/workspace_build.rs, as `workspace-docs`.
 
 Assertions:
 
@@ -468,11 +475,11 @@ Findings:
 
 ### `scripts/final-launch.sh`
 
-Subject: partly gone: the release notes it passes to `gh release create` are docs/release/v<version>.md, and docs/ carries no Markdown after b1ed746d1c.
+Subject: present: the notes it passes to `gh release create` are release/evidence/docs/release-notes-body.md, which the `release-docs` gate generates.
 
 Invoked by: nothing; it is the manual launch entry point, and it is named by xtask/src/release/launch_state.rs, release/release-train.toml, release/vyre-release-evidence.toml, docs/optimization/OWNERSHIP.toml and conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs.
 
-Gate: xtask/src/gates/release_contract.rs owns every precondition; the publish, tag, push and gh release actions stay operator actions.
+Gate: xtask/src/release/launch_state.rs and xtask/src/release/launch_contract.rs own the preconditions; the publish, tag, push and gh release actions stay operator actions.
 
 Assertions:
 
@@ -511,7 +518,7 @@ Findings:
 
 Subject: present.
 
-Invoked by: nothing; named in CONTRIBUTING.md.
+Invoked by: nothing.
 
 Gate: not a gate: it installs a local git hook. Its one assertion is reported and the hook target moves to `xtask sweep` once an operator decides how the hook is installed.
 
@@ -549,11 +556,11 @@ Findings:
 
 ### `scripts/lib/check_deep_bench_coverage.py`
 
-Subject: present.
+Subject: gone: the script is not in the tree.
 
-Invoked by: check_deep_bench_coverage.sh from gates.yml.
+Invoked by: nothing.
 
-Gate: xtask/src/gates/bench_contract.rs.
+Gate: xtask/src/gates/bench.rs, as `bench-coverage`.
 
 Assertions:
 
@@ -577,7 +584,7 @@ Subject: present.
 
 Invoked by: check_feature_msrv.sh from gates.yml.
 
-Gate: xtask/src/gates/feature_msrv.rs.
+Gate: none in the registry; check_feature_msrv.sh runs it from gates.yml.
 
 Assertions:
 
@@ -604,7 +611,7 @@ Subject: present.
 
 Invoked by: toml_reader.sh, gates.yml.
 
-Gate: replaced by typed TOML reads in xtask/src/gates/release_contract.rs.
+Gate: replaced by typed TOML reads in xtask/src/toml_text.rs.
 
 Assertions:
 
@@ -623,7 +630,7 @@ Subject: present.
 
 Invoked by: final-launch.sh, publish-release.sh.
 
-Gate: xtask/src/gates/release_contract.rs.
+Gate: xtask/src/release/release_train.rs.
 
 Assertions:
 
@@ -639,7 +646,7 @@ Subject: present.
 
 Invoked by: final-launch.sh.
 
-Gate: xtask/src/gates/release_contract.rs.
+Gate: xtask/src/release/repo_boundary.rs.
 
 Assertions:
 
@@ -655,7 +662,7 @@ Subject: present.
 
 Invoked by: run_sweep_oracle_matrix.sh, run_volume_sweep_shard.sh, gates.yml.
 
-Gate: xtask/src/gates/sweep_targets.rs.
+Gate: none in the registry; gates.yml runs the wrappers that call it.
 
 Assertions:
 
@@ -707,7 +714,7 @@ Subject: present.
 
 Invoked by: final-launch.sh, check_signed_conformance_certificate.sh.
 
-Gate: xtask/src/gates/release_contract.rs owns the certificate assertion; the sharded proof run stays an operator action.
+Gate: none in the registry; conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs holds the script to the merged certificate it must produce, and the sharded proof run stays an operator action.
 
 Assertions:
 
@@ -730,9 +737,9 @@ Findings:
 
 ### `scripts/public_api_snapshot_inventory.py`
 
-Subject: present.
+Subject: gone: the script is not in the tree.
 
-Invoked by: check_public_api_snapshot.sh, semver-checks.yml.
+Invoked by: nothing; public-api.yml runs `public-api-paths` in its place.
 
 Gate: xtask/src/gates/public_api.rs, which derives the same roster from the manifests it already walks.
 
@@ -756,7 +763,7 @@ Subject: present.
 
 Invoked by: final-launch.sh.
 
-Gate: xtask/src/gates/release_contract.rs owns the readiness assertions; the publish loop stays an operator action.
+Gate: xtask/src/release/package_readiness/mod.rs owns the readiness assertions; the publish loop stays an operator action.
 
 Assertions:
 
@@ -788,7 +795,7 @@ Subject: present.
 
 Invoked by: gates.yml.
 
-Gate: xtask/src/gates/sweep_targets.rs owns the roster assertions; the test run is a gate that shells into cargo.
+Gate: none in the registry; gates.yml runs the script.
 
 Assertions:
 
@@ -810,7 +817,7 @@ Subject: present.
 
 Invoked by: gates.yml, run_sweep_oracle_matrix.sh.
 
-Gate: xtask/src/gates/sweep_targets.rs.
+Gate: none in the registry; gates.yml runs the script.
 
 Assertions:
 
@@ -900,9 +907,9 @@ Findings:
 
 Subject: present.
 
-Invoked by: nothing; named in CONTRIBUTING.md and install_wire_precommit_hook.sh.
+Invoked by: `scripts/install_wire_precommit_hook.sh`.
 
-Gate: xtask/src/gates/wire_contract.rs.
+Gate: xtask/src/gates/workspace_build.rs covers the check, clippy and test runs as `workspace-check`, `workspace-clippy` and `workspace-tests`; the two-run ordering assertion has no gate.
 
 Assertions:
 
@@ -942,7 +949,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `program-wire-fields` | Add `pub scratch_hint: u32,` to `Program` in `vyre-foundation/src/ir_inner/model/program/definition.rs`. | 0 to 1 |
 | `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire/mod.rs` and `decode/from_wire.rs`. | 0 to 1 |
 | `program-wire-fields` | Rename `pub struct Program` to `pub struct ProgramInner`. | gate errors, which is the intended outcome: the declaration is located, not named, so losing it is unmeasurable rather than clean |
-| `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr/mod.rs`. | 1 to 2 |
+| `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr_visitor/mod.rs`. | 1 to 2 |
 | `frozen-contracts` | Delete `docs/frozen-traits/MutationClass.txt`. | 1 to 2 |
 | `frozen-contracts` | Reindent the body of `pub enum AlgebraicLaw` by four spaces. | stays 1; indentation is not part of the contract |
 | `file-size` | Append 200 blank lines to `vyre-foundation/src/optimizer/fact_cache/mod.rs` (measured 570, cap 599). | 75 to 76 |
@@ -973,7 +980,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |
 | `hot-path-owned-dispatch` | In `vyre-driver/src/backend/compiled_pipeline.rs`, make `dispatch` the required method and give `dispatch_borrowed` a default that copies each row with `to_vec`. | 0 to 2, one finding for the requirement and one for the copy it forces |
 | `hot-path-inventory` | In `vyre-libs/src/operation_catalog.rs`, serve `convergence_contract` by walking `inventory::iter` instead of probing the frozen index. | 0 to 1, quoting the statement that scans |
-| `hot-path-nested-rows` | In `vyre-libs/src/parsing/c/preprocess/gpu_pipeline/dispatch.rs`, delete the `dispatch_borrowed_into` declaration from `ProgramOracle`. | 0 to 1, naming the returning method that is then the only shape offered |
+| `hot-path-nested-rows` | In `vyre-driver/src/backend/vyre_backend.rs`, delete the `dispatch_borrowed_into` declaration. | 0 to 1, naming the returning method that is then the only shape offered |
 | `hot-path-nested-rows` | In `vyre-driver/src/backend/vyre_backend.rs`, replace the slot-preserving replacement in `dispatch_borrowed_into` with `*outputs = self.dispatch_borrowed(program, inputs, config)?;`. | 0 to 1, naming the slot the default replaces |
 | `hot-path-unbounded-read` | Add `fs::read_to_string(` to a file under `vyre-driver/src` outside the reviewed cache modules. | 1 to 3 |
 | `lint-unsafe-budget` | Add `#![allow(unsafe_code)]` to a crate root not in the reviewed budget. | 0 to 1 |

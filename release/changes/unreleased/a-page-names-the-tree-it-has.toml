@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The contributor and crate documentation names the tree as it stands: CONTRIBUTING.md carries no host-local build settings, the placement charter points at docs/architecture/crates.md, and the vyre-primitives page lists only the paths and features the crate still declares."

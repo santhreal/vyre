@@ -209,8 +209,7 @@ required_commands = [
 purpose = "Graph/dataflow compiler seam: frontier policies, CSR contracts, semiring formulations, relation facts, and compressed domains."
 layer = "Graph/flow compiler seam"
 write = [
-  "vyre-primitives/src/graph/**",
-  "vyre-primitives/src/bitset/**",
+  "vyre-libs/src/bitset/**",
   "vyre-libs/src/analysis/**",
   "vyre-libs/src/graph/**",
   "vyre-libs/src/security/**",
@@ -221,7 +220,7 @@ avoid = [
   "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
-  "cargo_full test -p vyre-primitives graph",
+  "cargo_full test -p vyre-libs graph",
   "cargo_full test -p vyre-libs analysis",
 ]
 
@@ -250,13 +249,13 @@ layer = "Scan/static analysis"
 write = [
   "vyre-libs/src/scan/**",
   "vyre-libs/src/decode/**",
-  "vyre-primitives/src/matching/**",
+  "vyre-libs/src/matching/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs scan",
-  "cargo_full test -p vyre-primitives matching",
+  "cargo_full test -p vyre-libs matching",
 ]
 
 [lane.scan_automata]
@@ -264,8 +263,8 @@ purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resi
 layer = "Scan/automata seam"
 write = [
   "vyre-libs/src/scan/**",
-  "vyre-primitives/src/matching/**",
-  "vyre-primitives/src/text/**",
+  "vyre-libs/src/matching/**",
+  "vyre-libs/src/text/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
   "release/evidence/benchmarks/**",
@@ -276,7 +275,7 @@ avoid = [
 ]
 required_commands = [
   "cargo_full test -p vyre-libs scan",
-  "cargo_full test -p vyre-primitives matching",
+  "cargo_full test -p vyre-libs matching",
 ]
 
 [lane.security_dataflow]
@@ -320,13 +319,12 @@ layer = "NN/math"
 write = [
   "vyre-libs/src/nn/**",
   "vyre-libs/src/math/**",
-  "vyre-primitives/src/math/**",
   "vyre-libs/tests/*quantized*",
   "vyre-libs/tests/*attention*",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs matmul",
-  "cargo_full test -p vyre-primitives math",
+  "cargo_full test -p vyre-libs math",
 ]
 
 [lane.sparse_math_ai]
@@ -335,7 +333,6 @@ layer = "Sparse math/AI seam"
 write = [
   "vyre-libs/src/math/**",
   "vyre-libs/src/nn/**",
-  "vyre-primitives/src/math/**",
   "vyre-libs/tests/*gemm*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",

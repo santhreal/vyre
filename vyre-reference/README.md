@@ -87,7 +87,7 @@ The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a b
 ### Boundaries
 
 The `reference-semantics` owner maintains this `semantics` crate at `vyre-reference`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-primitives`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs`, `vyre-primitives`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

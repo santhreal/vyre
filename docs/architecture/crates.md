@@ -219,15 +219,6 @@ dangling analysis, carrier inspection.
 Not here: anything a user's program depends on. This crate reads what other
 crates produced.
 
-### vyre-grammar-gen
-
-The host-side generator for the lexer DFA and LR(1) tables that the parsing
-compositions load as read-only data. See [parsing](parsing.md).
-
-Host-side is the point: table construction happens once and the device
-consumes the table. Not here: parsing. The parser is a composition and
-lives in `vyre-libs`.
-
 ### vyre-safetensors
 
 Bounded safetensors metadata and shard identity. No workspace member

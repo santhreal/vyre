@@ -30,6 +30,7 @@ This crate declares no Cargo features.
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `bin` | `audit_rule_contracts` | `xtask/src/bin/audit_rule_contracts.rs` | None | `./cargo_full test -p xtask --bin audit_rule_contracts` |
+| `bin` | `publishable_packages` | `xtask/src/bin/publishable_packages.rs` | None | `./cargo_full test -p xtask --bin publishable_packages` |
 | `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `./cargo_full test -p xtask --bin scaffold_rule` |
 | `bin` | `xtask` | `xtask/src/main.rs` | None | `./cargo_full test -p xtask --bin xtask` |
 | `lib` | `xtask` | `xtask/src/lib.rs` | None | `./cargo_full test -p xtask` |

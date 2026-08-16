@@ -1,11 +1,10 @@
 # Authoring a Cat-A op in vyre-libs
 
-This document is the recipe for landing a new composition in
-`vyre-libs`. A composition produces a `Program` assembled from
-existing IR: no raw shader source, no backend-specific code. Consumer
-dialects and compiler-internal domains use the same recipe. Every
-production backend runs the same program. The workspace `README.md`
-is the charter.
+The recipe for landing a new composition in `vyre-libs`. A composition
+produces a `Program` assembled from existing IR: no raw shader source, no
+backend-specific code. Consumer dialects and compiler-internal domains use the
+same recipe. Every production backend runs the same program.
+`docs/lego-block-rule.md` is the placement rule.
 
 Follow the 5-step recipe below. Every step has a test or a lint
 protecting it; skipping a step fails CI.
