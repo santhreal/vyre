@@ -2810,7 +2810,7 @@ bench_targets = []
 [[op]]
 family = "vyre-libs::matching::aho_corasick"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::aho_corasick"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -2825,7 +2825,7 @@ bench_targets = []
 [[op]]
 family = "vyre-libs::matching::compact_hits"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::compact_hits"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -2840,7 +2840,7 @@ bench_targets = []
 [[op]]
 family = "vyre-libs::matching::cooperative_dfa"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::cooperative_dfa"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -2855,7 +2855,7 @@ bench_targets = []
 [[op]]
 family = "vyre-libs::matching::emit_hit"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::emit_hit"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"

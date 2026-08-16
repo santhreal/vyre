@@ -87,6 +87,7 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
         OpTier::Library => {
             let domain = namespace_domain(id, "vyre-libs::");
             let owner = match domain {
+                "matching" => "vyre-libs/src/scan".to_string(),
                 "optim" => "vyre-libs/src/nn/optim".to_string(),
                 "quant" => "vyre-libs/src/nn/quant".to_string(),
                 "builder" => "vyre-libs/src/builder_catalog.rs".to_string(),
