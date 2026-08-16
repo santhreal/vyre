@@ -195,6 +195,22 @@ pub(crate) fn collect_node_accesses(node: &Node, accesses: &mut NodeAccesses) {
         Node::Region { body, .. } => {
             collect_node_sequence_accesses(body, accesses);
         }
+        Node::TileElementwise { body, .. } => {
+            collect_node_sequence_accesses(body, accesses);
+        }
+        Node::TileLoad { buffer, origin, .. } => {
+            accesses.read_buffers.insert(buffer.clone());
+            for expr in origin {
+                collect_expr_accesses(expr, accesses);
+            }
+        }
+        Node::TileStore { buffer, origin, .. } => {
+            accesses.read_buffers.insert(buffer.clone());
+            for expr in origin {
+                collect_expr_accesses(expr, accesses);
+            }
+        }
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
         Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
             accesses.read_buffers.insert(buffer.clone());
         }

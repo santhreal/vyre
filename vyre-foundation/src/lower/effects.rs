@@ -151,6 +151,23 @@ fn walk_node(node: &Node, effects: &mut ProgramEffects) {
             *effects |= ProgramEffects::BUFFER_WRITE;
             *effects |= ProgramEffects::BARRIER;
         }
+        Node::TileLoad { origin, .. } => {
+            for expr in origin {
+                walk_expr(expr, effects);
+            }
+        }
+        Node::TileStore { origin, .. } => {
+            *effects |= ProgramEffects::BUFFER_WRITE;
+            for expr in origin {
+                walk_expr(expr, effects);
+            }
+        }
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
+        Node::TileElementwise { body, .. } => {
+            for n in body {
+                walk_node(n, effects);
+            }
+        }
         Node::AsyncWait { .. } | Node::Resume { .. } | Node::Return | Node::Opaque(_) => {}
         Node::Trap { address, .. } => {
             *effects |= ProgramEffects::TRAP;

@@ -70,7 +70,7 @@ fn unsupported_capabilities_stay_false_until_lowering_exists() {
     );
 
     assert!(
-        !backend.supports_tensor_cores(),
+        !<WgpuBackend as VyreBackend>::supports_tensor_cores(&backend),
         "Fix: supports_tensor_cores must stay false until MMA/tensor-core intrinsics are emitted."
     );
 }

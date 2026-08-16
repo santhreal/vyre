@@ -34,7 +34,7 @@ use rustc_hash::FxHashSet;
 /// positive (fabricated sentinel ≠ real type) or silently pass a
 /// genuinely wrong assignment (fabricated sentinel = real type by
 /// coincidence).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Binding {
     /// Declared type of the variable.
     ///

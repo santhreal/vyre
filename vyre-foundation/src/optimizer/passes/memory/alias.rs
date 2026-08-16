@@ -150,6 +150,12 @@ fn has_unnameable_effect(node: &Node) -> bool {
         | Node::If { .. }
         | Node::Loop { .. }
         | Node::Block(_)
-        | Node::Region { .. } => false,
+        | Node::Region { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. } => false,
     }
 }

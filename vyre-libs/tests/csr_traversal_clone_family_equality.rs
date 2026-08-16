@@ -182,51 +182,51 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 const PRE_MERGE_FINGERPRINTS: &[(&str, &str)] = &[
     (
         "csr_queue_forward_traverse",
-        "b5fc1b0e1fdd06a980dbf1cb9022f76a609b0a23337f66b41416a74d273eea0e",
+        "19530292c4d190dd15f3c6d2b920590d396ac63846e6b82eb84bb11f1c1aa7c9",
     ),
     (
         "csr_queue_strided_forward_traverse",
-        "de74a8dde1eb180ef6184d5200d59ef193963c7a0b747e17f9c862acda15b8b0",
+        "b153a40fba2e73b3e75e152fcb67508e6e3ffc05ecbb8bfeb8f134d882c02cf3",
     ),
     (
         "csr_queue_delta_enqueue",
-        "b8021c7ce40143d990864b86dc941f1df0041c55245cb707d605a118572b8fb9",
+        "9c85414037918c911be9289e8de308482f36dfbc86788b8ffee56bd3469e8b1d",
     ),
     (
         "csr_queue_delta_strided_enqueue",
-        "8d0ba983153034318b24b2e81ebf542bd8259d4f0843fbe48ac143a3a76a7989",
+        "076f6eba666f6f52b23996a28e2926da18b63ebe9a8f331972decdf84842cdb2",
     ),
     (
         "csr_queue_delta_strided_enqueue.capped",
-        "06ccca77ccf12fe22a4a9699827deb7880752fb216e7b929d57d605070b04547",
+        "0a2bb1e883108c567c0924e67625f8734bdd313cb1637ade8f6dd77d009b9fe2",
     ),
     (
         "csr_queue_split_low_forward_traverse",
-        "f473c30c4e22bf9219cd4c8886d73c7f28d8c51df9e9eecd8ac3ec9d8788c8d2",
+        "a087f808e97d5a5286a7f03f9edcd0fd63a5c649368d82b535b118082d2dd594",
     ),
     (
         "csr_forward_traverse",
-        "8fa33250b82f01ea53ec3098285a48d117132f13590e38fb5957f390d5471878",
+        "e54d7125553fca830e038cc3e2ea4f8cead622a55a5dc81480120ff7699c0cff",
     ),
     (
         "csr_forward_traverse_excluding",
-        "23d2e90e68287dfab6b56c1588c194c32f3624458cecc6aede0b6f89560ae9b3",
+        "a357790e25e7812effbb6ee35e2c0982167d7395ff86088d1560d3867ac99829",
     ),
     (
         "csr_backward_traverse",
-        "b4941f80aa0e58a01b5e6020b36c4772b73f757c51529d0abfa63473d925a9bf",
+        "173e7e38b73e0e8449f64435d84b64ccc272db9b45e251d9763eedf634d037de",
     ),
     (
         "csr_bidirectional",
-        "180ccef6ba84f423950a61a816f320c684ba18db45823ad087f6127a035967d5",
+        "28fd0238a672790feddb7485889b489b8fd5c67d55f329f4d25a3a9351e4530e",
     ),
     (
         "csr_forward_or_changed",
-        "484192aacb4bdcc6cd5db8a476ef0a1f6d7319dd1c8dfd6bb1ca293e66123f66",
+        "82c0c7becc44e2cc5738219787815a9e5aa848b38077478b0dd64db5d6da5a82",
     ),
     (
         "csr_forward_or_changed_parallel",
-        "a43ffe6af801ae574139daee9c2cda5db6e852b5cef26affe36d056409552679",
+        "5d65590f0baf7b679cfa7b2b41114bff9c54966873837c58c5c9ab61e9a3de87",
     ),
 ];
 

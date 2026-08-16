@@ -202,6 +202,7 @@ pub(crate) fn run_hashmap_reference(
         vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
             vyre_foundation::validate::BackendCapabilities {
                 supports_subgroup_ops: true,
+                supports_tensor_cores: true,
                 ..Default::default()
             },
         ),
