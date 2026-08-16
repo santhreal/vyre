@@ -97,6 +97,401 @@ generator = "../scripts/crate_ownership.py"
 nav = true
 
 [[page]]
+path = "archive/0.7-2026-08-15/ARCHITECTURE.md"
+title = "Vyre architecture (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/CONVENTIONS.md"
+title = "vyre code organization conventions (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/CPU_GPU_CONVERGENCE.md"
+title = "CPU/GPU Convergence Lens  -  Security Ops (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/GATE_CLOSURE.md"
+title = "Gate Closure Mechanics (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/HOT_PATH_PROOFS.md"
+title = "Hot-Path O(1) Proofs (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/MATH_PRIMITIVES_PLACEMENT.md"
+title = "Math primitives  -  placement map (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/MIGRATION.md"
+title = "vyre  -  Migration Path (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/OPS.md"
+title = "Operation List (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/PER_OP_SURFACE.md"
+title = "Per-op Surface Contract (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/PRIMITIVES.md"
+title = "Primitive Operation Inventory (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/PUBLISH_GATE.md"
+title = "vyre-libs publish gate (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/README.md"
+title = "Archived book, vyre 0.7 (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/RECURSION_THESIS.md"
+title = "Recursive Composition Thesis (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/RELEASE_1_0_GATE.md"
+title = "Release 1.0 Gate Checklist (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/RELEASE_ENGINEERING.md"
+title = "Release engineering (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/TESTING_PROGRAM.md"
+title = "Testing Program  -  SQLite / NASA JPL / Linux / Chromium Standard (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/VISION.md"
+title = "vyre  -  vision (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/dialect-cookbook.md"
+title = "dialect cookbook (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/AlgebraicLaw.md"
+title = "AlgebraicLaw historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/EnforceGate.md"
+title = "EnforceGate historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/ExprVisitor.md"
+title = "ExprVisitor historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/Lowerable.md"
+title = "Lowerable historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/MutationClass.md"
+title = "MutationClass historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/VyreBackend.md"
+title = "VyreBackend historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/lego-block-rule.md"
+title = "LEGO-block rule: composition is the architecture (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/library-tiers.md"
+title = "Library tiers  -  the long-term organization (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/occ.md"
+title = "Open Conformance Certificates (OCC) (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/parity/three_substrate.md"
+title = "Three Substrate Parity (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/parsing-and-frontends.md"
+title = "Parsing & frontends  -  where source-language parsers live (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/primitives-tier.md"
+title = "Tier 2.5  -  `vyre-primitives` (the LEGO block layer) (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/santh-standard.md"
+title = "Santh Rust Engineering Standard (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/stability.md"
+title = "vyre  -  Stability Policy (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/wire-format-0.6-reservations.md"
+title = "Wire-format tag reservations  -  vyre 0.6 terminal allocation (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+[[page]]
 path = "lego-block-rule.md"
 title = "LEGO-block rule"
 status = "current"
