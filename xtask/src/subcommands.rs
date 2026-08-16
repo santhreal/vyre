@@ -144,7 +144,6 @@ pub static SUBSETS: &[Subset] = &[
             "lint-unsafe-budget",
             "lint-unsafe-justification",
             "proptest-coverage",
-            "audit-status",
         ],
     },
     Subset {

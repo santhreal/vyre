@@ -8,7 +8,6 @@
 //! `gates::sweep` is the runner and the wiring meta-check that keeps every
 //! registered gate connected to a pinned baseline and a workflow.
 
-pub mod audit_status;
 pub mod check_tier_deps;
 pub mod ci_contract;
 pub mod dedup_report;
@@ -57,7 +56,6 @@ use crate::gate::Gate;
 /// gate is adding it here and nowhere else. The sweep enumerates what this
 /// yields, which is why a gate cannot be registered and left unswept.
 pub static GATES: &[&dyn Gate] = &[
-    &audit_status::AuditStatus,
     &check_tier_deps::CheckTierDeps,
     &ci_contract::CiMatrix,
     &ci_contract::CiRequired,

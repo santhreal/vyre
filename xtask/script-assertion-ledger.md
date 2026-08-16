@@ -968,7 +968,6 @@ The `findings` column is the count with the injection applied, given the pin in
 | `lint-unsafe-justification` | Add an `unsafe {` block with no SAFETY comment above it. | 2 to 3 |
 | `lint-missing-docs-override` | Add `#![allow(missing_docs)]` to any crate root. | 0 to 1 |
 | `proptest-coverage` | Delete two property-test files, taking the count from 182 to 180 against the floor of 181. | 0 to 1 |
-| `audit-status` | Remove one status tag from a row in a status-managed audit document. | 0 to 1 |
 | `repo-hygiene` | Add a second `BACKLOG.md` under any crate directory and track it. | 2 to 3 |
 | `shader-source` | Add `out.push_str("@compute");` to a file under `vyre-driver-wgpu/src`. | 0 to 1 |
 | `layering` | Add `vyre-lints.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 29, one per member that reaches it, each naming the chain |

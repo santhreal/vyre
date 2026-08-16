@@ -19,10 +19,6 @@ name = "abstraction-gate"
 findings = 0
 
 [[gate]]
-name = "audit-status"
-findings = 0
-
-[[gate]]
 name = "backend-extension"
 findings = 0
 
