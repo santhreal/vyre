@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The ci-steps gate reads every script under scripts/, including the shared shell functions and readers in scripts/lib that the registry declares and every script sources; a single-level read skipped them while reporting the directory covered. The structural-gate row for cargo invocation resolution names the gate that now carries the contract."

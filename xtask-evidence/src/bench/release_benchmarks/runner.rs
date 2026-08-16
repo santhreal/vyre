@@ -335,7 +335,12 @@ fn child_output_tail(stdout: &[u8], stderr: &[u8]) -> String {
             text.push(' ');
         }
         let start = said.len().saturating_sub(MAX_CHILD_OUTPUT_BYTES);
-        text.push_str(said.get(start..).unwrap_or(said));
+        let start = said
+            .char_indices()
+            .map(|(index, _)| index)
+            .find(|index| *index >= start)
+            .unwrap_or(said.len());
+        text.push_str(&said[start..]);
     }
     if text.is_empty() {
         "the child said nothing".to_string()
@@ -946,5 +951,26 @@ mod tests {
         )
         .expect("Fix: create benchmark artifact test directory.");
         fs::write(&path, format!("{value}\n")).expect("Fix: write benchmark artifact test JSON.");
+    }
+
+    /// WHY: the tail of a failed child is cut by byte count, and a child that
+    /// prints UTF-8 puts characters across that cut. Slicing on the raw offset
+    /// returned `None` there, and the fallback handed back the whole stream, so
+    /// the one case the bound exists for was the case it did not bound.
+    #[test]
+    fn a_child_tail_is_cut_at_a_character_boundary() {
+        let said = "\u{20ac}".repeat(2000);
+        assert_eq!(said.len(), 6000);
+        assert!(!said.is_char_boundary(said.len() - MAX_CHILD_OUTPUT_BYTES));
+
+        let tail = child_output_tail(&[], said.as_bytes());
+
+        assert!(
+            tail.len() <= MAX_CHILD_OUTPUT_BYTES,
+            "Fix: the child tail must stay within its byte bound, got {}",
+            tail.len()
+        );
+        assert!(said.ends_with(&tail));
+        assert_eq!(tail.chars().next(), Some('\u{20ac}'));
     }
 }

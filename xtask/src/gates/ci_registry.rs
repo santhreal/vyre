@@ -226,16 +226,21 @@ fn read_line(names: &mut WorkflowNames, file: &str, line_number: usize, line: &s
         return;
     }
     let mut rest = command;
+    let selects_a_subset = command.contains("--subset ");
     while let Some(at) = rest.find("-- ") {
         rest = &rest[at + 3..];
         let name = token(rest);
-        if !name.is_empty() && !name.starts_with('-') {
-            names
-                .invoked
-                .entry(name)
-                .or_default()
-                .insert(file.to_string());
+        if name.is_empty() || name.starts_with('-') {
+            continue;
         }
+        if name == RUNNER && selects_a_subset {
+            continue;
+        }
+        names
+            .invoked
+            .entry(name)
+            .or_default()
+            .insert(file.to_string());
     }
     let mut rest = command;
     while let Some(at) = rest.find("--subset ") {
@@ -777,6 +782,38 @@ mod tests {
                 .insert((*file).to_string());
         }
         out
+    }
+
+    /// WHY: a workflow that runs one subset runs the gates in that subset and
+    /// nothing else. Recording the sweep for it credited every registered gate
+    /// to that file, which both hid gates no workflow selects and named the
+    /// wrong workflow on the rows it did report.
+    #[test]
+    fn a_subset_step_does_not_credit_the_whole_registry() {
+        let mut scanned = WorkflowNames::default();
+        read_line(
+            &mut scanned,
+            "docs-ci.yml",
+            7,
+            &format!("        run: ./cargo_full run -p xtask --bin xtask -- {RUNNER} --subset docs"),
+        );
+        assert!(!scanned.invoked.contains_key(RUNNER), "{:?}", scanned.invoked);
+        assert_eq!(
+            scanned.subsets.get("docs"),
+            Some(&BTreeSet::from(["docs-ci.yml".to_string()]))
+        );
+
+        let mut swept = WorkflowNames::default();
+        read_line(
+            &mut swept,
+            "gates.yml",
+            7,
+            &format!("        run: ./cargo_full run -p xtask --bin xtask -- {RUNNER}"),
+        );
+        assert_eq!(
+            swept.invoked.get(RUNNER),
+            Some(&BTreeSet::from(["gates.yml".to_string()]))
+        );
     }
 
     fn registry(rows: Vec<GateRow>) -> Registry {

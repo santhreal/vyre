@@ -668,38 +668,59 @@ fn run_findings(
     vec![Finding::at(
         step.origin.clone(),
         step.line,
-        format!("`cargo run` here does not resolve to one binary: {reason}"),
+        format!("this run step does not resolve to one binary: {reason}"),
         "name the binary in the command, or declare `default-run` in the package that ships more than one",
     )]
 }
 
-/// Read every command the files under `directory` issue.
+/// Read every command the files under `directory` issue, at any depth.
+///
+/// `scripts/` keeps its shared shell functions and its TOML reader one level
+/// down, in `scripts/lib`. A single-level read skipped them, so a cargo
+/// invocation written in a helper every script sources sat outside the gate.
 fn read_steps(root: &Path, directory: &str, extensions: &[&str]) -> Vec<Step> {
-    let mut steps = Vec::new();
-    let Ok(entries) = std::fs::read_dir(root.join(directory)) else {
-        return steps;
-    };
-    let mut files: Vec<std::path::PathBuf> = entries
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| {
-            path.extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| extensions.contains(&extension))
-        })
-        .collect();
+    let mut files = Vec::new();
+    collect_step_files(&root.join(directory), directory, extensions, &mut files);
     files.sort();
-    for path in files {
+    let mut steps = Vec::new();
+    for (origin, path) in files {
         let Ok(text) = std::fs::read_to_string(&path) else {
             continue;
         };
-        let name = path
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        steps.extend(self::steps(&format!("{directory}/{name}"), &text));
+        steps.extend(self::steps(&origin, &text));
     }
     steps
+}
+
+/// Every file under `directory` the caller reads, paired with the path a
+/// finding names it by.
+fn collect_step_files(
+    directory: &Path,
+    origin: &str,
+    extensions: &[&str],
+    files: &mut Vec<(String, std::path::PathBuf)>,
+) {
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().map(|name| name.to_string_lossy().into_owned()) else {
+            continue;
+        };
+        let named = format!("{origin}/{name}");
+        if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+            collect_step_files(&path, &named, extensions, files);
+            continue;
+        }
+        if path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extensions.contains(&extension))
+        {
+            files.push((named, path));
+        }
+    }
 }
 
 /// Every cargo selector a workflow or script names resolves against the tree.
@@ -1005,6 +1026,36 @@ mod tests {
         assert!(read_command("ci.yml", 1, "# cargo run -p departed fails here").is_none());
         assert!(read_command("ci.yml", 1, "the cargo invocation below runs the gates").is_none());
         assert!(read_command("ci.yml", 1, "cargo test -p vyre-libs").is_some());
+    }
+
+    /// WHY: `scripts/lib` holds the shell functions every script sources and
+    /// the readers the workflows call. A read that stops at the top level
+    /// leaves those commands unresolved while reporting the directory covered.
+    #[test]
+    fn a_command_in_a_nested_script_is_read() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let root = directory.path();
+        std::fs::create_dir_all(root.join("scripts/lib")).expect("the script tree");
+        std::fs::write(root.join("scripts/top.sh"), "cargo test -p vyre-libs\n")
+            .expect("the top script");
+        std::fs::write(
+            root.join("scripts/lib/cargo_runner.sh"),
+            "cargo test -p vyre-nested\n",
+        )
+        .expect("the nested script");
+
+        let origins: Vec<String> = read_steps(root, "scripts", &["sh", "py"])
+            .into_iter()
+            .map(|step| step.origin)
+            .collect();
+
+        assert_eq!(
+            origins,
+            vec![
+                "scripts/lib/cargo_runner.sh".to_string(),
+                "scripts/top.sh".to_string()
+            ]
+        );
     }
 
     /// WHY: the tree is the case that has to hold. Every selector in every

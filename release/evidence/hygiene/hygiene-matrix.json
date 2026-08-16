@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=true:worktree=587be6a3b515782d4f5c2d438cfd280a4b2bfe2e4de21819ef31730913109ab1",
+  "source_fingerprint": "git:7a82c191b17971aaffcfc9cc7eadc593c612cf76:dirty=true:worktree=74365f221f1e3d2f5b263904084ec17562e11b47aeef5a03da8a9fd2f3b97dae",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 3961,
+  "scanned_files": 3966,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -45,7 +45,7 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 95
+      "count": 97
     },
     {
       "pattern": "expect_call",
@@ -61,7 +61,7 @@
     },
     {
       "pattern": "source_inspection_test",
-      "count": 18
+      "count": 17
     },
     {
       "pattern": "std_thread_sleep",
@@ -74,6 +74,10 @@
     {
       "pattern": "tokio_sleep",
       "count": 2
+    },
+    {
+      "pattern": "unbounded_read",
+      "count": 1
     },
     {
       "pattern": "unwrap_call",
@@ -119,7 +123,7 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "release_blocker": false,
-      "count": 24
+      "count": 27
     },
     {
       "owner_lane": "driver_cuda",
@@ -287,7 +291,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 5
+      "count": 4
     }
   ],
   "intake_summary": [
@@ -352,7 +356,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 19
+      "count": 21
     },
     {
       "owner_lane": "coordination",
@@ -369,6 +373,15 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unbounded_read",
       "release_blocker": false,
       "count": 1
     },
@@ -658,7 +671,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 5
+      "count": 4
     }
   ],
   "threshold_policy": {
@@ -925,11 +938,6 @@
         "reason": "Derives the published quantized dispatch entry points from the `pub use\n..._via` re-exports that declare them, so an entry point shipped without a\nreadback contract row is red on its first run. The subject is the public\nexport list, which no run of the covered entry points can report on."
       },
       {
-        "file": "xtask/tests/tree_contracts/cargo_invocation_resolution.rs",
-        "test": "every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary",
-        "reason": "Reads every workflow and script for `cargo run` and every manifest for the\nbinaries a package ships, then asserts each invocation resolves to exactly one\ntarget. Whether an invocation resolves is decided by cargo before any code in\nthis workspace runs, so no execution can witness it. Running the invocations\ninstead would mean building and running every gate to check that the gates can\nbe run."
-      },
-      {
         "file": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
         "test": "no_production_crate_outside_the_oracle_ships_a_host_dispatcher",
         "reason": "Asserts that no crate except the parity oracle ships a `ProgramDispatcher` a\ndefault build can construct. The subject is the absence of a type in crates this\ntest does not link, and a type nobody constructed is invisible to every running\nprogram; the failure it prevents is a consumer reaching a host dispatcher years\nlater."
@@ -1152,6 +1160,16 @@
       "line": 222,
       "pattern": "panic_macro",
       "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/plumbing/host/scratch.rs",
+      "line": 179,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -1478,16 +1496,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-libs/src/scratch.rs",
-      "line": 179,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
       "line": 90,
       "pattern": "documented_panic_contract",
@@ -1799,7 +1807,17 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 144,
+      "line": 126,
+      "pattern": "unbounded_read",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 135,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -1809,7 +1827,27 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 150,
+      "line": 139,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 200,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 206,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2378,16 +2416,6 @@
       "release_blocker": false
     },
     {
-      "path": "xtask/tests/tree_contracts/cargo_invocation_resolution.rs",
-      "line": 52,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "xtask/tests/tree_contracts/ci_workflow_references.rs",
       "line": 311,
       "pattern": "source_inspection_test",
@@ -2759,7 +2787,7 @@
     },
     {
       "path": "xtask-evidence/src/bench/release_benchmarks/cpu_sota_proof.rs",
-      "line": 276,
+      "line": 279,
       "pattern": "expect_call",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -2967,6 +2995,12 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-libs/src/plumbing/host/scratch.rs",
+      "line": 179,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
+    },
+    {
       "path": "vyre-libs/src/scheduling/megakernel_schedule.rs",
       "line": 167,
       "pattern": "documented_panic_contract",
@@ -3159,12 +3193,6 @@
       "text": "self.inner.lock().expect("
     },
     {
-      "path": "vyre-libs/src/scratch.rs",
-      "line": 179,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
-    },
-    {
       "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
       "line": 90,
       "pattern": "documented_panic_contract",
@@ -3352,13 +3380,31 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 144,
+      "line": 126,
+      "pattern": "unbounded_read",
+      "text": "std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {"
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 135,
+      "pattern": "documented_panic_contract",
+      "text": "[] => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 139,
+      "pattern": "documented_panic_contract",
+      "text": "several => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 200,
       "pattern": "documented_panic_contract",
       "text": "let executable = std::env::current_exe().expect(\"Fix: the test binary path must be readable\");"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 150,
+      "line": 206,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -3713,13 +3759,6 @@
       "test": "no_other_build_task_source_resolves_its_own_binary"
     },
     {
-      "path": "xtask/tests/tree_contracts/cargo_invocation_resolution.rs",
-      "line": 52,
-      "pattern": "source_inspection_test",
-      "text": "test `every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary"
-    },
-    {
       "path": "xtask/tests/tree_contracts/ci_workflow_references.rs",
       "line": 311,
       "pattern": "source_inspection_test",
@@ -3946,7 +3985,7 @@
     },
     {
       "path": "xtask-evidence/src/bench/release_benchmarks/cpu_sota_proof.rs",
-      "line": 276,
+      "line": 279,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: the 100x proof evidence is a JSON object.\")"
     },

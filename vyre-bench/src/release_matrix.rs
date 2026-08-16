@@ -633,7 +633,7 @@ fn build_family_report(
     };
     let reproducible_cuda_command = benchmark_command.as_ref().is_some_and(|command| {
         command.contains("cargo_full")
-            && command.contains("--release")
+            && builds_optimized(command)
             && command.contains("--backend cuda")
             && command.contains("--enforce-budgets")
             && command.contains(&evidence_artifact)
@@ -663,6 +663,19 @@ fn build_family_report(
         reproducible_cuda_command,
         max_cpu_sota_min_speedup_x,
     }
+}
+
+/// True when the command passes `--release` to cargo rather than to the harness.
+///
+/// Everything after ` -- ` is an argument to vyre-bench, which builds nothing.
+/// A `--release` written there leaves the measurement running an unoptimized
+/// binary while the matrix reports the command as reproducible release
+/// evidence.
+fn builds_optimized(command: &str) -> bool {
+    command
+        .split_once(" -- ")
+        .map_or(command, |(cargo_arguments, _)| cargo_arguments)
+        .contains("--release")
 }
 
 fn preferred_release_case<'a>(
@@ -868,6 +881,20 @@ fn collect_cpu_sota_contracts(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// WHY: `--release` is a cargo flag before the separator and a harness
+    /// argument after it. A substring test accepted the second form, so a
+    /// matrix could call a debug measurement reproducible release evidence.
+    #[test]
+    fn only_a_cargo_release_flag_builds_optimized() {
+        assert!(builds_optimized(
+            "cargo_full run -p vyre-bench --release -- run --suite release"
+        ));
+        assert!(!builds_optimized(
+            "cargo_full run -p vyre-bench -- run --suite release --release"
+        ));
+        assert!(!builds_optimized("cargo_full run -p vyre-bench -- run"));
+    }
 
     #[test]
     fn preferred_release_case_rejects_non_release_defining_cpu_sota_cases() {
