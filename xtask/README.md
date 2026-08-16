@@ -46,6 +46,24 @@ Failure behavior: A missing rules tree or incomplete rule contract returns statu
 
 Exit codes: 0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments.
 
+### `publishable_packages`
+
+```console
+./cargo_full run -p xtask --bin publishable_packages -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads the workspace manifests, resolved from the repository root.
+
+Failure behavior: An unreadable workspace manifest returns status 1.
+
+Exit codes: 0 on a printed roster or help, 1 on a manifest read failure, 2 on invalid arguments.
+
 ### `scaffold_rule`
 
 ```console
@@ -70,7 +88,7 @@ Exit codes: 0 on scaffold creation or help, 1 on filesystem failure, 2 on invali
 ./cargo_full run -p xtask --bin xtask -- --help
 ```
 
-Commands: `abstraction-gate`, `backend-extension`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-tier-deps`, `ci-matrix`, `ci-required`, `cli-docs`, `compile`, `conformance-matrix`, `contract-in-source`, `cross-target`, `dep-drift`, `doc-claims`, `docs-check`, `docs-coupling`, `dup-scan`, `evidence-paths`, `example-capability`, `feature-isolation`, `feature-matrix`, `file-size`, `frozen-contracts`, `gate1`, `gates`, `gpu-loudness`, `heuristic-audit`, `hot-path-blocking-wait`, `hot-path-inventory`, `hot-path-nested-rows`, `hot-path-owned-dispatch`, `hot-path-reserve`, `hot-path-scan`, `hot-path-unbounded-cache`, `hot-path-unbounded-read`, `hygiene-matrix`, `internal-dep-versions`, `invariant-paths`, `launch-state`, `layering`, `lego-audit`, `lego-quick`, `lint-expect-fix`, `lint-missing-docs-override`, `lint-unsafe-budget`, `lint-unsafe-justification`, `list-ops`, `lockfile-clean`, `metadata-matrix`, `neutral-crates`, `op-matrix`, `op-names`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `parity-testing-isolated`, `path-deps-resolve`, `platform-boundary`, `platform-consumer-docs`, `primitive-admission-gate`, `print-composition`, `program-wire-fields`, `proptest-coverage`, `public-api-paths`, `readback-ring`, `release-benchmarks`, `release-conformance`, `release-docs`, `release-evidence`, `release-workload-matrix`, `repo-hygiene`, `shader-source`, `shrink`, `single-backlog`, `source-parses`, `source-reachability`, `trace-f32`, `unification`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar`, `workspace-check`, `workspace-clippy`, `workspace-docs`, `workspace-membership`, `workspace-tests`.
+Commands: `abstraction-gate`, `architecture-contract`, `backend-extension`, `backend-matrix`, `bench-baselines`, `bench-coverage`, `bench-crossback`, `bench-release`, `bench-smoke-runtime`, `catalog`, `check-tier-deps`, `ci-matrix`, `ci-required`, `cli-docs`, `compile`, `conformance-matrix`, `contract-in-source`, `cross-target`, `dep-drift`, `doc-claims`, `docs-check`, `docs-coupling`, `docs-references`, `docs-register`, `dup-scan`, `evidence-paths`, `example-capability`, `feature-isolation`, `feature-matrix`, `file-size`, `frozen-contracts`, `gate1`, `gates`, `gpu-loudness`, `heuristic-audit`, `hot-path-blocking-wait`, `hot-path-inventory`, `hot-path-nested-rows`, `hot-path-owned-dispatch`, `hot-path-reserve`, `hot-path-scan`, `hot-path-unbounded-cache`, `hot-path-unbounded-read`, `hygiene-matrix`, `internal-dep-versions`, `invariant-paths`, `launch-state`, `layering`, `lego-audit`, `lego-quick`, `lint-expect-fix`, `lint-one-policy`, `lint-unsafe-budget`, `lint-unsafe-justification`, `list-ops`, `lockfile-clean`, `metadata-matrix`, `neutral-crates`, `op-matrix`, `op-names`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `parity-testing-isolated`, `path-deps-resolve`, `platform-boundary`, `platform-consumer-docs`, `primitive-admission-gate`, `print-composition`, `program-wire-fields`, `proptest-coverage`, `public-api-paths`, `public-api-snapshot`, `readback-ring`, `release-benchmarks`, `release-conformance`, `release-docs`, `release-evidence`, `release-workload-matrix`, `repo-hygiene`, `shader-source`, `shrink`, `single-backlog`, `source-include-module`, `source-parses`, `source-reachability`, `trace-f32`, `unification`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar`, `workspace-check`, `workspace-clippy`, `workspace-docs`, `workspace-membership`, `workspace-tests`.
 
 Hardware: Requirements are command specific. Backend, conformance, and benchmark commands require their declared devices.
 
