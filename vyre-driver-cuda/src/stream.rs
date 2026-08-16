@@ -14,6 +14,7 @@ use cudarc::driver::{
 };
 use vyre_driver::{sealed, BackendError, PendingDispatch};
 
+use crate::backend::dispatch::ModuleGlobalsLease;
 use crate::backend::telemetry::CudaTelemetry;
 use crate::backend::{cuda_check, DispatchAllocations, HostTransferAllocations, ResidentUseGuard};
 
@@ -593,6 +594,14 @@ pub(crate) struct CudaPendingDispatch {
     ready_device_ns: Option<u64>,
     telemetry: Arc<CudaTelemetry>,
     completed: AtomicBool,
+    /// The module-scope globals lease held across the kernel's execution.
+    ///
+    /// Present only on a submission that deferred its release: the gate must stay
+    /// held until the completion event has been awaited, because the trap record
+    /// and the grid-barrier counter are live for the kernel's whole execution and
+    /// not merely until the launch call returned. Ending it at enqueue is what
+    /// makes an asynchronous submission block.
+    module_globals: Option<ModuleGlobalsLease>,
 }
 
 impl CudaPendingDispatch {
@@ -617,6 +626,7 @@ impl CudaPendingDispatch {
             ready_device_ns: None,
             telemetry,
             completed: AtomicBool::new(true),
+            module_globals: None,
         }
     }
 
@@ -642,6 +652,7 @@ impl CudaPendingDispatch {
             ready_device_ns: device_ns,
             telemetry,
             completed: AtomicBool::new(true),
+            module_globals: None,
         }
     }
 
@@ -700,6 +711,7 @@ impl CudaPendingDispatch {
             ready_device_ns: None,
             telemetry,
             completed: AtomicBool::new(false),
+            module_globals: None,
         }
     }
 
@@ -732,7 +744,21 @@ impl CudaPendingDispatch {
             ready_device_ns: None,
             telemetry,
             completed: AtomicBool::new(false),
+            module_globals: None,
         }
+    }
+
+    /// Carry a module-globals lease that must outlive the launch.
+    ///
+    /// The submission path enqueued its launches with
+    /// [`ModuleGlobalsLease::launch_then_defer_release`], so the gate is still
+    /// held. This handle owns the completion event, which makes it the one place
+    /// that can prove the kernel finished, and therefore the one place the lease
+    /// may be ended.
+    #[must_use]
+    pub(crate) fn holding_module_globals(mut self, lease: ModuleGlobalsLease) -> Self {
+        self.module_globals = Some(lease);
+        self
     }
 
     fn bind_context(&self) -> Result<(), BackendError> {
@@ -744,9 +770,9 @@ impl CudaPendingDispatch {
             })
     }
 
-    fn synchronize(&self) -> Result<(), BackendError> {
+    fn synchronize(&mut self) -> Result<(), BackendError> {
         if self.completed.load(Ordering::Acquire) {
-            return Ok(());
+            return self.release_module_globals();
         }
         self.bind_context()?;
         let event = self
@@ -759,7 +785,24 @@ impl CudaPendingDispatch {
         event.synchronize()?;
         self.telemetry.record_sync_point();
         self.completed.store(true, Ordering::Release);
-        Ok(())
+        self.release_module_globals()
+    }
+
+    /// End the deferred module-globals lease, now that completion is proven.
+    ///
+    /// Called from every path that observes completion, including the one that
+    /// found `completed` already set: [`PendingDispatch::is_ready`] can set that
+    /// flag without ending the lease, so an early return that skipped this would
+    /// hold the module's gate until the process exited and block every later
+    /// launch of the same module.
+    ///
+    /// The lease is taken out of the handle before it is ended, so a second call
+    /// is a no-op and the drop path cannot release it twice.
+    fn release_module_globals(&mut self) -> Result<(), BackendError> {
+        match self.module_globals.take() {
+            Some(lease) => lease.release_after_completion(),
+            None => Ok(()),
+        }
     }
 
     fn release_launch_resources(&mut self) {
@@ -829,6 +872,16 @@ impl CudaPendingDispatch {
         }
         if let Some(host_transfers) = self.host_transfers.take() {
             std::mem::forget(host_transfers);
+        }
+        // The lease is FORGOTTEN, not released. This path could not prove the
+        // kernel finished, and freeing the gate under a possibly-live grid lets
+        // the next launch of this module zero `_vyre_grid_barrier` underneath it,
+        // which is the corruption the gate exists to prevent. Leaving the gate
+        // busy blocks later launches of this one module; the stream and its
+        // allocations are already lost above, so both outcomes are a hang and
+        // this one cannot produce a wrong answer.
+        if let Some(lease) = self.module_globals.take() {
+            std::mem::forget(lease);
         }
     }
 
@@ -951,6 +1004,15 @@ impl Drop for CudaPendingDispatch {
         if !self.force_completion_on_drop() {
             self.leak_inflight_resources_after_drop_sync_failure();
             return;
+        }
+        // Completion is proven, so the trap record and the arrival count are
+        // final and the gate can be freed. A drop has nowhere to return an error
+        // to, so a trapped kernel whose result was never awaited is reported here
+        // instead of being lost.
+        if let Err(error) = self.release_module_globals() {
+            tracing::error!(
+                "Fix: CUDA pending dispatch completed with a module-globals failure that no caller awaited: {error}. Await the dispatch result so the failure reaches the caller."
+            );
         }
         self.release_launch_resources();
         self.allocations.take();

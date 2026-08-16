@@ -1418,6 +1418,76 @@ impl ModuleGlobalsLease {
         launched
     }
 
+    /// Run the launches and hand the lease back to be ended at completion.
+    ///
+    /// [`ModuleGlobalsLease::launch_then_release`] ends the lease at the point the
+    /// launches were enqueued, which means synchronizing the stream there. On a
+    /// path whose whole purpose is to return before the work finishes, that turns
+    /// an asynchronous submission into enqueue-then-block for every module that
+    /// declares a trap or a grid barrier. The lease instead travels with the
+    /// pending handle and is ended by
+    /// [`ModuleGlobalsLease::release_after_completion`] where the completion event
+    /// is already awaited, so the gate is held for exactly the interval the
+    /// module-scope globals are live and the host fences once.
+    ///
+    /// A failed launch is released here, with the stream synchronize the release
+    /// needs: no pending handle is produced for it, so nothing would await the
+    /// lease. The release error takes precedence over the launch error, the same
+    /// precedence `launch_then_release` uses.
+    pub(crate) fn launch_then_defer_release<T>(
+        self,
+        stream: cudarc::driver::sys::CUstream,
+        label: &'static str,
+        launch: impl FnOnce(&Self) -> Result<T, BackendError>,
+    ) -> Result<(T, Self), BackendError> {
+        // SAFETY: the caller owns `stream` across the launch sequence this lease
+        // covers, so it outlives the memset enqueued here.
+        let reset = unsafe { self.enqueue_trap_reset(stream) };
+        if let Err(error) = reset {
+            // The gate is freed by dropping the lease. Nothing was launched, so
+            // there is nothing to synchronize or read back.
+            return Err(error);
+        }
+        match launch(&self) {
+            Ok(value) => Ok((value, self)),
+            Err(error) => {
+                self.release_after_launch(stream, label)?;
+                Err(error)
+            }
+        }
+    }
+
+    /// End the lease once the completion event has been awaited.
+    ///
+    /// The event was recorded on the stream after the last launch, so awaiting it
+    /// already orders the kernel's writes before the reads below: the stream
+    /// synchronize [`ModuleGlobalsLease::release_after_launch`] performs would be a
+    /// second host fence at the one point the asynchronous path exists to avoid.
+    /// The ordering of the reads against the gate release is still
+    /// [`release_in_order`]'s, so this is not a second copy of that decision.
+    ///
+    /// Callers MUST have observed completion. Reading the trap record before the
+    /// kernel finishes reports no trap on a launch that was about to write one.
+    pub(crate) fn release_after_completion(self) -> Result<(), BackendError> {
+        let Self {
+            barrier,
+            trap,
+            guard,
+            arrival_ceiling,
+        } = self;
+        if barrier.is_none() && trap.is_none() {
+            return Ok(());
+        }
+        release_in_order(
+            guard,
+            || Ok(()),
+            || {
+                read_trap_record(trap.as_deref())?;
+                audit_arrivals(barrier, arrival_ceiling)
+            },
+        )
+    }
+
     /// End the lease once the launches have completed.
     ///
     /// When a global is held this SYNCHRONIZES `stream` first, and that is
@@ -1434,9 +1504,9 @@ impl ModuleGlobalsLease {
     /// of anything; reporting a stale-counter suspicion instead of the trap would
     /// name the wrong defect.
     ///
-    /// Private on purpose: [`ModuleGlobalsLease::launch_then_release`] is the only
-    /// caller, so no launch site can open-code the release and drift out of
-    /// order.
+    /// Private on purpose: [`ModuleGlobalsLease::launch_then_release`] and
+    /// [`ModuleGlobalsLease::launch_then_defer_release`] are the only callers, so
+    /// no launch site can open-code the release and drift out of order.
     fn release_after_launch(
         self,
         stream: cudarc::driver::sys::CUstream,

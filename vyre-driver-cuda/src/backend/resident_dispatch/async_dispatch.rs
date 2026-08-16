@@ -498,13 +498,19 @@ impl CudaBackend {
             let module_globals =
                 self.lease_module_globals(program, prepared, ptx_src, module_key)?;
             probe::charge(probe::Phase::Lease, lease_started);
-            // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream, reads the trap
-            // record, and only then frees the gate, so a launch failure cannot
-            // leave a grid spinning and a trap cannot be erased by the next
-            // sequence's reset.
+            // `launch_then_defer_release` runs the launches and hands the lease
+            // back instead of ending it. The module-scope globals are live for the
+            // kernel's whole EXECUTION, and this path returns before that, so
+            // ending the lease here would synchronize the stream: the one thing an
+            // asynchronous submission must not do. The pending handle owns the
+            // completion event, which makes it the only place that can prove the
+            // kernel finished, so it is what ends the lease.
+            //
+            // Everything that must still be enqueued under the lease goes INSIDE
+            // the closure. A failure there releases at enqueue, with the
+            // synchronize, because no pending handle will exist to await it.
             let launch_and_release_started = probe::mark();
-            module_globals.launch_then_release(
+            let (_, deferred_module_globals) = module_globals.launch_then_defer_release(
                 stream_raw,
                 "resident async dispatch launch",
                 |module_globals| {
@@ -516,31 +522,41 @@ impl CudaBackend {
                             prepared,
                             stream_raw,
                         )
-                    })
+                    })?;
+                    if let Some((_, end_event)) = guards.timing_events()? {
+                        end_event.record(stream_raw)?;
+                    }
+                    Ok(())
                 },
             )?;
+            // On this path the span covers the trap reset and the timing-event
+            // record. The release is paid by whoever awaits the pending handle.
             probe::charge_remainder(
                 probe::Phase::Release,
                 launch_and_release_started,
                 probe::Phase::LaunchLoop,
             );
-            if let Some((_, end_event)) = guards.timing_events()? {
-                end_event.record(stream_raw)?;
-            }
             // Output copies are enqueued on the same stream after the kernel.
             // The completion event recorded below fences uploads, compute, and
             // D2H transfer without blocking this submission call.
-            Ok(())
+            Ok(deferred_module_globals)
         })();
-        if let Err(error) = enqueue_result {
-            return Err(guards.abandon(
-                error,
-                &self.telemetry,
-                stream_raw,
-                "cuStreamSynchronize (resident async error cleanup)",
-                "enqueue",
-            ));
-        }
+        // Every fallible step that runs under the lease is inside the closure
+        // above, so an error here means the lease was already ended: either it was
+        // never taken, or `launch_then_defer_release` released it with the
+        // synchronize a failed launch needs.
+        let deferred_module_globals = match enqueue_result {
+            Ok(lease) => lease,
+            Err(error) => {
+                return Err(guards.abandon(
+                    error,
+                    &self.telemetry,
+                    stream_raw,
+                    "cuStreamSynchronize (resident async error cleanup)",
+                    "enqueue",
+                ));
+            }
+        };
 
         let pending = (|| {
             let mut staged_readback_bytes = 0_u64;
@@ -639,15 +655,21 @@ impl CudaBackend {
             Ok(pending)
         })();
         let pending = match pending {
-            Ok(pending) => pending,
+            Ok(pending) => pending.holding_module_globals(deferred_module_globals),
             Err(error) => {
-                return Err(guards.abandon(
+                let abandoned = guards.abandon(
                     error,
                     &self.telemetry,
                     stream_raw,
                     "cuStreamSynchronize (resident async output enqueue cleanup)",
                     "output enqueue",
-                ));
+                );
+                // Dropped AFTER the abandon synchronized the stream, so the gate is
+                // freed only once the grid cannot still be running. The trap record
+                // is not read: this dispatch produced no answer, and the failure
+                // worth reporting is the one that stopped the output enqueue.
+                drop(deferred_module_globals);
+                return Err(abandoned);
             }
         };
         if trace {
