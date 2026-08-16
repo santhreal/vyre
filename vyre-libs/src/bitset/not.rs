@@ -15,7 +15,7 @@ pub const OP_ID: &str = "vyre-primitives::bitset::not";
 /// # Example
 ///
 /// ```
-/// use crate::bitset::not::bitset_not;
+/// use vyre_libs::bitset::not::bitset_not;
 ///
 /// let program = bitset_not("input", "out", 4);
 /// assert_eq!(program.entry.len(), 1);

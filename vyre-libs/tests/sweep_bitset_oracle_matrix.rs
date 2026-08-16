@@ -171,20 +171,27 @@ const IN_PLACE_INDEXED: &[(&str, InPlaceIndexed, InPlaceIndexedExpect)] = &[
     ),
 ];
 
-/// Registered bitset ids this matrix deliberately does not sweep, and the
-/// suite that owns each. A registered id absent from both lists fails.
+/// Registered bitset ids this matrix deliberately does not sweep, and the test
+/// that owns each. A registered id absent from both lists fails.
+///
+/// The owner is named by its function declaration, not by a path. A path goes
+/// stale the moment a suite moves crates, and the failure then reports a
+/// missing file instead of an unproven operation: all three rows named
+/// `vyre-primitives/tests/...` after the bitset family moved to `vyre-libs`,
+/// and two of them pointed at nothing. A declaration follows the proof
+/// wherever it lands, and a proof that is deleted or renamed still fails.
 const EXEMPT: &[(&str, &str)] = &[
     (
         "vyre-primitives::bitset::select1_query",
-        "vyre-libs/tests/succinct_rank_select_adversarial_contracts.rs",
+        "fn select_query_specific_sparse_positions",
     ),
     (
         "vyre-primitives::bitset::four_russians_apply_byte_lut",
-        "vyre-primitives/tests/adversarial_boolean_packing_four_russians_readiness.rs",
+        "fn four_russians_ir_apply_lut_matches_cpu_reference",
     ),
     (
         "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut",
-        "vyre-primitives/tests/four_russians_dense_matvec_generated.rs",
+        "fn primitive_dense_matvec_arms_cover_every_declared_case_group",
     ),
 ];
 
@@ -353,12 +360,15 @@ fn bitset_registry_is_fully_covered() {
             vyre_foundation::operation::OperationRegistry::global()
                 .get(id)
                 .is_some(),
-            "Fix: exempted bitset operation {id} is no longer registered. Drop the exemption, or restore the registration {owner} proves."
+            "Fix: exempted bitset operation {id} is no longer registered. Drop the exemption, or restore the registration `{owner}` proves."
         );
-        let owner_path = vyre_test_support::monorepo::vyre_workspace_root().join(owner);
+        let owner_path = vyre_test_support::monorepo::declaring_source_file(owner);
         assert!(
-            owner_path.is_file(),
-            "Fix: bitset operation {id} is exempted to {owner}, which is not a file in this workspace. Name the suite that actually proves it."
+            owner_path
+                .components()
+                .any(|part| part.as_os_str() == "tests"),
+            "Fix: bitset operation {id} is exempted to `{owner}`, which is declared in {} and not in a test tree. An exemption must name a test that proves the operation.",
+            owner_path.display()
         );
     }
 }
