@@ -1,5 +1,8 @@
 //! Inspection and diagnostic helpers for Vyre IR and lowered kernel descriptors.
 /// Canonical compiler artifact and selected-plan diagnostics.
+/// Capability classification for neutral vs target-specific debug features.
+pub mod capability;
+
 pub(crate) mod artifact_report;
 pub(crate) mod body_path_map;
 /// Loop-carrier diagnostics.
@@ -36,3 +39,6 @@ pub use sanitizer::{
     PmuExpectation, PmuMeasurement, PmuWarning, PmuWorkloadClass, SanitizerFailure, SanitizerKind,
 };
 pub use wgsl::{dump_wgsl, dump_wgsl_with_lines, WgslDump};
+pub use capability::{
+    neutral_debug_capabilities, DebugCapabilityInfo, DebugCapabilityKind, DEBUG_CAPABILITIES,
+};

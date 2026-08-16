@@ -103,6 +103,9 @@ pub mod artifact_admission;
 /// Backend-neutral immutable-resource and mutable-state residency.
 pub mod resource_residency;
 
+/// Authenticated safetensors transfer lifecycle, residency composition, and integrity.
+pub mod safetensors_transfer;
+
 /// Resident work-queue protocols, scheduling policy, and runtime IO.
 pub mod resident_work_queue;
 
@@ -307,3 +310,7 @@ impl<'a> UringCompletionPump<'a> {
         Err(PipelineError::NotLinux)
     }
 }
+pub use safetensors_transfer::{
+    select_transfer_path, DeviceTransferCapabilities, PathSelectionDecision, SafetensorTransferPath,
+    TransferDescriptor, TransferError, TransferLifecycleEngine, TransferState,
+};
