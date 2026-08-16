@@ -27,6 +27,7 @@ This crate declares no Cargo features.
 | --- | --- | --- | --- | --- |
 | `bin` | `structure-gate` | `structure-gate/src/main.rs` | None | `./cargo_full test -p structure-gate --bin structure-gate` |
 | `lib` | `structure_gate` | `structure-gate/src/lib.rs` | None | `./cargo_full test -p structure-gate` |
+| `test` | `cfg_gate_polarity` | `structure-gate/tests/cfg_gate_polarity.rs` | None | `./cargo_full test -p structure-gate --test cfg_gate_polarity` |
 | `test` | `checkout_provenance` | `structure-gate/tests/checkout_provenance.rs` | None | `./cargo_full test -p structure-gate --test checkout_provenance` |
 | `test` | `crate_ownership_registry_reader` | `structure-gate/tests/crate_ownership_registry_reader.rs` | None | `./cargo_full test -p structure-gate --test crate_ownership_registry_reader` |
 | `test` | `crate_structure_contracts` | `structure-gate/tests/crate_structure_contracts.rs` | None | `./cargo_full test -p structure-gate --test crate_structure_contracts` |

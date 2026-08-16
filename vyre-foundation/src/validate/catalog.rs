@@ -602,6 +602,18 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         invariant: "backend-allocated output buffer `…` has no static element count or output byte range",
         corrective_action: "Declare the output with `.with_count(n)`, or use `.with_output_byte_range(0..0)` for a genuinely empty output.",
     },
+    ValidationRule {
+        code: "V131",
+        phase: ValidationPhase::Memory,
+        invariant: "async transfer tag `…` starts a copy while a copy under the same tag is still in flight on every path reaching it",
+        corrective_action: "Wait the tag before starting it again, or give the second copy its own tag: a depth-D pipeline needs D tags.",
+    },
+    ValidationRule {
+        code: "V132",
+        phase: ValidationPhase::Memory,
+        invariant: "async wait on tag `…` has no transfer to wait for on any path reaching it",
+        corrective_action: "Start the copy with AsyncLoad or AsyncStore under that tag before waiting, or drop the wait.",
+    },
 ];
 
 /// Every registered validation rule, ordered by code.

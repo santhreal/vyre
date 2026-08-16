@@ -113,6 +113,15 @@ pub fn validate_with_options(
             program,
         ));
 
+    // V131/V132: async copy tag discipline. Reports a tag started while it is
+    // already in flight and a wait with nothing to wait for. Both are relations
+    // between two nodes on a path, which the node walk cannot see.
+    report
+        .errors
+        .extend(crate::validate::async_pipeline::check_async_pipeline(
+            program,
+        ));
+
     for (ordinal, issue) in report.errors.iter_mut().enumerate() {
         if matches!(issue.location(), ValidationLocation::Program) {
             issue.set_location(ValidationLocation::Traversal {
