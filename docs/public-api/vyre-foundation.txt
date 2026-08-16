@@ -444,6 +444,7 @@ pub const vyre_foundation::fp_parity::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_foundation::ir::EXPR_VARIANT_NAMES: &[&str]
 pub const vyre_foundation::ir::NODE_VARIANT_NAMES: &[&str]
 pub const vyre_foundation::ir::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION: &str
+pub const vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS: u32
 pub const vyre_foundation::ir::PROGRAM_GRAPH_IDENTITY_VERSION: u16
 pub const vyre_foundation::ir::Program::ROOT_REGION_GENERATOR: &'static str
 pub const vyre_foundation::ir::stats::NODE_KIND_ALL_GATHER: u32
