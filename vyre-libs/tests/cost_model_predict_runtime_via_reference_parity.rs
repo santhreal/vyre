@@ -38,7 +38,7 @@ use vyre_libs::analysis::cost_model::predict_runtime_fixed_via;
 use vyre_primitives::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
 use vyre_primitives::math::conformal::conformal_threshold_cpu;
 
-use vyre_libs::test_support::fixed_mul as fixed_mul_16_16;
+use vyre_libs::test_parity_oracles::fixed_mul as fixed_mul_16_16;
 use vyre_driver_reference::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;

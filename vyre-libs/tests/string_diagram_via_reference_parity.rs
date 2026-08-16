@@ -17,7 +17,7 @@
 
 use vyre_libs::reasoning::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 
-use vyre_libs::test_support::fixed_mul;
+use vyre_libs::test_parity_oracles::fixed_mul;
 use vyre_driver_reference::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;

@@ -25,7 +25,7 @@
 use vyre_libs::solvers::multigrid_matroid_solver::matroid_solve_step_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_support::{fixed_mul, fixed_sdiv_by_positive as sdiv_by_positive};
+use vyre_libs::test_parity_oracles::{fixed_mul, fixed_sdiv_by_positive as sdiv_by_positive};
 
 const FIXED_ONE: u32 = 1 << 16;
 
