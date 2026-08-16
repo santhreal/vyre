@@ -126,6 +126,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `program_graph_identity_contract` | `vyre-foundation/tests/program_graph_identity_contract.rs` | None | `./cargo_full test -p vyre-foundation --test program_graph_identity_contract` |
 | `test` | `program_meta_surface` | `vyre-foundation/tests/program_meta_surface.rs` | None | `./cargo_full test -p vyre-foundation --test program_meta_surface` |
 | `test` | `program_rebuild_preserves_metadata` | `vyre-foundation/tests/program_rebuild_preserves_metadata.rs` | None | `./cargo_full test -p vyre-foundation --test program_rebuild_preserves_metadata` |
+| `test` | `program_soa_facts` | `vyre-foundation/tests/program_soa_facts.rs` | None | `./cargo_full test -p vyre-foundation --test program_soa_facts` |
 | `test` | `program_stats_proptest` | `vyre-foundation/tests/program_stats_proptest.rs` | None | `./cargo_full test -p vyre-foundation --test program_stats_proptest` |
 | `test` | `program_wire_property_contracts` | `vyre-foundation/tests/program_wire_property_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test program_wire_property_contracts` |
 | `test` | `quantized_datatype_wire` | `vyre-foundation/tests/quantized_datatype_wire.rs` | None | `./cargo_full test -p vyre-foundation --test quantized_datatype_wire` |
