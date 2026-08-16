@@ -1,4 +1,4 @@
-//! WGPU parity for the primitive-owned hex decoder.
+//! WGPU parity for the hex decoder.
 
 #![allow(deprecated)]
 mod common;
@@ -23,7 +23,7 @@ fn hex_lanes() -> u32 {
 fn dispatch_hex(input: &[u8]) -> Vec<u32> {
     let backend = live_backend();
     let decoded_words = hex_decoded_capacity(input.len() as u32);
-    let program = hex_decode("input", "output", "table", input.len() as u32);
+    let program = hex_decode("input", "output", input.len() as u32);
     let mut config = DispatchConfig::default();
     config.grid_override = Some([decoded_words.div_ceil(hex_lanes()).max(1), 1, 1]);
     let outputs = backend

@@ -33,9 +33,15 @@ fn decoded_capacity_no_panic_on_max() {
 
 #[test]
 fn base64_decode_program_has_expected_buffers() {
-    let p = base64_decode("input", "table", "output", "decoded_len", 4);
-    let names: Vec<&str> = p.buffers().iter().map(|b| b.name()).collect();
-    assert_eq!(names, vec!["input", "table", "output", "decoded_len"]);
+    // The collapsed builder names the table and the decoded-length sidecar
+    // itself, so the contract is the count, the order and which ones the program
+    // publishes, not four spellings the caller no longer supplies.
+    let p = base64_decode("input", "output", 4);
+    assert_eq!(p.buffers().len(), 4);
+    assert_eq!(p.output_buffer_indices(), vec![2, 3]);
+    assert_eq!(p.buffers()[0].count(), 4);
+    assert_eq!(p.buffers()[2].count(), decoded_capacity(4));
+    assert_eq!(p.buffers()[3].count(), 1);
 }
 
 #[test]
@@ -43,7 +49,7 @@ fn base64_decode_child_returns_region() {
     let node = base64_decode_child("parent", "input", "table", "output", "decoded_len", 4);
     match node {
         vyre_foundation::ir::Node::Region { generator, .. } => {
-            assert_eq!(generator.as_str(), BASE64_DECODE_OP_ID);
+            assert_eq!(generator.as_str(), OP_ID);
         }
         other => panic!("expected Region node, got {other:?}"),
     }
