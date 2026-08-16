@@ -148,6 +148,15 @@ fn node_unsummarisable_effect(node: &Node) -> bool {
 
 /// Re-key `node` from induction variable `from` onto `to`, rewriting reads
 /// and binding occurrences alike so the rewrite leaves no reference behind.
+///
+/// Every variant carrying an `Expr` operand is rewritten, not only the
+/// arithmetic ones: an async copy offset and a trap address read the induction
+/// variable exactly as a store index does, and a rename that skipped them would
+/// leave the renamed loop reading a variable that no longer binds. The match
+/// carries no catch-all so a new operand-carrying variant fails to compile here
+/// rather than silently keeping a stale name. `Opaque` is the one payload this
+/// walk cannot enter, which is why [`unsummarisable_effect`] reports it and
+/// both callers refuse a body that holds one.
 pub(super) fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
     match node {
         Node::Let { name, value } => Node::Let {
@@ -200,7 +209,50 @@ pub(super) fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
                 body: std::sync::Arc::new(rename_var_in_body(body_vec, from, to)),
             }
         }
-        other => other,
+        Node::AsyncLoad {
+            source,
+            destination,
+            offset,
+            size,
+            tag,
+        } => Node::AsyncLoad {
+            source,
+            destination,
+            offset: Box::new(rename_var_in_expr(*offset, from, to)),
+            size: Box::new(rename_var_in_expr(*size, from, to)),
+            tag,
+        },
+        Node::AsyncStore {
+            source,
+            destination,
+            offset,
+            size,
+            tag,
+        } => Node::AsyncStore {
+            source,
+            destination,
+            offset: Box::new(rename_var_in_expr(*offset, from, to)),
+            size: Box::new(rename_var_in_expr(*size, from, to)),
+            tag,
+        },
+        Node::Trap { address, tag } => Node::Trap {
+            address: Box::new(rename_var_in_expr(*address, from, to)),
+            tag,
+        },
+        // No `Expr` operand and no body, so the node is returned whole. The
+        // idents these hold name buffers, tags, and communicator groups, which
+        // live in their own namespaces and are never the loop induction
+        // variable.
+        node @ (Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::Opaque(_)) => node,
     }
 }
 
