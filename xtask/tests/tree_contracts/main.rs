@@ -21,6 +21,7 @@ mod architecture_docs;
 mod canonical_first_workgroup_guard;
 mod ci_workflow_references;
 mod cli_surface;
+mod codeowners_paths;
 mod crate_ownership_registry;
 mod crate_readmes;
 mod docs_manifest_completeness;
