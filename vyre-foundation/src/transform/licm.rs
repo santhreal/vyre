@@ -157,7 +157,21 @@ fn split_invariants(
             // Control flow: don't try to hoist out of nested If /
             // Loop scopes here (the recursion in `rewrite_scope`
             // already handled them). Just keep them in place.
-            _ => kept.push(node.clone()),
+            //
+            // Exhaustive with no catch-all: a new variant classified by
+            // silence would be read as neither side-effecting nor control
+            // flow, so a later binding could be hoisted above an effect the
+            // pass never heard of. Adding one fails to compile here, where
+            // the classification is made.
+            Node::If { .. }
+            | Node::Loop { .. }
+            | Node::Block(_)
+            | Node::Region { .. }
+            | Node::Return
+            | Node::AllReduce { .. }
+            | Node::AllGather { .. }
+            | Node::ReduceScatter { .. }
+            | Node::Broadcast { .. } => kept.push(node.clone()),
         }
     }
     (hoisted, kept)

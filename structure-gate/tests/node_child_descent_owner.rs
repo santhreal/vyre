@@ -246,11 +246,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "catch-all encodes the scope claim that other variants open their own scope, documented at the site",
     },
     Waiver {
-        path: "vyre-foundation/src/validate/rule_pipeline/mod.rs",
-        owner: "foundation-ir",
-        reason: "explicit work stack assigning per child body a divergence flag and a depth the owner walk has no slot for",
-    },
-    Waiver {
         path: "vyre-foundation/tests/adversarial_loop_induction_rebind.rs",
         owner: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",

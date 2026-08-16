@@ -276,6 +276,11 @@ pub(crate) fn check_async_tag(tag: &Ident, errors: &mut Vec<ValidationError>) {
 /// One match over the collective variants, so a rule that reads a collective's
 /// buffers and a walk that records them as accesses cannot disagree about which
 /// buffers a variant has. A non-collective node names none.
+///
+/// Exhaustive with no catch-all arm: a new collective variant would answer
+/// "names no buffers" under one, and the access walk would then let a program
+/// write a buffer the alias rules never saw. Adding a variant fails to compile
+/// here instead.
 #[must_use]
 pub(crate) fn collective_buffers(node: &Node) -> [Option<&Ident>; 2] {
     match node {
@@ -283,7 +288,22 @@ pub(crate) fn collective_buffers(node: &Node) -> [Option<&Ident>; 2] {
         Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
             [Some(input), Some(output)]
         }
-        _ => [None, None],
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Return
+        | Node::Block(_)
+        | Node::Barrier { .. }
+        | Node::Region { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => [None, None],
     }
 }
 

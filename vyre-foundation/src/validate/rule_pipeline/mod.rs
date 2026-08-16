@@ -435,7 +435,27 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                             let divergent = self.current_divergent();
                             push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
                         }
-                        _ => {}
+                        // No body, so nothing to descend into. Exhaustive with
+                        // no catch-all: a new body-bearing variant under one
+                        // would have its children skipped by every rule in the
+                        // pipeline, and the program would validate because
+                        // nothing looked inside it.
+                        Node::Let { .. }
+                        | Node::Assign { .. }
+                        | Node::Store { .. }
+                        | Node::Return
+                        | Node::Barrier { .. }
+                        | Node::IndirectDispatch { .. }
+                        | Node::AsyncLoad { .. }
+                        | Node::AsyncStore { .. }
+                        | Node::AsyncWait { .. }
+                        | Node::Trap { .. }
+                        | Node::Resume { .. }
+                        | Node::AllReduce { .. }
+                        | Node::AllGather { .. }
+                        | Node::ReduceScatter { .. }
+                        | Node::Broadcast { .. }
+                        | Node::Opaque(_) => {}
                     }
                     for issue in &mut self.errors[first_new_error..] {
                         if matches!(issue.location(), ValidationLocation::Program) {
