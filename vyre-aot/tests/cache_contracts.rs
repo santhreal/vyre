@@ -1,6 +1,6 @@
 //! Runtime cache blob contracts over the public `vyre_aot` surface.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::cache::*;
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
@@ -30,7 +30,7 @@ fn fingerprint_hex_is_64_lowercase_chars() {
 #[test]
 fn emit_writes_canonical_envelope_with_blake3_footer() {
     let program = add_one_program();
-    let artifact = common::artifact_over(
+    let artifact = fixture_target::artifact_over(
         &program,
         "fixture-target-format",
         (0..1024).map(|index| (index % 251) as u8).collect(),
@@ -51,7 +51,7 @@ fn emit_writes_canonical_envelope_with_blake3_footer() {
 #[test]
 fn emit_filename_matches_runtime_fingerprint() {
     let program = add_one_program();
-    let artifact = common::artifact_over(
+    let artifact = fixture_target::artifact_over(
         &program,
         "fixture-target-format",
         b"\x00\x01\x02\x03".to_vec(),
