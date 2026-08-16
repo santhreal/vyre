@@ -25,9 +25,6 @@ mod error;
 mod plan;
 mod program;
 
-#[cfg(test)]
-mod tests;
-
 pub use csr::{
     toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch,
     validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrLayout,

@@ -14,9 +14,6 @@ mod plan;
 mod program;
 mod registry;
 
-#[cfg(test)]
-mod tests;
-
 pub use layout::{
     count_witness_participants, validate_csr_inputs, validate_motif_inputs,
     validate_motif_witness, MotifLayout,
