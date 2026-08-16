@@ -3596,7 +3596,6 @@ dependencies = [
  "vyre-driver",
  "vyre-emit-naga",
  "vyre-foundation",
- "vyre-grammar-gen",
  "vyre-libs",
  "vyre-lower",
  "vyre-megakernel",

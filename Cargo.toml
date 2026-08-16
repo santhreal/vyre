@@ -236,7 +236,6 @@ vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
 vyre-lints = { version = "0.7.2", path = "vyre-lints" }
 vyre-debug = { version = "0.7.2", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
-c-grammar-gen = { package = "vyre-grammar-gen", version = "0.7.2", path = "vyre-grammar-gen" }
 
 # Shared third-party pins; every member agrees on versions.
 serde = { version = "=1.0.229", features = ["derive", "rc"] }
