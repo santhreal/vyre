@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workspace lockfile now records the TOML parser already declared by vyre-libs, so locked builds resolve without modifying the checkout."
