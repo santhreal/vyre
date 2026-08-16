@@ -18,7 +18,7 @@ use vyre_primitives::math::{
     ode_step::rk4_step,
     padic::hensel_lift_step,
     qsvt::qsvt_block_encode,
-    scallop_join_wide::semiring_gemm_wide,
+    semiring_gemm::semiring_gemm_wide,
     score_denoise::score_denoise_step,
     semiring_gemm::{semiring_gemm, Semiring},
     sinkhorn::sinkhorn_scale,
@@ -687,7 +687,7 @@ mod tests {
         let program =
             dispatch_semiring_gemm_wide("state", "rules", "next", Some("state"), 2, 2, 2, 2);
         let generator = program_generator(&program);
-        assert!(generator.contains("vyre-primitives::math::scallop_join_wide"));
+        assert!(generator.contains("vyre-primitives::math::semiring_gemm"));
         assert!(generator.contains("semiring_gemm_wide"));
     }
 

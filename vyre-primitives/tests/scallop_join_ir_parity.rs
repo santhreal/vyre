@@ -30,7 +30,7 @@ fn words(v: &Value) -> Vec<u32> {
 /// Run the IR and return the final `state` (binding 0, first RW buffer).
 fn run_ir(state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32) -> Vec<u32> {
     let cells = (n * n) as usize;
-    let program = scallop_join("state", "next", "join_rules", "changed", n, max_iterations);
+    let program = scallop_join("state", "next", "join_rules", "changed", n, 1, max_iterations);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -54,7 +54,7 @@ fn scallop_join_ir_matches_lineage_fixpoint_oracle() {
     let join_rules = vec![0b0001u32, 0b0100, 0b0010, 0b0001];
 
     let got = run_ir(&state, &join_rules, n, max_iterations);
-    let (want, iters) = cpu_ref(&state, &join_rules, n, max_iterations);
+    let (want, iters) = cpu_ref(&state, &join_rules, n, 1, max_iterations);
 
     // Non-vacuous: the monotone fixpoint must actually derive new facts (grow past the seed).
     assert!(
@@ -86,7 +86,7 @@ fn scallop_join_ir_matches_oracle_dense_and_already_converged() {
         0b100, 0b000, 0b100,
     ];
     let got = run_ir(&state, &join_rules, n, 16);
-    let (want, iters) = cpu_ref(&state, &join_rules, n, 16);
+    let (want, iters) = cpu_ref(&state, &join_rules, n, 1, 16);
     assert_eq!(
         got, want,
         "3x3 state diverged (iters={iters}): IR={got:?} oracle={want:?}"
@@ -97,6 +97,6 @@ fn scallop_join_ir_matches_oracle_dense_and_already_converged() {
     let stable = vec![0b111u32; 9];
     let no_rules = vec![0u32; 9];
     let got_stable = run_ir(&stable, &no_rules, n, 16);
-    let (want_stable, _) = cpu_ref(&stable, &no_rules, n, 16);
+    let (want_stable, _) = cpu_ref(&stable, &no_rules, n, 1, 16);
     assert_eq!(got_stable, want_stable, "already-converged path diverged");
 }

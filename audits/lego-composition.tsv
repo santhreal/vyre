@@ -303,7 +303,6 @@ vyre-primitives::math::quantized::i4x8_matvec_f32_scaled	0.000000000000
 vyre-primitives::math::quantized::unpack_i4x8	0.000000000000
 vyre-primitives::math::randomized_projection_step	0.000000000000
 vyre-primitives::math::scallop_join	0.000000000000
-vyre-primitives::math::scallop_join_wide	0.000000000000
 vyre-primitives::math::semiring_gemm	0.000000000000
 vyre-primitives::math::sheaf_laplacian_eigenvalue	0.916666666667
 vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase	0.000000000000

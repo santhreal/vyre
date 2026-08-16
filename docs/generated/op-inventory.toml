@@ -1383,11 +1383,35 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::parsing::c11_builtin_declaration_kind_for_row"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["parsing"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::parsing::c11_classify_vast_node_kinds"
 tier = "libs"
 category = "parsing"
 kind = "program_buffers"
 buffers = 2
+bytes_extraction = false
+features = ["parsing"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::c11_enclosing_function_lparen_for_row"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 4
 bytes_extraction = false
 features = ["parsing"]
 target_facets = ["cuda", "spirv", "wgpu"]
@@ -1436,6 +1460,30 @@ tier = "libs"
 category = "parsing"
 kind = "program_buffers"
 buffers = 3
+bytes_extraction = false
+features = ["parsing"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::c11_identifier_row_hash"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["parsing"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 6
 bytes_extraction = false
 features = ["parsing"]
 target_facets = ["cuda", "spirv", "wgpu"]
@@ -3592,18 +3640,6 @@ backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
 id = "vyre-primitives::math::scallop_join"
-tier = "intrinsic"
-category = "math"
-kind = "program_buffers"
-buffers = 4
-bytes_extraction = false
-features = ["math", "inventory-registry"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-primitives::math::scallop_join_wide"
 tier = "intrinsic"
 category = "math"
 kind = "program_buffers"
