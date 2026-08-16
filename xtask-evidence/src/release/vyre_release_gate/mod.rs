@@ -18,34 +18,18 @@ use checks::check_markdown_evidence_path_ready;
 use gate_inputs::{EvidenceManifest, GateMode};
 use paths::{escapes_repository, options_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::gate::{GateCtx, GateError, Report};
 
 /// Holds the release to the evidence manifest: every requirement closed and
 /// every cited artifact present, fresh, and internally consistent.
 pub struct VyreReleaseGate;
 
-impl Gate for VyreReleaseGate {
-    fn name(&self) -> &'static str {
-        "vyre-release-gate"
-    }
-
-    fn help(&self) -> &'static str {
-        "Judge the release evidence manifest. The default prepublication mode accepts the three \
-         approval-gated external actions as pending and rejects every internal blocker. \
-         --launch-complete additionally requires completed publication, repository verification \
-         and pushes, so it is only meaningful after the release has shipped. --manifest PATH \
-         judges another manifest."
-    }
-
+impl xtask::gate::GateBehavior for VyreReleaseGate {
     fn usage(&self) -> &'static [&'static str] {
         &[
-            "--launch-complete additionally requires completed publication, repository verification and pushes",
-            "--manifest PATH judges another release evidence manifest",
-        ]
-    }
-
-    fn generates(&self) -> bool {
-        false
+        "--launch-complete additionally requires completed publication, repository verification and pushes",
+        "--manifest PATH judges another release evidence manifest",
+    ]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -222,6 +206,7 @@ fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
         failures,
         "Attach real evidence artifacts and close every manifest requirement.",
     );
+    report.cover_complete("release criteria checks", manifest.requirements.len());
     report.note(format!(
         "{} requirement(s) judged for Vyre {} ({scope})",
         manifest.requirements.len(),

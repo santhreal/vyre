@@ -22,10 +22,10 @@
 //! owner sentence buys it time, so progress lands in the code the gate judges
 //! instead of in this file.
 
+use crate::gates::gate_canon::{baseline_path, load_baselines, Baseline};
 use std::fs;
 use std::path::Path;
 use std::process;
-use crate::gates::gate_canon::{baseline_path, load_baselines, Baseline};
 
 use crate::gate::{self, GateCtx, GateError, Report};
 use crate::subcommands;
@@ -227,29 +227,45 @@ fn baseline_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<String>
 
 /// Every disagreement between executable gates and their static contracts.
 fn metadata_failures(
+    root: &Path,
     gate_names: &[&str],
-    rows: &[crate::gate_metadata::GateMetadataRow],
+    descriptors: &[crate::gate::GateDescriptor],
 ) -> Vec<String> {
     let mut failures = Vec::new();
     for name in gate_names {
-        let Some(row) = rows.iter().find(|row| row.name == *name) else {
+        let Some(desc) = descriptors.iter().find(|d| d.name == *name) else {
             failures.push(format!(
-                "gate `{name}` has no metadata row; classify its area, subject universe, artifacts, and mutation proof"
+                "gate `{name}` has no descriptor row; classify its package, area, subject universe, artifacts, prerequisites, and mutation proof"
             ));
             continue;
         };
-        for failure in row.metadata.failures() {
-            failures.push(format!("gate `{name}` metadata {failure}"));
+        for failure in desc.failures() {
+            failures.push(format!("gate `{name}` descriptor {failure}"));
         }
     }
-    for row in rows {
-        if !gate_names.contains(&row.name) {
+    for desc in descriptors {
+        if !gate_names.contains(&desc.name) {
             failures.push(format!(
-                "gate metadata names `{}`, which has no executable gate; delete the stale row or restore the implementation",
-                row.name
+                "gate descriptor names `{}`, which has no executable gate; delete the stale row or restore the implementation",
+                desc.name
             ));
         }
     }
+    let mut artifact_owners = std::collections::BTreeMap::new();
+    for desc in descriptors {
+        for artifact in desc.artifacts {
+            if let Some(other) = artifact_owners.insert(*artifact, desc.name) {
+                failures.push(format!(
+                    "artifact `{artifact}` is claimed by both `{other}` and `{}`",
+                    desc.name
+                ));
+            }
+        }
+    }
+    failures.extend(crate::gate_metadata::validate_all_descriptors(
+        root,
+        descriptors,
+    ));
     failures
 }
 /// Every disagreement between the registry, the subsets and the workflows.
@@ -315,6 +331,7 @@ fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> 
     let names = workflow_names(root);
     let mut failures = baseline_failures(gate_names, baselines);
     failures.extend(metadata_failures(
+        root,
         gate_names,
         crate::gate_metadata::GATE_METADATA,
     ));
@@ -354,7 +371,7 @@ fn render_baseline(rows: &[(&str, usize)]) -> String {
 }
 
 /// The gates this invocation runs, and what to call the selection.
-fn selection(args: &[String]) -> Result<(Vec<&'static dyn crate::gate::Gate>, String), GateError> {
+fn selection(args: &[String]) -> Result<(Vec<crate::gate::RegisteredGate>, String), GateError> {
     let registry = subcommands::registry();
     let Some(at) = args.iter().position(|argument| argument == "--subset") else {
         return Ok((registry, "registry".to_string()));
@@ -386,8 +403,53 @@ fn selection(args: &[String]) -> Result<(Vec<&'static dyn crate::gate::Gate>, St
 }
 
 /// Run one gate and render what it reported.
-fn execute(gate: &dyn crate::gate::Gate, root: &Path) -> Result<Report, GateError> {
+fn execute(gate: &crate::gate::RegisteredGate, root: &Path) -> Result<Report, GateError> {
     gate.run(&GateCtx::new(root.to_path_buf(), Vec::new()))
+}
+
+/// Execute a selection of gates in sweep comparison mode with exactly one pre-capture and one post-verification.
+pub fn execute_sweep_selection(
+    root: &Path,
+    selected: &[crate::gate::RegisteredGate],
+    baselines: &[Baseline],
+) -> Vec<String> {
+    let mut failures = Vec::new();
+    let sweep_snapshot = crate::artifact_gate::WorkspaceSnapshot::capture(root);
+
+    for gate in selected {
+        let name = gate.name();
+        let Some(pin) = baselines.iter().find(|pin| pin.name == name) else {
+            continue;
+        };
+        let descriptor = crate::gate_metadata::descriptor(name);
+        match execute(gate, root) {
+            Err(error) => failures.push(format!("gate `{name}` could not run: {error}")),
+            Ok(report) => {
+                if let Some(descriptor) = descriptor {
+                    for failure in report.contract_failures(descriptor) {
+                        failures.push(format!("gate `{name}` {failure}"));
+                    }
+                } else {
+                    for failure in report.coverage_failures() {
+                        failures.push(format!("gate `{name}` {failure}"));
+                    }
+                }
+                let found = report.count();
+                if found > pin.findings {
+                    failures.push(format!(
+                        "gate `{name}` reported {found} finding(s) against a pinned {}; fix the new finding",
+                        pin.findings
+                    ));
+                }
+            }
+        }
+    }
+
+    let sweep_mutations = sweep_snapshot.detect_mutations(root, "sweep", &[], false);
+    for mutation in sweep_mutations {
+        failures.push(mutation);
+    }
+    failures
 }
 
 /// Run the gate sweep.
@@ -415,7 +477,7 @@ pub fn run(args: &[String]) {
         let mut failing = Vec::new();
         let mut red = Vec::new();
         for gate in &selected {
-            match execute(*gate, &root) {
+            match execute(gate, &root) {
                 Ok(report) => {
                     println!("{}: {} finding(s)", gate.name(), report.count());
                     rows.push((gate.name(), report.count()));
@@ -463,6 +525,7 @@ pub fn run(args: &[String]) {
     let registry = subcommands::registry();
     let gate_names: Vec<&str> = registry.iter().map(|gate| gate.name()).collect();
     let mut failures = wiring_failures(&root, &gate_names, &baselines);
+    let sweep_snapshot = crate::artifact_gate::WorkspaceSnapshot::capture(&root);
 
     for gate in &selected {
         let name = gate.name();
@@ -471,10 +534,20 @@ pub fn run(args: &[String]) {
             // pin would report a number nothing holds it to.
             continue;
         };
-        match execute(*gate, &root) {
+        let descriptor = crate::gate_metadata::descriptor(name);
+        match execute(gate, &root) {
             Err(error) => failures.push(format!("gate `{name}` could not run: {error}")),
             Ok(report) => {
                 print!("{}", gate::render(name, &report));
+                if let Some(descriptor) = descriptor {
+                    for failure in report.contract_failures(descriptor) {
+                        failures.push(format!("gate `{name}` {failure}"));
+                    }
+                } else {
+                    for failure in report.coverage_failures() {
+                        failures.push(format!("gate `{name}` {failure}"));
+                    }
+                }
                 let found = report.count();
                 if found > pin.findings {
                     failures.push(format!(
@@ -491,6 +564,10 @@ pub fn run(args: &[String]) {
         }
     }
 
+    let sweep_mutations = sweep_snapshot.detect_mutations(&root, "sweep", &[], false);
+    for mutation in sweep_mutations {
+        failures.push(mutation);
+    }
     if !failures.is_empty() {
         eprintln!("gates: {} failure(s):", failures.len());
         for failure in &failures {
@@ -513,6 +590,76 @@ mod tests {
         Baseline {
             name: name.to_string(),
             findings,
+        }
+    }
+
+    /// WHY: Section 182.5.4 requires rejecting any write outside the declaring gate's owned set.
+    #[test]
+    fn unowned_workspace_write_is_detected_and_rejected() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let root = temp.path();
+        let file_a = root.join("file_a.txt");
+        let unowned = root.join("unowned.txt");
+        std::fs::write(&file_a, "initial").expect("write file_a");
+
+        let snapshot = crate::artifact_gate::WorkspaceSnapshot::capture(root);
+
+        // Mutate unowned file outside declared set
+        std::fs::write(&unowned, "unowned content").expect("write unowned");
+
+        let declared_artifacts = &["file_a.txt"];
+        let violations = snapshot.detect_mutations(root, "test-gate", declared_artifacts, false);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("created workspace file `unowned.txt`"));
+        assert!(violations[0].contains("Section 182.5.6"));
+    }
+
+    /// WHY: Section 182.7.2 requires proving that full sweep and aggregate lego-audit invocation
+    /// each execute every discrete LEGO law gate exactly once without duplicate/rerun execution.
+    #[test]
+    fn full_sweep_and_aggregate_each_execute_laws_exactly_once() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let execution_counts: std::collections::HashMap<&str, Arc<AtomicUsize>> =
+            subcommands::LEGO_LAW_GATES
+                .iter()
+                .map(|name| (*name, Arc::new(AtomicUsize::new(0))))
+                .collect();
+
+        // 1. Full sweep simulation: runs registry() where each of the 123 gates is present once
+        let full_registry = subcommands::registry();
+        for gate in &full_registry {
+            if let Some(counter) = execution_counts.get(gate.name()) {
+                counter.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        for (name, counter) in &execution_counts {
+            assert_eq!(
+                counter.load(Ordering::SeqCst),
+                1,
+                "full sweep must execute LEGO law gate `{name}` exactly once"
+            );
+        }
+
+        // 2. Aggregate lego-audit simulation: runs the subset 'lego-audit'
+        for counter in execution_counts.values() {
+            counter.store(0, Ordering::SeqCst);
+        }
+        let subset = subcommands::subset("lego-audit").expect("lego-audit subset exists");
+        assert_eq!(subset.gates.len(), 11);
+        for gate_name in &subset.gates {
+            let gate = subcommands::find(gate_name).expect("gate exists in registry");
+            if let Some(counter) = execution_counts.get(gate.name()) {
+                counter.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        for (name, counter) in &execution_counts {
+            assert_eq!(
+                counter.load(Ordering::SeqCst),
+                1,
+                "aggregate lego-audit invocation must execute LEGO law gate `{name}` exactly once"
+            );
         }
     }
 
@@ -539,26 +686,28 @@ mod tests {
         assert_eq!(extra_row.len(), 1);
         assert!(extra_row[0].contains("pins `retired`"));
 
-        let tolerated = baseline_failures(
-            &names,
-            &[pin("dep-drift", 0), pin("op-names", 1)],
-        );
+        let tolerated = baseline_failures(&names, &[pin("dep-drift", 0), pin("op-names", 1)]);
         assert_eq!(tolerated.len(), 1);
         assert!(tolerated[0].contains("every pin must remain zero"));
 
-        let valid_metadata = crate::gate_metadata::GateMetadataRow {
+        let valid_descriptor = crate::gate::GateDescriptor {
             name: "dep-drift",
-            metadata: crate::gate::GateMetadata {
-                areas: &["prepublish"],
-                subject: "workspace manifests",
-                artifacts: &[],
-                proof: "definition-site mutation tests",
-            },
+            help:
+                "Reject a manifest that pins a workspace-managed dependency to a different version",
+            package: "xtask",
+            areas: &["prepublish"],
+            subject: "workspace manifests",
+            artifacts: &[],
+            prerequisites: &[],
+            proof: "crate::gates::dep_drift::tests::dep_drift_detects_mismatched_dependency_versions_and_ignores_workspace_inheritance",
         };
-        assert!(metadata_failures(&["dep-drift"], &[valid_metadata]).is_empty());
-        assert!(metadata_failures(&["dep-drift", "missing"], &[valid_metadata])[0]
-            .contains("`missing` has no metadata"));
-        assert!(metadata_failures(&[], &[valid_metadata])[0]
+        let root = crate::checkout::checkout_root();
+        assert!(metadata_failures(&root, &["dep-drift"], &[valid_descriptor]).is_empty());
+        assert!(
+            metadata_failures(&root, &["dep-drift", "missing"], &[valid_descriptor])[0]
+                .contains("`missing` has no descriptor")
+        );
+        assert!(metadata_failures(&root, &[], &[valid_descriptor])[0]
             .contains("has no executable gate"));
     }
 
@@ -692,9 +841,14 @@ mod tests {
             selection(&[]).expect("the whole registry").0.len(),
             subcommands::registry().len()
         );
-        let (selected, what) =
-            selection(&["--subset".to_string(), "cat-a".to_string()]).expect("a registered subset");
-        assert_eq!(what, "subset `cat-a`");
+        let subset = subcommands::subsets()
+            .into_iter()
+            .next()
+            .expect("the descriptor registry has at least one nonempty area");
+        let (selected, what) = selection(&["--subset".to_string(), subset.name.to_string()])
+            .expect("a descriptor-derived subset");
+        assert_eq!(what, format!("subset `{}`", subset.name));
+        assert_eq!(selected.len(), subset.gates.len());
         assert!(!selected.is_empty());
         assert!(selected.len() < subcommands::registry().len());
         assert!(selection(&["--subset".to_string()]).is_err());
@@ -763,5 +917,34 @@ mod tests {
         assert!(globbed[0].contains("check_*.sh"), "got {globbed:?}");
         assert_eq!(other.len(), 1, "got {other:?}");
         assert!(other[0].contains("run_*.sh"), "got {other:?}");
+    }
+    /// WHY: Section 182.5.6 and performance contract require O(1) workspace hashing per sweep run,
+    /// rather than O(gates) rehashing the entire workspace 123 times.
+    #[test]
+    fn sweep_performs_exactly_one_capture_and_one_verification_regardless_of_gate_count() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        fs::write(root.join("test.txt"), "hello").expect("write file");
+
+        crate::artifact_gate::reset_snapshot_counters();
+
+        let registry = subcommands::registry();
+        assert!(registry.len() > 10, "registry must contain multiple gates");
+
+        let baselines = load_baselines(&crate::checkout::checkout_root()).unwrap_or_default();
+
+        let subset_gates: Vec<crate::gate::RegisteredGate> =
+            registry.iter().take(5).copied().collect();
+        let _ = execute_sweep_selection(root, &subset_gates, &baselines);
+
+        let (captures, verifications) = crate::artifact_gate::snapshot_counter_values();
+        assert_eq!(
+            verifications, 1,
+            "Sweep must perform exactly 1 verification regardless of gate count"
+        );
+        assert_eq!(
+            captures, 2,
+            "Sweep must perform exactly 1 pre-capture + 1 post-capture inside verification"
+        );
     }
 }

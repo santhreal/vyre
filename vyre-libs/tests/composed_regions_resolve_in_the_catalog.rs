@@ -67,9 +67,9 @@ fn every_emitted_region_names_a_catalog_operation() {
             if generator == Program::ROOT_REGION_GENERATOR
                 || vyre_foundation::composition::is_anonymous_generator(&generator)
                 || catalog.contains(generator.as_str())
-                || catalog.iter().any(|op| {
-                    generator.starts_with(op) && generator[op.len()..].starts_with("::")
-                })
+                || catalog
+                    .iter()
+                    .any(|op| generator.starts_with(op) && generator[op.len()..].starts_with("::"))
             {
                 continue;
             }

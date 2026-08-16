@@ -18,7 +18,7 @@ use std::process::Command;
 
 use tempfile::TempDir;
 
-use xtask::gate::{Gate, GateCtx, Report};
+use xtask::gate::{GateBehavior, GateCtx, Report};
 use xtask::gates::ci_contract::CiRequired;
 
 /// A checkout with one workflow and the required-context document.

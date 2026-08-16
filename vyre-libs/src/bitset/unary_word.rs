@@ -43,13 +43,8 @@ mod tests {
         let mut cases = 0usize;
         for words in 0..=2048 {
             for op in [UnOp::BitNot, UnOp::Popcount] {
-                let program = bitset_unary_word_program(
-                    "vyre-libs::bitset::test",
-                    "in",
-                    "out",
-                    words,
-                    op,
-                );
+                let program =
+                    bitset_unary_word_program("vyre-libs::bitset::test", "in", "out", words, op);
                 assert_eq!(program.buffers().len(), 2);
                 let output = program
                     .buffers()

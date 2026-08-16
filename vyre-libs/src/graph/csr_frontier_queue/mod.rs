@@ -60,8 +60,7 @@ pub use self::word_block_scatter::{
 /// Canonical op id for bitset-to-queue compaction.
 pub const FRONTIER_TO_QUEUE_OP_ID: &str = "vyre-libs::graph::frontier_to_queue";
 /// Canonical op id for multi-workgroup bitset-to-queue compaction.
-pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str =
-    "vyre-libs::graph::frontier_to_queue_parallel";
+pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str = "vyre-libs::graph::frontier_to_queue_parallel";
 /// Canonical op id for word-level multi-workgroup bitset-to-queue compaction.
 pub const FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str =
     "vyre-libs::graph::frontier_words_to_queue_parallel";

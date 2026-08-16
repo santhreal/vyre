@@ -27112,7 +27112,7 @@
             "access": "Workgroup",
             "memory": "Shared",
             "element": "U32",
-            "count": 1024,
+            "count": 256,
             "pipeline_live_out": false
           },
           {
@@ -27121,7 +27121,7 @@
             "access": "Workgroup",
             "memory": "Shared",
             "element": "U32",
-            "count": 1024,
+            "count": 256,
             "pipeline_live_out": false
           }
         ],
@@ -31362,48 +31362,12 @@
         "buffers": [
           {
             "binding": 0,
-            "name": "source",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 5,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "__lines_line_start_flags",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 5,
-            "pipeline_live_out": true
-          },
-          {
-            "binding": 2,
             "name": "lines",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "U32",
-            "count": 5,
+            "count": 1,
             "pipeline_live_out": true
-          },
-          {
-            "binding": 0,
-            "name": "__lines_guarded_scan_a",
-            "access": "Workgroup",
-            "memory": "Shared",
-            "element": "U32",
-            "count": 1024,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 0,
-            "name": "__lines_guarded_scan_b",
-            "access": "Workgroup",
-            "memory": "Shared",
-            "element": "U32",
-            "count": 1024,
-            "pipeline_live_out": false
           }
         ],
         "inputs": [],
@@ -31454,21 +31418,6 @@
         {
           "depth": 0,
           "operation": "vyre-libs::text::line_index",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "inline::vyre-libs::text::line_index",
-          "registered": false
-        },
-        {
-          "depth": 2,
-          "operation": "vyre-libs::text::line_index::line_start_flags",
-          "registered": false
-        },
-        {
-          "depth": 2,
-          "operation": "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum",
           "registered": true
         }
       ]

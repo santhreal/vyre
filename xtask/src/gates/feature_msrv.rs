@@ -26,7 +26,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::cargo_runner;
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::feature_isolation::{derive_pairs, Pair};
 use crate::gates::scan::Tree;
 
@@ -36,15 +36,7 @@ const ROOT_MANIFEST: &str = "Cargo.toml";
 /// Compiles every declared feature selection on the advertised MSRV.
 pub struct FeatureMsrv;
 
-impl Gate for FeatureMsrv {
-    fn name(&self) -> &'static str {
-        "feature-msrv"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the advertised rust-version to a compile of every declared feature selection; --sweep compiles, --print-toolchain writes the validated version for a workflow to install"
-    }
-
+impl crate::gate::GateBehavior for FeatureMsrv {
     fn usage(&self) -> &'static [&'static str] {
         &[
             "--sweep compiles each declared selection on the advertised MSRV",
@@ -56,6 +48,7 @@ impl Gate for FeatureMsrv {
         let tree = Tree::open(&ctx.root)?;
         let manifest = tree.read_toml(ROOT_MANIFEST)?;
         let mut report = Report::clean();
+        report.cover_complete("workspace manifests", tree.members()?.len());
 
         let declared = declared_version(&manifest);
         let Some(version) = declared else {

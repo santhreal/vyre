@@ -25,7 +25,7 @@ use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{
     Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetPayload,
 };
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 const MAX_XTASK_COMPILE_INPUT_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_XTASK_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
@@ -34,15 +34,7 @@ const XTASK_SEARCH_BUDGET: SearchBudget = SearchBudget::new(256, 100_000, 1, 0, 
 /// Compiles the registered release corpus, and any caller-named wire file.
 pub struct Compile;
 
-impl Gate for Compile {
-    fn name(&self) -> &'static str {
-        "compile"
-    }
-
-    fn help(&self) -> &'static str {
-        "Compile the registered release corpus; --program ID narrows to one case, --input PATH compiles one wire file, --to ID also compiles that registered target, --out DIR writes the payloads"
-    }
-
+impl xtask::gate::GateBehavior for Compile {
     fn usage(&self) -> &'static [&'static str] {
         &[
             "--program ID narrows the run to one registered corpus case",
@@ -63,6 +55,7 @@ impl Gate for Compile {
             .collect();
         let out_dir = ctx.flag("--out").map(PathBuf::from);
         let mut report = Report::clean();
+        report.cover_complete("corpus cases", cases.len());
         report.note(format!(
             "{} program(s) compiled, {} registered target(s) requested",
             cases.len(),
@@ -97,11 +90,11 @@ impl Gate for Compile {
                     Ok(bytes) => bytes,
                     Err(error) => {
                         report.find(Finding::new(
-                            format!(
-                                "the authenticated payload of `{id}` for `{target}` does not encode: {error}"
-                            ),
-                            "repair the payload encoder for that target",
-                        ));
+                        format!(
+                            "the authenticated payload of `{id}` for `{target}` does not encode: {error}"
+                        ),
+                        "repair the payload encoder for that target",
+                    ));
                         continue;
                     }
                 };

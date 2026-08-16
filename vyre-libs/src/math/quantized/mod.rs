@@ -35,8 +35,7 @@ pub const I4_DOT_I32_OP_ID: &str = "vyre-libs::math::quantized::i4x8_dot_i32";
 pub const I4_DOT_F32_SCALED_OP_ID: &str = "vyre-libs::math::quantized::i4x8_dot_f32_scaled";
 
 /// Canonical op id for fused scaled packed signed INT4 matrix-vector products.
-pub const I4_MATVEC_F32_SCALED_OP_ID: &str =
-    "vyre-libs::math::quantized::i4x8_matvec_f32_scaled";
+pub const I4_MATVEC_F32_SCALED_OP_ID: &str = "vyre-libs::math::quantized::i4x8_matvec_f32_scaled";
 
 /// Canonical op id for batched fused scaled packed signed INT4 matvec.
 pub const I4_BATCHED_MATVEC_F32_SCALED_OP_ID: &str =

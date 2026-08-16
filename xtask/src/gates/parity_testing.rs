@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 
 /// The feature that must never be enabled outside a development dependency.
 const FEATURE: &str = "parity-testing";
@@ -61,18 +61,11 @@ fn is_allowed(crate_directory: &str, section: &str) -> bool {
 /// Keeps the raw-shader parity oracle out of every non-development dependency.
 pub struct ParityTestingIsolated;
 
-impl Gate for ParityTestingIsolated {
-    fn name(&self) -> &'static str {
-        "parity-testing-isolated"
-    }
-
-    fn help(&self) -> &'static str {
-        "Fail when a manifest enables the parity-testing feature outside a development dependency"
-    }
-
+impl crate::gate::GateBehavior for ParityTestingIsolated {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let paths = manifests(&ctx.root)?;
+        report.cover_complete("parity test manifests", paths.len());
         for path in &paths {
             let text = crate::output_arg::read_text_bounded(
                 path,

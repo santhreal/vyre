@@ -33,6 +33,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | --- | --- | --- | --- | --- |
 | `example` | `dominator_tree_e2e` | `vyre-libs/examples/dominator_tree_e2e.rs` | None | `./cargo_full test -p vyre-libs --example dominator_tree_e2e` |
 | `example` | `dominator_tree_e2e` | `vyre-libs/examples/dominator_tree_e2e.rs` | `cpu-parity`, `graph` | `./cargo_full test -p vyre-libs --example dominator_tree_e2e` |
+| `example` | `jacobi_workgroup_perf` | `vyre-libs/examples/jacobi_workgroup_perf.rs` | None | `./cargo_full test -p vyre-libs --example jacobi_workgroup_perf` |
 | `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | None | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
 | `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | `math-scan` | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
 | `example` | `select1_optimizer_parity` | `vyre-libs/examples/select1_optimizer_parity.rs` | None | `./cargo_full test -p vyre-libs --example select1_optimizer_parity` |
@@ -242,6 +243,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `ir_aliasing` | `vyre-libs/tests/ir_aliasing.rs` | None | `./cargo_full test -p vyre-libs --test ir_aliasing` |
 | `test` | `ir_aliasing` | `vyre-libs/tests/ir_aliasing.rs` | `decode`, `parsing` | `./cargo_full test -p vyre-libs --test ir_aliasing` |
 | `test` | `jacobi_serial_body_matches_per_lane` | `vyre-libs/tests/jacobi_serial_body_matches_per_lane.rs` | None | `./cargo_full test -p vyre-libs --test jacobi_serial_body_matches_per_lane` |
+| `test` | `jacobi_workgroup_cooperative_contracts` | `vyre-libs/tests/jacobi_workgroup_cooperative_contracts.rs` | None | `./cargo_full test -p vyre-libs --test jacobi_workgroup_cooperative_contracts` |
 | `test` | `kfac_block_inverse_proptest` | `vyre-libs/tests/kfac_block_inverse_proptest.rs` | None | `./cargo_full test -p vyre-libs --test kfac_block_inverse_proptest` |
 | `test` | `kfac_via_reference_parity` | `vyre-libs/tests/kfac_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test kfac_via_reference_parity` |
 | `test` | `kfac_via_reference_parity` | `vyre-libs/tests/kfac_via_reference_parity.rs` | `cpu-parity`, `solvers` | `./cargo_full test -p vyre-libs --test kfac_via_reference_parity` |

@@ -359,14 +359,16 @@ pub fn try_sum_product_evaluate_leveled(
         BufferDecl::storage(out, 7, BufferAccess::ReadWrite, DataType::U32).with_count(n_nodes),
     ];
 
-    Ok(crate::graph::level_wave::level_wave_program_with_buffers_and_op_id(
-        OP_ID_LEVELED,
-        step_body,
-        depths,
-        extra_buffers,
-        max_depth,
-        n_nodes,
-    ))
+    Ok(
+        crate::graph::level_wave::level_wave_program_with_buffers_and_op_id(
+            OP_ID_LEVELED,
+            step_body,
+            depths,
+            extra_buffers,
+            max_depth,
+            n_nodes,
+        ),
+    )
 }
 
 /// Host-side topological depth assignment for driving [`sum_product_evaluate_leveled`].

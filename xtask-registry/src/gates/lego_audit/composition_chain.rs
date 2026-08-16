@@ -33,3 +33,34 @@ pub(super) fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpI
     }
     flagged
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::gates::lego_audit::test_ops::op;
+
+    #[test]
+    fn non_leaf_operations_without_children_are_flagged() {
+        let mut valid_composed = op(
+            "vyre-libs::nn::composed_layer",
+            Tier::T3,
+            &["vyre-libs::nn::activation"],
+        );
+        valid_composed.own_nodes = 30;
+        valid_composed.composed_nodes = 20;
+
+        let mut uncomposed_non_leaf = op("vyre-libs::nn::uncomposed_layer", Tier::T3, &[]);
+        uncomposed_non_leaf.own_nodes = 50;
+        uncomposed_non_leaf.composed_nodes = 0;
+
+        let mut report = Report::clean();
+        let flagged =
+            check_6_composition_chain_coverage(&mut report, &[valid_composed, uncomposed_non_leaf]);
+        assert_eq!(
+            flagged, 1,
+            "non-leaf op without registered child regions must be flagged"
+        );
+        assert!(report.findings[0]
+            .message
+            .contains("vyre-libs::nn::uncomposed_layer has no registered child Regions"));
+    }
+}

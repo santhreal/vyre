@@ -20,7 +20,7 @@
 use std::collections::BTreeSet;
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Crate that owns the Metal backend and publishes its counters.
@@ -54,15 +54,7 @@ const CONNECT_TIMEOUT: &str = "8";
 /// Metal parity is proved on an Apple GPU, or not at all.
 pub struct MetalParity;
 
-impl Gate for MetalParity {
-    fn name(&self) -> &'static str {
-        "metal-parity"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the Metal counter roster to the driver's own assertions; `--host` <target> runs the suites on an Apple GPU"
-    }
-
+impl crate::gate::GateBehavior for MetalParity {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
@@ -71,6 +63,9 @@ impl Gate for MetalParity {
         let snapshot_source = format!("{metal_dir}/{SNAPSHOT_SOURCE}");
         let snapshot = tree.read(&snapshot_source)?;
         let published = published_counters(&snapshot);
+        report.cover_complete("published Metal counters", published.len());
+        report.cover_complete("measured Metal cases", MEASURED_CASES.len());
+        report.cover_complete("Metal conformance feature", 1);
         if published.is_empty() {
             report.find(Finding::in_file(
                 snapshot_source.as_str(),

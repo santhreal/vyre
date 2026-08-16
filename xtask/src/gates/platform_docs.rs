@@ -12,7 +12,7 @@
 //! to be present, so a crate-level `//!` block at column zero was outside its
 //! scope entirely.
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Crates that must stay consumer-neutral.
@@ -47,18 +47,11 @@ const RELEASE_COORDINATION: &str = "vyre-lints/rules/release_coordination_docs.t
 /// Platform documentation stays consumer-neutral.
 pub struct PlatformConsumerDocs;
 
-impl Gate for PlatformConsumerDocs {
-    fn name(&self) -> &'static str {
-        "platform-consumer-docs"
-    }
-
-    fn help(&self) -> &'static str {
-        "platform documentation that names a downstream consumer"
-    }
-
+impl crate::gate::GateBehavior for PlatformConsumerDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("platform crates", PLATFORM_CRATES.len());
         let exempt = release_coordination_entries(&tree)?;
 
         for crate_name in PLATFORM_CRATES {

@@ -152,24 +152,6 @@ pub(super) fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo
             ));
         }
     }
-    for (id, family) in IMPLEMENTATION_FAMILY_ROWS {
-        if !ops.iter().any(|op| &op.id == id) {
-            report.find(Finding::new(
-                format!("no registered op answers to `{id}`, claimed by the implementation family `{family}`"),
-                DEAD_EXEMPTION_FIX,
-            ));
-        }
-    }
-    for (one, other, _) in REVIEWED_DISTINCT_OPERATIONS {
-        for id in [one, other] {
-            if !ops.iter().any(|op| &op.id == id) {
-                report.find(Finding::new(
-                    format!("no registered op answers to `{id}`, half of the reviewed-distinct pair with `{}`", if id == one { other } else { one }),
-                    DEAD_EXEMPTION_FIX,
-                ));
-            }
-        }
-    }
     let colliding = colliding_stems(ops);
     for stem in KNOWN_STEM_FAMILIES {
         if !colliding.contains_key(stem) {

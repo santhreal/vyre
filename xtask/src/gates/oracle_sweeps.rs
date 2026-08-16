@@ -31,7 +31,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// The manifest that declares the workspace members.
@@ -67,20 +67,13 @@ impl SweepTarget {
 /// Runs and holds the derived oracle-matrix sweep roster.
 pub struct OracleSweeps;
 
-impl Gate for OracleSweeps {
-    fn name(&self) -> &'static str {
-        "oracle-sweeps"
-    }
-
-    fn help(&self) -> &'static str {
-        "Derive the sweep_* oracle-matrix roster from tracked sources and manifests; `--run` executes one partition"
-    }
-
+impl crate::gate::GateBehavior for OracleSweeps {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let members = workspace_members(&tree)?;
         let mut report = Report::clean();
         let roster = derive(&tree, &members, &mut report)?;
+        report.cover_complete("oracle sweep targets", roster.len());
 
         if roster.is_empty() {
             report.find(Finding::new(

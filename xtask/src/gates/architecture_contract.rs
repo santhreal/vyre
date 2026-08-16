@@ -15,7 +15,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{glob_match, Tree};
 
 /// The document this gate holds to the authorities.
@@ -71,15 +71,7 @@ const LANE_FIX: &str = "delete the lane entry, or restore what it names; a write
 /// The architecture document and the optimization lanes agree with the tree.
 pub struct ArchitectureContract;
 
-impl Gate for ArchitectureContract {
-    fn name(&self) -> &'static str {
-        "architecture-contract"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold docs/ARCHITECTURE.md and the optimization lane registry to the manifests, release train, operation schema, backend evidence and ownership registry"
-    }
-
+impl crate::gate::GateBehavior for ArchitectureContract {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut findings = Vec::new();
@@ -92,6 +84,7 @@ impl Gate for ArchitectureContract {
         judge_document(&tree, version.as_deref(), &mut findings)?;
         judge_lanes(&tree, &members, &mut findings)?;
         let mut report = Report::with_findings(findings);
+        report.cover_complete("workspace members", members.len());
         report.note(format!(
             "{} workspace member(s) read as the authority for the architecture prose",
             members.len()

@@ -51,6 +51,7 @@ pub mod geometry_constants;
 pub mod module_layout;
 pub mod registration_text;
 pub mod source_scan;
+// Source scan and route discovery.
 pub use geometry_constants::geometry_constant_failures;
 pub use source_scan::opaque_span;
 

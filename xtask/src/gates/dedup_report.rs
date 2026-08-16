@@ -377,8 +377,7 @@ pub fn registered_op_owner_lane(op_id: &str) -> &'static str {
         || op_id.starts_with("vyre-libs::matching::")
     {
         "scan_automata"
-    } else if op_id.starts_with("vyre-libs::parsing::")
-        || op_id.starts_with("vyre-libs::parsing::")
+    } else if op_id.starts_with("vyre-libs::parsing::") || op_id.starts_with("vyre-libs::parsing::")
     {
         "parser_frontend"
     } else if op_id.starts_with("vyre-libs::security::")
@@ -399,9 +398,7 @@ pub fn registered_op_owner_lane(op_id: &str) -> &'static str {
         || op_id.starts_with("vyre-libs::decode::")
     {
         "sparse_math_ai"
-    } else if op_id.starts_with("vyre-libs::visual::")
-        || op_id.starts_with("vyre-libs::visual::")
-    {
+    } else if op_id.starts_with("vyre-libs::visual::") || op_id.starts_with("vyre-libs::visual::") {
         "product_dogfood"
     } else if op_id.starts_with("vyre-primitives::") {
         "foundation_optimizer"

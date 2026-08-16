@@ -22,7 +22,7 @@
 //! produces fragments nothing else can call, which is the opposite of the rule
 //! the budget exists to enforce.
 
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 use crate::gates::composition_budget::{
     self, Counts, COMPOSED_FRACTION_THRESHOLD, LOOP_BUDGET, NODE_BUDGET,
@@ -33,18 +33,11 @@ use crate::gates::lego_audit::exemptions::is_declared_tier3_leaf;
 /// Enforces the Gate 1 complexity budget over every registered operation.
 pub struct Gate1;
 
-impl Gate for Gate1 {
-    fn name(&self) -> &'static str {
-        "gate1"
-    }
-
-    fn help(&self) -> &'static str {
-        "Enforce the Gate 1 complexity budget"
-    }
-
+impl xtask::gate::GateBehavior for Gate1 {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = composition_budget::collect_ops(&mut report);
+        report.cover_complete("registered operations", ops.len());
         let ids = composition_budget::registered_ids(&ops);
         let mut audited: Vec<(String, Counts)> = ops
             .iter()
@@ -58,9 +51,9 @@ impl Gate for Gate1 {
         audited.sort_by(|left, right| left.0.cmp(&right.0));
 
         report.note(format!(
-            "budget: loops <= {LOOP_BUDGET} and nodes <= {NODE_BUDGET}, or composed_fraction >= {:.0}%",
-            COMPOSED_FRACTION_THRESHOLD * 100.0
-        ));
+        "budget: loops <= {LOOP_BUDGET} and nodes <= {NODE_BUDGET}, or composed_fraction >= {:.0}%",
+        COMPOSED_FRACTION_THRESHOLD * 100.0
+    ));
         report.note(format!("{} operation(s) audited", audited.len()));
         for (op_id, counts) in &audited {
             report.note(format!(
@@ -70,12 +63,12 @@ impl Gate for Gate1 {
                 counts.composed_fraction_pct()
             ));
             match verdict(op_id, counts) {
-                Verdict::Passes => {}
-                Verdict::DeclaredLeaf => report.note(format!(
-                    "{op_id} is over the budget and is a declared pure-IR leaf; lego-audit owns that decision"
-                )),
-                Verdict::OverBudget => report.find(over_budget(op_id, counts)),
-            }
+            Verdict::Passes => {}
+            Verdict::DeclaredLeaf => report.note(format!(
+                "{op_id} is over the budget and is a declared pure-IR leaf; lego-audit owns that decision"
+            )),
+            Verdict::OverBudget => report.find(over_budget(op_id, counts)),
+        }
         }
         Ok(report)
     }

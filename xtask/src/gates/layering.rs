@@ -23,7 +23,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use structure_gate::backend_vocabulary::segments_of;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::manifest_contract::{dep_lines, dependency_hosts, entries, target_package};
 use crate::gates::scan::{self, Tree};
 
@@ -154,20 +154,13 @@ const INTERFACE_NAMES: &[(&str, &str, &str)] = &[(
 /// crate reaches a backend API.
 pub struct Layering;
 
-impl Gate for Layering {
-    fn name(&self) -> &'static str {
-        "layering"
-    }
-
-    fn help(&self) -> &'static str {
-        "hold every member inside the dependency closure its ownership entry declares, and keep substrate-neutral layers away from backend API crates and from concrete backend vocabulary"
-    }
-
+impl crate::gate::GateBehavior for Layering {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let graph = Graph::read(&tree)?;
         let registry = Registry::read(&tree, &graph.members)?;
         let mut report = Report::clean();
+        report.cover_complete("workspace crates", graph.members.len());
         let mut edges = 0usize;
         let mut scanned = 0usize;
 
@@ -364,15 +357,7 @@ fn words_in(line: &str) -> Vec<String> {
 /// or runtime, and no manifest names a retired crate.
 pub struct NeutralCrates;
 
-impl Gate for NeutralCrates {
-    fn name(&self) -> &'static str {
-        "neutral-crates"
-    }
-
-    fn help(&self) -> &'static str {
-        "keep the named substrate-neutral crates free of production edges to backends, driver products and the runtime, and keep retired crate names out of every manifest"
-    }
-
+impl crate::gate::GateBehavior for NeutralCrates {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let root = tree.read_toml("Cargo.toml")?;
@@ -384,6 +369,7 @@ impl Gate for NeutralCrates {
             .cloned()
             .unwrap_or_default();
         let mut report = Report::clean();
+        report.cover_complete("workspace crates", tree.members()?.len());
         let mut optional = Vec::new();
 
         for crate_name in NEUTRAL_CRATES {

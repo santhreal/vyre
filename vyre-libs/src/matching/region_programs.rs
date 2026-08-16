@@ -5,8 +5,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 /// Stable op id for survivor-flag generation over sorted region triples.
 pub const DEDUP_REGIONS_FLAG_OP_ID: &str = "vyre-libs::matching::region::dedup_regions_flag";
 /// Stable op id for full cluster metadata over sorted region triples.
-pub const DEDUP_REGIONS_CLUSTER_OP_ID: &str =
-    "vyre-libs::matching::region::dedup_regions_cluster";
+pub const DEDUP_REGIONS_CLUSTER_OP_ID: &str = "vyre-libs::matching::region::dedup_regions_cluster";
 /// Stable op id for per-pattern survivor-flag capping over region triples.
 pub const CAP_REGIONS_PER_PATTERN_OP_ID: &str =
     "vyre-libs::matching::region::cap_regions_per_pattern";

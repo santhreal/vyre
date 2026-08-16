@@ -1000,6 +1000,7 @@ pub fn vyre_foundation::ir::Program::with_launch_geometry(&self, geometry: &vyre
 pub fn vyre_foundation::ir::Program::with_non_composable_with_self(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_buffers(&self, buffers: alloc::vec::Vec<vyre_foundation::ir::BufferDecl>) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_entry(&self, entry: alloc::vec::Vec<vyre_foundation::ir::Node>) -> Self
+pub fn vyre_foundation::ir::Program::with_rewritten_launch_geometry(&self, geometry: &vyre_foundation::geometry::LaunchGeometry) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_workgroup_size_and_entry(&self, workgroup_size: [u32; 3], entry: alloc::vec::Vec<vyre_foundation::ir::Node>) -> Self
 pub fn vyre_foundation::ir::Program::with_rewritten_wrapped_entry(&self, entry: alloc::vec::Vec<vyre_foundation::ir::Node>) -> Self
 pub fn vyre_foundation::ir::Program::workgroup_size(&self) -> [u32; 3]

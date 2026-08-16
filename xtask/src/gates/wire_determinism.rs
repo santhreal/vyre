@@ -17,7 +17,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Crate that owns the wire format.
@@ -32,15 +32,7 @@ const SUITE_PREFIX: &str = "wire_";
 /// Runs the wire suites twice and holds them to one answer.
 pub struct WireDeterminism;
 
-impl Gate for WireDeterminism {
-    fn name(&self) -> &'static str {
-        "wire-determinism"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the wire suites to a tracked roster; `--run` executes each twice and compares the emitted order"
-    }
-
+impl crate::gate::GateBehavior for WireDeterminism {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
@@ -57,6 +49,7 @@ impl Gate for WireDeterminism {
                 (name.starts_with(SUITE_PREFIX) && !name.contains('/')).then(|| name.to_string())
             })
             .collect();
+        report.cover_complete("wire format test suites", suites.len());
         if suites.is_empty() {
             report.find(Finding::in_file(
                 SUITE_DIR,

@@ -29,33 +29,33 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "backend-matrix"
-subsets = ["contract-rules"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "bench-baselines"
-subsets = ["structure"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "bench-coverage"
-subsets = ["benchmarks", "structure"]
-workflows = ["gates.yml", "release-evidence.yml"]
-
-[[gate]]
-name = "bench-crossback"
-subsets = ["ir"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "bench-crossback"
+subsets = ["prepublish", "release-evidence"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "bench-release"
-subsets = ["benchmarks", "prepublish"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "bench-smoke-runtime"
-subsets = ["benchmarks", "structure"]
-workflows = ["bench-regression.yml", "gates.yml", "release-evidence.yml"]
+subsets = ["contract-rules"]
+workflows = ["bench-regression.yml", "gates.yml"]
 
 [[gate]]
 name = "catalog"
@@ -64,27 +64,27 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "check-tier-deps"
-subsets = ["structure"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "ci-matrix"
-subsets = ["repo-rules"]
+subsets = ["ci-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "ci-registry"
-subsets = []
+subsets = ["ci-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "ci-required"
-subsets = ["repo-rules"]
+subsets = ["ci-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "ci-steps"
-subsets = []
+subsets = ["ci-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
@@ -94,32 +94,32 @@ workflows = ["docs-ci.yml", "gates.yml"]
 
 [[gate]]
 name = "compile"
-subsets = ["ir"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "conformance-matrix"
-subsets = ["contract-rules", "release-evidence"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["conform.yml", "gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "contract-in-source"
-subsets = ["repo-rules"]
+subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "crate-ownership"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "crate-pages"
-subsets = []
+subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "crate-readmes"
-subsets = []
+subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
@@ -129,7 +129,7 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "cuda-parity"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml", "gpu-parity.yml"]
 
 [[gate]]
@@ -139,7 +139,7 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "doc-claims"
-subsets = ["repo-rules"]
+subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
@@ -164,38 +164,38 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "dup-scan"
-subsets = ["structure"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "evidence-paths"
-subsets = ["repo-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "example-capability"
-subsets = ["structure"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "feature-isolation"
-subsets = ["manifest-rules"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "feature-matrix"
-subsets = ["manifest-rules"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "feature-msrv"
-subsets = []
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "file-size"
-subsets = ["source-rules"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "frozen-contracts"
@@ -204,8 +204,8 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "gate-canon"
-subsets = []
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "gate1"
@@ -219,102 +219,152 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "heuristic-audit"
-subsets = ["structure"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "hot-path-blocking-wait"
-subsets = ["hot-path-rules"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hot-path-inventory"
-subsets = ["hot-path-rules"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hot-path-nested-rows"
-subsets = ["hot-path-rules"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hot-path-owned-dispatch"
-subsets = ["hot-path-rules"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hot-path-reserve"
-subsets = ["hot-path-rules"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hot-path-scan"
-subsets = ["structure"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hot-path-unbounded-cache"
-subsets = ["hot-path-rules"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hot-path-unbounded-read"
-subsets = ["hot-path-rules"]
+subsets = ["hot-path"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "hygiene-matrix"
-subsets = ["structure"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "internal-dep-versions"
-subsets = ["manifest-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "invariant-paths"
-subsets = ["repo-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "launch-state"
-subsets = ["contract-rules", "release-evidence"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "layering"
-subsets = ["manifest-rules"]
+subsets = ["contract-rules"]
 workflows = ["architectural-invariants.yml", "gates.yml"]
 
 [[gate]]
-name = "lego-audit"
-subsets = ["composition"]
+name = "lego-composability"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-composition-chains"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-composition-depth"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-cross-dialect"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-exemption-liveness"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-name-stems"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-no-reinvention"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-operand-shapes"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-primitive-coverage"
+subsets = ["lego-audit"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "lego-quick"
-subsets = ["composition"]
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-semantic-organization"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-trend"
+subsets = ["lego-audit"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "lint-expect-fix"
-subsets = ["lint-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "lint-one-policy"
-subsets = ["lint-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "lint-unsafe-budget"
-subsets = ["lint-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "lint-unsafe-justification"
-subsets = ["lint-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
@@ -324,33 +374,33 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "lockfile-clean"
-subsets = ["prepublish"]
-workflows = ["gates.yml", "release-evidence.yml"]
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "metadata-matrix"
-subsets = ["contract-rules", "release-evidence"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "metal-parity"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "neutral-crates"
-subsets = ["manifest-rules"]
+subsets = ["contract-rules"]
 workflows = ["architectural-invariants.yml", "gates.yml"]
 
 [[gate]]
 name = "op-matrix"
-subsets = ["docs"]
+subsets = ["prepublish"]
 workflows = ["architectural-invariants.yml", "conform.yml", "gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "op-names"
-subsets = ["cat-a"]
-workflows = ["gates.yml", "release-evidence.yml"]
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "operation-schema"
@@ -359,22 +409,22 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "optimization-corpus"
-subsets = ["ir", "release-evidence"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "optimization-docs"
-subsets = ["docs"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "optimization-matrix"
-subsets = ["ir", "release-evidence"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "oracle-sweeps"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
@@ -384,38 +434,33 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "parity-testing-isolated"
-subsets = ["cat-a"]
-workflows = ["gates.yml", "release-evidence.yml"]
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "path-deps-resolve"
-subsets = ["manifest-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "placement-predicates"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "platform-boundary"
-subsets = ["cat-a", "prepublish"]
-workflows = ["gates.yml", "release-evidence.yml"]
-
-[[gate]]
-name = "platform-consumer-docs"
-subsets = ["repo-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
-name = "primitive-admission-gate"
-subsets = ["composition"]
+name = "platform-consumer-docs"
+subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "print-composition"
-subsets = ["ir"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "program-wire-fields"
@@ -424,7 +469,7 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "proptest-coverage"
-subsets = ["lint-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
@@ -444,7 +489,7 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "release-benchmarks"
-subsets = ["benchmarks", "prepublish"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "gpu-parity.yml", "release-evidence.yml"]
 
 [[gate]]
@@ -454,8 +499,8 @@ workflows = ["gates.yml", "gpu-parity.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "release-docs"
-subsets = ["docs"]
-workflows = ["gates.yml"]
+subsets = ["prepublish", "release-evidence"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "release-evidence"
@@ -464,17 +509,17 @@ workflows = ["ci.yml", "gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "release-workload-matrix"
-subsets = ["benchmarks", "prepublish"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "repo-hygiene"
-subsets = ["repo-rules"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "script-ledger"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
@@ -484,48 +529,48 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "shrink"
-subsets = ["ir"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "single-backlog"
-subsets = ["repo-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "source-include-module"
-subsets = ["source-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "source-parses"
-subsets = ["source-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "source-reachability"
-subsets = ["source-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "spirv-parity"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "test-material-placement"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "testing-guides"
-subsets = []
+subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "trace-f32"
-subsets = ["ir"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "unification"
@@ -534,8 +579,8 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "verify-rewrite-proofs"
-subsets = ["ir"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "version-matrix"
@@ -544,43 +589,43 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "vyre-release-gate"
-subsets = ["prepublish"]
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "whats-similar"
-subsets = ["composition"]
-workflows = ["gates.yml"]
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "wire-determinism"
-subsets = []
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "workspace-check"
-subsets = ["cat-a"]
-workflows = ["gates.yml", "release-evidence.yml"]
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "workspace-clippy"
-subsets = ["cat-a"]
-workflows = ["gates.yml", "release-evidence.yml"]
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "workspace-docs"
-subsets = ["cat-a"]
-workflows = ["docs-ci.yml", "gates.yml", "release-evidence.yml"]
+subsets = ["docs"]
+workflows = ["docs-ci.yml", "gates.yml"]
 
 [[gate]]
 name = "workspace-membership"
-subsets = ["manifest-rules"]
+subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "workspace-tests"
-subsets = ["cat-a"]
-workflows = ["gates.yml", "release-evidence.yml"]
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[external]]
 run = "-p structure-gate"

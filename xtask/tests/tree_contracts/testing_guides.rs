@@ -10,7 +10,7 @@ use super::workspace_sources::{run_gate, track_fixture, workspace_root};
 
 /// Run the gate over a fixture checkout.
 fn run(root: &Path, write: bool) -> Report {
-    run_gate(&TestingGuides, root, write)
+    run_gate("testing-guides", &TestingGuides, root, write)
 }
 
 /// Every message the gate reported, joined for a failure diagnostic.

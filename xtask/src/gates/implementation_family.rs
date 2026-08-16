@@ -13,26 +13,17 @@
 /// builder, as `(operation id, family)`. The family is the path of the builder
 /// that owns the emitted body.
 pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
-    (
-        "vyre-libs::bitset::and",
-        "vyre-libs::bitset::binary_word",
-    ),
+    ("vyre-libs::bitset::and", "vyre-libs::bitset::binary_word"),
     (
         "vyre-libs::bitset::and_not",
         "vyre-libs::bitset::binary_word",
     ),
-    (
-        "vyre-libs::bitset::or",
-        "vyre-libs::bitset::binary_word",
-    ),
+    ("vyre-libs::bitset::or", "vyre-libs::bitset::binary_word"),
     (
         "vyre-libs::bitset::stochastic_and_mul",
         "vyre-libs::bitset::binary_word",
     ),
-    (
-        "vyre-libs::bitset::xor",
-        "vyre-libs::bitset::binary_word",
-    ),
+    ("vyre-libs::bitset::xor", "vyre-libs::bitset::binary_word"),
     (
         "vyre-libs::bitset::and_into",
         "vyre-libs::bitset::target_operand_word",

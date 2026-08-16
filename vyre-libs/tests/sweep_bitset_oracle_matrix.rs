@@ -95,11 +95,7 @@ const SCALAR_UNARY: &[(&str, UnaryScalar, UnaryScalar)] =
 
 /// One scalar answer over a pair of bitsets, length mismatch included.
 const SCALAR_BINARY: &[(&str, BinaryScalar, BinaryScalar)] = &[
-    (
-        "vyre-libs::bitset::equal",
-        equal::cpu_ref,
-        expect_equal,
-    ),
+    ("vyre-libs::bitset::equal", equal::cpu_ref, expect_equal),
     (
         "vyre-libs::bitset::subset_of",
         subset_of::cpu_ref,
@@ -122,19 +118,12 @@ const INDEXED_SCALAR: &[(&str, IndexedScalar, IndexedScalar)] = &[
 ];
 
 /// In-place rewrite of `target` from `target` alone.
-const IN_PLACE_UNARY: &[(&str, InPlaceUnary, InPlaceUnaryExpect)] = &[(
-    "vyre-libs::bitset::zero",
-    zero::cpu_ref,
-    expect_zeroed,
-)];
+const IN_PLACE_UNARY: &[(&str, InPlaceUnary, InPlaceUnaryExpect)] =
+    &[("vyre-libs::bitset::zero", zero::cpu_ref, expect_zeroed)];
 
 /// In-place rewrite of `target` from `target` and `operand`.
 const IN_PLACE_BINARY: &[(&str, InPlaceBinary, InPlaceBinaryExpect)] = &[
-    (
-        "vyre-libs::bitset::copy",
-        copy::cpu_ref,
-        expect_copied,
-    ),
+    ("vyre-libs::bitset::copy", copy::cpu_ref, expect_copied),
     (
         "vyre-libs::bitset::and_into",
         and_into::cpu_ref,

@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Flat cap for a production file outside the core crates.
@@ -95,15 +95,7 @@ const AUDIT_CEILINGS: &[(&str, usize)] = &[("vyre-driver-cuda/src/codegen/mod.rs
 /// Production source files stay under their cap.
 pub struct FileSize;
 
-impl Gate for FileSize {
-    fn name(&self) -> &'static str {
-        "file-size"
-    }
-
-    fn help(&self) -> &'static str {
-        "source files over their per-file line cap, and ratchet rows that name nothing"
-    }
-
+impl crate::gate::GateBehavior for FileSize {
     fn usage(&self) -> &'static [&'static str] {
         &["--report prints every file over the cap instead of the ratchet rows alone"]
     }
@@ -130,6 +122,7 @@ impl Gate for FileSize {
             }
             rows.push((lines, cap, path.clone()));
         }
+        report.cover_complete("source files", rows.len());
         report.note(format!("{} source files scanned", rows.len()));
         if ctx.has("--report") {
             rows.sort_by(|left, right| right.0.cmp(&left.0).then(left.2.cmp(&right.2)));
@@ -253,7 +246,10 @@ mod tests {
             cap_for("vyre-foundation/src/optimizer/passes/fusion_tests.rs"),
             TEST_MAX_LINES
         );
-        assert_eq!(cap_for("xtask/src/gates/hygiene_matrix.rs"), TEST_MAX_LINES);
+        assert_eq!(
+            cap_for("xtask/src/gates/hygiene_matrix/mod.rs"),
+            TEST_MAX_LINES
+        );
         assert_eq!(cap_for("conform/vyre-conform/src/lib.rs"), TEST_MAX_LINES);
     }
 }

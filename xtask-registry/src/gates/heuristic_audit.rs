@@ -12,7 +12,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 use xtask::gates::scan;
 
 const VYRE_ROOT: &str = "libs/performance/matching/vyre";
@@ -122,15 +122,7 @@ fn plain_comment_body(line: &str) -> Option<&str> {
 /// Reports hand-rolled heuristics that should be self-consumer calls.
 pub struct HeuristicAudit;
 
-impl Gate for HeuristicAudit {
-    fn name(&self) -> &'static str {
-        "heuristic-audit"
-    }
-
-    fn help(&self) -> &'static str {
-        "Report hand-rolled heuristics that should be self-consumer calls"
-    }
-
+impl xtask::gate::GateBehavior for HeuristicAudit {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let vyre_dir = resolve_vyre_dir(&ctx.root);
 
@@ -149,12 +141,13 @@ impl Gate for HeuristicAudit {
         }
 
         let mut report = Report::clean();
+        report.cover_complete("scanned crates", CRATES.len());
         report.note(format!("{} crate(s) audited", CRATES.len()));
         for error in &scan_errors {
             report.find(Finding::new(
-                format!("{error}, so the heuristic audit is incomplete"),
-                "make every audited production source root and file readable, then run the gate again",
-            ));
+            format!("{error}, so the heuristic audit is incomplete"),
+            "make every audited production source root and file readable, then run the gate again",
+        ));
         }
         for (path, line, marker, fix) in &hits {
             report.find(Finding::at(

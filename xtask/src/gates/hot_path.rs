@@ -14,21 +14,13 @@
 
 use std::path::Path;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Rule, Tree};
 
 /// Blocking waits, busy waits and polled maintenance on throughput paths.
 pub struct BlockingWait;
 
-impl Gate for BlockingWait {
-    fn name(&self) -> &'static str {
-        "hot-path-blocking-wait"
-    }
-
-    fn help(&self) -> &'static str {
-        "block-on, sleep, park and Maintain::Wait in driver production sources"
-    }
-
+impl GateBehavior for BlockingWait {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         // The spellings a blocking wait actually has in this tree. `PollType::Wait`
         // and `PollType::wait_for` are wgpu's current names for the device wait
@@ -78,15 +70,7 @@ impl Gate for BlockingWait {
 /// Unbounded associative containers in dispatcher and runtime wiring.
 pub struct UnboundedCache;
 
-impl Gate for UnboundedCache {
-    fn name(&self) -> &'static str {
-        "hot-path-unbounded-cache"
-    }
-
-    fn help(&self) -> &'static str {
-        "bare HashMap::new and VecDeque::new in dispatcher and runtime wiring"
-    }
-
+impl GateBehavior for UnboundedCache {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         scan::ratchet(
@@ -115,15 +99,7 @@ impl Gate for UnboundedCache {
 /// Unbounded synchronous reads of external files on dispatch-critical paths.
 pub struct UnboundedRead;
 
-impl Gate for UnboundedRead {
-    fn name(&self) -> &'static str {
-        "hot-path-unbounded-read"
-    }
-
-    fn help(&self) -> &'static str {
-        "read_to_end over an arbitrary file on a dispatch-critical path"
-    }
-
+impl GateBehavior for UnboundedRead {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         scan::ratchet(
@@ -157,15 +133,7 @@ impl Gate for UnboundedRead {
 /// reallocates inside the loop the reserve was meant to hoist out of.
 pub struct ReserveArgument;
 
-impl Gate for ReserveArgument {
-    fn name(&self) -> &'static str {
-        "hot-path-reserve"
-    }
-
-    fn help(&self) -> &'static str {
-        "reserve calls deriving additional capacity from capacity()"
-    }
-
+impl GateBehavior for ReserveArgument {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
@@ -173,6 +141,7 @@ impl Gate for ReserveArgument {
             report.note(note);
         }
         let files = tree.all_rust();
+        report.cover_complete("Rust source files", files.len());
         report.note(format!("scanned {} Rust source file(s)", files.len()));
         for file in &files {
             let text = tree.read(file)?;
@@ -300,5 +269,111 @@ mod tests {
             ["real.rs"],
             "a quoted call is data and a real one is a defect: {named:?}"
         );
+    }
+    /// WHY: blocking waits on throughput paths degrade latency and throughput.
+    /// Detecting needles like PollType::Wait, pollster::block_on, and thread::sleep
+    /// while skipping non-dispatch paths (wait_backoff.rs, acquire.rs, tests) is the exact invariant.
+    #[test]
+    fn blocking_waits_on_dispatch_paths_are_detected() {
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            (
+                "vyre-driver-wgpu/src/dispatch.rs",
+                "fn dispatch() {\n    let _ = PollType::Wait;\n    pollster::block_on(async {});\n    std::thread::sleep(std::time::Duration::from_millis(1));\n}\n",
+            ),
+            (
+                "vyre-driver-wgpu/src/wait_backoff.rs",
+                "fn backoff() {\n    std::thread::sleep(std::time::Duration::from_millis(1));\n}\n",
+            ),
+            (
+                "vyre-driver-wgpu/src/runtime/device/acquire.rs",
+                "fn acquire() {\n    let _ = PollType::Wait;\n}\n",
+            ),
+            (
+                "vyre-driver-wgpu/tests/harness.rs",
+                "fn test_harness() {\n    let _ = PollType::Wait;\n}\n",
+            ),
+            (
+                "vyre-driver-wgpu/src/clean.rs",
+                "fn clean() {\n    let _ = PollType::Poll;\n}\n",
+            ),
+        ]);
+
+        let report = BlockingWait
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        let named = report.named_files();
+        assert!(
+            named
+                .iter()
+                .all(|path| *path == "vyre-driver-wgpu/src/dispatch.rs"),
+            "only the unsanctioned dispatch path may be reported: {named:?}"
+        );
+        assert_eq!(report.findings.len(), 6);
+    }
+
+    /// WHY: unbounded associative container construction on hot tiers introduces
+    /// unbudgeted allocation and memory leaks. Detecting HashMap::new() and
+    /// VecDeque::new() while accepting bounded constructors and skipping test trees is the exact invariant.
+    #[test]
+    fn unbounded_cache_constructors_are_flagged() {
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            (
+                "vyre-driver-wgpu/src/hot.rs",
+                "fn hot() {\n    let _map = HashMap::new();\n    let _queue = VecDeque::new();\n}\n",
+            ),
+            (
+                "vyre-runtime/src/bounded.rs",
+                "fn bounded() {\n    let _map = HashMap::with_capacity(16);\n    let _queue = VecDeque::with_capacity(16);\n}\n",
+            ),
+            (
+                "vyre-runtime/tests/test_cache.rs",
+                "fn test_cache() {\n    let _map = HashMap::new();\n}\n",
+            ),
+        ]);
+
+        let report = UnboundedCache
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        let named = report.named_files();
+        assert!(
+            named
+                .iter()
+                .all(|path| *path == "vyre-driver-wgpu/src/hot.rs"),
+            "only unbounded constructors on the production hot tier may be reported: {named:?}"
+        );
+        assert_eq!(report.findings.len(), 4);
+    }
+
+    /// WHY: unbounded read_to_end on dispatch paths can read unbounded input into
+    /// memory. Statements without a .take( bound must be flagged, while bounded
+    /// reads and test trees pass.
+    #[test]
+    fn unbounded_read_to_end_without_take_is_flagged() {
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            (
+                "vyre-driver-wgpu/src/unbounded.rs",
+                "fn load(file: &mut File, buffer: &mut Vec<u8>) {\n    file.read_to_end(buffer);\n}\n",
+            ),
+            (
+                "vyre-driver-wgpu/src/bounded.rs",
+                "fn load_bounded(file: &mut File, buffer: &mut Vec<u8>) {\n    file.take(1024).read_to_end(buffer);\n}\n",
+            ),
+            (
+                "vyre-driver-wgpu/tests/test_read.rs",
+                "fn test_load(file: &mut File, buffer: &mut Vec<u8>) {\n    file.read_to_end(buffer);\n}\n",
+            ),
+        ]);
+
+        let report = UnboundedRead
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        let named = report.named_files();
+        assert!(
+            named
+                .iter()
+                .all(|path| *path == "vyre-driver-wgpu/src/unbounded.rs"),
+            "only the production read without a bound may be reported: {named:?}"
+        );
+        assert_eq!(report.findings.len(), 2);
     }
 }

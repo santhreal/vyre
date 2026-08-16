@@ -11,7 +11,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use vyre_driver::backend_dispatches;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 use xtask::release::conformance_evidence_semantics::REQUIRED_BACKENDS;
 use xtask::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
@@ -62,19 +62,7 @@ const MIN_INT4_CONFORMANCE_OP_COUNT: usize = 6;
 /// Holds release op and backend conformance coverage to the recorded matrix.
 pub struct ConformanceMatrixGate;
 
-impl Gate for ConformanceMatrixGate {
-    fn name(&self) -> &'static str {
-        "conformance-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold release op and backend conformance coverage to the recorded matrix; --write regenerates it"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl xtask::gate::GateBehavior for ConformanceMatrixGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let operations = vyre_registry_link::operation::live_operation_registry()
             .iter()
@@ -93,25 +81,25 @@ impl Gate for ConformanceMatrixGate {
         }
         entries.sort_by(|left, right| left.id.cmp(&right.id));
         let registered_backends =
-            vyre_registry_link::backend::live_backend_registry_by_precedence().map_err(|error| {
-                GateError::new(
-                    format!("the backend registry did not start: {error}"),
-                    "repair the backend registration this error names; conformance coverage cannot be measured without the live backend list",
-                )
-            })?;
+        vyre_registry_link::backend::live_backend_registry_by_precedence().map_err(|error| {
+            GateError::new(
+                format!("the backend registry did not start: {error}"),
+                "repair the backend registration this error names; conformance coverage cannot be measured without the live backend list",
+            )
+        })?;
         let mut dispatch_backends = Vec::new();
         for backend in registered_backends {
             if backend_dispatches(backend.id).map_err(|error| {
-                GateError::new(
-                    format!(
-                        "the backend registry did not start while asking whether `{}` dispatches: {error}",
-                        backend.id
-                    ),
-                    "repair the backend registration this error names",
-                )
-            })? {
-                dispatch_backends.push(backend.id.to_string());
-            }
+            GateError::new(
+                format!(
+                    "the backend registry did not start while asking whether `{}` dispatches: {error}",
+                    backend.id
+                ),
+                "repair the backend registration this error names",
+            )
+        })? {
+            dispatch_backends.push(backend.id.to_string());
+        }
         }
         let fixture_required_count = entries
             .iter()
@@ -186,9 +174,9 @@ impl Gate for ConformanceMatrixGate {
         }
         if ids.len() < MIN_RELEASE_OP_COUNT {
             blockers.push(format!(
-            "registered distinct conformance op count {} is below release floor {MIN_RELEASE_OP_COUNT}",
-            ids.len()
-        ));
+        "registered distinct conformance op count {} is below release floor {MIN_RELEASE_OP_COUNT}",
+        ids.len()
+    ));
         }
         if !catalog.duplicate_required_op_rows.is_empty() {
             blockers.push(format!(
@@ -204,13 +192,13 @@ impl Gate for ConformanceMatrixGate {
         }
         if fixture_input_count != fixture_required_count {
             blockers.push(format!(
-            "only {fixture_input_count}/{fixture_required_count} executable op entries have fixture inputs"
-        ));
+        "only {fixture_input_count}/{fixture_required_count} executable op entries have fixture inputs"
+    ));
         }
         if expected_output_count != fixture_required_count {
             blockers.push(format!(
-            "only {expected_output_count}/{fixture_required_count} executable op entries have expected outputs"
-        ));
+        "only {expected_output_count}/{fixture_required_count} executable op entries have expected outputs"
+    ));
         }
         if ci_blocking_gate_count < 3 {
             blockers.push(format!(
@@ -226,9 +214,9 @@ impl Gate for ConformanceMatrixGate {
                 ));
             } else if !gate.present || !gate.command_present || !gate.artifact_check_present {
                 blockers.push(format!(
-                "conformance CI gate `{}` in `{}` is incomplete: present={}, command_present={}, artifact_check_present={}",
-                gate.gate, gate.workflow, gate.present, gate.command_present, gate.artifact_check_present
-            ));
+            "conformance CI gate `{}` in `{}` is incomplete: present={}, command_present={}, artifact_check_present={}",
+            gate.gate, gate.workflow, gate.present, gate.command_present, gate.artifact_check_present
+        ));
             }
         }
         if !missing_required_ci_statuses.is_empty() {
@@ -276,9 +264,9 @@ impl Gate for ConformanceMatrixGate {
             .collect::<BTreeSet<_>>();
         if int4_conformance_ops.len() < MIN_INT4_CONFORMANCE_OP_COUNT {
             blockers.push(format!(
-                "the registry and the op matrix catalog declare {} INT4 conformance op(s) between them, below release floor {MIN_INT4_CONFORMANCE_OP_COUNT}",
-                int4_conformance_ops.len()
-            ));
+            "the registry and the op matrix catalog declare {} INT4 conformance op(s) between them, below release floor {MIN_INT4_CONFORMANCE_OP_COUNT}",
+            int4_conformance_ops.len()
+        ));
         }
         for op in &int4_conformance_ops {
             if !entry_by_id
@@ -286,8 +274,8 @@ impl Gate for ConformanceMatrixGate {
                 .is_some_and(|entry| entry.has_test_inputs && entry.has_expected_output)
             {
                 blockers.push(format!(
-                    "INT4 conformance op `{op}` is not registered with fixture inputs and expected outputs"
-                ));
+                "INT4 conformance op `{op}` is not registered with fixture inputs and expected outputs"
+            ));
             }
             if !catalog.required_ops.contains(op) {
                 blockers.push(format!(
@@ -300,8 +288,8 @@ impl Gate for ConformanceMatrixGate {
                 .any(|missing| missing == op)
             {
                 blockers.push(format!(
-                    "INT4 conformance op `{op}` is required by the op matrix catalog and has no registered conformance entry"
-                ));
+                "INT4 conformance op `{op}` is required by the op matrix catalog and has no registered conformance entry"
+            ));
             }
         }
         let matrix = ConformanceMatrix {
@@ -357,7 +345,7 @@ impl Gate for ConformanceMatrixGate {
             ));
         }
         inspection.generates(&relative, &matrix);
-        let mut report = xtask::artifact_gate::settle_inspection(ctx, self.name(), inspection);
+        let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
             "{} registered conformance op entry(ies)",
             matrix.op_count

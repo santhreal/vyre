@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// Concrete backend crates, each owning its own implementation.
@@ -28,21 +28,14 @@ const BACKEND_IDS: &[&str] = &["\"cuda\"", "\"wgpu\"", "\"spirv\"", "\"metal\"",
 /// Adding a backend is one crate plus inventory submissions.
 pub struct BackendExtension;
 
-impl Gate for BackendExtension {
-    fn name(&self) -> &'static str {
-        "backend-extension"
-    }
-
-    fn help(&self) -> &'static str {
-        "the core registry stays generic and each backend registers itself"
-    }
-
+impl crate::gate::GateBehavior for BackendExtension {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         const INVENTORY: &str = "vyre-driver/src/backend/registry/inventory_streams.rs";
         const ACQUIRE: &str = "vyre-driver/src/backend/registry/acquire.rs";
 
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("backend implementation crates", BACKENDS.len());
 
         let inventory = tree.read(INVENTORY)?;
         for (needle, message) in [
@@ -246,15 +239,7 @@ fn followed_by(line: &str, needle: &str, terminator: char) -> bool {
 /// Ordinary outputs stage through the size-classed readback ring.
 pub struct ReadbackRing;
 
-impl Gate for ReadbackRing {
-    fn name(&self) -> &'static str {
-        "readback-ring"
-    }
-
-    fn help(&self) -> &'static str {
-        "direct dispatch stages ordinary outputs through readback ring slots"
-    }
-
+impl crate::gate::GateBehavior for ReadbackRing {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         const RECORD: &str = "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs";
         const RECORD_MODULES: &str = "vyre-driver-wgpu/src/engine/record_and_readback";
@@ -271,6 +256,7 @@ impl Gate for ReadbackRing {
 
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("readback ring requirements", REQUIRED.len());
         let sources = tree.rust(&[RECORD, RECORD_MODULES])?;
         for needle in REQUIRED {
             if tree
@@ -310,15 +296,7 @@ impl Gate for ReadbackRing {
 /// Every field of the program type is on the wire or explicitly transient.
 pub struct ProgramWireFields;
 
-impl Gate for ProgramWireFields {
-    fn name(&self) -> &'static str {
-        "program-wire-fields"
-    }
-
-    fn help(&self) -> &'static str {
-        "program fields that are neither serialized nor declared transient"
-    }
-
+impl crate::gate::GateBehavior for ProgramWireFields {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         const ENCODE: &str = "vyre-foundation/src/serial/wire/encode/to_wire/mod.rs";
         const DECODE: &str = "vyre-foundation/src/serial/wire/decode/from_wire/mod.rs";
@@ -392,7 +370,9 @@ impl Gate for ProgramWireFields {
         }
 
         let known: BTreeSet<&str> = SERIALIZED.iter().chain(TRANSIENT).copied().collect();
-        for (number, field) in program_fields(&core, declaration.line) {
+        let fields = program_fields(&core, declaration.line);
+        report.cover_complete("program fields", fields.len());
+        for (number, field) in fields {
             if !known.contains(field.as_str()) {
                 report.find(Finding::at(
                     declaration.file.clone(),
@@ -444,19 +424,7 @@ fn program_fields(text: &str, declaration_line: u32) -> Vec<(u32, String)> {
 /// The seven frozen declarations match their snapshots.
 pub struct FrozenContracts;
 
-impl Gate for FrozenContracts {
-    fn name(&self) -> &'static str {
-        "frozen-contracts"
-    }
-
-    fn help(&self) -> &'static str {
-        "frozen declarations against their committed snapshots"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for FrozenContracts {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         /// Name, source file, and the declaration keyword to extract.
         const CONTRACTS: &[(&str, &str, &str)] = &[
@@ -500,6 +468,10 @@ impl Gate for FrozenContracts {
 
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        for (name, _, _) in CONTRACTS {
+            report.produced(format!("{SNAPSHOTS}/{name}.txt"));
+        }
+        report.cover_complete("frozen declarations", CONTRACTS.len());
         for (name, file, keyword) in CONTRACTS {
             let snapshot = format!("{SNAPSHOTS}/{name}.txt");
             if !tree.exists(file) {

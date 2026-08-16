@@ -206,9 +206,7 @@ mod tests {
             "Fix: alias extension registry must stay sorted so lookup is binary-searchable."
         );
         assert!(registry.get("vyre-libs::graph::alias_m").is_some());
-        assert!(registry
-            .get("vyre-libs::graph::alias_missing")
-            .is_none());
+        assert!(registry.get("vyre-libs::graph::alias_missing").is_none());
     }
 
     #[test]
@@ -228,14 +226,8 @@ mod tests {
         registry.register("vyre-libs::graph::alias_c", updated);
 
         assert_eq!(registry.len(), 3);
-        assert_eq!(
-            registry.extension_ops[0].0,
-            "vyre-libs::graph::alias_a"
-        );
-        assert_eq!(
-            registry.extension_ops[1].0,
-            "vyre-libs::graph::alias_c"
-        );
+        assert_eq!(registry.extension_ops[0].0, "vyre-libs::graph::alias_a");
+        assert_eq!(registry.extension_ops[1].0, "vyre-libs::graph::alias_c");
         let desc = registry
             .get("vyre-libs::graph::alias_c")
             .expect("Fix: updated alias_c descriptor must remain registered");

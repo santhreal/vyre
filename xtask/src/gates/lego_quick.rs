@@ -30,7 +30,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::use_paths::collect_use_paths;
 
 const MAX_LEGO_QUICK_SOURCE_BYTES: u64 = 2_097_152;
@@ -38,15 +38,7 @@ const MAX_LEGO_QUICK_SOURCE_BYTES: u64 = 2_097_152;
 /// Runs the fast composition boundary checks over the Rust sources of the tree.
 pub struct LegoQuick;
 
-impl Gate for LegoQuick {
-    fn name(&self) -> &'static str {
-        "lego-quick"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every dialect-to-dialect import in vyre-libs to an edge the manifest declares; --staged narrows to the staged set"
-    }
-
+impl crate::gate::GateBehavior for LegoQuick {
     fn usage(&self) -> &'static [&'static str] {
         &["--staged narrows the scan to the files git reports as staged"]
     }
@@ -79,6 +71,7 @@ impl Gate for LegoQuick {
         hits.sort_by_key(|hit| (hit.file.clone(), hit.line, hit.category.clone()));
 
         let mut report = Report::clean();
+        report.cover_complete("dialect source files", files.len());
         report.note(format!(
             "{} Rust file(s) scanned for sibling-dialect imports",
             files.len()
@@ -557,6 +550,11 @@ mod tests {
             dir.path(),
             "vyre-libs/src/math/region_checks.rs",
             "use crate::parsing::lexer;\nfn _f() {}\n",
+        );
+        let routes = structure_gate::source_scan::module_routes(&dir.path().join("vyre-libs/src"));
+        assert!(
+            routes.iter().all(|route| route.path != p),
+            "a cfg(test) child must not have a production module route: {routes:?}"
         );
         assert!(check_cross_dialect(dir.path(), &[p]).is_empty());
     }

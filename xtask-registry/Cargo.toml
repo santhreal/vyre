@@ -22,6 +22,7 @@ workspace = true
 # manifest here repeats that list.
 [dependencies]
 xtask = { path = "../xtask" }
+blake3.workspace = true
 vyre.workspace = true
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
