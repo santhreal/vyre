@@ -418,40 +418,18 @@ pub fn gpu_pipeline_resident(
         eprintln!("[pl] cross_scope_cse: {} us", t.elapsed().as_micros());
     }
 
-    // ---- Loop-invariant code motion (LICM) -----------------------
-    // For each `Loop`, hoist Let bindings whose value Expr doesn't
-    // reference the iter var (and is pure) to a sibling above the
-    // Loop. Conservative: stops hoisting on first side-effecting
-    // Node so observable behaviour is preserved.
-    t = std::time::Instant::now();
-    let post_licm = vyre_foundation::transform::licm::apply_licm(&post_cross);
-    if trace {
-        eprintln!("[pl] licm: {} us", t.elapsed().as_micros());
-    }
-
-    // ---- Constant propagation -------------------------------------
-    // After const-fold may have turned `let v = (1+2)` into
-    // `let v = LitU32(3)`, propagate the literal to every `Var(v)`
-    // use. Catches the cascading folds that arise when fold +
-    // let-dedupe run in sequence: e.g. `let a = 5; let b = a; store
-    // x b` becomes `let a = 5; let b = 5; store x 5` after this
-    // pass. Subsequent DCE drops `b` (and `a` if no other use).
-    t = std::time::Instant::now();
-    let post_prop = vyre_foundation::transform::const_prop::apply_const_prop(&post_licm);
-    if trace {
-        eprintln!("[pl] const_prop: {} us", t.elapsed().as_micros());
-    }
-
-    // ---- Dead-branch elimination ---------------------------------
-    // Const-prop may have turned a `Var(cond)` reference into a
-    // literal. If so, `Node::If { cond: LitU32(0)/false, .. }`
-    // collapses to its `otherwise` body (and vice versa). Splices
-    // the surviving branch into the parent scope so DCE sees a
-    // flatter Program.
-    t = std::time::Instant::now();
-    let post_dbe = vyre_foundation::transform::dead_branch::apply_dead_branch(&post_prop);
-    if trace {
-        eprintln!("[pl] dead_branch: {} us", t.elapsed().as_micros());
+    // ---- Host-side IR rewrites -----------------------------------
+    // The set, the order and the reason each one runs live in
+    // `vyre_foundation::transform::HOST_REWRITES`. Walking that table is what
+    // makes it the only owner: a rewrite absent from it does not run here, and
+    // the firing-case suite reads the same table.
+    let mut post_dbe = post_cross;
+    for rewrite in vyre_foundation::transform::HOST_REWRITES {
+        t = std::time::Instant::now();
+        post_dbe = (rewrite.apply)(&post_dbe);
+        if trace {
+            eprintln!("[pl] {}: {} us", rewrite.name, t.elapsed().as_micros());
+        }
     }
 
     // ---- DCE on the post-arena Program ----------------------------

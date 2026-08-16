@@ -7,20 +7,19 @@
 //! the rewrite is supposed to change, and asserts the specific change, so a
 //! rewrite that turns into an identity function fails here.
 //!
-//! The case table is checked against the source tree at run time: a new
-//! `pub fn apply_*` under `src/transform/` with no case here fails
-//! `every_rewrite_in_the_source_tree_has_a_firing_case`, rather than shipping
-//! uncovered.
+//! The case table is checked against `transform::HOST_REWRITES` at run time: a
+//! rewrite the resident pipeline runs with no case here fails
+//! `every_rewrite_the_resident_pipeline_runs_has_a_firing_case`, rather than
+//! shipping uncovered.
 //!
 //! Not covered: rewrite quality. These tests pin that the rewrite fires and
 //! that it declines the adversarial case next to it, not that its output is
 //! optimal.
 
 use std::collections::BTreeSet;
-use std::path::Path;
 
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::transform::{const_prop, dead_branch, licm};
+use vyre_foundation::transform::{const_prop, dead_branch, licm, HOST_REWRITES};
 use vyre_foundation::visit::child_bodies;
 
 /// A program whose entry is exactly `entry`, with the given buffers.
@@ -167,11 +166,14 @@ fn licm_hoists_an_invariant_let_out_of_the_loop_body() {
             Expr::u32(0),
             Expr::u32(4),
             vec![
-                Node::let_bind("invariant", Expr::BinOp {
+                Node::let_bind(
+                    "invariant",
+                    Expr::BinOp {
                         op: BinOp::Add,
                         left: Box::new(Expr::u32(2)),
                         right: Box::new(Expr::u32(3)),
-                    }),
+                    },
+                ),
                 Node::store("out", Expr::Var("i".into()), Expr::Var("invariant".into())),
             ],
         )],
@@ -251,46 +253,20 @@ fn licm_declines_a_load_from_a_writable_buffer() {
     );
 }
 
-/// Module names under `src/transform/` that expose a `pub fn apply_*` entry
-/// point, read from the source tree rather than listed here.
-fn rewrite_modules() -> BTreeSet<String> {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/transform");
-    let mut found = BTreeSet::new();
-    for entry in std::fs::read_dir(&dir).expect("src/transform is readable") {
-        let path = entry.expect("a readable directory entry").path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
-        let text = std::fs::read_to_string(&path).expect("a readable module");
-        if text
-            .lines()
-            .any(|line| line.starts_with("pub fn apply_") || line.starts_with("    pub fn apply_"))
-        {
-            found.insert(
-                path.file_stem()
-                    .and_then(|stem| stem.to_str())
-                    .expect("a UTF-8 module name")
-                    .to_string(),
-            );
-        }
-    }
-    found
-}
+/// Rewrites with a firing case above, keyed by the name the registry gives them.
+const CASES: &[&str] = &["const_prop", "dead_branch", "licm"];
 
 #[test]
-fn every_rewrite_in_the_source_tree_has_a_firing_case() {
-    let covered: BTreeSet<String> = ["const_prop", "dead_branch", "licm"]
-        .into_iter()
-        .map(str::to_string)
-        .collect();
-    let found = rewrite_modules();
+fn every_rewrite_the_resident_pipeline_runs_has_a_firing_case() {
+    let registered: BTreeSet<&str> = HOST_REWRITES.iter().map(|rewrite| rewrite.name).collect();
     assert!(
-        !found.is_empty(),
-        "the scan found no apply_* rewrite under src/transform, so it is scanning the wrong directory"
+        !registered.is_empty(),
+        "the rewrite registry is empty, so the resident pipeline applies nothing"
     );
     assert_eq!(
-        found, covered,
-        "the set of apply_* rewrites under src/transform no longer matches the cases in this file; \
-         add a firing case for each new rewrite and delete the case for each removed one"
+        registered,
+        CASES.iter().copied().collect::<BTreeSet<&str>>(),
+        "the rewrites vyre_foundation::transform::HOST_REWRITES declares no longer match the cases \
+         in this file; add a firing case for each new rewrite and delete the case for each removed one"
     );
 }

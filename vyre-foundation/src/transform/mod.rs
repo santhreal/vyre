@@ -6,6 +6,8 @@
 //! utilities. These passes are the vyre analogue of LLVM's mid-level IR
 //! passes.
 
+use crate::ir::Program;
+
 /// Call inlining transforms.
 ///
 /// This pass expands `Expr::Call` nodes into the callee's IR body,
@@ -52,3 +54,43 @@ pub mod autodiff;
 
 /// Collective communication rewrites shared by reference and GPU backends.
 pub mod collectives;
+
+/// One host-side IR rewrite the resident pipeline runs.
+pub struct HostRewrite {
+    /// The module that owns the rewrite, which is also how a trace line and a
+    /// firing case name it.
+    pub name: &'static str,
+    /// Rewrite one program into an equivalent one. An identity return means the
+    /// rewrite declined this program, not that it failed.
+    pub apply: fn(&Program) -> Program,
+}
+
+/// Every host-side rewrite, in the order the resident pipeline applies them.
+///
+/// This table is the only place the set and the order are stated. The pipeline
+/// walks it rather than naming three functions in sequence, so a rewrite that
+/// is not here does not run, and `vyre-foundation/tests/transform_rewrites_still_fire.rs`
+/// derives its coverage from it rather than from a scan of this directory.
+pub const HOST_REWRITES: &[HostRewrite] = &[
+    // For each `Loop`, hoist Let bindings whose value does not reference the
+    // iteration variable to a sibling above the loop. Conservative: hoisting
+    // stops at the first side-effecting node, so observable behaviour holds.
+    HostRewrite {
+        name: "licm",
+        apply: licm::apply_licm,
+    },
+    // Constant folding may have turned `let v = 1 + 2` into a literal. Propagate
+    // it into every use, which is what makes the cascading folds of fold plus
+    // let-dedupe visible to the dead-code pass that follows.
+    HostRewrite {
+        name: "const_prop",
+        apply: const_prop::apply_const_prop,
+    },
+    // Propagation may have turned a condition into a literal, collapsing an
+    // `If` to one branch. Splices the surviving branch into the parent scope so
+    // the dead-code pass sees a flatter program.
+    HostRewrite {
+        name: "dead_branch",
+        apply: dead_branch::apply_dead_branch,
+    },
+];

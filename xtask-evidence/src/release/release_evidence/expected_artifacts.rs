@@ -1,4 +1,3 @@
-
 use serde::Serialize;
 
 use xtask::artifact_paths::{

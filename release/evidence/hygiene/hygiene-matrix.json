@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:a2850c7372a28a25b4ceca6b78d59e627f750dc4:dirty=true:worktree=685a384e4e572880364d73d680e6af6b5c132cade7242a8ad596dd0a02cc90ad",
+  "source_fingerprint": "git:1d28c2277fea9ef670ec31f3078009ade08303c8:dirty=true:worktree=07663108a5942b8ba5cf9fc1132f18bfab8c5256bfb679c9c39b76c8d294f0e8",
   "schema_version": 5,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4555,
+  "scanned_files": 3889,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -45,7 +45,7 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 103
+      "count": 96
     },
     {
       "pattern": "expect_call",
@@ -61,7 +61,7 @@
     },
     {
       "pattern": "source_inspection_test",
-      "count": 22
+      "count": 19
     },
     {
       "pattern": "std_thread_sleep",
@@ -111,7 +111,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 14
+      "count": 11
     },
     {
       "owner_lane": "coordination",
@@ -183,7 +183,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 11
+      "count": 4
     },
     {
       "owner_lane": "lower_emit",
@@ -335,7 +335,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 14
+      "count": 11
     },
     {
       "owner_lane": "coordination",
@@ -452,7 +452,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 11
+      "count": 4
     },
     {
       "owner_lane": "lower_emit",
@@ -918,21 +918,6 @@
         "reason": "Reads every workflow and script for `cargo run` and every manifest for the\nbinaries a package ships, then asserts each invocation resolves to exactly one\ntarget. Whether an invocation resolves is decided by cargo before any code in\nthis workspace runs, so no execution can witness it. Running the invocations\ninstead would mean building and running every gate to check that the gates can\nbe run."
       },
       {
-        "file": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-        "test": "every_token_kind_agrees_in_the_declarator_follower_position",
-        "reason": "Derives the C token vocabulary from the source that declares it and compares\nthe two declaration annotators across every kind. The member set is the token\nenum itself, which no parse of any input can enumerate: a kind no fixture uses\nis exactly the kind the two annotators are free to disagree about."
-      },
-      {
-        "file": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-        "test": "every_token_kind_agrees_in_the_declarator_previous_position",
-        "reason": "The same derived vocabulary in the preceding-token position. Declared\nseparately from the follower position because one reviewed row must not exempt\na gate added later to the same file."
-      },
-      {
-        "file": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-        "test": "every_token_kind_agrees_in_the_declaration_prefix_position",
-        "reason": "The same derived vocabulary in the declaration-prefix position, where the two\nannotators disagreed on TOK_RBRACKET and TOK_RPAREN before the prefix walk was\ngiven one owner."
-      },
-      {
         "file": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
         "test": "no_production_crate_outside_the_oracle_ships_a_host_dispatcher",
         "reason": "Asserts that no crate except the parity oracle ships a `ProgramDispatcher` a\ndefault build can construct. The subject is the absence of a type in crates this\ntest does not link, and a type nobody constructed is invisible to every running\nprogram; the failure it prevents is a consumer reaching a host dispatcher years\nlater."
@@ -1239,76 +1224,6 @@
     {
       "path": "vyre-libs/src/parsing/source_cache.rs",
       "line": 253,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/declarations.rs",
-      "line": 160,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 105,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 112,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 119,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure_statement.rs",
-      "line": 615,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 204,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 214,
       "pattern": "documented_panic_contract",
       "owner_lane": "frontend_parsing",
       "surface": "production",
@@ -2318,7 +2233,7 @@
     },
     {
       "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 45,
+      "line": 46,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2328,37 +2243,7 @@
     },
     {
       "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 66,
-      "pattern": "source_inspection_test",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-      "line": 192,
-      "pattern": "source_inspection_test",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-      "line": 218,
-      "pattern": "source_inspection_test",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-      "line": 249,
+      "line": 70,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3034,48 +2919,6 @@
       "text": "self.inner.lock().expect("
     },
     {
-      "path": "vyre-libs/src/parsing/c/parse/declarations.rs",
-      "line": 160,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 105,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 112,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
-      "line": 119,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/parse/structure_statement.rs",
-      "line": 615,
-      "pattern": "documented_panic_contract",
-      "text": "other => panic!("
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 204,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"lazy scope table read lock was poisoned\"))"
-    },
-    {
-      "path": "vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 214,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"lazy scope table write lock was poisoned\"))"
-    },
-    {
       "path": "vyre-libs/src/scratch.rs",
       "line": 73,
       "pattern": "documented_panic_contract",
@@ -3679,38 +3522,17 @@
     },
     {
       "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 45,
+      "line": 46,
       "pattern": "source_inspection_test",
       "text": "test `no_production_crate_outside_the_oracle_ships_a_host_dispatcher` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_production_crate_outside_the_oracle_ships_a_host_dispatcher"
     },
     {
       "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 66,
+      "line": 70,
       "pattern": "source_inspection_test",
       "text": "test `the_walk_actually_reaches_the_dispatchers_it_judges` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_walk_actually_reaches_the_dispatchers_it_judges"
-    },
-    {
-      "path": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-      "line": 192,
-      "pattern": "source_inspection_test",
-      "text": "test `every_token_kind_agrees_in_the_declarator_follower_position` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "every_token_kind_agrees_in_the_declarator_follower_position"
-    },
-    {
-      "path": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-      "line": 218,
-      "pattern": "source_inspection_test",
-      "text": "test `every_token_kind_agrees_in_the_declarator_previous_position` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "every_token_kind_agrees_in_the_declarator_previous_position"
-    },
-    {
-      "path": "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs",
-      "line": 249,
-      "pattern": "source_inspection_test",
-      "text": "test `every_token_kind_agrees_in_the_declaration_prefix_position` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "every_token_kind_agrees_in_the_declaration_prefix_position"
     },
     {
       "path": "vyre-spec/tests/token_ids_have_one_owner.rs",
