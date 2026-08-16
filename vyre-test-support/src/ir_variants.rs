@@ -83,36 +83,18 @@ pub fn single_u32_output_program(nodes: Vec<Node>) -> Program {
     )
 }
 
-/// A statement-node extension payload with no reachable children.
-///
-/// The `Opaque` fixture needs a concrete payload, and core cannot look inside
-/// one. That is the point of the variant, and it is why [`node_shape`] reports
-/// it as opaque rather than as a leaf: an analysis must answer "unknown", not
-/// "nothing here".
-#[derive(Debug)]
-struct FixtureExtension;
-
-impl NodeExtension for FixtureExtension {
-    fn extension_kind(&self) -> &'static str {
-        "vyre.test_support.fixture_node"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "fixture-node"
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0x5a; 32]
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+// A statement-node extension payload with no reachable children.
+//
+// The `Opaque` fixture needs a concrete payload, and core cannot look inside
+// one. That is the point of the variant, and it is why `node_shape` reports it
+// as opaque rather than as a leaf: an analysis must answer "unknown", not
+// "nothing here".
+crate::test_node_extension!(
+    FixtureExtension,
+    kind: "vyre.test_support.fixture_node",
+    identity: "fixture-node",
+    fingerprint: 0x5a,
+);
 
 fn sample(variant: &'static str, slot: Option<&'static str>, node: Node) -> NodeSample {
     NodeSample {

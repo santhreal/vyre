@@ -24,52 +24,20 @@ const CAP_TENSOR_OPS: u32 = 1 << 6;
 const CAP_TRAP: u32 = 1 << 7;
 
 // ─── simple opaque test types (no wire-roundtrip needed here) ───
-#[derive(Debug)]
-struct EchoExpr;
-
-impl ExprNode for EchoExpr {
-    fn extension_kind(&self) -> &'static str {
-        "test.stats.expr"
-    }
-    fn debug_identity(&self) -> &str {
-        "test-expr"
-    }
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-    fn cse_safe(&self) -> bool {
-        true
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0; 32]
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+vyre_test_support::test_expr_extension! {
+    EchoExpr,
+    kind: "test.stats.expr",
+    identity: "test-expr",
+    result_type: Some(DataType::U32),
+    cse_safe: true,
+    fingerprint: 0,
 }
 
-#[derive(Debug)]
-struct EchoNode;
-
-impl NodeExtension for EchoNode {
-    fn extension_kind(&self) -> &'static str {
-        "test.stats.node"
-    }
-    fn debug_identity(&self) -> &str {
-        "test-node"
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0; 32]
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+vyre_test_support::test_node_extension! {
+    EchoNode,
+    kind: "test.stats.node",
+    identity: "test-node",
+    fingerprint: 0,
 }
 
 // ─── proptest strategies ───
