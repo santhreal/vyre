@@ -12,8 +12,7 @@ use vyre_foundation::composition::{tag_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::vast::{VastNode, NODE_STRIDE_U32, SENTINEL};
 use crate::graph::vast_tree_walk;
-
-pub use crate::graph::vast_tree_walk::VastWalkOrder;
+use crate::graph::vast_tree_walk::VastWalkOrder;
 
 const PREORDER_OP_ID: &str = "vyre-libs::graph::ast_walk_preorder";
 const POSTORDER_OP_ID: &str = "vyre-libs::graph::ast_walk_postorder";

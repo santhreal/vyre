@@ -34,13 +34,79 @@ fn source_files() -> Vec<(String, String)> {
     let src = root.join("src");
     let mut out = Vec::new();
     collect_rs(&src, &root, &mut out);
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    assert_walk_is_closed_under_the_module_tree(&out, &src);
+    out
+}
+
+/// Panics unless every file-backed module the walk read is itself in the walk.
+///
+/// The guard the gates below need is that the walk found the crate, not that the
+/// crate is a particular size: a walk rooted at the wrong directory or one that
+/// never descends makes every signature below match nothing and pass. A file
+/// count states that as a number, which then has to be lowered by hand every
+/// time the crate legitimately shrinks, and a lowered floor guards nothing.
+///
+/// Closure over the declarations is the same guard without the number. Each
+/// `mod name;` in a collected file names a sibling `name.rs` or `name/mod.rs`,
+/// and the compiler already proved those files exist, so a missing one means the
+/// walk skipped it. `src/lib.rs` is required outright because it is the root the
+/// closure starts from and an empty walk is closed over nothing.
+///
+/// Inline `mod name { ... }` blocks are not file-backed and are skipped. A
+/// `#[path]` attribute would point a declaration somewhere else; this crate has
+/// none, and one would surface here as a missing file rather than pass silently.
+fn assert_walk_is_closed_under_the_module_tree(files: &[(String, String)], src: &Path) {
+    let present: BTreeSet<&str> = files.iter().map(|(path, _)| path.as_str()).collect();
     assert!(
-        out.len() > 100,
-        "Fix: only {} source files were found under {}; the walk is wrong, so every gate below would pass by finding no members.",
-        out.len(),
+        present.contains("src/lib.rs"),
+        "Fix: the walk under {} did not read src/lib.rs, so it is not reading this crate; every gate below would pass by finding no members.",
         src.display()
     );
-    out.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut missing = Vec::new();
+    for (path, text) in files {
+        let directory = match path.rsplit_once('/') {
+            Some((head, tail)) if tail == "mod.rs" || tail == "lib.rs" => head.to_string(),
+            Some((head, tail)) => format!("{head}/{}", tail.trim_end_matches(".rs")),
+            None => String::new(),
+        };
+        for name in file_backed_modules(text) {
+            let flat = format!("{directory}/{name}.rs");
+            let nested = format!("{directory}/{name}/mod.rs");
+            if !present.contains(flat.as_str()) && !present.contains(nested.as_str()) {
+                missing.push(format!("{path} declares `mod {name};` but neither {flat} nor {nested} was read"));
+            }
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "Fix: the walk under {} skipped {} file-backed module(s), so the gates below cover less than the crate: {}",
+        src.display(),
+        missing.len(),
+        missing.join("; ")
+    );
+}
+
+/// The names of the `mod name;` declarations in `text`, ignoring inline modules.
+fn file_backed_modules(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let code = line.split("//").next().unwrap_or(line).trim();
+        let Some(rest) = code.strip_suffix(';') else {
+            continue;
+        };
+        let rest = rest.trim_start_matches("pub ");
+        let rest = match rest.find(") ") {
+            Some(end) if rest.starts_with("pub(") => &rest[end + 2..],
+            _ => rest,
+        };
+        if let Some(name) = rest.strip_prefix("mod ") {
+            let name = name.trim();
+            if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                out.push(name);
+            }
+        }
+    }
     out
 }
 

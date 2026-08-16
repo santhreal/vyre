@@ -5,7 +5,9 @@ use std::collections::HashSet;
 
 use vyre::ir::{BufferAccess, Program};
 use vyre_foundation::composition::tag_program;
-use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
+use vyre_libs::decode::base64::base64_decode;
+use vyre_libs::decode::hex::hex_decode;
+use vyre_libs::decode::inflate::inflate_stored_block;
 use vyre_libs::parsing::core_delimiter_match::core_delimiter_match;
 
 fn rebind_program(program: &Program, binding_base: u32) -> Program {

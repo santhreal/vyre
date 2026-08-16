@@ -49,9 +49,7 @@ pub(crate) mod upsample;
 
 // Re-exports for the public API surface.
 pub use blur::{gaussian_blur_2pass, GaussianBlurStages};
-pub use blur::{
-    gaussian_blur_2pass_with_kernel, gaussian_weights, GaussianKernel, GaussianKernelError,
-};
+pub use blur::{gaussian_blur_2pass_with_kernel, GaussianKernel, GaussianKernelError};
 pub use cell_grid::{cell_grid_fill, GridShape};
 pub use composite::alpha_over;
 pub use downsample::downsample_2x;

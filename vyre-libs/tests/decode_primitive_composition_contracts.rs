@@ -17,7 +17,9 @@
 
 use vyre::ir::{Node, Program};
 use vyre_foundation::visit::walk_nodes;
-use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
+use vyre_libs::decode::base64::base64_decode;
+use vyre_libs::decode::hex::hex_decode;
+use vyre_libs::decode::inflate::inflate_stored_block;
 
 /// Ids the collapse deleted. A region naming one of these means a second builder
 /// for the same codec came back.

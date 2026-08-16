@@ -198,7 +198,7 @@ fn inflate_stored_program(
 /// into `output`, storing one inflated byte per `u32` slot.
 ///
 /// ```ignore
-/// use vyre_libs::decode::inflate_stored_block;
+/// use vyre_libs::decode::inflate::inflate_stored_block;
 ///
 /// let program = inflate_stored_block("deflated", "inflated", 10);
 /// assert_eq!(program.workgroup_size(), [64, 1, 1]);
@@ -217,7 +217,7 @@ pub fn inflate_stored_block(input: &str, output: &str, input_len: u32) -> Progra
 /// Only BTYPE=0 (stored) blocks are accepted by this builder.
 ///
 /// ```ignore
-/// use vyre_libs::decode::inflate_stored_block_then_aho_corasick;
+/// use vyre_libs::decode::inflate::inflate_stored_block_then_aho_corasick;
 ///
 /// let program = inflate_stored_block_then_aho_corasick(
 ///     "input",

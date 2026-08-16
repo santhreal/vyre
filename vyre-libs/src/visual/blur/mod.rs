@@ -390,9 +390,6 @@ fn gaussian_blur_pass(
     )
 }
 
-/// Re-export weight computation from the Tier 2.5 primitive.
-pub use crate::math::conv1d::gaussian_weights;
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,

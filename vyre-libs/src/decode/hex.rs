@@ -148,7 +148,7 @@ fn hex_decode_program(input: &str, output: &str, table: &str, input_len: u32) ->
 /// storing one decoded byte per `u32` slot.
 ///
 /// ```ignore
-/// use vyre_libs::decode::hex_decode;
+/// use vyre_libs::decode::hex::hex_decode;
 ///
 /// let program = hex_decode("encoded", "decoded", 6);
 /// assert_eq!(program.workgroup_size(), [64, 1, 1]);
@@ -165,7 +165,7 @@ pub fn hex_decode(input: &str, output: &str, input_len: u32) -> Program {
 /// stages.
 ///
 /// ```ignore
-/// use vyre_libs::decode::hex_decode_then_aho_corasick;
+/// use vyre_libs::decode::hex::hex_decode_then_aho_corasick;
 ///
 /// let program = hex_decode_then_aho_corasick(
 ///     "encoded",

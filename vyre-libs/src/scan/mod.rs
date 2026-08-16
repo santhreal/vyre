@@ -87,9 +87,8 @@ pub use vyre_foundation::execution_plan::fusion::{fuse_programs, fuse_programs_v
 
 #[cfg(feature = "cpu-parity")]
 use crate::matching::dedup_regions_cpu as primitive_dedup_regions_cpu;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::matching::dedup_regions_inplace;
-pub use crate::matching::{dedup_regions_flag_program, RegionTriple};
+#[cfg(feature = "cpu-parity")]
+use crate::matching::RegionTriple;
 
 /// Reference region deduplication helper for parity tests.
 #[cfg(feature = "cpu-parity")]

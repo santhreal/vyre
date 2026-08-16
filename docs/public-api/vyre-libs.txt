@@ -23,9 +23,9 @@
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexFrontierDomain
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexSpillDecision
 impl core::cmp::Eq for vyre_libs::rule::RuleCondition
-impl core::cmp::Ord for vyre_libs::scan::RegionTriple
+impl core::cmp::Ord for vyre_libs::matching::RegionTriple
 impl core::cmp::PartialEq for vyre_libs::rule::RuleCondition
-impl core::cmp::PartialOrd for vyre_libs::scan::RegionTriple
+impl core::cmp::PartialOrd for vyre_libs::matching::RegionTriple
 impl core::convert::From<vyre_libs::graph::reachable::UnknownNode> for vyre_libs::graph::reachable::ReachableError
 impl core::convert::From<vyre_libs::matching::NfaToDfaError> for vyre_libs::scan::RegexDfaError
 impl core::convert::From<vyre_libs::scan::RegexCompileError> for vyre_libs::scan::RegexDfaError
@@ -156,6 +156,7 @@ impl vyre_libs::matching::AnchorDfaPlan
 impl vyre_libs::matching::CompiledDfa
 impl vyre_libs::matching::DfaDedupBatch
 impl vyre_libs::matching::DfaDedupTable
+impl vyre_libs::matching::RegionTriple
 impl vyre_libs::math::bellman_shortest_path::BellmanBuffers<'static>
 impl vyre_libs::math::linalg::Dot
 impl vyre_libs::math::linalg::Matmul
@@ -200,7 +201,6 @@ impl vyre_libs::scan::CompiledRegexSet
 impl vyre_libs::scan::RegexCompileError
 impl vyre_libs::scan::RegexConstruct
 impl vyre_libs::scan::RegexDfaError
-impl vyre_libs::scan::RegionTriple
 impl vyre_libs::scan::nfa::NfaPlan
 impl vyre_libs::scheduling::polyhedral_fusion::PolyhedralFusionScratch
 impl vyre_libs::security::AnalysisFact
@@ -360,6 +360,7 @@ pub const fn vyre_libs::hash::fnv1a::fnv1a32_update_byte(hash: u32, byte: u8) ->
 pub const fn vyre_libs::hash::fnv1a::fnv1a64_initial_state() -> u64
 pub const fn vyre_libs::hash::fnv1a::fnv1a64_update_byte(hash: u64, byte: u8) -> u64
 pub const fn vyre_libs::matching::AnchorDfaCandidate<'anchor>::new(pattern_id: u32, bytes: &'anchor [u8]) -> Self
+pub const fn vyre_libs::matching::RegionTriple::new(pid: u32, start: u32, end: u32) -> Self
 pub const fn vyre_libs::matching::bracket_match_dispatch_grid(n: u32, max_depth: u32) -> [u32; 3]
 pub const fn vyre_libs::matching::region_dedup_dispatch_grid(count: u32) -> [u32; 3]
 pub const fn vyre_libs::math::bigint_add_carry::bigint_add_carry_dispatch_grid(limb_count: u32) -> [u32; 3]
@@ -380,7 +381,6 @@ pub const fn vyre_libs::reasoning::zx_diagram::ZxColor::flip(self) -> Self
 pub const fn vyre_libs::scan::CaptureMode::accelerator_eligible(self) -> bool
 pub const fn vyre_libs::scan::CaptureMode::contract_row(self) -> vyre_libs::scan::CaptureModeContract
 pub const fn vyre_libs::scan::CaptureMode::verifier_required(self) -> bool
-pub const fn vyre_libs::scan::RegionTriple::new(pid: u32, start: u32, end: u32) -> Self
 pub const fn vyre_libs::security::AnalysisSourceSpan::byte_range(file_id: u32, start_byte: u32, end_byte: u32) -> Self
 pub const fn vyre_libs::security::FactId::is_valid(self) -> bool
 pub const fn vyre_libs::security::FactKind::tag(self) -> u16
@@ -440,26 +440,12 @@ pub const vyre_libs::bitset::xor_into::OP_ID: &str
 pub const vyre_libs::bitset::zero::OP_ID: &str
 pub const vyre_libs::contracts::PURE_DETERMINISTIC_CHEAP: vyre_spec::op_contract::OperationContract
 pub const vyre_libs::contracts::RULE_PREDICATE_CHEAP: vyre_spec::op_contract::OperationContract
-pub const vyre_libs::decode::BASE64_DECODE_TABLE_BUFFER: &str
-pub const vyre_libs::decode::ENC_ASCII: u32
-pub const vyre_libs::decode::ENC_BINARY: u32
-pub const vyre_libs::decode::ENC_ISO8859_1: u32
-pub const vyre_libs::decode::ENC_UTF16BE: u32
-pub const vyre_libs::decode::ENC_UTF16LE: u32
-pub const vyre_libs::decode::ENC_UTF8: u32
-pub const vyre_libs::decode::HEX_DECODE_TABLE_BUFFER: &str
 pub const vyre_libs::decode::base64::BASE64_DECODE_TABLE_BUFFER: &str
 pub const vyre_libs::decode::base64::BASE64_DECODE_TABLE_WORDS: u32
 pub const vyre_libs::decode::base64::BASE64_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_libs::decode::base64::INVALID: u32
 pub const vyre_libs::decode::base64::OP_ID: &str
 pub const vyre_libs::decode::base64::PAD: u32
-pub const vyre_libs::decode::encodex::ENC_ASCII: u32
-pub const vyre_libs::decode::encodex::ENC_BINARY: u32
-pub const vyre_libs::decode::encodex::ENC_ISO8859_1: u32
-pub const vyre_libs::decode::encodex::ENC_UTF16BE: u32
-pub const vyre_libs::decode::encodex::ENC_UTF16LE: u32
-pub const vyre_libs::decode::encodex::ENC_UTF8: u32
 pub const vyre_libs::decode::hex::HEX_DECODE_TABLE_BUFFER: &str
 pub const vyre_libs::decode::hex::HEX_DECODE_TABLE_WORDS: u32
 pub const vyre_libs::decode::hex::HEX_WORKGROUP_SIZE: [u32; 3]
@@ -939,10 +925,6 @@ pub const vyre_libs::predicate::tag_family::FUNCTION: u32
 pub const vyre_libs::predicate::tag_family::PACKAGE: u32
 pub const vyre_libs::range_ordering::MAX_CACHED_POSITIONS: u32
 pub const vyre_libs::range_ordering::MAX_DEPTH: u32
-pub const vyre_libs::reasoning::dnnf::AND_NODE: u32
-pub const vyre_libs::reasoning::dnnf::LITERAL_FALSE: u32
-pub const vyre_libs::reasoning::dnnf::LITERAL_TRUE: u32
-pub const vyre_libs::reasoning::dnnf::OR_NODE: u32
 pub const vyre_libs::reduce::all::OP_ID: &str
 pub const vyre_libs::reduce::any::OP_ID: &str
 pub const vyre_libs::reduce::count::OP_ID: &str
@@ -1122,12 +1104,9 @@ pub enum vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp
 pub enum vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError
 pub enum vyre_libs::encoding::matroid_megakernel_scheduler::MatroidScheduleError
 pub enum vyre_libs::encoding::reduction_metrics::ReductionMetric
-pub enum vyre_libs::graph::VastWalkOrder
 pub enum vyre_libs::graph::adaptive_traverse::AdaptiveTraversalMode
 pub enum vyre_libs::graph::adaptive_traverse::AdaptiveTraversalProgramKind
 pub enum vyre_libs::graph::adaptive_traverse::DenseTraversalKernel
-pub enum vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalMode
-pub enum vyre_libs::graph::dispatch::adaptive_traverse::DenseTraversalKernel
 pub enum vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlanError
 pub enum vyre_libs::graph::program_graph::GraphValidationError
 pub enum vyre_libs::graph::reachable::ReachableError
@@ -1341,16 +1320,8 @@ pub fn vyre_libs::decode::base64::standard_decode_table() -> [u32; 256]
 pub fn vyre_libs::decode::base64::standard_decode_table_ref() -> &'static [u32; 256]
 pub fn vyre_libs::decode::base64::try_decode_standard_packed_reference(input: &[u8]) -> core::result::Result<(alloc::vec::Vec<u32>, u32), vyre_libs::decode::base64::Base64DecodeReferenceError>
 pub fn vyre_libs::decode::base64::try_decode_standard_packed_reference_into(input: &[u8], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, vyre_libs::decode::base64::Base64DecodeReferenceError>
-pub fn vyre_libs::decode::base64_decode(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::base64_decode_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::classify_from_histogram(histogram: &[u32; 256], count: u32) -> u32
-pub fn vyre_libs::decode::encodex::classify_from_histogram(histogram: &[u32; 256], count: u32) -> u32
 pub fn vyre_libs::decode::encodex::encodex_gpu(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::decode::encodex::encodex_reference(input: &[u8]) -> u32
-pub fn vyre_libs::decode::encodex::encoding_classify_child(parent_op_id: &str, histogram: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
-pub fn vyre_libs::decode::encodex_gpu(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::encodex_reference(input: &[u8]) -> u32
-pub fn vyre_libs::decode::encoding_classify_child(parent_op_id: &str, histogram: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::decode::hex::hex_decode(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::decode::hex::hex_decode_body(input: &str, output: &str, table: &str, input_len: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::decode::hex::hex_decode_child(parent_op_id: &str, input: &str, output: &str, table: &str, input_len: u32) -> vyre_foundation::ir_inner::model::generated::Node
@@ -1359,10 +1330,6 @@ pub fn vyre_libs::decode::hex::hex_decode_reference_packed(input: &[u8]) -> allo
 pub fn vyre_libs::decode::hex::hex_decode_table() -> [u32; 256]
 pub fn vyre_libs::decode::hex::hex_decode_table_ref() -> &'static [u32; 256]
 pub fn vyre_libs::decode::hex::hex_decode_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::hex_decode(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::hex_decode_table() -> [u32; 256]
-pub fn vyre_libs::decode::hex_decode_table_ref() -> &'static [u32; 256]
-pub fn vyre_libs::decode::hex_decode_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::decode::inflate::cpu_inflate_stored(input: &[u32]) -> core::option::Option<vyre_libs::decode::inflate::CpuInflateResult>
 pub fn vyre_libs::decode::inflate::inflate_stored_block(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::decode::inflate::inflate_stored_block_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -1375,8 +1342,6 @@ pub fn vyre_libs::decode::inflate::inflate_stored_non_stored_trap_nodes() -> [vy
 pub fn vyre_libs::decode::inflate::inflate_stored_payload_expr(input: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::decode::inflate::inflate_stored_reference_bytes(input: &[u8]) -> core::result::Result<vyre_libs::decode::inflate::CpuInflateResult, &'static str>
 pub fn vyre_libs::decode::inflate::inflate_stored_reference_words(input: &[u32]) -> core::result::Result<vyre_libs::decode::inflate::CpuInflateResult, &'static str>
-pub fn vyre_libs::decode::inflate_stored_block(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::inflate_stored_block_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::decode::rle_segment_lengths::pack_rle_segments(segments: &[(u32, u8)]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_libs::decode::rle_segment_lengths::PackError>
 pub fn vyre_libs::decode::rle_segment_lengths::pack_rle_segments_into(segments: &[(u32, u8)], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_libs::decode::rle_segment_lengths::PackError>
 pub fn vyre_libs::decode::rle_segment_lengths::rle_decode_cpu(segments_in: &[u32]) -> alloc::vec::Vec<u8>
@@ -1397,9 +1362,6 @@ pub fn vyre_libs::decode::ziftsieve::ziftsieve_gpu(buffers: vyre_libs::decode::z
 pub fn vyre_libs::decode::ziftsieve::ziftsieve_literal_copy(buffers: vyre_libs::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_libs::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::decode::ziftsieve::ziftsieve_literal_copy_body(buffers: vyre_libs::decode::ziftsieve::ZiftsieveBuffers<'_>, seq_count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::decode::ziftsieve::ziftsieve_reference_extract_literals(compressed: &[u8], max_output: usize) -> core::result::Result<vyre_libs::decode::ziftsieve::ZiftsieveExtract, alloc::string::String>
-pub fn vyre_libs::decode::ziftsieve_gpu(buffers: vyre_libs::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_libs::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::ziftsieve_literal_copy(buffers: vyre_libs::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_libs::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::ziftsieve_reference_extract_literals(compressed: &[u8], max_output: usize) -> core::result::Result<vyre_libs::decode::ziftsieve::ZiftsieveExtract, alloc::string::String>
 pub fn vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch::new() -> Self
 pub fn vyre_libs::device::device_resident_token_fact_graph::plan_device_resident_token_fact_graph(nodes: &[vyre_libs::device::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_libs::device::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64) -> core::result::Result<vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
@@ -1492,8 +1454,8 @@ pub fn vyre_libs::encoding::matching_diagnostic_compaction::compile_diagnostic_d
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::compile_diagnostic_nfa_to_dfa(tables: &vyre_libs::matching::NfaTables<'_>, max_dfa_states: usize) -> core::result::Result<vyre_libs::matching::CompiledDfa, vyre_libs::matching::NfaToDfaError>
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::dedup_diagnostic_dfa_plan(table: &mut vyre_libs::matching::DfaDedupTable, dfa: vyre_libs::matching::CompiledDfa) -> vyre_libs::matching::DfaDedupResult
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::dedup_diagnostic_dfa_plans<I>(table: &mut vyre_libs::matching::DfaDedupTable, dfas: I) -> vyre_libs::matching::DfaDedupBatch where I: core::iter::traits::collect::IntoIterator<Item = vyre_libs::matching::CompiledDfa>
-pub fn vyre_libs::encoding::matching_diagnostic_compaction::dedup_region_survivor_flags_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, sorted_regions: &[vyre_libs::scan::RegionTriple]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::matching_diagnostic_compaction::dedup_region_survivor_flags_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, sorted_regions: &[vyre_libs::scan::RegionTriple], scratch: &mut vyre_libs::encoding::matching_diagnostic_compaction::MatchingDiagnosticCompactionGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::encoding::matching_diagnostic_compaction::dedup_region_survivor_flags_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, sorted_regions: &[vyre_libs::matching::RegionTriple]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::encoding::matching_diagnostic_compaction::dedup_region_survivor_flags_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, sorted_regions: &[vyre_libs::matching::RegionTriple], scratch: &mut vyre_libs::encoding::matching_diagnostic_compaction::MatchingDiagnosticCompactionGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::diagnostic_dfa_canonical_wire_bytes(table: &vyre_libs::matching::DfaDedupTable) -> usize
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::diagnostic_dfa_fingerprint(dfa: &vyre_libs::matching::CompiledDfa) -> u64
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::diagnostic_dfa_saved_wire_ppm(batch: &vyre_libs::matching::DfaDedupBatch) -> u32
@@ -1502,11 +1464,11 @@ pub fn vyre_libs::encoding::matching_diagnostic_compaction::merge_diagnostic_dfa
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::nested_diagnostic_brace_fixture() -> alloc::vec::Vec<u32>
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::pack_diagnostic_u32(words: &[u32]) -> alloc::vec::Vec<u8>
 pub fn vyre_libs::encoding::matching_diagnostic_compaction::reference_bracket_pairs(kinds: &[u32], max_depth: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::encoding::matching_diagnostic_compaction::reference_dedup_regions(regions: alloc::vec::Vec<vyre_libs::scan::RegionTriple>) -> alloc::vec::Vec<vyre_libs::scan::RegionTriple>
-pub fn vyre_libs::encoding::matching_diagnostic_compaction::reference_dedup_regions_inplace(regions: &mut alloc::vec::Vec<vyre_libs::scan::RegionTriple>)
-pub fn vyre_libs::encoding::matching_diagnostic_compaction::reference_sort_regions(regions: alloc::vec::Vec<vyre_libs::scan::RegionTriple>) -> alloc::vec::Vec<vyre_libs::scan::RegionTriple>
-pub fn vyre_libs::encoding::matching_diagnostic_compaction::sort_regions_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, regions: &[vyre_libs::scan::RegionTriple]) -> core::result::Result<alloc::vec::Vec<vyre_libs::scan::RegionTriple>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::matching_diagnostic_compaction::sort_regions_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, regions: &[vyre_libs::scan::RegionTriple], scratch: &mut vyre_libs::encoding::matching_diagnostic_compaction::MatchingDiagnosticCompactionGpuScratch, out: &mut alloc::vec::Vec<vyre_libs::scan::RegionTriple>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::encoding::matching_diagnostic_compaction::reference_dedup_regions(regions: alloc::vec::Vec<vyre_libs::matching::RegionTriple>) -> alloc::vec::Vec<vyre_libs::matching::RegionTriple>
+pub fn vyre_libs::encoding::matching_diagnostic_compaction::reference_dedup_regions_inplace(regions: &mut alloc::vec::Vec<vyre_libs::matching::RegionTriple>)
+pub fn vyre_libs::encoding::matching_diagnostic_compaction::reference_sort_regions(regions: alloc::vec::Vec<vyre_libs::matching::RegionTriple>) -> alloc::vec::Vec<vyre_libs::matching::RegionTriple>
+pub fn vyre_libs::encoding::matching_diagnostic_compaction::sort_regions_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, regions: &[vyre_libs::matching::RegionTriple]) -> core::result::Result<alloc::vec::Vec<vyre_libs::matching::RegionTriple>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::encoding::matching_diagnostic_compaction::sort_regions_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, regions: &[vyre_libs::matching::RegionTriple], scratch: &mut vyre_libs::encoding::matching_diagnostic_compaction::MatchingDiagnosticCompactionGpuScratch, out: &mut alloc::vec::Vec<vyre_libs::matching::RegionTriple>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidScratch::result(&self) -> &[u32]
 pub fn vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidScratch::take_result(&mut self) -> alloc::vec::Vec<u32>
@@ -1790,8 +1752,6 @@ pub fn vyre_libs::graph::dispatch::adaptive_traverse::adaptive_traverse_resident
 pub fn vyre_libs::graph::dispatch::adaptive_traverse::adaptive_traverse_resident_graph_step_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, graph: &vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveTraversalGraph, frontier_in: &[u32], allow_mask: u32, dense_threshold_pct: u32, scratch: &mut vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalResidentScratch, frontier_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::graph::dispatch::adaptive_traverse::adaptive_traverse_resident_sparse_queue_step_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, graph: &vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveSparseQueueGraph, frontier_in: &[u32], allow_mask: u32, scratch: &mut vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalResidentScratch, frontier_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::graph::dispatch::adaptive_traverse::adaptive_traverse_step(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], adj_rows_dense: &[u32], frontier_in: &[u32], allow_mask: u32, dense_threshold_pct: u32) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
-pub fn vyre_libs::graph::dispatch::adaptive_traverse::select_adaptive_traversal_mode(node_count: u32, edge_count: u32, frontier_popcount: u32, dense_threshold_pct: u32) -> vyre_libs::graph::adaptive_traverse::AdaptiveTraversalMode
-pub fn vyre_libs::graph::dispatch::adaptive_traverse::select_dense_traversal_kernel(node_count: u32, frontier_popcount: u32, expected_lut_reuse_steps: u32) -> vyre_libs::graph::adaptive_traverse::DenseTraversalKernel
 pub fn vyre_libs::graph::dispatch::adaptive_traverse::upload_resident_adaptive_four_russians_dense_graph(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, node_count: u32, adj_rows_dense: &[u32]) -> core::result::Result<vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveFourRussiansDenseGraph, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::graph::dispatch::adaptive_traverse::upload_resident_adaptive_sparse_queue_graph(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> core::result::Result<vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveSparseQueueGraph, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::graph::dispatch::adaptive_traverse::upload_resident_adaptive_traversal_graph(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], adj_rows_dense: &[u32]) -> core::result::Result<vyre_libs::graph::dispatch::adaptive_traverse::ResidentAdaptiveTraversalGraph, vyre_foundation::program_dispatch::DispatchError>
@@ -2242,6 +2202,8 @@ pub fn vyre_libs::matching::DfaDedupTable::len(&self) -> usize
 pub fn vyre_libs::matching::DfaDedupTable::merge_from(&mut self, other: &vyre_libs::matching::DfaDedupTable) -> vyre_libs::matching::DfaDedupBatch
 pub fn vyre_libs::matching::DfaWireError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::matching::NfaToDfaError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs::matching::RegionTriple::cmp(&self, other: &Self) -> core::cmp::Ordering
+pub fn vyre_libs::matching::RegionTriple::partial_cmp(&self, other: &Self) -> core::option::Option<core::cmp::Ordering>
 pub fn vyre_libs::matching::bracket_match(kinds: &str, stack: &str, match_pairs: &str, n: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::matching::bracket_match_cpu_ref(kinds: &[u32], max_depth: u32) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::matching::bracket_match_cpu_ref_into(kinds: &[u32], max_depth: u32, match_pairs: &mut alloc::vec::Vec<u32>, stack: &mut alloc::vec::Vec<u32>)
@@ -2251,9 +2213,9 @@ pub fn vyre_libs::matching::cap_regions_per_pattern_survivors_cpu(pids: &[u32], 
 pub fn vyre_libs::matching::compact_first_per_region_pattern_flag_program(regions: &str, pids: &str, survivors: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::matching::compact_first_per_region_pattern_survivors_cpu(regions: &[u32], pids: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::matching::dedup_regions_cluster_program(pids: &str, starts: &str, ends: &str, survivors: &str, merged_ends: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::matching::dedup_regions_cpu(input: alloc::vec::Vec<vyre_libs::scan::RegionTriple>) -> alloc::vec::Vec<vyre_libs::scan::RegionTriple>
+pub fn vyre_libs::matching::dedup_regions_cpu(input: alloc::vec::Vec<vyre_libs::matching::RegionTriple>) -> alloc::vec::Vec<vyre_libs::matching::RegionTriple>
 pub fn vyre_libs::matching::dedup_regions_flag_program(pids: &str, starts: &str, ends: &str, survivors: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::matching::dedup_regions_inplace(input: &mut alloc::vec::Vec<vyre_libs::scan::RegionTriple>)
+pub fn vyre_libs::matching::dedup_regions_inplace(input: &mut alloc::vec::Vec<vyre_libs::matching::RegionTriple>)
 pub fn vyre_libs::matching::dfa_compile(patterns: &[&[u8]]) -> vyre_libs::matching::CompiledDfa
 pub fn vyre_libs::matching::dfa_compile_case_insensitive(patterns: &[&[u8]]) -> vyre_libs::matching::CompiledDfa
 pub fn vyre_libs::matching::dfa_compile_case_insensitive_with_budget(patterns: &[&[u8]], budget_bytes: usize) -> core::result::Result<vyre_libs::matching::CompiledDfa, vyre_libs::matching::DfaCompileError>
@@ -2262,7 +2224,7 @@ pub fn vyre_libs::matching::dfa_fingerprint(dfa: &vyre_libs::matching::CompiledD
 pub fn vyre_libs::matching::dfa_wire_bytes(dfa: &vyre_libs::matching::CompiledDfa) -> usize
 pub fn vyre_libs::matching::nfa_to_dfa(tables: &vyre_libs::matching::NfaTables<'_>, max_dfa_states: usize) -> core::result::Result<vyre_libs::matching::CompiledDfa, vyre_libs::matching::NfaToDfaError>
 pub fn vyre_libs::matching::region_sort_program(pids_in: &str, starts_in: &str, ends_in: &str, pids_out: &str, starts_out: &str, ends_out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::matching::sort_regions_cpu(input: &mut [vyre_libs::scan::RegionTriple])
+pub fn vyre_libs::matching::sort_regions_cpu(input: &mut [vyre_libs::matching::RegionTriple])
 pub fn vyre_libs::math::algebra::bool_semiring_matmul(a: &str, b: &str, out: &str, rows: u32, inner: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::algebra::lattice_join(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::algebra::lattice_meet(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2856,8 +2818,6 @@ pub fn vyre_libs::reasoning::adjustment_set_pass_dependency::ordering_is_safe(ad
 pub fn vyre_libs::reasoning::adjustment_set_pass_dependency::pass_descendants(adj: &[u32], n: u32) -> alloc::vec::Vec<alloc::vec::Vec<u32>>
 pub fn vyre_libs::reasoning::dnnf::DnnfDag::root(&self) -> u32
 pub fn vyre_libs::reasoning::dnnf::compile_dnnf(clauses: &[alloc::vec::Vec<(u32, bool)>], num_vars: u32, max_depth: u32) -> vyre_libs::reasoning::dnnf::DnnfDag
-pub fn vyre_libs::reasoning::dnnf::ddnnf_evaluate(node_kinds: &str, node_var: &str, child_offsets: &str, child_counts: &str, children: &str, var_assignments: &str, out: &str, n_nodes: u32, n_children: u32, n_vars: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::reasoning::dnnf::ddnnf_evaluate_cpu(nodes: &[(u32, u32, u32)], node_var: &[u32], children: &[u32], var_assignments: &[u32], topo_order: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::reasoning::dnnf::is_satisfiable(dag: &vyre_libs::reasoning::dnnf::DnnfDag) -> bool
 pub fn vyre_libs::reasoning::dnnf::is_tautology(dag: &vyre_libs::reasoning::dnnf::DnnfDag, num_vars: u32) -> bool
 pub fn vyre_libs::reasoning::dnnf::model_count(dag: &vyre_libs::reasoning::dnnf::DnnfDag) -> u64
@@ -3039,8 +2999,6 @@ pub fn vyre_libs::scan::RegexDfaError::fmt(&self, formatter: &mut core::fmt::For
 pub fn vyre_libs::scan::RegexDfaError::from(error: vyre_libs::matching::NfaToDfaError) -> Self
 pub fn vyre_libs::scan::RegexDfaError::from(error: vyre_libs::scan::RegexCompileError) -> Self
 pub fn vyre_libs::scan::RegexReplayPolicy::default() -> Self
-pub fn vyre_libs::scan::RegionTriple::cmp(&self, other: &Self) -> core::cmp::Ordering
-pub fn vyre_libs::scan::RegionTriple::partial_cmp(&self, other: &Self) -> core::option::Option<core::cmp::Ordering>
 pub fn vyre_libs::scan::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::aho_corasick_bounded(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::anchored_window_extract_program(haystack: &str, transitions: &str, output_offsets: &str, output_records: &str, candidates: &str, candidate_count: &str, haystack_len: &str, match_count: &str, matches: &str, state_count: u32, output_records_len: u32, max_candidates: u32, max_matches: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -3096,9 +3054,7 @@ pub fn vyre_libs::scan::compile_regex_set(patterns: &[&str]) -> core::result::Re
 pub fn vyre_libs::scan::compile_regex_set_with_policy(patterns: &[&str], replay_policy: vyre_libs::scan::RegexReplayPolicy) -> core::result::Result<vyre_libs::scan::CompiledRegexSet, vyre_libs::scan::RegexCompileError>
 pub fn vyre_libs::scan::cooperative_dfa_scan(input: &str, transitions: &str, accept_mask: &str, matches: &str, input_len: u32, state_count: u32, subgroup_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::cooperative_dfa_scan_body_with_store(input: &str, transitions: &str, accept_mask: &str, matches: &str, subgroup_size: u32, store_value: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::scan::dedup_regions_flag_program(pids: &str, starts: &str, ends: &str, survivors: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::scan::dedup_regions_inplace(input: &mut alloc::vec::Vec<vyre_libs::scan::RegionTriple>)
-pub fn vyre_libs::scan::dedup_regions_reference(input: alloc::vec::Vec<vyre_libs::scan::RegionTriple>) -> alloc::vec::Vec<vyre_libs::scan::RegionTriple>
+pub fn vyre_libs::scan::dedup_regions_reference(input: alloc::vec::Vec<vyre_libs::matching::RegionTriple>) -> alloc::vec::Vec<vyre_libs::matching::RegionTriple>
 pub fn vyre_libs::scan::emit_hit(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::emit_hit_then_compact(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_libs::scan::emit_hit_then_compact_with_layout(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str, lane_count: u32, max_hits: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
@@ -3127,7 +3083,7 @@ pub fn vyre_libs::scan::region_of(pos: u32, region_starts: &[u32]) -> usize
 pub fn vyre_libs::scan::shannon_entropy_bits_per_byte(bytes: &[u8]) -> f32
 pub fn vyre_libs::scan::substring_search(haystack: &str, needle: &str, matches: &str, haystack_len: u32, needle_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::try_reference_post_process(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8]) -> core::result::Result<alloc::vec::Vec<vyre_libs::scan::PostProcessedMatch>, vyre_libs::scan::PostProcessError>
-pub fn vyre_libs::scan::try_reference_post_process_into(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8], triples: &mut alloc::vec::Vec<vyre_libs::scan::RegionTriple>, out: &mut alloc::vec::Vec<vyre_libs::scan::PostProcessedMatch>) -> core::result::Result<(), vyre_libs::scan::PostProcessError>
+pub fn vyre_libs::scan::try_reference_post_process_into(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8], triples: &mut alloc::vec::Vec<vyre_libs::matching::RegionTriple>, out: &mut alloc::vec::Vec<vyre_libs::scan::PostProcessedMatch>) -> core::result::Result<(), vyre_libs::scan::PostProcessError>
 pub fn vyre_libs::scheduling::branch_compaction::BranchCompactionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::scheduling::branch_compaction::plan_branch_compaction(branches: &[vyre_libs::scheduling::branch_compaction::BranchArm]) -> core::result::Result<vyre_libs::scheduling::branch_compaction::BranchCompactionPlan, vyre_libs::scheduling::branch_compaction::BranchCompactionError>
 pub fn vyre_libs::scheduling::frontier_partitioning::FrontierColorError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -3507,7 +3463,6 @@ pub fn vyre_libs::visual::downsample_2x(input: &str, output: &str, width: u32, h
 pub fn vyre_libs::visual::filter_chain(pixels: &str, count: u32, brightness: f32, contrast: f32, saturate: f32, invert: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::gaussian_blur_2pass(input: &str, output: &str, scratch: &str, width: u32, height: u32, radius: u32, sigma: f32) -> vyre_libs::visual::GaussianBlurStages
 pub fn vyre_libs::visual::gaussian_blur_2pass_with_kernel(input: &str, output: &str, scratch: &str, width: u32, height: u32, kernel: &vyre_libs::visual::GaussianKernel) -> vyre_libs::visual::GaussianBlurStages
-pub fn vyre_libs::visual::gaussian_weights(radius: u32, sigma: f32) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::visual::glass_blur_stage(input: &str, output: &str, scratch: &str, params: &vyre_libs::visual::GlassParams) -> vyre_libs::visual::GaussianBlurStages
 pub fn vyre_libs::visual::glass_filter_stage(pixels: &str, params: &vyre_libs::visual::GlassParams) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::glass_stages(input: &str, output: &str, scratch: &str, params: &vyre_libs::visual::GlassParams) -> (vyre_libs::visual::GaussianBlurStages, vyre_foundation::ir_inner::model::program::definition::Program)
@@ -3974,9 +3929,6 @@ pub struct vyre_libs::analysis::incremental_invalidation::InvalidationWave
 pub struct vyre_libs::analysis::incremental_invalidation::SourceSpan
 pub struct vyre_libs::analysis::knowledge_compile_pass_precondition::KnowledgeCompilePassScratch
 pub struct vyre_libs::bitset::frontier::FrontierAbsorbSummary
-pub struct vyre_libs::decode::ZiftsieveBuffers<'a>
-pub struct vyre_libs::decode::ZiftsieveExtents
-pub struct vyre_libs::decode::ZiftsieveExtract
 pub struct vyre_libs::decode::inflate::CpuInflateResult
 pub struct vyre_libs::decode::ziftsieve::ZiftsieveBuffers<'a>
 pub struct vyre_libs::decode::ziftsieve::ZiftsieveExtents
@@ -4173,7 +4125,6 @@ pub struct vyre_libs::scan::RegexDfaPipeline
 pub struct vyre_libs::scan::RegexDfaShard
 pub struct vyre_libs::scan::RegexPatternExtent
 pub struct vyre_libs::scan::RegexReplayPolicy
-pub struct vyre_libs::scan::RegionTriple
 pub struct vyre_libs::scan::ScanProgram
 pub struct vyre_libs::scan::classic_ac::ClassicAcAutomaton
 pub struct vyre_libs::scan::nfa::NfaPlan
@@ -4265,7 +4216,6 @@ pub struct vyre_libs::visual::GridShape
 pub trait vyre_libs::rule::RuleEvaluationContext
 pub trait vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample
 pub type vyre_libs::parsing::python::source_cache::Python312PipelineCache = vyre_libs::parsing::source_cache::ParsedSourceLru<vyre_libs::parsing::python::source_cache::Python312PipelinePrograms>
-pub use vyre_libs::analysis::dataflow_fixpoint::Semiring
 pub use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes
 pub use vyre_libs::math::semiring_gemm::Semiring
 pub use vyre_libs::parsing::go::lex::<<vyre_spec::go_token::*>>
@@ -4405,16 +4355,6 @@ pub vyre_libs::bitset::frontier::FrontierError::QueueCountMismatch
 pub vyre_libs::bitset::frontier::FrontierError::QueueCountMismatch::expected: u32
 pub vyre_libs::bitset::frontier::FrontierError::QueueCountMismatch::node_count: u32
 pub vyre_libs::bitset::frontier::FrontierError::QueueCountMismatch::observed: u32
-pub vyre_libs::decode::ZiftsieveBuffers::input: &'a str
-pub vyre_libs::decode::ZiftsieveBuffers::output: &'a str
-pub vyre_libs::decode::ZiftsieveBuffers::seq_literal_len: &'a str
-pub vyre_libs::decode::ZiftsieveBuffers::seq_literal_offset: &'a str
-pub vyre_libs::decode::ZiftsieveBuffers::seq_literal_start: &'a str
-pub vyre_libs::decode::ZiftsieveExtents::input_len: u32
-pub vyre_libs::decode::ZiftsieveExtents::max_output: u32
-pub vyre_libs::decode::ZiftsieveExtents::seq_count: u32
-pub vyre_libs::decode::ZiftsieveExtract::decoded_len: usize
-pub vyre_libs::decode::ZiftsieveExtract::literals: alloc::vec::Vec<u8>
 pub vyre_libs::decode::base64::Base64DecodeReferenceError::Allocation
 pub vyre_libs::decode::base64::Base64DecodeReferenceError::Allocation::requested: usize
 pub vyre_libs::decode::base64::Base64DecodeReferenceError::Allocation::source: alloc::string::String
@@ -4600,8 +4540,6 @@ pub vyre_libs::geom::clifford::Cl2Mv::e12: f64
 pub vyre_libs::geom::clifford::Cl2Mv::e1: f64
 pub vyre_libs::geom::clifford::Cl2Mv::e2: f64
 pub vyre_libs::geom::clifford::Cl2Mv::s: f64
-pub vyre_libs::graph::VastWalkOrder::Postorder
-pub vyre_libs::graph::VastWalkOrder::Preorder
 pub vyre_libs::graph::adaptive_traverse::AdaptiveFrontierLayout::words: usize
 pub vyre_libs::graph::adaptive_traverse::AdaptiveFrontierLayout::words_u32: u32
 pub vyre_libs::graph::adaptive_traverse::AdaptiveFrontierStats::layout: vyre_libs::graph::adaptive_traverse::AdaptiveFrontierLayout
@@ -4736,13 +4674,9 @@ pub vyre_libs::graph::csr_queue_split::CsrQueueSplitLowForwardParams::high_queue
 pub vyre_libs::graph::csr_queue_split::CsrQueueSplitLowForwardParams::node_count: u32
 pub vyre_libs::graph::csr_queue_split::CsrQueueSplitLowForwardParams::queue_capacity: u32
 pub vyre_libs::graph::csr_queue_split::CsrQueueSplitLowForwardParams::queue_len: &'a str
-pub vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalMode::SparseDense
-pub vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalMode::SparseQueue
 pub vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalPlanCacheSnapshot::entries: usize
 pub vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalPlanCacheSnapshot::hits: u64
 pub vyre_libs::graph::dispatch::adaptive_traverse::AdaptiveTraversalPlanCacheSnapshot::misses: u64
-pub vyre_libs::graph::dispatch::adaptive_traverse::DenseTraversalKernel::FourRussiansByteTile
-pub vyre_libs::graph::dispatch::adaptive_traverse::DenseTraversalKernel::RowScanBitmatrix
 pub vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan::bytes_per_query: usize
 pub vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan::dispatch_batches: usize
 pub vyre_libs::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan::max_queries_per_dispatch: usize
@@ -5515,9 +5449,6 @@ pub vyre_libs::scan::RegexPatternExtent::max_bytes: core::option::Option<u32>
 pub vyre_libs::scan::RegexPatternExtent::min_bytes: u32
 pub vyre_libs::scan::RegexPatternExtent::replay_limit_bytes: u32
 pub vyre_libs::scan::RegexReplayPolicy::open_ended_limit_bytes: u32
-pub vyre_libs::scan::RegionTriple::end: u32
-pub vyre_libs::scan::RegionTriple::pid: u32
-pub vyre_libs::scan::RegionTriple::start: u32
 pub vyre_libs::scan::ScanProgram::epsilon_table: alloc::vec::Vec<u32>
 pub vyre_libs::scan::ScanProgram::plan: vyre_libs::scan::nfa::NfaPlan
 pub vyre_libs::scan::ScanProgram::program: vyre_foundation::ir_inner::model::program::definition::Program

@@ -21,10 +21,9 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use crate::text::byte_histogram_256_child;
-pub use crate::text::{
-    classify_from_histogram, encoding_classify_child, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
-    ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
-};
+use crate::text::{classify_from_histogram, encoding_classify_child};
+#[cfg(test)]
+use crate::text::{ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
 
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
@@ -48,7 +47,7 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 /// their own CPU-side refinement if desired.
 ///
 /// ```ignore
-/// use vyre_libs::decode::encodex_gpu;
+/// use vyre_libs::decode::encodex::encodex_gpu;
 ///
 /// let program = encodex_gpu("bytes", "encoding", 1024);
 /// assert_eq!(program.buffers().len(), 3);

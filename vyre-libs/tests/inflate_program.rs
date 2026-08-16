@@ -10,7 +10,7 @@
 //! and broke the order.
 
 use vyre_foundation::ir::{BufferAccess, Program};
-use vyre_libs::decode::inflate_stored_block;
+use vyre_libs::decode::inflate::inflate_stored_block;
 
 #[test]
 fn inflate_stored_has_three_buffers() {

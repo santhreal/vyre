@@ -19,7 +19,7 @@ pub mod dispatch;
 #[cfg(feature = "graph")]
 pub use ast_walk::{
     ast_walk, ast_walk_postorder, ast_walk_postorder_nodes, ast_walk_preorder,
-    pack_branching_fixture, pack_spine_fixture, VastWalkOrder,
+    pack_branching_fixture, pack_spine_fixture,
 };
 
 /// Kahn's-algorithm topological sort.

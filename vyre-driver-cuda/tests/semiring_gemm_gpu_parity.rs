@@ -7,8 +7,9 @@ mod harness;
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::analysis::dataflow_fixpoint::{
     reference_semiring_gemm, semiring_gemm_via, semiring_gemm_via_bool_or,
-    semiring_gemm_via_lineage, semiring_gemm_via_min_plus, Semiring,
+    semiring_gemm_via_lineage, semiring_gemm_via_min_plus,
 };
+use vyre_libs::math::semiring_gemm::Semiring;
 
 #[test]
 fn cuda_semiring_gemm_bool_or_matches_reference_3x3_identity() {
