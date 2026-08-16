@@ -915,6 +915,20 @@ release_blocking_notes = "Source-backed row generated from vyre-foundation::oper
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 
 [[op]]
+family = "vyre-libs::graph::level_wave"
+tier = "libs"
+owners = ["vyre-libs/src/graph"]
+ops = ["vyre-libs::graph::level_wave"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+
+[[op]]
 family = "vyre-libs::graph::monoidal_compose"
 tier = "libs"
 owners = ["vyre-libs/src/graph"]
