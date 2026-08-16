@@ -19,12 +19,16 @@
 
 pub(crate) mod elementwise;
 pub(crate) mod tiled_reduce;
+/// Domain-neutral byte-range ordering predicates over the scanner output
+/// contract.
+pub mod range_ordering;
+mod registrations;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 /// Shared child region for one-output indexed maps.
 ///
@@ -128,7 +132,7 @@ pub fn check_tensors(
 ) -> Result<(), TensorRefError> {
     // Dtype check per tensor.
     for (r, expected) in tensors {
-        crate::tensor_ref::check_dtype(r, expected.clone(), op)?;
+        crate::plumbing::operand::tensor_ref::check_dtype(r, expected.clone(), op)?;
         if r.element_count().is_none() {
             return Err(TensorRefError::ElementCountOverflow {
                 name: r.name.as_str().to_string(),
@@ -415,12 +419,12 @@ fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec
 /// `math::algebra`, and other binary-arithmetic primitives.
 pub(crate) fn build_elementwise_binary<F>(
     op_id: &'static str,
-    a: crate::tensor_ref::TensorRef,
-    b: crate::tensor_ref::TensorRef,
-    out: crate::tensor_ref::TensorRef,
+    a: crate::plumbing::operand::tensor_ref::TensorRef,
+    b: crate::plumbing::operand::tensor_ref::TensorRef,
+    out: crate::plumbing::operand::tensor_ref::TensorRef,
     options: BuildOptions,
     f: F,
-) -> Result<vyre_foundation::ir::Program, crate::tensor_ref::TensorRefError>
+) -> Result<vyre_foundation::ir::Program, crate::plumbing::operand::tensor_ref::TensorRefError>
 where
     F: Fn(vyre_foundation::ir::Expr, vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr,
 {
@@ -434,7 +438,7 @@ where
     )?;
 
     if a.shape != b.shape || a.shape != out.shape {
-        return Err(crate::tensor_ref::TensorRefError::ShapeMismatch {
+        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
             name: "elementwise_binary".into(),
             found: vec![],
             expected: vec![],
@@ -443,19 +447,19 @@ where
     }
 
     let a_count = a.element_count().ok_or_else(|| {
-        crate::tensor_ref::TensorRefError::ElementCountOverflow {
+        crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow {
             name: a.name_str().to_string(),
             shape: a.shape.to_vec(),
         }
     })?;
     let out_count = out.element_count().ok_or_else(|| {
-        crate::tensor_ref::TensorRefError::ElementCountOverflow {
+        crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow {
             name: out.name_str().to_string(),
             shape: out.shape.to_vec(),
         }
     })?;
     if out_count < a_count {
-        return Err(crate::tensor_ref::TensorRefError::ShapeMismatch {
+        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
             name: out.name_str().to_string(),
             found: out.shape.to_vec(),
             expected: a.shape.to_vec(),
@@ -523,11 +527,11 @@ where
 
 pub(crate) fn build_elementwise_unary<F>(
     op_id: &'static str,
-    a: crate::tensor_ref::TensorRef,
-    out: crate::tensor_ref::TensorRef,
+    a: crate::plumbing::operand::tensor_ref::TensorRef,
+    out: crate::plumbing::operand::tensor_ref::TensorRef,
     options: BuildOptions,
     f: F,
-) -> Result<vyre_foundation::ir::Program, crate::tensor_ref::TensorRefError>
+) -> Result<vyre_foundation::ir::Program, crate::plumbing::operand::tensor_ref::TensorRefError>
 where
     F: Fn(vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr,
 {
@@ -540,7 +544,7 @@ where
     )?;
 
     if a.shape != out.shape {
-        return Err(crate::tensor_ref::TensorRefError::ShapeMismatch {
+        return Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
             name: "elementwise_unary".into(),
             found: vec![],
             expected: vec![],
@@ -549,7 +553,7 @@ where
     }
 
     let n = a.element_count().ok_or_else(|| {
-        crate::tensor_ref::TensorRefError::ElementCountOverflow {
+        crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow {
             name: a.name_str().to_string(),
             shape: a.shape.to_vec(),
         }

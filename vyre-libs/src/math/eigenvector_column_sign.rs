@@ -107,7 +107,7 @@ pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n:
 /// would never reach the program.
 #[must_use]
 pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => {
             return trap_program(OP_ID, Some((eigenvectors, DataType::F32)), message);

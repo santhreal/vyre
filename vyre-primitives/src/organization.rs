@@ -25,7 +25,6 @@ pub(crate) const COMPOSITION_FEATURES: &[&str] = &[];
 
 /// Crate-support features. Not domains.
 pub(crate) const SUPPORT_FEATURES: &[&str] = &[
-    "all-lego",
     "cpu-parity",
     "gpu",
     "inventory-registry",
@@ -77,23 +76,19 @@ mod tests {
         names
     }
 
-    /// Members of the `all-lego` array, read out of the manifest at run time.
+    /// The complete domain selection a consumer names to reach every operation
+    /// this crate registers.
     ///
-    /// The array may span lines, so the scan runs from the opening bracket to
-    /// the closing one rather than per line.
-    fn all_lego_members(toml: &str) -> BTreeSet<String> {
-        let start = toml
-            .find("all-lego = [")
-            .expect("Fix: Cargo.toml must declare the `all-lego` aggregate feature");
-        let body = &toml[start..];
-        let end = body
-            .find(']')
-            .expect("Fix: the `all-lego` array must be closed");
-        body[..end]
-            .split('"')
-            .skip(1)
-            .step_by(2)
-            .map(str::to_string)
+    /// One domain means one feature. There is no aggregate over it: an
+    /// aggregate whose single member is the thing it aggregates is a second
+    /// name for one fact, and the tree carried one for long enough that three
+    /// manifests explained their dependency in terms of composition domains
+    /// that had already left this crate.
+    fn complete_domain_selection() -> BTreeSet<String> {
+        INTRINSIC_FEATURES
+            .iter()
+            .chain(COMPOSITION_FEATURES)
+            .map(|name| (*name).to_string())
             .collect()
     }
 
@@ -167,48 +162,37 @@ mod tests {
         );
     }
 
-    /// WHY: `all-lego` is what a consumer and the registry walker name to reach
-    /// every domain. A domain outside the aggregate is invisible to both, and a
-    /// support feature inside it makes the aggregate mean something other than
-    /// "every domain".
+    /// WHY: every domain this crate registers has to be reachable by naming
+    /// features it declares, because a consumer that cannot name a domain
+    /// cannot link its registrations, and an unlinked registration is missing
+    /// from every registry walk while every count still agrees with itself.
     #[test]
-    fn all_lego_equals_the_union_of_the_domain_classes() {
+    fn every_domain_is_reachable_through_a_declared_feature() {
         let toml = std::fs::read_to_string(cargo_toml()).expect("Cargo.toml");
-        let members = all_lego_members(&toml);
-        let domains: BTreeSet<String> = INTRINSIC_FEATURES
-            .iter()
-            .chain(COMPOSITION_FEATURES)
-            .map(|name| (*name).to_string())
-            .collect();
-        let missing: Vec<&String> = domains.difference(&members).collect();
+        let declared = features(&toml);
+        let selection = complete_domain_selection();
         assert!(
-            missing.is_empty(),
-            "Fix: `all-lego` omits classified domain(s) {missing:?}; a domain outside the aggregate is unreachable through it"
+            !selection.is_empty(),
+            "Fix: this crate classifies no domain, so no consumer can reach an operation in it"
         );
-        let extra: Vec<&String> = members.difference(&domains).collect();
+        let unreachable: Vec<&String> = selection.difference(&declared).collect();
         assert!(
-            extra.is_empty(),
-            "Fix: `all-lego` names {extra:?}, which are not classified domains; the aggregate must aggregate domains and nothing else"
+            unreachable.is_empty(),
+            "Fix: classified domain(s) {unreachable:?} name no feature in Cargo.toml, so nothing a consumer can write links them"
         );
     }
 
-    /// WHY: `all_lego_equals_the_union_of_the_domain_classes` reads the manifest
-    /// with a hand-written scan. A scan that silently returns nothing makes both
-    /// difference assertions trivially pass, so it is proven against text whose
-    /// answer is known.
+    /// WHY: `every_cargo_feature_is_classified_exactly_once` and
+    /// `every_domain_is_reachable_through_a_declared_feature` both read the
+    /// manifest with a hand-written scan. A scan that silently returns nothing
+    /// makes every set comparison trivially pass, so it is proven against text
+    /// whose answer is known.
     #[test]
-    fn the_manifest_scans_read_names_out_of_declarations() {
-        let toml = "[features]\ndefault = []\nalpha = [\"beta\"]\nall-lego = [\n    \"alpha\",\n    \"beta\",\n]\n\"quoted\" = []\n[dependencies]\nnot-a-feature = \"1\"\n";
+    fn the_manifest_scan_reads_names_out_of_declarations() {
+        let toml = "[features]\ndefault = []\nalpha = [\"beta\"]\nhardware = [\n    \"alpha\",\n]\n\"quoted\" = []\n[dependencies]\nnot-a-feature = \"1\"\n";
         assert_eq!(
             features(toml),
-            ["alpha", "all-lego", "quoted"]
-                .into_iter()
-                .map(str::to_string)
-                .collect::<BTreeSet<_>>()
-        );
-        assert_eq!(
-            all_lego_members(toml),
-            ["alpha", "beta"]
+            ["alpha", "hardware", "quoted"]
                 .into_iter()
                 .map(str::to_string)
                 .collect::<BTreeSet<_>>()

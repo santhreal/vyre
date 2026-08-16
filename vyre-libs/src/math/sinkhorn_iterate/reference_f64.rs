@@ -174,7 +174,7 @@ pub fn try_sinkhorn_iterate_f64_into(
     Ok(max_iterations)
 }
 
-crate::scratch::define_reserve_capacity!(
+crate::plumbing::host::scratch::define_reserve_capacity!(
     reserve_f64_vec,
     f64,
     "Sinkhorn iterate f64 CPU oracle"

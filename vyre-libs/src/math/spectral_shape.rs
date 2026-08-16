@@ -86,7 +86,7 @@ pub fn try_mp_edge_clip_cpu_into(
     out: &mut Vec<f64>,
 ) -> Result<(), String> {
     if eigenvalues.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             eigenvalues.len() - out.len(),
             "spectral shape CPU oracle",

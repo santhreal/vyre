@@ -90,7 +90,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     TOTAL_WORDS as u64 * 4 * 2,
     Some(ContractDescription {
         primitive: "AES-CTR encryption",
-        baseline_crate: "OpenSSL EVP AES-128-CTR",
+        baseline_crate: "openssl",
         baseline_name: "OpenSSL 0.10.78 EVP path with hardware AES acceleration",
         min_speedup_x: 3.0,
     }),

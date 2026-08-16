@@ -63,7 +63,7 @@ pub(super) fn try_f64_matmul_into(
         )
     })?;
     if cells > output.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             output,
             cells - output.len(),
             context.allocation_context,

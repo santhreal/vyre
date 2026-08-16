@@ -123,7 +123,7 @@ pub fn givens_rotate_columns(
             "Fix: givens_rotate_columns needs n > 0 and both columns below n, got n={n}, first_col={first_col}, second_col={second_col}."
         ));
     }
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((matrix, DataType::F32)), message),
     };

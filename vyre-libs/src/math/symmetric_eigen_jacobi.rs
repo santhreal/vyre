@@ -175,7 +175,7 @@ pub fn jacobi_eigen_region(
 /// - `eigenvalues`: `n` output; `eigenvalues[k] = A_rotated[k,k]`.
 #[must_use]
 pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> Program {
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((eigenvalues, DataType::F32)), message),
     };

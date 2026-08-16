@@ -38,7 +38,7 @@ pub(crate) fn check_release_bench_targets(
         "release.workload.alias_reaching_def",
         "release.workload.ifds_witness",
         "release.workload.callgraph_reachability",
-        "release.workload.c_ast_traversal",
+        "release.workload.ast_motif_traversal",
         "release.workload.megakernel_stream",
         "release.workload.conformance_sparse_readback",
         "release.optimization.foundation_optimizer_impact",

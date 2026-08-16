@@ -3,7 +3,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use crate::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
 
-use crate::tensor_ref::TensorRefError;
+use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 use super::body::cooperative_matmul_body;
 use super::mma_body::cooperative_matmul_body_mma;

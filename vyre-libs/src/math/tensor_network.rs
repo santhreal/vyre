@@ -123,7 +123,7 @@ pub fn try_greedy_contract_order_cpu_into(
     order: &mut Vec<usize>,
 ) -> Result<(), String> {
     if dims.len() > order.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             order,
             dims.len() - order.len(),
             "tensor-network CPU oracle",

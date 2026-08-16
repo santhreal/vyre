@@ -7,7 +7,7 @@ use super::run_assembly::encode_u32_words;
 use super::synthetic_count::{SyntheticCountWorkload, SyntheticPattern};
 use super::synthetic_oracle::{
     pattern_input_count, string_bitmap_scatter_expected_words, string_bitmap_scatter_inputs,
-    synthetic_cpu_count, synthetic_inputs,
+    synthetic_baseline_label, synthetic_cpu_count, synthetic_inputs,
 };
 use super::synthetic_programs::build_synthetic_release_program;
 use crate::api::metric::digest64_buffers;
@@ -43,6 +43,10 @@ pub struct ReleaseMacroProgramSpec {
     pub family: ReleaseMacroFamily,
     /// Owner crate responsible for this workload.
     pub owner_crate: &'static str,
+    /// Primitive this release workload claims to accelerate.
+    pub primitive: &'static str,
+    /// CPU baseline the performance contract is judged against.
+    pub cpu_baseline: &'static str,
 }
 
 /// Generated release workload case with concrete inputs and CPU-oracle outputs.
@@ -80,6 +84,8 @@ fn release_macro_program_spec(
         min_speedup_x: workload.min_speedup_x as u32,
         family: workload.family,
         owner_crate: workload.owner_crate,
+        primitive: workload.primitive,
+        cpu_baseline: synthetic_baseline_label(workload.pattern),
     }
 }
 
@@ -182,7 +188,7 @@ fn build_release_macro_case_from_workload(
         | SyntheticPattern::QuantifiedLoops
         | SyntheticPattern::AliasReachingDef
         | SyntheticPattern::IfdsWitness
-        | SyntheticPattern::CAstTraversal
+        | SyntheticPattern::AstMotifTraversal
         | SyntheticPattern::MegakernelQueuedBatch
         | SyntheticPattern::EgraphSaturation => {
             let generated = synthetic_inputs(workload.pattern, records);
@@ -282,7 +288,7 @@ mod tests {
                     3,
                 ),
                 (
-                    "release.c_ast_traversal.1m",
+                    "release.ast_motif_traversal.1m",
                     "vyre-libs",
                     ReleaseMacroFamily::Parser,
                     3,

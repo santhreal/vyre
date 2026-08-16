@@ -7,7 +7,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
-use crate::tensor_ref::TensorRefError;
+use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 const OP_ID: &str = "vyre-libs::nn::cross_entropy";
 const CROSS_ENTROPY_TILE: u32 = 256;
@@ -327,11 +327,11 @@ mod tests {
     fn try_cross_entropy_rejects_zero_and_overflow_dimensions() {
         assert!(matches!(
             try_cross_entropy("logits", "targets", "loss", 0, 4),
-            Err(crate::tensor_ref::TensorRefError::ShapeMismatch { .. })
+            Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { .. })
         ));
         assert!(matches!(
             try_cross_entropy("logits", "targets", "loss", u32::MAX, 2),
-            Err(crate::tensor_ref::TensorRefError::ElementCountOverflow { .. })
+            Err(crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow { .. })
         ));
     }
 

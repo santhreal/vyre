@@ -90,7 +90,7 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
                 "matching" => "vyre-libs/src/scan".to_string(),
                 "optim" => "vyre-libs/src/nn/optim".to_string(),
                 "quant" => "vyre-libs/src/nn/quant".to_string(),
-                "builder" => "vyre-libs/src/builder_catalog.rs".to_string(),
+                "builder" => "vyre-libs/src/builder/registrations.rs".to_string(),
                 _ => format!("vyre-libs/src/{domain}"),
             };
             vec![owner]

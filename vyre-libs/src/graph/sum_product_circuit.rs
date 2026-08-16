@@ -585,7 +585,7 @@ pub fn try_sum_product_evaluate_cpu_into_with_scratch(
         topo_order,
     )?;
     scratch.values.clear();
-    crate::scratch::resize_vec(
+    crate::plumbing::host::scratch::resize_vec(
         &mut scratch.values,
         kinds.len(),
         0.0,
@@ -621,7 +621,7 @@ pub fn try_sum_product_evaluate_cpu_into_with_scratch(
         }
     }
     if scratch.values.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             scratch.values.len() - out.len(),
             "sum-product circuit CPU oracle",

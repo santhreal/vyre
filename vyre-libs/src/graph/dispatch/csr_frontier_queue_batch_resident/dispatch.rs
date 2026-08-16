@@ -14,7 +14,7 @@ use crate::graph::dispatch::csr_frontier_queue_scratch::{
     resident_csr_queue_traverse_kind_for_graph_stats, FrontierWordPrefixScratch,
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlotPlan, ResidentCsrQueueTraverseKind,
 };
-use crate::scratch::reserve_vec as reserve_graph_vec;
+use crate::plumbing::host::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };

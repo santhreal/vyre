@@ -8,7 +8,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::{
     builder::{check_tensors, strided_accumulate_child, BuildOptions},
-    tensor_ref::{TensorRef, TensorRefError},
+    plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
 use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 

@@ -34,7 +34,7 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
+use crate::plumbing::host::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
 #[cfg(any(test, feature = "cpu-parity"))]
 use rustc_hash::FxHashSet;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};

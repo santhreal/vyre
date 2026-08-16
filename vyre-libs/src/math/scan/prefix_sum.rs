@@ -6,14 +6,19 @@
 //! the multi-block chain. The primitives own the two bodies and neither of them
 //! chooses.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::Program;
-use crate::math::prefix_scan::{
-    prefix_scan_with_op_id, ScanKind, MAX_SINGLE_BLOCK_SCAN,
-};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::{GeneratorRef, Node, Program};
+use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
+
+/// The single-block scan body, as a phase boundary inside one operation.
+///
+/// It carries the `anonymous::` prefix over the builder's own id because that
+/// id registers no canonical operation, and a child region naming an
+/// unregistered id claims a building block that does not exist.
+const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-primitives::math::prefix_scan_inclusive_sum";
 
 /// Build a Program that computes the inclusive prefix sum of `input`
 /// into `output`, both sized `n`.
@@ -31,16 +36,41 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
         );
     }
     if n <= MAX_SINGLE_BLOCK_SCAN {
-        prefix_scan_with_op_id(input, output, n, ScanKind::InclusiveSum, OP_ID)
+        compose_scan_primitive(
+            SINGLE_BLOCK_CHILD,
+            prefix_scan(input, output, n, ScanKind::InclusiveSum),
+        )
     } else {
-        wrap_large_scan_program(multi_block_prefix_scan_sum_u32(input, output, n))
+        compose_scan_primitive(
+            crate::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM,
+            multi_block_prefix_scan_sum_u32(input, output, n),
+        )
     }
 }
 
-fn wrap_large_scan_program(program: Program) -> Program {
-    // Only the entry changes, so rebuild only the entry. `Program::wrapped`
-    // would deep-clone the buffer table and reset the metadata flags.
-    let tagged = vec![wrap_anonymous_region(OP_ID, program.entry().to_vec())];
+/// Declare the scan primitive this composition selected as its child.
+///
+/// The primitive builds its own region; this replaces that region with the
+/// same body under the same generator, attributed to this composition, so the
+/// selection is an edge to a registered building block rather than a relabel
+/// of the body. Only the entry changes, so only the entry is rebuilt:
+/// `Program::wrapped` would deep-clone the buffer table and reset the metadata
+/// flags.
+fn compose_scan_primitive(child_id: &'static str, program: Program) -> Program {
+    let body = match program.entry() {
+        [Node::Region { body, .. }] => body.as_ref().clone(),
+        other => other.to_vec(),
+    };
+    let tagged = vec![wrap_anonymous_region(
+        OP_ID,
+        vec![wrap_child_region(
+            child_id,
+            GeneratorRef {
+                name: OP_ID.to_string(),
+            },
+            body,
+        )],
+    )];
     program.with_rewritten_wrapped_entry(tagged)
 }
 

@@ -205,7 +205,7 @@ fn prepare_ifds_rule_columns(
 ) -> Result<(), String> {
     for column in columns {
         column.clear();
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             column,
             rule_count,
             "exploded IFDS primitive",

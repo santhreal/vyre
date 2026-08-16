@@ -339,3 +339,137 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     assert!(!output.status.success());
     assert!(reported(&output).contains("are out of order"));
 }
+
+/// Runs `git` in `dir` and returns its stdout, refusing to continue on failure.
+fn git(dir: &Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .expect("Fix: the merge demonstration needs git on PATH");
+    assert!(
+        output.status.success(),
+        "Fix: git {args:?} failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).expect("Fix: git output must be UTF-8")
+}
+
+/// A checkout with one committed fragment, and the sha to branch two ways from.
+fn seed_fragment_repository(root: &Path) -> String {
+    write_fixture(root, 3, false);
+    git(root, &["init", "--quiet", "."]);
+    git(root, &["config", "user.email", "release@example.invalid"]);
+    git(root, &["config", "user.name", "release"]);
+    git(root, &["add", "--all"]);
+    git(root, &["commit", "--quiet", "-m", "seed"]);
+    git(root, &["rev-parse", "HEAD"]).trim().to_string()
+}
+
+/// Commit `content` at `path` on a new branch cut from `base`.
+fn append_fragment_on_branch(root: &Path, base: &str, branch: &str, path: &str, content: &str) {
+    git(root, &["checkout", "--quiet", "-b", branch, base]);
+    let target = root.join(path);
+    fs::create_dir_all(target.parent().expect("Fix: fragment paths have a parent"))
+        .expect("Fix: the fragment directory must be creatable");
+    let mut existing = fs::read_to_string(&target).unwrap_or_default();
+    existing.push_str(content);
+    fs::write(&target, existing).expect("Fix: the fragment must be writable");
+    git(root, &["add", "--all"]);
+    git(root, &["commit", "--quiet", "-m", branch]);
+}
+
+/// The merge that used to eat a `[[fragments]]` header now keeps both fragments.
+///
+/// Two branches append a fragment, so both insertions begin with the same blank
+/// line and the same `[[fragments]]` line. A three-way merge matches that shared
+/// prefix between the two sides and leaves it out of the conflicting region, so
+/// the region holds only the differing tails and the header is common context.
+/// `merge=union` then resolves that region by concatenation and one header ends
+/// up carrying two ids, which is not valid TOML. The attribute did not fail to
+/// prevent the corruption, it produced it: without the attribute the same merge
+/// stops on a conflict a person resolves.
+///
+/// The control below performs the exact append on a shared file under the exact
+/// attribute and asserts the fusion, so this test fails if it stops
+/// demonstrating the defect the per-file layout exists to prevent.
+#[test]
+fn two_branches_appending_a_fragment_merge_with_both_fragments_intact() {
+    let shared = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    let one_file = "release/changes/shared.toml";
+    let _ = seed_fragment_repository(shared.path());
+    fs::write(
+        shared.path().join(".gitattributes"),
+        format!("{one_file} merge=union\n"),
+    )
+    .expect("Fix: the control must carry the attribute the tree carried");
+    fs::write(
+        shared.path().join(one_file),
+        "schema_version = 1\n\n[[fragments]]\nid = \"exact-fix\"\ncategory = \"Fixed\"\ntext = \"The exact release regression is fixed.\"\n",
+    )
+    .expect("Fix: the shared-file control must be writable");
+    git(shared.path(), &["add", "--all"]);
+    git(shared.path(), &["commit", "--quiet", "-m", "shared base"]);
+    let shared_base = git(shared.path(), &["rev-parse", "HEAD"]).trim().to_string();
+    append_fragment_on_branch(
+        shared.path(),
+        &shared_base,
+        "shared-alpha",
+        one_file,
+        "\n[[fragments]]\nid = \"alpha\"\ncategory = \"Added\"\ntext = \"Alpha.\"\n",
+    );
+    append_fragment_on_branch(
+        shared.path(),
+        &shared_base,
+        "shared-beta",
+        one_file,
+        "\n[[fragments]]\nid = \"beta\"\ncategory = \"Added\"\ntext = \"Beta.\"\n",
+    );
+    git(shared.path(), &["merge", "shared-alpha", "-m", "merge"]);
+    let fused = fs::read_to_string(shared.path().join(one_file))
+        .expect("Fix: the merged control must be readable");
+    assert_eq!(
+        (
+            fused.matches("[[fragments]]").count(),
+            fused.matches("\nid = ").count()
+        ),
+        (2, 3),
+        "Fix: the shared-file control must still fuse three fragments under two headers, or it proves nothing: {fused}"
+    );
+    assert!(
+        fused.contains("id = \"alpha\"") && fused.contains("id = \"beta\""),
+        "Fix: the control must keep both ids under one header: {fused}"
+    );
+
+    let split = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    let base = seed_fragment_repository(split.path());
+    append_fragment_on_branch(
+        split.path(),
+        &base,
+        "alpha",
+        "release/changes/unreleased/alpha-fragment.toml",
+        "category = \"Added\"\ntext = \"Alpha landed on its own branch.\"\n",
+    );
+    append_fragment_on_branch(
+        split.path(),
+        &base,
+        "beta",
+        "release/changes/unreleased/beta-fragment.toml",
+        "category = \"Added\"\ntext = \"Beta landed on its own branch.\"\n",
+    );
+    git(split.path(), &["merge", "alpha", "-m", "merge"]);
+
+    let output = run_gate(split.path(), "--write");
+    assert!(
+        output.status.success(),
+        "Fix: the merged fragment set must still parse: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let changelog = fs::read_to_string(split.path().join("CHANGELOG.md"))
+        .expect("Fix: generated changelog must be readable");
+    assert!(
+        changelog.contains("- Alpha landed on its own branch.")
+            && changelog.contains("- Beta landed on its own branch."),
+        "Fix: both merged fragments must reach the changelog: {changelog}"
+    );
+}

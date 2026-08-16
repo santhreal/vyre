@@ -241,7 +241,7 @@ pub fn try_cpu_ref_into(
     Ok(max_r)
 }
 
-crate::scratch::define_reserve_capacity!(
+crate::plumbing::host::scratch::define_reserve_capacity!(
     reserve_eigen_tmp,
     f64,
     "sheaf Laplacian eigenvalue CPU oracle"

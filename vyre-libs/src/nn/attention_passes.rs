@@ -20,29 +20,15 @@ pub const ATTENTION_WRITE_PASS_OP_ID: &str = "vyre-primitives::nn::attention_wri
 /// Emit the attention max-reduction pass for one contiguous query row `i`.
 #[must_use]
 pub fn attention_max_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: Expr) -> Vec<Node> {
-    attention_max_pass_with_bases(
+    attention_max_pass_bounded(
         q,
         k,
         d,
-        s,
+        Expr::u32(s),
         scale_expr,
         Expr::mul(Expr::var("i"), Expr::u32(d)),
         Expr::u32(0),
     )
-}
-
-/// Emit the attention max-reduction pass with explicit query and key bases.
-#[must_use]
-pub fn attention_max_pass_with_bases(
-    q: &str,
-    k: &str,
-    d: u32,
-    s: u32,
-    scale_expr: Expr,
-    query_base: Expr,
-    key_base: Expr,
-) -> Vec<Node> {
-    attention_max_pass_bounded(q, k, d, Expr::u32(s), scale_expr, query_base, key_base)
 }
 
 /// Emit a max-score pass whose causal/cache key limit is an expression.
@@ -149,29 +135,15 @@ pub fn attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -
 /// Emit the attention normalization-sum pass for one contiguous query row `i`.
 #[must_use]
 pub fn attention_sum_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: Expr) -> Vec<Node> {
-    attention_sum_pass_with_bases(
+    attention_sum_pass_bounded(
         q,
         k,
         d,
-        s,
+        Expr::u32(s),
         scale_expr,
         Expr::mul(Expr::var("i"), Expr::u32(d)),
         Expr::u32(0),
     )
-}
-
-/// Emit the attention normalization-sum pass with explicit query and key bases.
-#[must_use]
-pub fn attention_sum_pass_with_bases(
-    q: &str,
-    k: &str,
-    d: u32,
-    s: u32,
-    scale_expr: Expr,
-    query_base: Expr,
-    key_base: Expr,
-) -> Vec<Node> {
-    attention_sum_pass_bounded(q, k, d, Expr::u32(s), scale_expr, query_base, key_base)
 }
 
 /// Emit a normalization-sum pass whose causal/cache key limit is an expression.
@@ -300,37 +272,6 @@ pub fn attention_write_pass(
     out: &str,
 ) -> Vec<Node> {
     let row_base = Expr::mul(Expr::var("i"), Expr::u32(d));
-    attention_write_pass_with_bases(
-        q,
-        k,
-        v,
-        d,
-        s,
-        scale_expr,
-        out,
-        row_base.clone(),
-        Expr::u32(0),
-        Expr::u32(0),
-        row_base,
-    )
-}
-
-/// Emit the weighted-value write pass with explicit query, key, value, and output bases.
-#[allow(clippy::too_many_arguments)]
-#[must_use]
-pub fn attention_write_pass_with_bases(
-    q: &str,
-    k: &str,
-    v: &str,
-    d: u32,
-    s: u32,
-    scale_expr: Expr,
-    out: &str,
-    query_base: Expr,
-    key_base: Expr,
-    value_base: Expr,
-    output_base: Expr,
-) -> Vec<Node> {
     attention_write_pass_bounded(
         q,
         k,
@@ -339,10 +280,10 @@ pub fn attention_write_pass_with_bases(
         Expr::u32(s),
         scale_expr,
         out,
-        query_base,
-        key_base,
-        value_base,
-        output_base,
+        row_base.clone(),
+        Expr::u32(0),
+        Expr::u32(0),
+        row_base,
     )
 }
 

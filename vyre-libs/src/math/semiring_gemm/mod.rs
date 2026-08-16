@@ -242,7 +242,7 @@ pub fn try_semiring_gemm_cpu_into(
 ) -> Result<(), String> {
     let (m_usize, n_usize, k_usize, cell_count) = checked_cpu_gemm_shape(m, n, k)?;
     if cell_count > c.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             c,
             cell_count - c.len(),
             "semiring GEMM CPU oracle",

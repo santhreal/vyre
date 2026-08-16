@@ -55,7 +55,7 @@ fn linear_relu_parity_with_sequential_linear_plus_relu() {
 #[test]
 fn linear_builder_rejects_mismatched_bias_dimensions() {
     use super::super::builder::Linear;
-    use crate::tensor_ref::TensorRef;
+    use crate::plumbing::operand::tensor_ref::TensorRef;
     let err = Linear::new(
         TensorRef::u32_1d("x", 4),
         TensorRef::u32_2d("w", 4, 8),
@@ -65,7 +65,7 @@ fn linear_builder_rejects_mismatched_bias_dimensions() {
     .build()
     .unwrap_err();
     assert!(
-        matches!(&err, crate::tensor_ref::TensorRefError::ShapeMismatch { name, .. } if name == "b"),
+        matches!(&err, crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { name, .. } if name == "b"),
         "linear builder must reject bias with mismatched dimensions, got {err:?}"
     );
 }

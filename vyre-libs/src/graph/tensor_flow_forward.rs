@@ -338,7 +338,7 @@ pub fn try_tensor_flow_forward_cpu_into(
 
     let word_count = try_tensor_words(node_count, context_limit, field_limit)? as usize;
     if word_count > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             word_count - out.len(),
             "tensor flow CPU oracle",

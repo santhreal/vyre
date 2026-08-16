@@ -97,13 +97,13 @@ pub fn try_chebyshev_filter(
     n: u32,
     k_steps: u32,
 ) -> Result<Program, String> {
-    let laplacian_cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
+    let laplacian_cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
     if k_steps > MAX_K {
         return Err(format!(
             "Fix: chebyshev_filter k_steps must be <= MAX_K={MAX_K}, got {k_steps}."
         ));
     }
-    let scratch_words = crate::operand_shape::matrix_cells(OP_ID, n, 2)?;
+    let scratch_words = crate::plumbing::operand::shape::matrix_cells(OP_ID, n, 2)?;
 
     let t = Expr::InvocationId { axis: 0 };
 
@@ -375,7 +375,7 @@ pub fn try_chebyshev_filter_cpu_into(
 #[cfg(any(test, feature = "cpu-parity"))]
 fn resize_chebyshev_cpu_vec(out: &mut Vec<f32>, len: usize, context: &str) -> Result<(), String> {
     if len > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             len - out.len(),
             "Chebyshev graph-filter CPU oracle",

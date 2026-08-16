@@ -26,14 +26,20 @@ vyre-driver-metal = { workspace = true, optional = true }
 vyre-driver-reference = { workspace = true, optional = true }
 vyre-driver-spirv = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
-vyre-libs = { workspace = true, optional = true }
-# `all-lego` is every domain this crate carries, and a linkage owner links all of
-# them: `hardware` alone left the operation registry partial, and a release
-# conformance run judged against an op matrix that requires operations from the
-# geometry and optimization domains reported them missing when they were only
-# unlinked. A source that contributes part of itself is the state this crate's
+# `full` is what vyre-libs calls every domain that submits an
+# `OperationRegistration`, and a linkage owner links all of them. Default
+# features carry math, nn, matching, hash and decode only, so the geometry,
+# optimization, topology, graph, bitset, reduce, label, predicate, fixpoint,
+# visual, security, parsing, text and nfa registrations were absent from the
+# registry this crate publishes, and the per-source floor could not see it
+# because a source that contributes part of itself still contributes more than
+# nothing. A source that contributes part of itself is the state this crate's
 # floor exists to reject.
-vyre-primitives = { workspace = true, optional = true, features = ["all-lego"] }
+vyre-libs = { workspace = true, optional = true, features = ["full"] }
+# `hardware` is what this crate needs from vyre-primitives and what the
+# intrinsic registrations are gated on. The domain features that used to be
+# named here left for vyre-libs.
+vyre-primitives = { workspace = true, optional = true, features = ["hardware"] }
 
 [dev-dependencies]
 # The rules read the workspace member list to find registration-submitting

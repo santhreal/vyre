@@ -91,6 +91,60 @@ pub fn vyre_crate_directory(package: &str) -> PathBuf {
     structure_gate::member_directory(&vyre_workspace_root(), package)
 }
 
+/// The one source file in this checkout that declares `marker`.
+///
+/// A roster test derives its member set by reading the file that publishes the
+/// family, and naming that file by a crate plus a relative path pins the layout
+/// the test was written against. The file then moves, the read fails with
+/// `NotFound`, and the failure describes a missing path rather than the roster
+/// the test claims to check. Searching for the declaration instead follows the
+/// file wherever it goes, across crates as well as directories.
+///
+/// The search covers every source file the workspace holds, from
+/// [`structure_gate::scan`], which is the same roster the structure gate walks.
+/// `marker` must be the opening text of the declaration, such as
+/// `pub fn fnv1a64_program`, and a file matches when some line begins with it
+/// once indentation is trimmed. Matching a line prefix rather than any
+/// occurrence keeps the caller's own copy of the marker, which is a string
+/// literal in the middle of a line, from answering as a second home.
+///
+/// Exactly one file must match. Zero means the declaration was renamed or
+/// deleted, and a roster derived from nothing proves nothing. Two or more means
+/// the family has a second home, which is the duplication these contracts exist
+/// to catch, so it is reported rather than silently resolved to the first hit.
+///
+/// # Panics
+///
+/// Panics when the number of matching files is not exactly one.
+#[must_use]
+pub fn declaring_source_file(marker: &str) -> PathBuf {
+    let root = vyre_workspace_root();
+    let matches: Vec<String> = structure_gate::scan(&root)
+        .source_files
+        .into_iter()
+        .filter(|relative| {
+            std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {
+                source
+                    .lines()
+                    .any(|line| line.trim_start().starts_with(marker))
+            })
+        })
+        .collect();
+    match matches.as_slice() {
+        [only] => root.join(only),
+        [] => panic!(
+            "no source file in this workspace declares `{marker}`. Fix: the declaration was \
+             renamed or deleted, so update the marker to the name the family publishes now."
+        ),
+        several => panic!(
+            "`{marker}` is declared in {} files: {}. Fix: the family has more than one home, \
+             so collapse it onto one owner.",
+            several.len(),
+            several.join(", ")
+        ),
+    }
+}
+
 /// Workspace member paths and excluded paths from the root manifest, in this
 /// checkout.
 ///
@@ -106,7 +160,9 @@ pub fn vyre_crate_directory(package: &str) -> PathBuf {
 pub fn vyre_workspace_rosters() -> WorkspaceRosters {
     let root = vyre_workspace_root();
     WorkspaceRosters {
-        members: structure_gate::workspace_members(&root).into_iter().collect(),
+        members: structure_gate::workspace_members(&root)
+            .into_iter()
+            .collect(),
         excluded: structure_gate::workspace_excludes(&root)
             .into_iter()
             .collect(),
@@ -321,5 +377,64 @@ mod tests {
         assert!(rendered.starts_with("SKIP example contract:"), "{rendered}");
         assert!(rendered.contains(SANTH_ROOT_ENV), "{rendered}");
         assert!(rendered.contains(SANTH_ROOT_MARKER), "{rendered}");
+    }
+
+    /// A resolved declaring file must actually declare what was asked for.
+    ///
+    /// The failure this closes: a roster test named its source by a crate plus
+    /// a relative path, the file moved crates, and the read failed with
+    /// `NotFound`. The resolver answers with a file that exists and holds the
+    /// declaration, so a rehome is followed instead of reported as missing.
+    /// The marker is this function's own signature, which is present exactly
+    /// once and moves with this file, so the test cannot go stale against a
+    /// path written into it.
+    #[test]
+    fn a_resolved_declaring_file_holds_the_declaration_it_searched_for() {
+        let marker = "pub fn declaring_source_file";
+        let resolved = declaring_source_file(marker);
+        assert!(
+            resolved.is_absolute(),
+            "{} must be absolute so a caller can read it from any directory",
+            resolved.display()
+        );
+        let source = std::fs::read_to_string(&resolved)
+            .unwrap_or_else(|error| panic!("{} must be readable: {error}", resolved.display()));
+        assert!(
+            source
+                .lines()
+                .any(|line| line.trim_start().starts_with(marker)),
+            "{} does not declare `{marker}`",
+            resolved.display()
+        );
+    }
+
+    /// Only a declaration counts, never a mention.
+    ///
+    /// A caller stores its marker as a string literal, so a substring search
+    /// finds the caller too and reports the family as having two homes. That
+    /// turns a working resolver into a false duplication report, so the match
+    /// is anchored at the start of a line.
+    #[test]
+    fn a_marker_quoted_inside_a_line_is_not_a_declaration() {
+        // This very line mentions the marker mid-line, and this file still
+        // resolves as the single declaring home above.
+        let quoted = "pub fn declaring_source_file";
+        assert_eq!(
+            declaring_source_file(quoted),
+            vyre_workspace_root()
+                .join("vyre-test-support")
+                .join("src")
+                .join("monorepo.rs")
+        );
+    }
+
+    /// A marker nothing declares must say so rather than resolve to anything.
+    ///
+    /// Returning a first hit or an empty path would let a roster test derive
+    /// its member set from the wrong file, or from nothing, and still pass.
+    #[test]
+    #[should_panic(expected = "no source file in this workspace declares")]
+    fn a_marker_no_file_declares_is_reported_rather_than_guessed() {
+        let _ = declaring_source_file("pub fn no_such_declaration_exists_anywhere");
     }
 }

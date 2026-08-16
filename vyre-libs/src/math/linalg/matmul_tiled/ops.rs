@@ -4,7 +4,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::builder::{check_tensors, BuildOptions};
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 use super::mma_fragment::MmaCapabilityRecord;
 use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};

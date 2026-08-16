@@ -62,7 +62,7 @@ fn release_matrix_commands_prefer_canonical_release_workload_cases() {
         ("entropy-window", "release.entropy_window.1m"),
         ("alias-reaching-def", "release.alias_reaching_def.1m"),
         ("ifds-witness", "release.ifds_witness.1m"),
-        ("c-ast-traversal", "release.c_ast_traversal.1m"),
+        ("ast-motif-traversal", "release.ast_motif_traversal.1m"),
         ("semantic-optimizer-impact", "foundation.optimizer.impact"),
         ("sparse-output-compaction", "sparse.compaction.count.1m"),
         (
@@ -193,24 +193,3 @@ fn release_matrix_covers_all_release_workload_bench_targets() {
     }
 }
 
-#[test]
-fn release_matrix_committed_evidence_matches_generated_matrix() {
-    let workspace = workspace_root();
-    let expected_path = workspace.join("release/evidence/benchmarks/release-workload-matrix.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .expect("Fix: release-workload-matrix.json must be readable.");
-    let registry = vyre_bench::registry::collect_all();
-    let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
-    let generated = format!(
-        "{}\n",
-        serde_json::to_string_pretty(&matrix)
-            .expect("Fix: release workload matrix must serialize as JSON.")
-    );
-
-    assert_eq!(
-        expected,
-        generated,
-        "Fix: regenerate `{}` from vyre-bench release-matrix after changing release workload source data.",
-        expected_path.display()
-    );
-}

@@ -169,7 +169,7 @@ fn release_matrix_contains_current_required_family_ids() {
         "quantified-condition-loops",
         "alias-reaching-def",
         "ifds-witness",
-        "c-ast-traversal",
+        "ast-motif-traversal",
         "megakernel-queued-batches",
         "semantic-optimizer-impact",
         "sparse-output-compaction",

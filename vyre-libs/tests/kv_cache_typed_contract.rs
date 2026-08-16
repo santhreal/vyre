@@ -6,8 +6,31 @@ mod wire_words;
 use wire_words::{u16_bytes as bytes, u16_words_of as words};
 
 use vyre::ir::DataType;
-use vyre_libs::nn::attention::{kv_cache_append_typed, KvCacheAppendError};
+use vyre_libs::nn::attention::{kv_cache_append, KvCacheAppendError, KvCacheAppendSpec};
 use vyre_reference::value::Value;
+
+fn spec<'a>(
+    batch: u32,
+    heads: u32,
+    capacity: u32,
+    chunk_len: u32,
+    head_dim: u32,
+    offset: u32,
+    dtype: DataType,
+) -> KvCacheAppendSpec<'a> {
+    KvCacheAppendSpec {
+        prior: "prior",
+        chunk: "chunk",
+        next: "next",
+        batch,
+        heads,
+        capacity,
+        chunk_len,
+        head_dim,
+        offset,
+        dtype,
+    }
+}
 
 #[allow(clippy::too_many_arguments)]
 fn execute_bf16(
@@ -20,10 +43,7 @@ fn execute_bf16(
     dim: u32,
     offset: u32,
 ) -> Vec<u16> {
-    let program = kv_cache_append_typed(
-        "prior",
-        "chunk",
-        "next",
+    let program = kv_cache_append(spec(
         batch,
         heads,
         capacity,
@@ -31,7 +51,7 @@ fn execute_bf16(
         dim,
         offset,
         DataType::BF16,
-    )
+    ))
     .expect("Fix: valid BF16 cache transition must build");
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -84,7 +104,7 @@ fn bf16_full_prefill_replaces_complete_cache_generation() {
 #[test]
 fn integer_cache_dtype_fails_closed() {
     assert_eq!(
-        kv_cache_append_typed("prior", "chunk", "next", 1, 1, 1, 1, 1, 0, DataType::U32,),
+        kv_cache_append(spec(1, 1, 1, 1, 1, 0, DataType::U32)),
         Err(KvCacheAppendError::UnsupportedDtype {
             dtype: DataType::U32,
         })
@@ -95,18 +115,7 @@ fn integer_cache_dtype_fails_closed() {
 #[test]
 fn bf16_offset_overflow_fails_closed() {
     assert_eq!(
-        kv_cache_append_typed(
-            "prior",
-            "chunk",
-            "next",
-            1,
-            1,
-            u32::MAX,
-            2,
-            1,
-            u32::MAX,
-            DataType::BF16,
-        ),
+        kv_cache_append(spec(1, 1, u32::MAX, 2, 1, u32::MAX, DataType::BF16)),
         Err(KvCacheAppendError::Range {
             offset: u32::MAX,
             chunk_len: 2,

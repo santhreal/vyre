@@ -350,7 +350,7 @@ pub fn try_ddnnf_evaluate_cpu_into_with_scratch(
     validate_ddnnf_evaluate_inputs(nodes, node_var, children, var_assignments, topo_order)?;
     let n_nodes = nodes.len();
     scratch.values.clear();
-    crate::scratch::resize_vec(
+    crate::plumbing::host::scratch::resize_vec(
         &mut scratch.values,
         n_nodes,
         0u32,
@@ -411,7 +411,7 @@ pub fn try_ddnnf_evaluate_cpu_into_with_scratch(
         }
     }
     if n_nodes > out.len() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n_nodes - out.len(),
             "d-DNNF CPU oracle",

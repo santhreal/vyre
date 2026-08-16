@@ -73,7 +73,7 @@ pub fn try_matroid_exchange_bfs_step(
     any_change: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let dense_cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
+    let dense_cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
 
     let t = Expr::InvocationId { axis: 0 };
 
@@ -205,7 +205,7 @@ pub fn try_matroid_exchange_bfs_step_cpu_into(
     }
 
     out.clear();
-    crate::scratch::resize_vec(
+    crate::plumbing::host::scratch::resize_vec(
         out,
         n,
         0u32,
