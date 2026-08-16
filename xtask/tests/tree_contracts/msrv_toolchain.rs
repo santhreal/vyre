@@ -49,6 +49,11 @@ fn print_toolchain_writes_the_advertised_version_and_nothing_else() {
         .and_then(toml::Value::as_str)
         .expect("Fix: [workspace.package] must declare rust-version");
     assert_eq!(
+        stdout.as_ref(),
+        format!("{advertised}\n"),
+        "Fix: print mode must output exactly the advertised version followed by a newline and nothing else"
+    );
+    assert_eq!(
         lines[0], advertised,
         "Fix: the printed toolchain is the advertised minimum"
     );
@@ -58,5 +63,82 @@ fn print_toolchain_writes_the_advertised_version_and_nothing_else() {
             .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit())),
         "Fix: rustup installs a version, and `{}` is not one",
         lines[0]
+    );
+}
+
+/// WHY: print mode is an early exit that returns only the version; normal
+/// execution of feature-msrv without --print-toolchain must still render the
+/// complete gate report with notes and finding summary.
+#[test]
+fn normal_feature_msrv_preserves_standard_gate_report() {
+    let root = workspace_root();
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["feature-msrv"])
+        .current_dir(&root)
+        .output()
+        .expect("Fix: the runner must launch");
+    assert!(
+        output.status.success(),
+        "Fix: the gate must exit zero on normal execution: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("feature-msrv: note: advertised rust-version"),
+        "Fix: normal gate execution must include report notes: {stdout}"
+    );
+    assert!(
+        stdout.ends_with("feature-msrv: 0 finding(s)\n"),
+        "Fix: normal gate execution must end with standard finding count summary: {stdout}"
+    );
+}
+
+/// WHY: `cargo-fuzz` installs on stable, but the libFuzzer runner passes `-Z`
+/// sanitizer flags and therefore requires nightly. The smoke workflow installed
+/// and selected stable, so every fuzz target failed before reading one byte.
+/// The job set is derived from the workflow so a new fuzz job is covered.
+#[test]
+fn every_cargo_fuzz_job_selects_nightly() {
+    let root = workspace_root();
+    let workflow = std::fs::read_to_string(root.join(".github/workflows/fuzz.yml"))
+        .expect("Fix: the fuzz workflow must be readable");
+    let mut job = "<none>";
+    let mut toolchain = None;
+    let mut installs = 0usize;
+
+    for line in workflow.lines() {
+        if line.starts_with("  ")
+            && !line.starts_with("    ")
+            && line.trim_end().ends_with(':')
+        {
+            job = line.trim().trim_end_matches(':');
+            toolchain = None;
+        }
+
+        let trimmed = line.trim();
+        if let Some(selected) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
+            toolchain = Some(selected);
+        }
+        if !trimmed.contains("install --locked cargo-fuzz") {
+            continue;
+        }
+
+        installs += 1;
+        assert_eq!(
+            toolchain,
+            Some("nightly"),
+            "Fix: fuzz job `{job}` must select nightly before installing cargo-fuzz"
+        );
+        assert_eq!(
+            trimmed,
+            "run: cargo +nightly install --locked cargo-fuzz",
+            "Fix: fuzz job `{job}` must install cargo-fuzz with the selected nightly toolchain"
+        );
+    }
+
+    assert!(
+        installs > 0,
+        "Fix: the fuzz workflow contains no cargo-fuzz install, so this contract guards nothing"
     );
 }

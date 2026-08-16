@@ -15,6 +15,12 @@ pub mod diagnostics;
 pub mod fp_parity;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
+/// Target-neutral launch geometry requirements and lowering strategy.
+pub mod geometry;
+pub use geometry::{
+    CooperativeWidth, ElementPolicy, GeometryLoweringError, GeometryRequirements, GeometryStrategy,
+    LaunchGeometry, Uniformity,
+};
 
 pub mod ir {
     //! The vyre intermediate representation.

@@ -24,9 +24,9 @@ jobs:
           - registry_toml
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-fuzz
-        run: cargo +stable install --locked cargo-fuzz
+        run: cargo +nightly install --locked cargo-fuzz
       - name: Run smoke fuzz
         run: |
           cd vyre-foundation/fuzz
@@ -51,9 +51,9 @@ jobs:
           - registry_toml
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-fuzz
-        run: cargo +stable install --locked cargo-fuzz
+        run: cargo +nightly install --locked cargo-fuzz
       - name: Run CI fuzz
         run: |
           cd vyre-foundation/fuzz

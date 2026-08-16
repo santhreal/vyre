@@ -69,11 +69,6 @@ title = "Contributing"
 audience = "contributor"
 
 [[root_page]]
-path = "GOAL.md"
-title = "Vyre goal"
-audience = "contributor"
-
-[[root_page]]
 path = "SECURITY.md"
 title = "Security policy"
 audience = "user"

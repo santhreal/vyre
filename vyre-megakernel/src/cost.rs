@@ -514,10 +514,7 @@ mod tests {
             }
         }
 
-        let bench = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("the crate directory sits under the workspace root")
-            .join("vyre-bench");
+        let bench = vyre_test_support::monorepo::vyre_crate_directory("vyre-bench");
         let mut files = Vec::new();
         walk(&bench.join("snapshots"), &mut files);
         walk(&bench.join("baselines"), &mut files);

@@ -359,7 +359,7 @@ fn every_async_node_variant_is_accounted_for() {
 /// thing that fails is an async rule with no case anywhere.
 #[test]
 fn every_async_rule_in_the_catalog_has_a_case() {
-    let suite = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("tests");
+    let suite = vyre_test_support::monorepo::vyre_crate_directory("vyre-foundation").join("tests");
     let sources: Vec<String> = std::fs::read_dir(&suite)
         .expect("Fix: the crate's tests directory must be readable")
         .map(|entry| entry.expect("Fix: every tests directory entry must be readable"))

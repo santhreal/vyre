@@ -89,6 +89,7 @@ inventory::submit! {
         expected_output: Some(expected_output),
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+        geometry_requirements: None,
     }
 }
 
