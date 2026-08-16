@@ -1,12 +1,12 @@
-//! IR invariance across the three `nn/attention` clone families.
+//! IR invariance across the `nn/attention` clone families.
 //!
-//! Three families of duplicated builder code were collapsed onto single
-//! owners: the gated delta index/shape math, the tiled online-softmax
-//! skeleton, and the reduce-then-normalize skeleton. Collapsing a clone family
-//! is only safe if the surviving owner emits exactly what every former copy
-//! emitted, so this file pins the canonical wire fingerprint of every entry
-//! point involved. Any change to a shared helper that is not a deliberate IR
-//! change turns these red.
+//! Families of duplicated builder code were collapsed onto single owners: the
+//! gated delta index/shape math, the online-softmax core, the reduce-then-
+//! normalize skeleton, the three-pass score/sum/write owner, and the layout
+//! index-map owner. Collapsing a clone family is only safe if the surviving
+//! owner emits exactly what every former copy emitted, so this file pins the
+//! canonical wire fingerprint of every entry point involved. Any change to a
+//! shared helper that is not a deliberate IR change turns these red.
 //!
 //! What this does not catch: a change that alters the fingerprint on purpose.
 //! That is the point at which a human has to decide whether the new IR is
@@ -19,8 +19,11 @@ mod harness;
 use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{DataType, Node, Program};
 use vyre_libs::nn::attention::{
-    chunked_gated_delta, flash_attention_2, mla_decode, recurrent_gated_delta, softmax,
-    GatedDeltaSpec,
+    attention, attention_head_to_token, attention_head_to_token_typed, attention_reference,
+    attention_token_to_head, chunked_gated_delta, flash_attention, flash_attention_2,
+    gqa_attention, gqa_attention_causal, gqa_attention_causal_typed, kv_cache_append,
+    kv_cache_append_typed, mla_compress_kv, mla_decode, partial_rope, qk_gain, quest_paging,
+    recurrent_gated_delta, softmax, turboquant_attention, GatedDeltaSpec,
 };
 use vyre_libs::nn::norm::layer_norm;
 
@@ -94,6 +97,73 @@ fn entry_points() -> Vec<(&'static str, Program)> {
         ("flash_attention_2", flash_fixture()),
         ("softmax", softmax("input", "output", 1000)),
         ("layer_norm", layer_norm("input", "output", 1000, 1e-5)),
+        (
+            "flash_attention",
+            flash_attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM).expect("flash builds"),
+        ),
+        (
+            "flash_attention/direct",
+            flash_attention("q", "k", "v", "out", 4, 4).expect("direct flash builds"),
+        ),
+        ("attention", attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM)),
+        ("attention/direct", attention("q", "k", "v", "out", 4, 4)),
+        (
+            "attention_reference",
+            attention_reference("q", "k", "v", "out", 8, 4),
+        ),
+        (
+            "gqa_attention",
+            gqa_attention("q", "k", "v", "out", 4, 2, 8, 4).expect("gqa builds"),
+        ),
+        (
+            "gqa_attention_causal",
+            gqa_attention_causal("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2)
+                .expect("causal gqa builds"),
+        ),
+        (
+            "gqa_attention_causal/f16",
+            gqa_attention_causal_typed("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2, DataType::F16)
+                .expect("typed causal gqa builds"),
+        ),
+        (
+            "kv_cache_append",
+            kv_cache_append("prior", "chunk", "next", 2, 2, 8, 3, 4, 2).expect("cache builds"),
+        ),
+        (
+            "kv_cache_append/f16",
+            kv_cache_append_typed("prior", "chunk", "next", 2, 2, 8, 3, 4, 2, DataType::F16)
+                .expect("typed cache builds"),
+        ),
+        (
+            "attention_head_to_token",
+            attention_head_to_token("input", "output", 2, 3, 5, 4).expect("head to token builds"),
+        ),
+        (
+            "attention_head_to_token/f16",
+            attention_head_to_token_typed("input", "output", 2, 3, 5, 4, DataType::F16)
+                .expect("typed head to token builds"),
+        ),
+        (
+            "attention_token_to_head",
+            attention_token_to_head("input", "output", 2, 5, 3, 4).expect("token to head builds"),
+        ),
+        (
+            "quest_paging",
+            quest_paging("q", "meta", "scores", "io", 8, 3, 4),
+        ),
+        (
+            "partial_rope",
+            partial_rope("input", "cos", "sin", "output", 2, 5, 8, 4),
+        ),
+        ("qk_gain", qk_gain("q_in", "q_out", "gain", 3, 5, 4)),
+        (
+            "turboquant_attention",
+            turboquant_attention("q", "k_packed", "v_packed", "out", 6, 4),
+        ),
+        (
+            "mla_compress_kv",
+            mla_compress_kv("h", "w_dk", "c_out", 6, 4).expect("mla compress builds"),
+        ),
     ]
 }
 
@@ -111,7 +181,7 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 /// embed a shared child region and were unaffected.
 /// `clone_family_entry_points_carry_the_pinned_region_identities` now names
 /// such a rename directly instead of leaving it as an opaque digest change.
-const EXPECTED: [(&str, &str); 8] = [
+const EXPECTED: [(&str, &str); 26] = [
     (
         "recurrent_gated_delta/f32",
         "8d6a5194770b4b70680793d431b9876ad49f855cc9d0c42b2af4142bb941b0ed",
@@ -143,6 +213,78 @@ const EXPECTED: [(&str, &str); 8] = [
     (
         "layer_norm",
         "5cc4d4c537072eb8f99ff971606ef940de385fc9b817b9700cb2d56105ec4b33",
+    ),
+    (
+        "flash_attention",
+        "9f9805b63602d6b136c12756108f18c6df06074f51acc4807ec88c1b451e0d6a",
+    ),
+    (
+        "flash_attention/direct",
+        "dd3261d87484903b825a98979c36f3eb946d90fd4d02c9af823cf0bc97877871",
+    ),
+    (
+        "attention",
+        "fa758fcede885ecdcbf9a095d16ee1e20d4883d25844b475c9c4dce1ad73d885",
+    ),
+    (
+        "attention/direct",
+        "9fcb13a00c4c4b7ac0518574e0ebc1ebc949971c587bc09a889de5cb86d1f591",
+    ),
+    (
+        "attention_reference",
+        "058035e29c4514d5d9fb78ed82039006f94225fdbc3e2a10c42a72cfe05ed628",
+    ),
+    (
+        "gqa_attention",
+        "ba987863b55829511275b9b943d86662c7ead1172816981097456ed98737d80c",
+    ),
+    (
+        "gqa_attention_causal",
+        "96200c1d31d6a4023732377786557a517defcbaca504f3734f973054417b67eb",
+    ),
+    (
+        "gqa_attention_causal/f16",
+        "f9d16c17394ac3871c3dd8c1d715c0d22d0a694142c569832c415a8711ca405a",
+    ),
+    (
+        "kv_cache_append",
+        "13404f04d3caabb8e5b73e4a87b81f4e9a43f3769524bc9de222828223dba891",
+    ),
+    (
+        "kv_cache_append/f16",
+        "65b5891b893a906a2ac6f9c5d4364c2b989c93eda3c17b387b6c3e562cfbf306",
+    ),
+    (
+        "attention_head_to_token",
+        "3cdc5b0cae92da81221b5158a2d12968884db611a7340f106630bd685898b588",
+    ),
+    (
+        "attention_head_to_token/f16",
+        "bd08abf7a28bc81ef126b5a37dcb6bd8e2ac44b9496209967c04aab9527a2f8b",
+    ),
+    (
+        "attention_token_to_head",
+        "1620c80bcfe46cc52fc3a319a9bbbdd03b3dbc137cb135adc2f9e5bddc04ed6d",
+    ),
+    (
+        "quest_paging",
+        "0ef6ca5ca04dc26c4e2040894817d77e997212a06e9957f914cd5fcdc7998d2d",
+    ),
+    (
+        "partial_rope",
+        "80ab8860b8375cccde486cd3fcec0ab9529715fd4661551145ea9182ef4b9eb3",
+    ),
+    (
+        "qk_gain",
+        "9acc6d451eb5ff12028cbda2497a0b46135c160d4a1b3f34c7c65402b1e514d9",
+    ),
+    (
+        "turboquant_attention",
+        "a764e7aa79e16b2ecbbc9cde4bad5cc505fc10f1cf6369eceebf3198c45d2bb9",
+    ),
+    (
+        "mla_compress_kv",
+        "d2c7c68b9a9d6f8432d0589f6ca3875042db55d00f20961f2e27857b4ec49e1d",
     ),
 ];
 
@@ -253,12 +395,12 @@ fn region_identities(program: &Program) -> Vec<String> {
 
 /// Region-generator identities each entry point is expected to carry.
 ///
-/// The first six entry points inline everything into their own region; only
-/// the two reduce-family builders embed shared child regions, and those child
-/// identities are the collapse contract: `strided_accumulate` and
-/// `strided_writeback` exist so `softmax` and `layer_norm` stop carrying
-/// private copies of the same loop.
-const EXPECTED_IDENTITIES: [(&str, &[&str]); 8] = [
+/// Most entry points inline everything into their own region; the reduce-family
+/// builders, the three-pass score owner and the online-softmax core embed
+/// shared child regions, and those child identities are the collapse contract:
+/// a shared owner that stops being reached, or a builder that reacquires a
+/// private copy of a collapsed loop, changes this set.
+const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
     (
         "recurrent_gated_delta/f32",
         &["vyre-libs::nn::recurrent_gated_delta"],
@@ -293,6 +435,133 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 8] = [
             "vyre-libs::builder::strided_accumulate",
             "vyre-libs::nn::layer_norm",
             "vyre-primitives::reduce::workgroup_sum_f32",
+        ],
+    ),
+    (
+        "flash_attention",
+        &[
+            "vyre-libs::nn::flash_attention",
+        ],
+    ),
+    (
+        "flash_attention/direct",
+        &[
+            "vyre-libs::nn::flash_attention",
+        ],
+    ),
+    (
+        "attention",
+        &[
+            "vyre-libs::nn::attention",
+        ],
+    ),
+    (
+        "attention/direct",
+        &[
+            "vyre-libs::nn::attention",
+        ],
+    ),
+    (
+        "attention_reference",
+        &[
+            "vyre-libs::nn::attention_reference",
+            "vyre-primitives::math::dot_partial",
+            "vyre-primitives::nn::attention_max_pass",
+            "vyre-primitives::nn::attention_sum_pass",
+            "vyre-primitives::nn::attention_write_pass",
+        ],
+    ),
+    (
+        "gqa_attention",
+        &[
+            "vyre-libs::nn::gqa_attention",
+            "vyre-primitives::math::dot_partial",
+            "vyre-primitives::nn::attention_max_pass",
+            "vyre-primitives::nn::attention_sum_pass",
+            "vyre-primitives::nn::attention_write_pass",
+        ],
+    ),
+    (
+        "gqa_attention_causal",
+        &[
+            "vyre-libs::nn::gqa_attention_causal",
+            "vyre-primitives::math::dot_partial",
+            "vyre-primitives::nn::attention_max_pass",
+            "vyre-primitives::nn::attention_sum_pass",
+            "vyre-primitives::nn::attention_write_pass",
+        ],
+    ),
+    (
+        "gqa_attention_causal/f16",
+        &[
+            "vyre-libs::nn::gqa_attention_causal",
+            "vyre-primitives::math::dot_partial",
+            "vyre-primitives::nn::attention_max_pass",
+            "vyre-primitives::nn::attention_sum_pass",
+            "vyre-primitives::nn::attention_write_pass",
+        ],
+    ),
+    (
+        "kv_cache_append",
+        &[
+            "vyre-libs::nn::kv_cache_append",
+        ],
+    ),
+    (
+        "kv_cache_append/f16",
+        &[
+            "vyre-libs::nn::kv_cache_append",
+        ],
+    ),
+    (
+        "attention_head_to_token",
+        &[
+            "vyre-libs::nn::attention_head_to_token",
+        ],
+    ),
+    (
+        "attention_head_to_token/f16",
+        &[
+            "vyre-libs::nn::attention_head_to_token",
+        ],
+    ),
+    (
+        "attention_token_to_head",
+        &[
+            "vyre-libs::nn::attention_token_to_head",
+        ],
+    ),
+    (
+        "quest_paging",
+        &[
+            "vyre-libs::nn::attention::quest_paging",
+            "vyre-primitives::nn::quest_score_pages",
+            "vyre-primitives::nn::quest_select_top_k",
+            "vyre-primitives::nn::quest_zero_fill",
+        ],
+    ),
+    (
+        "partial_rope",
+        &[
+            "vyre-libs::nn::partial_rope",
+        ],
+    ),
+    (
+        "qk_gain",
+        &[
+            "vyre-libs::nn::qk_gain",
+        ],
+    ),
+    (
+        "turboquant_attention",
+        &[
+            "vyre-libs::nn::attention::turboquant",
+        ],
+    ),
+    (
+        "mla_compress_kv",
+        &[
+            "vyre-libs::nn::mla_compress_kv",
         ],
     ),
 ];
@@ -335,19 +604,29 @@ fn clone_family_entry_points_carry_the_pinned_region_identities() {
     union.dedup();
     assert!(
         union.len() >= 10,
-        "the eight entry points reach only {} distinct region identities; the \
+        "the entry points reach only {} distinct region identities; the \
          walk is no longer descending into child regions",
         union.len()
     );
 
+    let mut drifted = false;
+    let mut report = String::new();
     for ((name, got), (pinned_name, pinned)) in observed.iter().zip(EXPECTED_IDENTITIES.iter()) {
         assert_eq!(name, pinned_name, "fixture order drifted from the table");
         let got: Vec<&str> = got.iter().map(String::as_str).collect();
-        assert_eq!(
-            got, *pinned,
-            "{name} no longer carries the pinned region identities"
-        );
+        if got != *pinned {
+            drifted = true;
+        }
+        report.push_str(&format!("    (\n        \"{name}\",\n        &[\n"));
+        for identity in &got {
+            report.push_str(&format!("            \"{identity}\",\n"));
+        }
+        report.push_str("        ],\n    ),\n");
     }
+    assert!(
+        !drifted,
+        "region identities changed for at least one entry point. Observed:\n{report}"
+    );
 
     // The collapse contract: the reduce-family owner is reused, not copied.
     let shared = "vyre-libs::builder::strided_accumulate";
