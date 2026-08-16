@@ -24,13 +24,7 @@ use vyre_libs::reasoning::do_calculus_change_impact::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// A random DAG-ish 0/1 adjacency: only i->j with i<j edges, so the transitive closure is acyclic and
 /// terminates (matches how change-impact graphs are built).

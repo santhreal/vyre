@@ -20,8 +20,7 @@ use vyre_libs::solvers::mori_zwanzig_region_coarsen::coarsen_region_state_fixed_
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::test_parity_oracles::{
-    fixed_matvec as mz_project_fixed,
-    signed_fixed_19 as signed_fixed,
+    fixed_matvec as mz_project_fixed, signed_fixed_19 as signed_fixed, to_fixed,
     xorshift32 as xorshift,
 };
 
@@ -57,10 +56,6 @@ fn coarsen_region_state_fixed_via_matches_exact_fixed_point_matvec() {
         moved_cases > 380,
         "only {moved_cases}/400 projections were non-zero, the matvec is not being exercised"
     );
-}
-
-fn to_fixed(v: f64) -> u32 {
-    (v * 65536.0).round() as i64 as u32
 }
 
 #[test]

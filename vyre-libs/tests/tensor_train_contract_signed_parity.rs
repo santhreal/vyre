@@ -14,40 +14,12 @@
 //! BIT-EXACT: pure integer arithmetic, so the oracle replicates the kernel exactly
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, accumulated with
 //! wrapping u32 add. Any divergence is a real IR/dispatch defect, not a rounding artifact.
-#![cfg(feature = "math")]
+#![cfg(all(feature = "math", feature = "test-fixtures"))]
 
 use vyre_libs::math::tensor_train::tt_contract_step;
+use vyre_libs::test_parity_oracles::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
-
-const FIXED_ONE: f64 = 65536.0;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
-
-fn to_fixed(v: f64) -> u32 {
-    (v * FIXED_ONE).round() as i64 as u32
-}
-
-/// Bit-exact replica of the kernel's term multiply (the corrected SIGNED 16.16 multiply).
-fn fixed_mul(a: u32, b: u32) -> u32 {
-    ((i64::from(a as i32) * i64::from(b as i32)) >> 16) as i32 as u32
-}
-
-/// A signed 16.16 value in roughly `[-4.0, 4.0)`: an 18-bit magnitude, optionally negated (top bit
-/// set on the negative half (the operand class the old unsigned multiply corrupted)).
-fn signed_fixed(state: &mut u32) -> u32 {
-    let magnitude = (xorshift(state) & 0x0003_FFFF) as i32; // [0.0, 4.0) in 16.16
-    if xorshift(state) & 1 == 0 {
-        magnitude as u32
-    } else {
-        (-magnitude) as u32
-    }
-}
 
 /// Exact u32 16.16 oracle: `acc_out[b] = Σ_a acc_in[a]·core[a*r_next + b]`.
 fn contract_fixed(acc_in: &[u32], core: &[u32], r_prev: usize, r_next: usize) -> Vec<u32> {

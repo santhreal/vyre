@@ -275,7 +275,7 @@ avoid = [
 ]
 required_commands = [
   "cargo_full test -p vyre-libs scan",
-  "cargo_full test -p vyre-primitives matching",
+  "cargo_full test -p vyre-libs matching",
 ]
 
 [lane.security_dataflow]

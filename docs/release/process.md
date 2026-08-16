@@ -71,5 +71,8 @@ The six categories, in the order a section renders them: `Added`,
 `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Any other
 `category` value, and any third key, is a finding.
 
-`CHANGELOG.md` is regenerated from the fragments; it is not edited by hand,
-and a fragment is not a summary of the commit that carried it.
+`release-docs` regenerates two documents from the fragments and the release
+train: `CHANGELOG.md` and `release/evidence/docs/release-notes-body.md`.
+Neither is edited by hand, and a fragment is not a summary of the commit that
+carried it. Both are generated pages, so a rule that judges authored prose
+skips them.

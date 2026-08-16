@@ -58,19 +58,16 @@ pub(crate) fn u32_slice_fingerprint(values: &[u32]) -> u64 {
 
 #[cfg(feature = "graph")]
 pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x100000001b3;
+    use crate::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 
-    let mut hash = FNV_OFFSET;
+    let mut hash = fnv1a64_initial_state();
     for byte in (padded_words as u64).to_le_bytes() {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
+        hash = fnv1a64_update_byte(hash, byte);
     }
     for index in 0..padded_words {
         let value = values.get(index).copied().unwrap_or(0);
         for byte in value.to_le_bytes() {
-            hash ^= u64::from(byte);
-            hash = hash.wrapping_mul(FNV_PRIME);
+            hash = fnv1a64_update_byte(hash, byte);
         }
     }
     hash

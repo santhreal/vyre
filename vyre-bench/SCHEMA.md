@@ -2,7 +2,7 @@
 
 > Schema identifier: `vyre-bench.result.v1`
 
-This document specifies the JSON output schema produced by `vyre-bench run --format json`.
+The JSON output schema `vyre-bench run --format json` produces.
 Every table below names the fields of the struct that serializes it, so a field
 that is absent here is absent from the report.
 

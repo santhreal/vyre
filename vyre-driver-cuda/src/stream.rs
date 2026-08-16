@@ -5,6 +5,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
+use std::time::{Duration, Instant};
 
 use crossbeam_queue::ArrayQueue;
 use cudarc::driver::{
@@ -108,8 +109,64 @@ pub(crate) fn query_raw_stream_ready(
     }
 }
 
+/// Attempts a wait spends querying before it starts sleeping.
+///
+/// A dispatch whose kernel already retired is the common case, so the first
+/// window is a plain query loop: a microsecond kernel pays the query and nothing
+/// else. Only a wait that outlives the window starts sleeping, where the sleep
+/// granularity is negligible against the work it is waiting for.
+const DEVICE_WAIT_SPIN_QUERIES: u32 = 256;
+
+/// Longest a bounded device wait sleeps between two readiness queries.
+const DEVICE_WAIT_MAX_SLEEP: Duration = Duration::from_millis(1);
+
+/// Shortest sleep a bounded device wait takes once the query window is spent.
+const DEVICE_WAIT_FIRST_SLEEP: Duration = Duration::from_micros(16);
+
+/// Wait until `ready` reports completion, or fail when `deadline` elapses.
+///
+/// `cuStreamSynchronize` and `cuEventSynchronize` carry no timeout. A kernel that
+/// never retires, a driver object freed under the stream, or a device that fell
+/// off the bus blocks the calling thread with no error, no CPU use and no device
+/// work, which is indistinguishable from a wedged process. Polling against an
+/// explicit ceiling turns that into a reported failure naming the wait and the
+/// backend.
+fn wait_for_device(
+    label: &'static str,
+    deadline: Duration,
+    mut ready: impl FnMut() -> Result<bool, BackendError>,
+) -> Result<(), BackendError> {
+    let started = Instant::now();
+    for _ in 0..DEVICE_WAIT_SPIN_QUERIES {
+        if ready()? {
+            return Ok(());
+        }
+        std::hint::spin_loop();
+    }
+    let mut sleep = DEVICE_WAIT_FIRST_SLEEP;
+    loop {
+        if ready()? {
+            return Ok(());
+        }
+        let waited = started.elapsed();
+        if waited >= deadline {
+            return Err(BackendError::DispatchFailed {
+                code: None,
+                message: format!(
+                    "{label} on backend `{backend}` did not complete within {seconds}s. Fix: the device wait is bounded on purpose; diagnose the kernel that never retires, or raise the ceiling with {env}=<seconds> for a dispatch that legitimately runs longer.",
+                    backend = crate::CUDA_BACKEND_ID,
+                    seconds = deadline.as_secs(),
+                    env = crate::instrumentation::CUDA_DEVICE_WAIT_TIMEOUT_ENV,
+                ),
+            });
+        }
+        std::thread::sleep(sleep.min(deadline - waited));
+        sleep = (sleep * 2).min(DEVICE_WAIT_MAX_SLEEP);
+    }
+}
+
 /// Synchronize a raw CUDA stream without ever falling through to the legacy
-/// null-stream global fence.
+/// null-stream global fence, and without an unbounded wait.
 pub(crate) fn synchronize_raw_stream(
     stream: CUstream,
     label: &'static str,
@@ -121,9 +178,11 @@ pub(crate) fn synchronize_raw_stream(
             ),
         });
     }
-    // SAFETY: CUDA validates the opaque stream handle and returns a CUresult;
-    // `cuda_check` converts non-success into a typed backend error.
-    unsafe { cuda_check(cudarc::driver::sys::cuStreamSynchronize(stream), label) }
+    wait_for_device(
+        label,
+        crate::instrumentation::cuda_device_wait_timeout(),
+        || query_raw_stream_ready(stream, label),
+    )
 }
 
 impl Drop for CudaStream {
@@ -196,21 +255,18 @@ impl CudaEvent {
         }
     }
 
-    /// Block until the event completes.
+    /// Wait until the event completes, or fail on the bounded device deadline.
     pub(crate) fn synchronize(&self) -> Result<(), BackendError> {
         if self.raw.is_null() {
             return Err(BackendError::InvalidProgram {
                 fix: "Fix: cuEventSynchronize received a null CUDA event; pending dispatches must own a recorded completion event before synchronization.".to_string(),
             });
         }
-        // SAFETY: stream / event handles are owned by &self; cuStream*/cuEvent* calls
-        // operate on those owned handles and the result is checked via cuda_check.
-        unsafe {
-            cuda_check(
-                cudarc::driver::sys::cuEventSynchronize(self.raw),
-                "cuEventSynchronize",
-            )
-        }
+        wait_for_device(
+            "cuEventSynchronize",
+            crate::instrumentation::cuda_device_wait_timeout(),
+            || self.query_ready(),
+        )
     }
 
     /// Elapsed time between two timing-enabled events, in nanoseconds.

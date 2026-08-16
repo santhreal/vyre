@@ -45,6 +45,49 @@ authority = "../vyre-runtime/src/lib.rs"
 id = "testing"
 authority = "testing/TESTING.toml"
 
+# The Markdown at the repository root. A `[[page]]` path is rooted at `docs/`
+# and cannot reach these, so they are declared here and the `docs-register`
+# gate holds the root to them.
+[[root_page]]
+path = "README.md"
+title = "vyre"
+audience = "user"
+
+[[root_page]]
+path = "ARCHITECTURE.md"
+title = "Vyre architecture"
+audience = "contributor"
+
+[[root_page]]
+path = "CHANGELOG.md"
+title = "Changelog"
+audience = "user"
+
+[[root_page]]
+path = "CODE_OF_CONDUCT.md"
+title = "Code of conduct"
+audience = "contributor"
+
+[[root_page]]
+path = "CONTRIBUTING.md"
+title = "Contributing"
+audience = "contributor"
+
+[[root_page]]
+path = "GOAL.md"
+title = "Vyre goal"
+audience = "contributor"
+
+[[root_page]]
+path = "SECURITY.md"
+title = "Security policy"
+audience = "user"
+
+[[root_page]]
+path = "THESIS.md"
+title = "Vyre thesis"
+audience = "contributor"
+
 [[page]]
 path = "ARCHITECTURE.md"
 title = "Vyre architecture"

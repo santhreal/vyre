@@ -34,9 +34,32 @@ pub fn string_field(row: &toml::Table, key: &str) -> String {
         .to_string()
 }
 
+/// The strings of a TOML array value, empty when the value is absent, is not
+/// an array, or holds no string.
+///
+/// A declared list of names is read the same way wherever it appears: a
+/// `covers` list on a documentation page, a `features` list on a dependency, a
+/// roster in a generated document. Three copies of the same
+/// `as_array`/`filter_map(as_str)` chain drift by dropping the
+/// non-string case, which reads as an empty list at one caller and a panic at
+/// another.
+#[must_use]
+pub fn string_array(value: Option<&toml::Value>) -> Vec<String> {
+    value
+        .and_then(toml::Value::as_array)
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(toml::Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{array, quote};
+    use super::{array, quote, string_array};
 
     #[test]
     fn a_quoted_value_escapes_the_characters_toml_reserves() {
@@ -51,5 +74,21 @@ mod tests {
         assert_eq!(array(Vec::<&str>::new()), "[]");
         assert_eq!(array(["one"]), "[\"one\"]");
         assert_eq!(array(["one", "two"]), "[\"one\", \"two\"]");
+    }
+
+    #[test]
+    fn a_string_array_keeps_the_strings_and_drops_everything_else() {
+        let table: toml::Table = toml::from_str(
+            "mixed = [\"one\", 2, \"three\", true]\nempty = []\nscalar = \"one\"\n",
+        )
+        .expect("Fix: the fixture must be valid TOML.");
+
+        assert_eq!(
+            string_array(table.get("mixed")),
+            vec!["one".to_string(), "three".to_string()]
+        );
+        assert!(string_array(table.get("empty")).is_empty());
+        assert!(string_array(table.get("scalar")).is_empty());
+        assert!(string_array(table.get("absent")).is_empty());
     }
 }

@@ -101,18 +101,56 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
     }
 }
 
-/// `vyre-primitives::graph::toposort` becomes `vyre-primitives/src/graph`.
+/// `vyre-primitives::graph::toposort` becomes the directory that carries the
+/// code today, `vyre-libs/src/graph`.
 ///
-/// Read from the id so a namespace move carries its owner path with it instead
-/// of leaving a second hardcoded crate name in this generator.
+/// Operation ids are frozen, so the id names the crate an operation was minted
+/// under and not the crate it lives in: the composition move left 154 ids whose
+/// namespace crate no longer carries the code for their domain. The owner is
+/// therefore read from the checkout, which is the only thing that knows, and the
+/// id supplies just the domain. When neither crate carries the domain the
+/// id-derived path is kept, so `vyre-conform` `op_matrix_truth` reports the row
+/// instead of this generator inventing a plausible directory.
+///
+/// The question is whether a directory carries Rust source, not whether it
+/// exists: deleting every file in a directory leaves the directory behind, since
+/// git tracks files and not directories, and the move left one such shell at
+/// `vyre-primitives/src/matching`. An existence test would have named it the
+/// owner of eleven operations whose code is in `vyre-libs`.
 fn namespace_source_dir(id: &str) -> String {
-    match id.split_once("::") {
-        Some((crate_name, rest)) => {
-            let domain = rest.split("::").next().unwrap_or("unknown");
-            format!("{crate_name}/src/{domain}")
-        }
-        None => String::new(),
+    let Some((crate_name, rest)) = id.split_once("::") else {
+        return String::new();
+    };
+    let domain = rest.split("::").next().unwrap_or("unknown");
+    let minted = format!("{crate_name}/src/{domain}");
+    if carries_rust_source(&minted) {
+        return minted;
     }
+    let moved = format!("vyre-libs/src/{domain}");
+    if carries_rust_source(&moved) {
+        return moved;
+    }
+    minted
+}
+
+/// Whether the directory holds a Rust file, at any depth below it.
+fn carries_rust_source(dir: &str) -> bool {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    let mut nested = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "rs") {
+            return true;
+        }
+        if path.is_dir() {
+            nested.push(path);
+        }
+    }
+    nested
+        .into_iter()
+        .any(|path| path.to_str().is_some_and(carries_rust_source))
 }
 
 fn namespace_domain<'a>(id: &'a str, prefix: &str) -> &'a str {

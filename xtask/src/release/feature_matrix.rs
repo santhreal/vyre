@@ -236,8 +236,8 @@ fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    let dependency_names = dependency_names(&document);
-    let optional_dependency_names = optional_dependency_names(&document);
+    let dependency_names = crate::manifest_walk::dependency_names(&document);
+    let optional_dependency_names = crate::manifest_walk::optional_dependency_names(&document);
     let unresolved_feature_members = unresolved_feature_members(
         features_table,
         &features,
@@ -256,47 +256,6 @@ fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
         unresolved_feature_members,
         release_policy,
     }))
-}
-
-fn dependency_names(document: &toml::Table) -> Vec<String> {
-    let mut names = Vec::new();
-    collect_dependency_names_recursive(document, false, &mut names);
-    names.sort();
-    names.dedup();
-    names
-}
-
-fn optional_dependency_names(document: &toml::Table) -> Vec<String> {
-    let mut names = Vec::new();
-    collect_dependency_names_recursive(document, true, &mut names);
-    names.sort();
-    names.dedup();
-    names
-}
-
-fn collect_dependency_names_recursive(
-    table: &toml::Table,
-    optional_only: bool,
-    out: &mut Vec<String>,
-) {
-    for (key, child) in table {
-        if matches!(
-            key.as_str(),
-            "dependencies" | "dev-dependencies" | "build-dependencies"
-        ) {
-            if let Some(dependencies) = child.as_table() {
-                for (name, dependency) in dependencies {
-                    if !optional_only
-                        || dependency.get("optional").and_then(toml::Value::as_bool) == Some(true)
-                    {
-                        out.push(name.clone());
-                    }
-                }
-            }
-        } else if let Some(child) = child.as_table() {
-            collect_dependency_names_recursive(child, optional_only, out);
-        }
-    }
 }
 
 /// Every `feature:member` pair naming a member cargo cannot resolve.

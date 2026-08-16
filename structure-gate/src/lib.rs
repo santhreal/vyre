@@ -967,6 +967,32 @@ pub fn member_directory(root: &Path, package: &str) -> PathBuf {
 /// Panics when the root manifest cannot be read or parsed.
 #[must_use]
 pub fn workspace_members(root: &Path) -> Vec<String> {
+    workspace_paths(root, "members")
+}
+
+/// The paths the root manifest excludes from the workspace.
+///
+/// `exclude` is the other half of the roster: a directory that is neither a
+/// member nor excluded is a directory cargo will pull in the day it grows a
+/// manifest. Reading it beside [`workspace_members`] keeps both answers coming
+/// from one parse of one file.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed.
+#[must_use]
+pub fn workspace_excludes(root: &Path) -> Vec<String> {
+    workspace_paths(root, "exclude")
+}
+
+/// One `[workspace]` array of paths, empty when the key is absent.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed. Every gate in this
+/// crate answers for the roster that manifest declares, so a gate that carried
+/// on with an empty roster would report a clean tree it never read.
+fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
     let manifest = root.join("Cargo.toml");
     let text = read_source_bounded(&manifest)
         .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", manifest.display()));
@@ -974,10 +1000,10 @@ pub fn workspace_members(root: &Path) -> Vec<String> {
         .unwrap_or_else(|error| panic!("Fix: parse {}: {error}", manifest.display()));
     Value::Table(table)
         .get("workspace")
-        .and_then(|workspace| workspace.get("members"))
+        .and_then(|workspace| workspace.get(key))
         .and_then(Value::as_array)
-        .map(|members| {
-            members
+        .map(|entries| {
+            entries
                 .iter()
                 .filter_map(Value::as_str)
                 .map(str::to_string)

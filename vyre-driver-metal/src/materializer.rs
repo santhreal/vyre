@@ -5,15 +5,15 @@ mod native {
     use std::sync::Arc;
 
     use vyre_driver::materialize::{
-        self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
-        ResidentInstance,
+        self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance,
+        MaterializerDevice, ResidentInstance,
     };
     use vyre_driver::{
-        ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DeviceIdentity,
-        DispatchConfig, ResidentOwner, Resource, Submission, TimedDispatchResult, VyreBackend,
+        ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DispatchConfig, Resource,
+        Submission, TimedDispatchResult, VyreBackend,
     };
     use vyre_foundation::ir::Program;
-    use vyre_megakernel::{Artifact, TargetPayload, TargetPayloadFormat};
+    use vyre_megakernel::{Artifact, TargetPayload};
 
     use crate::runtime::{MetalBackend, MetalTargetModule};
     use crate::target_compiler::METAL_TARGET_FORMAT_VERSION;
@@ -157,22 +157,16 @@ mod native {
 
     pub(super) fn factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
         let backend = Arc::new(MetalBackend::acquire()?);
-        let format = TargetPayloadFormat::new("msl", METAL_TARGET_FORMAT_VERSION)
-            .map_err(|error| materialize::compile_error(METAL_BACKEND_ID, error))?;
-        let profile = crate::target_compiler::target_profile()?;
-        let generation = ResidentOwner::new()?.get();
         let device = backend.artifact_device_name();
         Ok(Box::new(MetalMaterializer {
             backend,
-            descriptor: MaterializerDevice::new(
-                DeviceIdentity {
-                    backend: METAL_BACKEND_ID,
-                    device,
-                    generation,
-                },
-                format,
-                profile,
-            ),
+            descriptor: MaterializerDevice::acquire(DeviceSpec {
+                backend: METAL_BACKEND_ID,
+                device,
+                format_extension: "msl",
+                format_version: METAL_TARGET_FORMAT_VERSION,
+                profile: crate::target_compiler::target_profile()?,
+            })?,
         }))
     }
 }

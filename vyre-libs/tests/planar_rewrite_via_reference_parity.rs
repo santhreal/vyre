@@ -13,17 +13,11 @@
 //! computation, so the oracle here is EXACT (0/1 chosen mask, no tolerance).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 use vyre_libs::parsing::planar_rewrite::reference_planar_rewrite_schedule;
+use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 #[test]
 fn schedule_via_matches_cpu_greedy_disjoint_selection_over_generated_grids() {

@@ -17,17 +17,10 @@
 
 use vyre_libs::reasoning::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 
-use vyre_libs::test_parity_oracles::fixed_mul;
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-const FIXED_ONE: u32 = 1 << 16;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::{
+    fixed_mul, signed_fixed_17 as signed_fixed, to_fixed, xorshift32 as xorshift, FIXED_ONE,
+};
 
 /// Exact u32 oracle for the 16.16 fixed-point matrix composition `f(a×b) · g(b×c) = out(a×c)`.
 fn compose_fixed(f: &[u32], g: &[u32], a: usize, b: usize, c: usize) -> Vec<u32> {
@@ -77,22 +70,6 @@ fn compose_via_matches_exact_fixed_matmul_over_generated_shapes() {
         nontrivial > 300,
         "expected >300 nonzero compositions, got {nontrivial}"
     );
-}
-
-/// A signed 16.16 value in roughly `[-2.0, 2.0)`: a 17-bit magnitude, optionally negated (top bit
-/// set on the negative half (the operand class the old unsigned high-word multiply corrupted)).
-fn signed_fixed(state: &mut u32) -> u32 {
-    let magnitude = (xorshift(state) & 0x0001_FFFF) as i32; // [0.0, 2.0) in 16.16
-    let signed = if xorshift(state) & 1 == 0 {
-        magnitude
-    } else {
-        -magnitude
-    };
-    signed as u32
-}
-
-fn to_fixed(v: f64) -> u32 {
-    (v * 65536.0).round() as i64 as u32
 }
 
 #[test]

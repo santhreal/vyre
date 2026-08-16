@@ -8,7 +8,10 @@ other crates produced.
 
 ## Overview
 
-This crate provides tools to validate, diff, and inspect Vyre's intermediate representation (IR) at the descriptor level, ensuring that passes like `vyre-lower` and `vyre-emit-naga` behave correctly. It is heavily utilized by `vyre-bench` and internal fuzzing infrastructure to catch regressions in descriptor equivalence and detect invalid control-flow rewrites.
+The crate validates, diffs and inspects Vyre intermediate representation at the
+descriptor level, so a pass such as `vyre-lower` or `vyre-emit-naga` is checked
+against what it produced. `vyre-bench` and the fuzzing targets read it to catch
+descriptor-equivalence regressions and invalid control-flow rewrites.
 
 ## Features
 

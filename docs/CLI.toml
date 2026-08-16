@@ -45,7 +45,16 @@ config = "The command reads the rules/launch tree in this repository, resolved f
 failure = "A missing rules tree or incomplete rule contract returns status 1."
 exit_codes = "0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments."
 
-
+[[binary]]
+package = "xtask"
+name = "publishable_packages"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads the workspace manifests, resolved from the repository root."
+failure = "An unreadable workspace manifest returns status 1."
+exit_codes = "0 on a printed roster or help, 1 on a manifest read failure, 2 on invalid arguments."
 
 [[binary]]
 package = "xtask"

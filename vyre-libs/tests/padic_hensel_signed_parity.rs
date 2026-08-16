@@ -18,39 +18,14 @@
 //!
 //! BIT-EXACT: pure integer arithmetic
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, then `wrapping_sub`.
-#![cfg(feature = "math")]
+#![cfg(all(feature = "math", feature = "test-fixtures"))]
 
 use vyre_libs::math::padic::hensel_lift_step;
+use vyre_libs::test_parity_oracles::{
+    fixed_mul, signed_fixed_18 as signed_fixed, to_fixed, xorshift32 as xorshift,
+};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
-
-const FIXED_ONE: f64 = 65536.0;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
-
-fn to_fixed(v: f64) -> u32 {
-    (v * FIXED_ONE).round() as i64 as u32
-}
-
-/// Bit-exact replica of the correction term's SIGNED 16.16 multiply.
-fn fixed_mul(a: u32, b: u32) -> u32 {
-    ((i64::from(a as i32) * i64::from(b as i32)) >> 16) as i32 as u32
-}
-
-/// A signed 16.16 value in roughly `[-4.0, 4.0)`: an 18-bit magnitude, optionally negated.
-fn signed_fixed(state: &mut u32) -> u32 {
-    let magnitude = (xorshift(state) & 0x0003_FFFF) as i32; // [0.0, 4.0) in 16.16
-    if xorshift(state) & 1 == 0 {
-        magnitude as u32
-    } else {
-        (-magnitude) as u32
-    }
-}
 
 /// Exact u32 16.16 oracle: `out[t] = x[t] - fixed_mul(f_x[t], inv_f_prime[t])`.
 fn hensel_fixed(x: &[u32], f_x: &[u32], inv_f_prime: &[u32]) -> Vec<u32> {

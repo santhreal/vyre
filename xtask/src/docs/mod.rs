@@ -9,6 +9,7 @@
 pub mod cli_docs;
 pub mod docs_check;
 pub mod docs_coupling;
+pub mod docs_register;
 pub mod research_key;
 pub mod research_source_ledger;
 
@@ -19,4 +20,5 @@ pub static GATES: &[&dyn Gate] = &[
     &cli_docs::CliDocs,
     &docs_check::DocsCheck,
     &docs_coupling::DocsCoupling,
+    &docs_register::DocsRegister,
 ];

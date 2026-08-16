@@ -4,10 +4,46 @@
 //! repeatedly query process environment variables. This module centralizes those
 //! controls behind one-time reads.
 
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
+use std::time::Duration;
 
 pub(crate) const CUDA_RESIDENT_BORROWED_FALLBACK_ENV: &str = "VYRE_CUDA_RESIDENT_BORROWED_FALLBACK";
 pub(crate) const CUDA_ALLOW_BORROWED_FALLBACK_ENV: &str = "VYRE_CUDA_ALLOW_BORROWED_FALLBACK";
+
+/// Environment control over the bounded device-wait ceiling, in whole seconds.
+pub(crate) const CUDA_DEVICE_WAIT_TIMEOUT_ENV: &str = "VYRE_CUDA_DEVICE_WAIT_TIMEOUT_SECS";
+
+/// Ceiling on one CUDA device wait when nothing overrides it.
+///
+/// Five minutes is far above any conformance, parity or benchmark dispatch in
+/// this workspace, and short enough that a wait which will never finish is
+/// reported instead of being mistaken for a long-running job.
+const CUDA_DEVICE_WAIT_TIMEOUT_SECS_DEFAULT: u64 = 300;
+
+/// Ceiling every bounded CUDA device wait is measured against.
+pub(crate) fn cuda_device_wait_timeout() -> Duration {
+    *CUDA_DEVICE_WAIT_TIMEOUT
+}
+
+static CUDA_DEVICE_WAIT_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
+    let Ok(value) = std::env::var(CUDA_DEVICE_WAIT_TIMEOUT_ENV) else {
+        return Duration::from_secs(CUDA_DEVICE_WAIT_TIMEOUT_SECS_DEFAULT);
+    };
+    match parse_device_wait_timeout_secs(&value) {
+        Some(seconds) => Duration::from_secs(seconds),
+        None => {
+            eprintln!(
+                "Fix: {CUDA_DEVICE_WAIT_TIMEOUT_ENV}=`{value}` is not a positive whole number of seconds; the bounded CUDA device wait keeps its {CUDA_DEVICE_WAIT_TIMEOUT_SECS_DEFAULT}s ceiling."
+            );
+            Duration::from_secs(CUDA_DEVICE_WAIT_TIMEOUT_SECS_DEFAULT)
+        }
+    }
+});
+
+/// Whole positive seconds in `value`, or `None` for anything else.
+fn parse_device_wait_timeout_secs(value: &str) -> Option<u64> {
+    value.trim().parse::<u64>().ok().filter(|seconds| *seconds > 0)
+}
 
 pub(crate) fn cuda_stage_trace_enabled() -> bool {
     cached_flag("VYRE_CUDA_STAGE_TRACE", &CUDA_STAGE_TRACE)
@@ -148,6 +184,27 @@ mod tests {
         let slot = OnceLock::new();
         assert!(!cached_flag("VYRE_CUDA_TEST_UNSET_FLAG", &slot));
         assert!(!cached_flag("VYRE_CUDA_TEST_UNSET_FLAG", &slot));
+    }
+
+    #[test]
+    fn device_wait_ceiling_accepts_only_positive_whole_seconds() {
+        assert_eq!(parse_device_wait_timeout_secs("1"), Some(1));
+        assert_eq!(parse_device_wait_timeout_secs(" 45 "), Some(45));
+        assert_eq!(
+            parse_device_wait_timeout_secs(&u64::MAX.to_string()),
+            Some(u64::MAX)
+        );
+        // Zero would make every device wait fail on its first query, and a
+        // negative, fractional or non-numeric value has no ceiling to apply, so
+        // each keeps the compiled-in default rather than silently disabling the
+        // bound.
+        for value in ["0", "-1", "1.5", "", "  ", "300s", "many"] {
+            assert_eq!(
+                parse_device_wait_timeout_secs(value),
+                None,
+                "Fix: CUDA device-wait ceiling `{value}` must be refused instead of replacing the bound."
+            );
+        }
     }
 
     #[test]

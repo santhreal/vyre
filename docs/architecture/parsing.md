@@ -30,9 +30,8 @@ manual SLR(1) construction of the C expression grammar. `parse_lr` is a
 host reference parser: it is the differential oracle for the device
 pipeline, and no shipping path routes a parse through it.
 
-`vyre-grammar-gen` is the host-side generator for the lexer DFA and the
-LR(1) tables. It runs on the developer's machine and its output is
-committed, so a build does not depend on it.
+The tables are committed source. No generator crate is in the workspace, so a
+build depends on none.
 
 ## A frontend is a feature
 

@@ -1033,6 +1033,7 @@ pub const vyre_libs::solvers::kfac_autotune_step::OP_ID: &str
 pub const vyre_libs::solvers::sheaf_spectral_clustering::DEFAULT_SPECTRUM_ITERATIONS: u32
 pub const vyre_libs::solvers::sinkhorn_dispatch_clustering::OP_ID: &str
 pub const vyre_libs::solvers::sinkhorn_full_clustering::OP_ID: &str
+pub const vyre_libs::test_parity_oracles::FIXED_ONE: u32
 pub const vyre_libs::text::BYTE_HISTOGRAM_256_OP_ID: &str
 pub const vyre_libs::text::CHAR_CLASS_OP_ID: &str
 pub const vyre_libs::text::CHAR_CLASS_WORKGROUP_SIZE: [u32; 3]
@@ -3391,8 +3392,11 @@ pub fn vyre_libs::telemetry::total_calls() -> u64
 pub fn vyre_libs::test_parity_oracles::fixed_matvec(matrix: &[u32], vector: &[u32], n: usize) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::test_parity_oracles::fixed_mul(a: u32, b: u32) -> u32
 pub fn vyre_libs::test_parity_oracles::fixed_sdiv_by_positive(numerator: u32, denominator: u32) -> u32
+pub fn vyre_libs::test_parity_oracles::from_fixed(v: u32) -> f64
 pub fn vyre_libs::test_parity_oracles::signed_fixed_17(state: &mut u32) -> u32
+pub fn vyre_libs::test_parity_oracles::signed_fixed_18(state: &mut u32) -> u32
 pub fn vyre_libs::test_parity_oracles::signed_fixed_19(state: &mut u32) -> u32
+pub fn vyre_libs::test_parity_oracles::to_fixed(v: f64) -> u32
 pub fn vyre_libs::test_parity_oracles::wrap_program_sequence(programs: &[&vyre_foundation::ir_inner::model::program::definition::Program], workgroup_size: [u32; 3]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::test_parity_oracles::xorshift32(state: &mut u32) -> u32
 pub fn vyre_libs::text::build_char_class_table() -> [u32; 256]

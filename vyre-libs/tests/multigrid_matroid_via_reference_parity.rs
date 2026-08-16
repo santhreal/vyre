@@ -25,16 +25,9 @@
 use vyre_libs::solvers::multigrid_matroid_solver::matroid_solve_step_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::test_parity_oracles::{fixed_mul, fixed_sdiv_by_positive as sdiv_by_positive};
-
-const FIXED_ONE: u32 = 1 << 16;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::{
+    fixed_mul, fixed_sdiv_by_positive as sdiv_by_positive, xorshift32 as xorshift, FIXED_ONE,
+};
 
 /// Exact u32 oracle for one weighted-Jacobi matroid solve step, mirroring the kernel bit-for-bit
 /// (including its SIGNED fixed multiply + SIGNED divide).

@@ -827,12 +827,12 @@ pub fn vyre_driver::materialize::MaterializedInstance::gather<'state>(&self, mod
 pub fn vyre_driver::materialize::MaterializedInstance::module_label(&self) -> &'static str
 pub fn vyre_driver::materialize::MaterializedInstance::modules(&self) -> &[Self::Module]
 pub fn vyre_driver::materialize::MaterializedInstance::submit_host_only(&self, bindings: &vyre_driver::BindingSet, feature: &str) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::MaterializerDevice::acquire(spec: vyre_driver::materialize::DeviceSpec<'_>) -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::MaterializerDevice::acquire_revocable(spec: vyre_driver::materialize::DeviceSpec<'_>, revoked: alloc::sync::Arc<core::sync::atomic::AtomicBool>) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::MaterializerDevice::admit_modules<M>(&self, backend_id: &str, artifact: &vyre_megakernel::schema::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, decode: impl core::ops::function::FnMut(vyre_driver::materialize::AdmittedModule) -> core::result::Result<M, vyre_driver::BackendError>) -> core::result::Result<alloc::vec::Vec<M>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::MaterializerDevice::identity(&self) -> &vyre_driver::DeviceIdentity
 pub fn vyre_driver::materialize::MaterializerDevice::instance(&self, artifact: &vyre_megakernel::schema::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, messages: vyre_driver::materialize::InstanceMessages) -> vyre_driver::materialize::InstanceCore
 pub fn vyre_driver::materialize::MaterializerDevice::is_healthy(&self) -> bool
-pub fn vyre_driver::materialize::MaterializerDevice::new(identity: vyre_driver::DeviceIdentity, format: vyre_megakernel::envelope::TargetPayloadFormat, profile: vyre_megakernel::envelope::TargetProfile) -> Self
-pub fn vyre_driver::materialize::MaterializerDevice::revocable(identity: vyre_driver::DeviceIdentity, format: vyre_megakernel::envelope::TargetPayloadFormat, profile: vyre_megakernel::envelope::TargetProfile, revoked: alloc::sync::Arc<core::sync::atomic::AtomicBool>) -> Self
 pub fn vyre_driver::materialize::MaterializerDevice::target<'a>(&'a self, backend_id: &'a str) -> vyre_driver::materialize::MaterializerTarget<'a>
 pub fn vyre_driver::materialize::MaterializerDevice::target_format(&self) -> &vyre_megakernel::envelope::TargetPayloadFormat
 pub fn vyre_driver::materialize::MaterializerDevice::target_profile(&self) -> &vyre_megakernel::envelope::TargetProfile
@@ -1343,6 +1343,7 @@ pub struct vyre_driver::launch_fusion::LaunchFusionScratch
 pub struct vyre_driver::launch_fusion::LaunchFusionStage
 pub struct vyre_driver::materialize::AdmittedModule
 pub struct vyre_driver::materialize::BoundState
+pub struct vyre_driver::materialize::DeviceSpec<'a>
 pub struct vyre_driver::materialize::InstanceCore
 pub struct vyre_driver::materialize::InstanceMessages
 pub struct vyre_driver::materialize::MaterializerDevice
@@ -2106,6 +2107,11 @@ pub vyre_driver::materialize::AdmittedModule::image: vyre_megakernel::target::Ta
 pub vyre_driver::materialize::AdmittedModule::program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::definition::Program>
 pub vyre_driver::materialize::BoundState::host: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>
 pub vyre_driver::materialize::BoundState::resident: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::Resource>
+pub vyre_driver::materialize::DeviceSpec::backend: &'static str
+pub vyre_driver::materialize::DeviceSpec::device: alloc::string::String
+pub vyre_driver::materialize::DeviceSpec::format_extension: &'a str
+pub vyre_driver::materialize::DeviceSpec::format_version: u16
+pub vyre_driver::materialize::DeviceSpec::profile: vyre_megakernel::envelope::TargetProfile
 pub vyre_driver::materialize::InstanceCore::artifact: vyre_megakernel::identity::Digest
 pub vyre_driver::materialize::InstanceCore::device: vyre_driver::DeviceIdentity
 pub vyre_driver::materialize::InstanceCore::messages: vyre_driver::materialize::InstanceMessages

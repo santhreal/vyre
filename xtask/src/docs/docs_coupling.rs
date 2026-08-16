@@ -38,6 +38,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gates::scan;
 use crate::output_arg::read_text_bounded;
 
 /// The manifest that declares every page and what it covers.
@@ -169,17 +170,7 @@ fn load_covering(root: &Path, report: &mut Report) -> Result<Vec<Covering>, Gate
         {
             continue;
         }
-        let covers: Vec<String> = row
-            .get("covers")
-            .and_then(toml::Value::as_array)
-            .map(|entries| {
-                entries
-                    .iter()
-                    .filter_map(toml::Value::as_str)
-                    .map(str::to_string)
-                    .collect()
-            })
-            .unwrap_or_default();
+        let covers = crate::toml_text::string_array(row.get("covers"));
         if covers.is_empty() {
             report.find(Finding::in_file(
                 MANIFEST,
@@ -306,34 +297,21 @@ fn coupling_findings(
     findings
 }
 
-/// Every path the repository tracks, relative to the checkout root.
+/// Every path the checkout holds, relative to its root, with the directories
+/// those paths imply.
+///
+/// [`scan::Tree`] is the one reader of what git would commit. A gate that
+/// spawns its own `git ls-files` measures a set nothing else agrees with, and
+/// the citation rule below reports against whatever that set happened to be.
 fn tracked_paths(root: &Path) -> Result<BTreeSet<String>, GateError> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["ls-files", "-z"])
-        .output()
-        .map_err(|error| {
-            GateError::new(
-                format!("could not run `git ls-files`: {error}"),
-                "run this gate inside a git work tree; the tracked set is the oracle",
-            )
-        })?;
-    if !output.status.success() {
-        return Err(GateError::new(
-            "`git ls-files` failed".to_string(),
-            "run this gate inside a git work tree; the tracked set is the oracle",
-        ));
-    }
-    let text = String::from_utf8_lossy(&output.stdout);
-    let mut paths: BTreeSet<String> = text
-        .split('\0')
-        .filter(|entry| !entry.is_empty())
-        .map(str::to_string)
+    let mut paths: BTreeSet<String> = scan::Tree::open(root)?
+        .paths()
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
         .collect();
     if paths.is_empty() {
         return Err(GateError::new(
-            "the repository tracks no file".to_string(),
+            "the checkout holds no file".to_string(),
             "run this gate inside a populated checkout",
         ));
     }
