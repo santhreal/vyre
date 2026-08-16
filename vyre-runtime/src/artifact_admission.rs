@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, RwLock};
 
 use thiserror::Error;
-use vyre_foundation::ir::Program;
+use vyre_foundation::ir::{GraphValueId, Program};
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileError, Diagnostic, FinalistEvaluator, ResourceAbiRecord,
     TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
@@ -178,6 +178,7 @@ impl ArtifactSession {
             &DeviceFinalists {
                 compiler: compiler.as_ref(),
                 materializer: materializer.as_ref(),
+                representative_inputs: request.representative_inputs(),
             },
         )?;
         let envelope = vyre_megakernel::attach_target(artifact, compiler.as_ref())?;
@@ -766,12 +767,13 @@ fn kernel_reads_initial_bytes(access: AbiAccess) -> bool {
 ///
 /// The compiler decides which plans are finalists; this supplies the device half:
 /// the registered target compiler, and one materialized launch per measurement
-/// whose duration is the device timestamp the backend reports. Inputs are zero
-/// filled because the measurement times the selected schedule, and a compiler
-/// has no caller data at compile time.
+/// whose duration is the device timestamp the backend reports. Measured
+/// compilation binds exact representative workload inputs for each host-input
+/// resource, preventing traps from aborting compile-time device timing.
 struct DeviceFinalists<'a> {
     compiler: &'a dyn TargetCompiler,
     materializer: &'a dyn ArtifactMaterializer,
+    representative_inputs: &'a BTreeMap<GraphValueId, Vec<u8>>,
 }
 
 impl FinalistEvaluator for DeviceFinalists<'_> {
@@ -797,7 +799,22 @@ impl FinalistEvaluator for DeviceFinalists<'_> {
                     resource.value.0
                 ))
             })?;
-            bindings.insert(resource.value, BoundResource::Host(vec![0; byte_count]));
+            let bytes = self
+                .representative_inputs
+                .get(&GraphValueId(resource.value.0))
+                .ok_or_else(|| {
+                    TargetCompileError::Unsupported(format!(
+                        "finalist measurement missing representative input for host-input resource `{}` (value {})",
+                        record.name, resource.value.0
+                    ))
+                })?;
+            if bytes.len() != byte_count {
+                return Err(TargetCompileError::Unsupported(format!(
+                    "finalist measurement representative input for resource `{}` (value {}) has {} bytes, but artifact requires {byte_count} bytes",
+                    record.name, resource.value.0, bytes.len()
+                )));
+            }
+            bindings.insert(resource.value, BoundResource::Host(bytes.clone()));
         }
         let completion = instance
             .submit(bindings)

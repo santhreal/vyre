@@ -54,6 +54,7 @@ pub const fn vyre_megakernel::ValidatedCompileRequest::device(&self) -> vyre_meg
 pub const fn vyre_megakernel::ValidatedCompileRequest::facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::ValidatedCompileRequest::graph(&self) -> &vyre_foundation::ir_inner::model::program_graph::ProgramGraph
 pub const fn vyre_megakernel::ValidatedCompileRequest::max_artifact_bytes(&self) -> u64
+pub const fn vyre_megakernel::ValidatedCompileRequest::representative_inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>
 pub const fn vyre_megakernel::ValidatedCompileRequest::search_budget(&self) -> vyre_megakernel::SearchBudget
 pub const fn vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str
 pub const vyre_megakernel::ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16
@@ -88,6 +89,7 @@ pub fn vyre_megakernel::ArtifactEnvelope::require_target_payload_index(&self, re
 pub fn vyre_megakernel::ArtifactEnvelope::target_payloads(&self) -> &[vyre_megakernel::TargetPayload]
 pub fn vyre_megakernel::ArtifactEnvelope::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::CompileRequest::validate(self) -> core::result::Result<vyre_megakernel::ValidatedCompileRequest, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::CompileRequest::with_representative_inputs(self, representative_inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>) -> Self
 pub fn vyre_megakernel::ExternalFacts::new(configuration_digest: vyre_megakernel::Digest, symbolic_bindings: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> Self
 pub fn vyre_megakernel::ExternalFacts::with_expected_launch_batch(self, expected_launch_batch: u32) -> Self
 pub fn vyre_megakernel::FinalistEvaluator::measure(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<u64, vyre_megakernel::TargetCompileError>
@@ -242,6 +244,7 @@ pub vyre_megakernel::ResourceRecord::first_stage: u32
 pub vyre_megakernel::ResourceRecord::last_stage: u32
 pub vyre_megakernel::ResourceRecord::lifetime: vyre_megakernel::ResourceLifetime
 pub vyre_megakernel::ResourceRecord::name: alloc::string::String
+pub vyre_megakernel::ResourceRecord::retained_predecessor: core::option::Option<vyre_megakernel::ArtifactValueId>
 pub vyre_megakernel::ResourceRecord::value: vyre_megakernel::ArtifactValueId
 pub vyre_megakernel::SearchBudget::max_candidates: u32
 pub vyre_megakernel::SearchBudget::max_cpu_work: u64

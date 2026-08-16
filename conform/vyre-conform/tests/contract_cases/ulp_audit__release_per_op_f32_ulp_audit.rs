@@ -38,19 +38,6 @@ fn release_per_op_f32_ulp_audit() {
                 ));
             continue;
         };
-
-        let tolerance = f32_ulp_tolerance(&program);
-        let production = match ProductionSession::compile(&program, backend) {
-            Ok(production) => production,
-            Err(error) => {
-                failures.push(format!(
-                    "{}: backend `{}` artifact compilation failed: {error}",
-                    entry.id, backend.id
-                ));
-                continue;
-            }
-        };
-
         let cases = test_inputs();
         let expected_cases = expected_output();
         if cases.is_empty() {
@@ -76,12 +63,39 @@ fn release_per_op_f32_ulp_audit() {
             ));
             continue;
         }
+        if cases.is_empty() {
+            failures.push(format!("{}: ULP audit has no fixture cases", entry.id));
+            continue;
+        }
         let input_plan = match WitnessInputPlan::for_program(&program) {
             Ok(plan) => plan,
             Err(error) => {
                 failures.push(format!(
                     "{}: ULP audit input planning failed: {error}",
                     entry.id
+                ));
+                continue;
+            }
+        };
+        let mut first_inputs: Vec<&[u8]> = Vec::with_capacity(program.buffers().len());
+        if let Err(error) = plan_witness_inputs_into(&cases[0], &input_plan, &mut first_inputs) {
+            failures.push(format!(
+                "{}: ULP audit first witness input planning failed: {error}",
+                entry.id
+            ));
+            continue;
+        }
+        let tolerance = f32_ulp_tolerance(&program);
+        let production = match ProductionSession::compile_with_representative_inputs(
+            &program,
+            &first_inputs,
+            backend,
+        ) {
+            Ok(production) => production,
+            Err(error) => {
+                failures.push(format!(
+                    "{}: backend `{}` artifact compilation failed: {error}",
+                    entry.id, backend.id
                 ));
                 continue;
             }

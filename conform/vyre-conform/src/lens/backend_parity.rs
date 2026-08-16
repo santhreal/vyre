@@ -49,7 +49,12 @@ pub fn run(entry: &SemanticOperation, backend: &'static BackendRegistration) -> 
             ),
         };
     }
-    let production = match ProductionSession::compile(&program, backend) {
+    let first_borrowed: Vec<&[u8]> = cases[0].iter().map(Vec::as_slice).collect();
+    let production = match ProductionSession::compile_with_representative_inputs(
+        &program,
+        &first_borrowed,
+        backend,
+    ) {
         Ok(session) => session,
         Err(error) => {
             return LensOutcome::Fail {

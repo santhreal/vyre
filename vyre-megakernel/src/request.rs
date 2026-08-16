@@ -105,6 +105,7 @@ pub struct CompileRequest {
     pub(crate) device: DeviceFacts,
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
+    representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
 }
 
 impl CompileRequest {
@@ -123,7 +124,18 @@ impl CompileRequest {
             device,
             search_budget,
             max_artifact_bytes,
+            representative_inputs: BTreeMap::new(),
         }
+    }
+
+    /// Supply representative workload input bytes for finalist measurement.
+    #[must_use]
+    pub fn with_representative_inputs(
+        mut self,
+        representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
+    ) -> Self {
+        self.representative_inputs = representative_inputs;
+        self
     }
 
     /// Validate topology, programs, device facts, external facts, and bounds.
@@ -180,9 +192,15 @@ impl CompileRequest {
         validate_device_support(&graph, self.device)?;
         validate_bindings(&graph, &self.facts.symbolic_bindings)?;
         validate_constant_identities(&graph, &self.facts.constant_identities)?;
+        validate_representative_inputs(
+            &graph,
+            &self.representative_inputs,
+            &self.facts.symbolic_bindings,
+        )?;
         Ok(ValidatedCompileRequest {
             graph,
             facts: self.facts,
+            representative_inputs: self.representative_inputs,
             device: self.device,
             search_budget: self.search_budget,
             max_artifact_bytes: self.max_artifact_bytes,
@@ -223,6 +241,7 @@ pub struct ValidatedCompileRequest {
     pub(crate) device: DeviceFacts,
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
+    representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
 }
 
 impl ValidatedCompileRequest {
@@ -236,6 +255,12 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn facts(&self) -> &ExternalFacts {
         &self.facts
+    }
+
+    /// Borrow the validated representative workload used for finalist measurement.
+    #[must_use]
+    pub const fn representative_inputs(&self) -> &BTreeMap<GraphValueId, Vec<u8>> {
+        &self.representative_inputs
     }
 
     /// Return the explicit bounded-search policy.
@@ -320,6 +345,46 @@ fn validate_constant_identities(
             "constant identity names a non-constant or missing graph value",
             "remove stale identities and key constant content by GraphValueId",
         ));
+    }
+    Ok(())
+}
+
+fn validate_representative_inputs(
+    graph: &ProgramGraph,
+    representative_inputs: &BTreeMap<GraphValueId, Vec<u8>>,
+    bindings: &BTreeMap<String, u64>,
+) -> Result<(), CompileError> {
+    let graph_inputs: BTreeMap<GraphValueId, &vyre_foundation::ir::ProgramGraphValue> = graph
+        .values()
+        .iter()
+        .filter(|value| value.producer.is_none())
+        .map(|value| (value.id, value))
+        .collect();
+
+    for (id, bytes) in representative_inputs {
+        let Some(value) = graph_inputs.get(id) else {
+            return Err(failure(
+                CompilerFailureKind::UnknownRepresentativeInput,
+                format!("request.representative_inputs.{}", id.0),
+                "representative input names an unknown or graph-produced value",
+                "remove stale representative inputs and key inputs by external GraphValueId",
+            ));
+        };
+
+        let expected_byte_count = crate::resource_records::value_byte_count(value, bindings)?;
+        let actual_byte_count = bytes.len() as u64;
+        if actual_byte_count != expected_byte_count {
+            return Err(failure(
+                CompilerFailureKind::RepresentativeInputLengthMismatch,
+                format!("request.representative_inputs.{}", id.0),
+                format!(
+                    "representative input for value `{}` has {} bytes, but graph declaration requires {expected_byte_count} bytes",
+                    value.name,
+                    bytes.len()
+                ),
+                "supply representative input bytes matching the static shape and element type",
+            ));
+        }
     }
     Ok(())
 }

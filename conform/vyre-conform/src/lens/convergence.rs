@@ -122,7 +122,8 @@ fn gpu_convergence(
 ) -> Result<Vec<Vec<u8>>, LoopError> {
     let mut state: Vec<Vec<u8>> = initial_inputs.to_vec();
     let mut prev_next: Vec<u8> = Vec::new();
-    let production = production_session(backend, program)?;
+    let borrowed_inputs: Vec<&[u8]> = initial_inputs.iter().map(Vec::as_slice).collect();
+    let production = production_session(backend, program, &borrowed_inputs)?;
     for _ in 0..max_iterations {
         let borrowed_state: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
         let outputs = production

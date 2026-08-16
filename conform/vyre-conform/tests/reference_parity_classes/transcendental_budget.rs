@@ -22,6 +22,7 @@
 //! `prove` compares the output and the per-op ULP audit measures the distance.
 
 use vyre_conform::production::ProductionSession;
+use vyre_conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
 use vyre_driver::BackendRegistration;
 use vyre_foundation::fp_parity::{f32_ulp_tolerance, BACKEND_TRANSCENDENTAL_ULP_BUDGET};
 use vyre_foundation::ir::Program;
@@ -57,7 +58,13 @@ fn every_transcendental_op_builds_a_payload_on_every_artifact_route_backend() {
         .iter()
         .filter_map(|operation| {
             let program = operation.program()?;
-            carries_the_transcendental_window(&program).then_some((operation.id, program))
+            if !carries_the_transcendental_window(&program) {
+                return None;
+            }
+            let test_inputs = operation.test_inputs?;
+            let cases = test_inputs();
+            let first_case = cases.into_iter().next()?;
+            Some((operation.id, program, first_case))
         })
         .collect::<Vec<_>>();
     assert!(
@@ -66,9 +73,25 @@ fn every_transcendental_op_builds_a_payload_on_every_artifact_route_backend() {
     );
 
     let mut refused = Vec::new();
-    for (op_id, program) in &programs {
+    for (op_id, program, first_case) in &programs {
+        let input_plan = match WitnessInputPlan::for_program(program) {
+            Ok(plan) => plan,
+            Err(error) => {
+                refused.push(format!("(plan, {op_id}): {error}"));
+                continue;
+            }
+        };
+        let mut backend_inputs = Vec::with_capacity(input_plan.source_count());
+        if let Err(error) = plan_witness_inputs_into(first_case, &input_plan, &mut backend_inputs) {
+            refused.push(format!("(witness, {op_id}): {error}"));
+            continue;
+        }
         for backend in &backends {
-            if let Err(error) = ProductionSession::compile(program, backend) {
+            if let Err(error) = ProductionSession::compile_with_representative_inputs(
+                program,
+                &backend_inputs,
+                backend,
+            ) {
                 refused.push(format!("({}, {op_id}): {error}", backend.id));
             }
         }

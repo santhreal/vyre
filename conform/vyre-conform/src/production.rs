@@ -8,8 +8,8 @@ use std::thread;
 use std::time::Duration;
 
 use thiserror::Error;
-use vyre_driver::{BackendRegistration, DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_driver::{BackendRegistration, BindingPlan, DispatchConfig, VyreBackend};
+use vyre_foundation::ir::{BufferDecl, Program, ProgramGraph};
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 use vyre_runtime::artifact_admission::{ArtifactSession, ArtifactSessionError};
 
@@ -157,26 +157,47 @@ pub struct ProductionSession {
 }
 
 impl ProductionSession {
-    /// Compile, target-compile, authenticate, and materialize one frontend program.
+    /// Compile a program with no host inputs.
     ///
     /// # Errors
     ///
-    /// Returns [`ProductionError`] when compilation, materialization or the
-    /// bounded compile step fails.
+    /// Returns [`ProductionError`] when the program needs representative host
+    /// inputs for measured compilation, or compilation and materialization fail.
     pub fn compile(
         program: &Program,
+        registration: &'static BackendRegistration,
+    ) -> Result<Self, ProductionError> {
+        Self::compile_with_representative_inputs(program, &[], registration)
+    }
+
+    /// Compile, target-compile, authenticate, and materialize one frontend program.
+    ///
+    /// `representative_inputs` uses Program host-input order and supplies the
+    /// exact workload bytes used for on-device finalist measurement.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProductionError`] when input planning, compilation,
+    /// materialization, or the bounded compile step fails.
+    pub fn compile_with_representative_inputs(
+        program: &Program,
+        representative_inputs: &[&[u8]],
         registration: &'static BackendRegistration,
     ) -> Result<Self, ProductionError> {
         let op_id = program.entry_op_id().unwrap_or(UNNAMED_OP_ID).to_string();
         let backend = registration.id;
         let owned_program = Arc::new(program.clone());
         let compiled_program = Arc::clone(&owned_program);
+        let owned_inputs = representative_inputs
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
         let session = run_bounded_step(
             "compilation",
             &op_id,
             backend,
             PRODUCTION_STEP_DEADLINE,
-            move || compile_artifact_session(&compiled_program, registration),
+            move || compile_artifact_session(&compiled_program, owned_inputs, registration),
         )?;
         let neutral = session.artifact()?;
         let payload = session.payload()?;
@@ -277,28 +298,117 @@ impl ProductionSession {
 
 /// Compile and materialize one program on `registration`, without a bound.
 ///
-/// [`ProductionSession::compile`] runs this under [`PRODUCTION_STEP_DEADLINE`].
+/// [`ProductionSession::compile_with_representative_inputs`] runs this under
+/// [`PRODUCTION_STEP_DEADLINE`].
 fn compile_artifact_session(
     program: &Program,
+    representative_inputs: Vec<Vec<u8>>,
     registration: &'static BackendRegistration,
 ) -> Result<ArtifactSession, ProductionError> {
-    let graph = ProgramGraph::from_program("main", program.clone())
+    let borrowed_inputs = representative_inputs
+        .iter()
+        .map(Vec::as_slice)
+        .collect::<Vec<_>>();
+    let binding_plan = BindingPlan::from_borrowed_inputs(program, &borrowed_inputs)
         .map_err(|error| ProductionError::Compile(error.to_string()))?;
+    let mut runtime_counts = BTreeMap::new();
+    for (&buffer_idx, bytes) in binding_plan
+        .input_indices
+        .iter()
+        .zip(&representative_inputs)
+    {
+        let buffer = &program.buffers()[buffer_idx];
+        if buffer.count() == 0 {
+            runtime_counts.insert(
+                buffer.name().to_string(),
+                runtime_element_count(buffer, bytes)?,
+            );
+        }
+    }
+    let graph =
+        ProgramGraph::from_program_with_runtime_counts("main", program.clone(), &runtime_counts)
+            .map_err(|error| ProductionError::Compile(error.to_string()))?;
+    let mut representative_map = BTreeMap::new();
+    for (bytes, &buffer_idx) in representative_inputs
+        .into_iter()
+        .zip(&binding_plan.input_indices)
+    {
+        let buffer = &program.buffers()[buffer_idx];
+        let graph_value = graph
+            .values()
+            .iter()
+            .find(|value| value.name == buffer.name())
+            .ok_or_else(|| {
+                ProductionError::Compile(format!(
+                    "graph value for input buffer `{}` not found",
+                    buffer.name()
+                ))
+            })?;
+        representative_map.insert(graph_value.id, bytes);
+    }
     let device = registration
         .acquire()
         .map_err(|error| ProductionError::Dispatch(error.to_string()))?
         .device_profile()
         .compile_facts();
+    let facts = ExternalFacts::new(Digest([0; 32]), BTreeMap::new());
     let request = CompileRequest::new(
         graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        facts,
         device,
         CONFORMANCE_SEARCH_BUDGET,
         MAX_ARTIFACT_BYTES,
     )
+    .with_representative_inputs(representative_map)
     .validate()
     .map_err(|error| ProductionError::Compile(error.to_string()))?;
     Ok(ArtifactSession::compile(registration, &request)?)
+}
+
+fn runtime_element_count(buffer: &BufferDecl, bytes: &[u8]) -> Result<u64, ProductionError> {
+    let element_bits = if let Some(bits) = buffer.element().bit_width() {
+        bits
+    } else if let Some(element_bytes) = buffer.element().size_bytes() {
+        element_bytes.checked_mul(8).ok_or_else(|| {
+            ProductionError::Compile(format!(
+                "runtime-sized input `{}` element width overflowed host addressing",
+                buffer.name()
+            ))
+        })?
+    } else {
+        return Err(ProductionError::Compile(format!(
+            "runtime-sized input `{}` has variable-width element type `{}`; supply a fixed-width element contract before artifact compilation",
+            buffer.name(),
+            buffer.element()
+        )));
+    };
+    if element_bits == 0 {
+        return Err(ProductionError::Compile(format!(
+            "runtime-sized input `{}` has zero-width element type `{}`",
+            buffer.name(),
+            buffer.element()
+        )));
+    }
+    let total_bits = bytes.len().checked_mul(8).ok_or_else(|| {
+        ProductionError::Compile(format!(
+            "runtime-sized input `{}` byte length overflowed bit-count arithmetic",
+            buffer.name()
+        ))
+    })?;
+    if total_bits % element_bits != 0 {
+        return Err(ProductionError::Compile(format!(
+            "runtime-sized input `{}` has {} bytes, which is not an exact number of `{}` elements",
+            buffer.name(),
+            bytes.len(),
+            buffer.element()
+        )));
+    }
+    u64::try_from(total_bits / element_bits).map_err(|error| {
+        ProductionError::Compile(format!(
+            "runtime-sized input `{}` element count exceeds u64: {error}",
+            buffer.name()
+        ))
+    })
 }
 
 /// How one program is executed on one backend.
@@ -330,23 +440,43 @@ pub enum ExecutionRoute {
 }
 
 impl ExecutionRoute {
+    /// Open the route `registration` declares it supports for an input-free program.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProductionError`] when an artifact route needs representative
+    /// host inputs, or compilation, materialization, or backend acquisition fails.
+    pub fn open(
+        program: &Program,
+        registration: &'static BackendRegistration,
+    ) -> Result<Self, ProductionError> {
+        Self::open_with_representative_inputs(program, &[], registration)
+    }
+
     /// Open the route `registration` declares it supports for `program`.
     ///
     /// The artifact route needs both a target compiler and a materializer, so it
     /// is taken only when the registration declares both. A registration missing
     /// either has no artifact to submit, and the backend's own dispatch entry
-    /// point is the route it does have.
+    /// point is the route it does have. Representative inputs are used only by
+    /// measured artifact compilation.
     ///
     /// # Errors
     ///
-    /// Returns [`ProductionError`] when compilation, materialization or backend
-    /// acquisition fails.
-    pub fn open(
+    /// Returns [`ProductionError`] when input planning, compilation,
+    /// materialization, or backend acquisition fails.
+    pub fn open_with_representative_inputs(
         program: &Program,
+        representative_inputs: &[&[u8]],
         registration: &'static BackendRegistration,
     ) -> Result<Self, ProductionError> {
         if registration.target_compiler.is_some() && registration.materializer.is_some() {
-            return ProductionSession::compile(program, registration).map(Self::Artifact);
+            return ProductionSession::compile_with_representative_inputs(
+                program,
+                representative_inputs,
+                registration,
+            )
+            .map(Self::Artifact);
         }
         let backend = registration
             .acquire()

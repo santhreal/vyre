@@ -276,6 +276,21 @@ fn request(max_artifact_bytes: u64) -> vyre_megakernel::ValidatedCompileRequest 
     request_with(facts(), budget(), max_artifact_bytes)
 }
 
+fn request_with_representative_inputs(
+    representative_inputs: BTreeMap<vyre_foundation::ir::GraphValueId, Vec<u8>>,
+) -> vyre_megakernel::ValidatedCompileRequest {
+    CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(representative_inputs)
+    .validate()
+    .expect("fixture request with representative inputs must validate")
+}
+
 /// WHY: artifact encoding must preserve typed graph identities across every stage.
 #[test]
 fn round_trip_preserves_typed_ids_abi_plan_and_digest() {
@@ -450,6 +465,20 @@ fn external_facts_and_search_budget_change_artifact_identity() {
     ))
     .unwrap();
     assert_ne!(baseline.digest(), searched.digest());
+
+    let with_representative =
+        BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![1u8; 68])]);
+    let representative_a = compile(&request_with_representative_inputs(
+        with_representative.clone(),
+    ))
+    .unwrap();
+    assert_ne!(baseline.digest(), representative_a.digest());
+
+    let with_different_bytes =
+        BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![2u8; 68])]);
+    let representative_b =
+        compile(&request_with_representative_inputs(with_different_bytes)).unwrap();
+    assert_ne!(representative_a.digest(), representative_b.digest());
 }
 
 /// WHY: missing external semantic facts must fail before artifact construction.
@@ -493,6 +522,111 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         diagnostic_path(&error),
         Some("request.facts.constant_identities.1")
     );
+}
+
+/// WHY: unknown representative input graph values and byte length mismatches fail validation.
+#[test]
+fn unknown_and_mismatched_representative_inputs_have_stable_diagnostics() {
+    let unknown_value = BTreeMap::from([(vyre_foundation::ir::GraphValueId(999), vec![0u8; 68])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(unknown_value)
+    .validate()
+    .err()
+    .expect("unknown representative value must fail validation");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC027_UNKNOWN_REPRESENTATIVE_INPUT"
+    );
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("request.representative_inputs.999")
+    );
+
+    let produced_value = BTreeMap::from([(vyre_foundation::ir::GraphValueId(3), vec![0u8; 68])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(produced_value)
+    .validate()
+    .err()
+    .expect("graph-produced representative input must fail validation");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC027_UNKNOWN_REPRESENTATIVE_INPUT"
+    );
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("request.representative_inputs.3")
+    );
+
+    let mismatched_length = BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![0u8; 12])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(mismatched_length)
+    .validate()
+    .err()
+    .expect("representative input length mismatch must fail validation");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC028_REPRESENTATIVE_INPUT_LENGTH_MISMATCH"
+    );
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("request.representative_inputs.0")
+    );
+}
+
+/// WHY: constant resources are caller-supplied host inputs during measurement,
+/// so their authenticated identity does not replace their representative bytes.
+#[test]
+fn constant_representative_inputs_are_accepted() {
+    let constant_input = BTreeMap::from([(vyre_foundation::ir::GraphValueId(1), vec![0xCD; 68])]);
+    let request = request_with_representative_inputs(constant_input);
+    assert_eq!(
+        request
+            .representative_inputs()
+            .get(&vyre_foundation::ir::GraphValueId(1))
+            .map(Vec::as_slice),
+        Some(&[0xCD; 68][..])
+    );
+}
+
+/// WHY: representative-input validation must propagate static-size failures
+/// instead of treating an unaddressable input as if no size contract existed.
+#[test]
+fn representative_input_size_overflow_fails_closed() {
+    let mut oversized_facts = facts();
+    oversized_facts
+        .symbolic_bindings
+        .insert("items".to_string(), u64::MAX);
+    let representative_inputs = BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![0u8])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        oversized_facts,
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(representative_inputs)
+    .validate()
+    .err()
+    .expect("unaddressable representative input size must fail validation");
+    assert_eq!(error.diagnostic.code.as_str(), "MKC011_RESOURCE_OVERFLOW");
 }
 
 /// WHY: an unbounded or disabled mandatory search dimension is not a valid request.
