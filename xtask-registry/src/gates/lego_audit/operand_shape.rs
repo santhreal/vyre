@@ -1,0 +1,143 @@
+//! Check 10: the operand-shape advisory.
+//!
+//! Two operations whose fingerprints agree over the bucket key and then score
+//! above the cosine threshold past it share an operand shape. The verdict is
+//! `unreviewed` rather than `duplicate`, because a shape cannot tell a shared
+//! algorithm from a shared idiom.
+
+#[allow(unused_imports)]
+use super::*;
+
+pub(super) const OPERAND_DUP_MIN_COSINE: f64 = 0.55;
+
+pub(super) fn check_10_operand_shape_duplicate(report: &mut Report, ops: &[OpInfo]) -> usize {
+    report.note(format!("[10/10] Operand-shape advisory (same fingerprint prefix, then cosine ≥ {OPERAND_DUP_MIN_COSINE:.2} past that prefix)"));
+    let pairs = operand_shape_duplicate_pairs(ops);
+    for (cos, a, b) in &pairs {
+        report.find(violation(format!("  ⚠ unreviewed shape pair: `{}` and `{}` share their entry shape and {:.0}% cosine over the rest of the body. Fix: extract the shared body to one builder and record both in `IMPLEMENTATION_FAMILY_ROWS`, or read the two algorithms side by side and record the pair in `REVIEWED_DISTINCT_OPERATIONS` with the reason the shape cannot express.",
+            a.id,
+            b.id,
+            cos * 100.0)));
+    }
+    if pairs.is_empty() {
+        report.note("  ✓ every shape pair is reviewed".to_string());
+    }
+    0
+}
+
+pub(super) fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)> {
+    let mut buckets: HashMap<Vec<u8>, Vec<&OpInfo>> = HashMap::new();
+    for op in ops {
+        if is_internal_phase_op(&op.id) {
+            continue;
+        }
+        if op.fingerprint.len() < PREFIX_LEN {
+            continue;
+        }
+        let prefix: Vec<u8> = op.fingerprint[..PREFIX_LEN].to_vec();
+        buckets.entry(prefix).or_default().push(op);
+    }
+    let mut pairs = Vec::new();
+    let mut reported: BTreeSet<(String, String)> = BTreeSet::new();
+    for ops_in_bucket in buckets.values() {
+        if ops_in_bucket.len() < 2 {
+            continue;
+        }
+        for (i, a) in ops_in_bucket.iter().enumerate() {
+            for b in ops_in_bucket.iter().skip(i + 1) {
+                if a.children.contains(&b.id) || b.children.contains(&a.id) {
+                    continue;
+                }
+                if same_implementation_family(&a.id, &b.id)
+                    || known_distinct_implementation_families(&a.id, &b.id)
+                    || reviewed_distinct_operations(&a.id, &b.id).is_some()
+                {
+                    continue;
+                }
+                if same_subdialect(&a.id, &b.id) {
+                    continue;
+                }
+                let cos = structural_similarity(
+                    fingerprint_past_prefix(&a.fingerprint),
+                    fingerprint_past_prefix(&b.fingerprint),
+                );
+                if cos < OPERAND_DUP_MIN_COSINE {
+                    continue;
+                }
+                let key = if a.id < b.id {
+                    (a.id.clone(), b.id.clone())
+                } else {
+                    (b.id.clone(), a.id.clone())
+                };
+                if !reported.insert(key) {
+                    continue;
+                }
+                pairs.push((cos, *a, *b));
+            }
+        }
+    }
+    pairs
+}
+
+#[cfg(test)]
+mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+    #[allow(unused_imports)]
+    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
+    #[allow(unused_imports)]
+    use std::path::PathBuf;
+
+    /// WHY: the bucket key fixes the first `PREFIX_LEN` bytes identical for
+    /// every pair in a bucket. Scoring those bytes again measures the key, so a
+    /// pair whose bodies diverge everywhere the key did not reach used to score
+    /// above the threshold on the strength of the agreement that bucketed it.
+    /// This test fails the moment the score reads the whole fingerprint again:
+    /// with a 16-byte shared entry and remainders that share no bigram, whole
+    /// fingerprint cosine is over 0.55 and remainder cosine is 0.
+    #[test]
+    fn a_pair_that_agrees_only_where_the_bucket_key_reaches_is_not_a_duplicate() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xB1, 0xB3, 0xB1, 0xB3, 0xB1, 0xB3, 0xB1, 0xB3]);
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::alpha::left", left),
+            op_with_fingerprint("vyre-primitives::beta::right", right),
+        ];
+        assert!(operand_shape_duplicate_pairs(&ops).is_empty());
+    }
+
+    /// WHY: a body that ends inside the key window leaves no evidence the key
+    /// did not already spend, so it cannot be judged either way. Two four-node
+    /// operations used to pair at 88% because the key had made them identical.
+    #[test]
+    fn a_body_that_ends_inside_the_bucket_key_is_not_compared() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::alpha::left", entry.clone()),
+            op_with_fingerprint("vyre-primitives::beta::right", entry),
+        ];
+        assert!(operand_shape_duplicate_pairs(&ops).is_empty());
+    }
+
+    /// WHY: the correction must keep the duplicates it was built to find. Two
+    /// bodies that agree past the key still pair.
+    #[test]
+    fn a_pair_that_agrees_past_the_bucket_key_is_still_a_duplicate() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA3]);
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::alpha::left", left),
+            op_with_fingerprint("vyre-primitives::beta::right", right),
+        ];
+        let pairs = operand_shape_duplicate_pairs(&ops);
+        assert_eq!(pairs.len(), 1, "the pair past the key must still be found");
+        assert!(pairs[0].0 >= OPERAND_DUP_MIN_COSINE);
+    }
+
+}
