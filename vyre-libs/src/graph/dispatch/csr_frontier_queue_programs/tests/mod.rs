@@ -17,13 +17,11 @@
 //!    bound plus row lookup, one edge-walk loop. Only the resident-buffer
 //!    additions may differ.
 
-use vyre_foundation::ir::Program;
 use crate::graph::csr_bidirectional::plan_csr_bidirectional_step;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::graph::csr_forward_or_changed::plan_csr_forward_or_changed_launch;
-use crate::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
-};
+use crate::graph::csr_queue_delta::{csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue};
+use vyre_foundation::ir::Program;
 use vyre_test_support::ir_regions::{canonicalize, edge_guard, region};
 
 use super::{
@@ -215,6 +213,13 @@ fn entry_points() -> Vec<(String, Program)> {
 /// Canonical wire fingerprints captured from the tree before the resident
 /// Program builders were rehomed onto one owner. Regenerate ONLY when a shape
 /// change is the intended product of the change under review.
+///
+/// Six rows moved once since capture. `frontier_word_counts_scan_pass_a` and
+/// `frontier_word_block_offsets_single_workgroup` swept a Hillis-Steele tree
+/// and now sweep a Blelloch tree, which writes O(n) elements over the sweep
+/// instead of writing every lane on every round. The three sites read those
+/// two builders, so `materialize.word_counts` and `materialize.block_offsets`
+/// moved at each of them.
 const PRE_MERGE_FINGERPRINTS: &str = "\
 resident.traverse.row_serial 031bfb635fdc53baa9c2e1d6717660a6d2b6cd19fb3865b0e865cc9da4415d4f
 resident.traverse.row_strided 755ee0d830c2649258f16e0456f7db6d841fcf3805da278a8878ae49860e1c73
@@ -224,8 +229,8 @@ resident.queue_len_init d20b4853102cc86ee9ca1964d574a1c4eda5a2ec039c9daf5a2a7531
 resident.high_len_init 19b456c3cd393f9af17cf41f36c7b4eec116bc1383f19bd1ee3b05d50cb77dc5
 resident.materialize.atomic_word_scan ec565e5dc14a33b005465512919707a6d002b884cd058694d49ab7b9c2db3c36
 resident.materialize.clear_frontier_out 484ba52ba09473538bb129174744cb0ff3d48936dbc56398080e20ecf1baeb60
-resident.materialize.word_counts 21986f355b59c3f422d7c0f16bd0b47f9cfb51fff66593983359a3665c20d85e
-resident.materialize.block_offsets ac230bff4afeccd7b2211f6d18437ee5c593c45e19df61a643e525061d86044a
+resident.materialize.word_counts 4c28e08f86a387602c10b425ad16091758c83c2e86e65504d77c98731b3e71fb
+resident.materialize.block_offsets 0ede6adc6fc5f61f48fb5fc5843972ef09279a56b6d4372ca8f65938c6f32a81
 resident.materialize.block_offsets_queue 7f232357c3612faaf33cdf0d83e3eaac43f194aa235e50e6f67e964640e305fb
 resident.materialize.word_prefix_queue ee629c1ec59d6c42c1c971d290efeaaea6528b0c690ef180685092f33d0ed854
 batch.traverse.row_serial 031bfb635fdc53baa9c2e1d6717660a6d2b6cd19fb3865b0e865cc9da4415d4f
@@ -236,8 +241,8 @@ batch.queue_len_init d20b4853102cc86ee9ca1964d574a1c4eda5a2ec039c9daf5a2a753162b
 batch.high_len_init 19b456c3cd393f9af17cf41f36c7b4eec116bc1383f19bd1ee3b05d50cb77dc5
 batch.materialize.atomic_word_scan ec565e5dc14a33b005465512919707a6d002b884cd058694d49ab7b9c2db3c36
 batch.materialize.clear_frontier_out 484ba52ba09473538bb129174744cb0ff3d48936dbc56398080e20ecf1baeb60
-batch.materialize.word_counts 21986f355b59c3f422d7c0f16bd0b47f9cfb51fff66593983359a3665c20d85e
-batch.materialize.block_offsets ac230bff4afeccd7b2211f6d18437ee5c593c45e19df61a643e525061d86044a
+batch.materialize.word_counts 4c28e08f86a387602c10b425ad16091758c83c2e86e65504d77c98731b3e71fb
+batch.materialize.block_offsets 0ede6adc6fc5f61f48fb5fc5843972ef09279a56b6d4372ca8f65938c6f32a81
 batch.materialize.block_offsets_queue 7f232357c3612faaf33cdf0d83e3eaac43f194aa235e50e6f67e964640e305fb
 batch.materialize.word_prefix_queue ee629c1ec59d6c42c1c971d290efeaaea6528b0c690ef180685092f33d0ed854
 adaptive.traverse.row_serial 031bfb635fdc53baa9c2e1d6717660a6d2b6cd19fb3865b0e865cc9da4415d4f
@@ -248,8 +253,8 @@ adaptive.queue_len_init d20b4853102cc86ee9ca1964d574a1c4eda5a2ec039c9daf5a2a7531
 adaptive.high_len_init 19b456c3cd393f9af17cf41f36c7b4eec116bc1383f19bd1ee3b05d50cb77dc5
 adaptive.materialize.atomic_word_scan 9dcdbe8023a52c01c47c8146a24bf249e2979bd2865a04554a68fafd3f54f970
 adaptive.materialize.clear_frontier_out 484ba52ba09473538bb129174744cb0ff3d48936dbc56398080e20ecf1baeb60
-adaptive.materialize.word_counts f6c8bcbe85c8f0fabccd3a71e86c252e2a0faf6ef6bc5ac351f8552fa6fc4321
-adaptive.materialize.block_offsets ac230bff4afeccd7b2211f6d18437ee5c593c45e19df61a643e525061d86044a
+adaptive.materialize.word_counts 2c8bafe1783238ff8cade8d3ee0ef2318a5493c67a871d5d647091ef0289674e
+adaptive.materialize.block_offsets 0ede6adc6fc5f61f48fb5fc5843972ef09279a56b6d4372ca8f65938c6f32a81
 adaptive.materialize.block_offsets_queue a2a832a27a4e02a874946d116516e77138b20e33709c131954f20eabd94c5a83
 adaptive.materialize.word_prefix_queue 11822924196f818a631343bce2aa2d355d68d5acdbde13640e1bf62336320dad
 csr_bidirectional ed1547453df29986ee2ee1b2e6946f19bda0fd685e94b361ee4306683a434130
@@ -278,12 +283,30 @@ fn resident_family_ir_fingerprints_are_byte_identical() {
             .into_iter()
             .map(|(name, program)| (name, hex32(program.fingerprint()))),
     );
-    assert_eq!(
-        actual,
-        PRE_MERGE_FINGERPRINTS.trim_end(),
+    if actual == PRE_MERGE_FINGERPRINTS.trim_end() {
+        return;
+    }
+    // Two thirty-row tables compared as one string report the whole blob and
+    // truncate it, which names no builder. Pair the rows so the failure says
+    // which Program moved.
+    let expected: Vec<&str> = PRE_MERGE_FINGERPRINTS.trim_end().lines().collect();
+    let observed: Vec<&str> = actual.lines().collect();
+    let mut moved = Vec::new();
+    for row in 0..expected.len().max(observed.len()) {
+        let (before, after) = (expected.get(row), observed.get(row));
+        if before != after {
+            moved.push(format!(
+                "  row {row}: was {}, is {}",
+                before.copied().unwrap_or("<absent>"),
+                after.copied().unwrap_or("<absent>")
+            ));
+        }
+    }
+    panic!(
         "Fix: a resident CSR Program changed its generated IR. Dedup must be a pure rehome; if a \
          shape change is intended, record why in the commit body and replace \
-         PRE_MERGE_FINGERPRINTS with the left-hand table above."
+         PRE_MERGE_FINGERPRINTS with the observed table.\n{}\n\nObserved table:\n{actual}",
+        moved.join("\n")
     );
 }
 
