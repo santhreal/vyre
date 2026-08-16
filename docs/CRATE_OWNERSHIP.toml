@@ -1490,7 +1490,7 @@ seam = "lowering"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["bitset", "cpu-parity", "graph", "hardware"]
+features = ["bitset", "cpu-parity", "graph", "hardware", "predicate"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

@@ -214,7 +214,7 @@ graph TD
 | `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-bench` | `vyre-libs` | product operation builders | `nn-linear-4bit` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-bench` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `cpu-parity`, `graph`, `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `cpu-parity`, `graph`, `hardware`, `predicate` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `vyre-bench` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `vyre-bench` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |

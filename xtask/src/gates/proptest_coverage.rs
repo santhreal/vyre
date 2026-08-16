@@ -15,8 +15,11 @@
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
-/// Measured floor. 181 tracked files on 2026-08-12.
-const FLOOR: usize = 181;
+/// Measured floor. 176 tracked files on 2026-08-15, down from 181 on
+/// 2026-08-12: five property-test files left with the C frontend they tested,
+/// and the invariants they generated inputs for no longer have a subject in
+/// this workspace. Every other lowering is a deleted test and is refused.
+const FLOOR: usize = 176;
 
 /// Stretch target tracked for the 0.7 release.
 const TARGET: usize = 200;
