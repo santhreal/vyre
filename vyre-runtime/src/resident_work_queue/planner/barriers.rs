@@ -6,11 +6,10 @@
 //! neighboring arms have known buffer effects and no same-buffer read/write or
 //! write/write dependency crosses the barrier.
 
-use std::sync::Arc;
-
 use smallvec::SmallVec;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use vyre_foundation::visit::any_descendant;
+use vyre_foundation::transform::rewrite_walk::{rewrite_body, NodeRewrite};
+use vyre_foundation::visit::{any_descendant, child_bodies};
 
 /// Report returned by [`elide_value_flow_barriers`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -35,14 +34,9 @@ pub struct BarrierElisionReport {
 #[must_use]
 pub fn elide_value_flow_barriers(program: Program) -> (Program, BarrierElisionReport) {
     let mut report = BarrierElisionReport::default();
-    if !nodes_have_barrier(program.entry()) {
-        return (program, report);
-    }
-    let entry = rewrite_nodes(program.entry().to_vec(), &mut report);
-    let rewritten = if report.removed == 0 {
-        program
-    } else {
-        program.with_rewritten_entry(entry)
+    let rewritten = match elided_scope(program.entry(), &mut report) {
+        Some(entry) => program.with_rewritten_entry(entry),
+        None => program,
     };
     (rewritten, report)
 }
@@ -67,65 +61,51 @@ fn node_has_barrier(node: &Node) -> bool {
     })
 }
 
-fn rewrite_nodes(nodes: Vec<Node>, report: &mut BarrierElisionReport) -> Vec<Node> {
-    if !nodes_have_barrier(&nodes) {
-        return nodes;
-    }
-    let mut rewritten = Vec::with_capacity(nodes.len());
-    for node in nodes {
-        rewritten.push(rewrite_node(node, report));
-    }
-    elide_barrier_siblings(rewritten, report)
+/// The barrier-elision policy for one scope, driven by the rewrite owner.
+///
+/// It answers only the body positions. Operands carry no barrier, so leaving
+/// them alone is what keeps an untouched subtree from being rebuilt.
+struct ElideBarriers<'a> {
+    report: &'a mut BarrierElisionReport,
 }
 
-fn rewrite_node(node: Node, report: &mut BarrierElisionReport) -> Node {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond,
-            then: rewrite_nodes(then, report),
-            otherwise: rewrite_nodes(otherwise, report),
-        },
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::Loop {
-            var,
-            from,
-            to,
-            body: rewrite_nodes(body, report),
-        },
-        Node::Block(body) => Node::Block(rewrite_nodes(body, report)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            if !nodes_have_barrier(&body) {
-                Node::Region {
-                    generator,
-                    source_region,
-                    body,
-                }
-            } else {
-                Node::Region {
-                    generator,
-                    source_region,
-                    body: Arc::new(rewrite_nodes(arc_vec_into_vec(body), report)),
-                }
-            }
-        }
-        // Every variant that nests node bodies is rewritten above; a variant
-        // that reaches here owns no body to rewrite, so returning it untouched
-        // is the complete answer. `elides_a_barrier_inside_every_body_slot`
-        // fails if a nesting variant ever lands in this arm.
-        other => other,
+impl NodeRewrite for ElideBarriers<'_> {
+    fn operand(&mut self, _expr: &Expr) -> Option<Expr> {
+        None
     }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        elided_scope(body, self.report)
+    }
+}
+
+/// Elide inside every nested body of `nodes`, then between its own siblings.
+///
+/// Returns `None` when no barrier was removed anywhere under `nodes`, so an
+/// unchanged scope is never rebuilt and the caller keeps the original slice.
+///
+/// Which positions hold nested bodies is `rewrite_walk::rewrite_node`'s
+/// answer, not this file's. That match is exhaustive with no catch-all, so a
+/// `Node` variant added with a body fails to compile there and is descended
+/// into here on the commit that declares it. The hand-written match this
+/// replaced ended in `other => other`, which classified every variant it had
+/// not been told about as childless: a barrier nested in a new variant would
+/// have stayed unexamined, and an unexamined barrier that should have been
+/// kept is a race.
+fn elided_scope(nodes: &[Node], report: &mut BarrierElisionReport) -> Option<Vec<Node>> {
+    if !nodes_have_barrier(nodes) {
+        return None;
+    }
+    let before = report.removed;
+    let descended = {
+        let mut policy = ElideBarriers { report };
+        rewrite_body(nodes, &mut policy)
+    };
+    let elided = elide_barrier_siblings(
+        descended.unwrap_or_else(|| nodes.to_vec()),
+        report,
+    );
+    (report.removed != before).then_some(elided)
 }
 
 fn elide_barrier_siblings(nodes: Vec<Node>, report: &mut BarrierElisionReport) -> Vec<Node> {
@@ -146,15 +126,6 @@ fn elide_barrier_siblings(nodes: Vec<Node>, report: &mut BarrierElisionReport) -
         out.push(node);
     }
     out
-}
-
-/// Take ownership of an `Arc<Vec<T>>`'s contents without the shared `Arc`: the
-/// sole owner is moved out, otherwise the bounded inner `Vec` is cloned.
-fn arc_vec_into_vec<T: Clone>(body: Arc<Vec<T>>) -> Vec<T> {
-    match Arc::try_unwrap(body) {
-        Ok(nodes) => nodes,
-        Err(shared) => shared.as_ref().clone(),
-    }
 }
 
 fn is_runtime_arm(node: &Node) -> bool {
@@ -214,6 +185,19 @@ fn intersects(left: &[&Ident], right: &[&Ident]) -> bool {
     }
 }
 
+/// Buffer effects of `node` and everything under it.
+///
+/// The match answers one question only: which buffers this node itself touches
+/// through its own operands. Descent is `visit::child_bodies`, the exhaustive
+/// owner of which variants hold bodies, so a `Node` variant added with a body
+/// is walked here on the commit that declares it.
+///
+/// The catch-all is therefore a decision about effects and not a claim about
+/// structure: an unenumerated variant may read or write any buffer, so it marks
+/// the arm unknown and `arms_are_independent` refuses to elide anything across
+/// it. A future variant added without touching this file costs a missed
+/// elision, never an elided barrier that was load-bearing. The collectives
+/// reach it today for that reason.
 fn collect_node_access<'a>(node: &'a Node, out: &mut AccessSet<'a>) {
     match node {
         Node::Let { value, .. } | Node::Assign { value, .. } => collect_expr_access(value, out),
@@ -226,19 +210,10 @@ fn collect_node_access<'a>(node: &'a Node, out: &mut AccessSet<'a>) {
             collect_expr_access(index, out);
             collect_expr_access(value, out);
         }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            collect_expr_access(cond, out);
-            collect_nodes_access(then, out);
-            collect_nodes_access(otherwise, out);
-        }
-        Node::Loop { from, to, body, .. } => {
+        Node::If { cond, .. } => collect_expr_access(cond, out),
+        Node::Loop { from, to, .. } => {
             collect_expr_access(from, out);
             collect_expr_access(to, out);
-            collect_nodes_access(body, out);
         }
         Node::IndirectDispatch { count_buffer, .. } => out.read(count_buffer),
         Node::AsyncLoad {
@@ -247,13 +222,8 @@ fn collect_node_access<'a>(node: &'a Node, out: &mut AccessSet<'a>) {
             offset,
             size,
             ..
-        } => {
-            out.read(source);
-            out.write(destination);
-            collect_expr_access(offset, out);
-            collect_expr_access(size, out);
         }
-        Node::AsyncStore {
+        | Node::AsyncStore {
             source,
             destination,
             offset,
@@ -265,21 +235,21 @@ fn collect_node_access<'a>(node: &'a Node, out: &mut AccessSet<'a>) {
             collect_expr_access(offset, out);
             collect_expr_access(size, out);
         }
-        Node::AsyncWait { .. } | Node::Return | Node::Barrier { .. } | Node::Resume { .. } => {}
+        Node::AsyncWait { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::Resume { .. }
+        | Node::Block(_)
+        | Node::Region { .. } => {}
         Node::Trap { address, .. } => {
             collect_expr_access(address, out);
             out.unknown = true;
         }
-        Node::Block(body) => collect_nodes_access(body, out),
-        Node::Region { body, .. } => collect_nodes_access(body, out),
         Node::Opaque(_) => out.unknown = true,
-        // Fail closed. An unenumerated variant may read or write any buffer, so
-        // it marks the arm unknown and `arms_are_independent` then refuses to
-        // elide anything across it. This is the one catch-all here that must
-        // stay: a future variant added without touching this file costs a
-        // missed elision, never an elided barrier that was load-bearing. The
-        // collectives above the `Trap` arm reach it today for that reason.
         _ => out.unknown = true,
+    }
+    for body in child_bodies(node) {
+        collect_nodes_access(body, out);
     }
 }
 
@@ -358,6 +328,8 @@ fn collect_expr_access<'a>(expr: &'a Expr, out: &mut AccessSet<'a>) {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
 
     use super::*;

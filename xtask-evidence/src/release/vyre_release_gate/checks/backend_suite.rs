@@ -27,7 +27,7 @@ use crate::bench::benchmark_evidence_semantics::{
 /// Any other recorded blocker - a failed case, a wrong answer, a missing metric
 /// - is a verdict nothing here recomputes, and is replayed unchanged.
 fn is_frozen_freshness_verdict(blocker: &str) -> bool {
-    blocker.contains("does not match current workspace source")
+    xtask::source_provenance::is_stale_source_verdict(blocker)
 }
 
 pub(crate) fn check_backend_suite_report(
