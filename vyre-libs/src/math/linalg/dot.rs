@@ -15,7 +15,6 @@ use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 const OP_ID: &str = "vyre-libs::math::dot";
 #[cfg(test)]
 const DOT_REFERENCE_OP_ID: &str = "vyre-libs::math::dot_reference";
-const DOT_TILE: u32 = 256;
 
 /// Typed Cat-A builder for [`dot`].
 #[derive(Debug, Clone)]
@@ -87,7 +86,7 @@ impl Dot {
         let lhs = self.lhs.name_str();
         let rhs = self.rhs.name_str();
         let out = self.out.name_str();
-        let workgroup = self.options.workgroup_size.unwrap_or([DOT_TILE, 1, 1]);
+        let workgroup = self.options.workgroup_size.unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1);
         let region = wrap_region(
             self.options.region_generator.unwrap_or(OP_ID),
@@ -301,7 +300,7 @@ mod tests {
 
     #[test]
     fn dot_large_n_tile_boundary_matches_reference() {
-        let n = 1025_u32; // Just above DOT_TILE=256, needs multiple tiles
+        let n = 1025_u32; // Just above 256, needs multiple tiles
         let lhs: Vec<u32> = (0..n).map(|i| i.wrapping_add(1)).collect();
         let rhs: Vec<u32> = (0..n).map(|i| i.wrapping_add(2)).collect();
         let program = dot("lhs", "rhs", "out", n).expect("Fix: dot n=1025 must build");

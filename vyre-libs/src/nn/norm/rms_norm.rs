@@ -14,7 +14,6 @@ use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::nn::rms_norm";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::rms_norm_reference";
-const RMS_TILE: u32 = 256;
 
 /// Build a Program that applies RMSNorm element-wise.
 #[must_use]
@@ -43,7 +42,7 @@ fn invalid_rms_program(op_id: &'static str, output: &str) -> Program {
 }
 
 fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Program {
-    let tile = RMS_TILE.min(n).max(1);
+    let tile = 256_u32.min(n).max(1);
     let chunks = n.div_ceil(tile);
     let sum_of_squares = ReducePhase {
         accumulate: strided_accumulate_child(

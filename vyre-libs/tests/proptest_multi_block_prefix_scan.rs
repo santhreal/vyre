@@ -6,9 +6,9 @@ mod ir_shape;
 use ir_shape::{contains_invocation_id, contains_loop, grid_sync_barrier_count};
 
 use proptest::prelude::*;
-use vyre_libs::reduce::multi_block_prefix_scan::{
-    cpu_ref, multi_block_prefix_scan_sum_u32, BLOCK_LANES,
-};
+use vyre_libs::reduce::multi_block_prefix_scan::{cpu_ref, multi_block_prefix_scan_sum_u32};
+
+const BLOCK_LANES: u32 = 1024;
 
 fn independent_wrapping_prefix(values: &[u32]) -> Vec<u32> {
     let mut acc = 0_u32;

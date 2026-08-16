@@ -10,7 +10,7 @@ use vyre_driver::DispatchConfig;
 use vyre_libs::math::prefix_scan::{cpu_ref as prefix_cpu, prefix_scan, ScanKind};
 use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_libs::math::stream_compact::{cpu_ref as compact_cpu, stream_compact};
-use vyre_libs::reduce::multi_block_prefix_scan::BLOCK_LANES;
+const BLOCK_LANES: u32 = 1024;
 
 fn run_prefix_scan(input: &[u32], kind: ScanKind) -> Vec<u32> {
     let n = input.len() as u32;

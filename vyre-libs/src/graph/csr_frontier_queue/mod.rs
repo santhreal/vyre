@@ -80,16 +80,6 @@ pub const FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID: &str =
 /// Canonical op id for packed-frontier scatter with precomputed block offsets.
 pub const FRONTIER_WORD_BLOCK_OFFSETS_TO_QUEUE_PARALLEL_OP_ID: &str =
     "vyre-primitives::graph::frontier_word_block_offsets_to_queue_parallel";
-/// Workgroup lanes used by the single-workgroup [`frontier_to_queue`] scan.
-///
-/// This is ONE constant on purpose. It drives the declared workgroup size, the
-/// stride of the cooperative scan, and the lane gate that confines the scan to
-/// the first workgroup. Splitting it into three literals is what lets a fixed
-/// workgroup declaration drift away from a lane gate, which is the shape that
-/// produces silent duplicate coverage.
-pub const FRONTIER_TO_QUEUE_WORKGROUP_LANES: u32 = 256;
-/// Workgroup lanes used by the deterministic packed-frontier scan path.
-pub const FRONTIER_WORD_SCAN_BLOCK_LANES: u32 = 1024;
 /// Canonical op id for device-side queue length initialization.
 pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-primitives::graph::frontier_queue_len_init";
 /// Canonical op id for queue-driven CSR expansion.
