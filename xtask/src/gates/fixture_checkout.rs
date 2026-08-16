@@ -31,8 +31,7 @@ pub fn checkout(files: &[(&str, &str)]) -> (TempDir, PathBuf) {
             fs::create_dir_all(parent)
                 .unwrap_or_else(|error| panic!("the fixture directory for {path}: {error}"));
         }
-        fs::write(&target, text)
-            .unwrap_or_else(|error| panic!("the fixture file {path}: {error}"));
+        fs::write(&target, text).unwrap_or_else(|error| panic!("the fixture file {path}: {error}"));
     }
     let status = Command::new("git")
         .args(["init", "-q", "."])

@@ -4,7 +4,6 @@
 //! cannot tell an operation that reuses a primitive from one that copied its
 //! body.
 
-#[allow(unused_imports)]
 use super::*;
 
 /// Enforce only the canonical primitive adoption and exception contract.
@@ -18,17 +17,7 @@ pub(super) fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpI
     for op in ops {
         // Tier 2 intrinsics and Tier 2.5 primitives are leaves unless
         // their own bodies choose to compose deeper primitives.
-        if matches!(op.tier, Tier::T2 | Tier::T2_5) {
-            continue;
-        }
-        if is_internal_phase_op(&op.id) {
-            continue;
-        }
-        if is_declared_tier3_leaf(&op.id) {
-            continue;
-        }
-        // Tiny ops are trivially allowed to be flat.
-        if op.own_nodes + op.composed_nodes < 20 {
+        if matches!(op.tier, Tier::T2 | Tier::T2_5) || !under_composition_rules(op) {
             continue;
         }
         if op.children.is_empty() {

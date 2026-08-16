@@ -4,7 +4,6 @@
 //! something renamed or deleted stops exempting anything and nothing says so,
 //! so the row reads as coverage of a subject nobody checks.
 
-#[allow(unused_imports)]
 use super::*;
 
 /// Id fragments that mark an op as one phase of a larger composition rather than
@@ -124,12 +123,7 @@ pub(super) fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
-    use std::path::PathBuf;
 
     /// This regression test keeps reviewed pure-IR leaves explicit instead of exempting every flat Tier-3 operation.
     #[test]

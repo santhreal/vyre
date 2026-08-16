@@ -4,7 +4,6 @@
 //! that inlines work a registered child used to carry lowers the fraction
 //! without changing any other measurement, so the fraction is pinned.
 
-#[allow(unused_imports)]
 use super::*;
 
 pub(super) const COMPOSITION_REGRESSION_EPSILON: f64 = 1.0e-9;
@@ -152,12 +151,7 @@ pub(super) fn previous_composition_baseline(
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
-    use std::path::PathBuf;
 
     /// This adversarial parser test rejects malformed and out-of-range baseline rows while preserving exact valid fractions.
     #[test]

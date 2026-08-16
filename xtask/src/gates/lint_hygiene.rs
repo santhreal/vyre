@@ -211,7 +211,13 @@ impl Gate for UnsafeJustification {
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         const COP_OUTS: &[&str] = &[
-            "todo", "fixme", "unclear", "investigate", "unknown", "tbd", "???",
+            "todo",
+            "fixme",
+            "unclear",
+            "investigate",
+            "unknown",
+            "tbd",
+            "???",
         ];
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();

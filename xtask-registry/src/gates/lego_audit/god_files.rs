@@ -8,7 +8,6 @@
 //! advisory into a finding would either duplicate that gate at a second
 //! threshold or fail every file over 500 lines, which is most of the tree.
 
-#[allow(unused_imports)]
 use super::*;
 
 /// Line count at which a source file is flagged for a split-by-responsibility

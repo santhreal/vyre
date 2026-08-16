@@ -4,7 +4,6 @@
 //! written speculatively. The admission registry records the exceptions with an
 //! owner and a reason, and this check holds every family to one or the other.
 
-#[allow(unused_imports)]
 use super::*;
 
 pub(super) const PRIMITIVE_ADMISSION_PATH: &str = "docs/optimization/PRIMITIVE_ADMISSION.toml";
@@ -175,12 +174,8 @@ pub(super) fn check_3_primitive_coverage(report: &mut Report, ops: &[OpInfo]) ->
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
-    use std::path::PathBuf;
+    use crate::gates::lego_audit::test_ops::op;
 
     /// This test prevents generated consumer_a/consumer_b aliases from satisfying the two-caller primitive promotion rule.
     #[test]

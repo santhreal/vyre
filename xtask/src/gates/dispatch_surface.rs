@@ -449,6 +449,10 @@ fn overwrite_findings(path: &Path, declaration: &Declaration) -> Vec<Finding> {
 }
 
 /// Whether `code` assigns a whole new value through `slot`.
+///
+/// Every dereference in `code` is a candidate, and one qualifies when the name
+/// after it is exactly `slot` and what follows is a single `=`. A longer name
+/// starting with `slot` is a different slot, and `==` is a comparison.
 fn assigns_through(code: &str, slot: &str) -> bool {
     code.match_indices('*').any(|(position, _)| {
         let Some(after) = code[position + 1..].trim_start().strip_prefix(slot) else {

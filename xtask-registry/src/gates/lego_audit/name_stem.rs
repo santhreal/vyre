@@ -5,7 +5,6 @@
 //! merged, or recorded in [`KNOWN_STEM_FAMILIES`] with the reason a rename is
 //! not available.
 
-#[allow(unused_imports)]
 use super::*;
 
 pub(super) const STEM_COLLISION_MIN: usize = 4;
@@ -126,12 +125,7 @@ pub(super) fn leaf_stem(leaf: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::gates::lego_audit::test_ops::{op, op_with_fingerprint};
-    #[allow(unused_imports)]
-    use std::path::PathBuf;
 
     /// This contract test keeps discoverability stems stable across multi-suffix operation names.
     #[test]
