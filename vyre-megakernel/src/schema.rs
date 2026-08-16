@@ -16,7 +16,7 @@ pub const ARTIFACT_SCHEMA_VERSION: u16 = 5;
 /// Canonical executable-node payload.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NodeRecord {
-    /// Graph node identity preserved from [`ProgramGraph`].
+    /// Graph node identity preserved from [`ProgramGraph`](vyre_foundation::ir::ProgramGraph).
     pub id: ArtifactNodeId,
     /// Stable diagnostic name; graph ID assignment never depends on lexical order.
     pub name: String,
