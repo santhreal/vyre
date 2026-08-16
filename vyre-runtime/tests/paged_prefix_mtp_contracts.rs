@@ -7,10 +7,9 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_driver::peer_transfer::{
-    PeerAccessCapability, PeerLinkKind, PeerTopology,
+use vyre_driver::{
+    PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource,
 };
-use vyre_driver::{ResidentOwner, Resource};
 use vyre_foundation::ir::DataType;
 use vyre_runtime::expert_scheduling::{
     ExpertWorkItem, IntraDeviceExpertQueueLimits, IntraDeviceExpertScheduler,
