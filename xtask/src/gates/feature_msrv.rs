@@ -16,14 +16,16 @@
 //!
 //!   - Default: the declaration is readable, names an installable version, and
 //!     yields a non-empty axis. No cargo, so the sweep runs it on every change.
-//!   - `--sweep`: compiles every selection through `rustup run <version> cargo
-//!     check --locked`, and reports each selection that fails. The toolchain is
-//!     named rather than defaulted, so a host whose default compiler is newer
-//!     cannot report a pass for a version this workspace never built on.
+//!   - `--sweep`: compiles every selection through the workspace cargo with a
+//!     leading `+<version>`, and reports each selection that fails. The
+//!     toolchain is named rather than defaulted, so a host whose default
+//!     compiler is newer cannot report a pass for a version this workspace
+//!     never built on.
 
 use std::path::Path;
 use std::process::Command;
 
+use crate::cargo_runner;
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::feature_isolation::{derive_pairs, Pair};
 use crate::gates::scan::Tree;
@@ -173,21 +175,28 @@ fn installed(version: &str) -> Result<(), GateError> {
 }
 
 /// Compile one selection on the named toolchain, reporting the failure.
+///
+/// The compile goes through the workspace cargo with a leading `+<version>`
+/// rather than through `rustup run`, because the wrapper is what decides which
+/// target directory a checkout builds into. A bare cargo compiled this
+/// workspace into a directory another checkout owns, where the same member path
+/// hashes to the same unit and one checkout's artifact answers another's
+/// request. `installed` above still holds the toolchain to a named version.
 fn compile_failure(
     root: &Path,
     version: &str,
     pair: &Pair,
 ) -> Result<Option<Finding>, GateError> {
-    let output = Command::new("rustup")
-        .current_dir(root)
-        .args(["run", version, "cargo", "check", "--locked", "-p"])
+    let output = cargo_runner::command(root)
+        .arg(format!("+{version}"))
+        .args(["check", "--locked", "-p"])
         .arg(&pair.member)
         .args(pair.cargo_flags())
         .output()
         .map_err(|error| {
             GateError::new(
                 format!(
-                    "cannot run `rustup run {version} cargo check` for `{}`: {error}",
+                    "cannot run `cargo +{version} check` for `{}`: {error}",
                     pair.label()
                 ),
                 "install the advertised toolchain so the sweep can compile against it",

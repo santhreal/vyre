@@ -24,15 +24,33 @@ fn write(path: &Path, text: &str) {
 }
 
 fn workspace(root: &Path, members: &[&str]) {
-    let named = members
+    let named: Vec<(&str, &str)> = members
         .iter()
-        .map(|member| format!("\"{member}\""))
+        .map(|member| {
+            let leaf = member.rsplit('/').next().unwrap_or(member);
+            (*member, leaf)
+        })
+        .collect();
+    workspace_named(root, &named);
+}
+
+/// A workspace whose members declare a package name of their own.
+fn workspace_named(root: &Path, members: &[(&str, &str)]) {
+    let listed = members
+        .iter()
+        .map(|(path, _)| format!("\"{path}\""))
         .collect::<Vec<_>>()
         .join(", ");
     write(
         &root.join("Cargo.toml"),
-        &format!("[workspace]\nmembers = [{named}]\n"),
+        &format!("[workspace]\nmembers = [{listed}]\n"),
     );
+    for (path, name) in members {
+        write(
+            &root.join(path).join("Cargo.toml"),
+            &format!("[package]\nname = \"{name}\"\nversion = \"0.1.0\"\n"),
+        );
+    }
 }
 
 #[test]
@@ -228,7 +246,96 @@ fn a_member_roster_that_reaches_no_crate_root_is_an_error() {
     assert!(
         errors
             .iter()
-            .any(|error| error.contains("names 2 member(s) and none carries a `src/lib.rs`")),
+            .any(|error| error.contains("names 2 member(s) and none carries a readable")),
+        "{errors:?}"
+    );
+}
+
+/// A placement names the package, not the directory it is built from.
+///
+/// WHY: the reader carried the workspace member path, so a crate under a
+/// grouping directory was reported as `conform/vyre-conform`, which names no
+/// package a reader can pass to cargo and no crate the registry knows.
+#[test]
+fn a_placement_names_the_package_not_the_member_directory() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let root = dir.path();
+    workspace_named(root, &[("conform/vyre-conform", "vyre-conform")]);
+    write(
+        &root.join("conform/vyre-conform/src/lib.rs"),
+        "inventory::submit! {\n    OperationRegistration::library(\"vyre-conform::probe\", builder)\n}\n",
+    );
+
+    let ids = BTreeSet::from(["vyre-conform::probe"]);
+    let mut errors = Vec::new();
+    let placements = read(root, &ids, &mut errors);
+
+    assert_eq!(errors, Vec::<String>::new());
+    assert_eq!(
+        placements.get("vyre-conform::probe"),
+        Some(&Placement {
+            crate_name: "vyre-conform".to_string(),
+            features: Vec::new(),
+        })
+    );
+    assert_eq!(
+        placements.directory("vyre-conform"),
+        Some("conform/vyre-conform")
+    );
+}
+
+/// A member manifest without a package name is an error naming the file.
+#[test]
+fn a_member_without_a_package_name_is_an_error_naming_the_manifest() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let root = dir.path();
+    write(
+        &root.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"libs\"]\n",
+    );
+    write(&root.join("libs/Cargo.toml"), "[package]\nversion = \"0\"\n");
+    write(
+        &root.join("libs/src/lib.rs"),
+        "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",
+    );
+
+    let ids = BTreeSet::from(["libs::real"]);
+    let mut errors = Vec::new();
+    read(root, &ids, &mut errors);
+
+    assert!(
+        errors.iter().any(|error| error.contains("libs/Cargo.toml")
+            && error.contains("declares no `package.name`")),
+        "{errors:?}"
+    );
+}
+
+/// A source file over the read cap is named, not skipped in silence.
+///
+/// WHY: a skipped file registers nothing, so the operations it defines came
+/// back with no definition site and the message named the operation rather than
+/// the file nobody read.
+#[test]
+fn a_source_file_over_the_read_cap_is_an_error_naming_the_file() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let root = dir.path();
+    workspace(root, &["libs"]);
+    let mut oversized = String::with_capacity(4 * 1024 * 1024 + 128);
+    oversized.push_str(
+        "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",
+    );
+    while oversized.len() <= 4 * 1024 * 1024 {
+        oversized.push_str("// padding to cross the read cap\n");
+    }
+    write(&root.join("libs/src/lib.rs"), &oversized);
+
+    let ids = BTreeSet::from(["libs::real"]);
+    let mut errors = Vec::new();
+    read(root, &ids, &mut errors);
+
+    assert!(
+        errors.iter().any(|error| error.contains("libs/src/lib.rs")
+            && error.contains("over the 4194304 byte read cap")),
         "{errors:?}"
     );
 }

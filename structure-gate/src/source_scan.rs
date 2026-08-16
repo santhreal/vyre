@@ -7,7 +7,7 @@
 //! author had open, and two scanners could disagree about which files the
 //! workspace contains.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -49,14 +49,13 @@ const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
 
 /// The text of one source, read under [`MAX_SOURCE_BYTES`].
 ///
-/// A file that cannot be opened or is not UTF-8 yields nothing, because a
-/// scanner reports what the tree says and an unreadable file says nothing.
-///
-/// # Panics
-///
-/// When the file holds more than [`MAX_SOURCE_BYTES`]. Truncating it would let
-/// a scanner judge a source it read only part of and report the tree as clean
-/// past the cut, which is the one answer worse than refusing.
+/// A file that cannot be opened, is not UTF-8, or holds more than the cap
+/// yields nothing. Truncating it would let a scanner judge a source it read
+/// only part of and report the tree as clean past the cut. Aborting is the
+/// other wrong answer: one generated file dropped into a source tree took down
+/// every rule over the whole tree, where a reader that has to have the file can
+/// name it and a reader that only needs the shape of the module tree carries
+/// on.
 fn read_source(path: &Path) -> Option<String> {
     let mut text = String::new();
     fs::File::open(path)
@@ -64,13 +63,7 @@ fn read_source(path: &Path) -> Option<String> {
         .take(MAX_SOURCE_BYTES + 1)
         .read_to_string(&mut text)
         .ok()?;
-    assert!(
-        text.len() as u64 <= MAX_SOURCE_BYTES,
-        "Fix: {} holds more than {MAX_SOURCE_BYTES} bytes, so a tree scan cannot read it whole; \
-         split the file or keep generated output out of the source tree",
-        path.display()
-    );
-    Some(text)
+    (text.len() as u64 <= MAX_SOURCE_BYTES).then_some(text)
 }
 
 /// Every `.rs` file under `root`, sorted.
@@ -302,38 +295,54 @@ pub struct ModuleRoute {
 #[must_use]
 pub fn module_routes(crate_src: &Path) -> Vec<ModuleRoute> {
     let mut found = Vec::new();
+    let mut visited = BTreeSet::new();
     let mut pending = vec![ModuleRoute {
         path: crate_src.join("lib.rs"),
         features: Vec::new(),
     }];
     while let Some(module) = pending.pop() {
-        let Some(text) = read_source(&module.path) else {
+        if !visited.insert(identity(&module.path)) {
             continue;
-        };
-        let directory = module_directory(&module.path);
-        for (name, attributes) in module_declarations(&text) {
-            let Some(gates) = reachable_features(&attributes) else {
-                continue;
-            };
-            let mut features = module.features.clone();
-            for gate in gates {
-                if !features.contains(&gate) {
-                    features.push(gate);
+        }
+        // A module the walk cannot read is still on this route. Only the
+        // descent stops, because an unread file declares no children, and the
+        // reader that has to read the file is the one that can name why.
+        if let Some(text) = read_source(&module.path) {
+            let directory = module_directory(&module.path);
+            for (name, attributes) in module_declarations(&text) {
+                let Some(gates) = reachable_features(&attributes) else {
+                    continue;
+                };
+                let mut features = module.features.clone();
+                for gate in gates {
+                    if !features.contains(&gate) {
+                        features.push(gate);
+                    }
                 }
-            }
-            let file = directory.join(format!("{name}.rs"));
-            let path = if file.is_file() {
-                file
-            } else {
-                directory.join(&name).join("mod.rs")
-            };
-            if path.is_file() {
-                pending.push(ModuleRoute { path, features });
+                let file = directory.join(format!("{name}.rs"));
+                let path = if file.is_file() {
+                    file
+                } else {
+                    directory.join(&name).join("mod.rs")
+                };
+                if path.is_file() {
+                    pending.push(ModuleRoute { path, features });
+                }
             }
         }
         found.push(module);
     }
     found
+}
+
+/// The identity a walk compares two module paths by.
+///
+/// A `mod` reachable twice, and a symlink that points back into the tree it
+/// came from, both name a file the walk has already read. Comparing the
+/// canonical path catches the second, where comparing the written path would
+/// walk the loop until the process died.
+fn identity(path: &Path) -> PathBuf {
+    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
 }
 
 /// Features gating the item declared on line `at`, or `None` when only a test
@@ -437,12 +446,12 @@ fn gating_attributes(
 ///
 /// A `cfg` naming `test` beside a feature, such as
 /// `any(test, feature = "cpu-parity")`, still compiles in a feature build, so
-/// only a `cfg` that names `test` and no feature at all is test-only.
+/// only a `cfg` that requires `test` and names no feature at all is test-only.
 fn reachable_features(attributes: &[String]) -> Option<Vec<String>> {
     let mut features = Vec::new();
     for attribute in attributes {
         let named = cfg_feature_names(attribute);
-        if named.is_empty() && names_test(attribute) {
+        if named.is_empty() && requires_test(attribute) {
             return None;
         }
         for feature in named {
@@ -476,21 +485,41 @@ pub fn cfg_feature_names(attribute: &str) -> Vec<String> {
     found
 }
 
-/// Whether one `cfg` attribute names the `test` predicate.
-fn names_test(attribute: &str) -> bool {
+/// Whether one `cfg` attribute requires the `test` predicate to hold.
+///
+/// Polarity is the whole question. `#[cfg(test)]` admits an item only in a test
+/// build; `#[cfg(not(test))]` admits it in every build except that one, so the
+/// item is production source. Reading the bare word made the second look like
+/// the first and dropped such a module from every route it belonged to.
+fn requires_test(attribute: &str) -> bool {
     let bytes = attribute.as_bytes();
-    let mut at = 0;
-    while let Some(found) = attribute[at..].find("test") {
-        let start = at + found;
-        let end = start + "test".len();
-        let before = start
-            .checked_sub(1)
-            .is_none_or(|index| !is_word_byte(bytes[index]));
-        let after = end >= bytes.len() || !is_word_byte(bytes[end]);
-        if before && after {
-            return true;
+    let mut negations: Vec<bool> = Vec::new();
+    let mut last_word: Option<(usize, usize)> = None;
+    let mut index = 0;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if is_word_byte(byte) {
+            let start = index;
+            while index < bytes.len() && is_word_byte(bytes[index]) {
+                index += 1;
+            }
+            if &attribute[start..index] == "test"
+                && negations.iter().filter(|negated| **negated).count() % 2 == 0
+            {
+                return true;
+            }
+            last_word = Some((start, index));
+            continue;
         }
-        at = end;
+        if byte == b'(' {
+            let opener = last_word.is_some_and(|(start, end)| &attribute[start..end] == "not");
+            negations.push(opener);
+            last_word = None;
+        } else if byte == b')' {
+            negations.pop();
+            last_word = None;
+        }
+        index += 1;
     }
     false
 }

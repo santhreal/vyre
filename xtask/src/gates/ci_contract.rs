@@ -231,16 +231,26 @@ impl Gate for CiRequired {
 
             let jobs = jobs(&text);
             for (line, context) in &section.contexts {
-                let Some(job) = jobs.iter().find(|job| {
-                    job.id == *context || job.name.as_deref() == Some(context.as_str())
-                }) else {
+                let Some(job) = jobs.iter().find(|job| job.reported() == context.as_str()) else {
+                    let display = jobs
+                        .iter()
+                        .find(|job| job.id == *context)
+                        .and_then(|job| job.name.clone());
+                    let message = match display {
+                        Some(name) => format!(
+                            "`{context}` is a job id in `{}` and that job reports as `{name}`",
+                            section.workflow
+                        ),
+                        None => format!("no job in `{}` reports as `{context}`", section.workflow),
+                    };
                     report.find(Finding::at(
                         REQUIRED,
                         *line,
-                        format!("no job in `{}` is named `{context}`", section.workflow),
-                        "name the job exactly as the required context, or correct the context; \
-                         branch protection matches on this string and a mismatch blocks every \
-                         merge on a check that never arrives",
+                        message,
+                        "name the required context exactly as the job reports it, which is the \
+                         job's `name:` when it declares one and the job id otherwise; branch \
+                         protection matches on this string and a mismatch blocks every merge on \
+                         a check that never arrives",
                     ));
                     continue;
                 };
@@ -488,6 +498,18 @@ struct Job {
     line: u32,
     /// Every line of the job, including its steps.
     body: String,
+}
+
+impl Job {
+    /// The status context this job reports, which is the display name when the
+    /// job declares one and the job id otherwise.
+    ///
+    /// Branch protection matches this string and nothing else, so a required
+    /// check named by job id where the job declares a `name:` waits for a
+    /// context that never arrives.
+    fn reported(&self) -> &str {
+        self.name.as_deref().unwrap_or(&self.id)
+    }
 }
 
 /// Every job a workflow declares.

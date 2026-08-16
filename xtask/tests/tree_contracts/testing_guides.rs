@@ -214,3 +214,46 @@ fn untracked_targets_are_excluded_from_testing_guides() {
     assert!(!guide.contains("a/tests/behavior.rs"));
     assert!(guide.contains("| `lib` | `a` | `a/src/lib.rs` |"));
 }
+
+/// An unrelated finding must not hide an orphaned guide.
+///
+/// WHY: the orphan scan used to run only when the report was empty, so any
+/// finding anywhere in the gate, including a schema field on the registry
+/// itself, made every leftover guide invisible for that run. A reader then
+/// fixed the reported problem and only learned about the orphans on the next
+/// run. A row that renders leaves its guide in the expected set whatever else
+/// was reported, so the two signals belong in one pass.
+#[test]
+fn an_unrelated_finding_does_not_hide_an_orphaned_guide() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), true);
+    track_fixture(temp.path());
+    assert!(run(temp.path(), true).findings.is_empty());
+    fs::write(
+        temp.path().join("docs/testing/removed.md"),
+        "# Removed crate\n",
+    )
+    .expect("Fix: orphan guide fixture must be writable");
+    let registry = fs::read_to_string(temp.path().join("docs/CRATE_OWNERSHIP.toml"))
+        .expect("Fix: fixture ownership registry must be readable");
+    fs::write(
+        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
+        format!("{registry}\n[planned]\nnext = \"b\"\n"),
+    )
+    .expect("Fix: fixture ownership registry must be writable");
+    track_fixture(temp.path());
+
+    let report = run(temp.path(), false);
+    let text = messages(&report);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.file.as_deref() == Some(Path::new("docs/testing/removed.md"))),
+        "Fix: the orphan guide must be reported beside the registry finding; got\n{text}"
+    );
+    assert!(
+        text.contains("planned crates"),
+        "Fix: the unrelated finding must still be reported; got\n{text}"
+    );
+}

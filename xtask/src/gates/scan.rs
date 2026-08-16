@@ -321,6 +321,26 @@ impl Tree {
         Ok(members)
     }
 
+    /// The directory of the workspace member that declares this package name.
+    ///
+    /// A package name is not a path. `vyre-conform` is declared at
+    /// `conform/vyre-conform`, so a gate that joins the package name onto the
+    /// checkout root reads a manifest that does not exist and reports the crate
+    /// as missing. The lookup fails closed naming the package it could not
+    /// place.
+    pub fn member_directory(&self, package: &str) -> Result<String, GateError> {
+        self.member_manifests()?
+            .into_iter()
+            .find(|member| member.name == package)
+            .map(|member| member.path)
+            .ok_or_else(|| {
+                GateError::new(
+                    format!("no workspace member declares the package `{package}`"),
+                    "name a package workspace.members carries, or add the member",
+                )
+            })
+    }
+
     /// Every line of every named file that satisfies the predicate.
     pub fn hits(
         &self,

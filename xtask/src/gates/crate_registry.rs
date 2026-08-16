@@ -158,7 +158,7 @@ impl Gate for CrateOwnership {
             return Ok(report);
         }
         for (path, rendered) in [
-            (GRAPH, render_graph(&records)),
+            (GRAPH, render_graph(&records)?),
             (OWNERSHIP, render_ownership(&records)),
         ] {
             report
@@ -760,14 +760,27 @@ fn ordered(records: &[CrateRecord]) -> Vec<&CrateRecord> {
 }
 
 /// The dependency graph document.
-#[must_use]
-pub fn render_graph(records: &[CrateRecord]) -> String {
+///
+/// A dependency whose package carries no record is an error rather than a
+/// panic. The gate renders only after the contract holds, so the set is
+/// complete on that path, but this is a public renderer and a caller that hands
+/// it a partial record set gets the package name back instead of an index out
+/// of a map.
+pub fn render_graph(records: &[CrateRecord]) -> Result<String, GateError> {
     let ordered = ordered(records);
     let ids: BTreeMap<&str, String> = ordered
         .iter()
         .enumerate()
         .map(|(index, record)| (record.package.as_str(), format!("C{index}")))
         .collect();
+    let node = |package: &str| -> Result<String, GateError> {
+        ids.get(package).cloned().ok_or_else(|| {
+            GateError::new(
+                format!("`{package}` is named as a dependency and carries no registry record"),
+                "declare the crate in docs/CRATE_OWNERSHIP.toml before rendering the graph; a node with no record has no place in the document",
+            )
+        })
+    };
     let mut lines = vec![
         "# Vyre Crate Graph".to_string(),
         String::new(),
@@ -789,14 +802,16 @@ pub fn render_graph(records: &[CrateRecord]) -> String {
     for record in &ordered {
         lines.push(format!(
             "  {}[\"{}\"]",
-            ids[record.package.as_str()], record.package
+            node(&record.package)?,
+            record.package
         ));
     }
     for record in &ordered {
         for dependency in &record.dependencies {
             lines.push(format!(
                 "  {} --> {}",
-                ids[record.package.as_str()], ids[dependency.package.as_str()]
+                node(&record.package)?,
+                node(&dependency.package)?
             ));
         }
     }
@@ -834,7 +849,7 @@ pub fn render_graph(records: &[CrateRecord]) -> String {
         "condition drift, stale seams, and missing visibility declarations.".to_string(),
         String::new(),
     ]);
-    lines.join("\n")
+    Ok(lines.join("\n"))
 }
 
 /// The per-crate ownership document.

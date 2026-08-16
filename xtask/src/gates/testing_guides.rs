@@ -83,10 +83,14 @@ impl Gate for TestingGuides {
 
         let mut expected: BTreeMap<String, String> = BTreeMap::new();
         // A row that never reached `expected` is a member whose guide would read
-        // as orphaned. Only an incomplete render set suppresses the orphan scan;
-        // a finding recorded while rendering a guide still leaves its row in the
-        // set, so it no longer hides every leftover in the directory.
-        let mut skipped = !report.findings.is_empty();
+        // as orphaned, so only an incomplete render set suppresses the orphan
+        // scan. An empty record set is the one incompleteness the loop below
+        // cannot see: it renders nothing, and every guide in the directory would
+        // then be reported as orphaned on the strength of a registry that
+        // carried no rows. Any other finding leaves the rows it did not touch in
+        // the set, so a metadata field missing for one crate no longer hides
+        // every leftover guide behind it.
+        let mut skipped = records.is_empty();
         for record in &records {
             let Some(fields) = metadata.resolve(record, &mut report) else {
                 skipped = true;

@@ -37,6 +37,10 @@ jobs:
       - name: Composition rules
         run: ./cargo_full run -p xtask -- gates --subset composition
 
+      # The external-IR extension demo is the only proof that a third party can
+      # extend the IR from outside this workspace, and presence proves nothing.
+      # `example-capability`, registered in this subset, builds every example as
+      # its own isolated crate against the committed lockfile.
       - name: Tree structure and hygiene
         run: ./cargo_full run -p xtask -- gates --subset structure
 
@@ -50,11 +54,6 @@ jobs:
       # so they live in a crate that depends on no vyre crate.
       - name: Workspace structure
         run: ./cargo_full run -p structure-gate
-
-      # The external-IR extension demo is the only proof that a third party can
-      # extend the IR from outside this workspace, and presence proves nothing.
-      # `example-capability`, in the structure subset above, builds every
-      # example as its own isolated crate against the committed lockfile.
 
       # bench-regression.yml times one case, which proves the runner works, not
       # that the registry still covers the dimensions the audit rows claim. This

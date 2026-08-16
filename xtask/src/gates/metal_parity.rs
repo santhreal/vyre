@@ -26,8 +26,8 @@ use crate::gates::scan::Tree;
 /// Crate that owns the Metal backend and publishes its counters.
 const METAL_CRATE: &str = "vyre-driver-metal";
 
-/// File that assembles the metric snapshot.
-const SNAPSHOT_SOURCE: &str = "vyre-driver-metal/src/runtime.rs";
+/// File that assembles the metric snapshot, relative to the driver crate.
+const SNAPSHOT_SOURCE: &str = "src/runtime.rs";
 
 /// Crate whose suite proves conformance against the reference.
 const CONFORM_CRATE: &str = "vyre-conform";
@@ -67,20 +67,22 @@ impl Gate for MetalParity {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
 
-        let snapshot = tree.read(SNAPSHOT_SOURCE)?;
+        let metal_dir = tree.member_directory(METAL_CRATE)?;
+        let snapshot_source = format!("{metal_dir}/{SNAPSHOT_SOURCE}");
+        let snapshot = tree.read(&snapshot_source)?;
         let published = published_counters(&snapshot);
         if published.is_empty() {
             report.find(Finding::in_file(
-                SNAPSHOT_SOURCE,
+                snapshot_source.as_str(),
                 "no Metal counter is published by the metric snapshot, so a Metal report carries no telemetry to judge",
                 "publish the counters through METAL_COUNTERS and the resident pushes; a backend that reports nothing cannot be compared",
             ));
         }
 
-        let asserted = asserted_counters(&tree, &published)?;
+        let asserted = asserted_counters(&tree, &metal_dir, &published)?;
         for counter in published.difference(&asserted) {
             report.find(Finding::in_file(
-                SNAPSHOT_SOURCE,
+                snapshot_source.as_str(),
                 format!(
                     "`{counter}` is published by the Metal snapshot and named by no test under `{METAL_CRATE}`"
                 ),
@@ -88,7 +90,8 @@ impl Gate for MetalParity {
             ));
         }
 
-        let bench_source = format!("{BENCH_CRATE}/src");
+        let bench_dir = tree.member_directory(BENCH_CRATE)?;
+        let bench_source = format!("{bench_dir}/src");
         let mut catalog = String::new();
         for path in tree.rust(&[bench_source.as_str()])? {
             catalog.push_str(&tree.read(path)?);
@@ -96,14 +99,15 @@ impl Gate for MetalParity {
         for case in MEASURED_CASES {
             if !catalog.contains(case) {
                 report.find(Finding::in_file(
-                    format!("{BENCH_CRATE}/src"),
+                    bench_source.as_str(),
                     format!("the Metal run measures `{case}`, which no benchmark case defines"),
                     "measure a case the catalog carries, or restore the case; a run against an unknown case id measures nothing and still exits zero",
                 ));
             }
         }
 
-        let conform_manifest = format!("{CONFORM_CRATE}/Cargo.toml");
+        let conform_dir = tree.member_directory(CONFORM_CRATE)?;
+        let conform_manifest = format!("{conform_dir}/Cargo.toml");
         let declares_gpu = tree
             .read_toml(&conform_manifest)?
             .get("features")
@@ -135,7 +139,7 @@ impl Gate for MetalParity {
             )
         })?;
         report.note(format!("host: {host}"));
-        remote(&host, &root, "\"$runner\" test -p vyre-driver-metal")?;
+        remote(&host, &root, &format!("\"$runner\" test -p {METAL_CRATE}"))?;
         remote(
             &host,
             &root,
@@ -190,10 +194,11 @@ fn published_counters(source: &str) -> BTreeSet<String> {
 /// Counters named by a test source in the driver crate.
 fn asserted_counters(
     tree: &Tree,
+    metal_dir: &str,
     published: &BTreeSet<String>,
 ) -> Result<BTreeSet<String>, GateError> {
     let mut found = BTreeSet::new();
-    for path in tree.rust(&[METAL_CRATE])? {
+    for path in tree.rust(&[metal_dir])? {
         let name = path.to_string_lossy();
         if !name.contains("/tests/") && !name.ends_with("/tests.rs") {
             continue;
@@ -223,8 +228,9 @@ fn measure(case: &str) -> String {
 /// Run one command in the checkout on the Apple host.
 fn remote(host: &str, root: &str, command: &str) -> Result<String, GateError> {
     let script = format!(
-        "set -euo pipefail; cd {root}; \
-         runner=./cargo_full; [ -x \"$runner\" ] || runner=cargo; {command}"
+        "set -euo pipefail; cd {}; \
+         runner=./cargo_full; [ -x \"$runner\" ] || runner=cargo; {command}",
+        quoted(root)
     );
     let output = Command::new("ssh")
         .args([
@@ -232,7 +238,7 @@ fn remote(host: &str, root: &str, command: &str) -> Result<String, GateError> {
             "BatchMode=yes",
             "-o",
             &format!("ConnectTimeout={CONNECT_TIMEOUT}"),
-            host,
+            destination(host)?,
             &script,
         ])
         .output()
@@ -252,6 +258,32 @@ fn remote(host: &str, root: &str, command: &str) -> Result<String, GateError> {
         ));
     }
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+/// One value, quoted for the remote `/bin/sh`.
+///
+/// The remote script is a string a shell parses, so a checkout path carrying a
+/// space, a semicolon or a substitution was read as syntax rather than as a
+/// path. Single quotes take everything but a single quote, which is closed,
+/// escaped and reopened.
+fn quoted(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+/// The ssh destination, or the reason it cannot be one.
+///
+/// ssh reads a leading `-` as an option, and `-oProxyCommand=...` runs a command
+/// on THIS machine rather than connecting anywhere, so a destination is checked
+/// before it reaches the argument list. Quoting cannot help here: the value is
+/// an argv entry, not shell text.
+fn destination(host: &str) -> Result<&str, GateError> {
+    if host.is_empty() || host.starts_with('-') {
+        return Err(GateError::new(
+            format!("`{host}` is not an ssh destination"),
+            "pass --host <user@machine>; a value opening with `-` is read by ssh as an option, and one of those options runs a command locally",
+        ));
+    }
+    Ok(host)
 }
 
 /// Every key a benchmark report carries, at any depth.
@@ -282,8 +314,9 @@ fn collect_keys(value: &serde_json::Value, found: &mut BTreeSet<String>) {
     }
 }
 
-/// `published_counters` and `report_keys` read text and JSON the gate never
-/// writes to disk, so no integration test can reach either through the CLI.
+/// `published_counters`, `report_keys`, `quoted` and `destination` read text the
+/// gate never writes to disk, so no integration test can reach them through the
+/// CLI.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -309,5 +342,27 @@ mod tests {
         assert!(keys.contains("metal_resident_bytes"));
         assert!(report_keys("[]").is_none());
         assert!(report_keys("not json").is_none());
+    }
+
+    /// WHY: the remote root was interpolated into a `/bin/sh` script, so a path
+    /// carrying a separator ran whatever followed it on the Apple host.
+    #[test]
+    fn a_root_carrying_shell_syntax_is_one_word() {
+        assert_eq!(quoted("/Users/ci/vyre"), "'/Users/ci/vyre'");
+        assert_eq!(
+            quoted("/tmp/x; rm -rf ~"),
+            "'/tmp/x; rm -rf ~'",
+            "a separator inside single quotes is text"
+        );
+        assert_eq!(quoted("/tmp/it's"), "'/tmp/it'\\''s'");
+    }
+
+    /// WHY: `-oProxyCommand=...` is an ssh option that runs a command locally,
+    /// so a destination is judged before it becomes an argv entry.
+    #[test]
+    fn a_destination_that_opens_an_option_is_refused() {
+        assert_eq!(destination("ci@apple").expect("a plain host"), "ci@apple");
+        assert!(destination("-oProxyCommand=touch /tmp/pwned").is_err());
+        assert!(destination("").is_err());
     }
 }

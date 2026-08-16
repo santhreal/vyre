@@ -8,12 +8,12 @@ The `ci-required` gate holds this list to the workflows that define it, and
 - `CI release gate`
 
 ## From `gates.yml` (run on every PR + push to main)
-- `registered-gates`
-- `tree-rules`
-- `feature-msrv`
-- `feature-isolation`
-- `feature-gated-sweeps`
-- `spirv-validation`
+- `Every registered gate`
+- `Rules the sweep owns, named by domain`
+- `Every feature compiles alone on the MSRV`
+- `Every feature compiles alone or records why it cannot`
+- `Oracle-matrix sweeps ci.yml cannot reach`
+- `Emitted SPIR-V is validated, not just shaped`
 
 ## From `bench.yml` (run on every PR and push to main)
 - `criterion-regression`

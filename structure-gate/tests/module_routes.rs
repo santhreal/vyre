@@ -143,3 +143,71 @@ fn a_test_predicate_beside_a_feature_still_compiles() {
         "a feature whose name contains `test` is not the test predicate"
     );
 }
+
+/// `not(test)` is production source, not test source.
+#[test]
+fn a_module_excluded_from_a_test_build_is_production_source() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let src = dir.path().join("src");
+    write(&src.join("lib.rs"), "#[cfg(not(test))]\npub mod platform;\n");
+    write(&src.join("platform.rs"), "pub fn run() {}\n");
+
+    let routes = module_routes(&src);
+
+    let platform = route(&routes, "platform.rs").expect("a not(test) module compiles");
+    assert!(platform.features.is_empty(), "{:?}", platform.features);
+    assert_eq!(
+        gating_features("#[cfg(not(test))]\npub fn kept() {}\n", 1),
+        Some(Vec::new())
+    );
+    assert_eq!(
+        gating_features("#[cfg(not(not(test)))]\nfn helper() {}\n", 1),
+        None,
+        "a doubly negated test predicate is the test predicate again"
+    );
+}
+
+/// A cycle in the module tree ends the walk instead of running forever.
+#[cfg(unix)]
+#[test]
+fn a_symlinked_cycle_reads_each_file_once() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let src = dir.path().join("src");
+    write(&src.join("lib.rs"), "pub mod region;\n");
+    write(&src.join("region/mod.rs"), "pub mod region;\n");
+    std::os::unix::fs::symlink(src.join("region"), src.join("region/region"))
+        .expect("Fix: fixture symlink must be creatable");
+
+    let routes = module_routes(&src);
+
+    assert_eq!(
+        routes.len(),
+        2,
+        "the cycle must be read once: {:?}",
+        routes.iter().map(|route| route.path.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// A module the walk cannot read is still a module on that route.
+///
+/// WHY: a source over the read cap aborted the whole walk, so one generated
+/// file dropped into a crate took down every rule that reads the module tree.
+/// Dropping the route instead is the other wrong answer: the reader that has to
+/// read the file then sees no module at all and reports nothing.
+#[test]
+fn a_module_over_the_read_cap_stays_on_its_route() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let src = dir.path().join("src");
+    write(&src.join("lib.rs"), "pub mod generated;\npub mod kept;\n");
+    write(&src.join("kept.rs"), "pub fn kept() {}\n");
+    let mut oversized = String::with_capacity(4 * 1024 * 1024 + 64);
+    while oversized.len() <= 4 * 1024 * 1024 {
+        oversized.push_str("// padding past the read cap\n");
+    }
+    write(&src.join("generated.rs"), &oversized);
+
+    let routes = module_routes(&src);
+
+    assert!(route(&routes, "generated.rs").is_some());
+    assert!(route(&routes, "kept.rs").is_some());
+}

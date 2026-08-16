@@ -754,7 +754,9 @@ mod tests {
     }
 
     /// WHY: the three static clauses are what the sweep asks for before it runs
-    /// anything, and each has to name the one thing to correct.
+    /// anything, and each has to name the one thing to correct. The agreeing
+    /// case is asserted first: a rule that reports on a registry and a baseline
+    /// that already agree says nothing when they disagree.
     #[test]
     fn registry_failures_report_each_direction() {
         let baselines = vec![
@@ -767,6 +769,11 @@ mod tests {
                 findings: 3,
             },
         ];
+        assert_eq!(
+            registry_failures(&["ci-matrix"], &baselines[..1]),
+            Vec::<String>::new(),
+            "a registry and a baseline that agree report nothing"
+        );
         let failures = registry_failures(&["ci-matrix", "unpinned-gate"], &baselines);
         assert!(
             failures.iter().any(|text| text.contains("`unpinned-gate` has no row")),

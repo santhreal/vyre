@@ -20,6 +20,7 @@ mod workspace_sources;
 mod architecture_docs;
 mod canonical_first_workgroup_guard;
 mod cargo_invocation_resolution;
+mod ci_required_contexts;
 mod ci_workflow_references;
 mod cli_surface;
 mod crate_ownership_registry;

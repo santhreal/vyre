@@ -400,6 +400,45 @@ pub enum OperationRegistryError {
     },
 }
 
+/// Hold one registration's declared tier to the crate that minted its id.
+///
+/// The tier was once read out of the id text, so a registration declared a tier
+/// and the classifier overruled it with a guess made from a namespace prefix.
+/// The id is now the authority over which tiers an identity can carry, and the
+/// declaration has to agree with it: a workspace crate mints foundation,
+/// intrinsic and library identities, a consumer crate mints external ones, and
+/// an id naming no crate mints nothing.
+fn validate_identity(entry: &OperationRegistration) -> Result<(), OperationRegistryError> {
+    match operation_id_namespace(entry.id) {
+        IdNamespace::Unknown => Err(OperationRegistryError::UnknownNamespace { id: entry.id }),
+        IdNamespace::Workspace(_) => {
+            if matches!(
+                entry.tier,
+                OperationTier::Intrinsic | OperationTier::Library | OperationTier::Foundation
+            ) {
+                Ok(())
+            } else {
+                Err(OperationRegistryError::InvalidTier {
+                    id: entry.id,
+                    declared: entry.tier,
+                    origin: "workspace",
+                })
+            }
+        }
+        IdNamespace::External(_) => {
+            if entry.tier == OperationTier::External {
+                Ok(())
+            } else {
+                Err(OperationRegistryError::InvalidTier {
+                    id: entry.id,
+                    declared: entry.tier,
+                    origin: "external",
+                })
+            }
+        }
+    }
+}
+
 /// Immutable validated view over every linked semantic operation registration.
 pub struct OperationRegistry {
     ordered: Vec<&'static OperationRegistration>,
@@ -420,34 +459,7 @@ impl OperationRegistry {
             if entry.build.is_none() && entry.signature.is_none() {
                 return Err(OperationRegistryError::MissingSemantics { id: entry.id });
             }
-            match operation_id_namespace(entry.id) {
-                IdNamespace::Unknown => {
-                    return Err(OperationRegistryError::UnknownNamespace { id: entry.id });
-                }
-                IdNamespace::Workspace(_) => {
-                    if !matches!(
-                        entry.tier,
-                        OperationTier::Intrinsic
-                            | OperationTier::Library
-                            | OperationTier::Foundation
-                    ) {
-                        return Err(OperationRegistryError::InvalidTier {
-                            id: entry.id,
-                            declared: entry.tier,
-                            origin: "workspace",
-                        });
-                    }
-                }
-                IdNamespace::External(_) => {
-                    if entry.tier != OperationTier::External {
-                        return Err(OperationRegistryError::InvalidTier {
-                            id: entry.id,
-                            declared: entry.tier,
-                            origin: "external",
-                        });
-                    }
-                }
-            }
+            validate_identity(entry)?;
             if by_id.insert(entry.id, *entry).is_some() {
                 return Err(OperationRegistryError::DuplicateId { id: entry.id });
             }
@@ -583,7 +595,10 @@ pub struct TargetOperationFacet {
 
 #[cfg(test)]
 mod tests {
-    use super::{IdNamespace, OperationTier, operation_id_namespace};
+    use super::{
+        IdNamespace, OperationRegistration, OperationRegistryError, OperationTier,
+        operation_id_namespace, validate_identity,
+    };
     use std::collections::BTreeSet;
 
     /// The tier roster carries every variant of the tier enum.
@@ -618,5 +633,115 @@ mod tests {
             operation_id_namespace("vyre-primitives::graph::toposort"),
             IdNamespace::Workspace("vyre-primitives")
         );
+    }
+
+    /// A workspace id cannot carry a tier only a consumer identity has.
+    ///
+    /// `validate_identity` is crate-private and the registry that calls it reads
+    /// the process-wide inventory, so no integration test can hand it a
+    /// registration: submitting a rejected one to the inventory would poison
+    /// every other test in the same binary. This is the only place the rejection
+    /// can be exercised on a registration built for the purpose.
+    #[test]
+    fn a_workspace_id_declaring_an_external_tier_is_rejected() {
+        let entry = OperationRegistration::new(
+            "vyre-libs::scan::literal_set",
+            OperationTier::External,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(
+            validate_identity(&entry),
+            Err(OperationRegistryError::InvalidTier {
+                id: "vyre-libs::scan::literal_set",
+                declared: OperationTier::External,
+                origin: "workspace",
+            })
+        );
+    }
+
+    /// A consumer id carries the external tier and no other.
+    #[test]
+    fn an_external_id_declaring_a_workspace_tier_is_rejected() {
+        let entry = OperationRegistration::new(
+            "community_pack::scan::signature",
+            OperationTier::Library,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(
+            validate_identity(&entry),
+            Err(OperationRegistryError::InvalidTier {
+                id: "community_pack::scan::signature",
+                declared: OperationTier::Library,
+                origin: "external",
+            })
+        );
+        assert_eq!(
+            validate_identity(&OperationRegistration::new(
+                "community_pack::scan::signature",
+                OperationTier::External,
+                None,
+                None,
+                None,
+            )),
+            Ok(())
+        );
+    }
+
+    /// Every tier a workspace crate can mint is accepted, and the two that name
+    /// no minting crate are not.
+    #[test]
+    fn a_workspace_id_carries_every_workspace_tier() {
+        for tier in [
+            OperationTier::Foundation,
+            OperationTier::Intrinsic,
+            OperationTier::Library,
+        ] {
+            assert_eq!(
+                validate_identity(&OperationRegistration::new(
+                    "vyre-primitives::hardware::popcount_u32",
+                    tier,
+                    None,
+                    None,
+                    None,
+                )),
+                Ok(()),
+                "{tier:?} is a tier a workspace crate mints"
+            );
+        }
+        assert_eq!(
+            validate_identity(&OperationRegistration::new(
+                "vyre-primitives::hardware::popcount_u32",
+                OperationTier::Unknown,
+                None,
+                None,
+                None,
+            )),
+            Err(OperationRegistryError::InvalidTier {
+                id: "vyre-primitives::hardware::popcount_u32",
+                declared: OperationTier::Unknown,
+                origin: "workspace",
+            })
+        );
+    }
+
+    /// An id that names no crate is refused before any tier question.
+    #[test]
+    fn an_id_naming_no_crate_is_refused_whatever_it_declares() {
+        for id in ["not_a_namespace", "core.indirect_dispatch", "vyre-libs::"] {
+            assert_eq!(
+                validate_identity(&OperationRegistration::new(
+                    id,
+                    OperationTier::Library,
+                    None,
+                    None,
+                    None,
+                )),
+                Err(OperationRegistryError::UnknownNamespace { id })
+            );
+        }
     }
 }

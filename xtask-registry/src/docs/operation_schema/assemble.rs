@@ -101,9 +101,14 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
     }
 
     let placements = placement::read(&root, &all_ids, &mut errors);
-    let placement_crates: BTreeSet<String> = all_ids
+    let placement_crates: BTreeMap<String, String> = all_ids
         .iter()
-        .filter_map(|id| placements.get(id).map(|found| found.crate_name.clone()))
+        .filter_map(|id| placements.get(id))
+        .filter_map(|found| {
+            placements
+                .directory(&found.crate_name)
+                .map(|directory| (found.crate_name.clone(), directory.to_string()))
+        })
         .collect();
     let manifest_features = read_manifest_features(&root, &placement_crates, &mut errors);
 

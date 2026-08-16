@@ -28,15 +28,17 @@ pub(super) fn category_from_id(id: &str) -> String {
 ///
 /// The crate list comes from the placements read out of the checkout, so a
 /// domain that moves brings its manifest into this catalog without anyone
-/// editing a list here.
+/// editing a list here. Each entry is `package name -> member directory`,
+/// because a package name is not a path and the catalog is keyed by the name a
+/// diagnostic prints.
 pub(super) fn read_manifest_features(
     root: &Path,
-    crates: &BTreeSet<String>,
+    crates: &BTreeMap<String, String>,
     errors: &mut Vec<String>,
 ) -> BTreeMap<String, BTreeSet<String>> {
     let mut catalog = BTreeMap::new();
-    for crate_name in crates {
-        let path = root.join(crate_name).join("Cargo.toml");
+    for (crate_name, directory) in crates {
+        let path = root.join(directory).join("Cargo.toml");
         let text = match super::read_text_bounded(&path) {
             Ok(value) => value,
             Err(error) => {
@@ -62,7 +64,7 @@ pub(super) fn read_manifest_features(
             .and_then(toml::Value::as_table)
             .map(|table| table.keys().cloned().collect())
             .unwrap_or_default();
-        catalog.insert(crate_name.to_string(), features);
+        catalog.insert(crate_name.clone(), features);
     }
     catalog
 }

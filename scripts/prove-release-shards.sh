@@ -94,7 +94,10 @@ for ((index = 0; index < SHARDS; index += 1)); do
     run_shard "$index" "$shard_path" &
     active_jobs=$((active_jobs + 1))
     if [[ "$active_jobs" -ge "$SHARD_WORKERS" ]]; then
-        if ! wait; then
+        # `wait -n`, not `wait`: a bare wait reaps every worker and reports the
+        # status of the last one, so a failed shard was counted as a pass and
+        # the counter then said one worker was still running when none was.
+        if ! wait -n; then
             failures=$((failures + 1))
         fi
         active_jobs=$((active_jobs - 1))

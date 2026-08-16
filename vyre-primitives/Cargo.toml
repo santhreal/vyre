@@ -35,9 +35,9 @@ vyre-foundation = ["dep:vyre-foundation"]
 # with it rather than being a second thing to remember.
 hardware = ["vyre-foundation", "inventory-registry"]
 
-# Enable canonical `OperationRegistration::primitive(...)` submissions so the
-# universal conform harness and `cargo xtask print-composition` discover every
-# registered primitive. Off by default to keep default-build dep-free.
+# Enable the `OperationRegistration` submissions so the universal conform
+# harness and `cargo xtask print-composition` discover every operation this
+# crate registers. Off by default to keep default-build dep-free.
 inventory-registry = ["dep:inventory", "vyre-foundation"]
 
 [dependencies]

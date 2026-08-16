@@ -19,7 +19,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use structure_gate::source_scan::{gating_features, module_routes, string_literals};
 use structure_gate::{parse_registrations, strip_cfg_test_items};
@@ -40,12 +40,22 @@ pub struct Placement {
 /// Every operation placement read from one checkout.
 pub struct Placements {
     by_id: BTreeMap<String, Placement>,
+    directories: BTreeMap<String, String>,
 }
 
 impl Placements {
     /// Placement of one operation, or `None` when no source file defines it.
     pub fn get(&self, id: &str) -> Option<&Placement> {
         self.by_id.get(id)
+    }
+
+    /// Directory one package is built from, relative to the workspace root.
+    ///
+    /// A package name is not a path: `vyre-conform` lives in `conform`. The
+    /// reader that already parsed each member manifest is the one place that
+    /// knows both, so it answers rather than leaving a caller to guess.
+    pub fn directory(&self, package: &str) -> Option<&str> {
+        self.directories.get(package).map(String::as_str)
     }
 }
 
@@ -62,10 +72,16 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
     // spells it names no registration of its own, and reading the set from the
     // matched ids alone left that crate registering nothing.
     let mut registering: BTreeSet<String> = BTreeSet::new();
-    for member in source_members(root, errors) {
-        for module in module_routes(&root.join(&member).join("src")) {
-            let Ok(raw) = read_capped(&module.path) else {
-                continue;
+    let mut directories: BTreeMap<String, String> = BTreeMap::new();
+    for member in members(root, errors) {
+        directories.insert(member.name.clone(), member.path.clone());
+        for module in module_routes(&root.join(&member.path).join("src")) {
+            let raw = match read_capped(&module.path) {
+                Ok(raw) => raw,
+                Err(reason) => {
+                    errors.push(reason);
+                    continue;
+                }
             };
             let text = strip_cfg_test_items(&raw);
             let mut features = module.features;
@@ -75,7 +91,7 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
                 }
             }
             let site = Site {
-                crate_name: member.clone(),
+                crate_name: member.name.clone(),
                 path: module
                     .path
                     .strip_prefix(root)
@@ -93,7 +109,7 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
                 BTreeSet::new()
             };
             if !declared.is_empty() {
-                registering.insert(member.clone());
+                registering.insert(member.name.clone());
             }
             for literal in string_literals(&text).into_iter().collect::<BTreeSet<&str>>() {
                 let Some(id) = ids.get(literal) else {
@@ -156,7 +172,7 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
             },
         );
     }
-    Placements { by_id }
+    Placements { by_id, directories }
 }
 
 /// One compiled module file that names an operation id.
@@ -167,10 +183,14 @@ struct Site {
     features: Vec<String>,
 }
 
-/// One module file the crate root reaches, with the features that reach it.
-struct Module {
-    path: PathBuf,
-    features: Vec<String>,
+/// One workspace member that carries a crate root.
+struct Member {
+    /// Directory of the member, relative to the workspace root.
+    path: String,
+    /// Declared `package.name`. A diagnostic names the package, because that is
+    /// what a reader passes to `cargo` and what the registry records; the
+    /// directory is a layout detail and `conform/vyre-conform` is not a crate.
+    name: String,
 }
 
 /// Workspace members that carry a crate root.
@@ -185,7 +205,7 @@ struct Module {
 /// parse that could not succeed: `toml::Value` parses a single TOML value, so a
 /// document opening with `[workspace]` was read as an array and rejected as
 /// trailing content.
-fn source_members(root: &Path, errors: &mut Vec<String>) -> Vec<String> {
+fn members(root: &Path, errors: &mut Vec<String>) -> Vec<Member> {
     let manifest_path = root.join("Cargo.toml");
     let text = match fs::read_to_string(&manifest_path) {
         Ok(text) => text,
@@ -207,31 +227,66 @@ fn source_members(root: &Path, errors: &mut Vec<String>) -> Vec<String> {
             return Vec::new();
         }
     };
-    let members = manifest
+    let declared = manifest
         .get("workspace")
         .and_then(|workspace| workspace.get("members"))
         .and_then(toml::Value::as_array);
-    let Some(members) = members else {
+    let Some(declared) = declared else {
         errors.push(format!(
             "`{}` declares no `[workspace] members` array. Fix: declare the workspace members that carry operation registrations",
             manifest_path.display()
         ));
         return Vec::new();
     };
-    let carrying: Vec<String> = members
-        .iter()
-        .filter_map(toml::Value::as_str)
-        .filter(|member| root.join(member).join("src/lib.rs").is_file())
-        .map(str::to_string)
-        .collect();
+    let mut carrying = Vec::new();
+    for path in declared.iter().filter_map(toml::Value::as_str) {
+        if !root.join(path).join("src/lib.rs").is_file() {
+            continue;
+        }
+        match package_name(root, path) {
+            Ok(name) => carrying.push(Member {
+                path: path.to_string(),
+                name,
+            }),
+            Err(reason) => errors.push(reason),
+        }
+    }
     if carrying.is_empty() {
         errors.push(format!(
-            "`{}` names {} member(s) and none carries a `src/lib.rs`. Fix: declare the members that hold the crate roots",
+            "`{}` names {} member(s) and none carries a readable `src/lib.rs` and `package.name`. Fix: declare the members that hold the crate roots",
             manifest_path.display(),
-            members.len()
+            declared.len()
         ));
     }
     carrying
+}
+
+/// The `package.name` one member declares.
+fn package_name(root: &Path, member: &str) -> Result<String, String> {
+    let manifest_path = root.join(member).join("Cargo.toml");
+    let text = fs::read_to_string(&manifest_path).map_err(|error| {
+        format!(
+            "cannot read `{}`: {error}. Fix: give the member a manifest or drop it from the workspace members",
+            manifest_path.display()
+        )
+    })?;
+    let manifest = toml::from_str::<toml::Table>(&text).map_err(|error| {
+        format!(
+            "cannot parse `{}`: {error}. Fix: repair the member manifest so it parses",
+            manifest_path.display()
+        )
+    })?;
+    manifest
+        .get("package")
+        .and_then(|package| package.get("name"))
+        .and_then(toml::Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| {
+            format!(
+                "`{}` declares no `package.name`. Fix: name the package the member builds",
+                manifest_path.display()
+            )
+        })
 }
 
 /// Features gating an `inventory::submit!` block in one file.
@@ -253,14 +308,31 @@ fn submission_features(text: &str) -> Vec<String> {
     features
 }
 
-fn read_capped(path: &Path) -> Result<String, ()> {
-    let Ok(meta) = fs::metadata(path) else {
-        return Err(());
-    };
+/// Read one source file, or say why it was not read.
+///
+/// A file over the cap is skipped, and a skipped file registers nothing, so a
+/// silent skip answered `no definition site` for every operation it defined.
+/// The cap stays; the skip is named.
+fn read_capped(path: &Path) -> Result<String, String> {
+    let meta = fs::metadata(path).map_err(|error| {
+        format!(
+            "cannot read `{}`: {error}. Fix: make the module file readable, or drop the `mod` declaration that names it",
+            path.display()
+        )
+    })?;
     if meta.len() > MAX_SOURCE_BYTES {
-        return Err(());
+        return Err(format!(
+            "`{}` is {} bytes, over the {MAX_SOURCE_BYTES} byte read cap, so the registrations it holds are unread. Fix: split the file",
+            path.display(),
+            meta.len()
+        ));
     }
-    fs::read_to_string(path).map_err(|_| ())
+    fs::read_to_string(path).map_err(|error| {
+        format!(
+            "cannot read `{}`: {error}. Fix: make the module file readable",
+            path.display()
+        )
+    })
 }
 
 /// These readers are crate-private, and no integration test can reach

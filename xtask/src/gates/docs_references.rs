@@ -324,67 +324,54 @@ fn collect(
 ) -> Result<(), GateError> {
     let relative = document.to_string_lossy().to_string();
     let text = tree.read(document)?;
-    if !GENERATED_NAVIGATION.contains(&relative.as_str()) {
+    let mut scan = DocumentScan {
+        tree,
+        document,
+        relative: &relative,
+        references,
+    };
+    if !GENERATED_NAVIGATION.contains(&scan.relative) {
         for (line, span) in code_spans(&text) {
-            record(
-                tree,
-                document,
-                &relative,
-                line,
-                span,
-                Source::CodeSpan,
-                references,
-            );
+            scan.record(line, span, Source::CodeSpan);
         }
         for (line, target) in link_targets(&text) {
-            record(
-                tree,
-                document,
-                &relative,
-                line,
-                target,
-                Source::Link,
-                references,
-            );
+            scan.record(line, target, Source::Link);
         }
     }
     for (line, command) in command_lines(&text) {
         for token in command_path_tokens(tree, &command) {
-            record(
-                tree,
-                document,
-                &relative,
-                line,
-                token,
-                Source::Command,
-                references,
-            );
+            scan.record(line, token, Source::Command);
         }
     }
     Ok(())
 }
 
-/// Record one reference, when the token it carries names a path at all.
-#[allow(clippy::too_many_arguments)]
-fn record(
-    tree: &Tree,
-    document: &Path,
-    relative: &str,
-    line: u32,
-    raw: String,
-    source: Source,
-    references: &mut BTreeSet<Reference>,
-) {
-    let Some(resolved) = resolve(tree, document, &raw, source) else {
-        return;
-    };
-    references.insert(Reference {
-        document: relative.to_string(),
-        line,
-        raw,
-        resolved,
-        source,
-    });
+/// One document being read, and the set its references land in.
+///
+/// The tree, the document, its workspace-relative spelling and the destination
+/// set do not vary across the tokens of one document, so they are the scan
+/// rather than four arguments repeated at every recording site.
+struct DocumentScan<'a> {
+    tree: &'a Tree,
+    document: &'a Path,
+    relative: &'a str,
+    references: &'a mut BTreeSet<Reference>,
+}
+
+impl DocumentScan<'_> {
+    /// Record one reference, when the token it carries names a path at all.
+    fn record(&mut self, line: u32, raw: String, source: Source) {
+        let Some(resolved) = resolve(self.tree, self.document, &raw, source) else {
+            return;
+        };
+        self.references.insert(Reference {
+            document: self.relative.to_string(),
+            line,
+            raw,
+            resolved,
+            source,
+        });
+    }
 }
 
 /// Every markdown link target, with the line it sits on.
@@ -707,10 +694,12 @@ fn has_existing_root_prefix(tree: &Tree, token: &str) -> bool {
 
 /// Whether a token is a path claim rather than prose, a URL or Rust syntax.
 ///
-/// A link target names a destination by grammar, so a sibling page reached as
-/// `[code style](code-style.md)` is a claim with no slash in it. A slashless name
-/// in prose is not: `mod.rs` in a sentence names a kind of file, and resolving it
-/// against the writer's own directory would report a path nobody claimed.
+/// A link target names a destination by grammar, so every one of them is a
+/// claim: `[code style](code-style.md)` has no slash, `[licence](LICENSE-MIT)`
+/// has no suffix either, and `[the catalog](catalog/)` names a directory. A
+/// slashless name in prose is not a claim: `mod.rs` in a sentence names a kind
+/// of file, and resolving it against the writer's own directory would report a
+/// path nobody claimed.
 fn is_path_candidate(tree: &Tree, raw: &str, source: Source) -> bool {
     let token = path_token(raw);
     if token.is_empty() || token.chars().any(char::is_whitespace) {
@@ -730,13 +719,13 @@ fn is_path_candidate(tree: &Tree, raw: &str, source: Source) -> bool {
     if matches!(token.as_str(), "." | ".." | "./" | "../") {
         return false;
     }
+    if source == Source::Link {
+        return true;
+    }
     if token.starts_with("./") || token.starts_with("../") || token.starts_with('/') {
         return true;
     }
     if ROOT_PREFIXES.iter().any(|prefix| token.starts_with(prefix)) {
-        return true;
-    }
-    if source == Source::Link && PATH_SUFFIXES.iter().any(|suffix| token.ends_with(suffix)) {
         return true;
     }
     if token.contains('/') && PATH_SUFFIXES.iter().any(|suffix| token.ends_with(suffix)) {
@@ -775,12 +764,13 @@ fn owning_member(tree: &Tree, document: &Path) -> Option<PathBuf> {
 /// not a path claim at all.
 ///
 /// A relative token has more than one reading: `tests/x.rs` in a crate document
-/// is that crate's test or the workspace one, and `examples/demo/Cargo.toml` in
-/// `examples/demo/README.md` is the manifest beside it under either reading. A
-/// reading that resolves is the one the writer meant, so the readings are tried
-/// in order of specificity and the first published one wins; when none resolves
-/// the most specific is reported, because that is the path the writer's own
-/// directory makes of it.
+/// is that crate's test or the workspace one, `builder/range_ordering.rs` in a
+/// crate's `ARCHITECTURE.md` is a module under that crate's `src/`, and
+/// `examples/demo/Cargo.toml` in `examples/demo/README.md` is the manifest
+/// beside it under either reading. A reading that resolves is the one the writer
+/// meant, so the readings are tried in order of specificity and the first
+/// published one wins; when none resolves the most specific is reported, because
+/// that is the path the writer's own directory makes of it.
 fn resolve(tree: &Tree, document: &Path, raw: &str, source: Source) -> Option<String> {
     let token = path_token(raw);
     if !is_path_candidate(tree, &token, source) {
@@ -795,12 +785,15 @@ fn resolve(tree: &Tree, document: &Path, raw: &str, source: Source) -> Option<St
         };
     }
     let mut candidates: Vec<PathBuf> = Vec::new();
-    if CRATE_RELATIVE_PREFIXES
-        .iter()
-        .any(|prefix| token.starts_with(prefix))
-    {
-        if let Some(member) = owning_member(tree, document) {
-            candidates.push(tree.absolute(member).join(&token));
+    if let Some(member) = owning_member(tree, document) {
+        if CRATE_RELATIVE_PREFIXES
+            .iter()
+            .any(|prefix| token.starts_with(prefix))
+        {
+            candidates.push(tree.absolute(&member).join(&token));
+        }
+        if !token.starts_with("src/") {
+            candidates.push(tree.absolute(&member).join("src").join(&token));
         }
     }
     if ROOT_PREFIXES.iter().any(|prefix| token.starts_with(prefix))
