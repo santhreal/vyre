@@ -363,35 +363,35 @@ fn bigram_counts(bytes: &[u8]) -> HashMap<(u8, u8), u32> {
 pub fn registered_op_owner_lane(op_id: &str) -> &'static str {
     if op_id.starts_with("vyre-primitives::hardware::") {
         "lower_emit"
-    } else if op_id.starts_with("vyre-primitives::graph::")
-        || op_id.starts_with("vyre-primitives::bitset::")
-        || op_id.starts_with("vyre-primitives::fixpoint::")
+    } else if op_id.starts_with("vyre-libs::graph::")
+        || op_id.starts_with("vyre-libs::bitset::")
+        || op_id.starts_with("vyre-libs::fixpoint::")
         || op_id.starts_with("vyre-libs::graph::")
         || op_id.starts_with("vyre-libs::dataflow::")
     {
         "graph_flow_compiler"
-    } else if op_id.starts_with("vyre-primitives::matching::")
-        || op_id.starts_with("vyre-primitives::text::")
-        || op_id.starts_with("vyre-primitives::nfa::")
+    } else if op_id.starts_with("vyre-libs::matching::")
+        || op_id.starts_with("vyre-libs::text::")
+        || op_id.starts_with("vyre-libs::nfa::")
         || op_id.starts_with("vyre-libs::scan::")
         || op_id.starts_with("vyre-libs::matching::")
     {
         "scan_automata"
-    } else if op_id.starts_with("vyre-primitives::parsing::")
+    } else if op_id.starts_with("vyre-libs::parsing::")
         || op_id.starts_with("vyre-libs::parsing::")
     {
         "parser_frontend"
     } else if op_id.starts_with("vyre-libs::security::")
         || op_id.starts_with("vyre-libs::borrowck::")
         || op_id.starts_with("vyre-libs::rule::")
-        || op_id.starts_with("vyre-primitives::predicate::")
+        || op_id.starts_with("vyre-libs::predicate::")
     {
         "security_dataflow"
-    } else if op_id.starts_with("vyre-primitives::math::")
-        || op_id.starts_with("vyre-primitives::reduce::")
-        || op_id.starts_with("vyre-primitives::hash::")
-        || op_id.starts_with("vyre-primitives::decode::")
-        || op_id.starts_with("vyre-primitives::label::")
+    } else if op_id.starts_with("vyre-libs::math::")
+        || op_id.starts_with("vyre-libs::reduce::")
+        || op_id.starts_with("vyre-libs::hash::")
+        || op_id.starts_with("vyre-libs::decode::")
+        || op_id.starts_with("vyre-libs::label::")
         || op_id.starts_with("vyre-libs::math::")
         || op_id.starts_with("vyre-libs::nn::")
         || op_id.starts_with("vyre-libs::quant::")
@@ -399,7 +399,7 @@ pub fn registered_op_owner_lane(op_id: &str) -> &'static str {
         || op_id.starts_with("vyre-libs::decode::")
     {
         "sparse_math_ai"
-    } else if op_id.starts_with("vyre-primitives::visual::")
+    } else if op_id.starts_with("vyre-libs::visual::")
         || op_id.starts_with("vyre-libs::visual::")
     {
         "product_dogfood"
@@ -616,7 +616,7 @@ mod tests {
     #[test]
     fn registered_op_owner_lane_classifies_major_namespaces() {
         assert_eq!(
-            registered_op_owner_lane("vyre-primitives::graph::csr_forward_traverse"),
+            registered_op_owner_lane("vyre-libs::graph::csr_forward_traverse"),
             "graph_flow_compiler"
         );
         assert_eq!(
@@ -632,7 +632,7 @@ mod tests {
             "parser_frontend"
         );
         assert_eq!(
-            registered_op_owner_lane("vyre-primitives::parsing::ssa_dominance_scan"),
+            registered_op_owner_lane("vyre-libs::parsing::ssa_dominance_scan"),
             "parser_frontend"
         );
         assert_eq!(
@@ -640,7 +640,7 @@ mod tests {
             "sparse_math_ai"
         );
         assert_eq!(
-            registered_op_owner_lane("vyre-primitives::predicate::call_to"),
+            registered_op_owner_lane("vyre-libs::predicate::call_to"),
             "security_dataflow"
         );
         assert_eq!(

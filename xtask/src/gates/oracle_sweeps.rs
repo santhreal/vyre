@@ -73,7 +73,7 @@ impl Gate for OracleSweeps {
     }
 
     fn help(&self) -> &'static str {
-        "Derive the sweep_* oracle-matrix roster from tracked sources and manifests; --run executes one partition"
+        "Derive the sweep_* oracle-matrix roster from tracked sources and manifests; `--run` executes one partition"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

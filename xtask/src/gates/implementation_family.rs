@@ -14,135 +14,135 @@
 /// that owns the emitted body.
 pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
     (
-        "vyre-primitives::bitset::and",
-        "vyre-primitives::bitset::binary_word",
+        "vyre-libs::bitset::and",
+        "vyre-libs::bitset::binary_word",
     ),
     (
-        "vyre-primitives::bitset::and_not",
-        "vyre-primitives::bitset::binary_word",
+        "vyre-libs::bitset::and_not",
+        "vyre-libs::bitset::binary_word",
     ),
     (
-        "vyre-primitives::bitset::or",
-        "vyre-primitives::bitset::binary_word",
+        "vyre-libs::bitset::or",
+        "vyre-libs::bitset::binary_word",
     ),
     (
-        "vyre-primitives::bitset::stochastic_and_mul",
-        "vyre-primitives::bitset::binary_word",
+        "vyre-libs::bitset::stochastic_and_mul",
+        "vyre-libs::bitset::binary_word",
     ),
     (
-        "vyre-primitives::bitset::xor",
-        "vyre-primitives::bitset::binary_word",
+        "vyre-libs::bitset::xor",
+        "vyre-libs::bitset::binary_word",
     ),
     (
-        "vyre-primitives::bitset::and_into",
-        "vyre-primitives::bitset::target_operand_word",
+        "vyre-libs::bitset::and_into",
+        "vyre-libs::bitset::target_operand_word",
     ),
     (
-        "vyre-primitives::bitset::and_not_into",
-        "vyre-primitives::bitset::target_operand_word",
+        "vyre-libs::bitset::and_not_into",
+        "vyre-libs::bitset::target_operand_word",
     ),
     (
-        "vyre-primitives::bitset::copy",
-        "vyre-primitives::bitset::target_operand_word",
+        "vyre-libs::bitset::copy",
+        "vyre-libs::bitset::target_operand_word",
     ),
     (
-        "vyre-primitives::bitset::or_into",
-        "vyre-primitives::bitset::target_operand_word",
+        "vyre-libs::bitset::or_into",
+        "vyre-libs::bitset::target_operand_word",
     ),
     (
-        "vyre-primitives::bitset::xor_into",
-        "vyre-primitives::bitset::target_operand_word",
+        "vyre-libs::bitset::xor_into",
+        "vyre-libs::bitset::target_operand_word",
     ),
     (
-        "vyre-primitives::bitset::equal",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::bitset::equal",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::bitset::subset_of",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::bitset::subset_of",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::bitset::set_bit",
-        "vyre-primitives::bitset::bit_update",
+        "vyre-libs::bitset::set_bit",
+        "vyre-libs::bitset::bit_update",
     ),
     (
-        "vyre-primitives::bitset::clear_bit",
-        "vyre-primitives::bitset::bit_update",
+        "vyre-libs::bitset::clear_bit",
+        "vyre-libs::bitset::bit_update",
     ),
     (
-        "vyre-primitives::predicate::literal_of",
+        "vyre-libs::predicate::literal_of",
         "vyre-libs::label::nodeset_filter",
     ),
     (
-        "vyre-primitives::predicate::node_kind_eq",
+        "vyre-libs::predicate::node_kind_eq",
         "vyre-libs::label::nodeset_filter",
     ),
     (
-        "vyre-primitives::label::resolve_family",
+        "vyre-libs::label::resolve_family",
         "vyre-libs::label::nodeset_filter",
     ),
     (
-        "vyre-primitives::graph::vast_walk_preorder",
-        "vyre-primitives::graph::vast_tree_walk_order",
+        "vyre-libs::graph::vast_walk_preorder",
+        "vyre-libs::graph::vast_tree_walk_order",
     ),
     (
-        "vyre-primitives::graph::vast_walk_postorder",
-        "vyre-primitives::graph::vast_tree_walk_order",
+        "vyre-libs::graph::vast_walk_postorder",
+        "vyre-libs::graph::vast_tree_walk_order",
     ),
     // Every row below reaches `forward_body` or `backward_body` in
     // `csr_frontier_step`, including the excluding variant, whose only
     // difference is the excluded-source operand that body already takes.
     (
-        "vyre-primitives::graph::csr_forward_traverse",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::graph::csr_forward_traverse",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::graph::csr_forward_traverse_excluding",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::graph::csr_forward_traverse_excluding",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::graph::csr_backward_traverse",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::graph::csr_backward_traverse",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::graph::csr_frontier_degree_sum",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::graph::csr_frontier_degree_sum",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::graph::tensor_flow_forward",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::graph::tensor_flow_forward",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::predicate::call_to",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::predicate::call_to",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::predicate::edge",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::predicate::edge",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::predicate::return_value_of",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::predicate::return_value_of",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::predicate::arg_of",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::predicate::arg_of",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::predicate::size_argument_of",
-        "vyre-primitives::graph::csr_frontier_step",
+        "vyre-libs::predicate::size_argument_of",
+        "vyre-libs::graph::csr_frontier_step",
     ),
     (
-        "vyre-primitives::graph::csr_forward_or_changed",
-        "vyre-primitives::graph::outgoing_frontier_or_changed",
+        "vyre-libs::graph::csr_forward_or_changed",
+        "vyre-libs::graph::outgoing_frontier_or_changed",
     ),
     (
-        "vyre-primitives::graph::csr_backward_or_changed",
-        "vyre-primitives::graph::incoming_frontier_or_changed",
+        "vyre-libs::graph::csr_backward_or_changed",
+        "vyre-libs::graph::incoming_frontier_or_changed",
     ),
     (
-        "vyre-primitives::graph::functor_apply",
-        "vyre-primitives::graph::target_centric_functor_apply",
+        "vyre-libs::graph::functor_apply",
+        "vyre-libs::graph::target_centric_functor_apply",
     ),
     (
         "vyre-primitives::hardware::workgroup_barrier",
@@ -161,80 +161,80 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-primitives::hardware::unary_u32_program",
     ),
     (
-        "vyre-primitives::graph::monoidal_compose",
-        "vyre-primitives::fixed_u32_matmul::u32_matmul_program",
+        "vyre-libs::graph::monoidal_compose",
+        "vyre-libs::math::fixed_u32_matmul_program",
     ),
     (
-        "vyre-primitives::math::tensor_network_pair_contract",
-        "vyre-primitives::fixed_u32_matmul::u32_matmul_program",
+        "vyre-libs::math::tensor_network_pair_contract",
+        "vyre-libs::math::fixed_u32_matmul_program",
     ),
     (
-        "vyre-primitives::math::semiring_gemm",
-        "vyre-primitives::fixed_u32_matmul::u32_matmul_program",
+        "vyre-libs::math::semiring_gemm",
+        "vyre-libs::math::fixed_u32_matmul_program",
     ),
     (
-        "vyre-primitives::math::sinkhorn_scale",
-        "vyre-primitives::math::u32_binary_map",
+        "vyre-libs::math::sinkhorn_scale",
+        "vyre-libs::math::u32_binary_map",
     ),
     (
-        "vyre-primitives::math::gaussian_rdp_step",
-        "vyre-primitives::math::u32_binary_map",
+        "vyre-libs::math::gaussian_rdp_step",
+        "vyre-libs::math::u32_binary_map",
     ),
     (
-        "vyre-primitives::math::iht_threshold",
-        "vyre-primitives::math::u32_vector_scalar_map",
+        "vyre-libs::math::iht_threshold",
+        "vyre-libs::math::u32_vector_scalar_map",
     ),
     (
-        "vyre-primitives::math::mp_edge_clip",
-        "vyre-primitives::math::u32_vector_scalar_map",
+        "vyre-libs::math::mp_edge_clip",
+        "vyre-libs::math::u32_vector_scalar_map",
     ),
     (
-        "vyre-primitives::reduce::sum",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::reduce::sum",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::reduce::min",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::reduce::min",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::reduce::max",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::reduce::max",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::reduce::count",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::reduce::count",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::reduce::count_non_zero",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::reduce::count_non_zero",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::reduce::any",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::reduce::any",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::reduce::all",
-        "vyre-primitives::reduce::atomic_grid_stride_u32",
+        "vyre-libs::reduce::all",
+        "vyre-libs::reduce::atomic_grid_stride_u32",
     ),
     (
-        "vyre-primitives::reduce::gather",
-        "vyre-primitives::reduce::indexed_move",
+        "vyre-libs::reduce::gather",
+        "vyre-libs::reduce::indexed_move",
     ),
     (
-        "vyre-primitives::reduce::scatter",
-        "vyre-primitives::reduce::indexed_move",
+        "vyre-libs::reduce::scatter",
+        "vyre-libs::reduce::indexed_move",
     ),
     (
-        "vyre-primitives::reduce::workgroup_sum_f32",
-        "vyre-primitives::reduce::workgroup_tree",
+        "vyre-libs::reduce::workgroup_sum_f32",
+        "vyre-libs::reduce::workgroup_tree",
     ),
     (
-        "vyre-primitives::reduce::workgroup_sum_u32",
-        "vyre-primitives::reduce::workgroup_tree",
+        "vyre-libs::reduce::workgroup_sum_u32",
+        "vyre-libs::reduce::workgroup_tree",
     ),
     (
-        "vyre-primitives::reduce::workgroup_max_f32",
-        "vyre-primitives::reduce::workgroup_tree",
+        "vyre-libs::reduce::workgroup_max_f32",
+        "vyre-libs::reduce::workgroup_tree",
     ),
     (
         "vyre-libs::math::atomic::atomic_add_u32",
@@ -372,12 +372,20 @@ pub const DISTINCT_FAMILY_PAIRS: &[(&str, &str)] = &[
         "vyre-primitives::hardware::unary_u32_program",
     ),
     (
-        "vyre-primitives::graph::outgoing_frontier_or_changed",
-        "vyre-primitives::graph::incoming_frontier_or_changed",
+        "vyre-libs::graph::outgoing_frontier_or_changed",
+        "vyre-libs::graph::incoming_frontier_or_changed",
     ),
     (
-        "vyre-primitives::reduce::indexed_move",
-        "vyre-primitives::graph::target_centric_functor_apply",
+        "vyre-libs::graph::csr_frontier_step",
+        "vyre-libs::graph::outgoing_frontier_or_changed",
+    ),
+    (
+        "vyre-libs::graph::csr_frontier_step",
+        "vyre-libs::graph::incoming_frontier_or_changed",
+    ),
+    (
+        "vyre-libs::reduce::indexed_move",
+        "vyre-libs::graph::target_centric_functor_apply",
     ),
     (
         "vyre-libs::nn::activation::typed_binary_activation_program",
@@ -402,52 +410,96 @@ pub const DISTINCT_FAMILY_PAIRS: &[(&str, &str)] = &[
 /// express.
 pub const REVIEWED_DISTINCT_OPERATIONS: &[(&str, &str, &str)] = &[
     (
-        "vyre-primitives::graph::path_reconstruct",
-        "vyre-primitives::text::encoding_classify",
+        "vyre-libs::graph::path_reconstruct",
+        "vyre-libs::text::encoding_classify",
         "a bounded serial loop that stores one element per step; one follows parent pointers to \
          materialize a path, the other reads 256 histogram bins to pick an encoding class",
     ),
     (
-        "vyre-primitives::graph::functor_apply",
-        "vyre-primitives::reduce::histogram",
+        "vyre-libs::graph::functor_apply",
+        "vyre-libs::reduce::histogram",
         "one lane reading through an index table and storing one element; the functor carries a \
          schema column mapping and the histogram counts occurrences of the bin its lane owns",
     ),
     (
-        "vyre-primitives::math::matrix_identity_fill",
-        "vyre-primitives::parsing::planar_rewrite_schedule",
+        "vyre-libs::math::matrix_identity_fill",
+        "vyre-libs::parsing::planar_rewrite_schedule",
         "row-major two-dimensional index arithmetic under a per-cell predicate; the fill compares \
          row against column and stores a constant, the rewrite matches a k by k window against a \
          pattern and stores its replacement",
     ),
     (
-        "vyre-primitives::math::tensor_train_decompose",
-        "vyre-primitives::parsing::planar_rewrite_schedule",
+        "vyre-libs::math::tensor_train_decompose",
+        "vyre-libs::parsing::planar_rewrite_schedule",
         "the loop nest that walks one mode index range is all the two share; the decomposition \
          composes an eigensolve and partial dot products per mode, and the shape carries neither \
          the truncation nor the window match",
     ),
     (
-        "vyre-primitives::decode::ziftsieve_literal_copy",
-        "vyre-primitives::math::bigint_add_carry",
+        "vyre-libs::decode::ziftsieve_literal_copy",
+        "vyre-libs::math::bigint_add_carry",
         "one lane per element over a contiguous range with a running offset; the copy moves bytes \
          to a prefix-summed destination and the addition propagates a carry between limbs, and a \
          carry chain cannot be a copy",
     ),
     (
         "vyre-libs::math::fft::fft4_complex",
-        "vyre-primitives::hash::blake3_g",
+        "vyre-libs::hash::blake3_g",
         "straight-line unrolled arithmetic over a fixed small operand set has one fingerprint \
          whatever the arithmetic is; one is four complex butterflies over f32 twiddles, the other \
          is the BLAKE3 four-word mixing of add, xor and rotate over u32",
     ),
     (
-        "vyre-primitives::graph::dominator_tree_intersect_step",
-        "vyre-primitives::math::softmax_step",
+        "vyre-libs::graph::dominator_tree_intersect_step",
+        "vyre-libs::math::softmax_step",
         "a lane-zero guard around one serial pass that accumulates into a binding and a second \
          serial pass that stores per element; the softmax divides every element by the sum it \
          just totalled, and the relaxation sweep walks a predecessor CSR and intersects two idom \
          parents by climbing the deeper one, which no division expresses",
+    ),
+    (
+        "vyre-libs::bitset::any",
+        "vyre-libs::math::symmetric_eigen_jacobi",
+        "hierarchical tree reduction over packed words versus iterative Jacobi rotation sweeps \
+         over symmetric matrix elements; the tree popcount accumulation is not an eigenvalue \
+         annihilation step",
+    ),
+    (
+        "vyre-libs::geom::tfn_scalar_mix",
+        "vyre-libs::math::mori_zwanzig_project_step",
+        "Clifford multivector rotor blend versus Mori-Zwanzig projection step over memory \
+         kernels; blending geometric algebra multivectors is not an orthogonal projection over \
+         resolvent operators",
+    ),
+    (
+        "vyre-libs::graph::dominator_frontier",
+        "vyre-libs::predicate::arg_of",
+        "dominance frontier computation over dominator tree CSR versus relational predicate \
+         argument lookup over node sets",
+    ),
+    (
+        "vyre-libs::graph::dominator_frontier",
+        "vyre-libs::predicate::size_argument_of",
+        "dominance frontier computation over dominator tree CSR versus relational predicate \
+         size argument lookup over node sets",
+    ),
+    (
+        "vyre-libs::graph::monoidal_compose",
+        "vyre-libs::math::randomized_projection_step",
+        "monoidal category tensor contraction versus randomized Johnson-Lindenstrauss dimension \
+         reduction; tensor network composition is not a random projection",
+    ),
+    (
+        "vyre-libs::graph::sheaf_diffusion_step",
+        "vyre-libs::opt::homotopy_euler_predictor",
+        "cellular sheaf Laplacian heat diffusion step over cochain complexes versus homotopy \
+         continuation Euler predictor step along curve tangents",
+    ),
+    (
+        "vyre-libs::math::hensel_lift_step",
+        "vyre-libs::opt::homotopy_euler_predictor",
+        "p-adic Hensel lift root refinement step over polynomial ideals versus homotopy \
+         continuation Euler predictor step along curve tangents",
     ),
 ];
 
@@ -553,12 +605,12 @@ mod tests {
     #[test]
     fn a_shared_builder_groups_its_operations() {
         assert!(same_implementation_family(
-            "vyre-primitives::predicate::edge",
-            "vyre-primitives::graph::csr_forward_traverse_excluding"
+            "vyre-libs::predicate::edge",
+            "vyre-libs::graph::csr_forward_traverse_excluding"
         ));
         assert!(!same_implementation_family(
-            "vyre-primitives::predicate::edge",
-            "vyre-primitives::reduce::all"
+            "vyre-libs::predicate::edge",
+            "vyre-libs::reduce::all"
         ));
     }
 
@@ -620,17 +672,17 @@ mod tests {
     fn a_reviewed_pair_reads_in_both_directions() {
         let forward = reviewed_distinct_operations(
             "vyre-libs::math::fft::fft4_complex",
-            "vyre-primitives::hash::blake3_g",
+            "vyre-libs::hash::blake3_g",
         );
         let backward = reviewed_distinct_operations(
-            "vyre-primitives::hash::blake3_g",
+            "vyre-libs::hash::blake3_g",
             "vyre-libs::math::fft::fft4_complex",
         );
         assert_eq!(forward, backward);
         assert!(forward.is_some());
         assert!(reviewed_distinct_operations(
-            "vyre-primitives::hash::blake3_g",
-            "vyre-primitives::reduce::all"
+            "vyre-libs::hash::blake3_g",
+            "vyre-libs::reduce::all"
         )
         .is_none());
     }

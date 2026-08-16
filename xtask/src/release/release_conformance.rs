@@ -1077,7 +1077,7 @@ mod tests {
     #[test]
     fn diff_summary_uses_replay_capsule_digests_for_output_mismatch() {
         let mut failure = pair(
-            "vyre-primitives::math::tensor_network_pair_contract",
+            "vyre-libs::math::tensor_network_pair_contract",
             "cuda",
             false,
             "backend output diverged from vyre-reference on case 0",

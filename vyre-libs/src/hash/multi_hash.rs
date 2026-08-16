@@ -16,7 +16,7 @@ use super::crc32::{crc32, crc32_finalize_expr, crc32_initial_expr, crc32_update_
 use super::fnv1a::{fnv1a32, fnv1a32_initial_expr, fnv1a32_update_byte_node};
 
 /// Stable Tier 2.5 op id for the fused CRC-32/FNV-1a32/Adler-32 walker.
-pub const MULTI_HASH_OP_ID: &str = "vyre-primitives::hash::multi_hash";
+pub const MULTI_HASH_OP_ID: &str = "vyre-libs::hash::multi_hash";
 
 /// CPU reference for the fused multi-hash contract.
 #[must_use]

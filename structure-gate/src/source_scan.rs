@@ -654,8 +654,15 @@ fn gating_attributes(
 fn reachable_features(attributes: &[String]) -> Option<Vec<String>> {
     let mut features = Vec::new();
     for attribute in attributes {
+        let trimmed = attribute.trim();
+        let predicate = if let Some(after) = trimmed.strip_prefix("#[cfg(") {
+            let inner = after.strip_suffix(']').unwrap_or(after).trim();
+            inner.strip_suffix(')').unwrap_or(inner).trim()
+        } else {
+            trimmed
+        };
         let named = cfg_feature_names(attribute);
-        if named.is_empty() && crate::cfg_test::requires_test(attribute) {
+        if named.is_empty() && crate::cfg_test::requires_test(predicate) {
             return None;
         }
         for feature in named {

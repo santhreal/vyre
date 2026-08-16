@@ -13,7 +13,7 @@ use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::traversal::forward_edge_program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::predicate::edge";
+pub const OP_ID: &str = "vyre-libs::predicate::edge";
 
 /// Build a Program. The body is a `Region { generator: edge::OP_ID }`
 /// wrapping the underlying `csr_forward_traverse` so callers (the

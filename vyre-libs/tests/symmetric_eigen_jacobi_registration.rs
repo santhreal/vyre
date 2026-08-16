@@ -1,4 +1,4 @@
-//! Canonical registration contract of `vyre-primitives::math::symmetric_eigen_jacobi`.
+//! Canonical registration contract of `vyre-libs::math::symmetric_eigen_jacobi`.
 //!
 //! WHY: the eigensolve is a reusable primitive with its own `OP_ID` that
 //! `tensor_train_decompose` composes as a child region, but for a while it carried no

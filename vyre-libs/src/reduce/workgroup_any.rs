@@ -6,7 +6,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for workgroup-local u32 any reduction.
-pub const WORKGROUP_ANY_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_any_u32";
+pub const WORKGROUP_ANY_U32_OP_ID: &str = "vyre-libs::reduce::workgroup_any_u32";
 
 /// Build a body that assigns `out_var = bit_or(values[0..count])`.
 #[must_use]

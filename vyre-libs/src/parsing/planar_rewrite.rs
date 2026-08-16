@@ -29,7 +29,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::parsing::planar_rewrite_schedule";
+pub const OP_ID: &str = "vyre-libs::parsing::planar_rewrite_schedule";
 
 /// Schedule a maximal non-overlapping set of `k × k` candidate matches
 /// in a single wave.

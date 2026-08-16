@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::gate::{Finding, GateCtx, Report};
+use crate::gate::{Coverage, Finding, GateCtx, Report};
 
 /// Largest committed artifact this module will read into memory.
 ///
@@ -190,8 +190,14 @@ pub fn settle_inspection(ctx: &GateCtx, gate: &str, inspection: Inspection) -> R
         notes,
         artifacts,
     } = inspection;
+    let owned_paths = artifacts.iter().map(|artifact| artifact.path.clone()).collect();
     findings.extend(settle(&ctx.root, gate, &artifacts, ctx.write));
-    Report { findings, notes }
+    Report {
+        findings,
+        notes,
+        coverage: vec![Coverage::complete("generated artifacts", artifacts.len())],
+        artifacts: owned_paths,
+    }
 }
 
 /// Compare every artifact against the tree, or write it when `write` is set.

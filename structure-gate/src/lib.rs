@@ -52,6 +52,7 @@ pub mod registration_text;
 pub mod source_scan;
 pub mod geometry_constants;
 pub use geometry_constants::geometry_constant_failures;
+pub use source_scan::opaque_span;
 
 use crate::module_layout::{
     directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
@@ -619,7 +620,7 @@ fn path_names_language(path: &str, language: &str) -> bool {
 const MAX_SOURCE_BYTES: u64 = 16_777_216;
 
 /// Read a source or manifest file, refusing anything over [`MAX_SOURCE_BYTES`].
-fn read_source_bounded(path: &Path) -> std::io::Result<String> {
+pub(crate) fn read_source_bounded(path: &Path) -> std::io::Result<String> {
     use std::io::Read as _;
 
     let file = fs::File::open(path)?;
@@ -727,7 +728,7 @@ fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
 
 /// This crate's own sources. Its tests carry example registrations that name
 /// other crates on purpose, so scanning itself would report its own fixtures.
-const SELF_CRATE: &str = "structure-gate";
+pub(crate) const SELF_CRATE: &str = "structure-gate";
 
 fn source_files(root: &Path, member: &str) -> Vec<PathBuf> {
     if member == SELF_CRATE {
@@ -737,7 +738,7 @@ fn source_files(root: &Path, member: &str) -> Vec<PathBuf> {
 }
 
 /// Every `.rs` file under one source tree.
-fn source_tree_files(directory: &Path) -> Vec<PathBuf> {
+pub(crate) fn source_tree_files(directory: &Path) -> Vec<PathBuf> {
     WalkDir::new(directory)
         .into_iter()
         .filter_map(Result::ok)
@@ -794,7 +795,7 @@ fn manifest_crate_ident(manifest: &Path) -> Option<String> {
     Some(crate_ident(name))
 }
 
-fn relative(root: &Path, path: &Path) -> String {
+pub(crate) fn relative(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .unwrap_or(path)
         .to_string_lossy()

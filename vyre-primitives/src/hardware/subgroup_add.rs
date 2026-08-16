@@ -90,6 +90,7 @@ inventory::submit! {
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         geometry_requirements: None,
+        source_file: file!(),
     }
 }
 

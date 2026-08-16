@@ -7,7 +7,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::ast_ops::AST_ASSIGN;
 
 /// Stable op id for the SSA dominance scan child region.
-pub const OP_ID: &str = "vyre-primitives::parsing::ssa_dominance_scan";
+pub const OP_ID: &str = "vyre-libs::parsing::ssa_dominance_scan";
 
 /// Emit the bounded lookahead scan that allocates phi nodes when rival
 /// assignments to the same variable cross block headers.

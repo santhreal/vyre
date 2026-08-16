@@ -95,6 +95,38 @@ impl Finding {
     }
 }
 
+/// The complete subject universe one gate judged.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Coverage {
+    /// Stable name for the subject class.
+    pub subject: String,
+    /// Subjects derived from the authoritative registry or source tree.
+    pub discovered: usize,
+    /// Subjects actually judged.
+    pub judged: usize,
+    /// Subjects excluded by a typed, live exemption.
+    pub exempted: usize,
+}
+
+impl Coverage {
+    /// Construct one complete coverage row.
+    #[must_use]
+    pub fn complete(subject: impl Into<String>, discovered: usize) -> Self {
+        Self {
+            subject: subject.into(),
+            discovered,
+            judged: discovered,
+            exempted: 0,
+        }
+    }
+
+    /// Whether this row accounts for its entire discovered universe.
+    #[must_use]
+    pub const fn is_closed(&self) -> bool {
+        self.discovered > 0 && self.judged + self.exempted == self.discovered
+    }
+}
+
 /// What a gate produces. `findings` is the pinned number; `notes` is context
 /// that must never be counted.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -103,6 +135,12 @@ pub struct Report {
     pub findings: Vec<Finding>,
     /// Context the gate wants a reader to have, never counted and never pinned.
     pub notes: Vec<String>,
+    /// Complete subject universes judged by this gate.
+    #[serde(default)]
+    pub coverage: Vec<Coverage>,
+    /// Exact workspace-relative artifacts this execution owns.
+    #[serde(default)]
+    pub artifacts: Vec<PathBuf>,
 }
 
 impl Report {
@@ -118,6 +156,8 @@ impl Report {
         Self {
             findings,
             notes: Vec::new(),
+            coverage: Vec::new(),
+            artifacts: Vec::new(),
         }
     }
 
@@ -135,6 +175,8 @@ impl Report {
                 .map(|message| Finding::new(message, fix))
                 .collect(),
             notes: Vec::new(),
+            coverage: Vec::new(),
+            artifacts: Vec::new(),
         }
     }
 
@@ -146,6 +188,41 @@ impl Report {
     /// Record one thing the gate found wrong.
     pub fn find(&mut self, finding: Finding) {
         self.findings.push(finding);
+    }
+    /// Record one complete subject universe.
+    pub fn cover(&mut self, coverage: Coverage) {
+        self.coverage.push(coverage);
+    }
+
+    /// Every reason this report does not account for its complete subject set.
+    #[must_use]
+    pub fn coverage_failures(&self) -> Vec<String> {
+        let mut failures = Vec::new();
+        if self.coverage.is_empty() {
+            failures.push("reported no subject coverage".to_string());
+            return failures;
+        }
+        let mut subjects = std::collections::BTreeSet::new();
+        for row in &self.coverage {
+            if !subjects.insert(row.subject.as_str()) {
+                failures.push(format!(
+                    "reported duplicate coverage rows for `{}`",
+                    row.subject
+                ));
+            }
+            if row.discovered == 0 {
+                failures.push(format!(
+                    "discovered zero `{}` subjects; an empty universe cannot prove the rule",
+                    row.subject
+                ));
+            } else if row.judged + row.exempted != row.discovered {
+                failures.push(format!(
+                    "accounted for {} judged and {} exempted `{}` subjects after discovering {}",
+                    row.judged, row.exempted, row.subject, row.discovered
+                ));
+            }
+        }
+        failures
     }
 
     /// The pinned number.
@@ -218,6 +295,37 @@ impl GateCtx {
     #[must_use]
     pub fn has(&self, flag: &str) -> bool {
         self.args.iter().any(|argument| argument == flag)
+    }
+}
+
+/// Static contract that makes a gate discoverable and auditable.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct GateMetadata {
+    /// Stable areas from which named subsets are derived.
+    pub areas: &'static [&'static str],
+    /// Authoritative class of subjects the gate judges.
+    pub subject: &'static str,
+    /// Exact workspace-relative artifacts this gate may rewrite.
+    pub artifacts: &'static [&'static str],
+    /// Test symbol that mutation-proves the invariant.
+    pub proof: &'static str,
+}
+
+impl GateMetadata {
+    /// Every defect in a metadata row.
+    #[must_use]
+    pub fn failures(self) -> Vec<String> {
+        let mut failures = Vec::new();
+        if self.areas.is_empty() {
+            failures.push("belongs to no area".to_string());
+        }
+        if self.subject.trim().is_empty() {
+            failures.push("declares no authoritative subject class".to_string());
+        }
+        if self.proof.trim().is_empty() {
+            failures.push("declares no mutation-proof test".to_string());
+        }
+        failures
     }
 }
 
@@ -511,6 +619,38 @@ mod tests {
         assert!(text.ends_with("demo: 3 finding(s)\n"));
     }
 
+    /// WHY: a clean finding count is meaningless when the gate discovered no
+    /// subjects or silently skipped part of its universe. Every invalid shape
+    /// must fail, while one complete non-empty row remains valid.
+    #[test]
+    fn coverage_requires_one_nonempty_closed_row_per_subject_class() {
+        let mut report = Report::clean();
+        assert_eq!(
+            report.coverage_failures(),
+            vec!["reported no subject coverage"]
+        );
+
+        report.cover(Coverage::complete("operations", 0));
+        assert!(report.coverage_failures()[0].contains("zero `operations`"));
+
+        report.coverage.clear();
+        report.cover(Coverage {
+            subject: "operations".to_string(),
+            discovered: 3,
+            judged: 1,
+            exempted: 1,
+        });
+        assert!(report.coverage_failures()[0].contains("accounted for 1 judged"));
+
+        report.coverage.clear();
+        report.cover(Coverage::complete("operations", 3));
+        report.cover(Coverage::complete("operations", 3));
+        assert!(report.coverage_failures()[0].contains("duplicate coverage"));
+
+        report.coverage.truncate(1);
+        assert!(report.coverage_failures().is_empty());
+    }
+
     /// WHY: the child of a delegated gate serialises its report and the parent
     /// renders it, so the two processes must agree on the shape. A field added
     /// on one side and not the other would silently drop findings.
@@ -518,6 +658,7 @@ mod tests {
     fn a_report_survives_the_process_boundary() {
         let mut report = Report::with_findings(vec![Finding::at("src/a.rs", 3, "m", "f")]);
         report.note("context");
+        report.cover(Coverage::complete("fixture files", 1));
         let json = serde_json::to_string(&report).expect("a report serialises");
         assert_eq!(
             serde_json::from_str::<Report>(&json).expect("a report deserialises"),

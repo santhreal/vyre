@@ -1,6 +1,6 @@
 //! GPU-resident rule-provenance tracking via #39 scallop_join (#39 substrate).
 //!
-//! Closes the recursion thesis for #39  -  `vyre-primitives::math::scallop_join`
+//! Closes the recursion thesis for #39  -  `vyre-libs::math::scallop_join`
 //! ships a Datalog-fixpoint primitive for user-dialect probabilistic logic,
 //! AND simultaneously powers vyre's own provenance bookkeeping.
 //!
@@ -50,7 +50,7 @@
 //! direct (out, src, clause-bitset) triples and `join_rules` with the
 //! static adjacency; the dispatch returns the closure.
 //!
-//! See `vyre-primitives::math::scallop_join::PROVENANCE_SELF_CONSUMER`
+//! See `vyre-libs::math::scallop_join::PROVENANCE_SELF_CONSUMER`
 //! for the cross-link from the primitive's docs back here.
 
 use crate::dispatch_buffers::{

@@ -135,11 +135,11 @@ mod tests {
     fn attention_programs_emit_expected_primitives() {
         assert_eq!(
             program_generator(&dispatch_attention_max_pass("q", "k", "max", 4, 2)),
-            "vyre-primitives::nn::attention_max_pass"
+            "vyre-libs::nn::attention_max_pass"
         );
         assert_eq!(
             program_generator(&dispatch_attention_sum_pass("q", "k", "max", "sum", 4, 2)),
-            "vyre-primitives::nn::attention_sum_pass"
+            "vyre-libs::nn::attention_sum_pass"
         );
         assert_eq!(
             program_generator(&dispatch_attention_write_pass(
@@ -154,7 +154,7 @@ mod tests {
                     d: 2,
                 }
             )),
-            "vyre-primitives::nn::attention_write_pass"
+            "vyre-libs::nn::attention_write_pass"
         );
     }
 
@@ -172,17 +172,17 @@ mod tests {
     fn quest_programs_emit_expected_primitives() {
         assert_eq!(
             program_generator(&dispatch_quest_zero_fill("queue", 16)),
-            "vyre-primitives::nn::quest_zero_fill"
+            "vyre-libs::nn::quest_zero_fill"
         );
         assert_eq!(
             program_generator(&dispatch_quest_score_pages(
                 "query", "pages", "scores", 16, 4
             )),
-            "vyre-primitives::nn::quest_score_pages"
+            "vyre-libs::nn::quest_score_pages"
         );
         assert_eq!(
             program_generator(&dispatch_quest_select_top_k("scores", "queue", 16, 4, -1.0)),
-            "vyre-primitives::nn::quest_select_top_k"
+            "vyre-libs::nn::quest_select_top_k"
         );
     }
 

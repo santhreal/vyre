@@ -11,7 +11,8 @@ use proptest::prelude::*;
 use vyre::ir::Program;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
-use vyre_libs::math::prefix_scan::{MAX_SINGLE_BLOCK_SCAN, SCAN_WORKGROUP_LANES};
+use vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
+use vyre_libs::math::prefix_scan::MAX_SINGLE_BLOCK_SCAN;
 use vyre_libs::math::scan::scan_prefix_sum;
 
 fn has_single_region(program: &Program) -> bool {
@@ -48,7 +49,7 @@ proptest! {
     }
 
     /// The workgroup is capped, not inflated. A scan past
-    /// `SCAN_WORKGROUP_LANES` elements gives each lane a longer run instead of
+    /// `PORTABLE_WORKGROUP_INVOCATIONS` elements gives each lane a longer run instead of
     /// asking for more lanes, so the next power of two stops being the answer
     /// at n = 257 and the cap is the answer from there to the single-block
     /// ceiling.
@@ -58,7 +59,7 @@ proptest! {
         prop_assert!(has_single_region(&p));
         prop_assert_eq!(
             p.workgroup_size(),
-            [n.next_power_of_two().min(SCAN_WORKGROUP_LANES), 1, 1]
+            [n.next_power_of_two().min(PORTABLE_WORKGROUP_INVOCATIONS), 1, 1]
         );
     }
 
@@ -81,11 +82,11 @@ proptest! {
 fn scan_prefix_sum_caps_lanes_one_element_past_the_workgroup_width() {
     let lanes = |n: u32| scan_prefix_sum("in", "out", n).workgroup_size()[0];
 
-    assert_eq!(lanes(SCAN_WORKGROUP_LANES), SCAN_WORKGROUP_LANES);
-    assert_eq!(lanes(SCAN_WORKGROUP_LANES + 1), SCAN_WORKGROUP_LANES);
-    assert_eq!(lanes(MAX_SINGLE_BLOCK_SCAN), SCAN_WORKGROUP_LANES);
+    assert_eq!(lanes(PORTABLE_WORKGROUP_INVOCATIONS), PORTABLE_WORKGROUP_INVOCATIONS);
+    assert_eq!(lanes(PORTABLE_WORKGROUP_INVOCATIONS + 1), PORTABLE_WORKGROUP_INVOCATIONS);
+    assert_eq!(lanes(MAX_SINGLE_BLOCK_SCAN), PORTABLE_WORKGROUP_INVOCATIONS);
     assert!(
-        (SCAN_WORKGROUP_LANES + 1).next_power_of_two() > SCAN_WORKGROUP_LANES,
+        (PORTABLE_WORKGROUP_INVOCATIONS + 1).next_power_of_two() > PORTABLE_WORKGROUP_INVOCATIONS,
         "this contract is vacuous unless the next power of two exceeds the cap here"
     );
 }

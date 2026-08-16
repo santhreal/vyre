@@ -11,7 +11,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::matrix_diagonal_extract";
+pub const OP_ID: &str = "vyre-libs::math::matrix_diagonal_extract";
 
 /// Emit the loop that copies `matrix[i * n + i]` into `diagonal[i]`.
 #[must_use]

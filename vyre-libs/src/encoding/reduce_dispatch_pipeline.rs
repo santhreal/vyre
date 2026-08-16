@@ -245,27 +245,27 @@ mod tests {
     fn program_builders_emit_expected_reduce_primitives() {
         assert_eq!(
             program_generator(&dispatch_workgroup_sum_f32("values", "out", 8, 4)),
-            "vyre-primitives::reduce::workgroup_sum_f32"
+            "vyre-libs::reduce::workgroup_sum_f32"
         );
         assert_eq!(
             program_generator(&dispatch_workgroup_sum_u32("values", "out", 8, 4)),
-            "vyre-primitives::reduce::workgroup_sum_u32"
+            "vyre-libs::reduce::workgroup_sum_u32"
         );
         assert_eq!(
             program_generator(&dispatch_workgroup_max_f32("values", "out", 8, 4)),
-            "vyre-primitives::reduce::workgroup_max_f32"
+            "vyre-libs::reduce::workgroup_max_f32"
         );
         assert_eq!(
             program_generator(&dispatch_range_count_u32("histogram", "out", 2, 5)),
-            "vyre-primitives::reduce::range_counts_u32"
+            "vyre-libs::reduce::range_counts_u32"
         );
         assert_eq!(
             program_generator(&dispatch_workgroup_any_u32("values", "out", 4)),
-            "vyre-primitives::reduce::workgroup_any_u32"
+            "vyre-libs::reduce::workgroup_any_u32"
         );
         assert_eq!(
             program_generator(&dispatch_radix_sort("keys", "sorted", 8, 16)),
-            "vyre-primitives::reduce::radix_sort"
+            "vyre-libs::reduce::radix_sort"
         );
     }
 
@@ -274,29 +274,29 @@ mod tests {
         let parent = "vyre-pass-engine::data::reduce_dispatch_pipeline";
         assert_eq!(
             region_generator(&child_sum_f32_stage(parent, 8, "scratch")),
-            "vyre-primitives::reduce::workgroup_sum_f32"
+            "vyre-libs::reduce::workgroup_sum_f32"
         );
         assert_eq!(
             region_generator(&child_sum_u32_stage(parent, 8, "scratch")),
-            "vyre-primitives::reduce::workgroup_sum_u32"
+            "vyre-libs::reduce::workgroup_sum_u32"
         );
         assert_eq!(
             region_generator(&child_max_f32_stage(parent, 8, "scratch")),
-            "vyre-primitives::reduce::workgroup_max_f32"
+            "vyre-libs::reduce::workgroup_max_f32"
         );
         assert_eq!(
             region_generator(&child_range_count_stage(parent, "hist", "sum", 1, 4)),
-            "vyre-primitives::reduce::range_counts_u32"
+            "vyre-libs::reduce::range_counts_u32"
         );
         assert_eq!(
             region_generator(&child_any_stage(parent, "changed", "any", 8)),
-            "vyre-primitives::reduce::workgroup_any_u32"
+            "vyre-libs::reduce::workgroup_any_u32"
         );
         assert_eq!(
             region_generator(&prefixed_child_any_stage(
                 parent, "changed", "any", 8, "any_i"
             )),
-            "vyre-primitives::reduce::workgroup_any_u32"
+            "vyre-libs::reduce::workgroup_any_u32"
         );
     }
 
@@ -321,13 +321,13 @@ mod tests {
         let pass_a = prefix_pass_a("input", "partials", "totals", 1024 + 1);
         assert_eq!(
             program_generator(&pass_a),
-            "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_a"
+            "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum::pass_a"
         );
 
         let pass_c = prefix_pass_c("partials", "totals_scanned", "output", 1024 + 1);
         assert_eq!(
             program_generator(&pass_c),
-            "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_c"
+            "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum::pass_c"
         );
     }
 

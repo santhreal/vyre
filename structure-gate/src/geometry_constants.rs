@@ -85,28 +85,15 @@ pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
 }
 
 fn is_ident_defined_on_line(line: &str, ident: &str) -> bool {
-    if let Some(pos) = line.find(ident) {
-        let before = &line[..pos];
-        let after = &line[pos + ident.len()..];
-
-        // Check if it's a const definition: preceded by `const ` (possibly with pub)
-        let is_const_def = before.trim_end().ends_with("const")
-            || before.contains("const ")
-            || before.contains("const\t");
-
-        let before_boundary = before
-            .chars()
-            .last()
-            .map_or(true, |c| !c.is_alphanumeric() && c != '_');
-        let after_boundary = after
-            .chars()
-            .next()
-            .map_or(true, |c| !c.is_alphanumeric() && c != '_');
-
-        is_const_def && before_boundary && after_boundary
-    } else {
-        false
-    }
+    let Some(const_pos) = line.find("const ") else {
+        return false;
+    };
+    let decl = line[const_pos + "const ".len()..].trim_start();
+    let decl_name = decl
+        .split(|c: char| c == ':' || c == '=' || c.is_whitespace())
+        .next()
+        .unwrap_or("");
+    decl_name == ident
 }
 #[cfg(test)]
 mod tests {

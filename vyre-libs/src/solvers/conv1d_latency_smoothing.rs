@@ -1,4 +1,4 @@
-//! Autotune latency-trace smoothing via `vyre-primitives::math::conv1d`.
+//! Autotune latency-trace smoothing via `vyre-libs::math::conv1d`.
 //!
 //! Optimizer telemetry is noisy: isolated dispatch spikes, PCIe jitter, and
 //! queue contention can cause a single bad sample to push the autotuner toward

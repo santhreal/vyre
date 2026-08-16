@@ -1,5 +1,5 @@
 /// Canonical op id.
-pub(crate) const OP_ID: &str = "vyre-primitives::graph::csr_forward_or_changed";
+pub(crate) const OP_ID: &str = "vyre-libs::graph::csr_forward_or_changed";
 /// Canonical one-lane workgroup for CSR forward-or-changed programs.
 pub(crate) const CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 /// Source-lane workgroup for node-parallel CSR forward-or-changed programs.

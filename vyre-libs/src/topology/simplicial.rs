@@ -24,7 +24,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::topology::simplicial_triangle_message";
+pub const OP_ID: &str = "vyre-libs::topology::simplicial_triangle_message";
 
 /// Emit the per-triangle message Program.
 ///

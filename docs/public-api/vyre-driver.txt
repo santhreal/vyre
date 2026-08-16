@@ -184,6 +184,7 @@ impl vyre_driver::tuner::TunerProgramKey
 impl vyre_driver::validation::LaunchGeometryLimits
 impl vyre_driver::validation::ProgramValidationCaps
 impl vyre_driver::validation::ValidationCache
+impl vyre_foundation::geometry::GeometryStrategy for vyre_driver::DeviceProfile
 impl<'a> vyre_driver::ExtractionDevice<'a>
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::Chain<A, B>
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::EnforceGate for vyre_driver::Chain<A, B>
@@ -452,6 +453,7 @@ pub fn vyre_driver::DeviceBuffer::debug_label(&self) -> core::option::Option<&st
 pub fn vyre_driver::DeviceProfile::compile_facts(self) -> vyre_megakernel::device_facts::DeviceFacts
 pub fn vyre_driver::DeviceProfile::default() -> Self
 pub fn vyre_driver::DeviceProfile::from_backend<B: vyre_driver::VyreBackend + ?core::marker::Sized>(backend: &B) -> Self
+pub fn vyre_driver::DeviceProfile::rank_geometries(&self, requirements: &vyre_foundation::geometry::GeometryRequirements, problem_elements: u32) -> alloc::vec::Vec<vyre_foundation::geometry::LaunchGeometry>
 pub fn vyre_driver::DeviceSignature::apply_to_profile(&self, profile: vyre_driver::DeviceProfile) -> vyre_driver::DeviceProfile
 pub fn vyre_driver::DeviceSignature::from_toml_str(source: &str) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_driver::DeviceSignature::matches_architecture_generation(&self, generation: u32) -> bool

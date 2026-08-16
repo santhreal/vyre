@@ -25,10 +25,10 @@
 use std::fs;
 use std::path::Path;
 use std::process;
+use crate::gates::gate_canon::{baseline_path, load_baselines, Baseline};
 
 use crate::gate::{self, GateCtx, GateError, Report};
-use crate::gates::gate_canon::{self, Baseline, baseline_path, load_baselines};
-use crate::subcommands::{self, SUBSETS};
+use crate::subcommands;
 
 /// The name the dispatcher answers to with this runner.
 ///
@@ -194,11 +194,70 @@ fn script_failures(root: &Path, scripts: &[(String, usize, String)]) -> Vec<Stri
     failures
 }
 
+/// Every disagreement between the registry and the baseline file.
+///
+/// Both directions are failures. A gate with no row would run unpinned, so a
+/// new finding in it would pass; a row with no gate is a pin nobody enforces,
+/// which is what a retired gate leaves behind.
+fn baseline_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
+    let mut failures = Vec::new();
+    for name in gate_names {
+        if !baselines.iter().any(|pin| pin.name == *name) {
+            failures.push(format!(
+                "gate `{name}` has no row in xtask/gate-baselines.toml; add one with its present finding count"
+            ));
+        }
+    }
+    for pin in baselines {
+        if !gate_names.iter().any(|name| *name == pin.name) {
+            failures.push(format!(
+                "xtask/gate-baselines.toml pins `{}`, which is not a registered gate; delete the row or register the gate",
+                pin.name
+            ));
+        }
+        if pin.findings != 0 {
+            failures.push(format!(
+                "xtask/gate-baselines.toml pins `{}` at {}; every gate is hard and every pin must remain zero",
+                pin.name, pin.findings
+            ));
+        }
+    }
+    failures
+}
+
+/// Every disagreement between executable gates and their static contracts.
+fn metadata_failures(
+    gate_names: &[&str],
+    rows: &[crate::gate_metadata::GateMetadataRow],
+) -> Vec<String> {
+    let mut failures = Vec::new();
+    for name in gate_names {
+        let Some(row) = rows.iter().find(|row| row.name == *name) else {
+            failures.push(format!(
+                "gate `{name}` has no metadata row; classify its area, subject universe, artifacts, and mutation proof"
+            ));
+            continue;
+        };
+        for failure in row.metadata.failures() {
+            failures.push(format!("gate `{name}` metadata {failure}"));
+        }
+    }
+    for row in rows {
+        if !gate_names.contains(&row.name) {
+            failures.push(format!(
+                "gate metadata names `{}`, which has no executable gate; delete the stale row or restore the implementation",
+                row.name
+            ));
+        }
+    }
+    failures
+}
 /// Every disagreement between the registry, the subsets and the workflows.
 fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]) -> Vec<String> {
     let mut failures = Vec::new();
-    for subset in SUBSETS {
-        for name in subset.gates {
+    let registered_subsets = subcommands::subsets();
+    for subset in &registered_subsets {
+        for name in &subset.gates {
             if !gate_names.contains(name) {
                 failures.push(format!(
                     "subset `{}` names `{name}`, which is not a registered gate",
@@ -218,7 +277,7 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
             .push("no workflow runs `xtask gates`, so no workflow runs the registry".to_string());
     }
     for name in subsets {
-        if !SUBSETS.iter().any(|subset| subset.name == name) {
+        if !registered_subsets.iter().any(|subset| subset.name == name) {
             failures.push(format!(
                 "a workflow runs `xtask gates --subset {name}`, which is not a registered subset"
             ));
@@ -232,7 +291,7 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
         }
     }
     let mut reachable: Vec<&str> = invoked.iter().map(String::as_str).collect();
-    for subset in SUBSETS {
+    for subset in &registered_subsets {
         if subsets.iter().any(|named| named == subset.name) {
             reachable.extend(subset.gates.iter().copied());
         }
@@ -254,7 +313,11 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
 /// script impossible to leave behind.
 fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
     let names = workflow_names(root);
-    let mut failures = gate_canon::registry_failures(gate_names, baselines);
+    let mut failures = baseline_failures(gate_names, baselines);
+    failures.extend(metadata_failures(
+        gate_names,
+        crate::gate_metadata::GATE_METADATA,
+    ));
     failures.extend(workflow_failures(
         gate_names,
         &names.invoked,
@@ -307,7 +370,7 @@ fn selection(args: &[String]) -> Result<(Vec<&'static dyn crate::gate::Gate>, St
             format!("`{name}` is not a registered subset"),
             format!(
                 "pass one of: {}",
-                SUBSETS
+                subcommands::subsets()
                     .iter()
                     .map(|subset| subset.name)
                     .collect::<Vec<_>>()
@@ -335,7 +398,7 @@ pub fn run(args: &[String]) {
         for gate in subcommands::registry() {
             println!("{}", gate.name());
         }
-        for subset in SUBSETS {
+        for subset in subcommands::subsets() {
             println!("subset {} {}", subset.name, subset.gates.join(" "));
         }
         return;
@@ -350,20 +413,14 @@ pub fn run(args: &[String]) {
         let recorded = baselines_or_exit(&root);
         let mut rows = Vec::new();
         let mut failing = Vec::new();
-        let mut raised = Vec::new();
+        let mut red = Vec::new();
         for gate in &selected {
             match execute(*gate, &root) {
                 Ok(report) => {
-                    let name = gate.name();
-                    let found = report.count();
-                    println!("{name}: {found} finding(s)");
-                    match recorded.iter().find(|pin| pin.name == name) {
-                        Some(pin) if found > pin.findings => raised.push(format!(
-                            "{name} measured {found} against a pinned {}",
-                            pin.findings
-                        )),
-                        Some(pin) => rows.push((name, found.min(pin.findings))),
-                        None => rows.push((name, found)),
+                    println!("{}: {} finding(s)", gate.name(), report.count());
+                    rows.push((gate.name(), report.count()));
+                    if report.count() != 0 {
+                        red.push(gate.name());
                     }
                 }
                 Err(error) => {
@@ -380,11 +437,10 @@ pub fn run(args: &[String]) {
             );
             process::exit(1);
         }
-        if !raised.is_empty() {
+        if !red.is_empty() {
             eprintln!(
-                "Fix: {} gate(s) report more than they are pinned at, and a pin never rises: {}. Fix the findings.",
-                raised.len(),
-                raised.join("; ")
+                "Fix: every gate is hard and a baseline may record only zero findings; fix: {}",
+                red.join(", ")
             );
             process::exit(1);
         }
@@ -451,7 +507,81 @@ pub fn run(args: &[String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gates::gate_canon::BaselineFile;
 
+    fn pin(name: &str, findings: usize) -> Baseline {
+        Baseline {
+            name: name.to_string(),
+            findings,
+        }
+    }
+
+    /// WHY: this is the defect the whole registry exists to close. A gate
+    /// registered with no baseline row runs unpinned, so a new finding in it
+    /// passes; both injections have to go red, and the clean case has to be
+    /// silent or the failure means nothing.
+    #[test]
+    fn a_registry_and_a_baseline_that_disagree_both_fail() {
+        let names = ["dep-drift", "op-names"];
+        assert_eq!(
+            baseline_failures(&names, &[pin("dep-drift", 0), pin("op-names", 0)]),
+            Vec::<String>::new()
+        );
+
+        let missing_row = baseline_failures(&names, &[pin("dep-drift", 0)]);
+        assert_eq!(missing_row.len(), 1);
+        assert!(missing_row[0].contains("`op-names` has no row"));
+
+        let extra_row = baseline_failures(
+            &names,
+            &[pin("dep-drift", 0), pin("op-names", 0), pin("retired", 0)],
+        );
+        assert_eq!(extra_row.len(), 1);
+        assert!(extra_row[0].contains("pins `retired`"));
+
+        let tolerated = baseline_failures(
+            &names,
+            &[pin("dep-drift", 0), pin("op-names", 1)],
+        );
+        assert_eq!(tolerated.len(), 1);
+        assert!(tolerated[0].contains("every pin must remain zero"));
+
+        let valid_metadata = crate::gate_metadata::GateMetadataRow {
+            name: "dep-drift",
+            metadata: crate::gate::GateMetadata {
+                areas: &["prepublish"],
+                subject: "workspace manifests",
+                artifacts: &[],
+                proof: "definition-site mutation tests",
+            },
+        };
+        assert!(metadata_failures(&["dep-drift"], &[valid_metadata]).is_empty());
+        assert!(metadata_failures(&["dep-drift", "missing"], &[valid_metadata])[0]
+            .contains("`missing` has no metadata"));
+        assert!(metadata_failures(&[], &[valid_metadata])[0]
+            .contains("has no executable gate"));
+    }
+
+    /// WHY: the baseline row shape is the exemption surface. `status` and
+    /// `owner` are what kept three gates red for a fortnight, and `output_lines`
+    /// is the pin that counted output instead of findings, so a file carrying
+    /// any of them must fail to load rather than be read with the field ignored.
+    #[test]
+    fn a_row_carrying_a_retired_field_fails_to_load() {
+        let good: BaselineFile =
+            toml::from_str("[[gate]]\nname = \"dep-drift\"\nfindings = 0\n").expect("loads");
+        assert_eq!(good.gate.len(), 1);
+        for row in [
+            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nstatus = \"red\"\n",
+            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nowner = \"someone\"\n",
+            "[[gate]]\nname = \"dep-drift\"\noutput_lines = 32\n",
+        ] {
+            assert!(
+                toml::from_str::<BaselineFile>(row).is_err(),
+                "a row carrying a retired field must not load: {row}"
+            );
+        }
+    }
     /// WHY: a workflow that invokes a name nobody registered runs nothing under
     /// a name that reads as coverage, and a subset nobody runs is a set of gates
     /// that only the whole-registry sweep reaches. The old scan kept only names
@@ -462,17 +592,18 @@ mod tests {
     /// decoration until someone wires it.
     #[test]
     fn workflow_and_registry_disagreement_fails_in_both_directions() {
+        let subsets = subcommands::subsets();
         // The registry under test must hold every subset member, because a
         // subset naming a gate nobody registered is itself a failure and would
         // otherwise drown the direction this test exercises.
-        let mut names: Vec<&str> = SUBSETS
+        let mut names: Vec<&str> = subsets
             .iter()
             .flat_map(|subset| subset.gates.iter().copied())
             .collect();
         names.push("dep-drift");
         names.sort_unstable();
         names.dedup();
-        let every_subset: Vec<String> = SUBSETS
+        let every_subset: Vec<String> = subsets
             .iter()
             .map(|subset| subset.name.to_string())
             .collect();
@@ -497,7 +628,7 @@ mod tests {
             .any(|failure| failure.contains("no workflow runs `xtask gates`")));
 
         let unrun_subset = workflow_failures(&names, &["gates".to_string()], &[]);
-        assert_eq!(unrun_subset.len(), SUBSETS.len() + names.len());
+        assert_eq!(unrun_subset.len(), subsets.len() + names.len());
         assert_eq!(
             unrun_subset
                 .iter()

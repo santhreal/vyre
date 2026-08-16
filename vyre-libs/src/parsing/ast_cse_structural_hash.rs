@@ -10,7 +10,7 @@ use crate::hash::fnv1a::fnv1a32_mul_xor_word_state;
 use super::ast_ops::{AST_ADD, AST_PTR_DEREF, AST_VAR};
 
 /// Stable op id for the structural CSE child region.
-pub const OP_ID: &str = "vyre-primitives::parsing::ast_cse_structural_hash";
+pub const OP_ID: &str = "vyre-libs::parsing::ast_cse_structural_hash";
 
 /// Emit the structural-hash deduplication phase.
 #[must_use]

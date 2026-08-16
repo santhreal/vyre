@@ -44,7 +44,7 @@ use std::process::Command;
 use serde::Deserialize;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
-use crate::subcommands::{self, SUBSETS};
+use crate::subcommands;
 
 /// Where the pinned finding counts live.
 pub const BASELINES: &str = "xtask/gate-baselines.toml";
@@ -68,9 +68,9 @@ pub struct Baseline {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct BaselineFile {
+pub(crate) struct BaselineFile {
     #[serde(default)]
-    gate: Vec<Baseline>,
+    pub(crate) gate: Vec<Baseline>,
 }
 
 /// The baseline file under a checkout root.
@@ -133,9 +133,10 @@ pub fn registry_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<Str
         }
     }
     for name in gate_names {
-        if !SUBSETS
+        let subsets = subcommands::subsets();
+        if !subsets
             .iter()
-            .any(|subset| subset.gates.contains(&{ *name }))
+            .any(|subset| subset.gates.contains(name))
         {
             failures.push(format!(
                 "gate `{name}` is registered and belongs to no subset; add it to the subset whose domain owns it, so its verdict reaches that domain instead of only the whole-registry run"
@@ -183,7 +184,7 @@ impl Gate for GateCanon {
     }
 
     fn help(&self) -> &'static str {
-        "Whether the registry, its pinned counts and its ratchet constants moved only in the strict direction; --base REF compares against that ref"
+        "Whether the registry, its pinned counts and its ratchet constants moved only in the strict direction; `--base` REF compares against that ref"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

@@ -38,7 +38,7 @@ impl Gate for WireDeterminism {
     }
 
     fn help(&self) -> &'static str {
-        "Hold the wire suites to a tracked roster; --run executes each twice and compares the emitted order"
+        "Hold the wire suites to a tracked roster; `--run` executes each twice and compares the emitted order"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

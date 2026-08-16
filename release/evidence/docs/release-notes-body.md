@@ -1228,7 +1228,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   The volume sweep runner had a three-crate list that left one tracked volume
   wave in no shard, and a shard index outside the shard count selected nothing
   and exited 0.
-- User-facing crate READMEs, `docs/ARCHITECTURE.md`, `GOAL.md`, `THESIS.md`,
+- User-facing crate READMEs, `docs/ARCHITECTURE.md`, `THESIS.md`,
   `CONTRIBUTING.md`, and the ownership/guide registries follow the workspace
   `README.md` charter. `vyre-libs` owns every composition, including
   compiler-internal domains. `vyre-primitives` owns only uncomposable
@@ -3327,6 +3327,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   as library API; a consumer reaches the same oracles at
   vyre_test_support::fixed_point, which is a dev-dependency and not part of any
   shipped binary.
+- Retired `GOAL.md`. Its roadmap and compiler boundary rules are canonically
+  owned by `docs/ARCHITECTURE.md`, `docs/CRATE_OWNERSHIP.toml`, and crate
+  architecture documentation.
 - Routing has no host arm. `PolicyRoute::CpuSimd`, `RoutingDecision::CpuSimd`,
   `ExecutionPolicy::use_cpu_fast_path` and the two host fast-path thresholds
   that only fed it are gone, and `ExecutionPolicy::route` no longer takes a

@@ -11,11 +11,11 @@ use crate::nn::attention_stability::{
 use crate::nn::f32_stability::{finite_or, flush_tiny};
 
 /// Stable op id for the max-score pass.
-pub const ATTENTION_MAX_PASS_OP_ID: &str = "vyre-primitives::nn::attention_max_pass";
+pub const ATTENTION_MAX_PASS_OP_ID: &str = "vyre-libs::nn::attention_max_pass";
 /// Stable op id for the normalization-sum pass.
-pub const ATTENTION_SUM_PASS_OP_ID: &str = "vyre-primitives::nn::attention_sum_pass";
+pub const ATTENTION_SUM_PASS_OP_ID: &str = "vyre-libs::nn::attention_sum_pass";
 /// Stable op id for the weighted-value write pass.
-pub const ATTENTION_WRITE_PASS_OP_ID: &str = "vyre-primitives::nn::attention_write_pass";
+pub const ATTENTION_WRITE_PASS_OP_ID: &str = "vyre-libs::nn::attention_write_pass";
 
 /// Emit the attention max-reduction pass for one contiguous query row `i`.
 #[must_use]

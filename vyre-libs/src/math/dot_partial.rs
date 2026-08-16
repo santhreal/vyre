@@ -9,7 +9,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id for the attention dot-product child region.
-pub const OP_ID: &str = "vyre-primitives::math::dot_partial";
+pub const OP_ID: &str = "vyre-libs::math::dot_partial";
 
 /// Emit the `dk` loop that accumulates a partial dot product into `accum_var`.
 #[must_use]

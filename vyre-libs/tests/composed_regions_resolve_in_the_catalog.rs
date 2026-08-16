@@ -32,22 +32,13 @@ const ANONYMOUS_PREFIX: &str = "anonymous::";
 /// Every distinct region-generator identity reachable from a program's entry.
 fn region_generators(program: &Program, out: &mut BTreeSet<String>) {
     fn walk(node: &Node, out: &mut BTreeSet<String>) {
-        match node {
-            Node::Region {
-                generator, body, ..
-            } => {
-                out.insert(generator.as_str().to_string());
-                body.iter().for_each(|child| walk(child, out));
+        if let Node::Region { generator, .. } = node {
+            out.insert(generator.as_str().to_string());
+        }
+        for body in vyre_foundation::visit::child_bodies(node) {
+            for child in body {
+                walk(child, out);
             }
-            Node::Block(body) => body.iter().for_each(|child| walk(child, out)),
-            Node::Loop { body, .. } => body.iter().for_each(|child| walk(child, out)),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().for_each(|child| walk(child, out));
-                otherwise.iter().for_each(|child| walk(child, out));
-            }
-            _ => {}
         }
     }
     program.entry().iter().for_each(|node| walk(node, out));
@@ -73,7 +64,13 @@ fn every_emitted_region_names_a_catalog_operation() {
         let mut generators = BTreeSet::new();
         region_generators(&build(), &mut generators);
         for generator in generators {
-            if generator.starts_with(ANONYMOUS_PREFIX) || catalog.contains(generator.as_str()) {
+            if generator == Program::ROOT_REGION_GENERATOR
+                || vyre_foundation::composition::is_anonymous_generator(&generator)
+                || catalog.contains(generator.as_str())
+                || catalog.iter().any(|op| {
+                    generator.starts_with(op) && generator[op.len()..].starts_with("::")
+                })
+            {
                 continue;
             }
             unresolved.push(format!("{} emits region {generator}", operation.id));

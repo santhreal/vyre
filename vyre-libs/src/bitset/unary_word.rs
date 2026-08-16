@@ -44,7 +44,7 @@ mod tests {
         for words in 0..=2048 {
             for op in [UnOp::BitNot, UnOp::Popcount] {
                 let program = bitset_unary_word_program(
-                    "vyre-primitives::bitset::test",
+                    "vyre-libs::bitset::test",
                     "in",
                     "out",
                     words,

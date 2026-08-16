@@ -47,7 +47,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::mori_zwanzig_project_step";
+pub const OP_ID: &str = "vyre-libs::math::mori_zwanzig_project_step";
 
 /// Emit `out[i] = Σ_j P[i, j] · f[j]`.
 ///

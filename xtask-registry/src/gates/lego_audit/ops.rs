@@ -37,6 +37,13 @@ pub(super) fn violation(text: String) -> Finding {
 /// One registered op with everything the audit needs.
 pub(crate) struct OpInfo {
     pub(crate) id: String,
+    pub(crate) source_file: String,
+    pub(crate) category: Option<String>,
+    pub(crate) laws: BTreeSet<String>,
+    pub(crate) semantic_version: u32,
+    pub(crate) tolerance: u32,
+    pub(crate) effects: vyre_foundation::operation::OperationEffects,
+    pub(crate) capabilities: String,
     // Kept for future audit passes that need to re-walk the raw IR
     // (e.g. to verify that Region source_region chains are stable
     // under re-optimization). The current fingerprint/own_nodes/
@@ -47,6 +54,7 @@ pub(crate) struct OpInfo {
     pub(crate) tier: Tier,
     pub(crate) buffer_signature: Vec<String>,
     pub(crate) fingerprint: Vec<u8>,
+    pub(crate) semantic_fingerprint: [u8; 32],
     pub(crate) own_nodes: usize,
     pub(crate) composed_nodes: usize,
     pub(crate) children: BTreeSet<String>, // op_ids this op invokes via Region.source_region
@@ -72,11 +80,29 @@ pub(super) fn tier_of(op_id: &str) -> Tier {
     }
 }
 
+fn build_registered_info(
+    entry: vyre_foundation::operation::SemanticOperation,
+    program: Program,
+) -> OpInfo {
+    let mut info = build_info(entry.id, program);
+    info.source_file = entry.source_file.to_string();
+    info.category = entry.category.map(str::to_string);
+    info.laws = entry.laws.iter().map(|law| (*law).to_string()).collect();
+    info.semantic_version = entry.semantic_version;
+    info.tolerance = entry.tolerance();
+    info.effects = vyre_foundation::operation::OperationEffects::from_program(&info.program);
+    info.capabilities = format!(
+        "{:?}",
+        vyre_foundation::program_caps::scan(&info.program)
+    );
+    info
+}
+
 pub(crate) fn collect_ops(report: &mut Report) -> Vec<OpInfo> {
     let mut ops = Vec::new();
     for entry in vyre_registry_link::operation::live_operation_registry().iter() {
         match entry.program() {
-            Some(program) => ops.push(build_info(entry.id, program)),
+            Some(program) => ops.push(build_registered_info(entry, program)),
             None => report.find(Finding::new(
                 format!(
                     "registered operation `{}` provides no neutral builder, so every composition law skips it",
@@ -95,10 +121,22 @@ pub(super) fn build_info(id: &'static str, program: Program) -> OpInfo {
     for node in program.entry() {
         walk(node, false, &mut state);
     }
+    let semantic_fingerprint = program
+        .clone()
+        .with_entry_op_id("vyre-semantic-owner")
+        .fingerprint();
     OpInfo {
         id: id.to_string(),
+        source_file: String::new(),
+        category: None,
+        laws: BTreeSet::new(),
+        semantic_version: 1,
+        tolerance: 0,
+        effects: vyre_foundation::operation::OperationEffects::default(),
+        capabilities: String::new(),
         buffer_signature: buffer_signature(&program),
         fingerprint: fingerprint_program(&program),
+        semantic_fingerprint,
         own_nodes: state.own_nodes,
         composed_nodes: state.composed_nodes,
         children: state.children,

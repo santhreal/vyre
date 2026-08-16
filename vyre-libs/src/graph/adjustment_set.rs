@@ -52,7 +52,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::graph::backdoor_descendants_check";
+pub const OP_ID: &str = "vyre-libs::graph::backdoor_descendants_check";
 
 /// Emit a Program that sets `out_violation[0] = 1` iff any node in
 /// `candidate_z` is also marked in `descendants_of_x`. Single-lane;

@@ -380,6 +380,7 @@ pub const fn vyre_libs::parsing::whitespace_classify_word::pack_bytes_le(b0: u8,
 pub const fn vyre_libs::parsing::whitespace_classify_word::whitespace_classify_word_dispatch_grid(word_count: u32) -> [u32; 3]
 pub const fn vyre_libs::predicate::edge_kind::call_arg_slot(n: u32) -> u32
 pub const fn vyre_libs::reasoning::zx_diagram::ZxColor::flip(self) -> Self
+pub const fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_requirements() -> vyre_foundation::geometry::GeometryRequirements
 pub const fn vyre_libs::scan::CaptureMode::accelerator_eligible(self) -> bool
 pub const fn vyre_libs::scan::CaptureMode::contract_row(self) -> vyre_libs::scan::CaptureModeContract
 pub const fn vyre_libs::scan::CaptureMode::verifier_required(self) -> bool
@@ -535,14 +536,12 @@ pub const vyre_libs::graph::csr_frontier_queue::CSR_QUEUE_FORWARD_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_QUEUE_LEN_INIT_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_TO_QUEUE_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str
-pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_TO_QUEUE_WORKGROUP_LANES: u32
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_WORDS_TO_QUEUE_CLEAR_OUT_PARALLEL_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_WORD_BLOCK_OFFSETS_TO_QUEUE_PARALLEL_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID: &str
 pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID: &str
-pub const vyre_libs::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES: u32
 pub const vyre_libs::graph::csr_queue_delta::CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str
 pub const vyre_libs::graph::csr_queue_delta::CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_libs::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY: u32
@@ -944,6 +943,8 @@ pub const vyre_libs::reduce::histogram::OP_ID: &str
 pub const vyre_libs::reduce::max::OP_ID: &str
 pub const vyre_libs::reduce::min::OP_ID: &str
 pub const vyre_libs::reduce::multi_block_prefix_scan::OP_ID_EXCLUSIVE_SUM: &str
+pub const vyre_libs::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM: &str
+pub const vyre_libs::reduce::multi_block_prefix_scan::SOFT_MAX_N: u32
 pub const vyre_libs::reduce::radix_sort::OP_ID: &str
 pub const vyre_libs::reduce::range_counts::RANGE_COUNTS_U32_OP_ID: &str
 pub const vyre_libs::reduce::scatter::OP_ID: &str
@@ -1956,6 +1957,7 @@ pub fn vyre_libs::graph::knowledge_compile::try_ddnnf_evaluate_cpu_into_with_scr
 pub fn vyre_libs::graph::level_wave::cpu_ref<F>(depths: &[u32], max_depth: u32, step_for_lane: F) where F: core::ops::function::FnMut(u32, u32)
 pub fn vyre_libs::graph::level_wave::level_wave_program(step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, max_depth: u32, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::level_wave::level_wave_program_with_buffers(step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, extra_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, max_depth: u32, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::graph::level_wave::level_wave_program_with_buffers_and_op_id(op_id: &str, step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, extra_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, max_depth: u32, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::matroid::matroid_exchange_bfs_step(frontier_in: &str, exchange_adj: &str, visited: &str, frontier_out: &str, any_change: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::matroid::matroid_exchange_bfs_step_cpu(frontier_in: &[u32], exchange_adj: &[u32], visited: &[u32], n: usize) -> (alloc::vec::Vec<u32>, bool)
 pub fn vyre_libs::graph::matroid::try_matroid_exchange_bfs_step(frontier_in: &str, exchange_adj: &str, visited: &str, frontier_out: &str, any_change: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -2520,7 +2522,9 @@ pub fn vyre_libs::math::succinct::try_rank1_query(bits: &str, superblocks: &str,
 pub fn vyre_libs::math::succinct::try_rank1_superblocks(bits: &str, superblocks: &str, word_count: u32, block_words: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::math::succinct::SuccinctBuildError>
 pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_eigen_region(parent_op_id: &str, a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_scratch_buffers() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>
 pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_sweeps(n: u32) -> u32
+pub fn vyre_libs::math::symmetric_eigen_jacobi::jacobi_workgroup() -> [u32; 3]
 pub fn vyre_libs::math::symmetric_eigen_jacobi::symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::tensor_network::greedy_contract_order_cpu(dims: &[u32]) -> alloc::vec::Vec<usize>
 pub fn vyre_libs::math::tensor_network::tn_pair_contract(a: &str, b: &str, c: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2589,6 +2593,8 @@ pub fn vyre_libs::nn::attention::attention_token_to_head(spec: vyre_libs::nn::at
 pub fn vyre_libs::nn::attention::chunked_gated_delta(spec: &vyre_libs::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>
 pub fn vyre_libs::nn::attention::flash_attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::flash_attention_2(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32, tile_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::nn::attention::fused_tile_attention(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::nn::attention::fused_tile_attention::fused_tile_attention(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::gqa_attention(q: &str, k: &str, v_buf: &str, output: &str, n_q_heads: u32, n_kv_heads: u32, seq_len: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::attention::gqa_attention_causal_typed(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -2905,9 +2911,15 @@ pub fn vyre_libs::reduce::multi_block_prefix_scan::cpu_ref(input: &[u32]) -> all
 pub fn vyre_libs::reduce::multi_block_prefix_scan::cpu_ref_exclusive(input: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_libs::reduce::multi_block_prefix_scan::cpu_ref_into(input: &[u32], out: &mut alloc::vec::Vec<u32>)
 pub fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(input: &str, output: &str, n: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32_with_geometry(input: &str, output: &str, n: u32, geometry: &vyre_foundation::geometry::LaunchGeometry) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes(input: &str, output: &str, n: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_geometry(input: &str, output: &str, n: u32, geometry: &vyre_foundation::geometry::LaunchGeometry) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::multi_block_prefix_scan::pass_a_local_scan(input: &str, partials: &str, block_totals: &str, n: u32, num_blocks: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::multi_block_prefix_scan::pass_a_local_scan_with_block_lanes(input: &str, partials: &str, block_totals: &str, n: u32, num_blocks: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::multi_block_prefix_scan::pass_c_broadcast_offsets(partials: &str, block_totals_scanned: &str, output: &str, n: u32, num_blocks: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::multi_block_prefix_scan::pass_c_broadcast_offsets_with_block_lanes(partials: &str, block_totals_scanned: &str, output: &str, n: u32, num_blocks: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::multi_block_prefix_scan::try_cpu_ref_exclusive_into(input: &[u32], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_libs::reduce::multi_block_prefix_scan::try_cpu_ref_into(input: &[u32], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_libs::reduce::radix_sort::cpu_ref(input: &[u32], bits: u32) -> alloc::vec::Vec<u32>
@@ -3674,6 +3686,7 @@ pub mod vyre_libs::nfa::subgroup_nfa
 pub mod vyre_libs::nn
 pub mod vyre_libs::nn::activation
 pub mod vyre_libs::nn::attention
+pub mod vyre_libs::nn::attention::fused_tile_attention
 pub mod vyre_libs::nn::attention::tiled_online_softmax
 pub mod vyre_libs::nn::attention_passes
 pub mod vyre_libs::nn::attention_stability

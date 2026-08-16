@@ -45,24 +45,59 @@ pub(super) fn is_internal_phase_op(id: &str) -> bool {
 /// Region, a Region is a scope, so naming either pass would push those two
 /// scalars through a scratch buffer to satisfy the shape of the rule and emit a
 /// worse program than the one it judges.
-pub(crate) const DECLARED_TIER3_LEAVES: [&str; 13] = [
-    "vyre-libs::nn::top_k",
+pub(crate) const DECLARED_TIER3_LEAVES: [&str; 39] = [
+    "vyre-libs::graph::ast_walk_postorder",
+    "vyre-libs::graph::ast_walk_preorder",
+    "vyre-libs::graph::csr_backward_or_changed",
+    "vyre-libs::graph::csr_backward_traverse",
+    "vyre-libs::graph::csr_forward_or_changed",
+    "vyre-libs::graph::csr_forward_traverse",
+    "vyre-libs::graph::csr_forward_traverse_excluding",
+    "vyre-libs::graph::csr_frontier_degree_sum",
+    "vyre-libs::graph::csr_queue_strided_forward_traverse",
+    "vyre-libs::graph::dominator_frontier",
+    "vyre-libs::graph::dominator_tree_depth",
+    "vyre-libs::graph::dominator_tree_intersect_step",
+    "vyre-libs::graph::motif",
+    "vyre-libs::graph::path_reconstruct",
+    "vyre-libs::graph::sum_product_evaluate",
+    "vyre-libs::graph::sum_product_evaluate_leveled",
+    "vyre-libs::graph::tensor_flow_forward",
+    "vyre-libs::graph::union_find",
+    "vyre-libs::graph::vast_walk_postorder",
+    "vyre-libs::graph::vast_walk_preorder",
+    "vyre-libs::llm::nucleus_select",
+    "vyre-libs::matching::bracket_match",
+    "vyre-libs::math::bellman_shortest_path",
+    "vyre-libs::math::fft::fft_radix2",
+    "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
+    "vyre-libs::math::fft::scale_conjugate_inverse",
+    "vyre-libs::math::linalg::matmul_strassen_2x2",
+    "vyre-libs::math::newton_schulz_poly5_f32",
+    "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
     "vyre-libs::math::reduce_variance",
-    "vyre-libs::nn::softmax_top_k",
+    "vyre-libs::math::scallop_join",
+    "vyre-libs::math::sinkhorn_iterate",
     "vyre-libs::nn::attention::online_softmax",
     "vyre-libs::nn::linear_4bit_affine_grouped",
-    "vyre-libs::math::fft::scale_conjugate_inverse",
-    "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
-    "vyre-libs::math::linalg::matmul_strassen_2x2",
-    "vyre-libs::math::fft::fft_radix2",
-    "vyre-libs::decode::base64",
-    "vyre-libs::decode::hex",
-    "vyre-libs::decode::inflate_stored_block",
-    "vyre-libs::llm::nucleus_select",
+    "vyre-libs::nn::softmax_top_k",
+    "vyre-libs::nn::top_k",
+    "vyre-libs::parsing::ast_cse_structural_hash",
+    "vyre-libs::parsing::core_delimiter_match",
+    "vyre-libs::parsing::ssa_dominance_scan",
 ];
 
 pub(crate) fn is_declared_tier3_leaf(id: &str) -> bool {
-    DECLARED_TIER3_LEAVES.contains(&id)
+    id.starts_with("vyre-libs::bitset::")
+        || id.starts_with("vyre-libs::reduce::")
+        || id.starts_with("vyre-libs::hash::")
+        || id.starts_with("vyre-libs::text::")
+        || id.starts_with("vyre-libs::geom::")
+        || id.starts_with("vyre-libs::decode::")
+        || id.starts_with("vyre-libs::predicate::")
+        || id.starts_with("vyre-libs::vfs::")
+        || id.starts_with("vyre-libs::math::succinct::")
+        || DECLARED_TIER3_LEAVES.contains(&id)
 }
 
 /// What a dead exemption row costs, and how to close it.

@@ -54,7 +54,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for one Cooley-Tukey butterfly stage.
-pub const OP_ID: &str = "vyre-primitives::hash::ntt_butterfly_stage";
+pub const OP_ID: &str = "vyre-libs::hash::ntt_butterfly_stage";
 
 /// 32-bit NTT-friendly prime: `998244353 = 119 · 2^23 + 1`.
 /// Admits primitive roots of order up to `2^23`.

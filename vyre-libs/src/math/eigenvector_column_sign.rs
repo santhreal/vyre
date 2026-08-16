@@ -19,7 +19,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::eigenvector_column_sign";
+pub const OP_ID: &str = "vyre-libs::math::eigenvector_column_sign";
 
 /// Magnitude below which a component cannot decide its column's sign.
 pub const EIGENVECTOR_SIGN_EPSILON: f32 = 1.0e-6;

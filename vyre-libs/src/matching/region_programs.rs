@@ -3,16 +3,16 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for survivor-flag generation over sorted region triples.
-pub const DEDUP_REGIONS_FLAG_OP_ID: &str = "vyre-primitives::matching::region::dedup_regions_flag";
+pub const DEDUP_REGIONS_FLAG_OP_ID: &str = "vyre-libs::matching::region::dedup_regions_flag";
 /// Stable op id for full cluster metadata over sorted region triples.
 pub const DEDUP_REGIONS_CLUSTER_OP_ID: &str =
-    "vyre-primitives::matching::region::dedup_regions_cluster";
+    "vyre-libs::matching::region::dedup_regions_cluster";
 /// Stable op id for per-pattern survivor-flag capping over region triples.
 pub const CAP_REGIONS_PER_PATTERN_OP_ID: &str =
-    "vyre-primitives::matching::region::cap_regions_per_pattern";
+    "vyre-libs::matching::region::cap_regions_per_pattern";
 /// Stable op id for per-region first-occurrence compaction over region triples.
 pub const COMPACT_FIRST_PER_REGION_PATTERN_OP_ID: &str =
-    "vyre-primitives::matching::region::compact_first_per_region_pattern";
+    "vyre-libs::matching::region::compact_first_per_region_pattern";
 /// Region-dedup lane packing for scanner match buffers.
 pub const REGION_DEDUP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -245,7 +245,7 @@ pub fn region_sort_program(
 ) -> Program {
     if count == 0 {
         return trap_program(
-            "vyre-primitives::matching::region::sort_regions",
+            "vyre-libs::matching::region::sort_regions",
             Some((pids_out, DataType::U32)),
             format!("Fix: region_sort_program requires count > 0, got {count}."),
         );
@@ -329,7 +329,7 @@ pub fn region_sort_program(
         ],
         REGION_DEDUP_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
-            "vyre-primitives::matching::region::region_sort",
+            "vyre-libs::matching::region::region_sort",
             body,
         )],
     )

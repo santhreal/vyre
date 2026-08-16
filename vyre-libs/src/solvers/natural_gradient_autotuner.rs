@@ -28,7 +28,7 @@
 //! 2. compute Fisher block M = Var(∂log_latency/∂config)
 //!    over recent autotune samples
 //! 3. M_inv_sqrt = inverse square root of M (host-side
-//!    Newton-Schulz iteration → vyre-primitives::math::preconditioner)
+//!    Newton-Schulz iteration → vyre-libs::math::preconditioner)
 //! 4. g_nat = natural_gradient_block_apply(M_inv_sqrt, g)
 //!    → preconditioned step direction
 //! 5. autotuner takes step in g_nat direction instead of g

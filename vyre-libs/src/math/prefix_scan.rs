@@ -40,9 +40,9 @@ use vyre_primitives::ir_safe::clamped_load_to;
 use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
 
 /// Canonical op id for inclusive sum-scan.
-pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_inclusive_sum";
+pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-libs::math::prefix_scan_inclusive_sum";
 /// Canonical op id for exclusive sum-scan.
-pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_exclusive_sum";
+pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-libs::math::prefix_scan_exclusive_sum";
 
 /// Which scan variant to emit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,26 +53,6 @@ pub enum ScanKind {
     ExclusiveSum,
 }
 
-/// Lanes a single-workgroup scan dispatches at most.
-///
-/// A scan reaches [`MAX_SINGLE_BLOCK_SCAN`] elements by giving each lane a run
-/// of elements, not by adding lanes. Two facts set this width, and it is the
-/// smaller of them: 256 is the workgroup size the fleet schedules at full
-/// occupancy, and past it a scan spends lanes on a sweep whose active fraction
-/// halves every round; `PORTABLE_WORKGROUP_INVOCATIONS` is the extent every
-/// registered target profile admits, and an op declares its geometry with no
-/// device in hand. Writing the occupancy choice alone would leave a second
-/// copy of the portable ceiling here to drift.
-pub const SCAN_WORKGROUP_LANES: u32 = if SCAN_OCCUPANCY_LANES
-    < vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
-{
-    SCAN_OCCUPANCY_LANES
-} else {
-    vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
-};
-
-/// Workgroup width the fleet schedules at full occupancy for a sweep scan.
-const SCAN_OCCUPANCY_LANES: u32 = 256;
 /// Largest element count one workgroup scans.
 ///
 /// Above this the scan is a multi-block chain, which

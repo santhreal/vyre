@@ -7,7 +7,7 @@
 //! - The contraction $G_1 \cdot G_2 \cdot \dots \cdot G_n$ computes
 //!   the "fusion pressure" or "total shared volume" across the chain.
 //!
-//! This module uses `vyre-primitives::math::tensor_train::tt_contract_step`
+//! This module uses `vyre-libs::math::tensor_train::tt_contract_step`
 //! (the same Program shipped to users) to analyze Vyre's own IR.
 
 use crate::dispatch_buffers::{

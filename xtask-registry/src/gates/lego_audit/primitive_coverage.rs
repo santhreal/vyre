@@ -215,7 +215,7 @@ mod tests {
         let ops = collect_ops(&mut Report::clean());
         assert!(ops
             .iter()
-            .any(|op| primitive_family(&op.id) == Some("math")));
+            .any(|op| primitive_family(&op.id) == Some("vfs")));
         assert_eq!(check_3_primitive_coverage(&mut Report::clean(), &ops), 0);
     }
 
@@ -251,7 +251,7 @@ mod tests {
         ops.push(op(
             "vyre-libs::catalog::math::new_primitive::consumer_a",
             Tier::T3,
-            &["vyre-primitives::math::new_primitive"],
+            &["vyre-libs::math::new_primitive"],
         ));
         assert_eq!(check_3_primitive_coverage(&mut Report::clean(), &ops), 1);
     }

@@ -4,7 +4,7 @@ use crate::graph::program_graph::ProgramGraphShape;
 
 use super::pattern::MotifEdge;
 use super::program::motif;
-use super::OP_ID;
+const OP_ID: &str = "vyre-libs::graph::motif";
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

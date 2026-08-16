@@ -6,7 +6,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for UTF-8 histogram shape counting.
-pub const UTF8_SHAPE_COUNTS_OP_ID: &str = "vyre-primitives::text::utf8_shape_counts";
+pub const UTF8_SHAPE_COUNTS_OP_ID: &str = "vyre-libs::text::utf8_shape_counts";
 
 fn saturating_add_expr(left: Expr, right: Expr) -> Expr {
     Expr::BinOp {

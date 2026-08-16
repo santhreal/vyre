@@ -16,7 +16,7 @@ use crate::graph::program_graph::{
 };
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::csr_backward_or_changed";
+pub const OP_ID: &str = "vyre-libs::graph::csr_backward_or_changed";
 /// Source-lane workgroup for reverse in-place CSR expansion.
 pub const CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

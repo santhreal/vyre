@@ -6,7 +6,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::test_bit";
+pub const OP_ID: &str = "vyre-libs::bitset::test_bit";
 
 /// Build a Program: `out_scalar[0] = (buf[bit_idx/32] >> (bit_idx%32)) & 1`,
 /// or `0` when `bit_idx/32 >= words` (out of range), matching `cpu_ref`.

@@ -9,7 +9,7 @@
 //!
 //! The IR builder, the host oracle, the fixture registration and the
 //! family-scoped entry point all live here. The op id is
-//! `vyre-primitives::decode::ziftsieve_literal_copy`.
+//! `vyre-libs::decode::ziftsieve_literal_copy`.
 
 use vyre_foundation::composition::wrap_anonymous_region;
 
@@ -20,7 +20,7 @@ use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_bu
 const FAMILY_PREFIX: &str = "decode_ziftsieve";
 
 /// Canonical primitive op id.
-pub const OP_ID: &str = "vyre-primitives::decode::ziftsieve_literal_copy";
+pub const OP_ID: &str = "vyre-libs::decode::ziftsieve_literal_copy";
 /// One invocation processes one indexed LZ4 sequence.
 pub const WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 /// Defensive upper bound for one compressed block.

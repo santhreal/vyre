@@ -31,7 +31,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::graph::sheaf_diffusion_step";
+pub const OP_ID: &str = "vyre-libs::graph::sheaf_diffusion_step";
 
 /// Emit the diagonal sheaf-Laplacian step.
 ///

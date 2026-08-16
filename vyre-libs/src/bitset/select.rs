@@ -9,7 +9,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::select1_query";
+pub const OP_ID: &str = "vyre-libs::bitset::select1_query";
 
 /// Build a Program that answers `select1` queries over a packed u32 bitvector.
 ///

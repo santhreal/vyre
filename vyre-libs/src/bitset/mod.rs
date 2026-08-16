@@ -55,7 +55,7 @@ pub(crate) use define_cpu_ref_into;
 /// Per-word bitwise AND over two packed bitsets.
 pub mod and {
     crate::bitset::binary_word::define_bitwise_binary_op! {
-        op_id: "vyre-primitives::bitset::and",
+        op_id: "vyre-libs::bitset::and",
         fn_name: bitset_and,
         op_kind: And,
         combine: |a, b| a & b,
@@ -74,7 +74,7 @@ pub mod and {
 /// In-place per-word bitwise AND (`target &= operand`).
 pub mod and_into {
     crate::bitset::binary_word::define_bitwise_in_place_op! {
-        op_id: "vyre-primitives::bitset::and_into",
+        op_id: "vyre-libs::bitset::and_into",
         fn_name: bitset_and_into,
         op_kind: And,
         combine: |target: u32, operand: u32| target & operand,
@@ -105,7 +105,7 @@ pub mod and_not;
 /// In-place per-word set difference (`target &= !operand`).
 pub mod and_not_into {
     crate::bitset::binary_word::define_bitwise_in_place_op! {
-        op_id: "vyre-primitives::bitset::and_not_into",
+        op_id: "vyre-libs::bitset::and_not_into",
         fn_name: bitset_and_not_into,
         op_kind: AndNot,
         combine: |target: u32, operand: u32| target & !operand,
@@ -143,7 +143,7 @@ pub(crate) mod bit_update;
 /// Scalar mutate: clear bit `bit_idx` in `target`.
 pub mod clear_bit {
     crate::bitset::bit_update::define_bit_update_op! {
-        op_id: "vyre-primitives::bitset::clear_bit",
+        op_id: "vyre-libs::bitset::clear_bit",
         fn_name: bitset_clear_bit,
         kind: Clear,
         inventory_input: [0xFFFF_FFFF, 0xFFFF_FFFF],
@@ -159,7 +159,7 @@ pub mod not;
 /// Per-word bitwise OR over two packed bitsets.
 pub mod or {
     crate::bitset::binary_word::define_bitwise_binary_op! {
-        op_id: "vyre-primitives::bitset::or",
+        op_id: "vyre-libs::bitset::or",
         fn_name: bitset_or,
         op_kind: Or,
         combine: |a, b| a | b,
@@ -178,7 +178,7 @@ pub mod or {
 /// In-place per-word bitwise OR (`target |= operand`).
 pub mod or_into {
     crate::bitset::binary_word::define_bitwise_in_place_op! {
-        op_id: "vyre-primitives::bitset::or_into",
+        op_id: "vyre-libs::bitset::or_into",
         fn_name: bitset_or_into,
         op_kind: Or,
         combine: |target: u32, operand: u32| target | operand,
@@ -211,7 +211,7 @@ pub mod select;
 /// Scalar mutate: set bit `bit_idx` in `target`.
 pub mod set_bit {
     crate::bitset::bit_update::define_bit_update_op! {
-        op_id: "vyre-primitives::bitset::set_bit",
+        op_id: "vyre-libs::bitset::set_bit",
         fn_name: bitset_set_bit,
         kind: Set,
         inventory_input: [0, 0],
@@ -224,7 +224,7 @@ pub(crate) mod unary_word;
 /// Per-word bitwise XOR over two packed bitsets.
 pub mod xor {
     crate::bitset::binary_word::define_bitwise_binary_op! {
-        op_id: "vyre-primitives::bitset::xor",
+        op_id: "vyre-libs::bitset::xor",
         fn_name: bitset_xor,
         op_kind: Xor,
         combine: |a, b| a ^ b,
@@ -243,7 +243,7 @@ pub mod xor {
 /// In-place per-word bitwise XOR (`target ^= operand`).
 pub mod xor_into {
     crate::bitset::binary_word::define_bitwise_in_place_op! {
-        op_id: "vyre-primitives::bitset::xor_into",
+        op_id: "vyre-libs::bitset::xor_into",
         fn_name: bitset_xor_into,
         op_kind: Xor,
         combine: |target: u32, operand: u32| target ^ operand,

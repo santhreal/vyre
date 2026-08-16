@@ -8,7 +8,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id.
-pub const OP_ID: &str = "vyre-primitives::parsing::core_delimiter_match";
+pub const OP_ID: &str = "vyre-libs::parsing::core_delimiter_match";
 
 /// Build a delimiter-depth Program for arbitrary token streams.
 ///

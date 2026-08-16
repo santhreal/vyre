@@ -10,7 +10,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::tensor_scc";
+pub const OP_ID: &str = "vyre-libs::math::tensor_scc";
 
 /// Build a bounded SCC-local bitset fixpoint program.
 #[must_use]

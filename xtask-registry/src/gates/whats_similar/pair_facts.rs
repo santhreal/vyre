@@ -75,84 +75,84 @@ mod tests {
     #[test]
     fn implementation_family_tracks_shared_builders() {
         assert_eq!(
-            implementation_family_id("vyre-primitives::bitset::and"),
-            implementation_family_id("vyre-primitives::bitset::stochastic_and_mul")
+            implementation_family_id("vyre-libs::bitset::and"),
+            implementation_family_id("vyre-libs::bitset::stochastic_and_mul")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::predicate::size_argument_of"),
-            implementation_family_id("vyre-primitives::graph::csr_backward_traverse")
+            implementation_family_id("vyre-libs::predicate::size_argument_of"),
+            implementation_family_id("vyre-libs::graph::csr_backward_traverse")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::graph::csr_forward_traverse"),
-            implementation_family_id("vyre-primitives::graph::csr_backward_traverse")
+            implementation_family_id("vyre-libs::graph::csr_forward_traverse"),
+            implementation_family_id("vyre-libs::graph::csr_backward_traverse")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::graph::csr_forward_traverse"),
-            implementation_family_id("vyre-primitives::graph::csr_frontier_degree_sum")
+            implementation_family_id("vyre-libs::graph::csr_forward_traverse"),
+            implementation_family_id("vyre-libs::graph::csr_frontier_degree_sum")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::graph::csr_forward_traverse"),
-            implementation_family_id("vyre-primitives::graph::tensor_flow_forward")
+            implementation_family_id("vyre-libs::graph::csr_forward_traverse"),
+            implementation_family_id("vyre-libs::graph::tensor_flow_forward")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::graph::vast_walk_preorder"),
-            implementation_family_id("vyre-primitives::graph::vast_walk_postorder")
+            implementation_family_id("vyre-libs::graph::vast_walk_preorder"),
+            implementation_family_id("vyre-libs::graph::vast_walk_postorder")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::math::semiring_gemm"),
-            implementation_family_id("vyre-primitives::math::tensor_network_pair_contract")
+            implementation_family_id("vyre-libs::math::semiring_gemm"),
+            implementation_family_id("vyre-libs::math::tensor_network_pair_contract")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::math::semiring_gemm"),
-            implementation_family_id("vyre-primitives::graph::monoidal_compose")
+            implementation_family_id("vyre-libs::math::semiring_gemm"),
+            implementation_family_id("vyre-libs::graph::monoidal_compose")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::math::sinkhorn_scale"),
-            implementation_family_id("vyre-primitives::math::gaussian_rdp_step")
+            implementation_family_id("vyre-libs::math::sinkhorn_scale"),
+            implementation_family_id("vyre-libs::math::gaussian_rdp_step")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::math::iht_threshold"),
-            implementation_family_id("vyre-primitives::math::mp_edge_clip")
+            implementation_family_id("vyre-libs::math::iht_threshold"),
+            implementation_family_id("vyre-libs::math::mp_edge_clip")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::predicate::node_kind_eq"),
-            implementation_family_id("vyre-primitives::label::resolve_family")
+            implementation_family_id("vyre-libs::predicate::node_kind_eq"),
+            implementation_family_id("vyre-libs::label::resolve_family")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::bitset::and_not"),
-            implementation_family_id("vyre-primitives::bitset::or")
+            implementation_family_id("vyre-libs::bitset::and_not"),
+            implementation_family_id("vyre-libs::bitset::or")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::bitset::and_into"),
-            implementation_family_id("vyre-primitives::bitset::xor_into")
+            implementation_family_id("vyre-libs::bitset::and_into"),
+            implementation_family_id("vyre-libs::bitset::xor_into")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::bitset::copy"),
-            implementation_family_id("vyre-primitives::bitset::and_into")
+            implementation_family_id("vyre-libs::bitset::copy"),
+            implementation_family_id("vyre-libs::bitset::and_into")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::bitset::set_bit"),
-            implementation_family_id("vyre-primitives::bitset::clear_bit")
+            implementation_family_id("vyre-libs::bitset::set_bit"),
+            implementation_family_id("vyre-libs::bitset::clear_bit")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::reduce::workgroup_sum_f32"),
-            implementation_family_id("vyre-primitives::reduce::workgroup_max_f32")
+            implementation_family_id("vyre-libs::reduce::workgroup_sum_f32"),
+            implementation_family_id("vyre-libs::reduce::workgroup_max_f32")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::reduce::sum"),
-            implementation_family_id("vyre-primitives::reduce::any")
+            implementation_family_id("vyre-libs::reduce::sum"),
+            implementation_family_id("vyre-libs::reduce::any")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::reduce::sum"),
-            implementation_family_id("vyre-primitives::reduce::count_non_zero")
+            implementation_family_id("vyre-libs::reduce::sum"),
+            implementation_family_id("vyre-libs::reduce::count_non_zero")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::reduce::count"),
-            implementation_family_id("vyre-primitives::reduce::all")
+            implementation_family_id("vyre-libs::reduce::count"),
+            implementation_family_id("vyre-libs::reduce::all")
         );
         assert_eq!(
-            implementation_family_id("vyre-primitives::reduce::gather"),
-            implementation_family_id("vyre-primitives::reduce::scatter")
+            implementation_family_id("vyre-libs::reduce::gather"),
+            implementation_family_id("vyre-libs::reduce::scatter")
         );
         assert_eq!(
             implementation_family_id("vyre-libs::math::atomic::atomic_or_u32"),
@@ -195,12 +195,12 @@ mod tests {
             "vyre-primitives::hardware::bit_reverse_u32"
         ));
         assert!(known_distinct_implementation_family_id(
-            "vyre-primitives::graph::csr_forward_or_changed",
-            "vyre-primitives::graph::csr_backward_or_changed"
+            "vyre-libs::graph::csr_forward_or_changed",
+            "vyre-libs::graph::csr_backward_or_changed"
         ));
         assert!(known_distinct_implementation_family_id(
-            "vyre-primitives::reduce::gather",
-            "vyre-primitives::graph::functor_apply"
+            "vyre-libs::reduce::gather",
+            "vyre-libs::graph::functor_apply"
         ));
         assert!(!known_distinct_implementation_family_id(
             "vyre-primitives::hardware::workgroup_barrier",
@@ -212,7 +212,7 @@ mod tests {
     fn unrelated_ops_do_not_gain_family_suppression() {
         assert_ne!(
             implementation_family_id("vyre-libs::math::atomic::atomic_or_u32"),
-            implementation_family_id("vyre-primitives::bitset::and")
+            implementation_family_id("vyre-libs::bitset::and")
         );
         assert!(implementation_family_id("unknown::op").is_none());
     }

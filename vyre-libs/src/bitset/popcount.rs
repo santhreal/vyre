@@ -10,7 +10,7 @@ use vyre_foundation::ir::{Program, UnOp};
 use crate::bitset::unary_word::bitset_unary_word_program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::popcount";
+pub const OP_ID: &str = "vyre-libs::bitset::popcount";
 
 /// Build a Program: `count_words[w] = popcount(input[w])`.
 #[must_use]

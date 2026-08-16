@@ -41,7 +41,7 @@ use serde::Deserialize;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::sweep::RUNNER;
-use crate::subcommands::{self, SUBSETS};
+use crate::subcommands;
 
 /// The one declaration of every check CI runs.
 pub const REGISTRY: &str = "xtask/ci-registry.toml";
@@ -349,9 +349,9 @@ fn strip_yaml_comment(line: &str) -> &str {
 #[must_use]
 pub fn derived_subsets() -> BTreeMap<String, BTreeSet<String>> {
     let mut map: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for subset in SUBSETS {
+    for subset in subcommands::subsets() {
         for gate in subset.gates {
-            map.entry((*gate).to_string())
+            map.entry(gate.to_string())
                 .or_default()
                 .insert(subset.name.to_string());
         }
@@ -606,8 +606,9 @@ pub fn findings(
         }
     }
 
-    for subset in SUBSETS {
-        for gate in subset.gates {
+    let subsets = subcommands::subsets();
+    for subset in &subsets {
+        for gate in &subset.gates {
             if !gate_names.contains(gate) {
                 findings.push(Finding::new(
                     format!("subset `{}` names `{gate}`, which is not a registered gate", subset.name),
@@ -629,7 +630,7 @@ pub fn findings(
         ));
     }
     for name in names.subsets.keys() {
-        if !SUBSETS.iter().any(|subset| subset.name == name) {
+        if !subsets.iter().any(|subset| subset.name == name) {
             findings.push(Finding::new(
                 format!("a workflow runs `xtask gates --subset {name}`, which is not a registered subset"),
                 "correct the step, or register the subset",
@@ -983,7 +984,7 @@ impl Gate for CiRegistry {
             registry.gate.len(),
             registry.external.len(),
             registry.workflow.len(),
-            SUBSETS.len(),
+            subcommands::subsets().len(),
             names
                 .invoked
                 .values()

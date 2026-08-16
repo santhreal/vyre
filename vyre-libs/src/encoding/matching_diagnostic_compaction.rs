@@ -521,7 +521,7 @@ mod tests {
                         u32_slice_to_le_bytes(&primitive_bracket_match(&kinds, depth_words as u32)),
                     ])
                 }
-                "vyre-primitives::matching::region::region_sort" => {
+                "vyre-libs::matching::region::region_sort" => {
                     // Six input-consuming buffers: pids/starts/ends ReadOnly(0-2) + the three
                     // plain-ReadWrite outputs pids_out/starts_out/ends_out(3-5, zero-filled).
                     assert_eq!(
@@ -547,7 +547,7 @@ mod tests {
                         u32_slice_to_le_bytes(&ends),
                     ])
                 }
-                "vyre-primitives::matching::region::dedup_regions_flag" => {
+                "vyre-libs::matching::region::dedup_regions_flag" => {
                     // Three input-consuming buffers: pids/starts/ends ReadOnly(0-2). `survivors` is
                     // WriteOnly(3) (backend-allocated, no input slot).
                     assert_eq!(

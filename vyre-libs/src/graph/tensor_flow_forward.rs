@@ -16,7 +16,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::tensor_flow_forward";
+pub const OP_ID: &str = "vyre-libs::graph::tensor_flow_forward";
 /// Source-lane workgroup for context/field-sensitive tensor propagation.
 pub const TENSOR_FLOW_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

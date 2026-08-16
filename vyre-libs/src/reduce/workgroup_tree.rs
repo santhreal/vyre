@@ -11,17 +11,17 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for an f32 workgroup sum over a scratch buffer.
-pub const SUM_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_f32";
+pub const SUM_F32_OP_ID: &str = "vyre-libs::reduce::workgroup_sum_f32";
 /// Canonical op id for a u32 workgroup sum over a scratch buffer.
-pub const SUM_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_u32";
+pub const SUM_U32_OP_ID: &str = "vyre-libs::reduce::workgroup_sum_u32";
 /// Canonical op id for an f32 workgroup maximum over a scratch buffer.
-pub const MAX_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_max_f32";
+pub const MAX_F32_OP_ID: &str = "vyre-libs::reduce::workgroup_max_f32";
 /// Canonical op id for a u32 workgroup maximum over a scratch buffer.
-pub const MAX_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_max_u32";
+pub const MAX_U32_OP_ID: &str = "vyre-libs::reduce::workgroup_max_u32";
 /// Canonical op id for an f32 workgroup minimum over a scratch buffer.
-pub const MIN_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_min_f32";
+pub const MIN_F32_OP_ID: &str = "vyre-libs::reduce::workgroup_min_f32";
 /// Canonical op id for a u32 workgroup minimum over a scratch buffer.
-pub const MIN_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_min_u32";
+pub const MIN_U32_OP_ID: &str = "vyre-libs::reduce::workgroup_min_u32";
 
 /// Scope for a workgroup-local reduction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -432,6 +432,41 @@ inventory::submit! {
             fixture_f32(&[0.0]),
         ]]),
         Some(|| vec![vec![fixture_f32(&[9.5])]]),
+    )
+}
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        MAX_U32_OP_ID,
+        || workgroup_max_u32("values", "out", 4, 4),
+        Some(|| vec![vec![
+            fixture_u32(&[1, 9, 4, 2]),
+            fixture_u32(&[0]),
+        ]]),
+        Some(|| vec![vec![fixture_u32(&[9])]]),
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        MIN_F32_OP_ID,
+        || workgroup_min_f32("values", "out", 4, 4),
+        Some(|| vec![vec![
+            fixture_f32(&[-3.0, 9.5, 4.0, 1.25]),
+            fixture_f32(&[0.0]),
+        ]]),
+        Some(|| vec![vec![fixture_f32(&[-3.0])]]),
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        MIN_U32_OP_ID,
+        || workgroup_min_u32("values", "out", 4, 4),
+        Some(|| vec![vec![
+            fixture_u32(&[3, 9, 4, 2]),
+            fixture_u32(&[0]),
+        ]]),
+        Some(|| vec![vec![fixture_u32(&[2])]]),
     )
 }
 

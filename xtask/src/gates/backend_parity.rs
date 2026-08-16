@@ -44,7 +44,7 @@ impl Gate for SpirvParity {
     }
 
     fn help(&self) -> &'static str {
-        "Hold the SPIR-V parity suite behind the validator feature; --validate installs nothing and runs it"
+        "Hold the SPIR-V parity suite behind the validator feature; `--validate` installs nothing and runs it"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -133,7 +133,7 @@ impl Gate for CudaParity {
     }
 
     fn help(&self) -> &'static str {
-        "Hold the CUDA driver to tracked parity targets; --device runs the crate's suite on a live NVIDIA GPU"
+        "Hold the CUDA driver to tracked parity targets; `--device` runs the crate's suite on a live NVIDIA GPU"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

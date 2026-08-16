@@ -254,15 +254,15 @@ mod tests {
     fn program_builders_emit_expected_numerical_primitives() {
         assert_eq!(
             program_generator(&dispatch_randomized_projection("a", "omega", "y", 2, 2, 2)),
-            "vyre-primitives::math::randomized_projection_step"
+            "vyre-libs::math::randomized_projection_step"
         );
         assert_eq!(
             program_generator(&dispatch_newton_schulz_y_step("y", "yzy", "next", 2)),
-            "vyre-primitives::math::newton_schulz_y_step"
+            "vyre-libs::math::newton_schulz_y_step"
         );
         assert_eq!(
             program_generator(&dispatch_newton_schulz_poly5_f32("mat", "out", 2, 2)),
-            "vyre-primitives::math::newton_schulz_poly5_f32"
+            "vyre-libs::math::newton_schulz_poly5_f32"
         );
         assert_eq!(
             program_generator(&dispatch_sinkhorn_iterate(
@@ -273,11 +273,11 @@ mod tests {
                     max_iterations: 3,
                 },
             )),
-            "vyre-primitives::math::sinkhorn_iterate"
+            "vyre-libs::math::sinkhorn_iterate"
         );
         assert_eq!(
             program_generator(&dispatch_gaussian_rdp_step("alpha", "sigma", "out", 4)),
-            "vyre-primitives::math::gaussian_rdp_step"
+            "vyre-libs::math::gaussian_rdp_step"
         );
     }
 

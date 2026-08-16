@@ -58,32 +58,32 @@ pub use self::word_block_scatter::{
 };
 
 /// Canonical op id for bitset-to-queue compaction.
-pub const FRONTIER_TO_QUEUE_OP_ID: &str = "vyre-primitives::graph::frontier_to_queue";
+pub const FRONTIER_TO_QUEUE_OP_ID: &str = "vyre-libs::graph::frontier_to_queue";
 /// Canonical op id for multi-workgroup bitset-to-queue compaction.
 pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str =
-    "vyre-primitives::graph::frontier_to_queue_parallel";
+    "vyre-libs::graph::frontier_to_queue_parallel";
 /// Canonical op id for word-level multi-workgroup bitset-to-queue compaction.
 pub const FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str =
-    "vyre-primitives::graph::frontier_words_to_queue_parallel";
+    "vyre-libs::graph::frontier_words_to_queue_parallel";
 /// Canonical op id for word-level compaction that also clears an output bitset.
 pub const FRONTIER_WORDS_TO_QUEUE_CLEAR_OUT_PARALLEL_OP_ID: &str =
-    "vyre-primitives::graph::frontier_words_to_queue_clear_out_parallel";
+    "vyre-libs::graph::frontier_words_to_queue_clear_out_parallel";
 /// Canonical op id for packed-frontier word popcount prefix-scan pass A.
 pub const FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID: &str =
-    "vyre-primitives::graph::frontier_word_counts_scan_pass_a";
+    "vyre-libs::graph::frontier_word_counts_scan_pass_a";
 /// Canonical op id for deterministic packed-frontier block-prefix scatter.
 pub const FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID: &str =
-    "vyre-primitives::graph::frontier_word_block_prefix_to_queue_parallel";
+    "vyre-libs::graph::frontier_word_block_prefix_to_queue_parallel";
 /// Canonical op id for in-place packed-frontier block-offset scan.
 pub const FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID: &str =
-    "vyre-primitives::graph::frontier_word_block_offsets_in_place";
+    "vyre-libs::graph::frontier_word_block_offsets_in_place";
 /// Canonical op id for packed-frontier scatter with precomputed block offsets.
 pub const FRONTIER_WORD_BLOCK_OFFSETS_TO_QUEUE_PARALLEL_OP_ID: &str =
-    "vyre-primitives::graph::frontier_word_block_offsets_to_queue_parallel";
+    "vyre-libs::graph::frontier_word_block_offsets_to_queue_parallel";
 /// Canonical op id for device-side queue length initialization.
-pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-primitives::graph::frontier_queue_len_init";
+pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-libs::graph::frontier_queue_len_init";
 /// Canonical op id for queue-driven CSR expansion.
-pub const CSR_QUEUE_FORWARD_OP_ID: &str = "vyre-primitives::graph::csr_queue_forward_traverse";
+pub const CSR_QUEUE_FORWARD_OP_ID: &str = "vyre-libs::graph::csr_queue_forward_traverse";
 
 /// Positional inputs for [`csr_queue_forward_traverse`].
 #[derive(Clone, Copy, Debug)]

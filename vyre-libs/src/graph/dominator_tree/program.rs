@@ -36,7 +36,7 @@ use super::depth::dominator_tree_depth_child;
 use super::intersect_step::dominator_tree_intersect_step_child;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::dominator_tree";
+pub const OP_ID: &str = "vyre-libs::graph::dominator_tree";
 // The one phase boundary that is not an operation of its own: clearing the
 // forest reads nothing and answers no question a second caller could ask. The
 // `anonymous::` prefix is what says so: see

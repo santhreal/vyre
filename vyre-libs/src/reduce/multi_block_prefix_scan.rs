@@ -40,12 +40,12 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 /// Canonical op id for inclusive sum-scan over arbitrary `n`.
 pub const OP_ID_INCLUSIVE_SUM: &str =
-    "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum";
+    "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum";
 
 /// Canonical op id for the exclusive-sum element-difference pass that turns the
 /// inclusive multi-block scan into an exclusive one.
 pub const OP_ID_EXCLUSIVE_SUM: &str =
-    "vyre-primitives::reduce::multi_block_prefix_scan_exclusive_sum";
+    "vyre-libs::reduce::multi_block_prefix_scan_exclusive_sum";
 
 /// Return the execution geometry requirements for multi-block prefix scan.
 #[must_use]
@@ -54,23 +54,12 @@ pub const fn multi_block_prefix_scan_requirements() -> vyre_foundation::geometry
         vyre_foundation::geometry::CooperativeWidth::Agnostic,
     )
 }
-/// Lanes per Pass-A block.
-///
-/// One block is one workgroup, so the width has to be one every target admits:
-/// this op declares its geometry when it builds its program, with no device in
-/// hand. The claim that 1024 is the universal maximum was false for the
-/// structured-compute target, whose profile admits 256, and the payload was
-/// refused at admission with `target workgroup extent 1024 exceeds profile limit
-/// 256` on every proof run. The portable extent is owned by
-/// `vyre_foundation::ir`, and a backend that cannot clear it fails its own
-/// profile contract instead of taking this op out of the certificate.
-pub const BLOCK_LANES: u32 = vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
-
 /// Historical direct-scan threshold retained for callers/tests that size
 /// around one level of block-total recursion. The implementation recurses and
 /// bottoms out at the guarded single-workgroup scan once
-/// `num_blocks <= BLOCK_LANES`.
-pub const SOFT_MAX_N: u32 = BLOCK_LANES * BLOCK_LANES;
+/// `num_blocks <= PORTABLE_WORKGROUP_INVOCATIONS`.
+pub const SOFT_MAX_N: u32 = vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
+    * vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
     usize::try_from(words)
         .ok()
@@ -412,9 +401,7 @@ fn try_guarded_single_block_scan(
         buffers,
         [block_lanes, 1, 1],
         vec![Node::Region {
-            generator: Ident::from(
-                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
-            ),
+            generator: Ident::from(OP_ID_INCLUSIVE_SUM),
             source_region: None,
             body: Arc::new(body),
         }],
@@ -543,7 +530,7 @@ fn try_pass_a_local_scan(
         [block_lanes, 1, 1],
         vec![Node::Region {
             generator: Ident::from(
-                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_a",
+                "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum::pass_a",
             ),
             source_region: None,
             body: Arc::new(body),
@@ -658,7 +645,7 @@ fn try_pass_c_broadcast_offsets(
         [block_lanes, 1, 1],
         vec![Node::Region {
             generator: Ident::from(
-                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_c",
+                "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum::pass_c",
             ),
             source_region: None,
             body: Arc::new(body),

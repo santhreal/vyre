@@ -31,11 +31,11 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::graph::do_intervention_delete_incoming";
+pub const OP_ID: &str = "vyre-libs::graph::do_intervention_delete_incoming";
 /// Rule 2 op id.
-pub const RULE2_OP_ID: &str = "vyre-primitives::graph::do_rule2_reverse_incoming";
+pub const RULE2_OP_ID: &str = "vyre-libs::graph::do_rule2_reverse_incoming";
 /// Rule 3 op id.
-pub const RULE3_OP_ID: &str = "vyre-primitives::graph::do_rule3_subgraph";
+pub const RULE3_OP_ID: &str = "vyre-libs::graph::do_rule3_subgraph";
 
 /// Emit a Program that zeros all incoming edges to nodes marked
 /// "intervened" in `intervention_mask`. The result is the post-do

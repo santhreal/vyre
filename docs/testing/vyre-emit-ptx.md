@@ -36,6 +36,7 @@ The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains
 | `test` | `adversarial_emit_program_matrix` | `vyre-emit-ptx/tests/adversarial_emit_program_matrix.rs` | None | `./cargo_full test -p vyre-emit-ptx --test adversarial_emit_program_matrix` |
 | `test` | `barrier_scope_parity` | `vyre-emit-ptx/tests/barrier_scope_parity.rs` | None | `./cargo_full test -p vyre-emit-ptx --test barrier_scope_parity` |
 | `test` | `cross_emitter_parity` | `vyre-emit-ptx/tests/cross_emitter_parity.rs` | None | `./cargo_full test -p vyre-emit-ptx --test cross_emitter_parity` |
+| `test` | `divergent_trap_and_grid_barrier` | `vyre-emit-ptx/tests/divergent_trap_and_grid_barrier.rs` | None | `./cargo_full test -p vyre-emit-ptx --test divergent_trap_and_grid_barrier` |
 | `test` | `emit_contracts` | `vyre-emit-ptx/tests/emit_contracts.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emit_contracts` |
 | `test` | `emitted_artifact_byte_stability` | `vyre-emit-ptx/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emitted_artifact_byte_stability` |
 | `test` | `grid_sync_loop_refusal` | `vyre-emit-ptx/tests/grid_sync_loop_refusal.rs` | None | `./cargo_full test -p vyre-emit-ptx --test grid_sync_loop_refusal` |
@@ -44,6 +45,7 @@ The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains
 | `test` | `pattern_analysis_contracts` | `vyre-emit-ptx/tests/pattern_analysis_contracts.rs` | None | `./cargo_full test -p vyre-emit-ptx --test pattern_analysis_contracts` |
 | `test` | `regression_emit_fixes` | `vyre-emit-ptx/tests/regression_emit_fixes.rs` | None | `./cargo_full test -p vyre-emit-ptx --test regression_emit_fixes` |
 | `test` | `shared_branch_walk_equality` | `vyre-emit-ptx/tests/shared_branch_walk_equality.rs` | None | `./cargo_full test -p vyre-emit-ptx --test shared_branch_walk_equality` |
+| `test` | `ulp_budget_is_not_an_admission_gate` | `vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs` | None | `./cargo_full test -p vyre-emit-ptx --test ulp_budget_is_not_an_admission_gate` |
 
 ## Test classes
 

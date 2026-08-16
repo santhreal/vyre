@@ -60,7 +60,7 @@ impl Gate for MetalParity {
     }
 
     fn help(&self) -> &'static str {
-        "Hold the Metal counter roster to the driver's own assertions; --host <target> runs the suites on an Apple GPU"
+        "Hold the Metal counter roster to the driver's own assertions; `--host` <target> runs the suites on an Apple GPU"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

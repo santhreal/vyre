@@ -56,6 +56,7 @@ mod no_reinvention;
 mod operand_shape;
 mod ops;
 mod primitive_coverage;
+mod semantic_organization;
 mod trend;
 
 use self::composability::*;
@@ -73,12 +74,13 @@ use self::operand_shape::*;
 use self::ops::*;
 pub(crate) use self::ops::{collect_ops, OpInfo, Tier};
 use self::primitive_coverage::*;
+use self::semantic_organization::*;
 use self::trend::*;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io;
 use vyre::ir::{Expr, Node, Program};
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Coverage, Finding, Gate, GateCtx, GateError, Report};
 
 use xtask::gates::dedup_report::{
     duplicate_family_report, duplicate_report_generator_command, duplicate_report_json_path,
@@ -93,7 +95,7 @@ use xtask::gates::implementation_family::{
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
 /// Entry point for the `lego-audit` subcommand.
-/// Audits registered composition against the ten LEGO-block laws.
+/// Audits registered composition against the complete LEGO-block laws.
 pub struct LegoAudit;
 
 impl Gate for LegoAudit {
@@ -102,7 +104,7 @@ impl Gate for LegoAudit {
     }
 
     fn help(&self) -> &'static str {
-        "Hold registered composition to the ten composition laws; --write records the composition baseline"
+        "Enforce semantic ownership, bidirectional composition, domain placement, and consolidation; --write records the composition baseline"
     }
 
     fn generates(&self) -> bool {
@@ -112,6 +114,7 @@ impl Gate for LegoAudit {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         report.note(format!("{} op(s) audited", ops.len()));
         if ctx.write {
             write_composition_baseline(&ctx.root, &ops).map_err(|error| {
@@ -159,6 +162,7 @@ impl Gate for LegoAudit {
         check_8_composability(&mut report, &ops);
         check_9_name_stem_collision(&mut report, &ops);
         check_10_operand_shape_duplicate(&mut report, &ops);
+        check_semantic_organization(&mut report, &ops);
         Ok(report)
     }
 }
@@ -178,6 +182,7 @@ impl Gate for PrimitiveAdmissionGate {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         report.note(format!("{} op(s) audited", ops.len()));
         check_3_primitive_coverage(&mut report, &ops);
         Ok(report)
@@ -193,10 +198,18 @@ pub(crate) mod test_ops {
     pub(crate) fn op(id: &str, tier: Tier, children: &[&str]) -> OpInfo {
         OpInfo {
             id: id.to_string(),
+            source_file: String::new(),
+            category: None,
+            laws: BTreeSet::new(),
+            semantic_version: 1,
+            tolerance: 0,
+            effects: vyre_foundation::operation::OperationEffects::default(),
+            capabilities: String::new(),
             program: Program::empty(),
             tier,
             buffer_signature: Vec::new(),
             fingerprint: vec![1; 64],
+            semantic_fingerprint: [0; 32],
             own_nodes: 1,
             composed_nodes: 0,
             children: children.iter().map(|child| (*child).to_string()).collect(),

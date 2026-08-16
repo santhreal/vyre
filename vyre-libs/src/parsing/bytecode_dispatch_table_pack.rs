@@ -1,7 +1,7 @@
 //! `bytecode_dispatch_table_pack`  -  pack an opcode-handler dispatch table
 //! into a constant-buffer for fast GPU-side bytecode interpretation.
 //!
-//! Op id: `vyre-primitives::parsing::bytecode_dispatch_table_pack`. Soundness:
+//! Op id: `vyre-libs::parsing::bytecode_dispatch_table_pack`. Soundness:
 //! `Exact` over the opcode → handler-offset mapping. The canonical
 //! bytecode-on-GPU interpreter loop reads `dispatch_table[opcode]` to find
 //! which handler program to invoke, then executes it. Centralising the table

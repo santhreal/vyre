@@ -6,7 +6,7 @@
 use vyre_foundation::ir::DataType;
 
 /// Stable Operation UUID identifying the Lock-Free Alias Union subkernel.
-pub const ALIAS_UNION_OP_ID: &str = "vyre-primitives::graph::alias_union";
+pub const ALIAS_UNION_OP_ID: &str = "vyre-libs::graph::alias_union";
 
 /// Descriptor for an alias-analysis extension op.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,12 +165,12 @@ mod tests {
         descriptor.commutative = false;
         descriptor.side_effects = false;
 
-        registry.register("vyre-primitives::graph::alias_test_ext", descriptor.clone());
-        registry.register("vyre-primitives::graph::alias_test_ext", descriptor);
+        registry.register("vyre-libs::graph::alias_test_ext", descriptor.clone());
+        registry.register("vyre-libs::graph::alias_test_ext", descriptor);
 
         assert_eq!(registry.len(), 2);
         let ext = registry
-            .get("vyre-primitives::graph::alias_test_ext")
+            .get("vyre-libs::graph::alias_test_ext")
             .expect("Fix: extension alias op should be registered");
         assert_eq!(ext.description, "test extension alias op");
         assert!(!ext.commutative);
@@ -182,10 +182,10 @@ mod tests {
     fn extension_ops_are_kept_sorted_for_binary_lookup() {
         let mut registry = default_alias_registry();
         for op_id in [
-            "vyre-primitives::graph::alias_z",
-            "vyre-primitives::graph::alias_a",
-            "vyre-primitives::graph::alias_m",
-            "vyre-primitives::graph::alias_b",
+            "vyre-libs::graph::alias_z",
+            "vyre-libs::graph::alias_a",
+            "vyre-libs::graph::alias_m",
+            "vyre-libs::graph::alias_b",
         ] {
             registry.register(op_id, AliasOpDescriptor::alias_union());
         }
@@ -198,16 +198,16 @@ mod tests {
         assert_eq!(
             ids,
             vec![
-                "vyre-primitives::graph::alias_a",
-                "vyre-primitives::graph::alias_b",
-                "vyre-primitives::graph::alias_m",
-                "vyre-primitives::graph::alias_z",
+                "vyre-libs::graph::alias_a",
+                "vyre-libs::graph::alias_b",
+                "vyre-libs::graph::alias_m",
+                "vyre-libs::graph::alias_z",
             ],
             "Fix: alias extension registry must stay sorted so lookup is binary-searchable."
         );
-        assert!(registry.get("vyre-primitives::graph::alias_m").is_some());
+        assert!(registry.get("vyre-libs::graph::alias_m").is_some());
         assert!(registry
-            .get("vyre-primitives::graph::alias_missing")
+            .get("vyre-libs::graph::alias_missing")
             .is_none());
     }
 
@@ -215,29 +215,29 @@ mod tests {
     fn duplicate_extension_update_preserves_sorted_registry_position() {
         let mut registry = default_alias_registry();
         registry.register(
-            "vyre-primitives::graph::alias_c",
+            "vyre-libs::graph::alias_c",
             AliasOpDescriptor::alias_union(),
         );
         registry.register(
-            "vyre-primitives::graph::alias_a",
+            "vyre-libs::graph::alias_a",
             AliasOpDescriptor::alias_union(),
         );
         let mut updated = AliasOpDescriptor::alias_union();
         updated.description = "updated alias op";
         updated.commutative = false;
-        registry.register("vyre-primitives::graph::alias_c", updated);
+        registry.register("vyre-libs::graph::alias_c", updated);
 
         assert_eq!(registry.len(), 3);
         assert_eq!(
             registry.extension_ops[0].0,
-            "vyre-primitives::graph::alias_a"
+            "vyre-libs::graph::alias_a"
         );
         assert_eq!(
             registry.extension_ops[1].0,
-            "vyre-primitives::graph::alias_c"
+            "vyre-libs::graph::alias_c"
         );
         let desc = registry
-            .get("vyre-primitives::graph::alias_c")
+            .get("vyre-libs::graph::alias_c")
             .expect("Fix: updated alias_c descriptor must remain registered");
         assert_eq!(desc.description, "updated alias op");
         assert!(!desc.commutative);
@@ -247,11 +247,11 @@ mod tests {
     fn registered_op_ids_are_deterministic_and_do_not_expose_descriptors() {
         let mut registry = default_alias_registry();
         registry.register(
-            "vyre-primitives::graph::alias_z",
+            "vyre-libs::graph::alias_z",
             AliasOpDescriptor::alias_union(),
         );
         registry.register(
-            "vyre-primitives::graph::alias_a",
+            "vyre-libs::graph::alias_a",
             AliasOpDescriptor::alias_union(),
         );
 
@@ -259,8 +259,8 @@ mod tests {
             registry.registered_op_ids(),
             vec![
                 ALIAS_UNION_OP_ID,
-                "vyre-primitives::graph::alias_a",
-                "vyre-primitives::graph::alias_z",
+                "vyre-libs::graph::alias_a",
+                "vyre-libs::graph::alias_z",
             ]
         );
     }

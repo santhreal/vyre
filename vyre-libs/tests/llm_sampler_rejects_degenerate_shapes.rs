@@ -23,19 +23,13 @@ use vyre_libs::nn::moe::softmax_top_k;
 /// The trap tags a program's entry carries, at any region depth.
 fn trap_tags(program: &Program) -> Vec<String> {
     fn walk(node: &Node, out: &mut Vec<String>) {
-        match node {
-            Node::Trap { tag, .. } => out.push(tag.as_str().to_string()),
-            Node::Region { body, .. } => body.iter().for_each(|child| walk(child, out)),
-            Node::Block(body) | Node::Loop { body, .. } => {
-                body.iter().for_each(|child| walk(child, out));
+        if let Node::Trap { tag, .. } = node {
+            out.push(tag.as_str().to_string());
+        }
+        for body in vyre_foundation::visit::child_bodies(node) {
+            for child in body {
+                walk(child, out);
             }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().for_each(|child| walk(child, out));
-                otherwise.iter().for_each(|child| walk(child, out));
-            }
-            _ => {}
         }
     }
     let mut out = Vec::new();

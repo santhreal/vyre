@@ -42,31 +42,31 @@ type InPlaceIndexedExpect = fn(&[u32], u32) -> Vec<u32>;
 /// `out[w]` from `lhs[w]` and `rhs[w]`, truncated to the shorter input.
 const VECTOR_BINARY: &[(&str, BinaryVector, BinaryVectorInto, BinaryVector)] = &[
     (
-        "vyre-primitives::bitset::and",
+        "vyre-libs::bitset::and",
         and::cpu_ref,
         and::cpu_ref_into,
         expect_and,
     ),
     (
-        "vyre-primitives::bitset::or",
+        "vyre-libs::bitset::or",
         or::cpu_ref,
         or::cpu_ref_into,
         expect_or,
     ),
     (
-        "vyre-primitives::bitset::xor",
+        "vyre-libs::bitset::xor",
         xor::cpu_ref,
         xor::cpu_ref_into,
         expect_xor,
     ),
     (
-        "vyre-primitives::bitset::and_not",
+        "vyre-libs::bitset::and_not",
         and_not::cpu_ref,
         and_not::cpu_ref_into,
         expect_and_not,
     ),
     (
-        "vyre-primitives::bitset::stochastic_and_mul",
+        "vyre-libs::bitset::stochastic_and_mul",
         stochastic_compute::cpu_ref,
         stochastic_compute::cpu_ref_into,
         expect_and,
@@ -76,13 +76,13 @@ const VECTOR_BINARY: &[(&str, BinaryVector, BinaryVectorInto, BinaryVector)] = &
 /// `out[w]` from `input[w]`.
 const VECTOR_UNARY: &[(&str, UnaryVector, UnaryVectorInto, UnaryVector)] = &[
     (
-        "vyre-primitives::bitset::not",
+        "vyre-libs::bitset::not",
         not::cpu_ref,
         not::cpu_ref_into,
         expect_not,
     ),
     (
-        "vyre-primitives::bitset::popcount",
+        "vyre-libs::bitset::popcount",
         popcount::cpu_ref,
         popcount::cpu_ref_into,
         expect_popcount,
@@ -91,17 +91,17 @@ const VECTOR_UNARY: &[(&str, UnaryVector, UnaryVectorInto, UnaryVector)] = &[
 
 /// One scalar answer over the whole bitset.
 const SCALAR_UNARY: &[(&str, UnaryScalar, UnaryScalar)] =
-    &[("vyre-primitives::bitset::any", any::cpu_ref, expect_any)];
+    &[("vyre-libs::bitset::any", any::cpu_ref, expect_any)];
 
 /// One scalar answer over a pair of bitsets, length mismatch included.
 const SCALAR_BINARY: &[(&str, BinaryScalar, BinaryScalar)] = &[
     (
-        "vyre-primitives::bitset::equal",
+        "vyre-libs::bitset::equal",
         equal::cpu_ref,
         expect_equal,
     ),
     (
-        "vyre-primitives::bitset::subset_of",
+        "vyre-libs::bitset::subset_of",
         subset_of::cpu_ref,
         expect_subset_of,
     ),
@@ -110,12 +110,12 @@ const SCALAR_BINARY: &[(&str, BinaryScalar, BinaryScalar)] = &[
 /// One addressed bit, in range and out of range.
 const INDEXED_SCALAR: &[(&str, IndexedScalar, IndexedScalar)] = &[
     (
-        "vyre-primitives::bitset::contains",
+        "vyre-libs::bitset::contains",
         contains::cpu_ref,
         expect_bit_at,
     ),
     (
-        "vyre-primitives::bitset::test_bit",
+        "vyre-libs::bitset::test_bit",
         test_bit::cpu_ref,
         expect_bit_at,
     ),
@@ -123,7 +123,7 @@ const INDEXED_SCALAR: &[(&str, IndexedScalar, IndexedScalar)] = &[
 
 /// In-place rewrite of `target` from `target` alone.
 const IN_PLACE_UNARY: &[(&str, InPlaceUnary, InPlaceUnaryExpect)] = &[(
-    "vyre-primitives::bitset::zero",
+    "vyre-libs::bitset::zero",
     zero::cpu_ref,
     expect_zeroed,
 )];
@@ -131,27 +131,27 @@ const IN_PLACE_UNARY: &[(&str, InPlaceUnary, InPlaceUnaryExpect)] = &[(
 /// In-place rewrite of `target` from `target` and `operand`.
 const IN_PLACE_BINARY: &[(&str, InPlaceBinary, InPlaceBinaryExpect)] = &[
     (
-        "vyre-primitives::bitset::copy",
+        "vyre-libs::bitset::copy",
         copy::cpu_ref,
         expect_copied,
     ),
     (
-        "vyre-primitives::bitset::and_into",
+        "vyre-libs::bitset::and_into",
         and_into::cpu_ref,
         expect_and_into,
     ),
     (
-        "vyre-primitives::bitset::or_into",
+        "vyre-libs::bitset::or_into",
         or_into::cpu_ref,
         expect_or_into,
     ),
     (
-        "vyre-primitives::bitset::xor_into",
+        "vyre-libs::bitset::xor_into",
         xor_into::cpu_ref,
         expect_xor_into,
     ),
     (
-        "vyre-primitives::bitset::and_not_into",
+        "vyre-libs::bitset::and_not_into",
         and_not_into::cpu_ref,
         expect_and_not_into,
     ),
@@ -160,12 +160,12 @@ const IN_PLACE_BINARY: &[(&str, InPlaceBinary, InPlaceBinaryExpect)] = &[
 /// In-place rewrite of one addressed bit of `target`.
 const IN_PLACE_INDEXED: &[(&str, InPlaceIndexed, InPlaceIndexedExpect)] = &[
     (
-        "vyre-primitives::bitset::set_bit",
+        "vyre-libs::bitset::set_bit",
         set_bit::cpu_ref,
         expect_bit_set,
     ),
     (
-        "vyre-primitives::bitset::clear_bit",
+        "vyre-libs::bitset::clear_bit",
         clear_bit::cpu_ref,
         expect_bit_cleared,
     ),
@@ -182,15 +182,15 @@ const IN_PLACE_INDEXED: &[(&str, InPlaceIndexed, InPlaceIndexedExpect)] = &[
 /// wherever it lands, and a proof that is deleted or renamed still fails.
 const EXEMPT: &[(&str, &str)] = &[
     (
-        "vyre-primitives::bitset::select1_query",
+        "vyre-libs::bitset::select1_query",
         "fn select_query_specific_sparse_positions",
     ),
     (
-        "vyre-primitives::bitset::four_russians_apply_byte_lut",
+        "vyre-libs::bitset::four_russians_apply_byte_lut",
         "fn four_russians_ir_apply_lut_matches_cpu_reference",
     ),
     (
-        "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut",
+        "vyre-libs::bitset::four_russians_dense_matvec_byte_lut",
         "fn primitive_dense_matvec_arms_cover_every_declared_case_group",
     ),
 ];
@@ -341,7 +341,7 @@ fn in_place_indexed_bitset_updates_match_independent_oracles() {
 fn bitset_registry_is_fully_covered() {
     let covered = swept_ids();
     for operation in vyre_foundation::operation::OperationRegistry::global().iter() {
-        if !operation.id.starts_with("vyre-primitives::bitset::") {
+        if !operation.id.starts_with("vyre-libs::bitset::") {
             continue;
         }
         let exempt = EXEMPT.iter().find(|(id, _)| *id == operation.id);

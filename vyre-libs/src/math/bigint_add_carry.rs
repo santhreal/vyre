@@ -1,7 +1,7 @@
 //! `bigint_add_carry`  -  multi-limb big-integer addition with explicit
 //! carry-out propagation, packed as one u32-limb per element.
 //!
-//! Op id: `vyre-primitives::math::bigint_add_carry`. Soundness: `Exact` over
+//! Op id: `vyre-libs::math::bigint_add_carry`. Soundness: `Exact` over
 //! `(a + b) mod 2^(32 * limb_count)` with the high carry-out emitted as a
 //! separate scalar. The CPU reference at the bottom of this file is the
 //! contract; the GPU `Program` matches it lane-for-lane.
@@ -45,7 +45,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for region-chain audits and bench attribution.
-pub const OP_ID: &str = "vyre-primitives::math::bigint_add_carry";
+pub const OP_ID: &str = "vyre-libs::math::bigint_add_carry";
 
 /// Canonical binding indices.
 pub const BINDING_A_IN: u32 = 0;
@@ -606,7 +606,7 @@ mod tests {
     #[test]
     fn op_id_is_canonical_and_stable() {
         // Op ids are wire-format-visible; changing them is a breaking change.
-        assert_eq!(OP_ID, "vyre-primitives::math::bigint_add_carry");
+        assert_eq!(OP_ID, "vyre-libs::math::bigint_add_carry");
     }
 
     #[test]

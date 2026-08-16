@@ -13,7 +13,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::stochastic_and_mul";
+pub const OP_ID: &str = "vyre-libs::bitset::stochastic_and_mul";
 
 /// Stochastic multiply (AND of bitstreams).
 #[must_use]

@@ -14,7 +14,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::hensel_lift_step";
+pub const OP_ID: &str = "vyre-libs::math::hensel_lift_step";
 
 /// Hensel iteration: `x_next = x - f(x) · (f'(x))^{-1}` modulo `p^{2k}`.
 /// Inputs are pre-evaluated `f_x` and `inv_f_prime` from the caller.

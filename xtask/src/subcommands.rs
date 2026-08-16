@@ -33,212 +33,75 @@ pub struct Subset {
     pub name: &'static str,
     /// What the set is for, shown in help.
     pub help: &'static str,
-    /// Gates in the set, by registered name.
-    pub gates: &'static [&'static str],
+    /// Gates in the set, derived from gate metadata.
+    pub gates: Vec<&'static str>,
 }
 
-/// Every named subset.
-pub static SUBSETS: &[Subset] = &[
-    Subset {
-        name: "cat-a",
-        help: "What a Cat-A author runs before opening a pull request",
-        gates: &[
-            "workspace-check",
-            "workspace-clippy",
-            "workspace-tests",
-            "workspace-docs",
-            "op-names",
-            "parity-testing-isolated",
-            "platform-boundary",
-        ],
-    },
-    Subset {
-        name: "prepublish",
-        help: "What must hold before publishing, beyond what a dry run catches",
-        gates: &[
-            "operation-schema",
-            "list-ops",
-            "catalog",
-            "gate1",
-            "abstraction-gate",
-            "cross-target",
-            "dep-drift",
-            "platform-boundary",
-            "vyre-release-gate",
-            "lockfile-clean",
-        ],
-    },
-    Subset {
-        name: "composition",
-        help: "Whether the registered building blocks still compose the way the rules say",
-        gates: &[
-            "lego-audit",
-            "lego-quick",
-            "primitive-admission-gate",
-            "whats-similar",
-        ],
-    },
-    Subset {
-        name: "structure",
-        help: "Whether the tree still has the shape the layering and hygiene rules require",
-        gates: &[
-            "bench-baselines",
-            "check-tier-deps",
-            "dup-scan",
-            "example-capability",
-            "hot-path-scan",
-            "hygiene-matrix",
-            "heuristic-audit",
-        ],
-    },
-    Subset {
-        name: "docs",
-        help: "Whether the generated documentation artifacts still match the tree",
-        gates: &[
-            "architecture-contract",
-            "cli-docs",
-            "crate-ownership",
-            "crate-pages",
-            "crate-readmes",
-            "docs-check",
-            "docs-coupling",
-            "docs-references",
-            "op-matrix",
-            "docs-register",
-            "optimization-docs",
-            "release-docs",
-            "testing-guides",
-        ],
-    },
-    Subset {
-        name: "benchmarks",
-        help: "Whether the measured benchmark surface is registered, covered and inside its declared budget",
-        gates: &[
-            "bench-coverage",
-            "bench-release",
-            "bench-smoke-runtime",
-            "release-benchmarks",
-            "release-workload-matrix",
-        ],
-    },
-    Subset {
-        name: "release-evidence",
-        help: "Whether the committed release evidence still matches the manifests, the lockfile and the recorded runs",
-        gates: &[
-            "conformance-matrix",
-            "launch-state",
-            "metadata-matrix",
-            "optimization-corpus",
-            "optimization-matrix",
-            "package-readiness",
-            "release-conformance",
-            "release-evidence",
-            "version-matrix",
-        ],
-    },
-    Subset {
-        name: "ir",
-        help: "Whether the IR still compiles, reduces, traces and proves what it claims",
-        gates: &[
-            "compile",
-            "shrink",
-            "print-composition",
-            "trace-f32",
-            "verify-rewrite-proofs",
-            "bench-crossback",
-        ],
-    },
-    Subset {
-        name: "manifest-rules",
-        help: "What the manifests must say about each other and about the layering, read without cargo",
-        gates: &[
-            "workspace-membership",
-            "path-deps-resolve",
-            "internal-dep-versions",
-            "layering",
-            "neutral-crates",
-            "feature-matrix",
-            "feature-isolation",
-            "feature-msrv",
-        ],
-    },
-    Subset {
-        name: "source-rules",
-        help: "What every tracked source file must be: compiled by a target, run by a runner, parseable, inside its size cap, and product rather than test material",
-        gates: &[
-            "source-reachability",
-            "source-include-module",
-            "source-parses",
-            "oracle-sweeps",
-            "file-size",
-            "test-material-placement",
-        ],
-    },
-    Subset {
-        name: "hot-path-rules",
-        help: "Allocation, blocking and unbounded growth on the dispatch path",
-        gates: &[
-            "hot-path-nested-rows",
-            "hot-path-blocking-wait",
-            "hot-path-unbounded-cache",
-            "hot-path-owned-dispatch",
-            "hot-path-unbounded-read",
-            "hot-path-inventory",
-            "hot-path-reserve",
-        ],
-    },
-    Subset {
-        name: "lint-rules",
-        help: "Lint hygiene, unsafe justification and property-test coverage",
-        gates: &[
-            "lint-expect-fix",
-            "lint-one-policy",
-            "lint-unsafe-budget",
-            "lint-unsafe-justification",
-            "proptest-coverage",
-        ],
-    },
-    Subset {
-        name: "contract-rules",
-        help: "Frozen public surfaces, wire field parity, backend parity registration, device loudness and the unification ratchets",
-        gates: &[
-            "frozen-contracts",
-            "backend-extension",
-            "backend-matrix",
-            "program-wire-fields",
-            "public-api-paths",
-            "public-api-snapshot",
-            "readback-ring",
-            "unification",
-            "cuda-parity",
-            "metal-parity",
-            "spirv-parity",
-            "wire-determinism",
-            "gpu-loudness",
-            "shader-source",
-        ],
-    },
-    Subset {
-        name: "repo-rules",
-        help: "What the checkout carries, what the release evidence cites, what the documents claim, and whether the registry itself was softened",
-        gates: &[
-            "repo-hygiene",
-            "single-backlog",
-            "platform-consumer-docs",
-            "doc-claims",
-            "contract-in-source",
-            "evidence-paths",
-            "invariant-paths",
-            "ci-matrix",
-            "ci-registry",
-            "ci-required",
-            "ci-steps",
-            "gate-canon",
-            "placement-predicates",
-            "script-ledger",
-        ],
-    },
+const AREA_HELP: &[(&str, &str)] = &[
+    ("cat-a", "What a Cat-A author runs before opening a pull request"),
+    (
+        "prepublish",
+        "What must hold before publishing, beyond what a dry run catches",
+    ),
+    (
+        "composition",
+        "Whether registered building blocks compose under their semantic ownership rules",
+    ),
+    (
+        "structure",
+        "Whether the tree has the shape its layering and hygiene contracts require",
+    ),
+    ("docs", "Whether generated documentation artifacts match the tree"),
+    (
+        "benchmarks",
+        "Whether the measured benchmark surface is registered, covered and inside its declared budget",
+    ),
+    (
+        "release-evidence",
+        "Whether the committed release evidence still matches the manifests, the lockfile and the recorded runs",
+    ),
+    (
+        "ir",
+        "Whether the IR compiles, reduces, traces, and proves its contracts",
+    ),
+    (
+        "manifest-rules",
+        "What manifests must say about dependencies and layering",
+    ),
+    ("source-rules", "What every tracked source file must satisfy"),
+    (
+        "hot-path-rules",
+        "Allocation, blocking, and bounded growth on dispatch paths",
+    ),
+    (
+        "lint-rules",
+        "Lint hygiene, unsafe justification, and property-test coverage",
+    ),
+    (
+        "contract-rules",
+        "Frozen surfaces, parity, device loudness, and unification ratchets",
+    ),
+    (
+        "repo-rules",
+        "Checkout contents, evidence references, workflows, and claims",
+    ),
 ];
+
+/// Named subsets derived from each gate metadata row's areas.
+#[must_use]
+pub fn subsets() -> Vec<Subset> {
+    crate::gate_metadata::areas()
+        .into_iter()
+        .map(|name| Subset {
+            name,
+            help: AREA_HELP
+                .iter()
+                .find_map(|(area, help)| (*area == name).then_some(*help))
+                .expect("every gate area has help text"),
+            gates: crate::gate_metadata::gates_in_area(name),
+        })
+        .collect()
+}
 
 /// Every gate implemented in a crate that links vyre.
 ///
@@ -401,8 +264,8 @@ pub fn find(name: &str) -> Option<&'static dyn Gate> {
 
 /// Look one subset up by name.
 #[must_use]
-pub fn subset(name: &str) -> Option<&'static Subset> {
-    SUBSETS.iter().find(|subset| subset.name == name)
+pub fn subset(name: &str) -> Option<Subset> {
+    subsets().into_iter().find(|subset| subset.name == name)
 }
 
 /// Every gate `package` is responsible for, in registry order.
@@ -458,10 +321,11 @@ pub fn delegate_table_problems(package: &str, implemented: &[&dyn Gate]) -> Vec<
 #[must_use]
 pub fn help_text() -> String {
     let gates = registry();
+    let subsets = subsets();
     let width = gates
         .iter()
         .map(|gate| gate.name().len())
-        .chain(SUBSETS.iter().map(|subset| subset.name.len()))
+        .chain(subsets.iter().map(|subset| subset.name.len()))
         .max()
         .unwrap_or(0);
     let mut text = String::from(
@@ -477,7 +341,7 @@ pub fn help_text() -> String {
     ));
     text.push_str(&format!("  {:width$}  Print this message\n", "--help"));
     text.push_str("\nSUBSETS:\n");
-    for subset in SUBSETS {
+    for subset in &subsets {
         text.push_str(&format!("  {:width$}  {}\n", subset.name, subset.help));
     }
     text.push_str("\nEvery subcommand is a gate. A gate that owns a generated artifact\n");
@@ -520,9 +384,9 @@ mod tests {
     /// exists to remove.
     #[test]
     fn every_subset_names_registered_gates() {
-        for subset in SUBSETS {
+        for subset in subsets() {
             assert!(!subset.gates.is_empty(), "`{}` is empty", subset.name);
-            for name in subset.gates {
+            for name in &subset.gates {
                 assert!(
                     find(name).is_some(),
                     "subset `{}` names `{name}`, which is not registered",
@@ -552,7 +416,7 @@ mod tests {
                 gate.name()
             );
         }
-        for subset in SUBSETS {
+        for subset in subsets() {
             assert!(
                 text.contains(subset.name),
                 "subset `{}` is absent from help",

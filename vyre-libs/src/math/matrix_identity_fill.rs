@@ -10,7 +10,7 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use crate::plumbing::operand::shape::square_matrix_cells;
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::matrix_identity_fill";
+pub const OP_ID: &str = "vyre-libs::math::matrix_identity_fill";
 
 /// Emit the nested loop that writes `1.0` on the diagonal and `0.0` elsewhere.
 #[must_use]

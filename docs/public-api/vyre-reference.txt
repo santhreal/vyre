@@ -218,6 +218,7 @@ pub fn vyre_reference::value::Value::to_bytes(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::to_bytes_width(&self, declared_width: usize) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::truthy(&self) -> bool
 pub fn vyre_reference::value::Value::try_as_f32(&self) -> core::option::Option<f32>
+pub fn vyre_reference::value::Value::try_as_f64(&self) -> core::option::Option<f64>
 pub fn vyre_reference::value::Value::try_as_u32(&self) -> core::option::Option<u32>
 pub fn vyre_reference::value::Value::try_as_u64(&self) -> core::option::Option<u64>
 pub fn vyre_reference::value::Value::try_zero_for(ty: vyre_spec::data_type::DataType) -> core::option::Option<Self>

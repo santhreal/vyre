@@ -17,7 +17,7 @@ use crate::parsing::{
 
 /// Stable primitive id for the bytecode dispatch-table packing contract.
 pub const BYTECODE_DISPATCH_TABLE_PACK_PRIMITIVE_ID: &str =
-    "vyre-primitives::parsing::bytecode_dispatch_table_pack";
+    "vyre-libs::parsing::bytecode_dispatch_table_pack";
 
 /// Primitive ids consumed by the self-hosted parsing dispatch pipeline.
 pub const PARSING_DISPATCH_PIPELINE_PRIMITIVES: [&str; 2] = [

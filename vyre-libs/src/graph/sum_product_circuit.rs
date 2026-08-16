@@ -47,10 +47,10 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::graph::sum_product_evaluate";
+pub const OP_ID: &str = "vyre-libs::graph::sum_product_evaluate";
 
 /// Op id for the depth-leveled evaluator ([`sum_product_evaluate_leveled`]).
-pub const OP_ID_LEVELED: &str = "vyre-primitives::graph::sum_product_evaluate_leveled";
+pub const OP_ID_LEVELED: &str = "vyre-libs::graph::sum_product_evaluate_leveled";
 
 /// Node-kind tag: leaf node (carries an evidence/marginal value).
 pub const KIND_LEAF: u32 = 0;
@@ -359,7 +359,8 @@ pub fn try_sum_product_evaluate_leveled(
         BufferDecl::storage(out, 7, BufferAccess::ReadWrite, DataType::U32).with_count(n_nodes),
     ];
 
-    Ok(crate::graph::level_wave::level_wave_program_with_buffers(
+    Ok(crate::graph::level_wave::level_wave_program_with_buffers_and_op_id(
+        OP_ID_LEVELED,
         step_body,
         depths,
         extra_buffers,

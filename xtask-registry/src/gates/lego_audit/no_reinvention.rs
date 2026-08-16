@@ -67,6 +67,7 @@ pub(super) fn no_reinvention_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo
             }
             if same_implementation_family(&a.id, &b.id)
                 || known_distinct_implementation_families(&a.id, &b.id)
+                || reviewed_distinct_operations(&a.id, &b.id).is_some()
             {
                 continue;
             }

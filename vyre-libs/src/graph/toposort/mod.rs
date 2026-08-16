@@ -39,7 +39,7 @@ pub use plan::{
 pub use program::toposort_program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::toposort";
+pub const OP_ID: &str = "vyre-libs::graph::toposort";
 /// Canonical dispatch input label for CSR offsets.
 pub const TOPOSORT_OFFSETS_BUFFER: &str = "toposort offsets";
 /// Canonical dispatch input label for CSR targets.

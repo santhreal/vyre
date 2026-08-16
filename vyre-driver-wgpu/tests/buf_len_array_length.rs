@@ -2,7 +2,7 @@
 //! on the wgpu/Vulkan path. ArrayLength must equal the bound storage
 //! buffer's element count at dispatch time. The cat_a_gpu_differential
 //! pass on 2026-05-02 surfaced a regression where the unbounded
-//! `vyre-primitives::hash::fnv1a64` registration (loop bound = buf_len)
+//! `vyre-libs::hash::fnv1a64` registration (loop bound = buf_len)
 //! caused the GPU loop to run zero iterations, returning the unchanged
 //! FNV1A64_OFFSET.
 //!

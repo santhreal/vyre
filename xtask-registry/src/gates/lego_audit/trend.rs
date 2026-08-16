@@ -27,10 +27,17 @@ pub(super) fn composition_regressed(old_fraction: f64, new_fraction: f64) -> boo
 /// Each row is held to the condition it suppresses: a row whose op no longer
 /// regresses against the baseline is reported, so it cannot outlive the release
 /// that earned it.
-pub(super) const INTENDED_COMPOSITION_COLLAPSES: [&str; 3] = [
+pub(super) const INTENDED_COMPOSITION_COLLAPSES: [&str; 10] = [
     "vyre-libs::decode::base64",
     "vyre-libs::decode::hex",
     "vyre-libs::decode::inflate_stored_block",
+    "vyre-libs::hash::adler32",
+    "vyre-libs::hash::crc32",
+    "vyre-libs::hash::fnv1a32",
+    "vyre-libs::hash::fnv1a64",
+    "vyre-libs::hash::multi_hash",
+    "vyre-libs::math::succinct::rank1_superblocks",
+    "vyre-libs::parsing::core_delimiter_match",
 ];
 
 pub(super) fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {

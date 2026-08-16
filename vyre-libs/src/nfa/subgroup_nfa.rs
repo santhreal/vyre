@@ -43,7 +43,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::nfa::subgroup_nfa_step";
+pub const OP_ID: &str = "vyre-libs::nfa::subgroup_nfa_step";
 
 /// Maximum NFA window width simulated by one subgroup.
 /// `LANES_PER_SUBGROUP × 32 bits = 1024` states per subgroup.
