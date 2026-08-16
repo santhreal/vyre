@@ -99,6 +99,7 @@ pub static SUBSETS: &[Subset] = &[
             "docs-check",
             "docs-coupling",
             "docs-references",
+            "docs-register",
             "optimization-docs",
             "release-docs",
         ],

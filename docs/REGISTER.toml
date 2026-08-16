@@ -1,0 +1,116 @@
+# The documentation register, read at run time by the `docs-register` gate.
+#
+# `[[banned]]` groups phrasing every authored Markdown page in the checkout is
+# rejected for. `[[host_local]]` groups the configuration a contributor-facing
+# page must not name, because it is a property of one machine and a reader who
+# has just cloned the repository can act on none of it. The gate derives the
+# rest of that set from `cargo_full` and `.cargo/config.toml`, so a new export
+# there is covered without an edit here.
+#
+# `match` selects how a phrase is found in a line:
+#   word            bounded by non-word characters, case-insensitive
+#   text            anywhere in the line, case-insensitive
+#   sentence-start  opening a line or a sentence, case-insensitive
+version = 1
+
+[[banned]]
+label = "the documentation as its own subject"
+match = "sentence-start"
+fix = "open the sentence with the thing the page is about, not with the page"
+phrases = [
+    "this document",
+    "this page",
+    "this section",
+    "this guide",
+    "this chapter",
+    "this file",
+    "this readme",
+    "the following section",
+    "the rest of this",
+]
+
+[[banned]]
+label = "hype"
+match = "word"
+fix = "state the measured fact, or delete the sentence"
+phrases = [
+    "best-in-class",
+    "blazing",
+    "cutting-edge",
+    "effortless",
+    "effortlessly",
+    "game-changer",
+    "game-changing",
+    "revolutionary",
+    "seamless",
+    "seamlessly",
+    "simply",
+    "state-of-the-art",
+    "world-class",
+]
+
+[[banned]]
+label = "a feature argued for rather than stated"
+match = "word"
+fix = "state what the feature does and stop"
+phrases = [
+    "earns its keep",
+    "honestly",
+    "it is not a wrapper",
+    "known gaps",
+    "leverage",
+    "leverages",
+    "leveraging",
+    "stated plainly",
+    "the honest limit",
+    "to be honest",
+    "under the hood",
+    "utilize",
+    "utilizes",
+    "utilizing",
+    "worth a look",
+]
+
+[[banned]]
+label = "how work here is produced"
+match = "word"
+fix = "state the product fact and name the real actor: the caller, the setting, the flag, the file"
+phrases = [
+    "agent swarm",
+    "handoff",
+    "lane owner",
+    "lane protocol",
+    "requirement ledger",
+    "subagent",
+    "subagents",
+    "the operator",
+    "worktree",
+    "worktrees",
+]
+
+[[banned]]
+label = "an em dash"
+match = "text"
+fix = "split the sentence, or use a colon"
+phrases = ["\u2014"]
+
+[[banned]]
+label = "a path outside the checkout"
+match = "text"
+fix = "cite a repository-relative path, or drop the citation"
+phrases = ["/tmp/", "/home/", "/media/", "/mnt/", "c:\\users"]
+
+[[host_local]]
+label = "compiler cache configuration"
+fix = "a compiler cache is local configuration outside the repository; no instruction here may name one"
+phrases = ["sccache", "rustc-wrapper", "rustc_wrapper"]
+
+[[host_local]]
+label = "a build-directory override"
+fix = "the wrapper at the workspace root owns the build directory; a page that names an override teaches a reader to break it"
+phrases = ["--target-dir", "target directory", "cargo_build_target_dir"]
+
+[[host_local]]
+label = "a build parallelism override"
+fix = "build parallelism is declared once, in the cargo configuration, and is a property of one machine"
+phrases = ["cargo_build_jobs", "--jobs"]
