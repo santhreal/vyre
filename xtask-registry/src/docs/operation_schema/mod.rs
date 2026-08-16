@@ -81,6 +81,10 @@ impl xtask::gate::GateBehavior for OperationSchemaGate {
                     errors,
                     "repair the registration the schema rejects, then run the gate again",
                 );
+                report.cover_complete(
+                    "registered operations",
+                    vyre_registry_link::operation::live_operation_registry().iter().count(),
+                );
                 report.produced(DEFAULT_OUTPUT);
                 return Ok(report);
             }

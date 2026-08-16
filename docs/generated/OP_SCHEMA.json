@@ -1,10 +1,10 @@
 {
   "schema_version": 4,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 336,
+  "operation_count": 337,
   "tier_counts": {
     "intrinsic": 9,
-    "libs": 327
+    "libs": 328
   },
   "category_counts": {
     "bitset": 23,
@@ -12,7 +12,7 @@
     "decode": 6,
     "fixpoint": 2,
     "geom": 2,
-    "graph": 27,
+    "graph": 28,
     "hardware": 9,
     "hash": 10,
     "label": 1,
@@ -61,7 +61,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 2,
@@ -226,7 +226,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 2,
@@ -1065,7 +1065,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 2,
@@ -1464,7 +1464,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 2,
@@ -1716,7 +1716,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -1863,7 +1863,7 @@
           {
             "binding": 0,
             "name": "target",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 3,
@@ -4550,6 +4550,84 @@
         {
           "depth": 0,
           "operation": "vyre-libs::graph::functor_apply",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::graph::level_wave",
+      "tier": "libs",
+      "category": "graph",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "depths",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "graph"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::graph::level_wave",
           "registered": true
         }
       ]
@@ -7686,7 +7764,7 @@
             "memory": "Global",
             "element": "F32",
             "count": 2,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 5,
@@ -7772,7 +7850,7 @@
       "composition_chain": [
         {
           "depth": 0,
-          "operation": "vyre.program.root",
+          "operation": "anonymous::vyre.program.root",
           "registered": false
         },
         {
@@ -21767,7 +21845,7 @@
           {
             "binding": 2,
             "name": "weights",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "F32",
             "count": 2,
@@ -27172,8 +27250,8 @@
       "composition_chain": [
         {
           "depth": 0,
-          "operation": "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum",
-          "registered": true
+          "operation": "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
+          "registered": false
         }
       ]
     },
@@ -28402,7 +28480,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 5,
@@ -28411,7 +28489,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 6,
@@ -28465,7 +28543,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 12,
@@ -28474,7 +28552,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 13,
@@ -28641,7 +28719,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -28861,7 +28939,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -29267,7 +29345,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 9,
@@ -29402,7 +29480,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 3,
@@ -29465,7 +29543,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 10,
@@ -29483,7 +29561,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 12,
@@ -29624,7 +29702,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -29720,7 +29798,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 3,
@@ -29734,7 +29812,7 @@
           {
             "binding": 4,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -29919,7 +29997,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -30011,7 +30089,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -30240,7 +30318,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -30336,7 +30414,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 3,
@@ -30443,7 +30521,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -30663,7 +30741,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -30813,7 +30891,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 9,
@@ -30944,7 +31022,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -31036,7 +31114,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -31362,12 +31440,48 @@
         "buffers": [
           {
             "binding": 0,
+            "name": "source",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 5,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "__lines_line_start_flags",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 5,
+            "pipeline_live_out": true
+          },
+          {
+            "binding": 2,
             "name": "lines",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "U32",
-            "count": 1,
+            "count": 5,
             "pipeline_live_out": true
+          },
+          {
+            "binding": 0,
+            "name": "__lines_guarded_scan_a",
+            "access": "Workgroup",
+            "memory": "Shared",
+            "element": "U32",
+            "count": 256,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 0,
+            "name": "__lines_guarded_scan_b",
+            "access": "Workgroup",
+            "memory": "Shared",
+            "element": "U32",
+            "count": 256,
+            "pipeline_live_out": false
           }
         ],
         "inputs": [],
@@ -31419,6 +31533,21 @@
           "depth": 0,
           "operation": "vyre-libs::text::line_index",
           "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "inline::vyre-libs::text::line_index",
+          "registered": false
+        },
+        {
+          "depth": 2,
+          "operation": "anonymous::vyre-primitives::text::line_index::line_start_flags",
+          "registered": false
+        },
+        {
+          "depth": 2,
+          "operation": "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
+          "registered": false
         }
       ]
     },

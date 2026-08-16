@@ -20,6 +20,7 @@ use crate::source_scan::opaque_span;
 /// owning crate, `vyre-primitives`, and builds `OperationTier::Intrinsic`.
 const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
     ("::primitive(", Some("Intrinsic")),
+    ("::intrinsic(", Some("Intrinsic")),
     ("::library(", Some("Library")),
     ("::new(", None),
 ];
@@ -328,6 +329,32 @@ fn registration() -> OperationRegistration {
             vec![(
                 "vyre-libs::nn::attention".to_string(),
                 Some("Library".to_string())
+            )]
+        );
+    }
+
+    #[test]
+    fn an_intrinsic_constructor_registration_is_parsed() {
+        let parsed = parse_registrations(
+            r#"
+    inventory::submit! {
+        vyre_foundation::operation::OperationRegistration::intrinsic(
+            OP_ID,
+            crate::hardware::catalog::U32_UNARY_SIGNATURE,
+            Some(|| bit_reverse_u32("input", "out", 4)),
+            Some(test_inputs),
+            Some(expected_output),
+        )
+    }
+    const OP_ID: &str = "vyre-primitives::hardware::bit_reverse_u32";
+"#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-primitives::hardware::bit_reverse_u32".to_string(),
+                Some("Intrinsic".to_string())
             )]
         );
     }
