@@ -41,7 +41,7 @@ proptest! {
         prop_assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
         prop_assert!(
             !contains_loop(&program),
-            "multi-block scan must not regress to the serial prefix_scan_large loop for n={n}"
+            "multi-block scan must not regress to a serial per-element loop for n={n}"
         );
         prop_assert!(
             !contains_invocation_id(&program),

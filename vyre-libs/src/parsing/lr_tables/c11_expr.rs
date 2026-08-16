@@ -1,10 +1,11 @@
+//! Precomputed LR tables for the C11 expression grammar.
+//!
+//! `vyre_spec::c11_expr_token` owns the terminal numbering; those ids are the
+//! column order of [`ACTION_TABLE`] and the token values a caller feeds the
+//! GPU parser. Name that module to read or write a token id.
+
 use super::action::{pack_accept, pack_error, pack_reduce, pack_shift};
 use super::{LrTables, Production};
-
-/// Terminal ids for this grammar. `vyre_spec::c11_expr_token` owns the
-/// numbering; the ids are the column order of [`ACTION_TABLE`] and the token
-/// values a caller feeds the GPU parser.
-pub use vyre_spec::c11_expr_token::*;
 
 /// Expression nonterminal id.
 pub const NT_E: u32 = 0;

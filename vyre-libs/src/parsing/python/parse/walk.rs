@@ -7,10 +7,10 @@
 
 use super::{load_u32, search_next_token_into};
 use crate::parsing::composition::child_phase;
-use crate::parsing::python::lex::{TOK_DOT, TOK_IDENTIFIER};
 use crate::parsing::python::{INVALID_POS, MAX_DOTTED_SEGMENTS};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::python_token::{TOK_DOT, TOK_IDENTIFIER};
 
 /// The `a.b.c` walk shared by every Python extractor that resolves a dotted
 /// name: `import` targets, `with` managers, call heads, and decorators.

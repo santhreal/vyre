@@ -6,16 +6,21 @@
 //! script that no workflow invoked. `.github/CI_REQUIRED.md` required two
 //! workflows that were never files.
 //!
-//! The document set is derived from the tree at run time: the root README, every
-//! page under `docs/`, every workspace member README, and every Markdown file at
-//! the repository root or under `.github/`. A new root document joins on the
-//! commit that adds it. Pages the docs manifest marks archived or superseded are
-//! out, and so is anything under `docs/archive/` or `docs/legacy/`, because a
-//! superseded page is a record rather than a claim.
+//! The document set is every tracked Markdown file. Restricting it to the root,
+//! `.github/` and `docs/` left a crate's own `ARCHITECTURE.md`, `CONFIG.md`,
+//! `SKILL.md` and `benches/RESULTS.md` unread, and those are where a citation of
+//! a deleted script survived longest: `benches/RESULTS.md` went on naming
+//! `scripts/check_bench_baselines.sh` for as long as nobody opened it. A new
+//! document joins on the commit that adds it. Pages the docs manifest marks
+//! archived or superseded are out, and so is anything under `docs/archive/` or
+//! `docs/legacy/`, because a superseded page is a record rather than a claim.
 //!
-//! `CHANGELOG.md` and `docs/release/` are exempt as a kind, not as a list. A
-//! changelog entry naming a file a later commit deleted is correct history, and
-//! rewriting it to satisfy a reference check would falsify the record.
+//! A `CHANGELOG.md`, `docs/release/` and `release/evidence/` are exempt as a
+//! kind, not as a list. A changelog entry naming a file a later commit deleted is
+//! correct history, and rewriting it to satisfy a reference check would falsify
+//! the record; a release evidence document records one command's run and the
+//! artifacts it cites are held by `evidence-paths` and `vyre-release-gate`, which
+//! read the manifest that produced them rather than the prose.
 
 use std::collections::BTreeSet;
 use std::path::{Component, Path, PathBuf};
@@ -24,7 +29,11 @@ use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Documents that record what happened rather than what the tree holds.
-const HISTORICAL_DOCUMENTS: &[&str] = &["CHANGELOG.md", "docs/release/"];
+///
+/// A trailing slash names a directory, and a bare file name matches that file
+/// wherever it sits, so a crate changelog is exempt for the same reason the
+/// workspace one is.
+const HISTORICAL_DOCUMENTS: &[&str] = &["CHANGELOG.md", "docs/release/", "release/evidence/"];
 
 /// Path prefixes that make a token a workspace-root-relative claim.
 const ROOT_PREFIXES: &[&str] = &[
@@ -206,30 +215,11 @@ fn glob_matches(tree: &Tree, pattern: &str) -> bool {
 /// Every document whose claims this gate reads.
 fn documents(tree: &Tree) -> Result<Vec<PathBuf>, GateError> {
     let inactive = inactive_pages(tree)?;
-    let mut candidates: BTreeSet<PathBuf> = BTreeSet::new();
-    if tree.has("README.md") {
-        candidates.insert(PathBuf::from("README.md"));
-    }
-    for member in tree.members()? {
-        let readme = format!("{member}/README.md");
-        if tree.has(&readme) {
-            candidates.insert(PathBuf::from(readme));
-        }
-    }
+    let mut documents = Vec::new();
     for path in tree.paths() {
         if path.extension().and_then(|value| value.to_str()) != Some("md") {
             continue;
         }
-        let text = path.to_string_lossy().to_string();
-        let is_root_document = !text.contains('/');
-        let is_github = text.starts_with(".github/");
-        let is_docs = text.starts_with("docs/");
-        if is_root_document || is_github || is_docs {
-            candidates.insert(path.clone());
-        }
-    }
-    let mut documents = Vec::new();
-    for path in candidates {
         let text = path.to_string_lossy().to_string();
         if inactive.contains(&text) {
             continue;
@@ -239,15 +229,27 @@ fn documents(tree: &Tree) -> Result<Vec<PathBuf>, GateError> {
         if archived {
             continue;
         }
-        if HISTORICAL_DOCUMENTS
-            .iter()
-            .any(|prefix| text.starts_with(prefix))
-        {
+        if is_historical(&text) {
             continue;
         }
-        documents.push(path);
+        documents.push(path.clone());
     }
     Ok(documents)
+}
+
+/// Whether a document records what happened rather than what the tree holds.
+///
+/// A [`HISTORICAL_DOCUMENTS`] entry ending in `/` is a directory prefix; one that
+/// does not is a file name, matched wherever in the tree it sits, so a crate's
+/// own changelog is exempt without being listed.
+fn is_historical(relative: &str) -> bool {
+    HISTORICAL_DOCUMENTS.iter().any(|entry| {
+        if entry.ends_with('/') {
+            relative.starts_with(entry)
+        } else {
+            relative == *entry || relative.ends_with(&format!("/{entry}"))
+        }
+    })
 }
 
 /// Pages the docs manifest classifies as archived or superseded.
@@ -592,39 +594,100 @@ fn is_path_candidate(tree: &Tree, raw: &str) -> bool {
     has_existing_root_prefix(tree, &token)
 }
 
+/// The crate directory a document sits in, when it sits in one.
+///
+/// The nearest tracked `Cargo.toml` above the document, so a crate's
+/// `ARCHITECTURE.md`, a `SKILL.md` beside its tests and the crate `README.md`
+/// all resolve `tests/`, `benches/` and `examples/` against the same root. The
+/// distinction matters because those three names also exist at the workspace
+/// root: without it a crate document naming its own `examples/foo.rs` is judged
+/// against the workspace `examples/` directory and reported for a file it never
+/// claimed.
+fn owning_member(tree: &Tree, document: &Path) -> Option<PathBuf> {
+    let mut directory = document.parent()?;
+    loop {
+        if directory == Path::new("") {
+            return None;
+        }
+        let manifest = format!(
+            "{}/Cargo.toml",
+            directory.to_string_lossy().replace('\\', "/")
+        );
+        if tree.has(&manifest) {
+            return Some(directory.to_path_buf());
+        }
+        directory = directory.parent()?;
+    }
+}
+
 /// The repository-relative path a token resolves to, or `None` when the token is
 /// not a path claim at all.
+///
+/// A relative token has more than one reading: `tests/x.rs` in a crate document
+/// is that crate's test or the workspace one, and `examples/demo/Cargo.toml` in
+/// `examples/demo/README.md` is the manifest beside it under either reading. A
+/// reading that resolves is the one the writer meant, so the readings are tried
+/// in order of specificity and the first published one wins; when none resolves
+/// the most specific is reported, because that is the path the writer's own
+/// directory makes of it.
 fn resolve(tree: &Tree, document: &Path, raw: &str, from_command: bool) -> Option<String> {
     let token = path_token(raw);
     if !is_path_candidate(tree, &token) {
         return None;
     }
-    let absolute_claim = token.starts_with('/');
     let document_parent = document.parent().unwrap_or(Path::new(""));
-    let candidate = if absolute_claim {
-        PathBuf::from(&token)
-    } else if document.file_name().and_then(|name| name.to_str()) == Some("README.md")
-        && document_parent != Path::new("")
-        && CRATE_RELATIVE_PREFIXES
-            .iter()
-            .any(|prefix| token.starts_with(prefix))
+    if token.starts_with('/') {
+        let normalized = normalize(Path::new(&token));
+        return match normalized.strip_prefix(normalize(tree.root())) {
+            Ok(relative) => Some(relative.to_string_lossy().replace('\\', "/")),
+            Err(_) => None,
+        };
+    }
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if CRATE_RELATIVE_PREFIXES
+        .iter()
+        .any(|prefix| token.starts_with(prefix))
     {
-        tree.absolute(document_parent).join(&token)
-    } else if ROOT_PREFIXES.iter().any(|prefix| token.starts_with(prefix))
+        if let Some(member) = owning_member(tree, document) {
+            candidates.push(tree.absolute(member).join(&token));
+        }
+    }
+    if ROOT_PREFIXES.iter().any(|prefix| token.starts_with(prefix))
         || has_existing_root_prefix(tree, &token)
     {
-        tree.absolute(&token)
-    } else if from_command && token.starts_with("./") {
-        tree.absolute(&token[2..])
-    } else {
-        tree.absolute(document_parent).join(&token)
-    };
-    let normalized = normalize(&candidate);
-    match normalized.strip_prefix(normalize(tree.root())) {
-        Ok(relative) => Some(relative.to_string_lossy().replace('\\', "/")),
-        Err(_) if absolute_claim => None,
-        Err(_) => Some(OUTSIDE.to_string()),
+        candidates.push(tree.absolute(&token));
     }
+    if from_command && token.starts_with("./") {
+        candidates.push(tree.absolute(&token[2..]));
+    }
+    candidates.push(tree.absolute(document_parent).join(&token));
+
+    let mut readings: Vec<String> = Vec::new();
+    for candidate in candidates {
+        let normalized = normalize(&candidate);
+        let reading = match normalized.strip_prefix(normalize(tree.root())) {
+            Ok(relative) => relative.to_string_lossy().replace('\\', "/"),
+            Err(_) => OUTSIDE.to_string(),
+        };
+        if !readings.contains(&reading) {
+            readings.push(reading);
+        }
+    }
+    let published = readings.iter().find(|reading| resolves(tree, reading));
+    published
+        .cloned()
+        .or_else(|| readings.into_iter().next())
+}
+
+/// Whether one reading of a token names something the checkout publishes.
+fn resolves(tree: &Tree, reading: &str) -> bool {
+    if reading == OUTSIDE {
+        return false;
+    }
+    if reading.contains('*') || reading.contains('?') {
+        return glob_matches(tree, reading);
+    }
+    matches!(resolution(tree, reading), Resolution::Listed)
 }
 
 /// Resolve `.` and `..` lexically. Symlinks are irrelevant to a claim about

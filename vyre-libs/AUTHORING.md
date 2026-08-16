@@ -187,15 +187,15 @@ round-trip, optimization, conformance, and generated catalog checks.
 
 | Dialect | Path | Feature flag |
 | --- | --- | --- |
-| Linear algebra | `src/math/*.rs` | `math-linalg` |
-| Scans + reductions | `src/math/scan.rs` | `math-scan` |
-| Broadcasting | `src/math/broadcast.rs` | `math-broadcast` |
-| NN activation | `src/nn/*.rs` | `nn-activation` |
-| NN linear layers | `src/nn/linear.rs` | `nn-linear` |
-| NN normalization | `src/nn/layer_norm.rs` | `nn-norm` |
-| NN attention | `src/nn/attention.rs`, `src/nn/softmax.rs` | `nn-attention` |
-| Substring search | `src/matching/substring.rs` | `matching-substring` |
-| DFA / Aho-Corasick | `src/matching/aho_corasick.rs`, `src/matching/dfa_compile.rs` | `matching-dfa` |
+| Linear algebra | `src/math/linalg/mod.rs` | `math-linalg` |
+| Scans + reductions | `src/math/scan/mod.rs` | `math-scan` |
+| Broadcasting | `src/math/broadcast/mod.rs` | `math-broadcast` |
+| NN activation | `src/nn/activation/mod.rs` | `nn-activation` |
+| NN linear layers | `src/nn/linear/mod.rs` | `nn-linear` |
+| NN normalization | `src/nn/norm/mod.rs` | `nn-norm` |
+| NN attention | `src/nn/attention/mod.rs` | `nn-attention` |
+| Substring search | `src/scan/substring/mod.rs` | `matching-substring` |
+| DFA / Aho-Corasick | `src/scan/dfa/mod.rs`, `src/scan/classic_ac/mod.rs` | `matching-dfa` |
 | BLAKE3 compression | `src/hash/blake3_compress.rs` | `crypto-blake3` |
 
 Add a new dialect by creating `src/<dialect>/mod.rs` + registering a

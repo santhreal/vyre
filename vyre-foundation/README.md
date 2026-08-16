@@ -32,11 +32,9 @@ assert_eq!(Program::from_wire(&wire).unwrap(), program);
 
 ## Architecture
 
-See [`COMPUTE_2_0.md`](../.internals/planning/COMPUTE_2_0.md) for the
-layer DAG. Foundation sits at the bottom; every migration target
-listed there: foundation-ir, foundation-visit, foundation-wire: is
-contained in this crate until the per-subcrate split lands in a later
-phase.
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the module map. Foundation sits at
+the bottom of the layer DAG: the IR, the visitor, and the wire format all live
+in this crate, and every layer above it depends on it one way.
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract

@@ -201,7 +201,6 @@ pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<
 ///
 /// Propagates any [`vyre_foundation::program_dispatch::DispatchError`]
 /// surfaced by the dispatcher.
-#[allow(clippy::too_many_arguments)]
 pub fn provenance_closure_via(
     dispatcher: &dyn ProgramDispatcher,
     state: &[u32],
@@ -222,7 +221,6 @@ pub fn provenance_closure_via(
 }
 
 /// Dispatch provenance closure into caller-owned storage.
-#[allow(clippy::too_many_arguments)]
 pub fn provenance_closure_via_into(
     dispatcher: &dyn ProgramDispatcher,
     state: &[u32],
@@ -245,7 +243,6 @@ pub fn provenance_closure_via_into(
 
 /// Dispatch provenance closure into caller-owned dispatch and output
 /// storage.
-#[allow(clippy::too_many_arguments)]
 pub fn provenance_closure_via_with_scratch_into(
     dispatcher: &dyn ProgramDispatcher,
     state: &[u32],

@@ -1,7 +1,5 @@
 # tests/SKILL.md  -  vyre-libs
 
-Read `../../.internals/skills/testing/SKILL.md` first.
-
 ## Purpose
 
 `vyre-libs` is Category-A library composition over vyre-ops

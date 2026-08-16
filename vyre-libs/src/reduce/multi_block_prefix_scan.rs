@@ -288,12 +288,10 @@ fn try_guarded_single_block_scan(input: &str, output: &str, n: u32) -> Result<Pr
     });
 
     scan_body.extend(
-        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            BLOCK_LANES,
-        ),
+        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(&scratch_a,
+        &scratch_b,
+        &lane,
+        BLOCK_LANES,),
     );
 
     scan_body.push(Node::if_then(
@@ -402,12 +400,10 @@ fn try_pass_a_local_scan(
     });
 
     body.extend(
-        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            BLOCK_LANES,
-        ),
+        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(&scratch_a,
+        &scratch_b,
+        &lane,
+        BLOCK_LANES,),
     );
 
     // Write per-element partial out (only for lanes whose global id is in range).

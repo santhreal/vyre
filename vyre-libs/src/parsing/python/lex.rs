@@ -2,10 +2,11 @@ use crate::parsing::composition::child_phase;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Python lexer token ids. `vyre_spec::python_token` owns the numbering; the
-/// ids are the wire contract between the GPU lexer program below and every
-/// host matcher that reads its sparse token rows.
-pub use vyre_spec::python_token::*;
+// `vyre_spec::python_token` owns the numbering of these ids. They are the wire
+// contract between the GPU lexer program below and every host matcher that
+// reads its sparse token rows, so a caller that reads a token kind names that
+// module rather than this one.
+use vyre_spec::python_token::*;
 
 fn load_byte(buffer: &str, index: Expr) -> Expr {
     Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))

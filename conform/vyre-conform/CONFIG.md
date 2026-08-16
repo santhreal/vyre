@@ -49,9 +49,5 @@ inventory::submit! {
 }
 ```
 
-Earlier revisions of this document described a TOML corpus under `rules/kat/`
-that the runner auto-loaded, with a `rules/SCHEMA.md` schema-of-truth. Neither
-path is in this repository and no code reads them, so the description is
-removed rather than left standing as an extension route that resolves to
-nothing. A data-driven corpus remains the intended shape for this layer; it
-lands as a documented loader plus a real `rules/` tree, not as prose.
+The corpus is Rust and nothing else. No loader reads a TOML witness file, so a
+new witness is one `inventory::submit!` in the crate that owns the op.
