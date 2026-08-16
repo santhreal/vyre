@@ -20,7 +20,7 @@ use std::sync::Arc;
 use vyre_foundation::composition::{tag_program, trap_program, wrap_anonymous_region};
 
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes;
-use vyre_foundation::geometry::GeometryRequirements;
+use vyre_foundation::GeometryRequirements;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
 };
@@ -32,7 +32,7 @@ const FLAG_OP_ID: &str = "anonymous::vyre-primitives::text::line_index::line_sta
 /// Return the execution geometry requirements for line indexing.
 #[must_use]
 pub const fn line_index_requirements() -> GeometryRequirements {
-    GeometryRequirements::cooperative(vyre_foundation::geometry::CooperativeWidth::Exactly(
+    GeometryRequirements::cooperative(vyre_foundation::CooperativeWidth::Exactly(
         PORTABLE_WORKGROUP_INVOCATIONS,
     ))
 }
@@ -68,7 +68,7 @@ pub fn line_index_with_geometry(
     source: &str,
     lines: &str,
     n: u32,
-    geometry: &vyre_foundation::geometry::LaunchGeometry,
+    geometry: &vyre_foundation::LaunchGeometry,
 ) -> Program {
     line_index_with_block_lanes(source, lines, n, geometry.workgroup[0])
 }
@@ -102,7 +102,7 @@ pub fn line_index_u8_with_geometry(
     source: &str,
     lines: &str,
     n: u32,
-    geometry: &vyre_foundation::geometry::LaunchGeometry,
+    geometry: &vyre_foundation::LaunchGeometry,
 ) -> Program {
     line_index_u8_with_block_lanes(source, lines, n, geometry.workgroup[0])
 }

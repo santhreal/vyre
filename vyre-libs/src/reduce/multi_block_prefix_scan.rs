@@ -47,11 +47,8 @@ pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-libs::reduce::multi_block_prefix_sca
 
 /// Return the execution geometry requirements for multi-block prefix scan.
 #[must_use]
-pub const fn multi_block_prefix_scan_requirements(
-) -> vyre_foundation::geometry::GeometryRequirements {
-    vyre_foundation::geometry::GeometryRequirements::cooperative(
-        vyre_foundation::geometry::CooperativeWidth::Agnostic,
-    )
+pub const fn multi_block_prefix_scan_requirements() -> vyre_foundation::GeometryRequirements {
+    vyre_foundation::GeometryRequirements::cooperative(vyre_foundation::CooperativeWidth::Agnostic)
 }
 /// Historical direct-scan threshold retained for callers/tests that size
 /// around one level of block-total recursion. The implementation recurses and
@@ -114,7 +111,7 @@ pub fn multi_block_prefix_scan_sum_u32_with_geometry(
     input: &str,
     output: &str,
     n: u32,
-    geometry: &vyre_foundation::geometry::LaunchGeometry,
+    geometry: &vyre_foundation::LaunchGeometry,
 ) -> Program {
     multi_block_prefix_scan_sum_u32_with_block_lanes(input, output, n, geometry.workgroup[0])
 }
@@ -244,7 +241,7 @@ pub fn multi_block_prefix_scan_sum_exclusive_u32_with_geometry(
     input: &str,
     output: &str,
     n: u32,
-    geometry: &vyre_foundation::geometry::LaunchGeometry,
+    geometry: &vyre_foundation::LaunchGeometry,
 ) -> Program {
     multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
         input,

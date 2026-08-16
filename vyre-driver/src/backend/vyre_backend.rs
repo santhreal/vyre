@@ -1074,12 +1074,12 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     }
 }
 
-impl vyre_foundation::geometry::GeometryStrategy for dyn VyreBackend {
+impl vyre_foundation::GeometryStrategy for dyn VyreBackend {
     fn rank_geometries(
         &self,
-        requirements: &vyre_foundation::geometry::GeometryRequirements,
+        requirements: &vyre_foundation::GeometryRequirements,
         problem_elements: u32,
-    ) -> Vec<vyre_foundation::geometry::LaunchGeometry> {
+    ) -> Vec<vyre_foundation::LaunchGeometry> {
         self.device_profile()
             .rank_geometries(requirements, problem_elements)
     }
