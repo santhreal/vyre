@@ -73,7 +73,7 @@ pub enum FrontierTypedPlanError {
         /// Nodes left unscheduled when cycle detection stopped.
         unscheduled_nodes: usize,
     },
-    /// The plan exceeds the stable CUDA frontier wave encoding.
+    /// The plan exceeds the stable frontier wave encoding.
     PlanTooLarge {
         /// Field that exceeded its representable range.
         field: &'static str,
@@ -97,7 +97,7 @@ impl std::fmt::Display for FrontierTypedPlanError {
             ),
             Self::PlanTooLarge { field } => write!(
                 f,
-                "frontier-typed IR {field} exceeds the stable CUDA frontier encoding. Fix: shard the frontier graph before planning."
+                "frontier-typed IR {field} exceeds the stable frontier encoding. Fix: shard the frontier graph before planning."
             ),
         }
     }

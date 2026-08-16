@@ -1,4 +1,4 @@
-//! Bitset compression planning for CUDA-resident dataflow facts.
+//! Bitset compression planning for device-resident dataflow facts.
 
 /// Runtime bitset representation selected for a dataflow fact set.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -66,15 +66,15 @@ impl std::fmt::Display for BitsetCompressionError {
                 active_bits,
             } => write!(
                 f,
-                "bitset compression active_bits={active_bits} exceeds universe_bits={universe_bits}. Fix: compute dataflow fact cardinality before choosing a CUDA bitset representation."
+                "bitset compression active_bits={active_bits} exceeds universe_bits={universe_bits}. Fix: compute dataflow fact cardinality before choosing a bitset representation."
             ),
             Self::ZeroIndexBytes => write!(
                 f,
-                "bitset compression received zero index_bytes. Fix: pass the concrete CUDA sparse-index ABI width."
+                "bitset compression received zero index_bytes. Fix: pass the concrete device sparse-index width."
             ),
             Self::ByteCountOverflow { field } => write!(
                 f,
-                "bitset compression overflowed while computing {field}. Fix: shard the fact universe before CUDA resident planning."
+                "bitset compression overflowed while computing {field}. Fix: shard the fact universe before device-resident planning."
             ),
         }
     }
