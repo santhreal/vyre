@@ -39,6 +39,7 @@ fn capability_snapshots_are_copyable_without_aliasing_state() {
         has_shared_memory: true,
         has_transcendental_polynomial_emit: false,
         max_native_int_width: 64,
+        ..BackendCapabilities::default()
     };
 
     let copied = caps;

@@ -85,12 +85,14 @@ impl NodeShape {
 pub fn node_shape(node: &Node) -> NodeShape {
     match node {
         Node::If { .. } | Node::Loop { .. } => NodeShape::BODIES_AND_OPERANDS,
-        Node::Block(_) | Node::Region { .. } => NodeShape::BODIES,
+        Node::Block(_) | Node::Region { .. } | Node::TileElementwise { .. } => NodeShape::BODIES,
         Node::Let { .. }
         | Node::Assign { .. }
         | Node::Store { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncStore { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
         | Node::Trap { .. } => NodeShape::OPERANDS,
         Node::Return
         | Node::Barrier { .. }
@@ -100,7 +102,10 @@ pub fn node_shape(node: &Node) -> NodeShape {
         | Node::AllReduce { .. }
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. } => NodeShape::INERT,
+        | Node::Broadcast { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. } => NodeShape::INERT,
         Node::Opaque(_) => NodeShape::OPAQUE,
     }
 }
@@ -128,7 +133,8 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
         } => [then, otherwise],
         Node::Loop { body, .. } => [body, &[]],
         Node::Block(nodes) => [nodes, &[]],
-        Node::Region { body, .. } => [body, &[]],
+        Node::Region { body, .. } => [body.as_slice(), &[]],
+        Node::TileElementwise { body, .. } => [body.as_slice(), &[]],
         Node::Let { .. }
         | Node::Assign { .. }
         | Node::Store { .. }
@@ -144,6 +150,11 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => [&[], &[]],
     }
 }
@@ -178,7 +189,7 @@ pub fn child_bodies_mut(node: &mut Node) -> SmallVec<[&mut Vec<Node>; 2]> {
             slots.push(then);
             slots.push(otherwise);
         }
-        Node::Loop { body, .. } | Node::Block(body) => slots.push(body),
+        Node::Loop { body, .. } | Node::Block(body) | Node::TileElementwise { body, .. } => slots.push(body),
         Node::Region { body, .. } => slots.push(Arc::make_mut(body)),
         Node::Let { .. }
         | Node::Assign { .. }
@@ -195,6 +206,11 @@ pub fn child_bodies_mut(node: &mut Node) -> SmallVec<[&mut Vec<Node>; 2]> {
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => {}
     }
     slots
@@ -346,6 +362,12 @@ pub fn node_scalars(node: &Node) -> NodeScalars<'_> {
         | Node::Broadcast { .. }
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => NodeScalars::NONE,
     }
 }
@@ -358,6 +380,21 @@ pub fn node_scalars(node: &Node) -> NodeScalars<'_> {
 #[must_use]
 pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
     node_scalars(node).operands
+}
+
+/// Operand expressions `node` carries in a variable-length position.
+///
+/// Most nodes fit their operands into the two-slot [`node_operands`] array.
+/// `TileLoad` and `TileStore` carry a `Vec<Expr>` origin that may exceed two
+/// entries, so they return the origin here instead.  A walk that needs every
+/// reachable expression pushes both [`node_operands`] and this slice.
+#[inline]
+#[must_use]
+pub fn node_variadic_operands(node: &Node) -> &[Expr] {
+    match node {
+        Node::TileLoad { origin, .. } | Node::TileStore { origin, .. } => origin.as_slice(),
+        _ => &[],
+    }
 }
 
 /// The scalar name a statement binds, or `None` when it binds nothing.
@@ -432,7 +469,8 @@ impl<'a> BufferRefs<'a> {
 #[must_use]
 pub fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
     match node {
-        Node::Store { buffer, .. } => BufferRefs::write(buffer),
+        Node::Store { buffer, .. } | Node::TileStore { buffer, .. } => BufferRefs::write(buffer),
+        Node::TileLoad { buffer, .. } => BufferRefs::read(buffer),
         Node::AsyncLoad {
             source,
             destination,
@@ -463,7 +501,11 @@ pub fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
         | Node::Return
         | Node::Barrier { .. }
         | Node::Block(_)
-        | Node::Region { .. } => BufferRefs::NONE,
+        | Node::Region { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. } => BufferRefs::NONE,
         Node::Opaque(_) => BufferRefs {
             complete: false,
             ..BufferRefs::NONE

@@ -629,6 +629,12 @@ fn emit_adjoint_node(
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => {
             return Err(AutodiffError::UnsupportedNode {
                 kind: node_variant_name(node).to_string(),

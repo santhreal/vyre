@@ -4,6 +4,44 @@ use super::{put_expr, put_nodes};
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{put_len_u32, put_string, put_u32, put_u8};
 use crate::serial::wire::{Node, MAX_OPAQUE_PAYLOAD_LEN};
+use crate::ir::{Layout, Residency, Tile};
+use crate::serial::wire::tags::put_data_type;
+
+fn put_residency(out: &mut Vec<u8>, residency: Residency) {
+    match residency {
+        Residency::Register => put_u8(out, 0),
+        Residency::Subgroup => put_u8(out, 1),
+        Residency::Workgroup => put_u8(out, 2),
+        Residency::Global => put_u8(out, 3),
+    }
+}
+
+fn put_layout(out: &mut Vec<u8>, layout: &Layout) -> Result<(), WireEncodeErr> {
+    match layout {
+        Layout::RowMajor => put_u8(out, 0),
+        Layout::ColumnMajor => put_u8(out, 1),
+        Layout::Swizzled { permutation, period } => {
+            put_u8(out, 2);
+            put_len_u32(out, permutation.len(), "permutation count")?;
+            for &p in permutation {
+                put_u32(out, p);
+            }
+            put_u32(out, *period);
+        }
+    }
+    Ok(())
+}
+
+fn put_tile(out: &mut Vec<u8>, tile: &Tile) -> Result<(), WireEncodeErr> {
+    put_data_type(out, &tile.element)?;
+    put_len_u32(out, tile.extents.len(), "tile extents count")?;
+    for &extent in &tile.extents {
+        put_u32(out, extent);
+    }
+    put_layout(out, &tile.layout)?;
+    put_residency(out, tile.residency);
+    Ok(())
+}
 
 /// Append the wire-format tag and payload for one [`Node`] to `out`.
 ///
@@ -203,6 +241,72 @@ pub fn put_node(out: &mut Vec<u8>, node: &Node) -> Result<(), WireEncodeErr> {
                 None => put_u8(out, 0),
             }
             put_nodes(out, body)?;
+        }
+        Node::TileLoad {
+            tile,
+            tile_type,
+            buffer,
+            origin,
+            layout,
+        } => {
+            put_u8(out, 19);
+            put_string(out, tile.as_str())?;
+            put_tile(out, tile_type)?;
+            put_string(out, buffer.as_str())?;
+            put_len_u32(out, origin.len(), "tile origin count")?;
+            for expr in origin {
+                put_expr(out, expr)?;
+            }
+            put_layout(out, layout)?;
+        }
+        Node::TileStore {
+            buffer,
+            origin,
+            tile,
+        } => {
+            put_u8(out, 20);
+            put_string(out, buffer.as_str())?;
+            put_len_u32(out, origin.len(), "tile origin count")?;
+            for expr in origin {
+                put_expr(out, expr)?;
+            }
+            put_string(out, tile.as_str())?;
+        }
+        Node::TileMatmul { acc, a, b } => {
+            put_u8(out, 21);
+            put_string(out, acc.as_str())?;
+            put_string(out, a.as_str())?;
+            put_string(out, b.as_str())?;
+        }
+        Node::TileReduce {
+            out: out_name,
+            tile,
+            op,
+            axis,
+        } => {
+            put_u8(out, 22);
+            put_string(out, out_name.as_str())?;
+            put_string(out, tile.as_str())?;
+            put_u8(out, op.builtin_wire_tag());
+            put_u32(out, *axis);
+        }
+        Node::TileElementwise {
+            out: out_name,
+            inputs,
+            body,
+        } => {
+            put_u8(out, 23);
+            put_string(out, out_name.as_str())?;
+            put_len_u32(out, inputs.len(), "tile elementwise inputs")?;
+            for input in inputs {
+                put_string(out, input.as_str())?;
+            }
+            put_nodes(out, body)?;
+        }
+        Node::TileDecl { name, tile } => {
+            put_u8(out, 24);
+            put_string(out, name.as_str())?;
+            put_tile(out, tile)?;
         }
         Node::Opaque(extension) => {
             put_u8(out, 0x80);

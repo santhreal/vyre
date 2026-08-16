@@ -78,6 +78,7 @@ fn assert_valid(program: &Program, id: &str) {
             has_transcendental_polynomial_emit: true,
             supports_distributed_collectives: true,
             max_native_int_width: 64,
+            ..Default::default()
         }),
     )
     .errors;

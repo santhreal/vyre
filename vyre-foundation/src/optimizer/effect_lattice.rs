@@ -333,6 +333,11 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => EffectLevel::Synchronized(SyncScope::Grid),
         // A pure control-flow terminator: no memory or synchronization effect.
+        Node::TileLoad { .. } => EffectLevel::ReadAtomic,
+        Node::TileStore { .. } => EffectLevel::ReadWriteAtomic(AtomicOrdering::SeqCst),
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => EffectLevel::Pure,
+        Node::TileElementwise { body, .. } => join_arms(body),
+        // A pure control-flow terminator: no memory or synchronization effect.
         Node::Return => EffectLevel::Pure,
         // Trap runs a host-side effect handler that may read or write any device
         // memory; Resume continues from it; an Opaque extension node carries a

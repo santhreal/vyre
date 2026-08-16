@@ -62,7 +62,9 @@ impl NodeSink for BufferNamesReached {
         match node {
             Node::Store { buffer, .. }
             | Node::AllReduce { buffer, .. }
-            | Node::Broadcast { buffer, .. } => record(buffer),
+            | Node::Broadcast { buffer, .. }
+            | Node::TileLoad { buffer, .. }
+            | Node::TileStore { buffer, .. } => record(buffer),
             Node::IndirectDispatch { count_buffer, .. } => record(count_buffer),
             Node::AllGather {
                 input: source,

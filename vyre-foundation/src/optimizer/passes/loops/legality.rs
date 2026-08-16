@@ -143,6 +143,11 @@ fn node_unsummarisable_effect(node: &Node) -> bool {
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => false,
+        Node::TileElementwise { body, .. } => unsummarisable_effect(body),
+        Node::TileLoad { origin, .. } | Node::TileStore { origin, .. } => {
+            origin.iter().any(expr_contains_opaque)
+        }
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => false,
     }
 }
 
@@ -200,6 +205,23 @@ pub(super) fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
                 body: std::sync::Arc::new(rename_var_in_body(body_vec, from, to)),
             }
         }
+        Node::TileElementwise { out, inputs, body } => Node::TileElementwise {
+            out,
+            inputs,
+            body: rename_var_in_body(body, from, to),
+        },
+        Node::TileLoad { tile, tile_type, buffer, origin, layout } => Node::TileLoad {
+            tile,
+            tile_type,
+            buffer,
+            origin: origin.into_iter().map(|e| rename_var_in_expr(e, from, to)).collect(),
+            layout,
+        },
+        Node::TileStore { buffer, origin, tile } => Node::TileStore {
+            buffer,
+            origin: origin.into_iter().map(|e| rename_var_in_expr(e, from, to)).collect(),
+            tile,
+        },
         other => other,
     }
 }

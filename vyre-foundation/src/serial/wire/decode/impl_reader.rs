@@ -185,6 +185,66 @@ impl Reader<'_> {
                     body: std::sync::Arc::new(body),
                 })
             }
+            19 => {
+                let tile = self.string()?.into();
+                let tile_type = self.tile()?;
+                let buffer = self.string()?.into();
+                let origin_len = self.bounded_len(MAX_TENSOR_RANK, "tile origin count")?;
+                let mut origin = Vec::with_capacity(origin_len);
+                for _ in 0..origin_len {
+                    origin.push(self.expr()?);
+                }
+                let layout = self.layout()?;
+                Ok(Node::TileLoad {
+                    tile,
+                    tile_type,
+                    buffer,
+                    origin,
+                    layout,
+                })
+            }
+            20 => {
+                let buffer = self.string()?.into();
+                let origin_len = self.bounded_len(MAX_TENSOR_RANK, "tile origin count")?;
+                let mut origin = Vec::with_capacity(origin_len);
+                for _ in 0..origin_len {
+                    origin.push(self.expr()?);
+                }
+                let tile = self.string()?.into();
+                Ok(Node::TileStore {
+                    buffer,
+                    origin,
+                    tile,
+                })
+            }
+            21 => {
+                let acc = self.string()?.into();
+                let a = self.string()?.into();
+                let b = self.string()?.into();
+                Ok(Node::TileMatmul { acc, a, b })
+            }
+            22 => {
+                let out = self.string()?.into();
+                let tile = self.string()?.into();
+                let op = crate::ir::SubgroupReduceOp::from_wire_tag(self.u8()?)?;
+                let axis = self.u32()?;
+                Ok(Node::TileReduce { out, tile, op, axis })
+            }
+            23 => {
+                let out = self.string()?.into();
+                let inputs_len = self.bounded_len(MAX_ARGS, "tile elementwise inputs")?;
+                let mut inputs = Vec::with_capacity(inputs_len);
+                for _ in 0..inputs_len {
+                    inputs.push(self.string()?.into());
+                }
+                let body = self.nodes()?;
+                Ok(Node::TileElementwise { out, inputs, body })
+            }
+            24 => {
+                let name = self.string()?.into();
+                let tile = self.tile()?;
+                Ok(Node::TileDecl { name, tile })
+            }
             0x80 => {
                 let kind = self.string()?;
                 let payload_len =
@@ -571,5 +631,54 @@ impl Reader<'_> {
                 "Fix: unknown IR expression tag {tag}; use a Program serializer compatible with this vyre version."
             )),
         }
+    }
+}
+impl Reader<'_> {
+    pub(crate) fn residency(&mut self) -> Result<crate::ir::Residency, String> {
+        match self.u8()? {
+            0 => Ok(crate::ir::Residency::Register),
+            1 => Ok(crate::ir::Residency::Subgroup),
+            2 => Ok(crate::ir::Residency::Workgroup),
+            3 => Ok(crate::ir::Residency::Global),
+            other => Err(format!(
+                "Fix: unknown tile residency tag {other}; use a compatible serializer."
+            )),
+        }
+    }
+
+    pub(crate) fn layout(&mut self) -> Result<crate::ir::Layout, String> {
+        match self.u8()? {
+            0 => Ok(crate::ir::Layout::RowMajor),
+            1 => Ok(crate::ir::Layout::ColumnMajor),
+            2 => {
+                let perm_len = self.bounded_len(MAX_TENSOR_RANK, "permutation count")?;
+                let mut permutation = Vec::with_capacity(perm_len);
+                for _ in 0..perm_len {
+                    permutation.push(self.u32()?);
+                }
+                let period = self.u32()?;
+                Ok(crate::ir::Layout::Swizzled { permutation, period })
+            }
+            other => Err(format!(
+                "Fix: unknown tile layout tag {other}; use a compatible serializer."
+            )),
+        }
+    }
+
+    pub(crate) fn tile(&mut self) -> Result<crate::ir::Tile, String> {
+        let element = self.data_type()?;
+        let extents_len = self.bounded_len(MAX_TENSOR_RANK, "tile extents count")?;
+        let mut extents = Vec::with_capacity(extents_len);
+        for _ in 0..extents_len {
+            extents.push(self.u32()?);
+        }
+        let layout = self.layout()?;
+        let residency = self.residency()?;
+        Ok(crate::ir::Tile {
+            element,
+            extents,
+            layout,
+            residency,
+        })
     }
 }

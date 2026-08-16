@@ -143,6 +143,40 @@ impl NodeSink for FallbackWireHasher<'_> {
                     h.update(source_gen.name.as_bytes());
                 }
             }
+            Node::TileLoad { tile, buffer, .. } => {
+                h.update(b"n:TileLoad\0");
+                h.update(tile.as_bytes());
+                h.update(buffer.as_bytes());
+            }
+            Node::TileStore { buffer, tile, .. } => {
+                h.update(b"n:TileStore\0");
+                h.update(buffer.as_bytes());
+                h.update(tile.as_bytes());
+            }
+            Node::TileMatmul { acc, a, b } => {
+                h.update(b"n:TileMatmul\0");
+                h.update(acc.as_bytes());
+                h.update(a.as_bytes());
+                h.update(b.as_bytes());
+            }
+            Node::TileReduce { out, tile, op, axis } => {
+                h.update(b"n:TileReduce\0");
+                h.update(out.as_bytes());
+                h.update(tile.as_bytes());
+                h.update(&op.builtin_wire_tag().to_le_bytes());
+                h.update(&axis.to_le_bytes());
+            }
+            Node::TileElementwise { out, inputs, .. } => {
+                h.update(b"n:TileElementwise\0");
+                h.update(out.as_bytes());
+                for input in inputs {
+                    h.update(input.as_bytes());
+                }
+            }
+            Node::TileDecl { name, .. } => {
+                h.update(b"n:TileDecl\0");
+                h.update(name.as_bytes());
+            }
             Node::Opaque(ext) => {
                 h.update(b"n:Opaque\0");
                 h.update(ext.extension_kind().as_bytes());

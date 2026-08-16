@@ -602,6 +602,30 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         invariant: "backend-allocated output buffer `…` has no static element count or output byte range",
         corrective_action: "Declare the output with `.with_count(n)`, or use `.with_output_byte_range(0..0)` for a genuinely empty output.",
     },
+    ValidationRule {
+        code: "V131",
+        phase: ValidationPhase::Node,
+        invariant: "Tile operation violates residency or hardware limits",
+        corrective_action: "Validate with BackendCapabilities supporting sufficient shared memory and register limits, or adjust tile parameters.",
+    },
+    ValidationRule {
+        code: "V132",
+        phase: ValidationPhase::Node,
+        invariant: "Tile store operation references invalid or incompatible buffer",
+        corrective_action: "Declare the buffer before storing tiles to it.",
+    },
+    ValidationRule {
+        code: "V133",
+        phase: ValidationPhase::Node,
+        invariant: "Matrix multiplication tile operation requires tensor core instruction support",
+        corrective_action: "Validate with BackendCapabilities supporting tensor cores or lower to scalar operations.",
+    },
+    ValidationRule {
+        code: "V134",
+        phase: ValidationPhase::Node,
+        invariant: "Tile load operation references invalid or incompatible buffer",
+        corrective_action: "Declare the buffer before loading tiles from it.",
+    },
 ];
 
 /// Every registered validation rule, ordered by code.

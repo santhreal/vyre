@@ -13,8 +13,9 @@
 use crate::composition::mark_self_exclusive_region;
 use crate::ir::{
     AtomicOp, BinOp, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, Node,
-    NodeExtension, Program, UnOp,
+    NodeExtension, Program, SubgroupReduceOp, UnOp,
 };
+use crate::ir_inner::model::tile::{Layout, Residency, Tile};
 use crate::ir_inner::model::expr::GeneratorRef;
 use crate::memory_model::MemoryOrdering;
 use proptest::prelude::*;
@@ -274,6 +275,31 @@ pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
                 Node::Opaque(extension)
             })
             .boxed(),
+        // Tile leaf nodes (no body).
+        (arb_ident(), arb_buffer_name(), arb_expr())
+            .prop_map(|(tile, buffer, origin)| Node::tile_load(
+                tile.clone(),
+                Tile::new(DataType::F32, vec![16, 16], Layout::RowMajor, Residency::Register),
+                buffer,
+                vec![origin],
+                Layout::RowMajor,
+            ))
+            .boxed(),
+        (arb_buffer_name(), arb_expr(), arb_ident())
+            .prop_map(|(buffer, origin, tile)| Node::tile_store(buffer, vec![origin], tile))
+            .boxed(),
+        (arb_ident(), arb_ident(), arb_ident())
+            .prop_map(|(acc, a, b)| Node::tile_matmul(acc, a, b))
+            .boxed(),
+        (arb_ident(), arb_ident())
+            .prop_map(|(out, tile)| Node::tile_reduce(out, tile, SubgroupReduceOp::Add, 0))
+            .boxed(),
+        arb_ident()
+            .prop_map(|name| Node::tile_decl(
+                name,
+                Tile::new(DataType::F32, vec![16, 16], Layout::RowMajor, Residency::Register),
+            ))
+            .boxed(),
     ]);
 
     if depth == 0 {
@@ -308,12 +334,22 @@ pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
             (
                 arb_generator(),
                 proptest::option::of(arb_generator()),
-                prop::collection::vec(inner, 0..=3),
+                prop::collection::vec(inner.clone(), 0..=3),
             )
                 .prop_map(|(generator, source_region, body)| Node::Region {
                     generator: Ident::from(generator),
                     source_region: source_region.map(|name| GeneratorRef { name }),
                     body: Arc::new(body),
+                }),
+            (
+                arb_ident(),
+                prop::collection::vec(arb_ident().prop_map(Ident::from), 1..=2),
+                prop::collection::vec(inner, 0..=3),
+            )
+                .prop_map(|(out, inputs, body)| Node::TileElementwise {
+                    out: out.into(),
+                    inputs,
+                    body,
                 }),
         ]
     })

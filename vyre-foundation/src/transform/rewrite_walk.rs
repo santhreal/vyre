@@ -233,7 +233,52 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
         }
         Node::AsyncWait { tag } => rewrite.ident(tag).map(|tag| Node::AsyncWait { tag }),
         Node::Resume { tag } => rewrite.ident(tag).map(|tag| Node::Resume { tag }),
-        Node::Return
+        Node::TileLoad { tile, tile_type, buffer, origin, layout } => {
+            let mut changed = false;
+            let new_origin: Vec<Expr> = origin.iter().map(|e| {
+                if let Some(ne) = rewrite.operand(e) {
+                    changed = true;
+                    ne
+                } else {
+                    e.clone()
+                }
+            }).collect();
+            changed.then(|| Node::TileLoad {
+                tile: tile.clone(),
+                tile_type: tile_type.clone(),
+                buffer: buffer.clone(),
+                origin: new_origin,
+                layout: layout.clone(),
+            })
+        }
+        Node::TileStore { buffer, origin, tile } => {
+            let mut changed = false;
+            let new_origin: Vec<Expr> = origin.iter().map(|e| {
+                if let Some(ne) = rewrite.operand(e) {
+                    changed = true;
+                    ne
+                } else {
+                    e.clone()
+                }
+            }).collect();
+            changed.then(|| Node::TileStore {
+                buffer: buffer.clone(),
+                origin: new_origin,
+                tile: tile.clone(),
+            })
+        }
+        Node::TileElementwise { out, inputs, body } => {
+            let new_body = rewrite.body(node, body);
+            new_body.map(|body| Node::TileElementwise {
+                out: out.clone(),
+                inputs: inputs.clone(),
+                body,
+            })
+        }
+        Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
+        | Node::Return
         | Node::Barrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }

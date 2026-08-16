@@ -273,6 +273,12 @@ fn record_nodes_transport_plan(nodes: &[Node], plan: &mut CollectiveTransportPla
                 | Node::AsyncWait { .. }
                 | Node::Trap { .. }
                 | Node::Resume { .. }
+                | Node::TileLoad { .. }
+                | Node::TileStore { .. }
+                | Node::TileMatmul { .. }
+                | Node::TileReduce { .. }
+                | Node::TileElementwise { .. }
+                | Node::TileDecl { .. }
                 | Node::Opaque(_) => {}
             }
         }

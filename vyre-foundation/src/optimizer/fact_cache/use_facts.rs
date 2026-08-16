@@ -148,6 +148,25 @@ fn derive_nodes_uses(nodes: &[Node], facts: &mut UseFactBuilder, control_deps: &
             Node::Opaque(_) => {
                 facts.has_opaque = true;
             }
+            Node::TileLoad { buffer, origin, .. } => {
+                *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
+                for off in origin {
+                    let mut deps = record_expr_uses_and_buffer_deps(off, facts);
+                    deps.extend(control_deps.iter().cloned());
+                }
+            }
+            Node::TileStore { buffer, origin, .. } => {
+                *facts.buffer_writes.entry(buffer.clone()).or_insert(0) += 1;
+                for off in origin {
+                    let mut deps = record_expr_uses_and_buffer_deps(off, facts);
+                    deps.extend(control_deps.iter().cloned());
+                    add_buffer_write_deps(facts, buffer, deps);
+                }
+            }
+            Node::TileElementwise { body, .. } => {
+                derive_nodes_uses(body, facts, control_deps);
+            }
+            Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
             Node::Return | Node::Barrier { .. } | Node::AsyncWait { .. } | Node::Resume { .. } => {}
         }
     }

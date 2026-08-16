@@ -226,6 +226,10 @@ impl DeviceProfile {
             has_transcendental_polynomial_emit: true,
             supports_distributed_collectives: self.supports_distributed_collectives,
             max_native_int_width: self.max_native_int_width,
+            supports_tensor_cores: self.supports_tensor_cores,
+            max_shared_memory_bytes: self.max_shared_memory_bytes,
+            regs_per_thread_max: self.regs_per_thread_max,
+            subgroup_size: self.subgroup_size,
         }
     }
 

@@ -566,6 +566,168 @@ pub(crate) fn store_value_targets(element: &DataType) -> String {
         .join(", ")
 }
 
+/// V134: Tile load validation and residency limit checks.
+pub(crate) fn check_tile_load(
+    tile_name: &Ident,
+    tile_type: &crate::ir::Tile,
+    buffer_name: &Ident,
+    origin: &[Expr],
+    buffers: &BufferTable<'_>,
+    options: ValidationOptions<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let Some(buf) = buffers.get(buffer_name.as_str()) {
+        if buf.access() == BufferAccess::WriteOnly {
+            errors.push(err(
+                "V134",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!("tile load from write-only buffer `{buffer_name}`"),
+                "buffer must be ReadOnly or ReadWrite for tile loading.".to_string(),
+            ));
+        }
+    } else {
+        errors.push(err(
+            "V134",
+            ValidationPhase::Node,
+            ValidationLocation::Program,
+            format!("tile load from unknown buffer `{buffer_name}`"),
+            "declare the buffer before loading tiles from it.".to_string(),
+        ));
+    }
+    if origin.len() != tile_type.extents.len() {
+        errors.push(err(
+            "V134",
+            ValidationPhase::Node,
+            ValidationLocation::Program,
+            format!(
+                "tile load origin rank {} does not match tile rank {}",
+                origin.len(),
+                tile_type.extents.len()
+            ),
+            "provide one origin index per tile dimension.".to_string(),
+        ));
+    }
+    check_tile_residency(tile_name, tile_type, options, errors);
+}
+
+/// V131: Check tile residency against target capabilities.
+pub(crate) fn check_tile_residency(
+    tile_name: &Ident,
+    tile_type: &crate::ir::Tile,
+    options: ValidationOptions<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let Some(caps) = options.backend_capabilities {
+        let bytes = tile_type.byte_size();
+        match tile_type.residency {
+            crate::ir::Residency::Workgroup => {
+                if caps.max_shared_memory_bytes > 0 && bytes > caps.max_shared_memory_bytes as u64 {
+                    errors.push(err(
+                        "V131",
+                        ValidationPhase::Node,
+                        ValidationLocation::Program,
+                        format!(
+                            "total Workgroup residency of {bytes} bytes exceeds target profile limit {} in operation `{tile_name}`",
+                            caps.max_shared_memory_bytes
+                        ),
+                        "reduce tile dimensions or shard workgroup memory.".to_string(),
+                    ));
+                }
+            }
+            crate::ir::Residency::Register => {
+                if caps.regs_per_thread_max > 0 {
+                    let words = (bytes + 3) / 4;
+                    if words > caps.regs_per_thread_max as u64 {
+                        errors.push(err(
+                            "V131",
+                            ValidationPhase::Node,
+                            ValidationLocation::Program,
+                            format!(
+                                "live Register residency of {words} registers exceeds target profile limit {} in operation `{tile_name}`",
+                                caps.regs_per_thread_max
+                            ),
+                            "reduce tile register footprint or spill to shared memory.".to_string(),
+                        ));
+                    }
+                }
+            }
+            crate::ir::Residency::Subgroup => {
+                if caps.subgroup_size > 0 && !tile_type.extents.is_empty() {
+                    let total_elements = tile_type.element_count();
+                    if total_elements % (caps.subgroup_size as usize) != 0
+                        && (caps.subgroup_size as usize) % total_elements != 0
+                    {
+                        errors.push(err(
+                            "V131",
+                            ValidationPhase::Node,
+                            ValidationLocation::Program,
+                            format!(
+                                "tile `{tile_name}` Subgroup residency with {total_elements} elements is incompatible with target subgroup size {}",
+                                caps.subgroup_size
+                            ),
+                            "align tile dimensions to target subgroup size.".to_string(),
+                        ));
+                    }
+                }
+            }
+            crate::ir::Residency::Global => {}
+        }
+    }
+}
+
+/// V132: Tile store validation.
+pub(crate) fn check_tile_store(
+    buffer_name: &Ident,
+    _origin: &[Expr],
+    _tile_name: &Ident,
+    buffers: &BufferTable<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let Some(buf) = buffers.get(buffer_name.as_str()) {
+        if buf.access() == BufferAccess::ReadOnly {
+            errors.push(err(
+                "V132",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!("tile store to read-only buffer `{buffer_name}`"),
+                "buffer must be WriteOnly or ReadWrite for tile storing.".to_string(),
+            ));
+        }
+    } else {
+        errors.push(err(
+            "V132",
+            ValidationPhase::Node,
+            ValidationLocation::Program,
+            format!("tile store to unknown buffer `{buffer_name}`"),
+            "declare the buffer before storing tiles to it.".to_string(),
+        ));
+    }
+}
+
+/// V133: Tile matmul validation.
+pub(crate) fn check_tile_matmul(
+    acc: &Ident,
+    a: &Ident,
+    b: &Ident,
+    options: ValidationOptions<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let Some(caps) = options.backend_capabilities {
+        if !caps.supports_tensor_cores {
+            errors.push(err(
+                "V133",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!(
+                    "target profile does not support matrix tensor core instructions for operation `{acc} = {a} x {b}`"
+                ),
+                "lower matrix multiplication to scalar loops or run on a target with tensor core support.".to_string(),
+            ));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -102,6 +102,11 @@ pub trait NodeVisitor {
         let _ = node;
         ControlFlow::Continue(())
     }
+    /// Tile operation node.
+    fn visit_tile(&mut self, node: &Node) -> ControlFlow<Self::Break> {
+        let _ = node;
+        ControlFlow::Continue(())
+    }
     /// Block node.
     fn visit_block(&mut self, node: &Node, body: &[Node]) -> ControlFlow<Self::Break>;
     /// Region wrapper node.
@@ -246,6 +251,12 @@ pub(crate) fn dispatch_node<V: NodeVisitor>(visitor: &mut V, node: &Node) -> Con
             source_region,
             body,
         } => visitor.visit_region(node, generator, source_region, body),
+        Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. } => visitor.visit_tile(node),
         Node::Opaque(extension) => visitor.visit_opaque_node(node, extension.as_ref()),
     }
 }

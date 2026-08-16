@@ -50,6 +50,10 @@ impl DeviceFacts {
                 has_shared_memory: false,
                 has_transcendental_polynomial_emit: false,
                 max_native_int_width: 0,
+                supports_tensor_cores: false,
+                max_shared_memory_bytes: 0,
+                regs_per_thread_max: 0,
+                subgroup_size: 0,
             },
             0,
         )
