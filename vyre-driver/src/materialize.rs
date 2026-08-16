@@ -117,15 +117,45 @@ pub fn admit(
             "target entry count must equal the compiler-selected fusion-group count",
         ));
     }
+    // Three per-group lists arrive in three orders: the bundle canonically sorts its
+    // modules by (stage, group), the fusion records are in the artifact's own plan
+    // order, and the entries are in the order the target compiler emitted them.
+    // Zipping them made every pairing an unstated assumption that all three orders
+    // agree, and the only check that would have caught a disagreement between an
+    // entry and its module compared entry names, which are all `main`. Each module
+    // now names the record and entry it belongs to: its group id, and the first
+    // member node of that group.
+    let mut records = BTreeMap::new();
+    for record in selected {
+        if records.insert(record.id, record).is_some() {
+            return Err(invalid_module(
+                "the selected plan lists one fusion group twice",
+            ));
+        }
+    }
+    let mut entries_by_node = BTreeMap::new();
+    for entry in payload.entries() {
+        if entries_by_node.insert(entry.node, entry).is_some() {
+            return Err(invalid_module(
+                "target entries must name distinct canonical nodes",
+            ));
+        }
+    }
 
     let mut admitted = Vec::with_capacity(selected.len());
-    for ((image, record), entry) in bundle
-        .modules
-        .into_iter()
-        .zip(selected)
-        .zip(payload.entries())
-    {
+    for image in bundle.modules {
+        let record = records.remove(&image.group).ok_or_else(|| {
+            invalid_module("target module names a fusion group the selected plan does not list")
+        })?;
         admit_module_identity(&image, record)?;
+        let entry_node = *record.members.first().ok_or_else(|| {
+            invalid_module("the selected plan lists a fusion group with no member node")
+        })?;
+        let entry = entries_by_node.remove(&entry_node).ok_or_else(|| {
+            invalid_module(
+                "target entry node identity must match the first member node of a selected fusion group",
+            )
+        })?;
         if image.entry_point != "main" {
             return Err(invalid_module("target module entry point must be `main`"));
         }
