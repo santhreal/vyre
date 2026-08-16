@@ -13,7 +13,7 @@ use crate::request::{SearchBudget, SearchWork};
 use crate::{cost, legality};
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 6;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 7;
 
 /// Canonical executable-node payload.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -138,6 +138,15 @@ pub struct ResourceAbiRecord {
     pub access: AbiAccess,
 }
 
+/// One named Program buffer projected onto a canonical graph value.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntryResourceBinding {
+    /// Program buffer name at the executable entry boundary.
+    pub buffer: String,
+    /// Canonical graph value bound to that buffer.
+    pub value: ArtifactValueId,
+}
+
 /// One canonical executable entry in the whole-program ABI.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EntryAbiRecord {
@@ -145,8 +154,12 @@ pub struct EntryAbiRecord {
     pub node: ArtifactNodeId,
     /// Input value identities in Program buffer order.
     pub inputs: Vec<ArtifactValueId>,
+    /// Input identities paired with their exact Program buffer names.
+    pub input_bindings: Vec<EntryResourceBinding>,
     /// Output value identities in Program buffer order.
     pub outputs: Vec<ArtifactValueId>,
+    /// Output identities paired with their exact Program buffer names.
+    pub output_bindings: Vec<EntryResourceBinding>,
 }
 
 /// Canonical resource and entry ABI projected to every target payload.

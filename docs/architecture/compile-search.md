@@ -16,7 +16,7 @@ Its output is one versioned immutable `Artifact` plus optional
 materialization, submission, queues, residency and recovery consume that
 product and do not alter artifact identity.
 
-The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 4`.
+The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 7`.
 
 ## Legality before cost
 

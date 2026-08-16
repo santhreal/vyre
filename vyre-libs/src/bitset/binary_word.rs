@@ -51,7 +51,7 @@ pub(crate) fn binary_word_program(
         vec![
             BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
             BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(words),
+            BufferDecl::storage(out, 2, BufferAccess::WriteOnly, DataType::U32).with_count(words),
         ],
         [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
         vec![wrap_anonymous_region(

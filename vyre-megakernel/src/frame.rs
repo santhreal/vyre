@@ -34,7 +34,7 @@ pub(crate) struct Frame {
 pub(crate) const ARTIFACT: Frame = Frame {
     magic: b"VMK0",
     version: crate::ARTIFACT_SCHEMA_VERSION,
-    domain: b"vyre-megakernel-artifact-v6\0",
+    domain: b"vyre-megakernel-artifact-v7\0",
     path: "artifact",
     version_skew: CompilerFailureKind::VersionSkew,
     digest_mismatch: CompilerFailureKind::DigestMismatch,

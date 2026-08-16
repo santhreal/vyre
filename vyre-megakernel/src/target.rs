@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
-use vyre_foundation::{
-    execution_plan::fusion::merge_programs_shared,
-    ir::{BufferAccess, Program},
-};
+use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
 use vyre_lower::{KernelDescriptor, MemoryClass};
 
 use crate::{
@@ -75,6 +72,31 @@ pub struct TargetModuleImage {
     pub entry_point: String,
     /// Immutable target-native module bytes.
     pub bytes: Vec<u8>,
+}
+
+impl TargetModuleImage {
+    /// Resolve a Program buffer name to the exact target `(group, slot)`.
+    ///
+    /// Shared and scratch storage are not externally bound. Duplicate names are
+    /// ambiguous and fail closed as `None`.
+    #[must_use]
+    pub fn binding_slot(&self, name: &str) -> Option<(u32, u32)> {
+        let mut found = None;
+        for slot in &self.descriptor.bindings.slots {
+            if slot.name != name {
+                continue;
+            }
+            let group = match slot.memory_class {
+                MemoryClass::Shared | MemoryClass::Scratch => continue,
+                MemoryClass::Uniform => 1,
+                MemoryClass::Global | MemoryClass::Constant => 0,
+            };
+            if found.replace((group, slot.slot)).is_some() {
+                return None;
+            }
+        }
+        found
+    }
 }
 
 /// Canonical ordered target modules for one neutral artifact.
@@ -282,7 +304,8 @@ pub fn compile_selected_modules(
                 module.group.0
             ))
         })?;
-        let bindings = selected_resource_bindings(artifact, &module, &lowered.descriptor)?;
+        let descriptor = lowered.descriptor;
+        let bindings = selected_resource_bindings(artifact, &module, &descriptor)?;
         let abi = selected_abi(artifact, &module);
         let logical_element_count =
             selected_logical_element_count(artifact, &module, &lowered.program);
@@ -291,7 +314,7 @@ pub fn compile_selected_modules(
             group: module.group,
             stage: module.stage,
             nodes: module.nodes,
-            descriptor: lowered.descriptor,
+            descriptor,
             abi,
             canonical_bindings: bindings,
             logical_element_count,
@@ -339,11 +362,10 @@ fn selected_resource_bindings(
     module: &SelectedModule,
     descriptor: &KernelDescriptor,
 ) -> Result<Vec<TargetResourceBinding>, TargetCompileError> {
-    // The artifact resource set is the owner of value identity, so the lookup is
-    // built from it rather than from the entry ABI. The entry ABI lists what the
-    // host binds, which excludes a value produced by one fusion group and consumed
-    // by another: every fused op that passes an intermediate between groups had a
-    // descriptor binding no lookup could resolve.
+    // Named entry-ABI records own each node's directional value identity. The
+    // artifact resource set supplies descriptor carriers that are intentionally
+    // absent from one split node's graph boundary; descriptor positions never
+    // participate in either lookup.
     let canonical_by_name = artifact
         .canonical_value_by_name()
         .map_err(|collision| TargetCompileError::InvalidArtifact(collision.to_string()))?;
@@ -364,62 +386,37 @@ fn selected_resource_bindings(
             ) && slot.name != vyre_lower::TRAP_SIDECAR_NAME
         })
         .map(|slot| {
-            let mut resolved = None;
-            for (node_id, program) in module.nodes.iter().zip(&module.programs) {
-                let Some(entry) = artifact.abi().entries.iter().find(|e| e.node == *node_id) else {
+            let mut first_input = None;
+            let mut last_output = None;
+            for node_id in &module.nodes {
+                let Some(entry) = artifact
+                    .abi()
+                    .entries
+                    .iter()
+                    .find(|entry| entry.node == *node_id)
+                else {
                     continue;
                 };
-                let mut in_idx = 0usize;
-                let mut out_idx = 0usize;
-                for buffer in program.buffers() {
-                    let is_in = matches!(
-                        buffer.access(),
-                        BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-                    );
-                    let is_out = matches!(
-                        buffer.access(),
-                        BufferAccess::WriteOnly | BufferAccess::ReadWrite
-                    ) || buffer.is_output() || buffer.pipeline_live_out;
-
-                    let cur_in = if is_in {
-                        let idx = in_idx;
-                        in_idx += 1;
-                        entry.inputs.get(idx).copied()
-                    } else {
-                        None
-                    };
-                    let cur_out = if is_out {
-                        let idx = out_idx;
-                        out_idx += 1;
-                        entry.outputs.get(idx).copied()
-                    } else {
-                        None
-                    };
-
-                    if buffer.name() == slot.name {
-                        match slot.visibility {
-                            vyre_lower::BindingVisibility::WriteOnly
-                            | vyre_lower::BindingVisibility::ReadWrite => {
-                                if let Some(val) = cur_out {
-                                    resolved = Some(val);
-                                    break;
-                                }
-                            }
-                            vyre_lower::BindingVisibility::ReadOnly => {
-                                if let Some(val) = cur_in {
-                                    resolved = Some(val);
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                if first_input.is_none() {
+                    first_input = entry
+                        .input_bindings
+                        .iter()
+                        .find(|binding| binding.buffer == slot.name)
+                        .map(|binding| binding.value);
                 }
-                if resolved.is_some() {
-                    break;
+                if let Some(output) = entry
+                    .output_bindings
+                    .iter()
+                    .find(|binding| binding.buffer == slot.name)
+                    .map(|binding| binding.value)
+                {
+                    // A fused carrier publishes its final successor while
+                    // retaining the first input as its launch predecessor.
+                    last_output = Some(output);
                 }
             }
-
-            let resource = resolved
+            let resource = last_output
+                .or(first_input)
                 .or_else(|| canonical_by_name.get(slot.name.as_str()).copied())
                 .ok_or_else(|| {
                     TargetCompileError::InvalidArtifact(format!(
@@ -427,6 +424,32 @@ fn selected_resource_bindings(
                         module.group.0, slot.name
                     ))
                 })?;
+            let inactive_access = artifact
+                .abi()
+                .resources
+                .iter()
+                .find(|binding| binding.value == resource)
+                .and_then(|binding| match binding.access {
+                    crate::AbiAccess::ReadOnly | crate::AbiAccess::Uniform => {
+                        Some(TargetResourceAccess::ReadOnly)
+                    }
+                    crate::AbiAccess::WriteOnly | crate::AbiAccess::ReadWrite => artifact
+                        .resources()
+                        .iter()
+                        .find(|candidate| candidate.value == resource)
+                        .map(|record| {
+                            if module.stage < record.first_stage {
+                                TargetResourceAccess::WriteOnly
+                            } else {
+                                TargetResourceAccess::ReadWrite
+                            }
+                        }),
+                })
+                .unwrap_or_else(|| match slot.visibility {
+                    vyre_lower::BindingVisibility::ReadOnly => TargetResourceAccess::ReadOnly,
+                    vyre_lower::BindingVisibility::WriteOnly => TargetResourceAccess::WriteOnly,
+                    vyre_lower::BindingVisibility::ReadWrite => TargetResourceAccess::ReadWrite,
+                });
             Ok(TargetResourceBinding {
                 resource,
                 group: if matches!(slot.memory_class, MemoryClass::Uniform) {
@@ -444,10 +467,16 @@ fn selected_resource_bindings(
                 } else {
                     TargetResourceMemory::Global
                 },
-                access: match slot.visibility {
-                    vyre_lower::BindingVisibility::ReadOnly => TargetResourceAccess::ReadOnly,
-                    vyre_lower::BindingVisibility::WriteOnly => TargetResourceAccess::WriteOnly,
-                    vyre_lower::BindingVisibility::ReadWrite => TargetResourceAccess::ReadWrite,
+                access: match (first_input.is_some(), last_output.is_some()) {
+                    (true, true) => TargetResourceAccess::ReadWrite,
+                    (true, false)
+                        if slot.visibility == vyre_lower::BindingVisibility::ReadWrite =>
+                    {
+                        TargetResourceAccess::ReadWrite
+                    }
+                    (true, false) => TargetResourceAccess::ReadOnly,
+                    (false, true) => TargetResourceAccess::WriteOnly,
+                    (false, false) => inactive_access,
                 },
             })
         })

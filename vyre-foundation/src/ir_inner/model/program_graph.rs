@@ -357,8 +357,8 @@ impl ProgramGraph {
     /// Append one Program node after all of its producers.
     ///
     /// Construction order is the topological schedule. This makes cycles
-    /// unrepresentable except for explicit, type-preserving retained-value
-    /// transitions declared through `retained_successor_of`.
+    /// unrepresentable except for explicit retained-value successions and the
+    /// final retained-to-output transition of a caller-visible result buffer.
     pub fn add_node(
         &mut self,
         name: impl Into<String>,
@@ -442,9 +442,20 @@ impl ProgramGraph {
                         prior: prior_id,
                     });
                 }
-                if prior.contract.lifetime != ValueLifetime::Retained
-                    || output.contract.lifetime != ValueLifetime::Retained
-                    || prior.contract != output.contract
+                let caller_output_transition = prior.contract.lifetime == ValueLifetime::Retained
+                    && output.contract.lifetime == ValueLifetime::Output
+                    && prior.contract.dtype == output.contract.dtype
+                    && prior.contract.shape == output.contract.shape
+                    && prior.contract.access == output.contract.access
+                    && program
+                        .buffers()
+                        .iter()
+                        .find(|buffer| buffer.name() == output.buffer)
+                        .is_some_and(|buffer| buffer.is_output());
+                if !caller_output_transition
+                    && (prior.contract.lifetime != ValueLifetime::Retained
+                        || output.contract.lifetime != ValueLifetime::Retained
+                        || prior.contract != output.contract)
                 {
                     return Err(ProgramGraphError::InvalidRetainedTransition {
                         output: output.name.clone(),

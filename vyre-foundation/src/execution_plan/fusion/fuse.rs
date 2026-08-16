@@ -323,6 +323,7 @@ fn classify_and_merge_arm_buffers(
         }
         if let Some(&idx) = name_to_index.get(&name) {
             let existing = &mut merged_buffers[idx];
+            let initialized_before_use = existing.is_backend_allocated_output();
             let access = buf.access();
             upgrade_buffer_access(existing, &access);
             if buf.count > existing.count {
@@ -330,6 +331,12 @@ fn classify_and_merge_arm_buffers(
             }
             if buf.is_output() {
                 existing.is_output = true;
+                existing.pipeline_live_out = true;
+            }
+            if initialized_before_use && existing.access() == BufferAccess::ReadWrite {
+                // A prior arm produced the storage before a later arm read it.
+                // Keep that first-write fact after access widening so launch
+                // planning allocates the carrier instead of demanding host bytes.
                 existing.pipeline_live_out = true;
             }
         } else {

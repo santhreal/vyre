@@ -594,22 +594,23 @@ inventory::submit! {
     .with_category("llm")
 }
 
+fn sample_token_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    const ZERO_F32: [f32; FIXTURE_CANDIDATES as usize] = [0.0; FIXTURE_CANDIDATES as usize];
+    const ZERO_U32: [u32; FIXTURE_CANDIDATES as usize] = [0; FIXTURE_CANDIDATES as usize];
+    vec![vec![
+        fixture_f32(&FIXTURE_LOGITS),
+        fixture_u32(&FIXTURE_COUNTS),
+        fixture_f32(&ZERO_F32),
+        fixture_u32(&ZERO_U32),
+        fixture_f32(&[FIXTURE_UNIFORM]),
+    ]]
+}
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         SAMPLE_TOKEN_OP_ID,
         sample_token_fixture_program,
-        Some(|| {
-            const ZERO_F32: [f32; FIXTURE_CANDIDATES as usize] = [0.0; FIXTURE_CANDIDATES as usize];
-            const ZERO_U32: [u32; FIXTURE_CANDIDATES as usize] = [0; FIXTURE_CANDIDATES as usize];
-            vec![vec![
-                fixture_f32(&FIXTURE_LOGITS),
-                fixture_u32(&FIXTURE_COUNTS),
-                fixture_f32(&ZERO_F32),
-                fixture_f32(&ZERO_F32),
-                fixture_u32(&ZERO_U32),
-                fixture_f32(&[FIXTURE_UNIFORM]),
-            ]]
-        }),
+        Some(sample_token_fixture_inputs),
         Some(|| {
             let selection = fixture_selection();
             vec![vec![
@@ -623,4 +624,38 @@ inventory::submit! {
         }),
     )
     .with_category("llm")
+}
+#[cfg(test)]
+mod buffer_contract_tests {
+    use super::*;
+
+    /// WHY: fused first-write intermediates are backend allocated and disappear
+    /// from logical witness order. The fixture must track the remaining buffers
+    /// by identity and exact byte length rather than the full Program table.
+    #[test]
+    fn sample_token_fixture_tracks_the_fused_buffer_abi() {
+        let program = sample_token_fixture_program();
+        let witness_buffers = program
+            .buffers()
+            .iter()
+            .filter(|buffer| !buffer.is_backend_allocated_output())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            witness_buffers
+                .iter()
+                .map(|buffer| buffer.name())
+                .collect::<Vec<_>>(),
+            ["logits", "counts", "best_vals", "best_idxs", "uniform"]
+        );
+        let fixture = &sample_token_fixture_inputs()[0];
+        assert_eq!(fixture.len(), witness_buffers.len());
+        for (bytes, buffer) in fixture.iter().zip(witness_buffers) {
+            assert_eq!(
+                Some(bytes.len()),
+                buffer.static_byte_len().unwrap(),
+                "fixture bytes must match `{}`",
+                buffer.name()
+            );
+        }
+    }
 }

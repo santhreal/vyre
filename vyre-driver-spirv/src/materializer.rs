@@ -60,7 +60,7 @@ impl ArtifactMaterializer for SpirvMaterializer {
         Ok(Box::new(SpirvArtifactInstance {
             core: self
                 .descriptor
-                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
+                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES)?,
             native: Arc::clone(&self.device),
             modules,
         }))

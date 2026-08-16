@@ -12,7 +12,8 @@ use vyre_driver::{
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload};
+use vyre_lower::TRAP_SIDECAR_NAME;
+use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetResourceAccess};
 
 use crate::descriptor_mapping::descriptor_bind_group;
 use crate::pipeline::WgpuPipeline;
@@ -20,7 +21,6 @@ use crate::target_compiler::{
     WgpuTargetModule, WGPU_TARGET_FORMAT_VERSION, WGPU_TARGET_MODULE_SCHEMA_VERSION,
 };
 use crate::{WgpuBackend, WGPU_BACKEND_ID};
-use vyre_lower::TRAP_SIDECAR_NAME;
 
 /// Resident-path rejection text. Both value-shaped rejections still say which
 /// event failed, produce or preserve, and omit the lifetime word the host path
@@ -79,37 +79,54 @@ impl ArtifactMaterializer for WgpuMaterializer {
                     }
                     let program = module.program;
                     let config = module.config;
-                    let binding_plan = BindingPlan::build(&program)?;
-                    let input_slots = module
-                        .image
-                        .descriptor
-                        .bindings
-                        .slots
-                        .iter()
-                        .filter(|slot| {
-                            descriptor_bind_group(slot.memory_class).is_some()
-                                && slot.name != TRAP_SIDECAR_NAME
-                        })
-                        .map(|slot| {
-                            let required = binding_plan
-                                .bindings
-                                .iter()
-                                .find(|binding| {
-                                    program.buffers()[binding.buffer_index].name() == slot.name
-                                })
-                                .is_none_or(|binding| binding.input_index.is_some());
-                            ArtifactInputSlot {
+                    let mut input_slots = Vec::new();
+                    for slot in &module.image.descriptor.bindings.slots {
+                        let Some(group) = descriptor_bind_group(slot.memory_class) else {
+                            continue;
+                        };
+                        if slot.name == TRAP_SIDECAR_NAME {
+                            continue;
+                        }
+                        let canonical = module
+                            .resource_bindings
+                            .iter()
+                            .find(|binding| binding.group == group && binding.slot == slot.slot)
+                            .ok_or_else(|| {
+                                materialize::invalid_module(&format!(
+                                    "target binding `{}` at group {group}, slot {} has no canonical directional metadata",
+                                    slot.name, slot.slot
+                                ))
+                            })?;
+                        let buffer = program
+                            .buffers()
+                            .iter()
+                            .find(|buffer| buffer.name() == slot.name)
+                            .ok_or_else(|| {
+                                materialize::invalid_module(&format!(
+                                    "target binding `{}` has no selected Program buffer",
+                                    slot.name
+                                ))
+                            })?;
+                        if canonical.access != TargetResourceAccess::WriteOnly {
+                            let expected_max = usize::try_from(buffer.count())
+                                .ok()
+                                .and_then(|count| count.checked_mul(buffer.element().min_bytes()))
+                                .filter(|_| buffer.count() != 0);
+                            input_slots.push(ArtifactInputSlot {
                                 name: slot.name.clone(),
-                                required,
-                            }
-                        })
-                        .collect();
+                                group,
+                                slot: slot.slot,
+                                expected_max,
+                            });
+                        }
+                    }
                     let pipeline = self.backend.compile_pipeline(
                         &program,
                         &config,
                         Some(crate::pipeline::AuthenticatedTarget {
                             wgsl: &target.wgsl,
                             descriptor: &module.image.descriptor,
+                            resource_bindings: &module.resource_bindings,
                         }),
                     )?;
                     let resident_slots = pipeline
@@ -127,7 +144,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
         Ok(Box::new(WgpuArtifactInstance {
             core: self
                 .descriptor
-                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
+                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES)?,
             lost: Arc::clone(&self.lost),
             modules,
         }))
@@ -136,7 +153,9 @@ impl ArtifactMaterializer for WgpuMaterializer {
 
 struct ArtifactInputSlot {
     name: String,
-    required: bool,
+    group: u32,
+    slot: u32,
+    expected_max: Option<usize>,
 }
 
 struct WgpuExecutableModule {
@@ -187,30 +206,47 @@ impl MaterializedInstance for WgpuArtifactInstance {
         "WGSL target module"
     }
 
-    /// Borrow bound bytes into the order this backend's target bindings declare.
-    ///
-    /// The input order comes from the emitted descriptor slots rather than the
-    /// binding plan, because a slot the target module declares but the plan does
-    /// not require is bound empty instead of rejected.
     fn gather<'state>(
         &self,
+        module_index: usize,
         module: &Self::Module,
         _plan: &BindingPlan,
         state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
     ) -> Result<Vec<&'state [u8]>, BackendError> {
         let mut inputs = Vec::with_capacity(module.input_slots.len());
         for slot in &module.input_slots {
-            let value = self.core.value_for_buffer(&slot.name)?;
-            match state.get(&value) {
-                Some(bytes) => inputs.push(bytes.as_slice()),
-                None if !slot.required => inputs.push(&[]),
-                None => {
-                    return Err(materialize::invalid_module(&format!(
-                        "canonical artifact value {} for target binding `{}` is unbound",
-                        value.0, slot.name
-                    )));
-                }
+            let value = self.core.value_for_module_slot(
+                &self.core.module_inputs,
+                module_index,
+                slot.group,
+                slot.slot,
+                &slot.name,
+            )?;
+            let bytes = state.get(&value).ok_or_else(|| {
+                materialize::invalid_module(&format!(
+                    "canonical artifact value {} for target binding `{}` is unbound",
+                    value.0, slot.name
+                ))
+            })?;
+            if slot
+                .expected_max
+                .is_some_and(|expected| bytes.len() > expected)
+            {
+                let canonical_name = self
+                    .core
+                    .values
+                    .iter()
+                    .find_map(|(name, candidate)| (*candidate == value).then_some(name.as_str()))
+                    .unwrap_or("<unnamed>");
+                return Err(materialize::invalid_module(&format!(
+                    "canonical artifact value {} (`{canonical_name}`) supplied {} byte(s) to target binding `{}`, whose static limit is {} byte(s)",
+                    value.0,
+                    bytes.len(),
+                    slot.name,
+                    slot.expected_max.unwrap_or_default(),
+                )));
             }
+            inputs.push(bytes.as_slice());
         }
         Ok(inputs)
     }
@@ -323,6 +359,12 @@ mod tests {
                     generation: 11,
                 },
                 values: BTreeMap::new(),
+                module_inputs: Vec::new(),
+                module_outputs: Vec::new(),
+                module_resources: Vec::new(),
+                module_named_resources: Vec::new(),
+                module_buffer_slots: Vec::new(),
+                retained_predecessors: BTreeMap::new(),
                 outputs: BTreeSet::new(),
                 retained: BTreeSet::new(),
                 messages: materialize::NEUTRAL_MESSAGES,

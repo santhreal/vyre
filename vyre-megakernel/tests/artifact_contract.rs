@@ -759,6 +759,188 @@ fn a_cuttable_grid_fence_compiles_without_cooperative_launch() {
     }
 }
 
+/// WHY: a fence split must carry every mutable buffer whose first write occurs
+/// before a later segment reads it. Ordering the launches through one retained
+/// buffer is insufficient when a sibling backend-allocated carrier crosses the
+/// same fence.
+#[test]
+fn grid_fence_split_carries_every_mutable_sibling_value() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("state", 0, DataType::U32).with_count(1),
+            BufferDecl::read_write("scratch", 1, DataType::U32).with_count(1),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("scratch", Expr::u32(0), Expr::u32(2)),
+            Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync),
+            Node::store(
+                "state",
+                Expr::u32(0),
+                Expr::bitor(
+                    Expr::load("state", Expr::u32(0)),
+                    Expr::load("scratch", Expr::u32(0)),
+                ),
+            ),
+        ],
+    );
+    let graph = ProgramGraph::from_program("sibling_carriers", program).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("every mutable sibling carrier must survive the launch split");
+    let nodes = validated.graph().nodes();
+    assert_eq!(nodes.len(), 2);
+    let produced = nodes[0]
+        .output_ports
+        .iter()
+        .position(|port| port.buffer == "scratch")
+        .and_then(|position| nodes[0].outputs.get(position))
+        .copied()
+        .expect("the producing segment must publish scratch");
+    let consumed = nodes[1]
+        .inputs
+        .iter()
+        .find(|input| input.buffer == "scratch")
+        .map(|input| input.value)
+        .expect("the consuming segment must bind scratch");
+    assert_eq!(consumed, produced);
+    assert_eq!(
+        nodes[1]
+            .output_ports
+            .iter()
+            .find(|port| port.buffer == "scratch")
+            .map(|port| port.contract.lifetime),
+        Some(vyre_foundation::ir::ValueLifetime::Retained),
+        "an internal sibling carrier must remain retained rather than become a caller output"
+    );
+}
+
+/// WHY: the first segment can publish the value that orders later launches.
+/// Requiring pre-existing retained input state rejects valid producer-consumer
+/// pipelines whose only crossing value is backend allocated.
+#[test]
+fn grid_fence_split_accepts_a_first_write_carrier_without_retained_input() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(1),
+            BufferDecl::read_write("intermediate", 1, DataType::U32)
+                .with_count(1)
+                .with_pipeline_live_out(true),
+            BufferDecl::output("out", 2, DataType::U32).with_count(1),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store(
+                "intermediate",
+                Expr::u32(0),
+                Expr::load("input", Expr::u32(0)),
+            ),
+            Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::load("intermediate", Expr::u32(0)),
+            ),
+        ],
+    );
+    let graph = ProgramGraph::from_program("first_write_carrier", program).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("a first-write carrier must order split launches");
+    let nodes = validated.graph().nodes();
+    assert_eq!(nodes.len(), 2);
+    let produced = nodes[0]
+        .output_ports
+        .iter()
+        .position(|port| port.buffer == "intermediate")
+        .and_then(|position| nodes[0].outputs.get(position))
+        .copied()
+        .expect("the first segment must publish the carrier");
+    assert_eq!(
+        nodes[1]
+            .inputs
+            .iter()
+            .find(|input| input.buffer == "intermediate")
+            .map(|input| input.value),
+        Some(produced)
+    );
+}
+
+/// WHY: a caller-visible output can be written before a whole-grid fence and
+/// read after it. Intermediate segments must carry its bytes as retained state,
+/// while the final segment must preserve the public Output lifetime.
+#[test]
+fn grid_fence_split_preserves_a_crossing_caller_output() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("state", 0, DataType::U32).with_count(1),
+            BufferDecl::output("result", 1, DataType::U32).with_count(1),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("result", Expr::u32(0), Expr::u32(2)),
+            Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync),
+            Node::store(
+                "state",
+                Expr::u32(0),
+                Expr::bitor(
+                    Expr::load("state", Expr::u32(0)),
+                    Expr::load("result", Expr::u32(0)),
+                ),
+            ),
+        ],
+    );
+    let graph = ProgramGraph::from_program("caller_output_carrier", program).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("a caller output crossing a fence must survive the launch split");
+    let nodes = validated.graph().nodes();
+    assert_eq!(nodes.len(), 2);
+    let produced = nodes[0]
+        .output_ports
+        .iter()
+        .position(|port| port.buffer == "result")
+        .and_then(|position| nodes[0].outputs.get(position))
+        .copied()
+        .expect("the producing segment must publish the output carrier");
+    assert_eq!(
+        nodes[1]
+            .inputs
+            .iter()
+            .find(|input| input.buffer == "result")
+            .map(|input| input.value),
+        Some(produced)
+    );
+    let final_port = nodes[1]
+        .output_ports
+        .iter()
+        .find(|port| port.buffer == "result")
+        .expect("the final segment must publish the caller output");
+    assert_eq!(
+        final_port.contract.lifetime,
+        vyre_foundation::ir::ValueLifetime::Output
+    );
+    assert_eq!(final_port.retained_successor_of, Some(produced));
+}
+
 /// WHY: cooperative dispatch already enforces a whole-grid fence in one kernel.
 /// Splitting that kernel would turn backend-allocated in-place pipeline storage
 /// into a retained host input and change the artifact ABI.
@@ -922,12 +1104,12 @@ fn resource_shape_overflow_has_stable_diagnostic() {
     assert_eq!(error.diagnostic.code.as_str(), "MKC011_RESOURCE_OVERFLOW");
 }
 
-/// WHY: persisted v5 artifacts must be rejected after the v6 retained-predecessor cutover.
+/// WHY: persisted v6 artifacts must be rejected after the v7 named-resource-ABI cutover.
 #[test]
 fn stale_artifact_version_is_rejected_before_body_decode() {
     let artifact = compile(&request(LIMIT)).unwrap();
     let mut bytes = artifact.to_bytes().unwrap();
-    bytes[4..6].copy_from_slice(&5u16.to_le_bytes());
+    bytes[4..6].copy_from_slice(&6u16.to_le_bytes());
     let error = Artifact::from_bytes(&bytes).expect_err("stale schema must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC015_VERSION_SKEW");
     assert_eq!(diagnostic_path(&error), Some("artifact.schema_version"));
@@ -1017,6 +1199,25 @@ fn entry_abi_inputs_and_outputs_preserve_program_buffer_order_despite_port_reord
     let entry = artifact.abi().entries.first().expect("entry must exist");
 
     assert_eq!(entry.inputs, vec![ArtifactValueId(0), ArtifactValueId(1)]);
+    assert_eq!(
+        entry
+            .input_bindings
+            .iter()
+            .map(|binding| (binding.buffer.as_str(), binding.value))
+            .collect::<Vec<_>>(),
+        vec![
+            ("first", ArtifactValueId(0)),
+            ("second", ArtifactValueId(1))
+        ]
+    );
+    assert_eq!(
+        entry
+            .output_bindings
+            .iter()
+            .map(|binding| (binding.buffer.as_str(), binding.value))
+            .collect::<Vec<_>>(),
+        vec![("out", ArtifactValueId(2))]
+    );
 }
 
 /// WHY: ResourceRecord retained_predecessor must serialize and round-trip through artifact framing.

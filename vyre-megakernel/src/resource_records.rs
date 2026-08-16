@@ -7,8 +7,8 @@ use vyre_foundation::ir::{BufferAccess, ProgramGraph, ProgramGraphValue, ShapeDi
 use crate::error::{failure, overflow, CompileError, CompilerFailureKind};
 use crate::identity::{ArtifactNodeId, ArtifactValueId, FusionGroupId};
 use crate::schema::{
-    AbiAccess, ArtifactAbi, EntryAbiRecord, MaterializationReason, MaterializationRecord,
-    ResourceAbiRecord, ResourceEnvelope, ResourceLifetime, ResourceRecord,
+    AbiAccess, ArtifactAbi, EntryAbiRecord, EntryResourceBinding, MaterializationReason,
+    MaterializationRecord, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime, ResourceRecord,
 };
 
 pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileError> {
@@ -44,6 +44,8 @@ pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileErro
         .map(|node| {
             let mut inputs = Vec::new();
             let mut outputs = Vec::new();
+            let mut input_bindings = Vec::new();
+            let mut output_bindings = Vec::new();
             for buffer in node.program.buffers() {
                 let is_in = matches!(
                     buffer.access(),
@@ -57,7 +59,12 @@ pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileErro
 
                 if is_in {
                     if let Some(input) = node.inputs.iter().find(|i| i.buffer == buffer.name()) {
-                        inputs.push(ArtifactValueId(input.value.0));
+                        let value = ArtifactValueId(input.value.0);
+                        inputs.push(value);
+                        input_bindings.push(EntryResourceBinding {
+                            buffer: buffer.name().to_string(),
+                            value,
+                        });
                     }
                 }
                 if is_out {
@@ -67,7 +74,12 @@ pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileErro
                         .position(|o| o.buffer == buffer.name())
                     {
                         if let Some(output_id) = node.outputs.get(pos) {
-                            outputs.push(ArtifactValueId(output_id.0));
+                            let value = ArtifactValueId(output_id.0);
+                            outputs.push(value);
+                            output_bindings.push(EntryResourceBinding {
+                                buffer: buffer.name().to_string(),
+                                value,
+                            });
                         }
                     }
                 }
@@ -75,7 +87,9 @@ pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileErro
             EntryAbiRecord {
                 node: ArtifactNodeId(node.id.0),
                 inputs,
+                input_bindings,
                 outputs,
+                output_bindings,
             }
         })
         .collect();

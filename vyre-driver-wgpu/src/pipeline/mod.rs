@@ -54,6 +54,7 @@ pub(crate) type BindGroupLayoutCache = dashmap::DashMap<
 pub(crate) struct AuthenticatedTarget<'a> {
     pub(crate) wgsl: &'a str,
     pub(crate) descriptor: &'a vyre_lower::KernelDescriptor,
+    pub(crate) resource_bindings: &'a [vyre_megakernel::TargetResourceBinding],
 }
 
 /// GPU pipeline + **all** per-program dispatch metadata co-located for
@@ -311,6 +312,8 @@ impl WgpuPipeline {
     ) -> Result<Arc<Self>, BackendError> {
         let authenticated_wgsl = target.as_ref().map(|target| target.wgsl);
         let authenticated_descriptor = target.as_ref().map(|target| target.descriptor);
+        let authenticated_resource_bindings =
+            target.as_ref().map(|target| target.resource_bindings);
         let compile_program = program;
         let geometry = match authenticated_descriptor {
             Some(descriptor) => {
@@ -436,38 +439,38 @@ impl WgpuPipeline {
         )?;
         public_output_bindings.extend(output_bindings.iter().map(|output| output.binding));
         let buffers = program.buffers();
-        let mut explicit_output_bindings = FxHashSet::default();
+        let mut host_input_bindings = FxHashSet::default();
         reserve_hash_set_to_capacity(
-            &mut explicit_output_bindings,
+            &mut host_input_bindings,
             buffers.len(),
             "WGPU pipeline binding classification",
-            "explicit output binding",
-            "split the pipeline or reduce output binding fanout before compilation",
+            "host input binding",
+            "split the pipeline or reduce input binding fanout before compilation",
         )?;
-        let mut pipeline_live_out_bindings = FxHashSet::default();
-        reserve_hash_set_to_capacity(
-            &mut pipeline_live_out_bindings,
-            buffers.len(),
-            "WGPU pipeline binding classification",
-            "pipeline live-out binding",
-            "split the pipeline or reduce live-out binding fanout before compilation",
-        )?;
-        for buffer in buffers {
-            if buffer.is_output() {
-                explicit_output_bindings.insert(buffer.binding());
-            }
-            if buffer.is_pipeline_live_out() {
-                pipeline_live_out_bindings.insert(buffer.binding());
-            }
+        if let Some(resource_bindings) = authenticated_resource_bindings {
+            host_input_bindings.extend(
+                resource_bindings
+                    .iter()
+                    .filter(|binding| {
+                        binding.access != vyre_megakernel::TargetResourceAccess::WriteOnly
+                    })
+                    .map(|binding| (binding.group, binding.slot)),
+            );
+        } else {
+            host_input_bindings.extend(
+                buffers
+                    .iter()
+                    .filter(|buffer| {
+                        buffer.kind() != vyre_foundation::ir::MemoryKind::Shared
+                            && !buffer.is_backend_allocated_output()
+                    })
+                    .map(|buffer| (0, buffer.binding())),
+            );
         }
 
-        let buffer_bindings: Arc<[BufferBindingInfo]> = descriptor_buffer_bindings(
-            &descriptor,
-            &public_output_bindings,
-            &explicit_output_bindings,
-            &pipeline_live_out_bindings,
-        )?
-        .into();
+        let buffer_bindings: Arc<[BufferBindingInfo]> =
+            descriptor_buffer_bindings(&descriptor, &public_output_bindings, &host_input_bindings)?
+                .into();
 
         for (group, binding) in bindings_reflection::declared_bindings(&wgsl) {
             if !buffer_bindings
