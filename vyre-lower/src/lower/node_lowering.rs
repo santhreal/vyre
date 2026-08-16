@@ -405,6 +405,81 @@ impl LowerCtx {
                 });
                 Ok(())
             }
+            Node::TileMatmul { acc, a, b } => {
+                let acc_id = self.scope.get(acc).unwrap_or(0);
+                let a_id = self.scope.get(a).unwrap_or(0);
+                let b_id = self.scope.get(b).unwrap_or(0);
+                let result_id = self.alloc_value()?;
+                body.ops.push(KernelOp {
+                    kind: KernelOpKind::MatrixMma {
+                        shape: crate::MatrixMmaShape::M16N8K16,
+                        a_layout: crate::MatrixMmaLayout::RowMajor,
+                        b_layout: crate::MatrixMmaLayout::ColMajor,
+                        a_type: crate::MatrixMmaElement::F16,
+                        b_type: crate::MatrixMmaElement::F16,
+                        accum_type: crate::MatrixMmaElement::F32,
+                    },
+                    operands: vec![a_id, a_id, a_id, a_id, b_id, b_id, acc_id, acc_id, acc_id, acc_id],
+                    result: Some(result_id),
+                });
+                self.scope.bind(acc.clone(), result_id);
+                Ok(())
+            }
+            Node::TileLoad { tile, buffer, origin, .. } => {
+                let slot = self.buffer_slot(buffer)?;
+                let origin_id = if let Some(first) = origin.first() {
+                    self.lower_expr(first, body)?
+                } else {
+                    0
+                };
+                let result_id = self.alloc_value()?;
+                body.ops.push(KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![slot, origin_id],
+                    result: Some(result_id),
+                });
+                self.scope.bind(tile.clone(), result_id);
+                Ok(())
+            }
+            Node::TileStore { buffer, origin, tile } => {
+                let slot = self.buffer_slot(buffer)?;
+                let origin_id = if let Some(first) = origin.first() {
+                    self.lower_expr(first, body)?
+                } else {
+                    0
+                };
+                let tile_id = self.scope.get(tile).unwrap_or(0);
+                body.ops.push(KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![slot, origin_id, tile_id],
+                    result: None,
+                });
+                Ok(())
+            }
+            Node::TileReduce { out, tile, op, .. } => {
+                let tile_id = self.scope.get(tile).unwrap_or(0);
+                let result_id = self.alloc_value()?;
+                body.ops.push(KernelOp {
+                    kind: KernelOpKind::SubgroupReduce {
+                        op: *op,
+                    },
+                    operands: vec![tile_id],
+                    result: Some(result_id),
+                });
+                self.scope.bind(out.clone(), result_id);
+                Ok(())
+            }
+            Node::TileElementwise { out, inputs: _, body: inner_body } => {
+                self.lower_child_node(body, depth, inner_body, KernelOpKind::StructuredBlock)?;
+                let res_id = self.alloc_value()?;
+                self.scope.bind(out.clone(), res_id);
+                Ok(())
+            }
+            Node::TileDecl { name, .. } => {
+                let res_id = self.alloc_value()?;
+                self.scope.bind(name.clone(), res_id);
+                Ok(())
+            }
             other => Err(LowerError::UnsupportedConstruct(format!(
                 "node `{}` has no KernelDescriptor lowering. Fix: add a KernelOpKind mapping before routing this program through vyre-lower.",
                 node_op_id(other)

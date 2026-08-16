@@ -9,6 +9,7 @@
 - [LEGO-block rule](lego-block-rule.md)
 - [Parsing](architecture/parsing.md)
 - [The artifact is the output type](architecture/artifact.md)
+- [Tile values in the IR](design/tile-values.md)
 - [Vyre Crate Graph](CRATE_GRAPH.md)
 - [Vyre Crate Ownership](OWNERSHIP.md)
 - [Vyre architecture](ARCHITECTURE.md)

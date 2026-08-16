@@ -211,6 +211,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   a failure, so a new member or feature is red until a decision is recorded for
   it. The declaration half runs inside the gate sweep; the compile half is
   `--sweep` and CI owns it.
+- The IR now supports first-class Tile values with explicit element type,
+  static extents, layout, and hardware residency, introducing dedicated
+  TileLoad, TileStore, TileMatmul, TileReduce, TileElementwise, and TileDecl
+  statement nodes, capability validation, reference interpreter execution, and
+  VIR0 schema version 7 serialization.
 - `vyre_foundation::fp_parity::max_output_ulp` reports the largest ULP distance
   over a program's declared F32 output slots. Output-slot alignment is one
   internal walk shared with the tolerance comparison. The conform ULP audit

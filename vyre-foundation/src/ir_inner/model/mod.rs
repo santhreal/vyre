@@ -39,3 +39,6 @@ mod program_graph_wire;
 
 /// The frozen IR vocabulary re-exported from `vyre-spec`.
 pub(crate) mod op_signature;
+
+/// Tile values and layouts.
+pub(crate) mod tile;

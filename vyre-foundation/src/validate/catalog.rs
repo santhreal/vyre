@@ -626,6 +626,30 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         invariant: "async transfer writes into non-writable buffer `…`",
         corrective_action: "Declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup, or name a storage tier the dispatch does not bind.",
     },
+    ValidationRule {
+        code: "V135",
+        phase: ValidationPhase::Node,
+        invariant: "Tile operation violates residency or hardware limits",
+        corrective_action: "Validate with BackendCapabilities supporting sufficient shared memory and register limits, or adjust tile parameters.",
+    },
+    ValidationRule {
+        code: "V136",
+        phase: ValidationPhase::Node,
+        invariant: "Tile store operation references invalid or incompatible buffer",
+        corrective_action: "Declare the buffer before storing tiles to it.",
+    },
+    ValidationRule {
+        code: "V137",
+        phase: ValidationPhase::Node,
+        invariant: "Matrix multiplication tile operation requires tensor core instruction support",
+        corrective_action: "Validate with BackendCapabilities supporting tensor cores or lower to scalar operations.",
+    },
+    ValidationRule {
+        code: "V138",
+        phase: ValidationPhase::Node,
+        invariant: "Tile load operation references invalid or incompatible buffer",
+        corrective_action: "Declare the buffer before loading tiles from it.",
+    },
 ];
 
 /// Every registered validation rule, ordered by code.
