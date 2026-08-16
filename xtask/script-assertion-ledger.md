@@ -20,17 +20,17 @@ checkable. Every rule is in the registry once no row names a tracked file.
 
 ### Left the tree
 
-- `scripts/architecture_docs.py`
-- `scripts/bench/cross_backend_comparison.sh`
-- `scripts/bench_smoke.sh`
-- `scripts/check_bench_baselines.sh`
-- `scripts/check_bench_smoke_runtime.sh`
-- `scripts/check_deep_bench_coverage.sh`
-- `scripts/check_docs_references.py`
-- `scripts/check_public_api_snapshot.sh`
-- `scripts/docs.sh`
-- `scripts/lib/check_deep_bench_coverage.py`
-- `scripts/public_api_snapshot_inventory.py`
+- scripts/architecture_docs.py
+- scripts/bench/cross_backend_comparison.sh
+- scripts/bench_smoke.sh
+- scripts/check_bench_baselines.sh
+- scripts/check_bench_smoke_runtime.sh
+- scripts/check_deep_bench_coverage.sh
+- scripts/check_docs_references.py
+- scripts/check_public_api_snapshot.sh
+- scripts/docs.sh
+- scripts/lib/check_deep_bench_coverage.py
+- scripts/public_api_snapshot_inventory.py
 
 ### Nothing invokes it
 
@@ -64,7 +64,7 @@ Exits nonzero on:
 - wrong repository
 - a failing `ci-required` gate
 
-### `scripts/architecture_docs.py`
+### scripts/architecture_docs.py
 
 Subject: gone: the script is not in the tree. docs/ARCHITECTURE.md, docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/optimization/OWNERSHIP.toml, docs/CRATE_OWNERSHIP.toml and release/release-train.toml are tracked, and the gates below read them.
 
@@ -96,7 +96,7 @@ Findings:
 - validate raises on the first failure, so a tree with ten violations reports one. The gate collects findings instead, which is also what makes the pinned count meaningful.
 - OPERATION_SCHEMA_VERSION = 4 is duplicated here and in xtask-registry/src/docs/operation_schema/mod.rs. The gate reads the Rust constant instead of restating the number.
 
-### `scripts/bench/cross_backend_comparison.sh`
+### scripts/bench/cross_backend_comparison.sh
 
 Subject: gone: the script is not in the tree, and it wrapped a registered subcommand whose table now lives in the committed release evidence.
 
@@ -117,7 +117,7 @@ Findings:
 
 - It is a wrapper around a registered subcommand and wrote generated Markdown into a gitignored directory, so a fresh checkout was red and one local run turned it green. Nothing invoked it.
 
-### `scripts/bench_smoke.sh`
+### scripts/bench_smoke.sh
 
 Subject: gone: the script is not in the tree.
 
@@ -133,7 +133,7 @@ Exits nonzero on:
 
 - any bench failure
 
-### `scripts/check_bench_baselines.sh`
+### scripts/check_bench_baselines.sh
 
 Subject: gone: the script is not in the tree.
 
@@ -157,7 +157,7 @@ Findings:
 - Nothing invokes it. A published-baseline claim that no workflow checks is a claim.
 - It walks the filesystem with `find` rather than tracked files, so an untracked benches/*.rs in a dev tree demands a section that CI never asks for.
 
-### `scripts/check_bench_smoke_runtime.sh`
+### scripts/check_bench_smoke_runtime.sh
 
 Subject: gone: the script is not in the tree.
 
@@ -205,7 +205,7 @@ Exits nonzero on:
 - no gpu_parity target
 - any test failure
 
-### `scripts/check_deep_bench_coverage.sh`
+### scripts/check_deep_bench_coverage.sh
 
 Subject: gone: the script is not in the tree.
 
@@ -221,7 +221,7 @@ Exits nonzero on:
 
 - whatever check_deep_bench_coverage.py exits nonzero on
 
-### `scripts/check_docs_references.py`
+### scripts/check_docs_references.py
 
 Subject: gone: the script is not in the tree. The documents it read are tracked: docs Markdown, root Markdown, .github Markdown and the crate READMEs.
 
@@ -310,7 +310,7 @@ Findings:
 - Roughly 60 assertions are `grep -q` over JSON, so a counter renamed inside a nested object still matches, and a field present with a null value passes. The gate parses the JSON and asserts the fields.
 - The artifact count of 7 is a literal in a grep pattern, so adding an eighth artifact fails with a message about a missing string rather than about the count.
 
-### `scripts/check_public_api_snapshot.sh`
+### scripts/check_public_api_snapshot.sh
 
 Subject: gone: the script is not in the tree; docs/public-api/*.txt are tracked.
 
@@ -453,7 +453,7 @@ Findings:
 - Every generated block links docs/testing/<crate>.md for testing commands. All 31 of those guides were deleted at b1ed746d1c, so 31 crate READMEs point a reader at nothing. That is a live defect in tracked files, and the gate reports one finding per dangling guide link.
 - It imports ContractError, load_registry, read_toml, validate and workspace_state from crate_ownership, so the registry contract and the README generator are one dependency chain. Both land in the same gate pair.
 
-### `scripts/docs.sh`
+### scripts/docs.sh
 
 Subject: gone: the script is not in the tree.
 
@@ -554,7 +554,7 @@ Findings:
 
 - Nothing remains open.
 
-### `scripts/lib/check_deep_bench_coverage.py`
+### scripts/lib/check_deep_bench_coverage.py
 
 Subject: gone: the script is not in the tree.
 
@@ -735,7 +735,7 @@ Findings:
 
 - Nothing remains open.
 
-### `scripts/public_api_snapshot_inventory.py`
+### scripts/public_api_snapshot_inventory.py
 
 Subject: gone: the script is not in the tree.
 
@@ -947,14 +947,14 @@ The `findings` column is the count with the injection applied, given the pin in
 | `readback-ring` | In `vyre-driver-wgpu/src/engine/record_and_readback/mod.rs`, rename `.arm_ticket(` to `.arm(` at its definition and its call sites. | 0 to 1 |
 | `readback-ring` | In `vyre-driver-wgpu/src/lib.rs`, replace `ReadbackRingSet::new()` with `ReadbackRingSet::default()`. | 0 to 1 |
 | `program-wire-fields` | Add `pub scratch_hint: u32,` to `Program` in `vyre-foundation/src/ir_inner/model/program/definition.rs`. | 0 to 1 |
-| `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire/mod.rs` and `decode/from_wire.rs`. | 0 to 1 |
+| `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire/mod.rs` and `vyre-foundation/src/serial/wire/decode/from_wire/mod.rs`. | 0 to 1 |
 | `program-wire-fields` | Rename `pub struct Program` to `pub struct ProgramInner`. | gate errors, which is the intended outcome: the declaration is located, not named, so losing it is unmeasurable rather than clean |
 | `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr_visitor/mod.rs`. | 1 to 2 |
 | `frozen-contracts` | Delete `docs/frozen-traits/MutationClass.txt`. | 1 to 2 |
 | `frozen-contracts` | Reindent the body of `pub enum AlgebraicLaw` by four spaces. | stays 1; indentation is not part of the contract |
 | `file-size` | Append 200 blank lines to `vyre-foundation/src/optimizer/fact_cache/mod.rs` (measured 570, cap 599). | 75 to 76 |
 | `file-size` | Append 60 lines to `vyre-libs/src/decode/inflate.rs` (measured 554, cap 582). | 75 to 76 |
-| `file-size` | Add a row to the audit ceilings naming `vyre-does-not-exist/src/lib.rs`. | 75 to 76 |
+| `file-size` | Add a row to the audit ceilings naming vyre-does-not-exist/src/lib.rs. | 75 to 76 |
 | `gpu-loudness` | Add `#[cfg(not(feature = "gpu"))]` above a test in `vyre-driver-wgpu/tests/` with no loud abort within ten lines above or twenty below. | 2 to 3 |
 | `gpu-loudness` | Add `if adapter.is_err() { return; }` to a test body. | 2 to 3 |
 | `gpu-loudness` | Add `Backend::acquire_or_panic();` five lines below an existing finding site in `conform/vyre-conform/tests/cert_artifact/prove_failure_contracts.rs`. | 2 to 1, which is the allowance working rather than a failure |
