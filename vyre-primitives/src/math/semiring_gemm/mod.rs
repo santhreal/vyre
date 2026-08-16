@@ -51,6 +51,9 @@ use crate::fixed_u32_matmul::u32_matmul_program;
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::math::semiring_gemm";
 
+mod wide;
+pub use wide::{semiring_gemm_wide, SEMIRING_GEMM_WIDE_WORKGROUP_SIZE};
+
 fn semiring_combine_expr(semiring: Semiring, a: Expr, b: Expr) -> Expr {
     match semiring {
         Semiring::Real | Semiring::MaxTimes => Expr::mul(a, b),

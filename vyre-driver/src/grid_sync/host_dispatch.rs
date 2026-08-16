@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use vyre_foundation::ir::{Ident, Program};
 
-use super::barrier_split::contains_grid_sync;
+use super::contains_grid_sync;
 use super::live_buffers::{
     borrowed_grid_sync_inputs_by_name, collect_final_named_outputs, owned_accumulator_fingerprint,
     refresh_named_outputs, GridSyncInput,
@@ -325,7 +325,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid_sync::barrier_split::entry_sequence;
+    use crate::grid_sync::entry_sequence;
     use crate::grid_sync::segment_buffers::{
         segment_buffer_consumes_input, segment_buffer_produces_output, segment_output_names,
     };

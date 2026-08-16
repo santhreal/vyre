@@ -62,18 +62,20 @@
 
 use std::collections::{HashMap, HashSet};
 
+use vyre_foundation::ir::Program;
+use vyre_foundation::transform::grid_sync_split as ir_split;
+
 use crate::backend::BackendError;
 
-mod barrier_split;
 mod host_dispatch;
-mod let_propagation;
 mod live_buffers;
 mod resident_dispatch;
 mod segment_buffers;
 #[cfg(test)]
 mod test_programs;
 
-pub use barrier_split::{contains_grid_sync, split_on_grid_sync, try_split_on_grid_sync};
+pub use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
+pub(crate) use vyre_foundation::transform::grid_sync_split::entry_sequence;
 pub use host_dispatch::{
     dispatch_with_grid_sync_split, dispatch_with_grid_sync_split_into,
     dispatch_with_grid_sync_split_timed, dispatch_with_grid_sync_split_via,
@@ -83,6 +85,31 @@ pub use resident_dispatch::{
     dispatch_resident_grid_sync_fixpoint_into, dispatch_resident_with_grid_sync_split_timed,
 };
 pub use segment_buffers::plan_host_grid_sync_segment_programs;
+
+/// Split `program` at every grid-sync fence, or produce no segments when the
+/// split itself fails.
+///
+/// Every dispatch route rejects an empty segment list through
+/// [`reject_empty_grid_sync_split`], so a failed split cannot be mistaken for a
+/// program that had nothing to run.
+#[must_use]
+pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
+    try_split_on_grid_sync(program).unwrap_or_default()
+}
+
+/// Fallible variant of [`split_on_grid_sync`] for production dispatch paths.
+///
+/// # Errors
+///
+/// Returns an actionable [`BackendError`] if segment storage cannot be reserved
+/// or if split accounting overflows.
+pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, BackendError> {
+    ir_split::split_on_grid_sync(program).map_err(|error| BackendError::InvalidProgram {
+        fix: format!(
+            "{error} Run on a backend with native grid sync, or reduce the number of grid-sync segments."
+        ),
+    })
+}
 
 // Split plumbing shared by more than one child module: fallible capacity
 // reservation, segment error context, and the timed-dispatch wall clock.

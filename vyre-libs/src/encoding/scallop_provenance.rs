@@ -116,6 +116,7 @@ pub fn build_provenance_program(n: u32, max_iterations: u32) -> Program {
         "provenance_join_rules",
         "provenance_changed",
         n,
+        1,
         max_iterations,
     )
 }
@@ -161,6 +162,7 @@ pub fn reference_provenance_closure_with_scratch(
         state,
         join_rules,
         n,
+        1,
         max_iterations,
         &mut scratch.closure,
         &mut scratch.join_scratch,

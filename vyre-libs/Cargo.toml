@@ -136,6 +136,7 @@ vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
 vyre-lower = { path = "../vyre-lower" }
 vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 vyre-driver = { path = "../vyre-driver" }
+vyre-megakernel = { path = "../vyre-megakernel" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
 naga.workspace = true

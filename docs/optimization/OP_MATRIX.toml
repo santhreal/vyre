@@ -1758,21 +1758,6 @@ tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
-family = "vyre-primitives::math::scallop_join_wide"
-tier = "intrinsic"
-owners = ["vyre-primitives/src/math"]
-ops = ["vyre-primitives::math::scallop_join_wide"]
-registry_sources = ["vyre-foundation::operation"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
 family = "vyre-primitives::math::semiring_gemm"
 tier = "intrinsic"
 owners = ["vyre-primitives/src/math"]

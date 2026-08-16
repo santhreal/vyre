@@ -7,6 +7,7 @@
 
 use std::fmt::Write as _;
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 use super::memory::AsyncCopyDirection;
@@ -206,7 +207,18 @@ impl BodyCtx<'_> {
                                 .to_string(),
                         ));
                     }
+                } else if matches!(
+                    ordering,
+                    MemoryOrdering::Acquire | MemoryOrdering::Release | MemoryOrdering::AcqRel
+                ) {
+                    // A one-sided or two-sided acquire/release names global memory
+                    // visibility, not thread convergence. `membar.gl` publishes the
+                    // preceding stores at device scope without stalling the CTA.
+                    let _ = writeln!(self.text, "    membar.gl;");
                 } else {
+                    // `SeqCst` is a full barrier within the issuing workgroup, and any
+                    // ordering added to the non-exhaustive enum later gets the strongest
+                    // CTA-scope construct until it is mapped deliberately.
                     let _ = writeln!(self.text, "    bar.sync 0;");
                 }
             }
