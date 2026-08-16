@@ -5,19 +5,23 @@
 //! the eigenvectors). This is the numerical core of the tensor-train SVD (`tensor_train_decompose`)
 //! (a truncated SVD of `A` is obtained from the eigendecomposition of the Gram matrix `AᵀA`).
 //!
-//! The algorithm is inherently sequential (each sweep picks the largest off-diagonal entry and
-//! applies one Givens rotation that depends on the current matrix), so the kernel runs on a single
-//! lane (`InvocationId == 0`), the canonical GPU serial-region idiom (cf. `sheaf_laplacian_eigenvalue`,
-//! matroid). It mirrors the CPU reference [`crate::math::tensor_train_decompose`]'s
-//! `symmetric_eigen_jacobi_into` step for step, so the two agree up to f32-vs-f64 rounding; the
-//! kernel is verified by the basis/order-invariant eigenpair contract (`A·vᵢ ≈ λᵢ·vᵢ` and `VᵀV ≈ I`)
-//! rather than element-wise, because near-degenerate eigenvalues admit different-but-valid
-//! eigenvector bases.
+//! One sweep is sequential in the matrix: it picks the largest off-diagonal entry and applies one
+//! Givens rotation that depends on the current matrix, so sweep `k + 1` cannot start before sweep
+//! `k`'s rotation has landed. The pivot SEARCH inside a sweep is not sequential — it is an argmax
+//! over the `n²` index pairs — so the kernel runs a workgroup of lanes: the search is a cooperative
+//! reduction ([`crate::builder::cooperative::Argmax`]) and only the rotation, the identity seeding,
+//! the sign pass and the diagonal read-out stay on one lane, each behind a barrier. The serial work
+//! per sweep drops from `n²` iterations in one lane to `n² / lanes` plus a log-depth tree. It
+//! mirrors the CPU reference [`crate::math::tensor_train_decompose`]'s `symmetric_eigen_jacobi_into`
+//! step for step, so the two agree up to f32-vs-f64 rounding; the kernel is verified by the
+//! basis/order-invariant eigenpair contract (`A·vᵢ ≈ λᵢ·vᵢ` and `VᵀV ≈ I`) rather than element-wise,
+//! because near-degenerate eigenvalues admit different-but-valid eigenvector bases.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::builder::cooperative::{Argmax, KeyKind, LANES};
 use crate::math::eigenvector_column_sign::eigenvector_column_sign_region;
 use crate::math::jacobi_apply_rotation::jacobi_apply_rotation_region;
 use crate::math::matrix_diagonal_extract::matrix_diagonal_extract_region;
@@ -31,9 +35,29 @@ pub const OP_ID: &str = "vyre-primitives::math::symmetric_eigen_jacobi";
 /// usable precision.
 const JACOBI_EPS: f32 = 1.0e-6;
 
-/// `row * n + col` flat index for an `n`-column row-major matrix.
-fn idx(row: Expr, n: u32, col: Expr) -> Expr {
-    Expr::add(Expr::mul(row, Expr::u32(n)), col)
+/// Workgroup scratch the pivot key reduces through, one f32 entry per lane.
+const JACOBI_PIVOT_KEY: &str = "jac_pivot_key";
+
+/// Workgroup scratch the pivot index reduces through, one u32 entry per lane.
+const JACOBI_PIVOT_INDEX: &str = "jac_pivot_index";
+
+/// The workgroup shape a program splicing [`jacobi_eigen_body`] dispatches.
+#[must_use]
+pub fn jacobi_workgroup() -> [u32; 3] {
+    [LANES, 1, 1]
+}
+
+/// The two workgroup scratch buffers [`jacobi_eigen_body`] reduces the pivot through.
+///
+/// Every program that splices the body declares these and dispatches
+/// [`jacobi_workgroup`], so the two callers cannot disagree about a name or a width. A missing
+/// declaration is not a wrong answer, it is a program the backend refuses to lower.
+#[must_use]
+pub fn jacobi_scratch_buffers() -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::workgroup(JACOBI_PIVOT_KEY, LANES, DataType::F32),
+        BufferDecl::workgroup(JACOBI_PIVOT_INDEX, LANES, DataType::U32),
+    ]
 }
 
 /// Number of Jacobi sweeps, matching the CPU reference `(16 * n² ).max(32)`.
@@ -42,7 +66,7 @@ pub fn jacobi_sweeps(n: u32) -> u32 {
     (16u32.saturating_mul(n).saturating_mul(n)).max(32)
 }
 
-/// Build the serial Jacobi eigensolve body (already lane-guarded by the caller). `a` is the f32
+/// Build the Jacobi eigensolve body. `a` is the f32
 /// symmetric matrix buffer (mutated in place to near-diagonal form; its diagonal becomes the
 /// eigenvalues), `eigenvectors` receives the accumulated rotation matrix `V` (columns = eigenvectors),
 /// `eigenvalues` receives `diag(A)` after convergence. All three are `n x n` / `n` f32 buffers.
@@ -56,91 +80,84 @@ pub fn jacobi_sweeps(n: u32) -> u32 {
 /// Emitted by exactly two callers: [`symmetric_eigen_jacobi`] (standalone Program) and
 /// [`crate::math::tensor_train_decompose::tensor_train_decompose_step`] (via
 /// [`jacobi_eigen_region`]), so the rotation policy lives in ONE place.
+///
+/// The body binds `local` and reduces the pivot through the scratch of
+/// [`jacobi_scratch_buffers`], so a program that splices it declares those buffers and runs
+/// [`jacobi_workgroup`] lanes. It guards its own writes: the identity seeding, the rotation, the
+/// sign pass and the diagonal read-out run on lane 0 of the first workgroup, and every barrier sits
+/// outside those guards, so a wider dispatch computes the same pivot without a second workgroup
+/// touching `a`.
 #[must_use]
 pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> Vec<Node> {
     let sweeps = jacobi_sweeps(n);
+    let pivot = Argmax {
+        op_id: OP_ID,
+        count: n.saturating_mul(n),
+        tile: LANES,
+        key_scratch: JACOBI_PIVOT_KEY,
+        key_kind: KeyKind::F32,
+        index_scratch: JACOBI_PIVOT_INDEX,
+        var: "jac_pair",
+    };
+    // The search key: `|A[i,j]|` on the strictly upper triangle, 0 elsewhere. The pair index is
+    // row-major, so `pair / n` is the row and `pair % n` the column, and the diagonal and lower
+    // triangle score 0, which loses to any entry the threshold would rotate on. A key of 0 also
+    // makes an already-diagonal matrix pick pair 0 and rotate nothing.
+    let key = |pair: Expr| {
+        Expr::select(
+            Expr::lt(
+                Expr::div(pair.clone(), Expr::u32(n)),
+                Expr::rem(pair.clone(), Expr::u32(n)),
+            ),
+            Expr::abs(Expr::load(a, pair)),
+            Expr::f32(0.0),
+        )
+    };
+    // One lane of one workgroup. A rotation rewrites two rows and two columns of `a` and of `V`,
+    // and the next sweep's search reads what it wrote, so the phases that mutate shared state are
+    // serial by the algorithm and only the search is not.
+    let serial = |body: Vec<Node>| {
+        Node::if_then(
+            Expr::and(
+                Expr::is_first_workgroup(),
+                Expr::eq(Expr::var("local"), Expr::u32(0)),
+            ),
+            body,
+        )
+    };
+
+    // One sweep: cooperative argmax over the pair space, then the rotation the winner asks for.
+    let mut sweep = pivot.nodes(key);
+    sweep.extend([
+        Node::let_bind("jac_pivot", Expr::load(JACOBI_PIVOT_INDEX, Expr::u32(0))),
+        Node::let_bind("jac_p", Expr::div(Expr::var("jac_pivot"), Expr::u32(n))),
+        Node::let_bind("jac_q", Expr::rem(Expr::var("jac_pivot"), Expr::u32(n))),
+        Node::let_bind("jac_maxod", Expr::load(JACOBI_PIVOT_KEY, Expr::u32(0))),
+        // Rotate only when the largest off-diagonal exceeds the convergence threshold.
+        serial(vec![Node::if_then(
+            Expr::gt(Expr::var("jac_maxod"), Expr::f32(JACOBI_EPS)),
+            vec![jacobi_apply_rotation_region(
+                OP_ID,
+                a,
+                eigenvectors,
+                n,
+                &Expr::var("jac_p"),
+                &Expr::var("jac_q"),
+            )],
+        )]),
+        // Publish the rotation to the lanes that search over it next sweep.
+        Node::barrier(),
+    ]);
+
     vec![
-        matrix_identity_fill_region(OP_ID, eigenvectors, n),
-        // Sweep loop: each iteration zeroes the largest off-diagonal entry via one
-        // Givens rotation. The pivot search stays here because `jac_p`, `jac_q` and
-        // `jac_maxod` are read by the rotation guard and a `Node::Region` scopes its
-        // body, so searching inside a child region would not publish them.
-        Node::loop_for(
-            "jac_sweep",
-            Expr::u32(0),
-            Expr::u32(sweeps),
-            vec![
-                // Find (p, q) = argmax_{i<j} |A[i,j]| and maxod = that magnitude.
-                Node::let_bind("jac_maxod", Expr::f32(0.0)),
-                Node::let_bind("jac_p", Expr::u32(0)),
-                Node::let_bind("jac_q", Expr::u32(0)),
-                Node::loop_for(
-                    "jac_si",
-                    Expr::u32(0),
-                    Expr::u32(n),
-                    vec![Node::loop_for(
-                        "jac_sj",
-                        Expr::u32(0),
-                        Expr::u32(n),
-                        vec![Node::if_then(
-                            Expr::lt(Expr::var("jac_si"), Expr::var("jac_sj")),
-                            vec![
-                                Node::let_bind(
-                                    "jac_av",
-                                    Expr::abs(Expr::load(
-                                        a,
-                                        idx(Expr::var("jac_si"), n, Expr::var("jac_sj")),
-                                    )),
-                                ),
-                                Node::let_bind(
-                                    "jac_isgt",
-                                    Expr::gt(Expr::var("jac_av"), Expr::var("jac_maxod")),
-                                ),
-                                Node::assign(
-                                    "jac_p",
-                                    Expr::select(
-                                        Expr::var("jac_isgt"),
-                                        Expr::var("jac_si"),
-                                        Expr::var("jac_p"),
-                                    ),
-                                ),
-                                Node::assign(
-                                    "jac_q",
-                                    Expr::select(
-                                        Expr::var("jac_isgt"),
-                                        Expr::var("jac_sj"),
-                                        Expr::var("jac_q"),
-                                    ),
-                                ),
-                                Node::assign(
-                                    "jac_maxod",
-                                    Expr::select(
-                                        Expr::var("jac_isgt"),
-                                        Expr::var("jac_av"),
-                                        Expr::var("jac_maxod"),
-                                    ),
-                                ),
-                            ],
-                        )],
-                    )],
-                ),
-                // Rotate only when the largest off-diagonal exceeds the convergence
-                // threshold.
-                Node::if_then(
-                    Expr::gt(Expr::var("jac_maxod"), Expr::f32(JACOBI_EPS)),
-                    vec![jacobi_apply_rotation_region(
-                        OP_ID,
-                        a,
-                        eigenvectors,
-                        n,
-                        &Expr::var("jac_p"),
-                        &Expr::var("jac_q"),
-                    )],
-                ),
-            ],
-        ),
-        eigenvector_column_sign_region(OP_ID, eigenvectors, n),
-        matrix_diagonal_extract_region(OP_ID, a, eigenvalues, n),
+        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        serial(vec![matrix_identity_fill_region(OP_ID, eigenvectors, n)]),
+        Node::barrier(),
+        Node::loop_for("jac_sweep", Expr::u32(0), Expr::u32(sweeps), sweep),
+        serial(vec![
+            eigenvector_column_sign_region(OP_ID, eigenvectors, n),
+            matrix_diagonal_extract_region(OP_ID, a, eigenvalues, n),
+        ]),
     ]
 }
 
@@ -175,28 +192,25 @@ pub fn jacobi_eigen_region(
 /// - `eigenvalues`: `n` output; `eigenvalues[k] = A_rotated[k,k]`.
 #[must_use]
 pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> Program {
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((eigenvalues, DataType::F32)), message),
     };
 
     let body = jacobi_eigen_body(a, eigenvectors, eigenvalues, n);
+    let mut buffers = vec![
+        BufferDecl::storage(a, 0, BufferAccess::ReadWrite, DataType::F32).with_count(cells),
+        BufferDecl::storage(eigenvectors, 1, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(cells),
+        BufferDecl::storage(eigenvalues, 2, BufferAccess::ReadWrite, DataType::F32).with_count(n),
+    ];
+    buffers.extend(jacobi_scratch_buffers());
+    // No lane guard here: the body guards the phases that write and leaves the barriers uniform, so
+    // a guard around the whole thing would put every barrier inside a non-uniform branch.
     Program::wrapped(
-        vec![
-            BufferDecl::storage(a, 0, BufferAccess::ReadWrite, DataType::F32).with_count(cells),
-            BufferDecl::storage(eigenvectors, 1, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(cells),
-            BufferDecl::storage(eigenvalues, 2, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(n),
-        ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                body,
-            )],
-        )],
+        buffers,
+        jacobi_workgroup(),
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -240,7 +254,7 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
 // eigenvalues that are not (2.0 and 13.0, each a sum of two cancelling terms) land 1 ULP low.
 // Nothing here justifies a wider window.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || symmetric_eigen_jacobi("a", "evec", "eval", 4),
         Some(|| {

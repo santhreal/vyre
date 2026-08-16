@@ -52,7 +52,7 @@ pub fn matrix_diagonal_extract_region(
 /// Build a standalone diagonal read-out Program.
 #[must_use]
 pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program {
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((diagonal, DataType::F32)), message),
     };
@@ -81,7 +81,7 @@ pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program 
 // ORACLE: the diagonal of that matrix is [1, 5, 9] by inspection. Small integers
 // are exact in f32 and the operation only copies, so no tolerance applies.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || matrix_diagonal_extract("m", "diag", 3),
         Some(|| {

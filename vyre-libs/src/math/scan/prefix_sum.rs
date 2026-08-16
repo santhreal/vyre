@@ -6,14 +6,20 @@
 //! the multi-block chain. The primitives own the two bodies and neither of them
 //! chooses.
 
+use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
+use crate::plumbing::program::attribution::attribute_child_nodes;
+use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Program;
-use crate::math::prefix_scan::{
-    prefix_scan_with_op_id, ScanKind, MAX_SINGLE_BLOCK_SCAN,
-};
-use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
+
+/// The single-block scan body, as a phase boundary inside one operation.
+///
+/// It carries the `anonymous::` prefix over the builder's own id because that
+/// id registers no canonical operation, and a child region naming an
+/// unregistered id claims a building block that does not exist.
+const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-primitives::math::prefix_scan_inclusive_sum";
 
 /// Build a Program that computes the inclusive prefix sum of `input`
 /// into `output`, both sized `n`.
@@ -31,17 +37,27 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
         );
     }
     if n <= MAX_SINGLE_BLOCK_SCAN {
-        prefix_scan_with_op_id(input, output, n, ScanKind::InclusiveSum, OP_ID)
+        compose_scan_primitive(
+            SINGLE_BLOCK_CHILD,
+            prefix_scan(input, output, n, ScanKind::InclusiveSum),
+        )
     } else {
-        wrap_large_scan_program(multi_block_prefix_scan_sum_u32(input, output, n))
+        compose_scan_primitive(
+            crate::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM,
+            multi_block_prefix_scan_sum_u32(input, output, n),
+        )
     }
 }
 
-fn wrap_large_scan_program(program: Program) -> Program {
-    // Only the entry changes, so rebuild only the entry. `Program::wrapped`
-    // would deep-clone the buffer table and reset the metadata flags.
-    let tagged = vec![wrap_anonymous_region(OP_ID, program.entry().to_vec())];
-    program.with_rewritten_wrapped_entry(tagged)
+/// Declare the scan primitive this composition selected as its child.
+///
+/// The primitive builds its own region; this replaces that region with the
+/// same body under the same generator, attributed to this composition, so the
+/// selection is an edge to a registered building block rather than a relabel
+/// of the body.
+fn compose_scan_primitive(child_id: &'static str, program: Program) -> Program {
+    let child = attribute_child_nodes(OP_ID, child_id, &program);
+    program.with_rewritten_wrapped_entry(vec![wrap_anonymous_region(OP_ID, child)])
 }
 
 inventory::submit! {
@@ -142,7 +158,12 @@ mod tests {
     fn prefix_sum_boundary_large_path_is_parallel_multi_block() {
         let program = scan_prefix_sum("input", "output", 1025);
         assert_top_region_generator(&program, OP_ID);
-        assert_eq!(program.workgroup_size(), [1024, 1, 1]);
+        // The width is owned by `multi_block_prefix_scan`, which declares the portable invocation
+        // floor. Restating a number here would pin the test to a width the scan no longer uses.
+        assert_eq!(
+            program.workgroup_size(),
+            [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1]
+        );
         assert!(
             !contains_loop(&program),
             "large scan_prefix_sum must not route through a serial per-element loop"
@@ -162,7 +183,11 @@ mod tests {
         for n in 1025..=4097 {
             let program = scan_prefix_sum("input", "output", n);
             assert_top_region_generator(&program, OP_ID);
-            assert_eq!(program.workgroup_size(), [1024, 1, 1], "n={n}");
+            assert_eq!(
+                program.workgroup_size(),
+                [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1],
+                "n={n}"
+            );
             assert!(
                 !contains_loop(&program),
                 "n={n}: large scan_prefix_sum must not emit a serial loop"

@@ -338,6 +338,83 @@ fn benchmark_target_contracts_cover_release_workload_case_ids() {
     }
 }
 
+/// The manifest and the harness each name a primitive, a CPU baseline and a
+/// speedup threshold for every release macro workload, and only the harness
+/// decides what a run enforces. A row that disagrees is a published claim no
+/// clock produced.
+///
+/// WHY: the manifest carried `cpu_baseline = "tree-sitter/libclang-class CPU AST
+/// traversal baseline"` and the harness timed an in-process scalar loop, so the
+/// row named an engine that never ran. Every row read as valid because the only
+/// checks were non-empty and positive. The roster is read from the harness, so a
+/// new workload without a row fails here rather than passing in silence.
+///
+/// Does not catch a threshold that is wrong on both sides; that is what
+/// re-measuring the baseline is for.
+#[test]
+fn release_workload_rows_agree_with_the_contract_the_harness_enforces() {
+    let manifest = toml::from_str::<toml::Value>(BENCH_TARGETS)
+        .expect("Fix: BENCH_TARGETS.toml must parse as TOML.");
+    let targets = manifest
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: BENCH_TARGETS.toml must contain [[target]] rows.");
+    let specs = vyre_bench::cases::release_workloads::release_macro_program_specs();
+    assert!(
+        !specs.is_empty(),
+        "Fix: the release macro roster must expose at least one workload."
+    );
+    let mut failures = Vec::new();
+    for spec in &specs {
+        let matching = targets
+            .iter()
+            .filter(|target| {
+                target.get("bench_case_id").and_then(toml::Value::as_str) == Some(spec.id)
+            })
+            .collect::<Vec<_>>();
+        let [row] = matching.as_slice() else {
+            failures.push(format!(
+                "Fix: release workload `{}` is named by {} BENCH_TARGETS row(s); it needs exactly one.",
+                spec.id,
+                matching.len()
+            ));
+            continue;
+        };
+        let primitive = row
+            .get("primitive")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        if primitive != spec.primitive {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS row for `{}` names primitive `{primitive}` where the harness contract names `{}`.",
+                spec.id, spec.primitive
+            ));
+        }
+        let cpu_baseline = row
+            .get("cpu_baseline")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        if cpu_baseline != spec.cpu_baseline {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS row for `{}` names CPU baseline `{cpu_baseline}` where the harness times `{}`.",
+                spec.id, spec.cpu_baseline
+            ));
+        }
+        let threshold = row
+            .get("min_speedup_over_cpu_sota")
+            .and_then(toml::Value::as_float)
+            .unwrap_or_default();
+        let enforced = f64::from(spec.min_speedup_x);
+        if threshold != enforced {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS row for `{}` requires {threshold}x where the harness enforces {enforced}x. A fractional threshold needs ReleaseMacroProgramSpec::min_speedup_x widened past u32.",
+                spec.id
+            ));
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
 fn case_id_from_command(command: &str) -> Option<String> {
     let mut parts = command.split_whitespace();
     while let Some(part) = parts.next() {

@@ -188,14 +188,14 @@ pub fn try_sinkhorn_iter_cpu_into(
     Ok(())
 }
 
-crate::scratch::define_reserve_capacity!(
+crate::plumbing::host::scratch::define_reserve_capacity!(
     reserve_sinkhorn_tmp,
     f64,
     "Sinkhorn CPU oracle"
 );
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             sinkhorn_scale("a", "b", "out", 4)

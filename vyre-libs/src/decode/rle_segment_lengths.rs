@@ -418,7 +418,7 @@ fn fixture_u32(words: &[u32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || rle_segment_lengths(3),
         Some(|| {

@@ -232,6 +232,7 @@ fn refresh_readwrite_inputs(
     Ok(())
 }
 
+// Inline: covers `GridSyncInput`, `refresh_readwrite_inputs`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

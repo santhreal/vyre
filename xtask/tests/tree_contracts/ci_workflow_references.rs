@@ -363,22 +363,28 @@ fn every_target_a_workflow_names_exists_in_the_package_it_addresses() {
     );
 }
 
+/// A workflow step runs no repository script.
+///
+/// WHY: every CI assertion is a registered `xtask` gate, so a step that shells
+/// into a repository script carries an assertion the registry, the baseline and
+/// the subset roster cannot see. The scripts still tracked are operator actions
+/// with no assertion, recorded in `xtask/script-assertion-ledger.md`, and no
+/// workflow invokes one. This goes red on the first step that does, whether the
+/// script is published or not.
 #[test]
-fn every_script_a_workflow_runs_is_published() {
+fn no_workflow_step_runs_a_repository_script() {
     let root = workspace_root();
     let mut offenders = Vec::new();
-    let mut checked = 0_usize;
+    let mut commands_read = 0_usize;
 
     for (workflow, commands) in workflow_files(&root) {
         for command in &commands {
+            commands_read += 1;
             for reference in references(&workflow, command) {
                 if reference.kind != Kind::Script {
                     continue;
                 }
-                checked += 1;
-                if !root.join(&reference.name).is_file() {
-                    offenders.push(format!("{}: {}", reference.workflow, reference.name));
-                }
+                offenders.push(format!("{}: {}", reference.workflow, reference.name));
             }
         }
     }
@@ -386,13 +392,14 @@ fn every_script_a_workflow_runs_is_published() {
     offenders.dedup();
 
     assert!(
-        checked > 0,
-        "Fix: no workflow step runs a repository script, so this gate guards nothing"
+        commands_read > 0,
+        "Fix: no workflow step reached this gate, so it guards nothing"
     );
     assert!(
         offenders.is_empty(),
-        "{offenders:#?} run a script that is not in this tree. Fix: publish it, correct the \
-         path, or drop the step."
+        "{offenders:#?} run a repository script from a workflow step. Fix: register the \
+         assertion as an `xtask` gate, name that gate in the step, and record the departure in \
+         `xtask/script-assertion-ledger.md`."
     );
 }
 

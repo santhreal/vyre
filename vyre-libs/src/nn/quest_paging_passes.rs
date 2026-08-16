@@ -220,7 +220,7 @@ pub fn quest_select_top_k(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         QUEST_ZERO_FILL_OP_ID,
         || quest_zero_fill("io", 4),
         Some(|| {
@@ -233,7 +233,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         QUEST_SCORE_PAGES_OP_ID,
         || quest_score_pages("q", "meta", "scores", 4, 2),
         Some(|| {
@@ -252,7 +252,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         QUEST_SELECT_TOP_K_OP_ID,
         || quest_select_top_k("scores", "io", 4, 1, -1.0),
         Some(|| {

@@ -188,7 +188,7 @@ fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         ADLER32_OP_ID,
         || adler32_program("input", "out", 3),
         Some(|| {

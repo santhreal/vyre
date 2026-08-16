@@ -184,6 +184,9 @@ pub(crate) fn validate_fused_resident_readbacks(
     Ok(())
 }
 
+// Inline: covers `FusedResidentReadbacks`, `ResidentReadbackCopy`, `ResidentReadbackView`,
+// `fuse_resident_readback_copies` and 1 more item this module keeps private, which no integration
+// test can name.
 #[cfg(test)]
 mod tests {
     use smallvec::smallvec;

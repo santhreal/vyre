@@ -1,0 +1,11 @@
+lane = "release-evidence-measured-evidence"
+workflow = ".github/workflows/release-evidence.yml"
+job = "measured-evidence"
+state = "live"
+required_status = "release-evidence / Generate measured evidence"
+triggers = ["workflow_dispatch", "push"]
+steps = [
+  { gate = "release-conformance", args = ["--write"] },
+  { gate = "release-benchmarks", args = ["--write"] },
+  { gate = "bench-release", args = ["--write"] },
+]

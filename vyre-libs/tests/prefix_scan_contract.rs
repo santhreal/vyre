@@ -15,6 +15,7 @@
 use std::collections::HashMap;
 
 use vyre_foundation::ir::{BinOp, BufferAccess, Expr, Node, Program};
+use vyre_foundation::visit::child_bodies;
 use vyre_libs::math::prefix_scan::{cpu_ref, prefix_scan, ScanKind};
 use vyre_reference::value::Value;
 
@@ -197,15 +198,11 @@ fn count_node(node: &Node, lane: u32, targets: &[String], env: &mut HashMap<Stri
                 .map(|inner| count_node(inner, lane, targets, env))
                 .sum()
         }
-        Node::Block(nodes) => nodes
-            .iter()
+        other => child_bodies(other)
+            .into_iter()
+            .flatten()
             .map(|inner| count_node(inner, lane, targets, env))
             .sum(),
-        Node::Region { body, .. } => body
-            .iter()
-            .map(|inner| count_node(inner, lane, targets, env))
-            .sum(),
-        _ => 0,
     }
 }
 

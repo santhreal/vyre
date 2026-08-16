@@ -290,7 +290,7 @@ fn checked_tt_step_shape(r_prev: u32, r_next: u32) -> Result<(usize, usize, usiz
 #[cfg(any(test, feature = "cpu-parity"))]
 fn reserve_tt_output(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), String> {
     if len > out.capacity() {
-        crate::scratch::reserve_items(out, len - out.len(), "TT CPU oracle", name)?;
+        crate::plumbing::host::scratch::reserve_items(out, len - out.len(), "TT CPU oracle", name)?;
     }
     Ok(())
 }

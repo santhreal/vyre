@@ -80,9 +80,9 @@ pub fn try_randomized_projection_step(
         return Err("Fix: randomized_projection_step requires l > 0, got 0.".to_string());
     }
 
-    let a_cells = crate::operand_shape::matrix_cells(&format!("{OP_ID} A input"), m, n)?;
-    let omega_cells = crate::operand_shape::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
-    let cells = crate::operand_shape::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
+    let a_cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} A input"), m, n)?;
+    let omega_cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
+    let cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // i = t / l, j = t % l
@@ -234,7 +234,7 @@ pub fn try_modified_gram_schmidt_cpu_into(
         )
     })?;
     if cells > q.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             q,
             cells - q.len(),
             "randomized SVD CPU oracle",
@@ -268,7 +268,7 @@ pub fn try_modified_gram_schmidt_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || randomized_projection_step("a", "omega", "y", 1, 2, 2),
         Some(|| {

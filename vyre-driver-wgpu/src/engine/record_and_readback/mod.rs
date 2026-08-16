@@ -250,6 +250,22 @@ fn record_dispatch_unsubmitted_impl(
         }
     }
 
+    // Judge the launch against the ceiling this device reported, whatever
+    // produced it: the compiled pipeline's inference, the re-inference above, or a
+    // caller that filled `workgroup_count` in directly. A grid past the ceiling is
+    // rejected inside the recorded command buffer, where the rejection is a
+    // validation abort rather than an error this call can return, so it has to be
+    // caught before anything is recorded.
+    request.workgroup_count = vyre_driver::admit_dispatch_grid(
+        request.workgroup_count,
+        request
+            .device_queue
+            .0
+            .limits()
+            .max_compute_workgroups_per_dimension,
+        crate::WGPU_BACKEND_ID,
+    )?;
+
     // Create a GPU buffer for every binding that needs one.
     // Tuple = (binding, pooled buffer, logical-byte-size). The third
     // field is the size we want the descriptor binding range to use,

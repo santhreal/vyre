@@ -101,7 +101,7 @@ pub fn try_monoidal_compose_cpu_into(
         "monoidal_compose CPU oracle output shape overflows cell count. Fix: reduce a*c before parity comparison.".to_string()
     })?;
     if out_cells > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             out_cells - out.len(),
             "string diagram CPU oracle",
@@ -123,7 +123,7 @@ pub fn try_monoidal_compose_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || monoidal_compose("f", "g", "out", 2, 2, 2),
         Some(|| {

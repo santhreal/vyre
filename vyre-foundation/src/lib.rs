@@ -15,6 +15,12 @@ pub mod diagnostics;
 pub mod fp_parity;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
+/// Target-neutral launch geometry requirements and lowering strategy.
+pub mod geometry;
+pub use geometry::{
+    CooperativeWidth, ElementPolicy, GeometryLoweringError, GeometryRequirements, GeometryStrategy,
+    LaunchGeometry, Uniformity,
+};
 
 pub mod ir {
     //! The vyre intermediate representation.
@@ -38,7 +44,7 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program::{
         BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, Scope,
-        ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION,
+        ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION, PORTABLE_WORKGROUP_INVOCATIONS,
     };
     pub use crate::ir_inner::model::program_graph::{
         GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,

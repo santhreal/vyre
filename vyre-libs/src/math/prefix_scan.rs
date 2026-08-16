@@ -15,7 +15,7 @@
 //! # Algorithm
 //!
 //! Work-efficient Blelloch scan over `N` elements in one workgroup of at most
-//! [`SCAN_WORKGROUP_LANES`] lanes. A lane owns a contiguous run of
+//! 256 lanes. A lane owns a contiguous run of
 //! `ceil(N / lanes)` elements: it sums its run, the workgroup scans the run
 //! sums with [`reduce::workgroup_tree`](crate::reduce::workgroup_tree), and the
 //! lane replays its run from the resulting offset.
@@ -27,7 +27,7 @@
 //! ```
 //!
 //! Total work is `2N` element reads plus the `2*lanes-2` additions of the
-//! sweep. The workgroup is never inflated past [`SCAN_WORKGROUP_LANES`], so
+//! sweep. The workgroup is never inflated past 256 lanes, so
 //! `N = 1024` dispatches 256 lanes of four elements rather than 1024 lanes of
 //! one, and `N = 513` dispatches 256 rather than the 1024 a
 //! next-power-of-two lane count would ask for.
@@ -56,11 +56,23 @@ pub enum ScanKind {
 /// Lanes a single-workgroup scan dispatches at most.
 ///
 /// A scan reaches [`MAX_SINGLE_BLOCK_SCAN`] elements by giving each lane a run
-/// of elements, not by adding lanes. 256 is the workgroup size the fleet
-/// schedules at full occupancy; past it a scan spends lanes on a sweep whose
-/// active fraction halves every round.
-pub const SCAN_WORKGROUP_LANES: u32 = 256;
+/// of elements, not by adding lanes. Two facts set this width, and it is the
+/// smaller of them: 256 is the workgroup size the fleet schedules at full
+/// occupancy, and past it a scan spends lanes on a sweep whose active fraction
+/// halves every round; `PORTABLE_WORKGROUP_INVOCATIONS` is the extent every
+/// registered target profile admits, and an op declares its geometry with no
+/// device in hand. Writing the occupancy choice alone would leave a second
+/// copy of the portable ceiling here to drift.
+pub const SCAN_WORKGROUP_LANES: u32 = if SCAN_OCCUPANCY_LANES
+    < vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
+{
+    SCAN_OCCUPANCY_LANES
+} else {
+    vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS
+};
 
+/// Workgroup width the fleet schedules at full occupancy for a sweep scan.
+const SCAN_OCCUPANCY_LANES: u32 = 256;
 /// Largest element count one workgroup scans.
 ///
 /// Above this the scan is a multi-block chain, which
@@ -71,7 +83,7 @@ pub const MAX_SINGLE_BLOCK_SCAN: u32 = 1024;
 /// Emit a single-workgroup prefix-sum Program.
 ///
 /// `n` is the number of input slots, in `1..=`[`MAX_SINGLE_BLOCK_SCAN`]. The
-/// emitted workgroup holds `min(n.next_power_of_two(), SCAN_WORKGROUP_LANES)`
+/// emitted workgroup holds `min(n.next_power_of_two(), 256)`
 /// lanes and each lane walks `ceil(n / lanes)` elements.
 #[must_use]
 pub fn prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Program {
@@ -102,7 +114,7 @@ pub fn prefix_scan_with_op_id(
         );
     }
 
-    let lanes = n.next_power_of_two().min(SCAN_WORKGROUP_LANES);
+    let lanes = n.next_power_of_two().min(256);
     let run = n.div_ceil(lanes);
     let lane = Expr::InvocationId { axis: 0 };
     let scratch_a = format!("__{out_buf}_scan_a");
@@ -214,7 +226,7 @@ pub fn cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) -> Result<(), String> {
     if input.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             input.len() - out.len(),
             "prefix scan CPU oracle",

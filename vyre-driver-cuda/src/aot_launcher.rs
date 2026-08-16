@@ -471,6 +471,8 @@ fn read_final_metric_record(
     )
 }
 
+// Inline: covers `CUDA_DEVICE_ORDINAL_ENV`, `CUDA_FFI`, `METRIC_RECORD_WORDS`, `emit_main` and 8
+// more items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

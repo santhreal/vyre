@@ -182,6 +182,8 @@ const fn dependency_capacity(wave_count: usize) -> usize {
     }
 }
 
+// Inline: `vyre_driver_cuda::frontier_typed_ir_adapter` is `pub(crate)`, so no integration test can
+// reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

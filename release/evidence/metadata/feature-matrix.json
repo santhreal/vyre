@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:0b2dfccf38a23c7e458e59970e052294ee4cda88:dirty=false",
+  "source_fingerprint": "git:7a82c191b17971aaffcfc9cc7eadc593c612cf76:dirty=false",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -275,7 +275,7 @@
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 59,
+      "feature_count": 60,
       "has_default_feature": true,
       "default_feature_members": [
         "math-linalg",
@@ -346,6 +346,7 @@
         "security",
         "solvers",
         "telemetry",
+        "test-fixtures",
         "text",
         "topology",
         "visual"
@@ -422,11 +423,10 @@
     {
       "name": "vyre-primitives",
       "manifest": "vyre-primitives/Cargo.toml",
-      "feature_count": 7,
+      "feature_count": 6,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "all-lego",
         "cpu-parity",
         "default",
         "gpu",

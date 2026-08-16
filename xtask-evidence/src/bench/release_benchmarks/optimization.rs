@@ -19,7 +19,7 @@ use super::artifact_metrics::{
 };
 use super::metrics::{
     max_first_available_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50,
-    min_metric_p50, release_axis_blockers, write_json,
+    min_metric_p50, release_axis_blockers,
 };
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
@@ -228,7 +228,7 @@ pub(super) fn optimization_semantic_win(
     }
 }
 
-pub(super) fn write_release_axes(workspace_root: &Path) {
+pub(super) fn write_release_axes(workspace_root: &Path) -> Result<(), String> {
     let suite_path = workspace_root.join("release/evidence/benchmarks/cuda-release-suite.json");
     let mut reports = Vec::new();
     let mut source_artifacts = Vec::new();
@@ -349,13 +349,16 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
         source_artifacts,
         blockers,
     };
-    write_json(
+    xtask::json_document::write(
         &workspace_root.join("release/evidence/benchmarks/bench-release-axes.json"),
         &evidence,
-    );
+    )
 }
 
-pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backend: &str) {
+pub(super) fn write_optimization_benchmark_manifest(
+    workspace_root: &Path,
+    backend: &str,
+) -> Result<(), String> {
     let specs = [(
         "foundation.optimizer.impact",
         "release/evidence/optimization/optimizer-impact-cuda.json",
@@ -490,7 +493,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
     } else {
         Some(cache_hit_rates.iter().sum::<f64>() / cache_hit_rates.len() as f64)
     };
-    write_json(
+    xtask::json_document::write(
         &workspace_root.join("release/evidence/optimization/pass-family-benchmark-manifest.json"),
         &OptimizationBenchmarkManifest {
             schema_version: 2,
@@ -513,7 +516,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             cases,
             blockers,
         },
-    );
+    )
 }
 
 #[cfg(test)]
@@ -625,7 +628,7 @@ mod tests {
         )
         .expect("Fix: write aggregate proof release axis decoy.");
 
-        write_release_axes(dir.path());
+        write_release_axes(dir.path()).expect("Fix: write the release axes evidence.");
 
         let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
             .expect("Fix: read generated release axes evidence.");
@@ -708,7 +711,7 @@ mod tests {
         )
         .expect("Fix: write stale provenance CUDA release suite fixture.");
 
-        write_release_axes(dir.path());
+        write_release_axes(dir.path()).expect("Fix: write the release axes evidence.");
 
         let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
             .expect("Fix: read generated release axes evidence.");
@@ -781,7 +784,7 @@ mod tests {
         )
         .expect("Fix: write mislabeled CUDA release suite fixture.");
 
-        write_release_axes(dir.path());
+        write_release_axes(dir.path()).expect("Fix: write the release axes evidence.");
 
         let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
             .expect("Fix: read generated release axes evidence.");
@@ -941,7 +944,8 @@ mod tests {
         fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
             .expect("Fix: write temporary workspace manifest.");
 
-        write_optimization_benchmark_manifest(dir.path(), "cuda");
+        write_optimization_benchmark_manifest(dir.path(), "cuda")
+            .expect("Fix: write the optimization benchmark manifest.");
 
         let manifest: Value = serde_json::from_str(
             &fs::read_to_string(

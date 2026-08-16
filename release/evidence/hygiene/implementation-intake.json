@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:05fee828fb611fdb1273c3145af35136df94101f:dirty=true:worktree=1c4382f5f4d89be6572efc0d11d816cfb1df870bef01ecb9ee2a5ed93e9ceddd",
+  "source_fingerprint": "git:6f3d6a963ac241593362782370a2b48231e6c94c:dirty=true:worktree=cb57bef57092b22c55320809b4e96b362f08e2a427acd08410730b862c0a004a",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -64,16 +64,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 19
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 2
+      "count": 21
     },
     {
       "owner_lane": "coordination",
@@ -82,7 +73,7 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 5
+      "count": 4
     },
     {
       "owner_lane": "coordination",
@@ -90,6 +81,15 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unbounded_read",
       "release_blocker": false,
       "count": 1
     },
@@ -239,8 +239,8 @@
     },
     {
       "owner_lane": "runtime_resident_work_queue",
-      "surface": "test",
-      "risk": "test_hygiene",
+      "surface": "production",
+      "risk": "informational",
       "hot_path": false,
       "pattern": "unwrap_call",
       "release_blocker": false,
@@ -307,7 +307,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 1
+      "count": 5
     },
     {
       "owner_lane": "testing_evidence",
@@ -316,7 +316,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 3
+      "count": 14
     },
     {
       "owner_lane": "testing_evidence",
@@ -370,7 +370,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 13
+      "count": 15
     },
     {
       "owner_lane": "testing_evidence",
@@ -380,33 +380,6 @@
       "pattern": "source_inspection_test",
       "release_blocker": false,
       "count": 5
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 11
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "placeholder_text",
-      "release_blocker": false,
-      "count": 1
     }
   ],
   "blockers": []

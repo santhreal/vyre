@@ -120,23 +120,23 @@ fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
         return Err("Fix: mla_decode all dims must be > 0".to_string());
     }
 
-    const WORKGROUP_LANES: u32 = 64;
-    const TILE_SIZE: u32 = 64;
+    let workgroup_lanes = 64_u32;
+    let tile_size = 64_u32;
 
     let head_stride = head_dim;
     let uv_stride = num_heads.checked_mul(head_dim).ok_or("overflow")?;
 
-    let q_scratch_count = WORKGROUP_LANES.checked_mul(head_dim).ok_or("overflow")?;
-    let score_scratch_count = WORKGROUP_LANES.checked_mul(TILE_SIZE).ok_or("overflow")?;
-    let o_acc_count = WORKGROUP_LANES.checked_mul(head_dim).ok_or("overflow")?;
+    let q_scratch_count = workgroup_lanes.checked_mul(head_dim).ok_or("overflow")?;
+    let score_scratch_count = workgroup_lanes.checked_mul(tile_size).ok_or("overflow")?;
+    let o_acc_count = workgroup_lanes.checked_mul(head_dim).ok_or("overflow")?;
 
     let scale = 1.0f32 / (head_dim as f32).sqrt();
     let scale_expr = Expr::f32(scale);
-    let num_tiles = seq_len.div_ceil(TILE_SIZE);
+    let num_tiles = seq_len.div_ceil(tile_size);
 
     // Scratch index helpers: each lane gets its own sub-slice.
     let q_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
-    let score_idx = |local: Expr, j: Expr| scratch_index(TILE_SIZE, local, j);
+    let score_idx = |local: Expr, j: Expr| scratch_index(tile_size, local, j);
     let o_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
 
     // ---- Compute all scores for the current tile ----
@@ -342,7 +342,7 @@ fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
             item_count: num_heads,
             seq_len,
             head_dim,
-            tile_size: TILE_SIZE,
+            tile_size,
             tile_count: num_tiles,
         },
         compute_tile_scores,
@@ -366,7 +366,7 @@ fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
             BufferDecl::workgroup("o_acc", o_acc_count, DataType::F32),
             BufferDecl::output(out, 5, DataType::F32).with_count(num_heads * head_dim),
         ],
-        [WORKGROUP_LANES, 1, 1],
+        [workgroup_lanes, 1, 1],
         vec![wrap_anonymous_region("vyre-libs::nn::mla_decode", body)],
     ))
 }

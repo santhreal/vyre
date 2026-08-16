@@ -25,6 +25,7 @@ pub(crate) fn validate_and_analyze(
     Ok(descriptor)
 }
 
+// Inline: covers `validate_and_analyze`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

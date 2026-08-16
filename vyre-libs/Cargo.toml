@@ -40,6 +40,7 @@ full = [
     "math-kernels",
     "nn-activation", "nn-linear", "nn-linear-4bit", "nn-norm", "nn-attention", "nn-moe", "nn-inference",
     "nn-kernels",
+    "llm",
     "matching-substring", "matching-dfa", "matching-nfa",
     "matching-kernels", "nfa",
     "hash",
@@ -52,7 +53,10 @@ full = [
     "parsing-kernels",
     "text",
     "bitset", "reduce", "label", "predicate", "fixpoint", "graph",
+    "representation",
+    "builder-ops",
     "geom", "opt", "topology",
+    "vfs",
 ]
 cpu-parity = ["vyre-primitives/cpu-parity"]
 
@@ -60,8 +64,11 @@ cpu-parity = ["vyre-primitives/cpu-parity"]
 # kernels with stable op ids, moved here from vyre-primitives. A domain names
 # only the domains its own source reaches, so enabling one never compiles a
 # sibling it does not call.
-bitset = []
+# `bitset` names `reduce` because `bitset/relation.rs` builds `equal` and
+# `subset_of` on `reduce::atomic_scalar::atomic_grid_stride_u32`.
+bitset = ["reduce"]
 reduce = []
+vfs = []
 fixpoint = ["bitset"]
 label = ["bitset"]
 # `graph` names `math-kernels` because seven graph kernels reach
@@ -69,7 +76,9 @@ label = ["bitset"]
 # The reverse edge does not exist: `math-kernels` compiles no graph module.
 graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels"]
 predicate = ["graph", "bitset", "label"]
-math-kernels = []
+# `math-kernels` names `reduce` because `math/prefix_scan.rs` sweeps
+# `reduce::workgroup_tree::blelloch_inclusive_sum_nodes`.
+math-kernels = ["reduce"]
 nn-kernels = ["math-kernels"]
 # `matching-kernels` names `hash` because `matching/nfa_to_dfa.rs` imports
 # `hash::fnv1a` unconditionally.
@@ -85,13 +94,33 @@ hash = []
 # `math-dialect` gates the dialect-level math surface (atomics, clamp, conv,
 # fft, the f32 reductions). Each `math-*` sub-feature names it so the surface
 # is not compiled by a consumer that only wants `math::fixed`.
-math-dialect = []
+# `math-dialect` names `reduce` because `math/reduce_mean.rs` folds through
+# `reduce::workgroup_tree`.
+# It also names `builder-ops` because `math/reduce_mean.rs` composes
+# `strided_accumulate_child` and `math/square.rs` is a `build_indexed_map`
+# skeleton.
+math-dialect = ["builder-ops", "reduce"]
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
 matching = ["matching-substring", "matching-dfa"]
 crypto = ["crypto-blake3"]
-decode = ["cpu-parity", "matching-kernels"]
+# `decode` names `text` because `decode/encodex.rs` builds its classifier from
+# `text::byte_histogram_256_child` and `text::encoding_classify_child`.
+#
+# It does not name `cpu-parity`. That edge put host reference oracles into
+# every default build of this crate and hid the domain edges the sweep exists
+# to find, because the oracle modules re-enabled whatever a domain forgot.
+decode = ["matching-kernels", "text"]
 text = ["reduce"]
+# `representation` gates `src/representation`, which reaches nothing else in
+# the crate: the unpack kernel is built from bare IR.
+representation = []
+# `builder-ops` gates the two shared child regions the builder registers as
+# catalog entries of their own. Every dialect whose source composes
+# `build_indexed_map` or `strided_accumulate_child` names it, because the
+# skeletons emit child regions carrying those ids and a build that emits an id
+# its catalog does not contain hands consumers unresolvable programs.
+"builder-ops" = []
 logical = ["bitset"]
 rule = ["dep:regex"]
 
@@ -101,37 +130,76 @@ telemetry = []
 device = []
 graph-dispatch = ["device", "telemetry", "math-kernels", "graph"]
 solvers = ["device", "telemetry", "math-kernels", "topology"]
-encoding = ["device", "telemetry", "matching-kernels", "math-kernels", "nn-kernels", "parsing-kernels"]
+# `encoding` names `bitset` because `encoding/bitset_mask_algebra.rs` composes
+# eight `bitset::` builders, and `graph` plus `fixpoint` because
+# `matroid_exact_megakernel.rs` and `scallop_provenance.rs` reach
+# `math::matroid_intersection_full` and `math::scallop_join`, which are gated
+# on those two.
+encoding = ["device", "telemetry", "matching-kernels", "math-kernels", "nn-kernels", "parsing-kernels", "bitset", "graph", "fixpoint"]
 reasoning = ["analysis", "graph"]
-analysis = ["device", "telemetry", "math-kernels"]
-scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels"]
+# `analysis` names `graph` because `analysis/cost_model.rs` dispatches
+# `graph::level_wave` and `graph::sum_product_circuit`.
+analysis = ["device", "telemetry", "math-kernels", "graph"]
+# `scheduling` names `graph` because `scheduling/spectral_schedule.rs` builds on
+# `graph::chebyshev_filter`.
+scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
 
 # Every dialect feature whose module invokes `impl_cat_a_builder_options!`
 # declares that it needs the macro. The macro's own gate then names one
 # feature instead of restating this set, which is what let the set rot into a
 # dead-code warning on a build that enabled none of them.
 "cat-a-builder-options" = []
-"math-linalg" = ["cat-a-builder-options", "math-dialect", "math-kernels"]
+# `math-linalg` names `builder-ops` because `math/linalg/dot.rs` composes
+# `strided_accumulate_child`.
+"math-linalg" = ["builder-ops", "cat-a-builder-options", "math-dialect", "math-kernels"]
 "math-scan" = ["math-dialect", "math-kernels"]
 "math-broadcast" = ["math-dialect", "math-kernels"]
 "math-algebra" = ["math-dialect", "math-kernels"]
-"math-succinct" = ["math-dialect", "math-kernels"]
-"nn-activation" = ["nn-kernels"]
+# `math-succinct` names `graph` because `math/succinct.rs` parents its rank
+# superblock region on `graph::path_reconstruct::OP_ID`.
+"math-succinct" = ["math-dialect", "math-kernels", "graph"]
+# `nn-activation` names `builder-ops` because embedding, skip_gate,
+# parallel_residual_block, the optimizer apply steps and the quant pack and
+# unpack kernels are all `build_indexed_map` skeletons.
+"nn-activation" = ["builder-ops", "nn-kernels"]
 "nn-linear" = ["cat-a-builder-options", "math-linalg", "nn-activation", "nn-kernels"]
 "nn-linear-4bit" = ["nn-linear"]
-"nn-norm" = ["cat-a-builder-options", "math-broadcast", "nn-kernels"]
-"nn-attention" = ["cat-a-builder-options", "nn-norm", "math-linalg", "nn-kernels"]
+# `nn-norm` names `builder-ops` because `nn/norm/rms_norm.rs` and the layer-norm
+# reduce phases compose `strided_accumulate_child`.
+"nn-norm" = ["builder-ops", "cat-a-builder-options", "math-broadcast", "nn-kernels"]
+# `nn-attention` names `builder-ops` because `nn/attention/softmax.rs` composes
+# `strided_accumulate_child` in both reduce passes.
+"nn-attention" = [
+    "builder-ops",
+    "cat-a-builder-options",
+    "nn-norm",
+    "math-linalg",
+    "nn-kernels",
+]
 "nn-moe" = ["nn-attention"]
 "nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
-"matching-substring" = ["cpu-parity", "matching-dfa", "matching-kernels"]
-"matching-dfa" = ["cpu-parity", "matching-kernels"]
+# `llm` names `nn-moe` because `llm/sampling.rs` composes
+# `nn::moe::softmax_top_k` and `llm/paged_kv.rs` builds on
+# `nn::attention::layout`, which `nn-moe` already names.
+# It also names `builder-ops` because `llm/sampling.rs` builds `logit_adjust`
+# as a `build_indexed_map` skeleton.
+"llm" = ["builder-ops", "nn-moe"]
+# Neither matching domain names `cpu-parity`, for the same reason `decode` does
+# not: it compiled the host oracles into every default build and masked the
+# edges the sweep is for.
+"matching-substring" = ["matching-dfa", "matching-kernels"]
+# `matching-dfa` names `text` because `scan/post_process.rs` folds
+# `text::reference_byte_histogram` into `shannon_entropy_bits_per_byte`.
+"matching-dfa" = ["matching-kernels", "text"]
 "matching-nfa" = ["matching-dfa", "nfa"]
 "matching-regex" = ["matching-nfa", "dep:regex-syntax"]
 "intern" = ["hash"]
 "crypto-blake3" = ["hash"]
 "visual" = ["math-kernels"]
 "parsing" = ["go-parser", "python-parser"]
-"go-parser" = []
+# `go-parser` names `reduce` because `parsing/go/lex.rs` scans quote flags with
+# `reduce::multi_block_prefix_scan`.
+"go-parser" = ["reduce"]
 "python-parser" = ["parsing-kernels"]
 security = ["label", "predicate"]
 
@@ -179,6 +247,10 @@ proptest.workspace = true
 naga.workspace = true
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
+# The shipped-build oracle gate resolves the dependency graph a consumer
+# compiles out of the manifests themselves, so it parses TOML rather than
+# restating any part of that graph in Rust.
+toml.workspace = true
 vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # The device-residency ownership gate derives its crate roster from the root
 # manifest. Path-only, and dev-only: cargo strips it from the published
@@ -630,6 +702,16 @@ path = "tests/nn_attention_clone_family_ir_invariance.rs"
 required-features = ["nn-attention"]
 
 [[test]]
+name = "attention_layout_dispatch_grid"
+path = "tests/attention_layout_dispatch_grid.rs"
+required-features = ["llm"]
+
+[[test]]
+name = "flash_attention_plan_shared_memory"
+path = "tests/flash_attention_plan_shared_memory.rs"
+required-features = ["nn-attention"]
+
+[[test]]
 name = "recurrent_gated_delta_contract"
 path = "tests/recurrent_gated_delta_contract.rs"
 required-features = ["nn-attention"]
@@ -785,6 +867,16 @@ required-features = ["cpu-parity", "fixpoint", "graph", "math-kernels"]
 [[test]]
 name = "adversarial_graph_csr_validation_contracts"
 path = "tests/adversarial_graph_csr_validation_contracts.rs"
+required-features = ["graph"]
+
+[[test]]
+name = "graph_motif_contracts"
+path = "tests/graph_motif_contracts.rs"
+required-features = ["cpu-parity", "graph"]
+
+[[test]]
+name = "graph_toposort_contracts"
+path = "tests/graph_toposort_contracts.rs"
 required-features = ["graph"]
 
 [[test]]
@@ -981,6 +1073,11 @@ required-features = ["cpu-parity", "math-kernels"]
 name = "prefix_scan_contract"
 path = "tests/prefix_scan_contract.rs"
 required-features = ["cpu-parity", "math-kernels"]
+
+[[test]]
+name = "scallop_join_ir_parity"
+path = "tests/scallop_join_ir_parity.rs"
+required-features = ["cpu-parity", "math-kernels", "fixpoint"]
 
 [[test]]
 name = "scallop_join_grid_contract"

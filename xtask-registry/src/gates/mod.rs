@@ -9,6 +9,7 @@ pub mod abstraction_gate;
 pub mod composition_budget;
 pub mod cross_target;
 pub mod gate1;
+pub mod handrolled_operations;
 pub mod heuristic_audit;
 pub mod lego_audit;
 pub mod verify_rewrite_proofs;

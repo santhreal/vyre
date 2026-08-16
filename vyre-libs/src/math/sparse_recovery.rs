@@ -115,7 +115,7 @@ pub fn try_iht_top_k_cpu_into(
 ) -> Result<f64, String> {
     let n = z.len();
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "IHT sparse-recovery CPU oracle",
@@ -124,7 +124,7 @@ pub fn try_iht_top_k_cpu_into(
     }
     if n > scratch.order.capacity() {
         let additional = n - scratch.order.len();
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             &mut scratch.order,
             additional,
             "IHT sparse-recovery CPU oracle",
@@ -169,7 +169,7 @@ fn finite_abs_score(value: f64) -> f64 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             iht_threshold("a", "b", "out", 4)

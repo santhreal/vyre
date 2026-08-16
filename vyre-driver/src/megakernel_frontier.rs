@@ -528,6 +528,7 @@ fn reserve_vec<T>(
 
 storage_reserve_failure_adapter!(MegakernelFrontierMemoryPlanError);
 
+// Inline: covers `from`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{

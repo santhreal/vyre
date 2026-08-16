@@ -172,6 +172,8 @@ pub(crate) fn checked_elapsed_wall_ns(
     })
 }
 
+// Inline: `vyre_driver::backend` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod borrowed_input_slices_tests {
     use super::*;

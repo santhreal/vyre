@@ -10,6 +10,11 @@ use super::topk_selection::{
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
+/// Canonical op id. It is the region generator name, the trap subject, and the
+/// child name a composition attributes this body to, so it is one constant
+/// rather than a literal repeated at each of those three sites.
+pub(crate) const OP_ID: &str = "vyre-libs::nn::softmax_top_k";
+
 /// Build a Program that computes softmax over `scores`, then returns the
 /// top-k indices and their normalized weights.
 ///
@@ -31,12 +36,64 @@ pub fn softmax_top_k(
 ) -> Program {
     if k == 0 {
         return trap_program(
-            "vyre-libs::nn::softmax_top_k",
+            OP_ID,
             Some((out_indices, DataType::U32)),
             "Fix: softmax_top_k requires k > 0 so the selection scratch has at least one slot."
                 .to_string(),
         );
     }
+    Program::wrapped(
+        softmax_top_k_buffers(scores, out_indices, out_weights, n, k),
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            softmax_top_k_body(scores, out_indices, out_weights, n, k),
+        )],
+    )
+}
+
+/// Buffer table of the standalone operation, in binding order.
+fn softmax_top_k_buffers(
+    scores: &str,
+    out_indices: &str,
+    out_weights: &str,
+    n: u32,
+    k: u32,
+) -> Vec<BufferDecl> {
+    let mut buffers = vec![
+        BufferDecl::storage(scores, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::output(out_indices, 1, DataType::U32).with_count(k),
+        BufferDecl::read_write(out_weights, 2, DataType::F32).with_count(k),
+    ];
+    buffers.extend(softmax_top_k_scratch(3, k));
+    buffers
+}
+
+/// The selection scratch this body keeps its running best `k` in.
+///
+/// A composition that runs the body has to declare the same two buffers at its
+/// own binding indices, and a second spelling of them is a table that drifts
+/// from the body that reads it.
+pub(crate) fn softmax_top_k_scratch(first_binding: u32, k: u32) -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::read_write(BEST_VALS, first_binding, DataType::F32).with_count(k),
+        BufferDecl::read_write(BEST_IDXS, first_binding + 1, DataType::U32).with_count(k),
+    ]
+}
+
+/// Softmax over `scores` followed by top-k selection, as region body nodes.
+///
+/// Serial by construction: the maximum, the exponential sum and the insertion
+/// sort are one pass each over `n`, on one invocation. A caller that wants this
+/// selection inside a larger operation runs these nodes as a child region
+/// rather than restating them.
+pub(crate) fn softmax_top_k_body(
+    scores: &str,
+    out_indices: &str,
+    out_weights: &str,
+    n: u32,
+    k: u32,
+) -> Vec<Node> {
     let mut body = init_top_k_slots(k);
 
     // max_val = max(scores)
@@ -86,17 +143,7 @@ pub fn softmax_top_k(
         Expr::var("sum"),
     ));
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(scores, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(out_indices, 1, DataType::U32).with_count(k),
-            BufferDecl::read_write(out_weights, 2, DataType::F32).with_count(k),
-            BufferDecl::read_write(BEST_VALS, 3, DataType::F32).with_count(k),
-            BufferDecl::read_write(BEST_IDXS, 4, DataType::U32).with_count(k),
-        ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region("vyre-libs::nn::softmax_top_k", body)],
-    )
+    body
 }
 
 fn fixture_f32_bytes(values: &[f32]) -> Vec<u8> {
@@ -211,7 +258,7 @@ mod tests {
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
-        "vyre-libs::nn::softmax_top_k",
+        OP_ID,
         || softmax_top_k("scores", "indices", "weights", 8, 2),
         Some(softmax_top_k_fixture_inputs),
         Some(softmax_top_k_fixture_expected),

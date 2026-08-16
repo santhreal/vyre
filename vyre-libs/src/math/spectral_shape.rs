@@ -86,7 +86,7 @@ pub fn try_mp_edge_clip_cpu_into(
     out: &mut Vec<f64>,
 ) -> Result<(), String> {
     if eigenvalues.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             eigenvalues.len() - out.len(),
             "spectral shape CPU oracle",
@@ -99,7 +99,7 @@ pub fn try_mp_edge_clip_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             mp_edge_clip("a", "b", "out", 4)

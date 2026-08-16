@@ -144,6 +144,8 @@ pub(super) fn validate_io_queue_view(byte_len: usize) -> Result<IoQueueView, Pip
     Ok(IoQueueView { slot_count })
 }
 
+// Inline: covers `read_queue_word`, `write_queue_word_unfenced`, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
     use super::*;

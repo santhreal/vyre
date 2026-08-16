@@ -516,25 +516,19 @@ fn descriptor_trap_sidecar_slot(desc: &KernelDescriptor) -> Result<Option<u32>, 
     Ok(Some(slot.slot))
 }
 
-fn descriptor_trap_tag_codes(body: &KernelBody) -> FxHashMap<vyre_lower::Name, u32> {
-    fn walk(body: &KernelBody, tags: &mut FxHashMap<vyre_lower::Name, u32>, next: &mut u32) {
-        for op in &body.ops {
-            if let KernelOpKind::Trap { tag } = &op.kind {
-                tags.entry(tag.clone()).or_insert_with(|| {
-                    let code = *next;
-                    *next = next.saturating_add(1);
-                    code
-                });
-            }
-        }
-        for child in &body.child_bodies {
-            walk(child, tags, next);
-        }
-    }
-    let mut tags = FxHashMap::default();
-    let mut next = 1;
-    walk(body, &mut tags, &mut next);
-    tags
+/// Index `vyre_lower::descriptor_trap_tags` by tag for the emitter, which
+/// resolves a code from the tag it is lowering. The numbering itself belongs to
+/// vyre-lower so a code decodes to the same tag on every backend and host.
+fn descriptor_trap_tag_codes(
+    body: &KernelBody,
+) -> Result<FxHashMap<vyre_lower::Name, u32>, EmitError> {
+    let table = vyre_lower::descriptor_trap_tags(body).map_err(|source| {
+        EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
+    })?;
+    Ok(table
+        .into_iter()
+        .map(|entry| (entry.tag, entry.code))
+        .collect())
 }
 
 pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, EmitError> {
@@ -544,7 +538,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
         builder.add_binding(binding, atomic_slots.contains(&binding.slot))?;
     }
     let trap_sidecar_slot = descriptor_trap_sidecar_slot(desc)?;
-    let trap_tag_codes = descriptor_trap_tag_codes(&desc.body);
+    let trap_tag_codes = descriptor_trap_tag_codes(&desc.body)?;
 
     let mut function = Function::default();
     function.name = Some("main".to_owned());

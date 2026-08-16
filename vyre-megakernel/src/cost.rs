@@ -18,6 +18,11 @@
 //! against bytes and the answer differs by host. The floor prices a device that
 //! measured nothing.
 //!
+//! `the_cost_weights_are_the_figures_the_recordings_hold` reads those files at
+//! run time and derives both weights from them, so a weight that drifts from
+//! its citation, or a cheaper dispatch landing in a new recording, is a red
+//! test rather than a stale doc comment.
+//!
 //! A group's shared scratch is the union of its members' declarations, not the
 //! sum of their totals. Fusion keeps one declaration per buffer name and takes
 //! the larger count, so two ops fused over one tile hold one tile in the
@@ -490,5 +495,83 @@ mod tests {
             device(0),
         );
         assert_eq!(cost.shared_scratch_bytes, 32 * 1024);
+    }
+
+    /// Every `p50` of one metric across every recorded bench file in the tree,
+    /// paired with the case id it came from.
+    fn recorded(metric: &str) -> Vec<(String, u64)> {
+        fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    walk(&path, out);
+                } else if path.extension().is_some_and(|ext| ext == "json") {
+                    out.push(path);
+                }
+            }
+        }
+
+        let bench = vyre_test_support::monorepo::vyre_crate_directory("vyre-bench");
+        let mut files = Vec::new();
+        walk(&bench.join("snapshots"), &mut files);
+        walk(&bench.join("baselines"), &mut files);
+        assert!(!files.is_empty(), "no recorded bench file was found");
+
+        let mut found = Vec::new();
+        for file in files {
+            let text = std::fs::read_to_string(&file).expect("a recorded bench file must read");
+            let value: serde_json::Value =
+                serde_json::from_str(&text).expect("a recorded bench file must parse");
+            let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
+                continue;
+            };
+            for case in cases {
+                let Some(p50) = case
+                    .pointer(&format!("/metrics/{metric}/p50"))
+                    .and_then(serde_json::Value::as_u64)
+                else {
+                    continue;
+                };
+                let id = case
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default();
+                found.push((id.to_string(), p50));
+            }
+        }
+        found
+    }
+
+    /// WHY: both weights are durations read off a recording, and a constant that
+    /// drifts from the recording it cites prices every fusion decision against a
+    /// device nothing measured. This derives both from the files at run time, so a
+    /// cheaper recorded dispatch or a re-measured rate turns the suite red instead
+    /// of leaving a stale weight behind a doc comment. It proves nothing about
+    /// whether the model ranks a real plan correctly.
+    #[test]
+    fn the_cost_weights_are_the_figures_the_recordings_hold() {
+        let dispatches = recorded("dispatch_ns");
+        let (floor_case, floor) = dispatches
+            .iter()
+            .min_by_key(|(id, p50)| (*p50, id.as_str()))
+            .expect("a recorded dispatch must exist");
+        assert_eq!(
+            LAUNCH_COST_FLOOR_NS, *floor,
+            "the launch floor must be the cheapest recorded dispatch, now held by `{floor_case}`"
+        );
+
+        let rates = recorded("device_gb_s_x1000");
+        let (_, rate) = rates
+            .iter()
+            .find(|(id, _)| id == floor_case)
+            .expect("the case that fixes the floor must record its device rate");
+        assert_eq!(
+            TRAFFIC_BYTES_PER_NS,
+            rate.saturating_add(500).div_euclid(1_000),
+            "the traffic rate must be the rate that case recorded, to the nearest byte"
+        );
     }
 }

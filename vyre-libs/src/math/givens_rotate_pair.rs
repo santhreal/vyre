@@ -123,7 +123,7 @@ pub fn givens_rotate_columns(
             "Fix: givens_rotate_columns needs n > 0 and both columns below n, got n={n}, first_col={first_col}, second_col={second_col}."
         ));
     }
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((matrix, DataType::F32)), message),
     };
@@ -166,7 +166,7 @@ pub fn givens_rotate_columns(
 // fixture is really pinning: writing the first column before reading the second
 // would produce 0.6 and 0.36 in row 0.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || givens_rotate_columns("m", "coeff", 2, 0, 1),
         Some(|| {

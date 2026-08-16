@@ -18,7 +18,6 @@ pub const vyre_primitives::hardware::subgroup_add::OP_ID: &str
 pub const vyre_primitives::hardware::subgroup_ballot::OP_ID: &str
 pub const vyre_primitives::hardware::subgroup_shuffle::OP_ID: &str
 pub const vyre_primitives::hardware::workgroup_barrier::OP_ID: &str
-pub const vyre_primitives::vfs::resolve::VFS_RESOLVE_OP_ID: &str
 pub enum vyre_primitives::hardware::catalog::HardwareSemantic
 pub fn vyre_primitives::hardware::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_primitives::hardware::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -36,7 +35,6 @@ pub fn vyre_primitives::ir_safe::clamped_load(buf: &str, idx: vyre_foundation::i
 pub fn vyre_primitives::ir_safe::clamped_load_to(buf: &str, idx: vyre_foundation::ir_inner::model::generated::Expr, bound: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::ir_safe::source_byte_table_lookup(table: &str, source: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
-pub fn vyre_primitives::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, num_requests: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_primitives::wire::append_f32_slice_le_bytes(values: &[f32], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::append_packed_byte_lane(bytes: &[u8], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::append_u32_slice_le_bytes(words: &[u32], out: &mut alloc::vec::Vec<u8>)
@@ -87,8 +85,6 @@ pub mod vyre_primitives::hardware::subgroup_shuffle
 pub mod vyre_primitives::hardware::workgroup_barrier
 pub mod vyre_primitives::ir_safe
 pub mod vyre_primitives::operation_catalog
-pub mod vyre_primitives::vfs
-pub mod vyre_primitives::vfs::resolve
 pub mod vyre_primitives::wire
 pub struct vyre_primitives::ArithAdd
 pub struct vyre_primitives::ArithMul

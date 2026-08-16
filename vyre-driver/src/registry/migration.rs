@@ -398,6 +398,8 @@ pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
     .with_fix(dep.note)
 }
 
+// Inline: `vyre_driver::registry` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

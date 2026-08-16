@@ -118,7 +118,7 @@ pub fn try_functor_apply_cpu_into(
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
     out.clear();
-    crate::scratch::resize_vec(
+    crate::plumbing::host::scratch::resize_vec(
         out,
         target_size as usize,
         0u32,
@@ -134,7 +134,7 @@ pub fn try_functor_apply_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || functor_apply("source_row", "mapping", "target_row", 4),
         Some(|| {

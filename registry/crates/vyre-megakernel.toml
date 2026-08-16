@@ -1,0 +1,5 @@
+name = "vyre-megakernel"
+concern = "Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy."
+pages = { spec = "vyre-megakernel/SPEC.md", readme = "vyre-megakernel/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation", "vyre-lower"]

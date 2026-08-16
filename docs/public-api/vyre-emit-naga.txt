@@ -8,7 +8,6 @@ pub const fn vyre_emit_naga::patterns::vec_pack::PackKind::lane_count(&self) -> 
 pub const vyre_emit_naga::patterns::NagaAuditReport::FINDING_NOUN: &'static str
 pub const vyre_emit_naga::patterns::pipeline_prewarm::PREWARM_OP_THRESHOLD: u32
 pub const vyre_emit_naga::program::TRAP_SIDECAR_NAME: &str
-pub const vyre_emit_naga::program::TRAP_SIDECAR_WORDS: u32
 pub enum vyre_emit_naga::EmitError
 pub enum vyre_emit_naga::patterns::vec_pack::PackKind
 pub fn vyre_emit_naga::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
@@ -46,7 +45,8 @@ pub struct vyre_emit_naga::patterns::NagaAuditReport
 pub struct vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint
 pub struct vyre_emit_naga::patterns::vec_pack::PackGroup
 pub struct vyre_emit_naga::patterns::vec_pack::PackingPlan
-pub struct vyre_emit_naga::program::TrapTag
+pub type vyre_emit_naga::program::TrapTag = vyre_lower::descriptor::binding_layout::DescriptorTrapTag
+pub use vyre_emit_naga::program::TRAP_SIDECAR_WORDS
 pub vyre_emit_naga::BindResultEntry::child_body_depth: usize
 pub vyre_emit_naga::BindResultEntry::init_handle: u32
 pub vyre_emit_naga::BindResultEntry::init_scalar_kind: core::option::Option<alloc::string::String>
@@ -80,5 +80,3 @@ pub vyre_emit_naga::patterns::vec_pack::PackKind::Vec3
 pub vyre_emit_naga::patterns::vec_pack::PackKind::Vec4
 pub vyre_emit_naga::patterns::vec_pack::PackingPlan::groups: alloc::vec::Vec<vyre_emit_naga::patterns::vec_pack::PackGroup>
 pub vyre_emit_naga::patterns::vec_pack::PackingPlan::kernel_id: alloc::string::String
-pub vyre_emit_naga::program::TrapTag::code: u32
-pub vyre_emit_naga::program::TrapTag::tag: alloc::sync::Arc<str>

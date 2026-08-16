@@ -744,6 +744,7 @@ fn dirs_cache_root() -> PathBuf {
     }
 }
 
+// Inline: covers `default`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -4,7 +4,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::nn::rms::{inverse_rms_expr, square_expr};
-use crate::tensor_ref::TensorRefError;
+use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 /// Fused RMSNorm + linear: `out = (input / rms(input)) @ W + b`.
 ///

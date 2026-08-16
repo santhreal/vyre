@@ -59,10 +59,10 @@ Resolved by outcome (the original gap-marker test `gap_workgroup_cooperative_sca
 no longer exists; the capability it tracked is delivered). softmax and layer_norm
 now build cooperative *tiled* reductions, not [1,1,1] scalar dispatches:
 - softmax (vyre-libs/src/nn/attention/softmax.rs) dispatches
-  `workgroup_size.unwrap_or([SOFTMAX_TILE, 1, 1])` with SOFTMAX_TILE = 256 and
-  Node::barrier() reductions; the [1,1,1] form is only the CPU reference program.
+  `workgroup_size.unwrap_or([256, 1, 1])` and Node::barrier() reductions;
+  the [1,1,1] form is only the CPU reference program.
 - layer_norm (vyre-libs/src/nn/norm/layer_norm.rs) dispatches
-  `[LAYER_NORM_TILE, 1, 1]` (256) with barriers.
+  `[256, 1, 1]` with barriers.
 - attention is cooperatively tiled at COOPERATIVE_TILED_WORKGROUP_LANES = 64
   (planner.rs); FlashAttention-2 builders exist (flash_attention_2*).
 The reduction is wired as inline shared-memory + Node::Barrier in the op bodies

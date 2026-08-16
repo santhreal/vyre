@@ -9,7 +9,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 
 use toml::Value;
 
@@ -118,7 +117,6 @@ impl Gate for CheckTierDeps {
             }
         }
         validate_cross_crate_promotion_contract(root, &mut failures);
-        validate_crate_ownership_registry(root, &mut failures);
 
         let mut report = Report::from_messages(failures, FIX);
         report.note(format!(
@@ -128,39 +126,6 @@ impl Gate for CheckTierDeps {
         ));
         Ok(report)
     }
-}
-
-fn validate_crate_ownership_registry(root: &Path, failures: &mut Vec<String>) {
-    let script = root.join("scripts/crate_ownership.py");
-    let output = match Command::new("python3")
-        .arg(&script)
-        .arg("--check")
-        .current_dir(root)
-        .output()
-    {
-        Ok(output) => output,
-        Err(error) => {
-            failures.push(format!(
-                "could not launch `{}` with python3: {error}",
-                script.display()
-            ));
-            return;
-        }
-    };
-    if output.status.success() {
-        return;
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let message = stderr.trim();
-    failures.push(if message.is_empty() {
-        format!(
-            "`{}` failed with status {} and no diagnostic",
-            script.display(),
-            output.status
-        )
-    } else {
-        message.to_string()
-    });
 }
 
 fn workspace_members(root: &Path) -> Vec<String> {
@@ -343,9 +308,9 @@ fn read_contract_doc(root: &Path, rel: &str, failures: &mut Vec<String>) -> Opti
 
 fn cross_crate_promotion_contract_text_failures(crate_graph: &str, lego_rule: &str) -> Vec<String> {
     let mut failures = Vec::new();
-    // The generated crate graph proves the dependency surface exists and is
-    // fresh (crate_ownership.py --check); the LEGO rule owns the promotion
-    // contract text, so the marker requirement applies to the rule doc.
+    // The generated crate graph proves the dependency surface exists; the
+    // `crate-ownership` gate owns its freshness, and the LEGO rule owns the
+    // promotion contract text, so the marker requirement applies to the rule doc.
     if crate_graph.is_empty() {
         failures.push("docs/CRATE_GRAPH.md is empty or unreadable".to_string());
     }

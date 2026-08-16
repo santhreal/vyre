@@ -58,7 +58,7 @@ pub use schema::{
     AbiAccess, Artifact, ArtifactAbi, BarrierRecord, EntryAbiRecord, ExecutionMode, FusionRecord,
     FusionRejection, GeometryRecord, MaterializationReason, MaterializationRecord, NodeRecord,
     PlanMeasurement, Provenance, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime,
-    ResourceRecord, SelectedPlan, ARTIFACT_SCHEMA_VERSION,
+    ResourceNameCollision, ResourceRecord, SelectedPlan, ARTIFACT_SCHEMA_VERSION,
 };
 pub use target::SelectedModule;
 pub use target::{

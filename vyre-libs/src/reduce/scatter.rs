@@ -80,7 +80,7 @@ pub fn try_cpu_ref_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || scatter("src", "indices", "dst", 4),
         Some(|| {

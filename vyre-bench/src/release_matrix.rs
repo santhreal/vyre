@@ -6,8 +6,6 @@
 //! requirements auditable from the benchmark registry.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::Path;
 
 use serde::Serialize;
 
@@ -185,17 +183,17 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         ),
     },
     ReleaseWorkloadFamily {
-        id: "c-ast-traversal",
-        title: "C AST traversal and motif predicates",
+        id: "ast-motif-traversal",
+        title: "AST-shaped node motif predicate traversal",
         release_plan_workload: 9,
         required: true,
-        any_terms: &["release.c_ast_traversal"],
-        all_terms: &["release.c_ast_traversal"],
-        bench_target_id: "release.workload.c_ast_traversal",
-        dispatch_policy: "specialized-parser-kernel",
+        any_terms: &["release.ast_motif_traversal"],
+        all_terms: &["release.ast_motif_traversal"],
+        bench_target_id: "release.workload.ast_motif_traversal",
+        dispatch_policy: "single-kernel-count",
         requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
-            "architectural: C AST traversal consumes parser-owned AST buffers with table/stream access patterns that remain outside the condition megakernel for this release",
+            "architectural: AST motif traversal evaluates node-kind, depth and motif predicates over table-shaped node columns, which is a single counting pass rather than a queued rule opcode stream",
         ),
     },
     ReleaseWorkloadFamily {
@@ -290,6 +288,20 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: grouped INT4 linear fuses packed weight decode, scale/zero-point sidecars, and accumulation in one inference kernel instead of queueing scalar condition opcodes",
+        ),
+    },
+    ReleaseWorkloadFamily {
+        id: "egraph-saturation",
+        title: "Rewrite-equivalence saturation predicates",
+        release_plan_workload: 17,
+        required: false,
+        any_terms: &["release.egraph_saturation", "egraph"],
+        all_terms: &["optimization", "rewrite"],
+        bench_target_id: "release.workload.egraph_saturation",
+        dispatch_policy: "single-kernel-count",
+        requires_cpu_sota_baseline: true,
+        non_megakernel_justification: Some(
+            "architectural: rewrite-equivalence saturation evaluates independent opcode and class-membership predicates in one counting pass rather than queueing a rule opcode stream",
         ),
     },
 ];
@@ -461,25 +473,15 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
     }
 }
 
-pub fn emit_release_matrix(
+/// Render the matrix as a table or as JSON.
+///
+/// There is no write path here. The committed matrix artifact is written by the
+/// `release-workload-matrix` gate, which stamps the provenance head that this
+/// serialization omits.
+pub fn render_release_matrix(
     matrix: &ReleaseWorkloadMatrix,
     format: &str,
-    output: Option<&str>,
-) -> anyhow::Result<()> {
-    let rendered = render_release_matrix(matrix, format)?;
-    if let Some(output) = output {
-        let output = Path::new(output);
-        if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(output, rendered)?;
-        return Ok(());
-    }
-    print!("{rendered}");
-    Ok(())
-}
-
-fn render_release_matrix(matrix: &ReleaseWorkloadMatrix, format: &str) -> anyhow::Result<String> {
+) -> anyhow::Result<String> {
     if format == "json" {
         return Ok(format!("{}\n", serde_json::to_string_pretty(matrix)?));
     }
@@ -614,7 +616,7 @@ fn build_family_report(
     );
     let benchmark_command = benchmark_case.map(|case_id| {
         format!(
-            "cargo_full run -p vyre-bench -- run --suite release --case {case_id} --backend cuda --enforce-budgets --output {evidence_artifact}"
+            "cargo_full run -p vyre-bench --release -- run --suite release --case {case_id} --backend cuda --enforce-budgets --output {evidence_artifact}"
         )
     });
     cpu_sota_contracts.sort();
@@ -631,6 +633,7 @@ fn build_family_report(
     };
     let reproducible_cuda_command = benchmark_command.as_ref().is_some_and(|command| {
         command.contains("cargo_full")
+            && builds_optimized(command)
             && command.contains("--backend cuda")
             && command.contains("--enforce-budgets")
             && command.contains(&evidence_artifact)
@@ -660,6 +663,19 @@ fn build_family_report(
         reproducible_cuda_command,
         max_cpu_sota_min_speedup_x,
     }
+}
+
+/// True when the command passes `--release` to cargo rather than to the harness.
+///
+/// Everything after ` -- ` is an argument to vyre-bench, which builds nothing.
+/// A `--release` written there leaves the measurement running an unoptimized
+/// binary while the matrix reports the command as reproducible release
+/// evidence.
+fn builds_optimized(command: &str) -> bool {
+    command
+        .split_once(" -- ")
+        .map_or(command, |(cargo_arguments, _)| cargo_arguments)
+        .contains("--release")
 }
 
 fn preferred_release_case<'a>(
@@ -865,6 +881,20 @@ fn collect_cpu_sota_contracts(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// WHY: `--release` is a cargo flag before the separator and a harness
+    /// argument after it. A substring test accepted the second form, so a
+    /// matrix could call a debug measurement reproducible release evidence.
+    #[test]
+    fn only_a_cargo_release_flag_builds_optimized() {
+        assert!(builds_optimized(
+            "cargo_full run -p vyre-bench --release -- run --suite release"
+        ));
+        assert!(!builds_optimized(
+            "cargo_full run -p vyre-bench -- run --suite release --release"
+        ));
+        assert!(!builds_optimized("cargo_full run -p vyre-bench -- run"));
+    }
 
     #[test]
     fn preferred_release_case_rejects_non_release_defining_cpu_sota_cases() {

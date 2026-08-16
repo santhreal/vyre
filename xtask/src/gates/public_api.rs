@@ -19,6 +19,7 @@
 
 use std::collections::BTreeSet;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -78,6 +79,10 @@ impl Gate for PublicApiSnapshot {
         true
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &["--crate NAME judges one publishable crate instead of every one"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let rows = roster(&tree)?;
@@ -112,11 +117,11 @@ impl Gate for PublicApiSnapshot {
                 }
             }
             let source_root = format!("{}/src", row.directory);
-            if !ctx.root.join(&source_root).is_dir() {
+            if !structure_gate::source_scan::carries_rust_source(&ctx.root.join(&source_root)) {
                 report.find(Finding::in_file(
                     source_root.clone(),
                     format!(
-                        "publishable package `{}` has no source root at `{source_root}`",
+                        "publishable package `{}` has no Rust source under `{source_root}`",
                         row.package
                     ),
                     "restore the source root, or stop publishing the package so the gate stops promising a surface for it",
@@ -241,16 +246,17 @@ fn summarize(committed: &str, current: &str) -> String {
 /// Snapshot files naming no publishable package.
 fn unowned_snapshots(root: &Path, owned: &BTreeSet<&str>) -> Result<Vec<PathBuf>, GateError> {
     let directory = root.join(SNAPSHOT_DIR);
-    if !directory.is_dir() {
-        return Ok(Vec::new());
-    }
     let mut stale = Vec::new();
-    let entries = fs::read_dir(&directory).map_err(|error| {
-        GateError::new(
-            format!("cannot list `{SNAPSHOT_DIR}`: {error}"),
-            "restore the snapshot directory",
-        )
-    })?;
+    let entries = match fs::read_dir(&directory) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => {
+            return Err(GateError::new(
+                format!("cannot list `{SNAPSHOT_DIR}`: {error}"),
+                "restore the snapshot directory",
+            ))
+        }
+    };
     for entry in entries {
         let entry = entry.map_err(|error| {
             GateError::new(
@@ -281,7 +287,7 @@ fn unowned_snapshots(root: &Path, owned: &BTreeSet<&str>) -> Result<Vec<PathBuf>
 /// caller's `sort` is what makes the snapshot a function of the tree: byte order
 /// does not move with a locale.
 fn extract(root: &Path, package: &str) -> Result<String, GateError> {
-    let cargo = crate::output_arg::cargo_runner(root);
+    let cargo = crate::cargo_runner::binary(root);
     let output = Command::new(&cargo)
         .args([
             "public-api",
@@ -506,7 +512,13 @@ mod tests {
             .run(&GateCtx::new(root, Vec::new()))
             .unwrap();
         assert_eq!(report.count(), 1, "{:?}", report.findings);
-        assert!(report.findings[0].message.contains("no source root"));
+        assert!(
+            report.findings[0]
+                .message
+                .contains("publishable package `gone` has no Rust source under `gone/src`"),
+            "{:?}",
+            report.findings[0].message
+        );
     }
 
     /// WHY: `--crate` is the guard against an unscoped refresh, so a name that

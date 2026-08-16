@@ -88,6 +88,7 @@ pub(super) fn schema(suite: &str, cases: Vec<CaseReport>) -> ReportSchema {
             nvidia_driver_version: Some("test-driver".to_string()),
             nvidia_cuda_version: Some("test-cuda".to_string()),
             features: vec!["gpu.nvidia_smi".to_string()],
+            build_profile: "release".to_string(),
         },
         features: Vec::new(),
         cases,

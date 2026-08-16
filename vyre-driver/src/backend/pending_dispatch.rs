@@ -123,6 +123,7 @@ impl PendingDispatch for ReadyPending {
     }
 }
 
+// Inline: covers `ReadyPending`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

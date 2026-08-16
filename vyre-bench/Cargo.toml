@@ -28,8 +28,12 @@ vyre-registry-link = { workspace = true, features = [
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
+# `cpu-parity` is the host oracle set. This harness measures the device path
+# against it, so it names it. It is not in the default set, because a consumer
+# linking this library must not compile a CPU reference into it.
 vyre-libs = { workspace = true, features = [
     "bitset",
+    "cpu-parity",
     "graph",
     "nn-linear-4bit",
     "predicate",

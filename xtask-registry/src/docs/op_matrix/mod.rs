@@ -11,6 +11,8 @@ mod registered_rows;
 mod render;
 mod validation;
 
+use std::path::Path;
+
 use xtask::artifact_gate::Inspection;
 
 use registered_rows::{live_operation_ids, registered_records};
@@ -32,13 +34,13 @@ xtask::artifact_gate! {
        Proves every registered op id carries a canonical tier namespace, is registered by one \
        semantic source, appears in one family, and that every family declares owners and \
        tests. Proves nothing about whether the named owner and test paths exist.",
-    inspect: |ctx| inspect(),
+    inspect: |ctx| inspect(&ctx.root),
 }
 
 /// The matrix the registry generates, and every row problem found producing it.
-fn inspect() -> Inspection {
+fn inspect(root: &Path) -> Inspection {
     let mut inspection = Inspection::new();
-    let (matrix, problems) = build_matrix();
+    let (matrix, problems) = build_matrix(root);
     for problem in problems {
         inspection.blocked(
             MATRIX_PATH,
@@ -58,9 +60,9 @@ fn inspect() -> Inspection {
 /// the first was fixed and the artifact went unrefreshed exactly when it was
 /// most wrong. Every violation is now collected and the matrix is rendered from
 /// the rows that survived.
-fn build_matrix() -> (String, Vec<String>) {
+fn build_matrix(root: &Path) -> (String, Vec<String>) {
     let mut problems = Vec::new();
-    let mut records = registered_records(&mut problems);
+    let mut records = registered_records(root, &mut problems);
     problems.extend(validate_records(&records, &live_operation_ids()));
 
     records.sort_by(|left, right| {

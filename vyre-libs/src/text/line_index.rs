@@ -18,7 +18,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
-use crate::reduce::multi_block_prefix_scan::{multi_block_prefix_scan_sum_u32, BLOCK_LANES};
+use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the registered Tier 3 wrapper.
@@ -85,7 +85,7 @@ fn try_line_index_with_source_type(
     }
 
     vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass])
-        .map(|program| crate::program_outputs::demote_intermediate_outputs(program, lines))
+        .map(|program| crate::plumbing::program::outputs::demote_intermediate_outputs(program, lines))
         .map_err(|error| {
             format!(
                 "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan fusion instead of falling back to a serial lane-0 loop."
@@ -169,7 +169,7 @@ fn line_start_flags_program(
                 .with_pipeline_live_out(true)
                 .with_output_byte_range(0..output_bytes),
         ],
-        [BLOCK_LANES, 1, 1],
+        [1024, 1, 1],
         vec![wrap_anonymous_region(
             FLAG_OP_ID,
             vec![Node::if_then(Expr::lt(t, Expr::u32(n)), lane_body)],
@@ -178,8 +178,8 @@ fn line_start_flags_program(
 }
 
 /// Reference oracle: same line-counting semantics as the GPU kernel.
+#[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
     let mut out = Vec::with_capacity(source.len());
     let mut line: u32 = 0;
@@ -203,7 +203,7 @@ pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         LINE_INDEX_OP_ID,
         || line_index("source", "lines", 5),
         Some(|| {
@@ -261,8 +261,8 @@ mod tests {
 
     #[test]
     fn builder_uses_parallel_scan_pipeline() {
-        let program = line_index("source", "lines", BLOCK_LANES + 17);
-        assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
+        let program = line_index("source", "lines", 1024 + 17);
+        assert_eq!(program.workgroup_size(), [1024, 1, 1]);
         assert!(program
             .buffers()
             .iter()

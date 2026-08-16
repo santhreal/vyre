@@ -322,6 +322,7 @@ where
     Ok(outputs)
 }
 
+// Inline: covers `dispatch_grid_sync_split_generic`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -158,6 +158,54 @@ fn the_operation_registry_holds_exactly_what_the_counted_sources_contributed() {
     );
 }
 
+/// Every operation the tree registers reached this binary's registry.
+///
+/// WHY: the per-source floor above asks whether a source contributed anything,
+/// and both other operation rules compare the registry against the same live
+/// counts, so a source linked with a narrow feature selection satisfies all
+/// three while the registry is missing whole domains: the counts shrink
+/// together and agree. `docs/generated/catalog.toml` is generated from a build
+/// that links every registering domain and is held to the live registry by its
+/// own gate, so it is the one account of the whole set that does not shrink
+/// with this crate's feature selection. Reading it here is what turns a
+/// narrowed dependency red. It caught exactly that: `vyre-libs` was linked on
+/// default features, so 14 domains never registered.
+#[test]
+fn the_registry_holds_every_operation_the_generated_catalog_names() {
+    let catalog = checkout_root().join("docs/generated/catalog.toml");
+    let text = std::fs::read_to_string(&catalog)
+        .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", catalog.display()));
+    let table: toml::Value = toml::from_str(&text)
+        .unwrap_or_else(|error| panic!("Fix: cannot parse {}: {error}", catalog.display()));
+    let named: BTreeSet<String> = table
+        .get("subsystem")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: the generated catalog must list its subsystems")
+        .iter()
+        .filter_map(|subsystem| subsystem.get("operations"))
+        .filter_map(toml::Value::as_array)
+        .flatten()
+        .filter_map(toml::Value::as_str)
+        .map(str::to_string)
+        .collect();
+    assert!(
+        !named.is_empty(),
+        "Fix: the generated catalog named no operation, so this rule proves nothing; regenerate it with `xtask catalog --write`"
+    );
+    let registry = live_operation_registry();
+    let present: BTreeSet<String> = registry
+        .iter()
+        .map(|operation| operation.id.to_string())
+        .collect();
+    let absent: Vec<&String> = named.difference(&present).collect();
+    assert!(
+        absent.is_empty(),
+        "Fix: {} of the {} operations the generated catalog names did not reach the registry this crate publishes, so every rule reading it is judging a partial tree. Widen the feature selection on the registration source in vyre-registry-link/Cargo.toml until each one links. Missing: {absent:?}",
+        absent.len(),
+        named.len()
+    );
+}
+
 /// A crate declares that it owns a backend registration by submitting one. Every
 /// such crate has to be declared here, because this owner is what references it.
 #[test]

@@ -36,6 +36,8 @@ impl PipelineFingerprint {
     }
 }
 
+// Inline: `vyre_runtime::pipeline_cache::fingerprint` is `private`, so no integration test can
+// reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

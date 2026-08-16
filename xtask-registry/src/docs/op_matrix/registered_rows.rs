@@ -1,10 +1,10 @@
 //! The matrix rows derived from the live operation registry.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
-use vyre_foundation::operation::{
-    classify_operation_id as classify_op_id, OperationTier as OpTier,
-};
+use structure_gate::source_scan::{carries_rust_source, source_directory_named};
+use vyre_foundation::operation::OperationTier as OpTier;
 
 use super::record::OpRecord;
 
@@ -12,24 +12,36 @@ use super::record::OpRecord;
 ///
 /// A registration problem used to abort the whole matrix. It now excludes that
 /// one id and is reported, so the remaining rows are still checked.
-pub(super) fn registered_records(problems: &mut Vec<String>) -> Vec<OpRecord> {
+///
+/// `root` is the checkout the owner directories are read from. Reading them
+/// through relative paths answered from whatever directory the process happened
+/// to start in, so the same registry produced different owners for the same
+/// tree.
+pub(super) fn registered_records(root: &Path, problems: &mut Vec<String>) -> Vec<OpRecord> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut tiers = BTreeMap::<String, OpTier>::new();
 
     let registry = vyre_registry_link::operation::live_operation_registry();
     for entry in registry.iter() {
         push_registered(&mut ids, entry.id, "vyre-foundation::operation", problems);
+        tiers.insert(entry.id.to_string(), entry.tier);
     }
 
+    // One directory search per namespace and domain, not per operation. The
+    // fallback walks a crate source tree, and 327 registrations share 40-odd
+    // domains, so the uncached reader walked the same trees hundreds of times.
+    let mut owners = BTreeMap::<String, String>::new();
     ids.into_iter()
-        .filter_map(
-            |(id, sources)| match record_for_registered_id(&id, sources) {
+        .filter_map(|(id, sources)| {
+            let tier = tiers.get(&id).copied().unwrap_or(OpTier::Unknown);
+            match record_for_registered_id(root, &mut owners, &id, tier, sources) {
                 Ok(record) => Some(record),
                 Err(problem) => {
                     problems.push(problem);
                     None
                 }
-            },
-        )
+            }
+        })
         .collect()
 }
 
@@ -60,11 +72,16 @@ fn push_registered(
     }
 }
 
-fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRecord, String> {
-    let tier = classify_op_id(id);
+fn record_for_registered_id(
+    root: &Path,
+    owners: &mut BTreeMap<String, String>,
+    id: &str,
+    tier: OpTier,
+    sources: BTreeSet<String>,
+) -> Result<OpRecord, String> {
     if tier == OpTier::Unknown {
         return Err(format!(
-            "Fix: op id `{id}` from `{sources:?}` has no canonical tier namespace."
+            "Fix: op id `{id}` from `{sources:?}` declares no tier."
         ));
     }
     if sources.len() > 1 {
@@ -76,7 +93,7 @@ fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRec
     let record = OpRecord {
         family: id.to_string(),
         tier,
-        owners: owner_paths(id, tier),
+        owners: owner_paths(root, owners, id, tier)?,
         ops: vec![id.to_string()],
         duplicate_ok: sources.len() > 1,
         registry_sources: sources.into_iter().collect(),
@@ -85,30 +102,42 @@ fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRec
         cuda: "supported",
         wgpu: "supported",
         spirv: "experimental",
-        release_blocking_notes: release_notes(id, tier),
-        tests: test_paths(id, tier),
+        release_blocking_notes: release_notes(id, tier)?,
+        tests: test_paths(id, tier)?,
     };
 
     Ok(record)
 }
 
-fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
+/// Directory that carries the definition, for every tier that has one.
+///
+/// Both tiers read the checkout through [`namespace_source_dir`]. A frozen id
+/// names the crate that minted it, so a domain alias keyed on the id namespace
+/// answered `vyre-libs/src/unknown` for every composition that kept a
+/// `vyre-primitives::` id.
+///
+/// An external extension is defined by a crate outside this checkout, so no
+/// directory here owns it, and a foundation op is defined by the IR rather than
+/// by a domain directory.
+///
+/// # Errors
+///
+/// `OperationTier` is `non_exhaustive`, so a tier this rule does not name is
+/// reported as the id that carries it rather than taking the empty owner list a
+/// foundation op gets. An empty list reads as "defined by the IR", which is the
+/// one answer that would let a new tier ship with no owner and no finding.
+fn owner_paths(
+    root: &Path,
+    owners: &mut BTreeMap<String, String>,
+    id: &str,
+    tier: OpTier,
+) -> Result<Vec<String>, String> {
     match tier {
-        OpTier::Intrinsic => vec![namespace_source_dir(id)],
-        OpTier::Library => {
-            let domain = namespace_domain(id, "vyre-libs::");
-            let owner = match domain {
-                "matching" => "vyre-libs/src/scan".to_string(),
-                "optim" => "vyre-libs/src/nn/optim".to_string(),
-                "quant" => "vyre-libs/src/nn/quant".to_string(),
-                "builder" => "vyre-libs/src/builder_catalog.rs".to_string(),
-                _ => format!("vyre-libs/src/{domain}"),
-            };
-            vec![owner]
-        }
-        OpTier::External => vec!["docs/optimization/README.md".to_string()],
-        OpTier::Foundation | OpTier::Unknown => Vec::new(),
-        _ => Vec::new(),
+        OpTier::Intrinsic | OpTier::Library => Ok(vec![namespace_source_dir(root, owners, id)]),
+        OpTier::Foundation | OpTier::External | OpTier::Unknown => Ok(Vec::new()),
+        tier => Err(format!(
+            "Fix: op id `{id}` declares tier `{tier:?}`, which reaches no owner rule. Record where a registration of that tier keeps its definition, in `owner_paths` of the op matrix rows."
+        )),
     }
 }
 
@@ -128,40 +157,45 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
 /// git tracks files and not directories, and the move left one such shell at
 /// `vyre-primitives/src/matching`. An existence test would have named it the
 /// owner of eleven operations whose code is in `vyre-libs`.
-fn namespace_source_dir(id: &str) -> String {
+///
+/// A domain is not always a top-level module. The optimizer and quantization
+/// ops moved under `nn`, so the search runs over the whole crate source tree
+/// through [`source_directory_named`] once the top-level answer holds no code.
+fn namespace_source_dir(root: &Path, owners: &mut BTreeMap<String, String>, id: &str) -> String {
     let Some((crate_name, rest)) = id.split_once("::") else {
         return String::new();
     };
     let domain = rest.split("::").next().unwrap_or("unknown");
+    let key = format!("{crate_name}/{domain}");
+    if let Some(found) = owners.get(&key) {
+        return found.clone();
+    }
+    let found = resolve_source_dir(root, crate_name, domain);
+    owners.insert(key, found.clone());
+    found
+}
+
+/// Read one namespace and domain out of the checkout.
+fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
     let minted = format!("{crate_name}/src/{domain}");
-    if carries_rust_source(&minted) {
+    if carries_rust_source(&root.join(&minted)) {
         return minted;
     }
     let moved = format!("vyre-libs/src/{domain}");
-    if carries_rust_source(&moved) {
+    if carries_rust_source(&root.join(&moved)) {
         return moved;
     }
-    minted
-}
-
-/// Whether the directory holds a Rust file, at any depth below it.
-fn carries_rust_source(dir: &str) -> bool {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return false;
-    };
-    let mut nested = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "rs") {
-            return true;
-        }
-        if path.is_dir() {
-            nested.push(path);
+    for relative in [format!("{crate_name}/src"), "vyre-libs/src".to_string()] {
+        if let Some(found) = source_directory_named(&root.join(&relative), domain) {
+            let found = found.to_string_lossy().replace('\\', "/");
+            let root_prefix = format!("{}/", root.to_string_lossy().replace('\\', "/"));
+            return found
+                .strip_prefix(&root_prefix)
+                .unwrap_or(&found)
+                .to_string();
         }
     }
-    nested
-        .into_iter()
-        .any(|path| path.to_str().is_some_and(carries_rust_source))
+    minted
 }
 
 fn namespace_domain<'a>(id: &'a str, prefix: &str) -> &'a str {
@@ -170,7 +204,15 @@ fn namespace_domain<'a>(id: &'a str, prefix: &str) -> &'a str {
         .unwrap_or("unknown")
 }
 
-fn test_paths(id: &str, tier: OpTier) -> Vec<String> {
+/// Suites that judge one operation, per tier.
+///
+/// # Errors
+///
+/// `OperationTier` is `non_exhaustive`. A tier this rule does not name reaches
+/// no suite, and an empty list here reads as an operation the harnesses already
+/// cover, so the tier is reported instead. Naming a new tier in one field rule
+/// and not the others is exactly how a row ships judged by nothing.
+fn test_paths(id: &str, tier: OpTier) -> Result<Vec<String>, String> {
     let mut tests = match tier {
         OpTier::Intrinsic => {
             let crate_name = id.split_once("::").map_or("", |(name, _)| name);
@@ -185,24 +227,36 @@ fn test_paths(id: &str, tier: OpTier) -> Vec<String> {
             vec!["vyre-libs/tests/universal_harness.rs".to_string()]
         }
         OpTier::Foundation | OpTier::Unknown => Vec::new(),
-        _ => Vec::new(),
+        tier => {
+            return Err(format!(
+                "Fix: op id `{id}` declares tier `{tier:?}`, which reaches no suite rule. Record which suite judges a registration of that tier, in `test_paths` of the op matrix rows."
+            ));
+        }
     };
     tests.push("conform/vyre-conform/tests/op_matrix_truth.rs".to_string());
-    tests
+    Ok(tests)
 }
 
-fn release_notes(_id: &str, tier: OpTier) -> String {
+/// What the row says about the tier it was generated from.
+///
+/// # Errors
+///
+/// A tier this rule does not name is reported rather than described by an empty
+/// sentence, for the reason [`test_paths`] gives.
+fn release_notes(id: &str, tier: OpTier) -> Result<String, String> {
     match tier {
-        OpTier::Intrinsic => {
+        OpTier::Intrinsic => Ok(
             "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform.".to_string()
-        }
-        OpTier::Library => {
+        ),
+        OpTier::Library => Ok(
             "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace.".to_string()
-        }
-        OpTier::External => {
+        ),
+        OpTier::External => Ok(
             "Source-backed row generated from vyre-foundation::operation for an external consumer crate.".to_string()
-        }
-        OpTier::Foundation | OpTier::Unknown => String::new(),
-        _ => String::new(),
+        ),
+        OpTier::Foundation | OpTier::Unknown => Ok(String::new()),
+        tier => Err(format!(
+            "Fix: op id `{id}` declares tier `{tier:?}`, which reaches no release-note rule. Record what a row of that tier states, in `release_notes` of the op matrix rows."
+        )),
     }
 }

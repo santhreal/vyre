@@ -155,10 +155,12 @@ fn no_source_file_resolves_the_checkout_from_a_compiled_in_path() {
 /// itself gets an exemption, and an exemption list is a hole of exactly the kind
 /// this test exists to close.
 fn banned_spellings() -> Vec<String> {
-    ["CARGO_MANIFEST_DIR", "VYRE_CHECKOUT_ROOT"]
-        .iter()
-        .map(|name| format!("env{}({name:?})", "!"))
-        .collect()
+    let mut spellings = Vec::new();
+    for name in ["CARGO_MANIFEST_DIR", "VYRE_CHECKOUT_ROOT"] {
+        spellings.push(format!("env{}({name:?})", "!"));
+        spellings.push(format!("option_env{}({name:?})", "!"));
+    }
+    spellings
 }
 
 /// Every directory the scan reads, paired with the member that owns it.
@@ -178,14 +180,14 @@ fn scanned_directories(root: &Path) -> Vec<(String, PathBuf)> {
         let crate_dir = root.join(&member);
         for area in ["src", "tests", "benches"] {
             let candidate = crate_dir.join(area);
-            if candidate.is_dir() {
+            if structure_gate::source_scan::carries_rust_source(&candidate) {
                 directories.push((member.clone(), candidate));
             }
         }
     }
 
     let root_tests = root.join("tests");
-    if root_tests.is_dir() {
+    if structure_gate::source_scan::carries_rust_source(&root_tests) {
         directories.push(("tests".to_string(), root_tests));
     }
 

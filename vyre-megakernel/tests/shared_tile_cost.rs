@@ -21,13 +21,16 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph,
 };
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
     compile, ArtifactNodeId, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
 };
+
+use graph_fixtures::producer_consumer_pair;
+
+mod graph_fixtures;
 
 /// Elements in each declared tile. A u32 tile of 8192 elements is 32 KiB, which
 /// fits the 48 KiB budget below once and not twice.
@@ -35,15 +38,6 @@ const TILE_ELEMENTS: u32 = 8192;
 
 /// Bytes one tile occupies.
 const TILE_BYTES: u64 = TILE_ELEMENTS as u64 * 4;
-
-fn invocation_contract() -> ValueContract {
-    ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Symbol("items".into())],
-        access: BufferAccess::ReadWrite,
-        lifetime: ValueLifetime::Invocation,
-    }
-}
 
 /// A program that stages its input through a workgroup tile of the given name.
 fn tiled_program(input: &str, output: &str, tile: &str) -> Program {
@@ -64,48 +58,10 @@ fn tiled_program(input: &str, output: &str, tile: &str) -> Program {
 /// A producer and a consumer joined by one invocation-scoped value, each
 /// staging through a tile of the given name.
 fn tiled_pair(producer_tile: &str, consumer_tile: &str) -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let input = graph
-        .add_external_value("input", invocation_contract())
-        .unwrap();
-    let (_, intermediate) = graph
-        .add_node(
-            "producer",
-            tiled_program("input", "intermediate", producer_tile),
-            vec![GraphInput {
-                buffer: "input".into(),
-                value: input,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "intermediate".into(),
-                name: "intermediate".into(),
-                contract: invocation_contract(),
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    graph
-        .add_node(
-            "consumer",
-            tiled_program("intermediate", "output", consumer_tile),
-            vec![GraphInput {
-                buffer: "intermediate".into(),
-                value: intermediate[0],
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "output".into(),
-                name: "output".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    graph
+    producer_consumer_pair(
+        tiled_program("input", "intermediate", producer_tile),
+        tiled_program("intermediate", "output", consumer_tile),
+    )
 }
 
 /// A device that holds shared memory and reports a 48 KiB workgroup budget.

@@ -149,7 +149,7 @@ mod non_panic_wrapper_tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || stochastic_and_mul("a", "b", "out", 2),
         Some(|| {

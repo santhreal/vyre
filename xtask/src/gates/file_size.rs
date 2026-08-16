@@ -30,6 +30,13 @@ const CORE_ROOTS: &[&str] = &[
 
 /// Measured line counts for files under the core crates. The cap is this number
 /// plus five percent, rounded up.
+///
+/// Commit b0ac36c845 moved `matching/region.rs`, `matching/dfa_compile/compile.rs`
+/// and `math/semiring_gemm/mod.rs` out of `vyre-primitives` into `vyre-libs` and
+/// split each one. The rows follow the code to its new path at the count
+/// measured there, 198, 347 and 356 lines, rather than lapsing to the flat core
+/// cap of 2500, which would leave three files that were under 550 lines free to
+/// grow by a factor of four.
 const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-driver-wgpu/src/backend_dispatch.rs", 1360),
     ("vyre-driver-wgpu/src/pipeline/mod.rs", 900),
@@ -72,15 +79,15 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-foundation/src/serial/wire/encode/to_wire/mod.rs", 690),
     ("vyre-libs/src/parsing/python/lex.rs", 660),
     ("vyre-runtime/src/replay/mod.rs", 549),
-    ("vyre-primitives/src/matching/region.rs", 544),
-    ("vyre-primitives/src/matching/dfa_compile/compile.rs", 344),
+    ("vyre-libs/src/matching/region.rs", 198),
+    ("vyre-libs/src/matching/dfa_compile/compile.rs", 347),
     ("vyre-libs/src/parsing/go/parse/structure.rs", 539),
     ("vyre-foundation/src/ir_inner/model/expr/mod.rs", 539),
     ("vyre-foundation/src/optimizer/mod.rs", 970),
     ("vyre-foundation/src/execution_plan/mod.rs", 740),
     ("vyre-runtime/src/uring/ring.rs", 685),
     ("vyre-foundation/src/execution_plan/policy.rs", 660),
-    ("vyre-primitives/src/math/semiring_gemm/mod.rs", 535),
+    ("vyre-libs/src/math/semiring_gemm/mod.rs", 356),
 ];
 
 /// Per-file ceilings for files the split audit tracks outside the core crates.
@@ -98,6 +105,10 @@ impl Gate for FileSize {
 
     fn help(&self) -> &'static str {
         "source files over their per-file line cap, and ratchet rows that name nothing"
+    }
+
+    fn usage(&self) -> &'static [&'static str] {
+        &["--report prints every file over the cap instead of the ratchet rows alone"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

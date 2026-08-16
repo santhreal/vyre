@@ -46,8 +46,8 @@ impl Registry {
     /// is reported instead of defaulted.
     pub fn read(root: &Path) -> Result<Self, String> {
         let path = root.join(REGISTRY);
-        let text =
-            read_source_bounded(&path).map_err(|error| format!("cannot read {REGISTRY}: {error}"))?;
+        let text = read_source_bounded(&path)
+            .map_err(|error| format!("cannot read {REGISTRY}: {error}"))?;
         Self::parse(&text)
     }
 
@@ -68,11 +68,13 @@ impl Registry {
         let mut rows = Vec::with_capacity(entries.len());
         for entry in entries {
             let Some(package) = entry.get("package").and_then(Value::as_str) else {
-                return Err(format!("{REGISTRY} has a [[crate]] entry with no `package`"));
+                return Err(format!(
+                    "{REGISTRY} has a [[crate]] entry with no `package`"
+                ));
             };
             rows.push(CrateRow {
                 package: package.to_string(),
-                path: field(entry, "path", package)?,
+                path: field(entry, "path", package)?.replace('\\', "/"),
                 owner: field(entry, "owner", package)?,
                 layer: field(entry, "layer", package)?,
             });
@@ -95,14 +97,17 @@ impl Registry {
     ///
     /// The longest declared directory wins, so a member nested inside another
     /// member's directory keeps the files under it.
+    ///
+    /// Both sides are slash-separated: the query is normalised here and the row
+    /// was normalised when the registry was read. Normalising only one side let
+    /// a row written with backslashes match by prefix and not exactly, so the
+    /// same file was owned or unowned depending on which arm answered.
     #[must_use]
     pub fn owning_crate(&self, path: &str) -> Option<&CrateRow> {
         let path = path.replace('\\', "/");
         self.rows
             .iter()
-            .filter(|row| {
-                path == row.path || path.starts_with(&format!("{}/", row.path.replace('\\', "/")))
-            })
+            .filter(|row| path == row.path || path.starts_with(&format!("{}/", row.path)))
             .max_by_key(|row| row.path.len())
     }
 }

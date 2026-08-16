@@ -18,6 +18,13 @@
 //!   Feature-gated behind `python-parser`.
 
 /// Substrate-neutral parsing primitives (AST, delimiter, grammar).
+///
+/// Behind `parsing` because the three registrations under it carry
+/// `vyre-libs::parsing::` op ids, and that is the feature the operation
+/// schema routes those ids to. The substrate below (`composition`,
+/// `source_cache`, `lr_tables`, `vast`, `parallel_parse`) registers nothing
+/// and stays available to a build that only wants the kernels.
+#[cfg(feature = "parsing")]
 pub mod core;
 
 /// Content-hash LRU cache for parsed source artifacts. ROADMAP L2 / E2

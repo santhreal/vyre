@@ -109,7 +109,7 @@ evidence = [
   "evidence/benchmarks/workload-06-quantified-condition-loops.json",
   "evidence/benchmarks/workload-07-alias-reaching-def.json",
   "evidence/benchmarks/workload-08-ifds-witness.json",
-  "evidence/benchmarks/workload-09-c-ast-traversal.json",
+  "evidence/benchmarks/workload-09-ast-motif-traversal.json",
   "evidence/benchmarks/workload-10-megakernel-queued-batches.json",
   "evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
   "evidence/benchmarks/workload-12-sparse-output-compaction.json",

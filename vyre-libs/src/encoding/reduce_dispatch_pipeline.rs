@@ -6,7 +6,7 @@
 use vyre_foundation::ir::{Node, Program};
 use crate::reduce::{
     multi_block_prefix_scan::{
-        multi_block_prefix_scan_sum_u32, pass_a_local_scan, pass_c_broadcast_offsets, BLOCK_LANES,
+        multi_block_prefix_scan_sum_u32, pass_a_local_scan, pass_c_broadcast_offsets,
     },
     radix_sort::radix_sort,
     range_counts::{range_counts_u32, range_counts_u32_body, range_counts_u32_child},
@@ -157,14 +157,14 @@ pub fn dispatch_multi_block_prefix_sum(input: &str, output: &str, n: u32) -> Pro
 /// Build pass A for a resident multi-block prefix-sum chain.
 #[must_use]
 pub fn prefix_pass_a(input: &str, partials: &str, block_totals: &str, n: u32) -> Program {
-    let num_blocks = n.div_ceil(BLOCK_LANES).max(1);
+    let num_blocks = n.div_ceil(1024).max(1);
     pass_a_local_scan(input, partials, block_totals, n, num_blocks)
 }
 
 /// Build pass C for a resident multi-block prefix-sum chain.
 #[must_use]
 pub fn prefix_pass_c(partials: &str, block_totals_scanned: &str, output: &str, n: u32) -> Program {
-    let num_blocks = n.div_ceil(BLOCK_LANES).max(1);
+    let num_blocks = n.div_ceil(1024).max(1);
     pass_c_broadcast_offsets(partials, block_totals_scanned, output, n, num_blocks)
 }
 
@@ -315,16 +315,16 @@ mod tests {
         let small = dispatch_multi_block_prefix_sum("input", "output", 64);
         assert!(!small.buffers.is_empty());
 
-        let large = dispatch_multi_block_prefix_sum("input", "output", BLOCK_LANES + 17);
+        let large = dispatch_multi_block_prefix_sum("input", "output", 1024 + 17);
         assert!(!large.buffers.is_empty());
 
-        let pass_a = prefix_pass_a("input", "partials", "totals", BLOCK_LANES + 1);
+        let pass_a = prefix_pass_a("input", "partials", "totals", 1024 + 1);
         assert_eq!(
             program_generator(&pass_a),
             "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_a"
         );
 
-        let pass_c = prefix_pass_c("partials", "totals_scanned", "output", BLOCK_LANES + 1);
+        let pass_c = prefix_pass_c("partials", "totals_scanned", "output", 1024 + 1);
         assert_eq!(
             program_generator(&pass_c),
             "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_c"

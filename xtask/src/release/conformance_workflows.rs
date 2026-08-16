@@ -130,13 +130,7 @@ pub fn parse_required_ci_statuses(vyre_root: &Path) -> (Vec<String>, Vec<String>
 /// Whether any workflow defines a job producing the named status.
 pub fn ci_status_defined(vyre_root: &Path, status: &str, scan_errors: &mut Vec<String>) -> bool {
     let workflow_root = vyre_root.join(".github/workflows");
-    if !workflow_root.is_dir() {
-        scan_errors.push(format!(
-            "workflow root `{}` is not a directory while searching status `{status}`",
-            workflow_root.display()
-        ));
-        return false;
-    }
+    let mut workflows_read = 0usize;
     for entry in tree_walk::pruned(&workflow_root, BUILD_OUTPUT_AND_VCS) {
         let entry = match entry {
             Ok(entry) => entry,
@@ -165,12 +159,19 @@ pub fn ci_status_defined(vyre_root: &Path, status: &str, scan_errors: &mut Vec<S
                 continue;
             }
         };
+        workflows_read += 1;
         if text.contains(&format!("name: {status}"))
             || text.contains(&format!("  {status}:"))
             || text.contains(&format!("    name: {status}"))
         {
             return true;
         }
+    }
+    if workflows_read == 0 {
+        scan_errors.push(format!(
+            "workflow root `{}` yielded no workflow file while searching status `{status}`",
+            workflow_root.display()
+        ));
     }
     false
 }

@@ -1,4 +1,5 @@
 //! Adversarial oracle tests for `text::utf8_validate` classification.
+#![cfg(all(feature = "text", feature = "cpu-parity"))]
 
 use vyre_foundation::ir::{DataType, Program};
 use vyre_libs::text::{

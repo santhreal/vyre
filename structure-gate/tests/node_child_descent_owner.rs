@@ -68,10 +68,10 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
-use structure_gate::source_scan::{
-    is_word_byte, mask_comments_and_strings, matching_brace, rust_sources_with_text,
-};
 use structure_gate::crate_ownership::Registry;
+use structure_gate::source_scan::{
+    is_word_byte, mask_comments_and_strings, matching_brace, rust_sources_with_text, SourceText,
+};
 use structure_gate::workspace_root;
 
 /// Where `Node` is declared, relative to the workspace root.
@@ -359,6 +359,7 @@ const WAIVERS: &[Waiver] = &[
         owner: "pass-engine",
         reason: "test oracle deliberately independent of the dead code walker it audits",
     },
+
 ];
 
 /// One recorded hand-written descent.
@@ -660,7 +661,16 @@ fn every_owner_call_names_a_function_in_the_traversal_surface() {
         "vyre-foundation/src/transform/rewrite_walk.rs",
     ];
     let mut declared: BTreeSet<String> = BTreeSet::new();
-    for (relative, text) in rust_sources_with_text(&root) {
+    for source in rust_sources_with_text(&root) {
+        // A refused read is oversized, unopenable, or not UTF-8, none of
+        // which is a hand-written owner declaration.
+        let SourceText::Read {
+            path: relative,
+            text,
+        } = source
+        else {
+            continue;
+        };
         let normalised = relative.replace('\\', "/");
         if !surface.iter().any(|home| normalised.starts_with(home)) {
             continue;
@@ -685,7 +695,7 @@ fn every_owner_call_names_a_function_in_the_traversal_surface() {
     }
     let absent: Vec<&&str> = OWNER_CALLS
         .iter()
-        .filter(|call| !declared.contains(*call))
+        .filter(|call| !declared.contains(**call))
         .collect();
     assert!(
         absent.is_empty(),
@@ -799,10 +809,20 @@ fn rebuild(node: &Node) -> Node {
 }
 
 /// Every reported block in the tree, ordered.
+///
+/// A source the walk cannot read is a failure rather than a gap: a file nothing
+/// judged is a file this ratchet does not cover, and the count would fall for a
+/// reason nobody recorded.
 fn scan(root: &Path) -> Vec<Site> {
     let slots = declared_child_slots(root);
     let mut sites = Vec::new();
-    for (relative, text) in rust_sources_with_text(root) {
+    for source in rust_sources_with_text(root) {
+        let (relative, text) = match source {
+            SourceText::Read { path, text } => (path, text),
+            SourceText::Unread { path, reason } => {
+                panic!("Fix: {path} {reason}, so the descent scan never read it")
+            }
+        };
         for line in blocks_in(&text, &slots) {
             sites.push(Site {
                 path: relative.clone(),

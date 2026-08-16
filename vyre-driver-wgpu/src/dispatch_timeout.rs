@@ -55,6 +55,8 @@ pub(crate) fn enforce_budget(
     Ok(())
 }
 
+// Inline: covers `SERVICEABLE_FLOOR`, `deadline`, `enforce_budget`, `reject_unserviceable`, which
+// no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

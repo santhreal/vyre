@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:5474265045a711a03ca666ef42440b344ea8d6da:dirty=false",
+  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
   "schema_version": 1,
   "scan": "resource-bound",
   "findings": [
@@ -14,6 +14,12 @@
       "line": 163,
       "pattern": "thread_sleep",
       "text": "std::thread::sleep(sleep.min(deadline - waited));"
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 126,
+      "pattern": "unbounded_read",
+      "text": "std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {"
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
@@ -35,19 +41,19 @@
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 225,
+      "line": 226,
       "pattern": "std_thread_sleep",
       "text": "text: \"std::thread::sleep(\","
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 225,
+      "line": 226,
       "pattern": "thread_sleep",
       "text": "text: \"std::thread::sleep(\","
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",
-      "line": 230,
+      "line": 231,
       "pattern": "tokio_sleep",
       "text": "text: \"tokio::time::sleep(\","
     }

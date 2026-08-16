@@ -7,6 +7,14 @@ The `ci-required` gate holds this list to the workflows that define it, and
 ## From `ci.yml` (run on every PR + push to main)
 - `CI release gate`
 
+## From `gates.yml` (run on every PR + push to main)
+- `Every registered gate`
+- `Rules the sweep owns, named by domain`
+- `Every feature compiles alone on the MSRV`
+- `Every feature compiles alone or records why it cannot`
+- `Oracle-matrix sweeps ci.yml cannot reach`
+- `Emitted SPIR-V is validated, not just shaped`
+
 ## From `bench.yml` (run on every PR and push to main)
 - `criterion-regression`
 
@@ -24,5 +32,9 @@ The `ci-required` gate holds this list to the workflows that define it, and
 Not blocking on individual PRs. Tracked in cycle reports.
 
 - `fuzz.yml`  -  full fuzz lane once active fuzz targets exist.
-- `mutation-testing.yml`  -  weekly zero-survivor gate once restored from `workflows-paused`.
-- `reproducible-build.yml`  -  nightly `reproducible` gate once restored from `workflows-paused`.
+
+A workflow that is paused, superseded or left unprotected is declared in
+`xtask/ci-registry.toml`, which keeps a row for every workflow path the tree
+carries or once carried. It is not named here: this document is the payload of
+branch protection, and a name here that no workflow file answers to declares a
+lane that cannot run.

@@ -1,7 +1,6 @@
 //! Shared scratch planning for resident CSR frontier queues.
 
 use crate::bitset::frontier::frontier_tail_mask;
-use crate::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES;
 use crate::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
     CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
@@ -293,7 +292,7 @@ fn capped_frontier_popcount(
 pub(crate) fn frontier_word_prefix_scratch(
     frontier_words: usize,
 ) -> Result<FrontierWordPrefixScratch, String> {
-    let lanes = FRONTIER_WORD_SCAN_BLOCK_LANES as usize;
+    let lanes = 1024_usize;
     let padded = frontier_words.checked_add(lanes - 1).ok_or_else(|| {
         format!(
             "Fix: resident CSR queue frontier_words={frontier_words} overflows word-prefix block rounding."
@@ -581,10 +580,10 @@ mod tests {
             let scratch = frontier_word_prefix_scratch(words)
                 .expect("Fix: generated word-prefix scratch should fit");
             assert!(scratch.block_count >= 1);
-            assert!(scratch.partial_words >= FRONTIER_WORD_SCAN_BLOCK_LANES as usize);
+            assert!(scratch.partial_words >= 1024);
             assert_eq!(
                 scratch.partial_words,
-                scratch.block_total_words * FRONTIER_WORD_SCAN_BLOCK_LANES as usize
+                scratch.block_total_words * 1024
             );
             assert!(
                 scratch.partial_words >= words,

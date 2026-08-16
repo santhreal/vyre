@@ -83,7 +83,7 @@ fn every_workspace_member_has_a_classified_testing_guide() {
 
     assert!(
         missing.is_empty(),
-        "Fix: these workspace members have no `testing/<crate>.md` row in docs/DOCS.toml. Run `python3 scripts/testing_guides.py --write`, add the row beside the other generated testing guides, then run `./cargo_full run --bin xtask -- docs-check --write`. Adding a crate must not leave the documentation manifest incomplete:\n  {}",
+        "Fix: these workspace members have no `testing/<crate>.md` row in docs/DOCS.toml. Run `./cargo_full run --bin xtask -- testing-guides --write`, add the row beside the other generated testing guides, then run `./cargo_full run --bin xtask -- docs-check --write`. Adding a crate must not leave the documentation manifest incomplete:\n  {}",
         missing.join("\n  ")
     );
 }

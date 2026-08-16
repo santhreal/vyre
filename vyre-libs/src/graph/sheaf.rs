@@ -97,7 +97,7 @@ pub fn try_sheaf_diffusion_step(
         ));
     }
 
-    let cells = crate::operand_shape::matrix_cells(OP_ID, n_nodes, d)?;
+    let cells = crate::plumbing::operand::shape::matrix_cells(OP_ID, n_nodes, d)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // delta = damping · restriction_diag[t] · stalks[t]
@@ -178,7 +178,7 @@ pub fn try_sheaf_diffusion_step_cpu_into(
 ) -> Result<(), String> {
     let n = stalks.len().min(restriction_diag.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "sheaf diffusion CPU oracle",
@@ -197,7 +197,7 @@ pub fn try_sheaf_diffusion_step_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || sheaf_diffusion_step("stalks", "restriction_diag", "damping", "stalks_next", 1, 1),
         Some(|| {

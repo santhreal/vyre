@@ -46,16 +46,17 @@ vyre-spec.workspace = true
 # mapping, and `full` deliberately leaves the regex frontend and its
 # regex-syntax dependency out of what a library consumer gets.
 vyre-libs = { workspace = true, features = ["full", "matching-regex"] }
-vyre-primitives = { workspace = true, features = ["all-lego"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 inventory.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 syn = { workspace = true, features = ["full", "visit"] }
 toml.workspace = true
 walkdir.workspace = true
+# The tree reads a placement answer has to make: the workspace-member roster,
+# the checkout root, and whether a directory carries Rust source. One owner, in
+# the crate that depends on no vyre crate. publish = false on both sides.
+structure-gate = { path = "../structure-gate" }
 
 [dev-dependencies]
-# Run-time checkout root, so a contract binary reused across checkouts still
-# reports on the tree cargo was invoked in. publish = false on both sides.
-structure-gate = { path = "../structure-gate" }
 tempfile = { workspace = true }

@@ -11,7 +11,6 @@ use super::sizing_diagnostics::{
 };
 use super::{
     FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID, FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
-    FRONTIER_WORD_SCAN_BLOCK_LANES,
 };
 use crate::bitset::bitset_words;
 
@@ -37,10 +36,11 @@ pub fn frontier_word_counts_scan_pass_a(
         );
     }
     let words = bitset_words(node_count);
-    let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
+    let block_lanes = 1024_u32;
+    let num_blocks = words.div_ceil(block_lanes).max(1);
     let total_partials = match checked_frontier_u32_product(
         num_blocks,
-        FRONTIER_WORD_SCAN_BLOCK_LANES,
+        block_lanes,
         "frontier_word_counts_scan_pass_a partial word count",
     ) {
         Ok(total_partials) => total_partials,
@@ -93,7 +93,7 @@ pub fn frontier_word_counts_scan_pass_a(
     body.push(Node::let_bind(
         "fwcs_global",
         Expr::add(
-            Expr::mul(block.clone(), Expr::u32(FRONTIER_WORD_SCAN_BLOCK_LANES)),
+            Expr::mul(block.clone(), Expr::u32(block_lanes)),
             lane.clone(),
         ),
     ));
@@ -125,10 +125,12 @@ pub fn frontier_word_counts_scan_pass_a(
     });
 
     body.extend(
-        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(&scratch_a,
-        &scratch_b,
-        &lane,
-        FRONTIER_WORD_SCAN_BLOCK_LANES,),
+        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+            &scratch_a,
+            &scratch_b,
+            &lane,
+            block_lanes,
+        ),
     );
 
     body.push(Node::if_then(
@@ -140,7 +142,7 @@ pub fn frontier_word_counts_scan_pass_a(
         )],
     ));
     body.push(Node::if_then(
-        Expr::eq(lane.clone(), Expr::u32(FRONTIER_WORD_SCAN_BLOCK_LANES - 1)),
+        Expr::eq(lane.clone(), Expr::u32(block_lanes - 1)),
         vec![Node::store(
             block_totals,
             block.clone(),
@@ -159,10 +161,10 @@ pub fn frontier_word_counts_scan_pass_a(
                 .with_count(num_blocks)
                 .with_pipeline_live_out(true)
                 .with_output_byte_range(0..block_total_bytes),
-            BufferDecl::workgroup(&scratch_a, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
-            BufferDecl::workgroup(&scratch_b, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
+            BufferDecl::workgroup(&scratch_a, block_lanes, DataType::U32),
+            BufferDecl::workgroup(&scratch_b, block_lanes, DataType::U32),
         ],
-        [FRONTIER_WORD_SCAN_BLOCK_LANES, 1, 1],
+        [block_lanes, 1, 1],
         vec![wrap_anonymous_region(
             FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
             body,
@@ -187,7 +189,8 @@ pub fn frontier_word_block_offsets_in_place(block_totals: &str, node_count: u32)
         );
     }
     let words = bitset_words(node_count);
-    let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
+    let block_lanes = 1024_u32;
+    let num_blocks = words.div_ceil(block_lanes).max(1);
     let block_total_bytes = match try_u32_byte_range(
         num_blocks,
         "frontier_word_block_offsets_in_place block totals",
@@ -201,7 +204,7 @@ pub fn frontier_word_block_offsets_in_place(block_totals: &str, node_count: u32)
             );
         }
     };
-    if num_blocks <= FRONTIER_WORD_SCAN_BLOCK_LANES {
+    if num_blocks <= block_lanes {
         return frontier_word_block_offsets_single_workgroup(
             block_totals,
             num_blocks,
@@ -235,10 +238,12 @@ fn frontier_word_block_offsets_single_workgroup(
     });
 
     body.extend(
-        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(&scratch_a,
-        &scratch_b,
-        &lane,
-        FRONTIER_WORD_SCAN_BLOCK_LANES,),
+        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+            &scratch_a,
+            &scratch_b,
+            &lane,
+            1024,
+        ),
     );
 
     body.push(Node::if_then(
@@ -265,10 +270,10 @@ fn frontier_word_block_offsets_single_workgroup(
                 .with_count(num_blocks)
                 .with_pipeline_live_out(true)
                 .with_output_byte_range(0..block_total_bytes),
-            BufferDecl::workgroup(&scratch_a, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
-            BufferDecl::workgroup(&scratch_b, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
+            BufferDecl::workgroup(&scratch_a, 1024, DataType::U32),
+            BufferDecl::workgroup(&scratch_b, 1024, DataType::U32),
         ],
-        [FRONTIER_WORD_SCAN_BLOCK_LANES, 1, 1],
+        [1024, 1, 1],
         vec![wrap_anonymous_region(
             FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID,
             body,

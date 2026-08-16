@@ -682,7 +682,7 @@ pub fn try_cpu_ref_into(
         seed,
     )?;
     let words = layout.words;
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         frontier,
         words,
         "dominator frontier CPU oracle",
@@ -814,7 +814,7 @@ fn dominates(dom_offsets: &[u32], dom_targets: &[u32], dominator: u32, node: u32
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || dominator_frontier(4, 4, 4, "idom", "df"),
         Some(|| {

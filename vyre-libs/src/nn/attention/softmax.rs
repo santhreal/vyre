@@ -25,7 +25,7 @@ use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate_child,
     strided_writeback_child, BuildOptions,
 };
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
@@ -34,7 +34,6 @@ use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 /// certificates stay self-describing.
 const OP_ID: &str = "vyre-libs::nn::softmax";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::softmax_reference";
-const SOFTMAX_TILE: u32 = 256;
 
 /// Typed Cat-A builder for [`softmax`]. Future knobs (workgroup size,
 /// region generator override, tenant id) land as [`BuildOptions`]
@@ -85,7 +84,7 @@ impl Softmax {
             self.input.name_str(),
             self.output.name_str(),
             n,
-            self.options.workgroup_size.unwrap_or([SOFTMAX_TILE, 1, 1]),
+            self.options.workgroup_size.unwrap_or([256, 1, 1]),
             generator,
         ))
     }

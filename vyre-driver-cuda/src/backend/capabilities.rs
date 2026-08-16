@@ -367,6 +367,12 @@ impl CudaBackend {
             supports_f16: self.hardware_supports_f16(),
             supports_bf16: self.hardware_supports_bf16(),
             supports_indirect_dispatch: false,
+            // True because a trapping lane now leaves a record the host reads: the
+            // emitter writes address, tag code, and lane into the module-scope trap
+            // sidecar under a compare-and-swap, and the launch path zeroes the
+            // record before the sequence and reads it back after synchronizing, so
+            // a trapped launch refuses instead of returning wrong data. This and
+            // the device profile must report the same answer.
             supports_trap_propagation: true,
             supports_distributed_collectives: false,
             max_workgroup_size: self.max_block_dim(),
@@ -667,6 +673,9 @@ fn cuda_usize_bytes_to_u64(byte_len: usize, field: &str) -> Result<u64, BackendE
 })
 }
 
+// Inline: covers `cache_identity_program`, `cuda_transient_dispatch_budget_bytes`,
+// `cuda_transient_dispatch_live_available_budget_bytes`, `cuda_transient_dispatch_required_bytes`
+// and 1 more item this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;

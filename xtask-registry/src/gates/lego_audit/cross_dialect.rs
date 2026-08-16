@@ -32,14 +32,16 @@ use super::*;
 pub(super) fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
     report.note("[4/10] Cross-dialect reach-through (a dialect names a sibling edge in vyre_libs::prelude, not from inside its own module tree)".to_string());
     let checkout = xtask::checkout::checkout_root();
-    let libs_root = Some(checkout.join("vyre-libs").join("src"));
-    let Some(libs_root) = libs_root.filter(|p| p.is_dir()) else {
+    let libs_root = checkout.join("vyre-libs").join("src");
+    // A directory outlives the deletion of every file in it, so its presence is
+    // not the question. What this check needs is dialect source to read.
+    if !structure_gate::source_scan::carries_rust_source(&libs_root) {
         report.find(violation(
-            "  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root."
+            "  ⚠ vyre-libs/src carries no Rust source. Fix: invoke from the workspace root."
                 .to_string(),
         ));
         return 0;
-    };
+    }
     let (dialects, list_errors) = list_dialect_dirs(&libs_root);
     if !list_errors.is_empty() {
         for error in &list_errors {
@@ -137,16 +139,18 @@ pub(super) fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
 /// module is never in that set to begin with. Five rows named single-file
 /// modules or a path that no longer exists and were removed for that reason:
 /// `region`, `tensor_ref`, `buffer_names`, `descriptor` and `test_support`.
-/// `check_0_every_exemption_is_live` holds each remaining row to an existing
-/// directory, so the next row that goes the same way fails instead of reading
-/// as coverage.
-pub(super) const SHARED_PLUMBING_DIRS: [&str; 1] = ["builder"];
+/// Four of those five now live under `plumbing`, the second live row: one
+/// directory holding what a composition of any dialect needs around the IR it
+/// builds. `check_0_every_exemption_is_live` holds each remaining row to a
+/// directory that still carries Rust source, so the next row that goes the same
+/// way fails instead of reading as coverage.
+pub(super) const SHARED_PLUMBING_DIRS: [&str; 2] = ["builder", "plumbing"];
 
-/// Shared-plumbing rows that name no directory under `libs_src`.
+/// Shared-plumbing rows whose directory under `libs_src` carries no Rust source.
 pub(super) fn dead_plumbing_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
     SHARED_PLUMBING_DIRS
         .into_iter()
-        .filter(|dir| !libs_src.join(dir).is_dir())
+        .filter(|dir| !structure_gate::source_scan::carries_rust_source(&libs_src.join(dir)))
         .collect()
 }
 
@@ -195,11 +199,11 @@ pub(super) fn is_substrate_target(name: &str) -> bool {
     KERNEL_SUBSTRATE_DIRS.contains(&name)
 }
 
-/// Kernel-substrate rows that name no directory under `libs_src`.
+/// Kernel-substrate rows whose directory under `libs_src` carries no Rust source.
 pub(super) fn dead_substrate_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
     KERNEL_SUBSTRATE_DIRS
         .into_iter()
-        .filter(|dir| !libs_src.join(dir).is_dir())
+        .filter(|dir| !structure_gate::source_scan::carries_rust_source(&libs_src.join(dir)))
         .collect()
 }
 
@@ -248,6 +252,15 @@ pub(super) fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathB
 mod tests {
     use super::*;
 
+    /// A row is live where its directory carries Rust source, so a fixture that
+    /// only creates the directory proves nothing: an empty directory left behind
+    /// by a move is exactly the state these rules report.
+    fn write_module(libs_src: &std::path::Path, dir: &str) {
+        let directory = libs_src.join(dir);
+        std::fs::create_dir_all(&directory).expect("dialect directory");
+        std::fs::write(directory.join("mod.rs"), "pub fn build() {}\n").expect("dialect source");
+    }
+
     /// WHY: the shared-plumbing list is consumed by a directory filter, so a row
     /// naming a single-file module or a path that was removed is skipped by
     /// nothing and still reads as a reviewed exemption. Five of the six rows were
@@ -268,20 +281,21 @@ mod tests {
         );
 
         for dir in SHARED_PLUMBING_DIRS {
-            std::fs::create_dir(libs_src.path().join(dir)).expect("plumbing directory");
+            write_module(libs_src.path(), dir);
         }
         assert_eq!(
             dead_plumbing_rows(libs_src.path()),
             Vec::<&str>::new(),
-            "no row is dead once every one of them names a directory"
+            "no row is dead once every one of them names a directory carrying source"
         );
 
         let first = SHARED_PLUMBING_DIRS[0];
-        std::fs::remove_dir(libs_src.path().join(first)).expect("remove one plumbing directory");
+        std::fs::remove_file(libs_src.path().join(first).join("mod.rs"))
+            .expect("remove the source under one plumbing directory");
         assert_eq!(
             dead_plumbing_rows(libs_src.path()),
             vec![first],
-            "the row whose directory went away is the one reported"
+            "a directory that holds no Rust source holds no exemption"
         );
     }
 
@@ -354,20 +368,21 @@ mod tests {
         );
 
         for dir in KERNEL_SUBSTRATE_DIRS {
-            std::fs::create_dir(libs_src.path().join(dir)).expect("substrate directory");
+            write_module(libs_src.path(), dir);
         }
         assert_eq!(
             dead_substrate_rows(libs_src.path()),
             Vec::<&str>::new(),
-            "no row is dead once every one of them names a directory"
+            "no row is dead once every one of them names a directory carrying source"
         );
 
         let first = KERNEL_SUBSTRATE_DIRS[0];
-        std::fs::remove_dir(libs_src.path().join(first)).expect("remove one substrate directory");
+        std::fs::remove_file(libs_src.path().join(first).join("mod.rs"))
+            .expect("remove the source under one substrate directory");
         assert_eq!(
             dead_substrate_rows(libs_src.path()),
             vec![first],
-            "the row whose directory went away is the one reported"
+            "a directory that holds no Rust source holds no exemption"
         );
     }
 }

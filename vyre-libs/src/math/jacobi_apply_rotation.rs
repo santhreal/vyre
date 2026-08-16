@@ -134,7 +134,7 @@ pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32
             "Fix: jacobi_apply_rotation needs n > 0 and a distinct off-diagonal pivot below n, got n={n}, p={p}, q={q}."
         ));
     }
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((a, DataType::F32)), message),
     };
@@ -173,7 +173,7 @@ pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32
 // fixture is exact and no tolerance is needed. The two off-diagonal cells are
 // the forced zeros.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || jacobi_apply_rotation("a", "evec", 2, 0, 1),
         Some(|| {

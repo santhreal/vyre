@@ -102,7 +102,7 @@ fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str>
     let mut offset = 0usize;
     while offset < bytes.len() {
         if let Some(span) = opaque_span(rest, offset) {
-            offset += span;
+            offset += span.get();
             continue;
         }
         match bytes[offset] {
@@ -125,7 +125,6 @@ fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str>
     None
 }
 
-
 /// Byte offset just past the struct literal that opens in `body`.
 ///
 /// Registration fields hold closures, so the first `}` is almost never the end
@@ -141,7 +140,7 @@ fn struct_literal_end(body: &str) -> usize {
     let mut offset = 0usize;
     while offset < bytes.len() {
         if let Some(span) = opaque_span(body, offset) {
-            offset += span;
+            offset += span.get();
             continue;
         }
         match bytes[offset] {

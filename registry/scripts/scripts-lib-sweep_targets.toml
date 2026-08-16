@@ -1,0 +1,4 @@
+path = "scripts/lib/sweep_targets.py"
+state = "holds_logic"
+destination = "the sweep runner that owns sharding"
+reason = "derives the sweep_* oracle-matrix roster and each target's required features from tracked sources and manifests"

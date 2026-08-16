@@ -1,0 +1,7 @@
+lane = "adversarial"
+workflow = ".github/workflows-paused/adversarial.yml"
+state = "unprotected"
+file = "deleted"
+reason = "the adversarial gauntlet test it ran was deleted with the conformance registry suite"
+unprotected_class = "adversarial input generation against the registered operation set"
+steps = []

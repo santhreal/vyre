@@ -504,7 +504,7 @@ fn require_len(name: &str, got: usize, need: usize) -> Result<(), String> {
 #[cfg(any(test, feature = "cpu-parity"))]
 fn reserve_cpu_scratch(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), String> {
     if len > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             len - out.len(),
             "AMG V-cycle CPU oracle",
@@ -516,7 +516,7 @@ fn reserve_cpu_scratch(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(),
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || amg_v_cycle("a", "b", "x", "r", "p", "ac", "om", "sf", "scb", "scx", 4, 2),
         Some(|| {
@@ -549,7 +549,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         V_CYCLE_PHASE_OP_ID,
         || {
             Program::wrapped(

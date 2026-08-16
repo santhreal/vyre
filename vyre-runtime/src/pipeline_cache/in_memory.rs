@@ -402,6 +402,7 @@ impl PipelineCacheStore for InMemoryPipelineCache {
     }
 }
 
+// Inline: covers `metrics`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

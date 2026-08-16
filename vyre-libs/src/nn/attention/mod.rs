@@ -3,11 +3,9 @@ pub(crate) mod flash_attention;
 pub(crate) mod flash_attention_2;
 mod gated_delta;
 mod gated_delta_chunked;
-mod gated_delta_layout;
+mod gated_delta_spec;
 pub(crate) mod gqa_attention;
-mod head_to_token;
-mod kv_cache;
-mod layout_permute;
+pub(crate) mod layout;
 pub(crate) mod mla;
 pub(crate) mod partial_rope;
 pub(crate) mod planner;
@@ -15,18 +13,20 @@ pub(crate) mod qk_gain;
 pub(crate) mod quest;
 mod scaled_dot_product;
 mod softmax;
-mod tiled_online_softmax;
-mod token_to_head;
+pub mod tiled_online_softmax;
 pub(crate) mod turboquant;
 
 pub use flash_attention::flash_attention;
-pub use flash_attention_2::{flash_attention_2, flash_attention_2_reference};
+pub use flash_attention_2::flash_attention_2;
 pub use gated_delta::{recurrent_gated_delta, RecurrentGatedDeltaError};
 pub use gated_delta_chunked::chunked_gated_delta;
-pub use gated_delta_layout::GatedDeltaSpec;
+pub use gated_delta_spec::GatedDeltaSpec;
 pub use gqa_attention::{gqa_attention, gqa_attention_causal, gqa_attention_causal_typed};
-pub use head_to_token::{attention_head_to_token, attention_head_to_token_typed};
-pub use kv_cache::{kv_cache_append, kv_cache_append_typed, KvCacheAppendError};
+pub use layout::{
+    attention_head_to_token, attention_layout_dispatch_grid, attention_token_to_head,
+    kv_cache_append, AttentionPermuteSpec, KvCacheAppendError, KvCacheAppendSpec,
+    ATTENTION_LAYOUT_WORKGROUP_SIZE,
+};
 pub use mla::{mla_compress_kv, mla_decode};
 pub use partial_rope::{partial_rope, partial_rope_at_offset, partial_rope_at_offset_typed};
 pub use planner::FLASH_ATTENTION_OUTPUT_TOLERANCE_ABS;
@@ -39,7 +39,6 @@ pub use qk_gain::qk_gain;
 pub use quest::quest_paging;
 pub use scaled_dot_product::{attention, attention_reference, try_attention_reference, Attention};
 pub use softmax::{softmax, softmax_reference, Softmax};
-pub use token_to_head::{attention_token_to_head, attention_token_to_head_typed};
 pub use turboquant::turboquant_attention;
 
 /// Test-only owner of the `q`/`k`/`v`/`out` reference-eval harness shared by the

@@ -3,8 +3,8 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use super::i4_expressions::{
-    i4_dot_accumulation_body, i4_matvec_scaled_body, signed_i4_nibble_expr,
-    signed_i4_nibble_f32_expr,
+    i4_dot_accumulation_body, i4_matvec_scaled_body, i4_packed_dot_loop, i4_packed_scaled_score,
+    signed_i4_nibble_expr, signed_i4_nibble_f32_expr,
 };
 
 use super::{
@@ -75,7 +75,6 @@ pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Prog
 /// Lane products are accumulated directly into `out[0]` as i32, avoiding the
 /// extra memory traffic of unpacking either vector into temporary lane buffers.
 #[must_use]
-/// Build a Program that computes a packed signed INT4 dot product.
 pub fn i4x8_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> Program {
     if lane_count == 0 {
         return trap_program(
@@ -113,7 +112,6 @@ pub fn i4x8_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u
 ///
 /// `out[0] = dot(lhs_i4, rhs_i4) as f32 * lhs_scale[0] * rhs_scale[0]`.
 #[must_use]
-/// Build a Program that computes a packed signed INT4 dot product with f32 scales.
 pub fn i4x8_dot_f32_scaled(
     lhs_packed: &str,
     rhs_packed: &str,
@@ -165,7 +163,6 @@ pub fn i4x8_dot_f32_scaled(
 /// The kernel fuses unpack, dequant scale, and matvec accumulation so neither a
 /// dequantized weight matrix nor a temporary lane buffer is materialized.
 #[must_use]
-/// Build a Program that computes `out[row] = scale[row] * dot(i4_row[row], x)`.
 pub fn i4x8_matvec_f32_scaled(
     weights_packed: &str,
     x: &str,
@@ -220,7 +217,6 @@ pub fn i4x8_matvec_f32_scaled(
 /// batch element, avoiding repeated kernel submissions for small inference
 /// batches.
 #[must_use]
-/// Build a Program that computes a batch of row-scaled packed INT4 matvecs.
 pub fn i4x8_batched_matvec_f32_scaled(
     weights_packed: &str,
     x_batches: &str,
@@ -284,7 +280,6 @@ pub fn i4x8_batched_matvec_f32_scaled(
 /// packed eight per u32 word. Weights are row-major `[row][col]`; activations
 /// are batch-major `[batch][col]`; output is `[batch][row]`.
 #[must_use]
-/// Build a Program that computes a batch of packed-activation INT4 matmuls.
 pub fn i4x8_batched_matmul_f32_scaled(
     weights_packed: &str,
     activation_batches_packed: &str,
@@ -314,85 +309,17 @@ pub fn i4x8_batched_matmul_f32_scaled(
         Node::let_bind("i4_matmul_batch", batch_index),
         Node::let_bind("i4_matmul_out_index", item.clone()),
         Node::let_bind("i4_matmul_acc", Expr::f32(0.0)),
-        Node::loop_for(
-            "i4_matmul_col",
-            Expr::u32(0),
-            Expr::u32(cols),
-            vec![
-                Node::let_bind(
-                    "i4_matmul_weight_word",
-                    Expr::add(
-                        Expr::mul(Expr::var("i4_matmul_row"), Expr::u32(words_per_row)),
-                        Expr::div(Expr::var("i4_matmul_col"), Expr::u32(I4_LANES_PER_WORD)),
-                    ),
-                ),
-                Node::let_bind(
-                    "i4_matmul_activation_word",
-                    Expr::add(
-                        Expr::mul(Expr::var("i4_matmul_batch"), Expr::u32(words_per_row)),
-                        Expr::div(Expr::var("i4_matmul_col"), Expr::u32(I4_LANES_PER_WORD)),
-                    ),
-                ),
-                Node::let_bind(
-                    "i4_matmul_shift",
-                    Expr::mul(
-                        Expr::rem(Expr::var("i4_matmul_col"), Expr::u32(I4_LANES_PER_WORD)),
-                        Expr::u32(4),
-                    ),
-                ),
-                Node::let_bind(
-                    "i4_matmul_weight_nibble",
-                    Expr::bitand(
-                        Expr::shr(
-                            Expr::load(weights_packed, Expr::var("i4_matmul_weight_word")),
-                            Expr::var("i4_matmul_shift"),
-                        ),
-                        Expr::u32(0xF),
-                    ),
-                ),
-                Node::let_bind(
-                    "i4_matmul_activation_nibble",
-                    Expr::bitand(
-                        Expr::shr(
-                            Expr::load(
-                                activation_batches_packed,
-                                Expr::var("i4_matmul_activation_word"),
-                            ),
-                            Expr::var("i4_matmul_shift"),
-                        ),
-                        Expr::u32(0xF),
-                    ),
-                ),
-                Node::let_bind(
-                    "i4_matmul_weight",
-                    signed_i4_nibble_f32_expr(Expr::var("i4_matmul_weight_nibble")),
-                ),
-                Node::let_bind(
-                    "i4_matmul_activation",
-                    signed_i4_nibble_f32_expr(Expr::var("i4_matmul_activation_nibble")),
-                ),
-                Node::assign(
-                    "i4_matmul_acc",
-                    Expr::add(
-                        Expr::var("i4_matmul_acc"),
-                        Expr::mul(
-                            Expr::var("i4_matmul_weight"),
-                            Expr::var("i4_matmul_activation"),
-                        ),
-                    ),
-                ),
-            ],
+        i4_packed_dot_loop(
+            "i4_matmul",
+            weights_packed,
+            activation_batches_packed,
+            cols,
+            words_per_row,
         ),
         Node::store(
             out,
             Expr::var("i4_matmul_out_index"),
-            Expr::mul(
-                Expr::mul(
-                    Expr::var("i4_matmul_acc"),
-                    Expr::load(row_scales, Expr::var("i4_matmul_row")),
-                ),
-                Expr::load(batch_scales, Expr::var("i4_matmul_batch")),
-            ),
+            i4_packed_scaled_score("i4_matmul", row_scales, batch_scales),
         ),
     ];
 
@@ -430,7 +357,6 @@ pub fn i4x8_batched_matmul_f32_scaled(
 /// routing/search workloads emit one score/index pair per batch item instead
 /// of materializing the full `[batch][row]` logits matrix.
 #[must_use]
-/// Build a Program that emits the top-1 row score and index per packed INT4 activation.
 pub fn i4x8_batched_matmul_top1_f32_scaled(
     weights_packed: &str,
     activation_batches_packed: &str,
@@ -462,84 +388,16 @@ pub fn i4x8_batched_matmul_top1_f32_scaled(
             Expr::u32(rows),
             vec![
                 Node::let_bind("i4_top1_acc", Expr::f32(0.0)),
-                Node::loop_for(
-                    "i4_top1_col",
-                    Expr::u32(0),
-                    Expr::u32(cols),
-                    vec![
-                        Node::let_bind(
-                            "i4_top1_weight_word",
-                            Expr::add(
-                                Expr::mul(Expr::var("i4_top1_row"), Expr::u32(words_per_row)),
-                                Expr::div(Expr::var("i4_top1_col"), Expr::u32(I4_LANES_PER_WORD)),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "i4_top1_activation_word",
-                            Expr::add(
-                                Expr::mul(Expr::var("i4_top1_batch"), Expr::u32(words_per_row)),
-                                Expr::div(Expr::var("i4_top1_col"), Expr::u32(I4_LANES_PER_WORD)),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "i4_top1_shift",
-                            Expr::mul(
-                                Expr::rem(Expr::var("i4_top1_col"), Expr::u32(I4_LANES_PER_WORD)),
-                                Expr::u32(4),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "i4_top1_weight_nibble",
-                            Expr::bitand(
-                                Expr::shr(
-                                    Expr::load(weights_packed, Expr::var("i4_top1_weight_word")),
-                                    Expr::var("i4_top1_shift"),
-                                ),
-                                Expr::u32(0xF),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "i4_top1_activation_nibble",
-                            Expr::bitand(
-                                Expr::shr(
-                                    Expr::load(
-                                        activation_batches_packed,
-                                        Expr::var("i4_top1_activation_word"),
-                                    ),
-                                    Expr::var("i4_top1_shift"),
-                                ),
-                                Expr::u32(0xF),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "i4_top1_weight",
-                            signed_i4_nibble_f32_expr(Expr::var("i4_top1_weight_nibble")),
-                        ),
-                        Node::let_bind(
-                            "i4_top1_activation",
-                            signed_i4_nibble_f32_expr(Expr::var("i4_top1_activation_nibble")),
-                        ),
-                        Node::assign(
-                            "i4_top1_acc",
-                            Expr::add(
-                                Expr::var("i4_top1_acc"),
-                                Expr::mul(
-                                    Expr::var("i4_top1_weight"),
-                                    Expr::var("i4_top1_activation"),
-                                ),
-                            ),
-                        ),
-                    ],
+                i4_packed_dot_loop(
+                    "i4_top1",
+                    weights_packed,
+                    activation_batches_packed,
+                    cols,
+                    words_per_row,
                 ),
                 Node::let_bind(
                     "i4_top1_score",
-                    Expr::mul(
-                        Expr::mul(
-                            Expr::var("i4_top1_acc"),
-                            Expr::load(row_scales, Expr::var("i4_top1_row")),
-                        ),
-                        Expr::load(batch_scales, Expr::var("i4_top1_batch")),
-                    ),
+                    i4_packed_scaled_score("i4_top1", row_scales, batch_scales),
                 ),
                 Node::if_then(
                     Expr::lt(Expr::var("i4_top1_best_score"), Expr::var("i4_top1_score")),

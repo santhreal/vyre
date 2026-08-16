@@ -76,7 +76,7 @@ mod tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || edge(ProgramGraphShape::new(4, 2), "fin", "fout", 0xFFFF_FFFF),
         Some(|| {

@@ -11,11 +11,11 @@
   "axes": [
     {
       "id": "parsing-throughput",
-      "title": "C parser / AST traversal throughput",
-      "terms": ["release.c_ast_traversal", "parser", "ast"],
+      "title": "AST motif traversal throughput",
+      "terms": ["release.ast_motif_traversal", "parser", "ast"],
       "minimum_matching_cases": 1,
       "minimum_input_bytes": 1048576,
-      "evidence_artifact": "release/evidence/benchmarks/workload-09-c-ast-traversal.json"
+      "evidence_artifact": "release/evidence/benchmarks/workload-09-ast-motif-traversal.json"
     },
     {
       "id": "dataflow-convergence",
@@ -63,7 +63,7 @@
       "terms": ["release.egraph_saturation", "egraph", "saturation"],
       "minimum_matching_cases": 1,
       "minimum_input_bytes": 1048576,
-      "evidence_artifact": "release/evidence/benchmarks/workload-11-egraph-saturation.json"
+      "evidence_artifact": "release/evidence/benchmarks/workload-17-egraph-saturation.json"
     }
   ]
 }

@@ -698,6 +698,8 @@ fn free_bucket_capacity(max_retained_bytes: usize) -> usize {
         .min(MAX_FREE_ENTRIES_PER_BUCKET)
 }
 
+// Inline: covers `class_index`, `free_bucket_capacity`, `release`, `size_class`, which no
+// integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{class_index, free_bucket_capacity, size_class, BufferPool};

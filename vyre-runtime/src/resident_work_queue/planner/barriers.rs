@@ -326,6 +326,8 @@ fn collect_expr_access<'a>(expr: &'a Expr, out: &mut AccessSet<'a>) {
     }
 }
 
+// Inline: `vyre_runtime::resident_work_queue::planner::barriers` is `private`, so no integration
+// test can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;

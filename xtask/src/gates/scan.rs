@@ -321,6 +321,26 @@ impl Tree {
         Ok(members)
     }
 
+    /// The directory of the workspace member that declares this package name.
+    ///
+    /// A package name is not a path. `vyre-conform` is declared at
+    /// `conform/vyre-conform`, so a gate that joins the package name onto the
+    /// checkout root reads a manifest that does not exist and reports the crate
+    /// as missing. The lookup fails closed naming the package it could not
+    /// place.
+    pub fn member_directory(&self, package: &str) -> Result<String, GateError> {
+        self.member_manifests()?
+            .into_iter()
+            .find(|member| member.name == package)
+            .map(|member| member.path)
+            .ok_or_else(|| {
+                GateError::new(
+                    format!("no workspace member declares the package `{package}`"),
+                    "name a package workspace.members carries, or add the member",
+                )
+            })
+    }
+
     /// Every line of every named file that satisfies the predicate.
     pub fn hits(
         &self,
@@ -656,8 +676,8 @@ pub fn mask_literals(text: &str) -> String {
             continue;
         }
         match structure_gate::source_scan::opaque_span(text, at) {
-            Some(span) if span > 0 => {
-                let mut end = (at + span).min(text.len());
+            Some(span) => {
+                let mut end = (at + span.get()).min(text.len());
                 while end < text.len() && !text.is_char_boundary(end) {
                     end += 1;
                 }
@@ -678,7 +698,7 @@ pub fn mask_literals(text: &str) -> String {
                 }
                 at = end;
             }
-            _ => {
+            None => {
                 let character = text[at..].chars().next().unwrap_or(' ');
                 masked.push(character);
                 at += character.len_utf8();
@@ -806,7 +826,8 @@ pub fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
 /// different claim: it compiles in a release build with that feature on, and the
 /// 864 items carrying it in this workspace are shipped code. `not(test)` is the
 /// opposite of a test item.
-fn is_test_only_attribute(code: &str) -> bool {
+#[must_use]
+pub fn is_test_only_attribute(code: &str) -> bool {
     let trimmed = code.trim();
     if trimmed == "#[test]" || trimmed.ends_with("::test]") {
         return true;

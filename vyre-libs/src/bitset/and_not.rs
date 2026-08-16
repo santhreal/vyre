@@ -49,7 +49,7 @@ pub fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_and_not("lhs", "rhs", "out", 2),
         Some(|| {

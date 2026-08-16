@@ -594,6 +594,7 @@ fn rounded_f64_to_u16_bucket(value: f64, label: &'static str) -> u16 {
     rounded as u16
 }
 
+// Inline: covers `launch_pressure_bps`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{

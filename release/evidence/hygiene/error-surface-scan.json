@@ -1,35 +1,35 @@
 {
-  "source_fingerprint": "git:05fee828fb611fdb1273c3145af35136df94101f:dirty=false",
+  "source_fingerprint": "git:6f3d6a963ac241593362782370a2b48231e6c94c:dirty=true:worktree=401f1757506ae433c3460fcc3394460371561b86f1be9f61e3244508dbe63a1f",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 278,
+      "line": 277,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 280,
+      "line": 279,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 638,
+      "line": 660,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 684,
+      "line": 706,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 686,
+      "line": 708,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -92,6 +92,12 @@
       "line": 222,
       "pattern": "panic_macro",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-libs/src/plumbing/host/scratch.rs",
+      "line": 179,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
       "path": "vyre-libs/src/scheduling/megakernel_schedule.rs",
@@ -274,34 +280,10 @@
       "text": "panic!(\"vyre-primitives dense boolean-matvec LUT build failed: {error}\");"
     },
     {
-      "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 44,
-      "pattern": "panic_macro",
-      "text": "panic!(\"{}\", self.0);"
-    },
-    {
-      "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 118,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
-    },
-    {
-      "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 163,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
-    },
-    {
       "path": "vyre-libs/src/parsing/source_cache.rs",
       "line": 253,
       "pattern": "documented_panic_contract",
       "text": "self.inner.lock().expect("
-    },
-    {
-      "path": "vyre-libs/src/scratch.rs",
-      "line": 179,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
       "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
@@ -347,13 +329,13 @@
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 417,
+      "line": 463,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 480,
+      "line": 526,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
@@ -443,13 +425,25 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 144,
+      "line": 135,
+      "pattern": "documented_panic_contract",
+      "text": "[] => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 139,
+      "pattern": "documented_panic_contract",
+      "text": "several => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 200,
       "pattern": "documented_panic_contract",
       "text": "let executable = std::env::current_exe().expect(\"Fix: the test binary path must be readable\");"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 150,
+      "line": 206,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -485,25 +479,25 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 282,
+      "line": 281,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 325,
+      "line": 324,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 420,
+      "line": 419,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 428,
+      "line": 427,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -749,19 +743,19 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 245,
+      "line": 210,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 370,
+      "line": 335,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 376,
+      "line": 341,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },

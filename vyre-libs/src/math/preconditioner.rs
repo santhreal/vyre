@@ -181,7 +181,7 @@ fn poly5_fixture_expected(values: &[f32]) -> Vec<f32> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         POLY5_F32_OP_ID,
         || newton_schulz_poly5_f32("mat", "output", 2, 2),
         Some(|| vec![vec![
@@ -220,7 +220,7 @@ pub fn try_newton_schulz_y_step_cpu_into(
 ) -> Result<(), String> {
     let n = y_curr.len().min(yzy.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "Newton-Schulz preconditioner CPU oracle",

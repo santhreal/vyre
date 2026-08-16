@@ -132,7 +132,7 @@ pub fn tfn_scalar_mix_cpu(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || tfn_scalar_mix("features", "weights", "out", 1, 2, 2),
         Some(|| {

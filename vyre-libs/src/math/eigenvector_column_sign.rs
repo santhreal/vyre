@@ -107,7 +107,7 @@ pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n:
 /// would never reach the program.
 #[must_use]
 pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
-    let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
+    let cells = match crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n) {
         Ok(cells) => cells,
         Err(message) => {
             return trap_program(OP_ID, Some((eigenvectors, DataType::F32)), message);
@@ -141,7 +141,7 @@ pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
 // column 1 is unchanged. The -0.0 is the zero row times -1.0 and is what f32
 // produces; it is in the fixture because the comparison is on bytes.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || eigenvector_column_sign("evec", 2),
         Some(|| {

@@ -40,4 +40,15 @@ mod tests {
             Vec::<String>::new()
         );
     }
+
+    /// WHY: `--help` is a question about a gate, and a gate that reads the tree
+    /// to answer it has run the check the caller asked it not to run:
+    /// `bench-crossback --help` read 35 measurements and reported clean. The
+    /// answer is built from what the gate declares, so an option named in a help
+    /// line and answered nowhere is a gap, and a gate added to this table is
+    /// judged without being listed anywhere else.
+    #[test]
+    fn every_gate_answers_help_with_the_options_it_names() {
+        assert_eq!(xtask::gate::usage_gaps(GATES), Vec::<String>::new());
+    }
 }

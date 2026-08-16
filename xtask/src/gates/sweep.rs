@@ -23,12 +23,11 @@
 //! instead of in this file.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process;
 
-use serde::Deserialize;
-
 use crate::gate::{self, GateCtx, GateError, Report};
+use crate::gates::gate_canon::{self, Baseline, baseline_path, load_baselines};
 use crate::subcommands::{self, SUBSETS};
 
 /// The name the dispatcher answers to with this runner.
@@ -39,50 +38,18 @@ use crate::subcommands::{self, SUBSETS};
 /// the gate half of the table and reported the runner itself as unregistered.
 pub const RUNNER: &str = "gates";
 
-/// Pinned finding count for one gate.
+/// Read the pinned rows, or exit naming what could not be read.
 ///
-/// `deny_unknown_fields` is load-bearing. This file used to carry `status` and
-/// `owner` per row, which together let a failing gate stay legal indefinitely
-/// behind a prose excuse; three gates sat red that way for a fortnight while
-/// the sweep reported that every gate held its baseline. A row that still
-/// carries either field, or the `output_lines` this file pinned before findings
-/// were countable, now fails to load instead of being ignored.
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Baseline {
-    name: String,
-    findings: usize,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct BaselineFile {
-    #[serde(default)]
-    gate: Vec<Baseline>,
-}
-
-fn baseline_path(root: &Path) -> PathBuf {
-    root.join("xtask/gate-baselines.toml")
-}
-
-fn load_baselines(root: &Path) -> Vec<Baseline> {
-    let path = baseline_path(root);
-    let text = fs::read_to_string(&path).unwrap_or_else(|error| {
-        eprintln!(
-            "Fix: cannot read {}: {error}. Regenerate it with `xtask gates --write-baseline`.",
-            path.display()
-        );
+/// The rows and every rule about them belong to `gate_canon`, which is the gate
+/// a caller can ask for by name. The sweep needs them before it runs anything,
+/// because pairing a gate with its pin is what the sweep does, so it reads them
+/// through that owner rather than parsing the file a second time here.
+fn baselines_or_exit(root: &Path) -> Vec<Baseline> {
+    load_baselines(root).unwrap_or_else(|error| {
+        eprintln!("{error}");
         process::exit(1);
-    });
-    let parsed: BaselineFile = toml::from_str(&text).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot parse {}: {error}", path.display());
-        process::exit(1);
-    });
-    parsed.gate
+    })
 }
-
-/// A glob a workflow may name, because a glob names a set rather than a file.
-const SCRIPT_GLOBS: &[&str] = &["check_*.sh"];
 
 /// What the in-repo workflows name: xtask subcommands, subsets, and scripts.
 struct WorkflowNames {
@@ -204,48 +171,23 @@ fn strip_yaml_comment(line: &str) -> &str {
 
 /// Every workflow reference to a script the checkout does not carry.
 ///
-/// A glob is a set, so it is checked against the accepted globs rather than
-/// against the filesystem.
+/// A glob is rejected outright. It was accepted while `scripts/check_*.sh`
+/// carried assertions a workflow ran as a set; every one of those is a
+/// registered gate now, so a workflow step naming a set of scripts is a step
+/// that reaches whatever a future checkout happens to leave in the directory.
 fn script_failures(root: &Path, scripts: &[(String, usize, String)]) -> Vec<String> {
     let directory = root.join("scripts");
     let mut failures = Vec::new();
     for (file, line, name) in scripts {
         if name.contains('*') {
-            if !SCRIPT_GLOBS.contains(&name.as_str()) {
-                failures.push(format!(
-                    "{file}:{line} names `scripts/{name}`, which is not an accepted glob; name the script, or add the glob"
-                ));
-            }
+            failures.push(format!(
+                "{file}:{line} names `scripts/{name}`; a workflow step names one script or one gate, never a glob"
+            ));
             continue;
         }
         if !directory.join(name).exists() {
             failures.push(format!(
                 "{file}:{line} invokes `scripts/{name}`, which the checkout does not carry; point the step at what owns the rule now, or delete the step"
-            ));
-        }
-    }
-    failures
-}
-
-/// Every disagreement between the registry and the baseline file.
-///
-/// Both directions are failures. A gate with no row would run unpinned, so a
-/// new finding in it would pass; a row with no gate is a pin nobody enforces,
-/// which is what a retired gate leaves behind.
-fn baseline_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
-    let mut failures = Vec::new();
-    for name in gate_names {
-        if !baselines.iter().any(|pin| pin.name == *name) {
-            failures.push(format!(
-                "gate `{name}` has no row in xtask/gate-baselines.toml; add one with its present finding count"
-            ));
-        }
-    }
-    for pin in baselines {
-        if !gate_names.iter().any(|name| *name == pin.name) {
-            failures.push(format!(
-                "xtask/gate-baselines.toml pins `{}`, which is not a registered gate; delete the row or register the gate",
-                pin.name
             ));
         }
     }
@@ -312,7 +254,7 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
 /// script impossible to leave behind.
 fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
     let names = workflow_names(root);
-    let mut failures = baseline_failures(gate_names, baselines);
+    let mut failures = gate_canon::registry_failures(gate_names, baselines);
     failures.extend(workflow_failures(
         gate_names,
         &names.invoked,
@@ -405,13 +347,24 @@ pub fn run(args: &[String]) {
     });
 
     if args.iter().any(|argument| argument == "--write-baseline") {
+        let recorded = baselines_or_exit(&root);
         let mut rows = Vec::new();
         let mut failing = Vec::new();
+        let mut raised = Vec::new();
         for gate in &selected {
             match execute(*gate, &root) {
                 Ok(report) => {
-                    println!("{}: {} finding(s)", gate.name(), report.count());
-                    rows.push((gate.name(), report.count()));
+                    let name = gate.name();
+                    let found = report.count();
+                    println!("{name}: {found} finding(s)");
+                    match recorded.iter().find(|pin| pin.name == name) {
+                        Some(pin) if found > pin.findings => raised.push(format!(
+                            "{name} measured {found} against a pinned {}",
+                            pin.findings
+                        )),
+                        Some(pin) => rows.push((name, found.min(pin.findings))),
+                        None => rows.push((name, found)),
+                    }
                 }
                 Err(error) => {
                     println!("{}: could not run: {error}", gate.name());
@@ -424,6 +377,14 @@ pub fn run(args: &[String]) {
                 "Fix: {} gate(s) could not run and a baseline may not record a failure: {}. Fix what they report, then write the baseline.",
                 failing.len(),
                 failing.join(", ")
+            );
+            process::exit(1);
+        }
+        if !raised.is_empty() {
+            eprintln!(
+                "Fix: {} gate(s) report more than they are pinned at, and a pin never rises: {}. Fix the findings.",
+                raised.len(),
+                raised.join("; ")
             );
             process::exit(1);
         }
@@ -442,7 +403,7 @@ pub fn run(args: &[String]) {
         return;
     }
 
-    let baselines = load_baselines(&root);
+    let baselines = baselines_or_exit(&root);
     let registry = subcommands::registry();
     let gate_names: Vec<&str> = registry.iter().map(|gate| gate.name()).collect();
     let mut failures = wiring_failures(&root, &gate_names, &baselines);
@@ -490,58 +451,6 @@ pub fn run(args: &[String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn pin(name: &str, findings: usize) -> Baseline {
-        Baseline {
-            name: name.to_string(),
-            findings,
-        }
-    }
-
-    /// WHY: this is the defect the whole registry exists to close. A gate
-    /// registered with no baseline row runs unpinned, so a new finding in it
-    /// passes; both injections have to go red, and the clean case has to be
-    /// silent or the failure means nothing.
-    #[test]
-    fn a_registry_and_a_baseline_that_disagree_both_fail() {
-        let names = ["dep-drift", "op-names"];
-        assert_eq!(
-            baseline_failures(&names, &[pin("dep-drift", 0), pin("op-names", 3)]),
-            Vec::<String>::new()
-        );
-
-        let missing_row = baseline_failures(&names, &[pin("dep-drift", 0)]);
-        assert_eq!(missing_row.len(), 1);
-        assert!(missing_row[0].contains("`op-names` has no row"));
-
-        let extra_row = baseline_failures(
-            &names,
-            &[pin("dep-drift", 0), pin("op-names", 3), pin("retired", 9)],
-        );
-        assert_eq!(extra_row.len(), 1);
-        assert!(extra_row[0].contains("pins `retired`"));
-    }
-
-    /// WHY: the baseline row shape is the exemption surface. `status` and
-    /// `owner` are what kept three gates red for a fortnight, and `output_lines`
-    /// is the pin that counted output instead of findings, so a file carrying
-    /// any of them must fail to load rather than be read with the field ignored.
-    #[test]
-    fn a_row_carrying_a_retired_field_fails_to_load() {
-        let good: BaselineFile =
-            toml::from_str("[[gate]]\nname = \"dep-drift\"\nfindings = 0\n").expect("loads");
-        assert_eq!(good.gate.len(), 1);
-        for row in [
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nstatus = \"red\"\n",
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nowner = \"someone\"\n",
-            "[[gate]]\nname = \"dep-drift\"\noutput_lines = 32\n",
-        ] {
-            assert!(
-                toml::from_str::<BaselineFile>(row).is_err(),
-                "a row carrying a retired field must not load: {row}"
-            );
-        }
-    }
 
     /// WHY: a workflow that invokes a name nobody registered runs nothing under
     /// a name that reads as coverage, and a subset nobody runs is a set of gates
@@ -707,20 +616,21 @@ mod tests {
         let present = vec![("gates.yml".to_string(), 7, "present.sh".to_string())];
         let absent = vec![("gates.yml".to_string(), 9, "retired.sh".to_string())];
         let glob = vec![("gates.yml".to_string(), 11, "check_*.sh".to_string())];
-        let unknown_glob = vec![("gates.yml".to_string(), 13, "run_*.sh".to_string())];
+        let other_glob = vec![("gates.yml".to_string(), 13, "run_*.sh".to_string())];
 
         let clean = script_failures(&root, &present);
         let missing = script_failures(&root, &absent);
-        let accepted = script_failures(&root, &glob);
-        let rejected = script_failures(&root, &unknown_glob);
+        let globbed = script_failures(&root, &glob);
+        let other = script_failures(&root, &other_glob);
 
         fs::remove_dir_all(&root).expect("the fixture is removed");
         assert_eq!(clean, Vec::<String>::new());
-        assert_eq!(accepted, Vec::<String>::new());
         assert_eq!(missing.len(), 1, "got {missing:?}");
         assert!(missing[0].contains("gates.yml:9"), "got {missing:?}");
         assert!(missing[0].contains("scripts/retired.sh"), "got {missing:?}");
-        assert_eq!(rejected.len(), 1, "got {rejected:?}");
-        assert!(rejected[0].contains("run_*.sh"), "got {rejected:?}");
+        assert_eq!(globbed.len(), 1, "got {globbed:?}");
+        assert!(globbed[0].contains("check_*.sh"), "got {globbed:?}");
+        assert_eq!(other.len(), 1, "got {other:?}");
+        assert!(other[0].contains("run_*.sh"), "got {other:?}");
     }
 }

@@ -133,7 +133,7 @@ pub fn try_reachable(
         }
     }
     let mut head: Vec<usize> = Vec::new();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut head,
         n,
         "reachable CPU oracle",
@@ -142,7 +142,7 @@ pub fn try_reachable(
     .map_err(ReachableError::Allocation)?;
     head.resize(n, NONE);
     let mut to_nodes: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut to_nodes,
         edges.len(),
         "reachable CPU oracle",
@@ -150,7 +150,7 @@ pub fn try_reachable(
     )
     .map_err(ReachableError::Allocation)?;
     let mut next_edges: Vec<usize> = Vec::new();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut next_edges,
         edges.len(),
         "reachable CPU oracle",
@@ -164,7 +164,7 @@ pub fn try_reachable(
         head[from as usize] = edge_index;
     }
     let mut visited: Vec<bool> = Vec::new();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut visited,
         n,
         "reachable CPU oracle",
@@ -173,7 +173,7 @@ pub fn try_reachable(
     .map_err(ReachableError::Allocation)?;
     visited.resize(n, false);
     let mut out_of_range_sources: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut out_of_range_sources,
         sources.len(),
         "reachable CPU oracle",
@@ -181,7 +181,7 @@ pub fn try_reachable(
     )
     .map_err(ReachableError::Allocation)?;
     let mut stack: Vec<u32> = Vec::new();
-    crate::scratch::reserve_items(
+    crate::plumbing::host::scratch::reserve_items(
         &mut stack,
         sources.len(),
         "reachable CPU oracle",

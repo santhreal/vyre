@@ -18,6 +18,8 @@ publish = false
 toml.workspace = true
 walkdir.workspace = true
 
+# Fixture trees for the source-placement contracts. A test that judges how a
+# directory tree is read has to build one.
 [dev-dependencies]
 tempfile.workspace = true
 

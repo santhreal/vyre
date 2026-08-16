@@ -157,6 +157,8 @@ pub fn select_sort_backend(distribution: Distribution) -> SortBackend {
     }
 }
 
+// Inline: `vyre_driver::routing` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

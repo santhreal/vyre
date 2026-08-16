@@ -33,6 +33,7 @@ This crate declares no Cargo features.
 | `test` | `crate_structure_contracts` | `structure-gate/tests/crate_structure_contracts.rs` | None | `./cargo_full test -p structure-gate --test crate_structure_contracts` |
 | `test` | `device_only_routing` | `structure-gate/tests/device_only_routing.rs` | None | `./cargo_full test -p structure-gate --test device_only_routing` |
 | `test` | `materializer_admission` | `structure-gate/tests/materializer_admission.rs` | None | `./cargo_full test -p structure-gate --test materializer_admission` |
+| `test` | `module_routes` | `structure-gate/tests/module_routes.rs` | None | `./cargo_full test -p structure-gate --test module_routes` |
 | `test` | `node_child_descent_owner` | `structure-gate/tests/node_child_descent_owner.rs` | None | `./cargo_full test -p structure-gate --test node_child_descent_owner` |
 | `test` | `test_gated_modules` | `structure-gate/tests/test_gated_modules.rs` | None | `./cargo_full test -p structure-gate --test test_gated_modules` |
 

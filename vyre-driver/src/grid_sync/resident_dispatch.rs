@@ -359,6 +359,7 @@ fn free_resident_program_resources(
     }
 }
 
+// Inline: covers `allocate_resident_program_resources`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

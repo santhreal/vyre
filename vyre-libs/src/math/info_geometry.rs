@@ -186,7 +186,7 @@ pub fn try_amari_alpha_step_cpu_into(
     let s = 1.0 - t;
     let n = p.len().min(q.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "information-geometry CPU oracle",
@@ -216,7 +216,7 @@ pub fn try_amari_alpha_step_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             bhattacharyya_per_element("a", "b", "out", 4)

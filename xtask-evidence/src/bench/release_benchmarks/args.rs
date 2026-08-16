@@ -1,3 +1,36 @@
+/// What the caller asked for: a measurement run, or the option list.
+pub(super) enum Parsed {
+    Run(Config),
+    Usage,
+}
+
+/// The option list, one line per note.
+///
+/// A gate never prints. `--help` used to write these lines on stdout and exit,
+/// and stdout is where a delegated gate's parent reads one JSON report: the
+/// caller got usage text followed by a protocol error, and a gate that exits has
+/// judged nothing. They travel back as report notes, which the runner renders.
+pub(super) const USAGE: &[&str] = &[
+    "usage: release-benchmarks [--write] [--backend cuda|wgpu] [--only FAMILY] \
+     [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] \
+     [--reuse-existing] [--refresh-suites-only] [--workload-suite-only]",
+    "--write re-measures the suite on a release host; without it the recorded artifacts are \
+     audited and no benchmark runs.",
+    "--backend selects the measured backend and defaults to cuda.",
+    "--only names one release workload family from the release workload matrix.",
+    "--measured-samples sets the per-case sample count and must be 30 or more for release \
+     evidence.",
+    "--sample-timeout-secs bounds one sample.",
+    "--include-wgpu-comparison measures the wgpu comparison suite as well, which the cuda \
+     release path does not need.",
+    "--reuse-existing keeps artifacts that already validate and re-measures only the missing or \
+     invalid cases.",
+    "--refresh-suites-only rewrites the suite and proof summaries from recorded artifact JSON \
+     without measuring.",
+    "--workload-suite-only writes workload artifacts and suite summaries without the auxiliary \
+     optimization artifacts.",
+];
+
 pub(super) struct Config {
     pub(super) backend: String,
     pub(super) only: Option<String>,
@@ -9,7 +42,14 @@ pub(super) struct Config {
     pub(super) workload_suite_only: bool,
 }
 
-pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
+/// Parse the caller flags a `GateCtx` carries.
+///
+/// `ctx.args` holds the flags after the subcommand name, so parsing starts at the
+/// first element. This used to start at index 2, which skipped two flags: every
+/// invocation that passed one option reported the third token as unknown, so
+/// `--write --backend cuda` rejected `cuda` and no option was reachable at all. A
+/// bare `--write` still measured, which is why the break stayed hidden.
+pub(super) fn parse_args(args: &[String]) -> Result<Parsed, String> {
     let mut backend = "cuda".to_string();
     let mut only = None;
     let mut measured_samples = Some(30usize);
@@ -18,7 +58,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut reuse_existing = false;
     let mut refresh_suites_only = false;
     let mut workload_suite_only = false;
-    let mut index = 2;
+    let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
             "--backend" => {
@@ -88,17 +128,14 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
                 workload_suite_only = true;
                 index += 1;
             }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run -p xtask --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing] [--refresh-suites-only] [--workload-suite-only]\n\n\
-                     Generates CUDA-first release benchmark JSON artifacts from the release workload matrix. WGPU comparison evidence is opt-in so CUDA release validation time is not spent on non-release-path backends by default. --reuse-existing validates already-written artifacts and reruns only missing or invalid cases. --refresh-suites-only rewrites suite/proof summaries from existing artifact JSON without running benchmarks. --workload-suite-only runs workload artifacts and suite summaries without auxiliary optimization artifacts."
-                );
-                std::process::exit(0);
+            "--write" => {
+                index += 1;
             }
+            "--help" | "-h" => return Ok(Parsed::Usage),
             other => return Err(format!("Fix: unknown release-benchmarks option `{other}`.")),
         }
     }
-    Ok(Config {
+    Ok(Parsed::Run(Config {
         backend,
         only,
         measured_samples,
@@ -107,29 +144,36 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
         reuse_existing,
         refresh_suites_only,
         workload_suite_only,
-    })
+    }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// The flags a `GateCtx` carries: everything after the subcommand name, which
+    /// includes `--write` when the caller asked for a re-measure.
     fn args(extra: &[&str]) -> Vec<String> {
-        std::iter::once("cargo".to_string())
-            .chain(std::iter::once("release-benchmarks".to_string()))
-            .chain(extra.iter().map(|arg| arg.to_string()))
-            .collect()
+        extra.iter().map(|arg| (*arg).to_string()).collect()
+    }
+
+    /// The configuration a flag list parses to, or a panic naming the flags.
+    fn config(extra: &[&str]) -> Config {
+        match parse_args(&args(extra)) {
+            Ok(Parsed::Run(config)) => config,
+            Ok(Parsed::Usage) => panic!("Fix: {extra:?} must parse as a run, not as usage."),
+            Err(error) => panic!("Fix: {extra:?} must parse: {error}"),
+        }
     }
 
     #[test]
     fn refresh_suites_only_parses_without_forcing_benchmark_reuse() {
-        let config = parse_args(&args(&[
+        let config = config(&[
             "--backend",
             "cuda",
             "--include-wgpu-comparison",
             "--refresh-suites-only",
-        ]))
-        .expect("Fix: release-benchmarks refresh-only args should parse.");
+        ]);
 
         assert_eq!(config.backend, "cuda");
         assert!(config.include_wgpu_comparison);
@@ -142,14 +186,58 @@ mod tests {
 
     #[test]
     fn workload_suite_only_parses_as_auxiliary_skip() {
-        let config = parse_args(&args(&["--backend", "wgpu", "--workload-suite-only"]))
-            .expect("Fix: release-benchmarks workload-suite args should parse.");
+        let config = config(&["--backend", "wgpu", "--workload-suite-only"]);
 
         assert_eq!(config.backend, "wgpu");
         assert!(config.workload_suite_only);
         assert!(
             !config.refresh_suites_only,
             "Fix: workload-suite execution must still run benchmark artifacts unless refresh-only is also explicit."
+        );
+    }
+
+    /// Every option must be reachable from the first flag onward.
+    ///
+    /// The parser used to start at index 2 while `GateCtx.args` starts at the
+    /// first flag, so the two leading flags were skipped and their values were
+    /// read as commands. `--write --backend cuda` reported `cuda` as an unknown
+    /// option; a lone `--write` fell off the end and silently took the default
+    /// backend, which is why the gate looked usable.
+    #[test]
+    fn every_flag_is_reachable_from_the_first_argument() {
+        let written = config(&["--write", "--backend", "wgpu"]);
+        assert_eq!(written.backend, "wgpu");
+
+        let defaulted = config(&["--write"]);
+        assert_eq!(defaulted.backend, "cuda");
+
+        let selected = config(&["--only", "condition-eval", "--measured-samples", "30"]);
+        assert_eq!(selected.only.as_deref(), Some("condition-eval"));
+        assert_eq!(selected.measured_samples, Some(30));
+
+        let Err(error) = parse_args(&args(&["--nonsense"])) else {
+            panic!("Fix: an unknown first flag must still be rejected.");
+        };
+        assert!(
+            error.contains("--nonsense"),
+            "Fix: the error must name the option the caller typed, got `{error}`."
+        );
+    }
+
+    /// `--help` is an answer, not an exit. A gate that printed usage on stdout
+    /// broke the report protocol its parent reads, so the option list comes back
+    /// as an outcome the caller renders.
+    #[test]
+    fn help_parses_as_usage_rather_than_printing() {
+        for flag in ["--help", "-h"] {
+            assert!(
+                matches!(parse_args(&args(&[flag])), Ok(Parsed::Usage)),
+                "Fix: `{flag}` must return the usage outcome."
+            );
+        }
+        assert!(
+            USAGE.iter().any(|line| line.contains("--measured-samples")),
+            "Fix: the usage lines must name every option the parser accepts."
         );
     }
 }

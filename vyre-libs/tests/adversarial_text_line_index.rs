@@ -1,4 +1,5 @@
 //! Adversarial oracle tests for `text::line_index`.
+#![cfg(all(feature = "text", feature = "cpu-parity"))]
 
 use vyre_foundation::ir::{DataType, Program};
 use vyre_libs::text::{line_index, line_index_u8, reference_line_index};

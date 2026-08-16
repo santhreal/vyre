@@ -1191,6 +1191,8 @@ impl vyre_foundation::program_dispatch::ProgramDispatcher for WgpuBackend {
     }
 }
 
+// Inline: covers `borrowed_slices_from_owned_inputs`, `empty_batch_result_slots`,
+// `finalize_batch_results`, which no integration test can name.
 #[cfg(test)]
 mod borrowed_slice_conversion_tests {
     use super::{

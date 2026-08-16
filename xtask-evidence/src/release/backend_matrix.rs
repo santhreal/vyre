@@ -107,7 +107,11 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         id: "ldmatrix-cp-async",
         relative: "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
         role: "Ampere+ async global-to-shared staging pattern",
-        tokens: &["ldmatrix", "cp.async"],
+        tokens: &[
+            "supports_async_copy",
+            "supports_ldmatrix",
+            "KernelOpKind::StoreShared",
+        ],
     },
     BackendFeatureRequirement {
         id: "predicated-execution",
@@ -263,10 +267,20 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         tokens: &["cache", "pipeline", "MAX_PENDING_DURABLE_CACHE_FILES"],
     },
     BackendFeatureRequirement {
-        id: "wgpu-no-cpu-fallback-test",
-        relative: "vyre-driver-wgpu/tests/dispatch_never_cpu_fallback.rs",
-        role: "WGPU no-hidden-CPU-fallback contract",
-        tokens: &["never", "cpu", "fallback"],
+        id: "wgpu-megakernel-dispatcher",
+        relative: "vyre-driver-wgpu/src/pipeline/persistent.rs",
+        role: "WGPU batched megakernel dispatch through persistent bindings",
+        tokens: &[
+            "dispatch_persistent_batched",
+            "dispatch_borrowed_persistent_batched",
+            "DispatchItem",
+        ],
+    },
+    BackendFeatureRequirement {
+        id: "wgpu-no-cpu-fallback",
+        relative: "vyre-driver-wgpu/src/runtime/device/selector.rs",
+        role: "WGPU adapter selection that refuses a CPU adapter",
+        tokens: &["has_real_gpu_adapter", "DeviceType::Cpu"],
     },
     BackendFeatureRequirement {
         id: "megakernel-paired-speculation",
@@ -280,6 +294,28 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         ],
     },
 ];
+
+/// The feature marker ids the CUDA matrix emits, in declaration order.
+///
+/// The check that judges a recorded matrix reads this rather than a second
+/// list: a marker added here has to appear in the artifact, and a marker
+/// deleted here stops being required, with no third place to update.
+#[must_use]
+pub fn cuda_feature_marker_ids() -> Vec<&'static str> {
+    CUDA_FEATURE_MARKERS
+        .iter()
+        .map(|requirement| requirement.id)
+        .collect()
+}
+
+/// The feature marker ids the WGPU matrix emits, in declaration order.
+#[must_use]
+pub fn wgpu_feature_marker_ids() -> Vec<&'static str> {
+    WGPU_FEATURE_MARKERS
+        .iter()
+        .map(|requirement| requirement.id)
+        .collect()
+}
 
 const UNRESOLVED_MARKERS: &[&str] = &[
     "todo",
@@ -652,7 +688,7 @@ fn collect_feature_markers(
             (String::new(), None)
         };
         let lowered = text.to_ascii_lowercase();
-        let code_lowered = non_comment_source(&text).to_ascii_lowercase();
+        let code_lowered = implementation_source(&text).to_ascii_lowercase();
         let missing_tokens = requirement
             .tokens
             .iter()
@@ -1016,17 +1052,167 @@ fn scan_hidden_fallback_file(
     }
 }
 
-fn non_comment_source(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for line in text.lines() {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("//") {
+/// The implementation text of a Rust source: comments and test items removed.
+///
+/// A feature marker names implementation text. A token that appears only in a
+/// doc comment or inside a test outlives the feature it claims, so a marker
+/// scored against the whole file passes over an empty implementation carrying
+/// the right prose. String literals are kept, because emitted target text is
+/// implementation.
+fn implementation_source(text: &str) -> String {
+    let without_comments = strip_comments(text);
+    strip_test_items(&without_comments)
+}
+
+/// Copy `text` without line comments, block comments or their nesting.
+///
+/// Bytes are compared, not characters: every delimiter is ASCII, so a
+/// multi-byte character is copied whole and never matches one.
+fn strip_comments(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    let mut block_depth = 0usize;
+    while index < bytes.len() {
+        if block_depth > 0 {
+            if bytes[index..].starts_with(b"/*") {
+                block_depth += 1;
+                index += 2;
+            } else if bytes[index..].starts_with(b"*/") {
+                block_depth -= 1;
+                index += 2;
+            } else {
+                if bytes[index] == b'\n' {
+                    out.push(b'\n');
+                }
+                index += 1;
+            }
             continue;
         }
-        out.push_str(line);
-        out.push('\n');
+        if bytes[index..].starts_with(b"//") {
+            while index < bytes.len() && bytes[index] != b'\n' {
+                index += 1;
+            }
+            continue;
+        }
+        if bytes[index..].starts_with(b"/*") {
+            block_depth = 1;
+            index += 2;
+            continue;
+        }
+        let end = string_literal_end(bytes, index);
+        if end > index {
+            out.extend_from_slice(&bytes[index..end]);
+            index = end;
+            continue;
+        }
+        out.push(bytes[index]);
+        index += 1;
     }
-    out
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// One past the end of the string literal starting at `index`, or `index`
+/// when no literal starts there. Raw literals close on their own hash count.
+fn string_literal_end(bytes: &[u8], index: usize) -> usize {
+    if bytes[index] == b'r' {
+        let mut cursor = index + 1;
+        let mut hashes = 0usize;
+        while cursor < bytes.len() && bytes[cursor] == b'#' {
+            hashes += 1;
+            cursor += 1;
+        }
+        if cursor < bytes.len() && bytes[cursor] == b'"' {
+            cursor += 1;
+            while cursor < bytes.len() {
+                if bytes[cursor] == b'"' && closing_hashes(bytes, cursor + 1) >= hashes {
+                    return cursor + 1 + hashes;
+                }
+                cursor += 1;
+            }
+            return bytes.len();
+        }
+        return index;
+    }
+    if bytes[index] != b'"' {
+        return index;
+    }
+    let mut cursor = index + 1;
+    while cursor < bytes.len() {
+        match bytes[cursor] {
+            b'\\' => cursor += 2,
+            b'"' => return cursor + 1,
+            _ => cursor += 1,
+        }
+    }
+    bytes.len()
+}
+
+/// Hash characters run length at `index`.
+fn closing_hashes(bytes: &[u8], index: usize) -> usize {
+    let mut count = 0;
+    while index + count < bytes.len() && bytes[index + count] == b'#' {
+        count += 1;
+    }
+    count
+}
+
+/// Copy `code` without any item attributed `#[cfg(test)]` or `#[test]`.
+///
+/// `code` has already had its comments removed, so a string literal is the
+/// only place an attribute or a brace can appear without meaning one.
+fn strip_test_items(code: &str) -> String {
+    const ATTRIBUTES: [&str; 2] = ["#[cfg(test)]", "#[test]"];
+    let bytes = code.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    let mut kept_from = 0;
+    while index < bytes.len() {
+        let end = string_literal_end(bytes, index);
+        if end > index {
+            index = end;
+            continue;
+        }
+        if ATTRIBUTES
+            .iter()
+            .any(|attribute| bytes[index..].starts_with(attribute.as_bytes()))
+        {
+            out.extend_from_slice(&bytes[kept_from..index]);
+            index = item_end(bytes, index);
+            kept_from = index;
+            continue;
+        }
+        index += 1;
+    }
+    out.extend_from_slice(&bytes[kept_from..]);
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// One past the end of the item starting at the attribute at `start`.
+///
+/// A braced item ends on its matching brace. An item that is a declaration
+/// rather than a body, such as `#[cfg(test)] mod tests;`, ends on the
+/// semicolon, so the rest of the file is not swallowed. A closing brace that
+/// belongs to an enclosing item ends the scan where it stands.
+fn item_end(bytes: &[u8], start: usize) -> usize {
+    let mut index = start;
+    let mut depth = 0usize;
+    while index < bytes.len() {
+        let end = string_literal_end(bytes, index);
+        if end > index {
+            index = end;
+            continue;
+        }
+        match bytes[index] {
+            b'{' => depth += 1,
+            b'}' if depth <= 1 => return index + 1,
+            b'}' => depth -= 1,
+            b';' if depth == 0 => return index + 1,
+            _ => {}
+        }
+        index += 1;
+    }
+    bytes.len()
 }
 
 fn probe_nvidia_smi() -> GpuProbe {
@@ -1207,5 +1393,101 @@ mod capability_contract_tests {
                 && row.probed_value.as_deref() == Some("32 lanes")
         }));
         assert!(capability_contract_blockers(&rows).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod feature_marker_tests {
+    use super::*;
+
+    /// WHY: a marker scored against the whole file passes on prose alone. The
+    /// feature can be deleted and the doc comment describing it keeps the
+    /// marker green. What this does not catch is a token that names a real
+    /// symbol which no longer does the work.
+    #[test]
+    fn a_token_that_lives_only_in_a_comment_or_a_test_is_not_implementation() {
+        let source = r#"
+//! cp.async staging, sm_80 and up.
+/* ldmatrix is described here and nowhere else */
+pub fn analyze() -> bool {
+    let text = "    // cp.async.commit_group;";
+    !text.is_empty() // trailing prose about ldmatrix
+}
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ldmatrix_and_cp_async_are_named_in_the_test() {
+        assert!(super::analyze());
+    }
+}
+"#;
+
+        let code = implementation_source(source);
+
+        assert!(
+            code.contains("cp.async.commit_group"),
+            "Fix: an emitted target string is implementation text and must survive: {code}"
+        );
+        assert!(
+            code.contains("pub fn analyze"),
+            "Fix: the implementation must survive: {code}"
+        );
+        assert!(
+            !code.contains("sm_80"),
+            "Fix: a doc comment is not implementation text: {code}"
+        );
+        assert!(
+            !code.contains("ldmatrix is described"),
+            "Fix: a block comment is not implementation text: {code}"
+        );
+        assert!(
+            !code.contains("trailing prose"),
+            "Fix: a trailing comment is not implementation text: {code}"
+        );
+        assert!(
+            !code.contains("ldmatrix_and_cp_async_are_named_in_the_test"),
+            "Fix: a test item is not implementation text: {code}"
+        );
+    }
+
+    /// WHY: the marker set is read from the two declarations at run time, so a
+    /// marker added later that points at a test file fails here instead of
+    /// passing on the test's prose.
+    #[test]
+    fn no_feature_marker_names_a_test_file() {
+        let declared = CUDA_FEATURE_MARKERS.iter().chain(WGPU_FEATURE_MARKERS);
+        for requirement in declared {
+            let relative = requirement.relative;
+            assert!(
+                !relative.contains("/tests/")
+                    && !relative.ends_with("/tests.rs")
+                    && !relative.ends_with("_test.rs")
+                    && !relative.ends_with("_tests.rs"),
+                "Fix: feature marker `{}` names the test file `{relative}`. A marker names the \
+                 implementation the feature lives in, because a test's prose outlives the feature.",
+                requirement.id
+            );
+        }
+    }
+
+    /// WHY: the recorded matrix is judged against the ids the producer emits.
+    /// A second hand-written list of ids goes stale the first time a marker is
+    /// added or renamed, and the check then requires a marker nothing writes.
+    #[test]
+    fn the_required_marker_ids_are_the_ids_the_producer_emits() {
+        assert_eq!(
+            cuda_feature_marker_ids().len(),
+            CUDA_FEATURE_MARKERS.len(),
+            "Fix: every declared CUDA marker is required."
+        );
+        assert_eq!(
+            wgpu_feature_marker_ids().len(),
+            WGPU_FEATURE_MARKERS.len(),
+            "Fix: every declared WGPU marker is required."
+        );
+        assert!(
+            cuda_feature_marker_ids().contains(&"ldmatrix-cp-async"),
+            "Fix: the async staging marker stays required."
+        );
     }
 }

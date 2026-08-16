@@ -87,10 +87,6 @@ Mathematical optimizers (gradient step, projected gradient).
 Topology-aware partitioning helpers  -  the substrate the megakernel
 scaling layer reaches into.
 
-### `vfs/`
-Virtual-filesystem-style buffer addressing (multi-buffer offsets +
-permissions table). Used by the megakernel's IO queue.
-
 ### `markers.rs`
 Algebraic-law marker registrations (Commutative / Associative /
 Idempotent / OverflowWrapping).

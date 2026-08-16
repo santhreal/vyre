@@ -588,6 +588,7 @@ impl Drop for GraphHostBuffers {
     }
 }
 
+// Inline: covers `GraphHostBuffers`, `context`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::GraphHostBuffers;
@@ -829,6 +830,24 @@ impl CudaBackend {
         let (ptx_src, ptx_source_key) = self.ptx_for_program_cached_with_key(program, config)?;
         let module_key = self.module_cache_key_for_ptx_source_key(ptx_source_key)?;
         let func = self.resolve_launch_function(&ptx_src, module_key, &prepared.launch, false)?;
+        // A trap-declaring module cannot be captured. The trap record is read back
+        // after a stream synchronize, and a synchronize is not permitted during
+        // capture; a captured graph would replay the launches with no readback at
+        // all, so a trapping replay would report success and hand back whatever the
+        // lanes wrote before the guard fired. Refuse for the same reason
+        // cooperative capture is refused: the recorded sequence would be missing a
+        // step that the launch path treats as mandatory.
+        if self
+            .module_globals_with_key(&ptx_src, module_key)?
+            .trap
+            .is_some()
+        {
+            return Err(BackendError::UnsupportedFeature {
+                name: "cuda_graph_trap_capture (the trap record is read back after a stream synchronize, which graph capture forbids, so a captured replay could not report a trap)"
+                    .to_string(),
+                backend: crate::CUDA_BACKEND_ID.to_string(),
+            });
+        }
         self.validate_transient_dispatch_memory_budget(
             &prepared,
             sample_inputs,

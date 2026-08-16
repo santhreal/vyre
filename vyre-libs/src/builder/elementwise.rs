@@ -8,7 +8,7 @@
 //! helper, and left the quantization ops with no way to reach it at all.
 
 use crate::builder::{build_indexed_map, BuildOptions};
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 

@@ -1,8 +1,9 @@
 # vyre-libs  -  architecture
 
 Tier-3 compositions: every `fn(...) -> Program` that lowers via
-existing IR ops + intrinsics. No hardware-specific arms.
-
+existing IR ops + intrinsics as pure mathematical and semantic transformations.
+No hardware-specific arms, no hardcoded thread-indexing/execution schedules,
+no host dispatch orchestration, and no CPU reference oracles.
 ## Modules (one folder per domain)
 
 ### `decode/`
@@ -52,25 +53,24 @@ Boolean primitives  -  `and`, `or`, `xor`, `nand`, `nor`. Each
 declares its `Commutative`/`Associative`/`Idempotent` markers
 for the algebraic-law registry.
 
-### `region.rs`
-Public region-wrap helpers that consumers use.
-
-### `descriptor.rs`
-Buffer-shape descriptors used by every compositional op.
-
-### `contracts.rs`
-Per-op contract types (precondition/postcondition pairs the
-conform suite checks).
-
-### `operation_catalog.rs`
-Derived library-tier view over the canonical foundation operation registry.
+### `plumbing/`
+What every composition needs around the IR it builds, and no dialect owns.
+`operand/` decides what a buffer argument is: its name, its element type and
+its cell count. `program/` reads a built Program back out for tooling and
+demotes the intermediate outputs of a fused pair. `registration/` holds the
+type-signature and contract presets a catalog entry declares, plus the
+library-tier view over the canonical foundation registry. `host/` is the work
+between a Program and a backend call: operand marshalling, scratch
+reservation, the shape-keyed Program cache and the composition call counters.
 
 ### `representation/`
 Frozen wire-form types that downstream frontends rely on (PackedAst,
 PgBuffers carrier, etc.).
 
-### `range_ordering.rs`
-Sorted-range helpers used by the matching + dataflow stacks.
+### `builder/`
+The shapes a composition is written in: elementwise maps, tiled reductions,
+sorted-range helpers for the matching and dataflow stacks, and the catalog
+registrations that publish them.
 
 ## Public types
 

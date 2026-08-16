@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, RwLock};
 
 use thiserror::Error;
+use vyre_foundation::ir::Program;
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileError, Diagnostic, FinalistEvaluator, ResourceAbiRecord,
     TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
@@ -13,7 +14,7 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
     BoundResource, Completion, DeviceIdentity, Resource, Submission,
 };
-use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime};
+use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime, ResourceRecord};
 
 /// Failure to authenticate an artifact envelope or select its exact required payload.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -408,7 +409,7 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         let artifact = state.admitted.neutral();
-        let resources = host_input_resources(artifact);
+        let resources = host_input_resources(artifact)?;
         if resources.len() != inputs.len() {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
@@ -420,7 +421,7 @@ impl ArtifactSession {
             .into());
         }
         let mut bindings = BindingSet::new(state.admitted.neutral().digest());
-        for (resource, bytes) in resources.into_iter().zip(inputs) {
+        for ((resource, _), bytes) in resources.into_iter().zip(inputs) {
             bindings.insert(resource.value, BoundResource::Host(bytes.to_vec()));
         }
         Ok(bindings)
@@ -432,6 +433,10 @@ impl ArtifactSession {
     }
 
     /// Project writable completion values in canonical ABI slot order.
+    ///
+    /// Slot order is graph value order. A caller holding the Program the graph was
+    /// lifted from reads [`Self::program_outputs`] instead, because that order is
+    /// the buffer declaration order the Program author bound.
     pub fn ordered_outputs(
         &self,
         completion: &Completion,
@@ -467,6 +472,78 @@ impl ArtifactSession {
                             ),
                         }
                         .into()
+                    })
+            })
+            .collect()
+    }
+
+    /// Project writable completion values in Program buffer declaration order.
+    ///
+    /// [`Self::ordered_outputs`] projects canonical ABI slot order, which numbers
+    /// graph values. A graph lifted from one Program mints an external value for
+    /// every retained read-write buffer before the node that produces the declared
+    /// outputs, so slot order is retained-then-output and cannot express a Program
+    /// that declares an output buffer before a retained one. A caller that authored
+    /// the Program binds its inputs and reads its outputs in declaration order, the
+    /// order `Program::output_buffer_indices` reports, so this projects onto that
+    /// order through the canonical resource names.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the artifact does not carry one canonical resource per
+    /// declared writable buffer, or when the completion omits one of those values.
+    pub fn program_outputs(
+        &self,
+        program: &Program,
+        completion: &Completion,
+    ) -> Result<Vec<Vec<u8>>, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let canonical = state
+            .admitted
+            .neutral()
+            .canonical_value_by_name()
+            .map_err(|collision| {
+                ArtifactSessionError::from(BackendError::InvalidProgram {
+                    fix: collision.to_string(),
+                })
+            })?;
+        let buffers = program.buffers();
+        program
+            .output_buffer_indices()
+            .iter()
+            .map(|index| {
+                let name = buffers
+                    .get(*index as usize)
+                    .ok_or_else(|| {
+                        ArtifactSessionError::from(BackendError::InvalidProgram {
+                            fix: format!(
+                                "Fix: Program declares writable buffer index {index}, which is outside its buffer list."
+                            ),
+                        })
+                    })?
+                    .name();
+                let value = canonical.get(name).copied().ok_or_else(|| {
+                    ArtifactSessionError::from(BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: artifact resources must carry canonical value `{name}` for the declared writable buffer."
+                        ),
+                    })
+                })?;
+                completion
+                    .outputs
+                    .get(&value)
+                    .or_else(|| completion.retained.get(&value))
+                    .cloned()
+                    .ok_or_else(|| {
+                        ArtifactSessionError::from(BackendError::InvalidProgram {
+                            fix: format!(
+                                "Fix: materializer completion must project writable artifact value {} (`{name}`).",
+                                value.0
+                            ),
+                        })
                     })
             })
             .collect()
@@ -611,29 +688,77 @@ fn validate_instance(
     Ok(())
 }
 
-/// Artifact ABI resources the caller supplies host bytes for, in slot order.
+/// Artifact ABI resources the caller supplies host bytes for, in slot order,
+/// each paired with its canonical resource record.
 ///
-/// Write-only values and outputs are produced by the device, so only read-visible
-/// values need bytes. Measurement and caller submission select the same set: a
-/// measured launch that bound a different set would not be timing the launch the
-/// caller performs.
-fn host_input_resources(artifact: &Artifact) -> Vec<&ResourceAbiRecord> {
-    let mut resources = artifact
+/// One fact decides the set: whether an artifact entry produces the value. A
+/// value no entry produces has no other source, so its contents at launch are
+/// the caller's. A value some entry produces is device state, however many
+/// entries also read it, and a retained value's successor is produced even
+/// though its predecessor is bound by the caller.
+///
+/// The earlier form asked for the values in `entry.outputs` that were absent
+/// from `entry.inputs`. That is the same set on every representable artifact,
+/// because a node's newly minted outputs can never appear among the values it
+/// binds as inputs, but it reads as though the arity depended on how the
+/// compiler grouped the graph. Stating the rule directly removes the question.
+///
+/// Access then removes what nothing reads: a write-only slot's contents at
+/// launch are unobservable, so binding bytes to it would ask the caller for a
+/// buffer no kernel reads.
+///
+/// Measurement and caller submission select the same set: a measured launch that
+/// bound a different set would not be timing the launch the caller performs.
+///
+/// # Errors
+///
+/// Returns an error when an ABI slot names a value the resource set does not
+/// carry. Both describe one graph, so a gap is a malformed artifact, and
+/// assuming a byte count for the missing value binds a buffer at the wrong size.
+fn host_input_resources(
+    artifact: &Artifact,
+) -> Result<Vec<(&ResourceAbiRecord, &ResourceRecord)>, BackendError> {
+    let produced = entry_produced_values(artifact);
+    let mut resources = Vec::new();
+    for resource in &artifact.abi().resources {
+        let record = artifact
+            .resources()
+            .iter()
+            .find(|record| record.value == resource.value)
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: artifact ABI slot {} names value {}, which the artifact resource set does not carry. Regenerate the artifact so its ABI and its resource set describe the same graph.",
+                    resource.slot, resource.value.0
+                ),
+            })?;
+        if !produced.contains(&resource.value) && kernel_reads_initial_bytes(resource.access) {
+            resources.push((resource, record));
+        }
+    }
+    resources.sort_unstable_by_key(|(resource, _)| resource.slot);
+    Ok(resources)
+}
+
+/// Values some artifact entry produces.
+fn entry_produced_values(artifact: &Artifact) -> BTreeSet<ArtifactValueId> {
+    artifact
         .abi()
-        .resources
+        .entries
         .iter()
-        .filter(|resource| match resource.access {
-            AbiAccess::ReadOnly | AbiAccess::Uniform => true,
-            AbiAccess::ReadWrite => artifact
-                .resources()
-                .iter()
-                .find(|record| record.value == resource.value)
-                .is_none_or(|record| record.lifetime != ResourceLifetime::Output),
-            AbiAccess::WriteOnly => false,
-        })
-        .collect::<Vec<_>>();
-    resources.sort_unstable_by_key(|resource| resource.slot);
-    resources
+        .flat_map(|entry| entry.outputs.iter().copied())
+        .collect()
+}
+
+/// Whether the kernel reads what a slot holds at launch.
+///
+/// Exhaustive on purpose: a new access class must state whether its initial
+/// contents are read before a caller can be asked for them, and a wildcard arm
+/// would file it under whichever answer happened to be first.
+fn kernel_reads_initial_bytes(access: AbiAccess) -> bool {
+    match access {
+        AbiAccess::ReadOnly | AbiAccess::Uniform | AbiAccess::ReadWrite => true,
+        AbiAccess::WriteOnly => false,
+    }
 }
 
 /// Compiler finalist evaluation on the acquired device.
@@ -663,12 +788,8 @@ impl FinalistEvaluator for DeviceFinalists<'_> {
             .materialize(artifact, payload)
             .map_err(measurement_failure)?;
         let mut bindings = BindingSet::new(artifact.digest());
-        for resource in host_input_resources(artifact) {
-            let byte_count = artifact
-                .resources()
-                .iter()
-                .find(|record| record.value == resource.value)
-                .map_or(0, |record| record.byte_count);
+        for (resource, record) in host_input_resources(artifact).map_err(measurement_failure)? {
+            let byte_count = record.byte_count;
             let byte_count = usize::try_from(byte_count).map_err(|_| {
                 TargetCompileError::Unsupported(format!(
                     "artifact value {} needs {byte_count} bytes, which exceeds host addressing",

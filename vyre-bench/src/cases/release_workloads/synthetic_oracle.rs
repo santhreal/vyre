@@ -103,6 +103,67 @@ pub(super) fn synthetic_cpu_count(pattern: SyntheticPattern, records: u32) -> u3
         .sum()
 }
 
+/// Count matching rows out of the host input buffers the dispatch reads.
+///
+/// `synthetic_cpu_count` regenerates every row from its index, which costs several
+/// rotate-multiply rounds per column and is work the dispatched program never does:
+/// its inputs are materialized and uploaded before the clock starts. Timing the
+/// generator on one side only inflates every speedup this harness reports, so the
+/// baseline the contract is judged against reads the same bytes the device reads.
+pub(super) fn synthetic_cpu_count_over_inputs(
+    pattern: SyntheticPattern,
+    inputs: &[Vec<u8>],
+    records: u32,
+) -> Result<u32, String> {
+    let columns = pattern_input_count(pattern);
+    if inputs.len() < columns {
+        return Err(format!(
+            "synthetic CPU baseline needs {columns} input column(s) for this pattern but received {}. Fix: pass the prepared input buffers.",
+            inputs.len()
+        ));
+    }
+    let required = records as usize * std::mem::size_of::<u32>();
+    for (index, column) in inputs.iter().take(columns).enumerate() {
+        if column.len() < required {
+            return Err(format!(
+                "synthetic CPU baseline input column {index} holds {} bytes but records={records} needs {required}. Fix: generate the column at the benchmarked record count.",
+                column.len()
+            ));
+        }
+    }
+    let mut row = vec![0u32; columns];
+    let mut matches = 0u32;
+    for record in 0..records as usize {
+        let start = record * std::mem::size_of::<u32>();
+        for (slot, column) in row.iter_mut().zip(inputs) {
+            *slot = u32::from_le_bytes([
+                column[start],
+                column[start + 1],
+                column[start + 2],
+                column[start + 3],
+            ]);
+        }
+        matches += u32::from(row_matches(pattern, &row));
+    }
+    Ok(matches)
+}
+
+/// Name the CPU baseline this harness times, owned by the module that implements it.
+///
+/// Every release macro workload is judged against the same in-process reference, so
+/// the label is derived from the pattern instead of restated per workload, where a
+/// case could name an engine that never runs.
+pub(super) fn synthetic_baseline_label(pattern: SyntheticPattern) -> &'static str {
+    match pattern {
+        SyntheticPattern::StringBitmapScatter => {
+            "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)"
+        }
+        _ => {
+            "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+        }
+    }
+}
+
 fn synthetic_row(pattern: SyntheticPattern, index: u32) -> Vec<u32> {
     match pattern {
         SyntheticPattern::ConditionEval => vec![
@@ -139,10 +200,10 @@ fn synthetic_row(pattern: SyntheticPattern, index: u32) -> Vec<u32> {
             ifds_transfer_mask(index),
             ifds_witness_mask(index),
         ],
-        SyntheticPattern::CAstTraversal => vec![
-            c_ast_node_kind_mask(index),
-            c_ast_depth_mask(index),
-            c_ast_motif_mask(index),
+        SyntheticPattern::AstMotifTraversal => vec![
+            ast_node_kind_mask(index),
+            ast_depth_mask(index),
+            ast_motif_mask(index),
         ],
         SyntheticPattern::MegakernelQueuedBatch => vec![
             megakernel_queue_mask(index),
@@ -500,9 +561,9 @@ pub(super) const C_AST_LANES: u32 = 16;
 
 pub(super) const C_AST_THRESHOLD: u32 = 6;
 
-const C_AST_LANE_MASK: u32 = (1u32 << C_AST_LANES) - 1;
+const AST_MOTIF_LANE_MASK: u32 = (1u32 << C_AST_LANES) - 1;
 
-fn c_ast_node_kind_mask(index: u32) -> u32 {
+fn ast_node_kind_mask(index: u32) -> u32 {
     let mut state = index ^ 0xDEAD_BEEF;
     let mut mask = 0u32;
     for lane in 0..C_AST_LANES {
@@ -521,8 +582,8 @@ fn c_ast_node_kind_mask(index: u32) -> u32 {
     }
 }
 
-fn c_ast_depth_mask(index: u32) -> u32 {
-    let rotated = c_ast_node_kind_mask(index).rotate_right((index & 7) + 1) & C_AST_LANE_MASK;
+fn ast_depth_mask(index: u32) -> u32 {
+    let rotated = ast_node_kind_mask(index).rotate_right((index & 7) + 1) & AST_MOTIF_LANE_MASK;
     if index % 53 == 0 {
         rotated | 0x3F3F
     } else {
@@ -530,7 +591,7 @@ fn c_ast_depth_mask(index: u32) -> u32 {
     }
 }
 
-fn c_ast_motif_mask(index: u32) -> u32 {
+fn ast_motif_mask(index: u32) -> u32 {
     if index % 53 == 0 {
         0x3F3F
     } else {
@@ -538,7 +599,7 @@ fn c_ast_motif_mask(index: u32) -> u32 {
     }
 }
 
-fn c_ast_traversal_matches(node_kind_mask: u32, depth_mask: u32, motif_mask: u32) -> bool {
+fn ast_motif_traversal_matches(node_kind_mask: u32, depth_mask: u32, motif_mask: u32) -> bool {
     let mut ast_hits = 0u32;
     for lane in 0..C_AST_LANES {
         let bit = 1u32 << lane;
@@ -667,7 +728,7 @@ fn row_matches(pattern: SyntheticPattern, row: &[u32]) -> bool {
         SyntheticPattern::QuantifiedLoops => quantified_row_matches(row[0], row[1], row[2]),
         SyntheticPattern::AliasReachingDef => alias_reaching_def_matches(row[0], row[1], row[2]),
         SyntheticPattern::IfdsWitness => ifds_witness_matches(row[0], row[1], row[2]),
-        SyntheticPattern::CAstTraversal => c_ast_traversal_matches(row[0], row[1], row[2]),
+        SyntheticPattern::AstMotifTraversal => ast_motif_traversal_matches(row[0], row[1], row[2]),
         SyntheticPattern::MegakernelQueuedBatch => megakernel_queue_matches(row[0], row[1], row[2]),
         SyntheticPattern::EgraphSaturation => egraph_saturation_matches(row[0], row[1], row[2]),
     }

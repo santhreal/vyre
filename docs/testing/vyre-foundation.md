@@ -83,6 +83,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `inline_per_invocation_builtin_rejection` | `vyre-foundation/tests/inline_per_invocation_builtin_rejection.rs` | None | `./cargo_full test -p vyre-foundation --test inline_per_invocation_builtin_rejection` |
 | `test` | `ir_variant_shape_owner_closure` | `vyre-foundation/tests/ir_variant_shape_owner_closure.rs` | None | `./cargo_full test -p vyre-foundation --test ir_variant_shape_owner_closure` |
 | `test` | `licm_hoist_scope_safety` | `vyre-foundation/tests/licm_hoist_scope_safety.rs` | None | `./cargo_full test -p vyre-foundation --test licm_hoist_scope_safety` |
+| `test` | `licm_speculation_bounds` | `vyre-foundation/tests/licm_speculation_bounds.rs` | None | `./cargo_full test -p vyre-foundation --test licm_speculation_bounds` |
 | `test` | `linear_type_validation` | `vyre-foundation/tests/linear_type_validation.rs` | None | `./cargo_full test -p vyre-foundation --test linear_type_validation` |
 | `test` | `loop_fusion_atomic_expected_scalar_dependency` | `vyre-foundation/tests/loop_fusion_atomic_expected_scalar_dependency.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_atomic_expected_scalar_dependency` |
 | `test` | `loop_fusion_binding_collision` | `vyre-foundation/tests/loop_fusion_binding_collision.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_binding_collision` |
@@ -104,8 +105,8 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `node_variant_traversal_closure` | `vyre-foundation/tests/node_variant_traversal_closure.rs` | None | `./cargo_full test -p vyre-foundation --test node_variant_traversal_closure` |
 | `test` | `opaque_payload_endian` | `vyre-foundation/tests/opaque_payload_endian.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_payload_endian` |
 | `test` | `opaque_wire_round_trip` | `vyre-foundation/tests/opaque_wire_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_wire_round_trip` |
+| `test` | `operation_namespace` | `vyre-foundation/tests/operation_namespace.rs` | None | `./cargo_full test -p vyre-foundation --test operation_namespace` |
 | `test` | `operation_registry` | `vyre-foundation/tests/operation_registry.rs` | None | `./cargo_full test -p vyre-foundation --test operation_registry` |
-| `test` | `operation_tier_classification` | `vyre-foundation/tests/operation_tier_classification.rs` | None | `./cargo_full test -p vyre-foundation --test operation_tier_classification` |
 | `test` | `optimizer_algebraic_rules_contracts` | `vyre-foundation/tests/optimizer_algebraic_rules_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_algebraic_rules_contracts` |
 | `test` | `optimizer_dataflow_value_differential` | `vyre-foundation/tests/optimizer_dataflow_value_differential.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_dataflow_value_differential` |
 | `test` | `optimizer_idempotence_proptest` | `vyre-foundation/tests/optimizer_idempotence_proptest.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_idempotence_proptest` |

@@ -1131,6 +1131,9 @@ pub(crate) fn free_cuda_ptr(ptr: u64) {
     free_cuda_ptr_with_label(ptr, "CUDA allocation");
 }
 
+// Inline: covers `HostOutputTransfer`, `HostTransferAllocations`, `PinnedHostAllocation`,
+// `PinnedHostAllocationPool` and 4 more items this module keeps private, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use std::sync::{

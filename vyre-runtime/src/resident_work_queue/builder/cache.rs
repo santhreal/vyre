@@ -125,6 +125,9 @@ fn cached_template(key: EmptyTemplateKey, build: impl FnOnce() -> Program) -> Ar
     program
 }
 
+// Inline: covers `EMPTY_TEMPLATE_CACHE`, `EMPTY_TEMPLATE_CACHE_CAP`,
+// `cached_empty_sharded_once_control_report_program_shared`, `cached_empty_sharded_program_shared`,
+// which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

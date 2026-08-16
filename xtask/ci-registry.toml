@@ -1,0 +1,686 @@
+# Every check CI runs, declared once, written by
+# `xtask ci-registry --write`.
+#
+# A `[[gate]]` row carries the subsets that hold the gate and the
+# workflows that run it. An `[[external]]` row is a check CI runs that
+# is not an xtask gate. The finding count each gate is pinned at lives
+# in `xtask/gate-baselines.toml`.
+#
+# The `ci-registry` gate compares this file against the registry, the
+# subsets and the workflow steps, in both directions, so a gate no
+# workflow runs and a row naming no gate are both failures.
+
+schema_version = 1
+
+[[gate]]
+name = "abstraction-gate"
+subsets = ["prepublish"]
+workflows = ["ci.yml", "gates.yml", "release-evidence.yml", "strict.yml"]
+
+[[gate]]
+name = "architecture-contract"
+subsets = ["docs"]
+workflows = ["architectural-invariants.yml", "gates.yml"]
+
+[[gate]]
+name = "backend-extension"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "backend-matrix"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "bench-baselines"
+subsets = ["structure"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "bench-coverage"
+subsets = []
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "bench-crossback"
+subsets = ["ir"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "bench-release"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "bench-smoke-runtime"
+subsets = []
+workflows = ["bench-regression.yml", "gates.yml"]
+
+[[gate]]
+name = "catalog"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "check-tier-deps"
+subsets = ["structure"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "ci-matrix"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "ci-registry"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "ci-required"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "ci-steps"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "cli-docs"
+subsets = []
+workflows = ["docs-ci.yml", "gates.yml"]
+
+[[gate]]
+name = "compile"
+subsets = ["ir"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "conformance-matrix"
+subsets = []
+workflows = ["conform.yml", "gates.yml"]
+
+[[gate]]
+name = "contract-in-source"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "crate-pages"
+subsets = ["docs"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "cross-target"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "dep-drift"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "doc-claims"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "docs-check"
+subsets = ["docs"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "docs-coupling"
+subsets = ["docs"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "docs-references"
+subsets = ["docs"]
+workflows = ["architectural-invariants.yml", "gates.yml"]
+
+[[gate]]
+name = "docs-register"
+subsets = ["docs"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "dup-scan"
+subsets = ["structure"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "evidence-paths"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "example-capability"
+subsets = ["structure"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "feature-isolation"
+subsets = []
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "feature-matrix"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "file-size"
+subsets = ["source-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "frozen-contracts"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "gate1"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "gpu-loudness"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "heuristic-audit"
+subsets = ["structure"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-blocking-wait"
+subsets = ["hot-path-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-inventory"
+subsets = ["hot-path-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-nested-rows"
+subsets = ["hot-path-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-owned-dispatch"
+subsets = ["hot-path-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-reserve"
+subsets = ["hot-path-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-scan"
+subsets = ["structure"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-unbounded-cache"
+subsets = ["hot-path-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hot-path-unbounded-read"
+subsets = ["hot-path-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "hygiene-matrix"
+subsets = ["structure"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "internal-dep-versions"
+subsets = ["manifest-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "invariant-paths"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "launch-state"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "layering"
+subsets = ["manifest-rules"]
+workflows = ["architectural-invariants.yml", "gates.yml"]
+
+[[gate]]
+name = "lego-audit"
+subsets = ["composition"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lego-quick"
+subsets = ["composition"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lint-expect-fix"
+subsets = ["lint-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lint-one-policy"
+subsets = ["lint-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lint-unsafe-budget"
+subsets = ["lint-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lint-unsafe-justification"
+subsets = ["lint-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "list-ops"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "lockfile-clean"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "metadata-matrix"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "neutral-crates"
+subsets = ["manifest-rules"]
+workflows = ["architectural-invariants.yml", "gates.yml"]
+
+[[gate]]
+name = "op-matrix"
+subsets = []
+workflows = ["architectural-invariants.yml", "conform.yml", "gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "op-names"
+subsets = ["cat-a"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "operation-schema"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "optimization-corpus"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "optimization-docs"
+subsets = ["docs"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "optimization-matrix"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "package-readiness"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "parity-testing-isolated"
+subsets = ["cat-a"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "path-deps-resolve"
+subsets = ["manifest-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "platform-boundary"
+subsets = ["cat-a", "prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "platform-consumer-docs"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "primitive-admission-gate"
+subsets = ["composition"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "print-composition"
+subsets = ["ir"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "program-wire-fields"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "proptest-coverage"
+subsets = ["lint-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "public-api-paths"
+subsets = []
+workflows = ["gates.yml", "public-api.yml"]
+
+[[gate]]
+name = "public-api-snapshot"
+subsets = []
+workflows = ["gates.yml", "public-api.yml"]
+
+[[gate]]
+name = "readback-ring"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "release-benchmarks"
+subsets = []
+workflows = ["gates.yml", "gpu-parity.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "release-conformance"
+subsets = []
+workflows = ["gates.yml", "gpu-parity.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "release-docs"
+subsets = ["docs"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "release-evidence"
+subsets = []
+workflows = ["ci.yml", "gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "release-workload-matrix"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "repo-hygiene"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "shader-source"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "shrink"
+subsets = ["ir"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "single-backlog"
+subsets = ["repo-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "source-include-module"
+subsets = ["source-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "source-parses"
+subsets = ["source-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "source-reachability"
+subsets = ["source-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "trace-f32"
+subsets = ["ir"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "unification"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "verify-rewrite-proofs"
+subsets = ["ir"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "version-matrix"
+subsets = []
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "vyre-release-gate"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "whats-similar"
+subsets = ["composition"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "workspace-check"
+subsets = ["cat-a"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "workspace-clippy"
+subsets = ["cat-a"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "workspace-docs"
+subsets = ["cat-a"]
+workflows = ["docs-ci.yml", "gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "workspace-membership"
+subsets = ["manifest-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "workspace-tests"
+subsets = ["cat-a"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[external]]
+run = "-p structure-gate"
+workflows = ["gates.yml"]
+
+[[external]]
+run = "-p vyre-bench"
+workflows = ["gpu-parity.yml"]
+
+[[external]]
+run = "-p vyre-conform"
+workflows = ["gpu-parity.yml"]
+
+[[external]]
+run = "-p vyre-driver-wgpu"
+workflows = ["gpu-parity.yml"]
+
+[[external]]
+run = "scripts/check_cuda_parity_perf_gate.sh"
+workflows = ["gpu-parity.yml"]
+
+[[external]]
+run = "scripts/check_external_ir_extension_ci.sh"
+workflows = ["gates.yml"]
+
+[[external]]
+run = "scripts/check_spirv_parity_perf_gate.sh"
+workflows = ["gates.yml"]
+
+[[external]]
+run = "scripts/run_sweep_oracle_matrix.sh"
+workflows = ["gates.yml"]
+
+[[external]]
+run = "scripts/run_volume_sweep_shard.sh"
+workflows = ["gates.yml"]
+
+[[workflow]]
+path = ".github/workflows-paused/adversarial.yml"
+state = "unprotected"
+reason = "the adversarial gauntlet test it ran was deleted with the conformance registry suite"
+class = "adversarial input generation against the registered operation set"
+
+[[workflow]]
+path = ".github/workflows-paused/book.yml"
+state = "superseded"
+reason = "the mdbook it built and deployed was deleted, and the documentation tree that replaced it is held by docs-check"
+superseded_by = ".github/workflows/gates.yml"
+gate = "docs-check"
+
+[[workflow]]
+path = ".github/workflows-paused/catalog-consistency.yml"
+state = "superseded"
+reason = "the catalog gate holds docs/generated/catalog.toml to the live operation inventory, which is what the test it ran compared"
+superseded_by = ".github/workflows/gates.yml"
+gate = "catalog"
+
+[[workflow]]
+path = ".github/workflows-paused/codeowners-coverage.yml"
+state = "unprotected"
+reason = "the coverage test it ran was deleted with the conformance suite, and repo-hygiene requires the CODEOWNERS file to exist without reading a path in it"
+class = "every path inside the trust boundary resolves to a CODEOWNERS owner"
+
+[[workflow]]
+path = ".github/workflows-paused/mutation-testing.yml"
+state = "unprotected"
+reason = "the four-hour mutation budget it needed was never validated against the runner time limit"
+class = "mutation coverage of the conformance verifier, its algebra and the bitset primitives"
+
+[[workflow]]
+path = ".github/workflows-paused/parity-determinism.yml"
+state = "unprotected"
+reason = "the composition parity and determinism stress tests it ran were deleted, and the parity half is measured by the parity matrix that conform.yml and gpu-parity.yml run"
+class = "byte-identical output across 100 repeat dispatches of one composition on CUDA"
+
+[[workflow]]
+path = ".github/workflows-paused/random-order.yml"
+state = "unprotected"
+reason = "the surviving randomized-order lane, test-random-order.yml, is itself paused, so nothing in CI runs the suite in a randomized order"
+class = "the test suite executed in a randomized order, so an ordering dependency between tests fails rather than passing on the declared order"
+
+[[workflow]]
+path = ".github/workflows-paused/reproducible-build.yml"
+state = "paused"
+reason = "a full clean release build twice per run exceeds the runner time budget for a nightly schedule"
+returns_when = "the second pass reuses a warm cache, or a hosted runner with a larger time budget is available"
+
+[[workflow]]
+path = ".github/workflows-paused/test-random-order.yml"
+state = "paused"
+reason = "the nightly toolchain it needs for randomized test order fails to install on the hosted runner"
+returns_when = "randomized order lands on the stable toolchain, or the nightly install is fixed"
+
+[[workflow]]
+path = ".github/workflows/architectural-invariants.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/bench-regression.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/bench.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/ci.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/conform.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/coverage.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/deny.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/dependency-audit.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/docs-ci.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/fuzz.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/gates.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/gpu-parity.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/loom.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/miri.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/public-api.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/release-evidence.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/semver-checks.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/strict.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/udeps.yml"
+state = "live"

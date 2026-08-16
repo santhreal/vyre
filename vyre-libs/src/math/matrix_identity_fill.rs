@@ -7,7 +7,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_chi
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-use crate::operand_shape::square_matrix_cells;
+use crate::plumbing::operand::shape::square_matrix_cells;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::matrix_identity_fill";
@@ -77,7 +77,7 @@ pub fn matrix_identity_fill(matrix: &str, n: u32) -> Program {
 //
 // ORACLE: the 3x3 identity. Every value is exact in f32.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || matrix_identity_fill("m", 3),
         Some(|| {

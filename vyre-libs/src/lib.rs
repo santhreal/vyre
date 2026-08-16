@@ -35,68 +35,31 @@
 // function pointers, so the standard auto-traits provide Send + Sync without
 // unsafe code.
 
-/// Region builder  -  the shared helper every composition routes through.
-
-/// Domain-neutral byte-range ordering predicates.
-pub mod range_ordering;
-
 /// The declared seam one Tier 3 dialect crosses to compose another.
 pub mod prelude;
 
-/// `TensorRef`  -  typed buffer-argument wrapper used by every Cat-A
-/// composition for dtype + shape + name-uniqueness validation.
-pub(crate) mod tensor_ref;
-
-pub use tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
-
 /// Shared builder helpers every Cat-A composition reuses.
 pub(crate) mod builder;
-mod builder_catalog;
 
+/// Shared plumbing every composition needs and no dialect owns: what a buffer
+/// argument is, what a built `Program` declares, what a registration carries,
+/// and what the host does to launch it.
+pub(crate) mod plumbing;
+
+pub use builder::range_ordering;
 pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};
-
-pub mod buffer_names;
-
-/// `ProgramDescriptor`  -  introspection surface for Cat-A Programs.
-pub(crate) mod descriptor;
-
-/// Host-side byte marshalling for `ProgramDispatcher` calls.
-pub mod dispatch_buffers;
-
-/// Host-side capacity reservation for staging buffers and CPU-oracle scratch.
-/// Crate-root plumbing, not a dialect: every dialect that stages a dispatch or
-/// grows an oracle scratch vector reserves through this one owner.
-#[cfg(any(
-    feature = "device",
-    feature = "graph",
-    feature = "math-kernels"
-))]
-pub(crate) mod scratch;
-
-/// Cell counts of a matrix operand, refused the same way by every op. Crate-root
-/// plumbing for the same reason as `scratch`: several domains need it and none
-/// of them may enable another.
-#[cfg(any(feature = "graph", feature = "math-kernels"))]
-pub(crate) mod operand_shape;
-
-/// Which buffers a fused Program still publishes to the host.
-#[cfg(any(feature = "reduce", feature = "text"))]
-pub(crate) mod program_outputs;
-
-/// Host-side compiled-`Program` cache keyed by dispatch shape. Crate-root
-/// plumbing for the same reason as `scratch`.
-#[cfg(feature = "device")]
-pub(crate) mod dispatch_program_cache;
-
-pub use descriptor::{BufferDescriptor, ProgramDescriptor};
-
-/// Derived view over canonical library operation registrations.
-pub mod operation_catalog;
+pub use plumbing::host::dispatch_buffers;
+pub use plumbing::operand::buffer_names;
+pub use plumbing::operand::tensor_ref::{
+    check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError,
+};
+pub use plumbing::program::descriptor::{BufferDescriptor, ProgramDescriptor};
+pub use plumbing::registration::{contracts, operation_catalog};
 
 /// Per-module call counters for the composition surface.
 #[cfg(feature = "telemetry")]
-pub mod telemetry;
+pub use plumbing::host::telemetry;
 
 /// Device-boundary contracts: probe, memory ownership, resident graph layout.
 #[cfg(feature = "device")]
@@ -148,6 +111,11 @@ pub mod logical;
 ))]
 pub mod nn;
 
+/// Language-model decode layer  -  paged key-value cache addressing and token
+/// sampling, composed from the neural-net and math dialects.
+#[cfg(feature = "llm")]
+pub mod llm;
+
 /// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
 /// program builders plus immutable compilation artifacts.
 #[cfg(any(
@@ -173,17 +141,29 @@ pub mod hash;
 
 /// Text-processing compositions for the GPU C parser pipeline
 /// (Phase L1+): byte classification, UTF-8 validation, line index.
+#[cfg(feature = "text")]
 pub mod text;
 
 /// Representation sub-dialect: bit-packing and unpacking.
+#[cfg(feature = "representation")]
 pub mod representation;
 
 /// GPU parser infrastructure (Phase L3+): bracket matching, DFA
 /// lexer driver, LR(1) table walker. Grammar tables are generated
 /// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
+// `parsing-kernels` and `go-parser` are the two roots. `parsing` names both
+// language pipelines and `python-parser` names `parsing-kernels`, so a build
+// that asks for either of those already sets one of the two.
+#[cfg(any(
+    feature = "parsing",
+    feature = "parsing-kernels",
+    feature = "go-parser",
+    feature = "python-parser"
+))]
 pub mod parsing;
 
 /// Packed AST walks (`ast_walk_*` catalog ops).
+#[cfg(feature = "graph")]
 pub mod graph;
 
 /// Security / taint compositions for static program analysis.
@@ -211,6 +191,13 @@ pub mod bitset;
 /// ValueSets. Backs source-query dialect aggregates.
 #[cfg(feature = "reduce")]
 pub mod reduce;
+
+/// Virtual filesystem DMA compositions: the `#include` hash resolver that
+/// turns asset identifiers into asynchronous block loads. Built from
+/// `Node::AsyncLoad` and `Node::AsyncWait`, so it composes existing IR and
+/// carries no hardware contract of its own.
+#[cfg(feature = "vfs")]
+pub mod vfs;
 
 /// Label to NodeSet resolver: turn a TagFamily bitmask into a NodeSet bitset.
 #[cfg(feature = "label")]
@@ -289,22 +276,15 @@ pub mod rule;
 #[cfg(feature = "intern")]
 pub mod intern;
 
-/// Operation contract presets used by catalog entries.
-pub mod contracts;
-/// Type-signature constants shared across op definitions.
-pub(crate) mod signatures;
-/// Re-exports every type-signature constant at the crate root for convenient access.
-pub use signatures::{
+/// The type-signature constants an op declaration reads. The module holding
+/// them is private, so these re-exports are their only public path.
+pub use plumbing::registration::signatures::{
     BOOL_OUTPUTS, BYTES_TO_BYTES_INPUTS, BYTES_TO_BYTES_OUTPUTS, BYTES_TO_U32_OUTPUTS,
     F32_F32_F32_INPUTS, F32_F32_INPUTS, F32_INPUTS, F32_OUTPUTS, I32_OUTPUTS, U32_INPUTS,
     U32_OUTPUTS, U32_U32_INPUTS,
 };
 /// Owner-local byte fixtures for semantic operation registrations and tests.
 pub(crate) mod fixture_bytes;
-/// Pre-sweep shader snapshot migration entries, collected via inventory.
-/// `pub(crate)` because the registry is an internal pre-sweep tool  -
-/// downstream dialects do not submit through this path.
-pub(crate) mod test_migration;
 
 /// Dispatcher doubles and program sequencing for this crate's own unit tests.
 #[cfg(test)]

@@ -390,6 +390,8 @@ pub(crate) fn timestamp_profile_requested(config: &vyre_driver::DispatchConfig) 
     ) || std::env::var_os("VYRE_WGPU_TIMESTAMPS").is_some()
 }
 
+// Inline: covers `WgpuPendingDispatch`, `WgpuPendingKind`, `ready`, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
     use super::*;

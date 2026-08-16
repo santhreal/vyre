@@ -606,6 +606,8 @@ fn parse_f64_field(
         })
 }
 
+// Inline: covers `MIN_RELEASE_GRAPH_EDGES`, `MIN_RELEASE_GRAPH_NODES`,
+// `megakernel_speedup_evidence_csv_capacity`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -73,3 +73,13 @@ jobs:
 
       - name: Pre-publish subset
         run: ./cargo_full run -p xtask -- gates --subset prepublish
+
+      # The evidence and benchmark gates above each write one artifact. These
+      # two subsets judge the committed set against the tree, so every one of
+      # them is held to its pinned finding count rather than only to whether
+      # its own --write run exited zero.
+      - name: Release evidence subset
+        run: ./cargo_full run -p xtask -- gates --subset release-evidence
+
+      - name: Benchmark subset
+        run: ./cargo_full run -p xtask -- gates --subset benchmarks

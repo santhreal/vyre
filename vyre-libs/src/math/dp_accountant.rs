@@ -122,7 +122,7 @@ pub fn try_gaussian_rdp_step_cpu_into(
 ) -> Result<(), String> {
     let n = alpha.len().min(sigma_squared.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "DP accountant CPU oracle",
@@ -149,7 +149,7 @@ pub fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             gaussian_rdp_step("alpha", "sigma_sq", "out", 4)

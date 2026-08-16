@@ -9,7 +9,3 @@ pub use tiered_cache::{AccessStats, CacheEntry, CacheError, CacheTier, LruPolicy
 pub(crate) mod lru;
 /// Multi-tier cache storage, policy, and errors.
 pub(crate) mod tiered_cache;
-
-/// Cache test suites.
-#[cfg(test)]
-mod tests;

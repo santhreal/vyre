@@ -224,6 +224,7 @@ pub fn versioned_specialization_artifact_key(
     key
 }
 
+// Inline: covers `SENTINEL_UNTAGGED_DTYPE`, `dtype_tag`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

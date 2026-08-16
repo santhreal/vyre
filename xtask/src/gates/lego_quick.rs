@@ -31,7 +31,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
-use crate::gates::use_paths::{collect_use_paths, is_test_source_path};
+use crate::gates::use_paths::collect_use_paths;
 
 const MAX_LEGO_QUICK_SOURCE_BYTES: u64 = 2_097_152;
 
@@ -45,6 +45,10 @@ impl Gate for LegoQuick {
 
     fn help(&self) -> &'static str {
         "Hold every dialect-to-dialect import in vyre-libs to an edge the manifest declares; --staged narrows to the staged set"
+    }
+
+    fn usage(&self) -> &'static [&'static str] {
+        &["--staged narrows the scan to the files git reports as staged"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -170,6 +174,13 @@ fn workspace_relative(path: &str, marker: &str) -> String {
 /// the question is whether some feature that gates `X` enables some feature
 /// that gates `Y`. Both sides are read at run time, from `lib.rs` and from the
 /// manifest, so a new dialect or a new feature edge needs no edit here.
+///
+/// The importing side is the route to the file, not the gate on its dialect
+/// module. `encoding/mod.rs` declares one file behind the four neural-network
+/// features, so that file compiles only where `nn` does; judged by the
+/// `encoding` gate alone, 13 of its imports read as coupling no feature enables.
+/// A file on no route is not compiled in a production build, which is how a
+/// `#[cfg(test)]` module file leaves this rule rather than through a name test.
 fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Hit> {
     let libs = root.join("vyre-libs");
     let dialects = dialect_features(&libs.join("src"));
@@ -177,12 +188,14 @@ fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Hit> {
         return Vec::new();
     }
     let closure = feature_closure(&libs.join("Cargo.toml"));
+    let routes: BTreeMap<PathBuf, BTreeSet<String>> =
+        structure_gate::source_scan::module_routes(&libs.join("src"))
+            .into_iter()
+            .map(|route| (route.path, route.features.into_iter().collect()))
+            .collect();
 
     let mut out = Vec::new();
     for path in files {
-        if is_test_source_path(path) {
-            continue;
-        }
         let path_str = path.to_string_lossy();
         let Some(idx) = path_str.find("vyre-libs/src/") else {
             continue;
@@ -191,7 +204,10 @@ fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Hit> {
         let Some(this_dialect) = after.split('/').next() else {
             continue;
         };
-        let Some(this_features) = dialects.get(this_dialect) else {
+        if !dialects.contains_key(this_dialect) {
+            continue;
+        }
+        let Some(this_features) = routes.get(path.as_path()) else {
             continue;
         };
         let Ok(text) = read_text_bounded(path) else {
@@ -411,13 +427,27 @@ mod tests {
         );
     }
 
+    /// Write a module file and the declaration that compiles it.
+    ///
+    /// A file no `mod` statement names is on no route, so no build reaches it
+    /// and the rule does not judge it. A fixture that skipped the declaration
+    /// made every case below pass for that reason rather than the one it names.
+    fn write_module(dir: &Path, dialect: &str, name: &str, body: &str) -> PathBuf {
+        let declaration = format!("vyre-libs/src/{dialect}/mod.rs");
+        let mut declared = std::fs::read_to_string(dir.join(&declaration)).unwrap_or_default();
+        declared.push_str(&format!("pub mod {name};\n"));
+        write(dir, &declaration, &declared);
+        write(dir, &format!("vyre-libs/src/{dialect}/{name}.rs"), body)
+    }
+
     #[test]
     fn an_undeclared_dialect_import_is_a_finding() {
         let dir = TempDir::new().unwrap();
         crate_fixture(dir.path());
-        let p = write(
+        let p = write_module(
             dir.path(),
-            "vyre-libs/src/math/uses_parsing.rs",
+            "math",
+            "uses_parsing",
             "use crate::parsing::lexer;\nfn _f() {}\n",
         );
         let findings = check_cross_dialect(dir.path(), &[p]);
@@ -444,9 +474,10 @@ mod tests {
             "vyre-libs/Cargo.toml",
             "[features]\nedge = [\"parsing\"]\nparsing = []\n",
         );
-        let p = write(
+        let p = write_module(
             dir.path(),
-            "vyre-libs/src/math/uses_parsing.rs",
+            "math",
+            "uses_parsing",
             "use crate::parsing::lexer;\nfn _f() {}\n",
         );
         assert!(check_cross_dialect(dir.path(), &[p]).is_empty());
@@ -469,9 +500,62 @@ mod tests {
             "vyre-libs/Cargo.toml",
             "[features]\nouter = [\"middle\"]\nmiddle = [\"parsing\"]\nparsing = []\n",
         );
+        let p = write_module(
+            dir.path(),
+            "math",
+            "uses_parsing",
+            "use crate::parsing::lexer;\nfn _f() {}\n",
+        );
+        assert!(check_cross_dialect(dir.path(), &[p]).is_empty());
+    }
+
+    /// WHY: a nested declaration carries its own gate, and the importing side
+    /// is the route to the file rather than the gate on its dialect. Judged by
+    /// the dialect alone, one file that `encoding/mod.rs` declares behind the
+    /// neural-network features produced 13 findings against imports every one
+    /// of those features enables.
+    #[test]
+    fn a_nested_declaration_supplies_the_importing_features() {
+        let dir = TempDir::new().unwrap();
+        write(
+            dir.path(),
+            "vyre-libs/src/lib.rs",
+            "pub mod math;\n#[cfg(feature = \"parsing\")]\npub mod parsing;\n",
+        );
+        write(
+            dir.path(),
+            "vyre-libs/Cargo.toml",
+            "[features]\nedge = [\"parsing\"]\nparsing = []\n",
+        );
+        write(
+            dir.path(),
+            "vyre-libs/src/math/mod.rs",
+            "#[cfg(feature = \"edge\")]\npub mod uses_parsing;\n",
+        );
         let p = write(
             dir.path(),
             "vyre-libs/src/math/uses_parsing.rs",
+            "use crate::parsing::lexer;\nfn _f() {}\n",
+        );
+        assert!(check_cross_dialect(dir.path(), &[p]).is_empty());
+    }
+
+    /// WHY: a module only a test build reaches is not production source. The
+    /// rule used to answer that question from the file name, which reported 6
+    /// imports in one `#[cfg(test)]` module and would have missed the next one
+    /// spelled differently.
+    #[test]
+    fn a_file_on_no_route_is_not_judged() {
+        let dir = TempDir::new().unwrap();
+        crate_fixture(dir.path());
+        write(
+            dir.path(),
+            "vyre-libs/src/math/mod.rs",
+            "#[cfg(test)]\nmod region_checks;\n",
+        );
+        let p = write(
+            dir.path(),
+            "vyre-libs/src/math/region_checks.rs",
             "use crate::parsing::lexer;\nfn _f() {}\n",
         );
         assert!(check_cross_dialect(dir.path(), &[p]).is_empty());
@@ -481,9 +565,10 @@ mod tests {
     fn a_same_dialect_import_is_not_a_finding() {
         let dir = TempDir::new().unwrap();
         crate_fixture(dir.path());
-        let p = write(
+        let p = write_module(
             dir.path(),
-            "vyre-libs/src/math/uses_self.rs",
+            "math",
+            "uses_self",
             "use crate::math::reduce;\nfn _f() {}\n",
         );
         assert!(check_cross_dialect(dir.path(), &[p]).is_empty());
@@ -493,9 +578,10 @@ mod tests {
     fn a_primitive_import_is_not_a_finding() {
         let dir = TempDir::new().unwrap();
         crate_fixture(dir.path());
-        let p = write(
+        let p = write_module(
             dir.path(),
-            "vyre-libs/src/math/uses_primitives.rs",
+            "math",
+            "uses_primitives",
             "use vyre_primitives::lane_grid;\nfn _f() {}\n",
         );
         assert!(check_cross_dialect(dir.path(), &[p]).is_empty());

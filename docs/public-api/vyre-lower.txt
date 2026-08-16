@@ -273,6 +273,7 @@ pub fn vyre_lower::descriptor_builder::slot(index: u32, element_type: vyre_spec:
 pub fn vyre_lower::descriptor_builder::store_global(slot: u32, index: u32, value: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::target_without_subgroups() -> vyre_lower::EmissionTargetCapabilities
 pub fn vyre_lower::descriptor_builder::workgroup_limits(max_size: [u32; 3], max_invocations: u32) -> vyre_lower::WorkgroupLimits
+pub fn vyre_lower::descriptor_trap_tags(body: &vyre_lower::KernelBody) -> core::result::Result<alloc::vec::Vec<vyre_lower::DescriptorTrapTag>, vyre_lower::LowerError>
 pub fn vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::corpus() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
@@ -315,6 +316,7 @@ pub struct vyre_lower::BindingSlot
 pub struct vyre_lower::DescriptorIntent
 pub struct vyre_lower::DescriptorIntentEvidence
 pub struct vyre_lower::DescriptorIntentSet
+pub struct vyre_lower::DescriptorTrapTag
 pub struct vyre_lower::Dispatch
 pub struct vyre_lower::EmissionTargetCapabilities
 pub struct vyre_lower::FullReport
@@ -432,6 +434,8 @@ pub vyre_lower::DescriptorIntentStrategy::Prefilter
 pub vyre_lower::DescriptorIntentStrategy::RelationSeed
 pub vyre_lower::DescriptorIntentStrategy::Streaming
 pub vyre_lower::DescriptorIntentStrategy::Verifier
+pub vyre_lower::DescriptorTrapTag::code: u32
+pub vyre_lower::DescriptorTrapTag::tag: vyre_lower::Name
 pub vyre_lower::Dispatch::workgroup_size: [u32; 3]
 pub vyre_lower::EmissionTargetCapabilities::subgroup: vyre_lower::SubgroupCapabilities
 pub vyre_lower::EmissionTargetCapabilities::workgroup: vyre_lower::WorkgroupLimits

@@ -21,7 +21,7 @@ pub fn cpu_ref(values: &[u32]) -> u32 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || reduce_count_non_zero("values", "out", 4),
         Some(|| {

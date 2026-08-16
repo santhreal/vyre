@@ -150,7 +150,7 @@ pub fn try_rk4_step_cpu_into(
         .min(k3.len())
         .min(k4.len());
     if n > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             n - out.len(),
             "RK4 CPU oracle",

@@ -32,11 +32,24 @@ pub(super) fn is_internal_phase_op(id: &str) -> bool {
 /// registered `vyre-primitives` child, so the child Region was the second
 /// module, not a lower composition unit; collapsing the pair left the emitting
 /// body with nothing under it to name.
-pub(super) const DECLARED_TIER3_LEAVES: [&str; 12] = [
+///
+/// `nn::attention::online_softmax` is the `(m, l, o_acc)` recurrence itself.
+/// The scalar and tiled attention entry points compose it and are no longer
+/// leaves; splitting the recurrence further would name a fragment of one loop
+/// nest that nothing else can call.
+///
+/// `llm::nucleus_select` is one serial draw in two passes over the same
+/// candidate array. The first pass records the nucleus length and its mass in
+/// registers and the second scales the uniform sample by that mass, which is
+/// what renormalizes the nucleus without a third pass. A registered child is a
+/// Region, a Region is a scope, so naming either pass would push those two
+/// scalars through a scratch buffer to satisfy the shape of the rule and emit a
+/// worse program than the one it judges.
+pub(crate) const DECLARED_TIER3_LEAVES: [&str; 13] = [
     "vyre-libs::nn::top_k",
     "vyre-libs::math::reduce_variance",
     "vyre-libs::nn::softmax_top_k",
-    "vyre-libs::nn::flash_attention",
+    "vyre-libs::nn::attention::online_softmax",
     "vyre-libs::nn::linear_4bit_affine_grouped",
     "vyre-libs::math::fft::scale_conjugate_inverse",
     "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
@@ -45,9 +58,10 @@ pub(super) const DECLARED_TIER3_LEAVES: [&str; 12] = [
     "vyre-libs::decode::base64",
     "vyre-libs::decode::hex",
     "vyre-libs::decode::inflate_stored_block",
+    "vyre-libs::llm::nucleus_select",
 ];
 
-pub(super) fn is_declared_tier3_leaf(id: &str) -> bool {
+pub(crate) fn is_declared_tier3_leaf(id: &str) -> bool {
     DECLARED_TIER3_LEAVES.contains(&id)
 }
 

@@ -188,6 +188,8 @@ pub fn report_scaling(
     println!();
 }
 
+// Inline: `vyre_driver::self_optimizer_bench` is declared under `#[cfg(test)]`, so no integration
+// test can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

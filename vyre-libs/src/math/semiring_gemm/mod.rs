@@ -242,7 +242,7 @@ pub fn try_semiring_gemm_cpu_into(
 ) -> Result<(), String> {
     let (m_usize, n_usize, k_usize, cell_count) = checked_cpu_gemm_shape(m, n, k)?;
     if cell_count > c.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             c,
             cell_count - c.len(),
             "semiring GEMM CPU oracle",
@@ -340,7 +340,7 @@ fn fixture_u32(words: &[u32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || semiring_gemm("a", "b", "c", 2, 2, 2, Semiring::Real),
         Some(|| vec![vec![

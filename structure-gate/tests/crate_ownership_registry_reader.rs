@@ -84,6 +84,27 @@ fn the_longest_declared_directory_owns_the_file() {
     );
 }
 
+/// A row and a query written with different separators resolve to one member.
+///
+/// The reader normalised the query and, in the exact-match arm, not the row, so
+/// a row declared with backslashes owned every file under its directory and not
+/// the directory itself. Both spellings of both sides answer the same row here.
+#[test]
+fn a_declared_directory_owns_its_files_whichever_separator_wrote_it() {
+    let registry = Registry::parse(
+        "schema_version = 2\n\n\
+         [[crate]]\npackage = \"win\"\npath = \"tools\\\\win\"\nowner = \"win-owner\"\nlayer = \"tooling\"\n",
+    )
+    .expect("Fix: the fixture registry must be readable");
+    for query in ["tools/win", "tools\\win", "tools/win/src/lib.rs", "tools\\win\\src\\lib.rs"] {
+        assert_eq!(
+            registry.owning_crate(query).map(|row| row.owner.as_str()),
+            Some("win-owner"),
+            "Fix: `{query}` must resolve to the member that declares its directory"
+        );
+    }
+}
+
 /// A file under no declared member resolves to no owner.
 #[test]
 fn a_file_outside_every_declared_directory_has_no_owner() {

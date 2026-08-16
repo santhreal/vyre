@@ -4,8 +4,9 @@
 //! Category A composition. Recipe rotates first 16 of 64 head dims.
 //! Standard RoPE: `[x1*cos - x2*sin, x1*sin + x2*cos]` on pairs.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use super::layout::{layout_move_program, IndexMap, LayoutMove};
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 const OP_ID: &str = "vyre-libs::nn::partial_rope";
 
@@ -154,7 +155,7 @@ fn build_partial_rope_at_offset(
         }
     };
 
-    let i = Expr::var("i");
+    let i = Expr::var("index");
     let dim = Expr::rem(i.clone(), Expr::u32(head_dim));
     let token = Expr::rem(
         Expr::div(i.clone(), Expr::u32(head_dim)),
@@ -192,20 +193,9 @@ fn build_partial_rope_at_offset(
         ),
     );
 
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(total)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
+    layout_move_program(LayoutMove {
+        op_id: OP_ID,
+        buffers: vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, activation_dtype.clone())
                 .with_count(total),
             BufferDecl::storage(cos_table, 1, BufferAccess::ReadOnly, DataType::F32)
@@ -214,9 +204,10 @@ fn build_partial_rope_at_offset(
                 .with_count(table_count),
             BufferDecl::output(output, 3, activation_dtype).with_count(total),
         ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+        write: output,
+        count: total,
+        map: IndexMap::Element { value },
+    })
 }
 
 inventory::submit! {

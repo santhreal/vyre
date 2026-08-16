@@ -31,12 +31,22 @@ fn main() {
         process::exit(1);
     };
     let ctx = GateCtx::new(xtask::checkout::checkout_root(), args[2..].to_vec());
+    // A delegated gate carries its options in the crate that implements them,
+    // so the request travels to the child and comes back as report notes. Every
+    // other gate is answered here, before it reads the tree.
+    if gate::help_requested(&ctx.args) && gate.package().is_none() {
+        print!("{}", gate::render(name, &gate::usage_report(gate)));
+        return;
+    }
     match gate.run(&ctx) {
         Err(error) => {
             eprintln!("{error}");
             process::exit(1);
         }
         Ok(report) => {
+            if ctx.has("--print-toolchain") && report.findings.is_empty() {
+                return;
+            }
             print!("{}", gate::render(name, &report));
             // A finding is a failure. There is no informational mode: a gate
             // that reported a problem and exited 0 is how 32 gates judged

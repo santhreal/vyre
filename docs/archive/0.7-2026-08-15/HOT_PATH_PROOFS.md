@@ -1,7 +1,7 @@
 # Hot-Path O(1) Proofs
 
-**Status: Superseded.** Use [`docs/optimization/README.md`](optimization/README.md)
-and `docs/optimization/BENCH_TARGETS.toml` for current performance proof rules.
+**Status: Superseded.** Use `docs/optimization/HOT_PATHS.toml` and
+`docs/optimization/BENCH_TARGETS.toml` for current performance proof rules.
 
 Closes #27 A.3 hot-path O(1) proofs.
 

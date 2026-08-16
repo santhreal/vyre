@@ -7,6 +7,12 @@ pub mod bitset_transform_pipeline;
 pub mod matching_diagnostic_compaction;
 pub mod matroid_exact_megakernel;
 pub mod matroid_megakernel_scheduler;
+#[cfg(any(
+    feature = "nn-activation",
+    feature = "nn-linear",
+    feature = "nn-norm",
+    feature = "nn-attention"
+))]
 pub mod nn_attention_paging;
 pub mod parsing_dispatch_pipeline;
 pub mod reduce_dispatch_pipeline;

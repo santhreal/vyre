@@ -56,7 +56,7 @@ pub fn try_qsvt_block_encode(
     a_scaled: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
+    let cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
     let t = Expr::InvocationId { axis: 0 };
     let n_v = Expr::load(norm, Expr::u32(0));
     let safe_norm = Expr::select(Expr::eq(n_v.clone(), Expr::u32(0)), Expr::u32(1), n_v);
@@ -112,7 +112,7 @@ pub fn try_qsvt_block_encode_cpu_into(
         )
     })?;
     if cells > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             cells - out.len(),
             "QSVT CPU oracle",
@@ -265,7 +265,7 @@ pub fn try_qsvt_apply_cpu_into(
 #[cfg(any(test, feature = "cpu-parity"))]
 fn reserve_qsvt_cpu_vec<T>(out: &mut Vec<T>, len: usize, context: &str) -> Result<(), String> {
     if len > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             len - out.len(),
             "QSVT CPU oracle",
@@ -276,7 +276,7 @@ fn reserve_qsvt_cpu_vec<T>(out: &mut Vec<T>, len: usize, context: &str) -> Resul
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || qsvt_block_encode("a", "norm", "a_scaled", 4),
         Some(|| {

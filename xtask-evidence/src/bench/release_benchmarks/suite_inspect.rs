@@ -12,7 +12,6 @@ use super::artifact_metrics::{
     first_metric_p50, read_benchmark_report, read_text_bounded, record_observed_metric_percentile,
     record_required_metric_percentile, report_cases, WallClockMinima,
 };
-use super::metrics::write_json;
 use super::release_thresholds::{
     MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR,
     MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR, MIN_CUDA_RELEASE_MEMORY_MIB,
@@ -55,8 +54,7 @@ fn attach_fused_execution_dag(path: &Path, case_id: &str) -> Result<(), String> 
         )
     })?;
     report_object.insert("fused_execution_dag".to_string(), dag);
-    write_json(path, &report);
-    Ok(())
+    xtask::json_document::write(path, &report)
 }
 
 fn fused_execution_dag_from_report(report: &Value, case_id: &str) -> Result<Value, String> {
@@ -138,8 +136,8 @@ pub(super) fn write_backend_suite(
     workspace_root: &Path,
     backend: &str,
     artifact_inputs: Vec<BackendSuiteArtifactInput>,
-) {
-    write_backend_suite_with_extra_blockers(workspace_root, backend, artifact_inputs, Vec::new());
+) -> Result<(), String> {
+    write_backend_suite_with_extra_blockers(workspace_root, backend, artifact_inputs, Vec::new())
 }
 
 pub(super) fn write_backend_suite_with_extra_blockers(
@@ -147,7 +145,7 @@ pub(super) fn write_backend_suite_with_extra_blockers(
     backend: &str,
     artifact_inputs: Vec<BackendSuiteArtifactInput>,
     extra_blockers: Vec<String>,
-) {
+) -> Result<(), String> {
     let output = backend_suite_output_path(backend);
     let mut blockers = extra_blockers;
     if artifact_inputs.is_empty() {
@@ -223,24 +221,7 @@ pub(super) fn write_backend_suite_with_extra_blockers(
         artifact_statuses,
         blockers,
     };
-    let path = workspace_root.join(output);
-    if let Some(parent) = path.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
-    let json = match serde_json::to_string_pretty(&evidence) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize backend suite evidence: {error}");
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(&path, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
-    }
+    xtask::json_document::write(&workspace_root.join(output), &evidence)
 }
 
 fn backend_suite_schema_digest_chain(
@@ -619,6 +600,19 @@ pub(super) fn inspect_backend_suite_artifact(
         }
         None => blockers.push("artifact has no source_fingerprint provenance".to_string()),
         Some(_) => {}
+    }
+    match report
+        .get("environment")
+        .and_then(|environment| environment.get("build_profile"))
+        .and_then(nonblank_str)
+    {
+        Some("release") => {}
+        Some(profile) => blockers.push(format!(
+            "artifact was measured by a `{profile}` build, so its baseline carries the cost of an \
+             unoptimized harness"
+        )),
+        None => blockers
+            .push("artifact does not name the build profile that measured it".to_string()),
     }
     if let (Some((field, fingerprint)), Some(current_fingerprint)) = (
         crate::bench::benchmark_evidence_semantics::report_freshness_fingerprint(&report),
@@ -1003,7 +997,8 @@ mod tests {
     fn write_wgpu_suite_regenerates_gated_fallback_artifact() {
         let dir = TempDir::new().expect("Fix: create a temporary workspace for suite output test.");
 
-        write_backend_suite(dir.path(), "wgpu", Vec::new());
+        write_backend_suite(dir.path(), "wgpu", Vec::new())
+            .expect("Fix: write the backend suite evidence.");
 
         let fallback = dir
             .path()
@@ -1043,7 +1038,8 @@ mod tests {
                 "backend `wgpu` comparison family `string-bitmap-scatter` case `release.string_bitmap_scatter.1m` artifact `release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json`: Fix: benchmark command failed with exit status 1"
                     .to_string(),
             ],
-        );
+        )
+        .expect("Fix: writing the fallback suite must succeed.");
 
         let suite_path = dir
             .path()
@@ -1090,7 +1086,8 @@ mod tests {
                     cpu_sota_100x_required: false,
                 },
             ],
-        );
+        )
+        .expect("Fix: write the backend suite evidence.");
 
         let suite_path = dir
             .path()
@@ -1142,7 +1139,8 @@ mod tests {
                     cpu_sota_100x_required: false,
                 },
             ],
-        );
+        )
+        .expect("Fix: write the backend suite evidence.");
 
         let suite_path = dir
             .path()
@@ -1212,7 +1210,8 @@ mod tests {
                 requested_case_id: " \t ".to_string(),
                 cpu_sota_100x_required: false,
             }],
-        );
+        )
+        .expect("Fix: write the backend suite evidence.");
 
         let suite_path = dir
             .path()

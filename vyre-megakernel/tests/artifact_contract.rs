@@ -1,10 +1,8 @@
 //! Whole-program request, identity, ABI, artifact, and corruption contracts.
 //!
-//! The fence fixtures below guard on a uniform condition, which every lane of a
-//! workgroup takes together, so the fence reaches device admission and the two
-//! outcomes there are what the tests read. A fence under a divergent guard
-//! never gets that far: IR validation refuses it first as V010, because a
-//! barrier only part of a workgroup reaches is invalid on any device.
+//! Fence admission is judged on the graph the planner produces, so which fence
+//! shapes reach that decision is a property of the fixture. `fenced_program`
+//! states it.
 
 #![forbid(unsafe_code)]
 
@@ -20,6 +18,10 @@ use vyre_megakernel::{
     Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest, DependencyKind,
     DeviceFacts, Digest, ExternalFacts, SearchBudget,
 };
+
+use graph_fixtures::copy_program;
+
+mod graph_fixtures;
 
 const LIMIT: u64 = 1_000_000;
 
@@ -38,21 +40,6 @@ fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
         access,
         lifetime,
     }
-}
-
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::load(input, Expr::u32(0)),
-        )],
-    )
 }
 
 fn add_program(left: &str, right: &str, output: &str) -> Program {
@@ -686,16 +673,23 @@ fn an_uncuttable_grid_fence_compiles_with_cooperative_launch() {
     .expect("Fix: a cooperative device must accept a whole-grid fence");
 }
 
-/// A program carrying a whole-grid fence, conditional when `guarded`.
+/// A program carrying a whole-grid fence, inside a branch when
+/// `under_a_uniform_branch`.
 ///
 /// An unconditional fence at the top of the entry sequence is a cut point. A
-/// fence inside a branch is not, because the branch decides which invocations
-/// reach it.
-fn fenced_program(guarded: bool) -> Program {
+/// fence inside a branch is not, because the branch decides where in the
+/// sequence it sits and hoisting it out would move it.
+///
+/// The branch condition is `true`, which every lane of a workgroup takes
+/// together. That is deliberate: a fence under a divergent condition is refused
+/// by IR validation as V010 and never reaches device admission, which is the
+/// decision these cases read. Uncuttable here means the planner cannot lift the
+/// fence, not that the fence is invalid.
+fn fenced_program(under_a_uniform_branch: bool) -> Program {
     let fence = Node::Barrier {
         ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
     };
-    let body = if guarded {
+    let body = if under_a_uniform_branch {
         vec![
             Node::store("out", Expr::u32(0), Expr::u32(1)),
             Node::if_then(Expr::bool(true), vec![fence]),

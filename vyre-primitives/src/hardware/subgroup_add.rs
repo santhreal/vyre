@@ -10,43 +10,39 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_add";
 
 /// Build a Program whose per-lane output is the sum of all active subgroup
 /// lanes.
+///
+/// The reduction is `Expr::subgroup_add`, which every backend emitter lowers to
+/// its own subgroup add: this op is admitted to this crate because it needs that
+/// arm and a reference-interpreter arm, and it earns that admission only by
+/// using them. It previously summed thirty-two memory neighbours in a serial
+/// loop, which made every lane redo its subgroup's whole sum out of storage, and
+/// registered `HardwareSemantic::SubgroupAddU32` for work no subgroup
+/// instruction performed.
+///
+/// The lane value is a control-flow-guarded local and the collective sits in
+/// uniform control flow, for the reason `subgroup_shuffle` states: a collective
+/// under a divergent branch has no well defined participating-lane set, and an
+/// operand read at every lane index reads past the end of a buffer narrower than
+/// the dispatch. A lane outside `values` contributes zero, so the sum is over
+/// the in-range lanes of that subgroup.
 #[must_use]
 pub fn subgroup_add(values: &str, out: &str, n: u32) -> Program {
     let body = vec![wrap_anonymous_region(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+            Node::let_bind("lane_value", Expr::u32(0)),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::buf_len(values)),
+                vec![Node::assign(
+                    "lane_value",
+                    Expr::load(values, Expr::var("idx")),
+                )],
+            ),
+            Node::let_bind("sum", Expr::subgroup_add(Expr::var("lane_value"))),
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::buf_len(out)),
-                vec![
-                    Node::let_bind(
-                        "group_base",
-                        Expr::mul(Expr::div(Expr::var("idx"), Expr::u32(32)), Expr::u32(32)),
-                    ),
-                    Node::let_bind("sum", Expr::u32(0)),
-                    Node::loop_for(
-                        "lane",
-                        Expr::u32(0),
-                        Expr::u32(32),
-                        vec![
-                            Node::let_bind(
-                                "peer",
-                                Expr::add(Expr::var("group_base"), Expr::var("lane")),
-                            ),
-                            Node::if_then(
-                                Expr::lt(Expr::var("peer"), Expr::buf_len(values)),
-                                vec![Node::assign(
-                                    "sum",
-                                    Expr::add(
-                                        Expr::var("sum"),
-                                        Expr::load(values, Expr::var("peer")),
-                                    ),
-                                )],
-                            ),
-                        ],
-                    ),
-                    Node::store(out, Expr::var("idx"), Expr::var("sum")),
-                ],
+                vec![Node::store(out, Expr::var("idx"), Expr::var("sum"))],
             ),
         ],
     )];
@@ -93,6 +89,7 @@ inventory::submit! {
         expected_output: Some(expected_output),
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+        geometry_requirements: None,
     }
 }
 

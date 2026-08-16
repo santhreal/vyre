@@ -123,7 +123,7 @@ pub fn try_greedy_contract_order_cpu_into(
     order: &mut Vec<usize>,
 ) -> Result<(), String> {
     if dims.len() > order.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             order,
             dims.len() - order.len(),
             "tensor-network CPU oracle",
@@ -137,7 +137,7 @@ pub fn try_greedy_contract_order_cpu_into(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || tn_pair_contract("a", "b", "c", 2, 2, 2),
         Some(|| {

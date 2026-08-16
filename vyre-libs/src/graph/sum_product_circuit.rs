@@ -585,7 +585,7 @@ pub fn try_sum_product_evaluate_cpu_into_with_scratch(
         topo_order,
     )?;
     scratch.values.clear();
-    crate::scratch::resize_vec(
+    crate::plumbing::host::scratch::resize_vec(
         &mut scratch.values,
         kinds.len(),
         0.0,
@@ -621,7 +621,7 @@ pub fn try_sum_product_evaluate_cpu_into_with_scratch(
         }
     }
     if scratch.values.len() > out.capacity() {
-        crate::scratch::reserve_items(
+        crate::plumbing::host::scratch::reserve_items(
             out,
             scratch.values.len() - out.len(),
             "sum-product circuit CPU oracle",
@@ -704,7 +704,7 @@ fn validate_sum_product_evaluate_inputs(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || sum_product_evaluate(
             "kinds",
@@ -746,7 +746,7 @@ inventory::submit! {
 // child_counts, children, weights, leaf_values, out (seeded zero). reference_eval
 // returns the sole RW buffer `out` = [2.0, 3.0, 5.0, 10.0] in 16.16.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID_LEVELED,
         || sum_product_evaluate_leveled(
             "depths",
