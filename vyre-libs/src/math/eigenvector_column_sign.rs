@@ -15,9 +15,9 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
+use crate::builder::cooperative::{for_each_index, LANES};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use crate::builder::cooperative::{for_each_index, LANES};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::eigenvector_column_sign";

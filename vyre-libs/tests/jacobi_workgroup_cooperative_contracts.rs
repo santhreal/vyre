@@ -20,16 +20,10 @@
 #![cfg(feature = "math")]
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_libs::math::eigenvector_column_sign::{
-    eigenvector_column_sign, OP_ID as SIGN_OP_ID,
-};
+use vyre_libs::math::eigenvector_column_sign::{eigenvector_column_sign, OP_ID as SIGN_OP_ID};
 use vyre_libs::math::jacobi_apply_rotation::OP_ID as ROTATION_OP_ID;
-use vyre_libs::math::matrix_diagonal_extract::{
-    matrix_diagonal_extract, OP_ID as DIAG_OP_ID,
-};
-use vyre_libs::math::matrix_identity_fill::{
-    matrix_identity_fill, OP_ID as IDENTITY_OP_ID,
-};
+use vyre_libs::math::matrix_diagonal_extract::{matrix_diagonal_extract, OP_ID as DIAG_OP_ID};
+use vyre_libs::math::matrix_identity_fill::{matrix_identity_fill, OP_ID as IDENTITY_OP_ID};
 use vyre_libs::math::symmetric_eigen_jacobi::{
     jacobi_eigen_body, jacobi_workgroup, symmetric_eigen_jacobi,
 };
@@ -85,16 +79,28 @@ fn all_four_primitives_dispatch_declared_workgroup_lanes() {
 #[test]
 fn all_four_primitives_bind_local_id() {
     let jacobi = symmetric_eigen_jacobi("a", "evec", "eval", 4);
-    assert!(check_local_id_binding(&jacobi), "symmetric_eigen_jacobi missing local binding");
+    assert!(
+        check_local_id_binding(&jacobi),
+        "symmetric_eigen_jacobi missing local binding"
+    );
 
     let identity = matrix_identity_fill("m", 4);
-    assert!(check_local_id_binding(&identity), "matrix_identity_fill missing local binding");
+    assert!(
+        check_local_id_binding(&identity),
+        "matrix_identity_fill missing local binding"
+    );
 
     let diag = matrix_diagonal_extract("m", "diag", 4);
-    assert!(check_local_id_binding(&diag), "matrix_diagonal_extract missing local binding");
+    assert!(
+        check_local_id_binding(&diag),
+        "matrix_diagonal_extract missing local binding"
+    );
 
     let sign = eigenvector_column_sign("evec", 4);
-    assert!(check_local_id_binding(&sign), "eigenvector_column_sign missing local binding");
+    assert!(
+        check_local_id_binding(&sign),
+        "eigenvector_column_sign missing local binding"
+    );
 }
 
 #[test]
@@ -102,20 +108,26 @@ fn jacobi_cooperative_phases_are_not_serialized() {
     let body = jacobi_eigen_body("a", "evec", "eval", 4);
 
     // 1. Identity fill region is top-level (not in an If)
-    let identity_node = body.iter().find(|n| matches!(n, Node::Region { generator, .. } if generator.as_str() == IDENTITY_OP_ID));
+    let identity_node = body.iter().find(
+        |n| matches!(n, Node::Region { generator, .. } if generator.as_str() == IDENTITY_OP_ID),
+    );
     assert!(
         identity_node.is_some(),
         "matrix_identity_fill must be spliced at top-level cooperative scope, not inside serial"
     );
 
     // 2. Column sign and diagonal extract regions are top-level (not in an If)
-    let sign_node = body.iter().find(|n| matches!(n, Node::Region { generator, .. } if generator.as_str() == SIGN_OP_ID));
+    let sign_node = body
+        .iter()
+        .find(|n| matches!(n, Node::Region { generator, .. } if generator.as_str() == SIGN_OP_ID));
     assert!(
         sign_node.is_some(),
         "eigenvector_column_sign must be spliced at top-level cooperative scope, not inside serial"
     );
 
-    let diag_node = body.iter().find(|n| matches!(n, Node::Region { generator, .. } if generator.as_str() == DIAG_OP_ID));
+    let diag_node = body
+        .iter()
+        .find(|n| matches!(n, Node::Region { generator, .. } if generator.as_str() == DIAG_OP_ID));
     assert!(
         diag_node.is_some(),
         "matrix_diagonal_extract must be spliced at top-level cooperative scope, not inside serial"
@@ -126,7 +138,10 @@ fn jacobi_cooperative_phases_are_not_serialized() {
         .iter()
         .find(|n| matches!(n, Node::Loop { var, .. } if var == "jac_sweep"))
         .expect("jac_sweep loop");
-    if let Node::Loop { body: sweep_body, .. } = sweep_loop {
+    if let Node::Loop {
+        body: sweep_body, ..
+    } = sweep_loop
+    {
         let rotation_is_serialized = sweep_body.iter().any(|node| match node {
             Node::If { then, .. } => then.iter().any(|inner| match inner {
                 Node::If { then: sub, .. } => {
@@ -150,7 +165,9 @@ fn jacobi_barriers_placed_at_data_boundaries() {
     // Barrier immediately after identity fill
     let identity_pos = body
         .iter()
-        .position(|n| matches!(n, Node::Region { generator, .. } if generator.as_str() == IDENTITY_OP_ID))
+        .position(
+            |n| matches!(n, Node::Region { generator, .. } if generator.as_str() == IDENTITY_OP_ID),
+        )
         .expect("identity region pos");
     assert!(
         matches!(body.get(identity_pos + 1), Some(Node::Barrier { .. })),
@@ -162,7 +179,10 @@ fn jacobi_barriers_placed_at_data_boundaries() {
         .iter()
         .find(|n| matches!(n, Node::Loop { var, .. } if var == "jac_sweep"))
         .expect("jac_sweep loop");
-    if let Node::Loop { body: sweep_body, .. } = sweep_loop {
+    if let Node::Loop {
+        body: sweep_body, ..
+    } = sweep_loop
+    {
         assert!(
             matches!(sweep_body.last(), Some(Node::Barrier { .. })),
             "a workgroup barrier must follow each rotation sweep before the next sweep begins"
@@ -208,7 +228,9 @@ fn diagonal_extract_cooperative_lane_striding_reference_exactness() {
             ],
         )
         .expect("diagonal extract reference eval");
-        let out = unpack_f32(&outputs[vyre_reference::output_index(&program, "diag").unwrap()].to_bytes());
+        let out = unpack_f32(
+            &outputs[vyre_reference::output_index(&program, "diag").unwrap()].to_bytes(),
+        );
         assert_eq!(out.len(), n as usize);
         for i in 0..(n as usize) {
             assert_eq!(out[i], matrix[i * (n as usize) + i]);
@@ -228,7 +250,8 @@ fn eigenvector_sign_cooperative_lane_striding_reference_exactness() {
                 let sign = if c % 2 == 1 { -3.5f32 } else { 3.5f32 };
                 matrix[1 * n_usize + c] = sign;
                 for r in 2..n_usize {
-                    matrix[r * n_usize + c] = ((r * 10 + c) as f32) * if c % 2 == 1 { -1.0 } else { 1.0 };
+                    matrix[r * n_usize + c] =
+                        ((r * 10 + c) as f32) * if c % 2 == 1 { -1.0 } else { 1.0 };
                 }
             } else {
                 matrix[0] = -12.0f32;
@@ -236,11 +259,8 @@ fn eigenvector_sign_cooperative_lane_striding_reference_exactness() {
         }
 
         let program = eigenvector_column_sign("evec", n);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(pack_f32(&matrix))],
-        )
-        .expect("column sign reference eval");
+        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_f32(&matrix))])
+            .expect("column sign reference eval");
         let out = unpack_f32(&outputs[0].to_bytes());
         assert_eq!(out.len(), count);
 

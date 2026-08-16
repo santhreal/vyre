@@ -1,8 +1,8 @@
 //! Measured performance evidence comparing 1-lane baseline vs 64-lane cooperative Jacobi paths.
 
 use std::time::Instant;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs::math::eigenvector_column_sign::{eigenvector_column_sign, OP_ID as SIGN_OP_ID};
 use vyre_libs::math::matrix_diagonal_extract::{matrix_diagonal_extract, OP_ID as DIAG_OP_ID};
 use vyre_libs::math::matrix_identity_fill::{matrix_identity_fill, OP_ID as IDENTITY_OP_ID};
@@ -28,8 +28,15 @@ fn serial_identity_fill(matrix: &str, n: u32) -> Program {
                     Expr::u32(n),
                     vec![Node::store(
                         matrix,
-                        Expr::add(Expr::mul(Expr::var("mif_row"), Expr::u32(n)), Expr::var("mif_col")),
-                        Expr::select(Expr::eq(Expr::var("mif_row"), Expr::var("mif_col")), Expr::f32(1.0), Expr::f32(0.0)),
+                        Expr::add(
+                            Expr::mul(Expr::var("mif_row"), Expr::u32(n)),
+                            Expr::var("mif_col"),
+                        ),
+                        Expr::select(
+                            Expr::eq(Expr::var("mif_row"), Expr::var("mif_col")),
+                            Expr::f32(1.0),
+                            Expr::f32(0.0),
+                        ),
                     )],
                 )],
             )],
@@ -54,7 +61,13 @@ fn serial_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program {
                 vec![Node::store(
                     diagonal,
                     Expr::var("mde_i"),
-                    Expr::load(matrix, Expr::add(Expr::mul(Expr::var("mde_i"), Expr::u32(n)), Expr::var("mde_i"))),
+                    Expr::load(
+                        matrix,
+                        Expr::add(
+                            Expr::mul(Expr::var("mde_i"), Expr::u32(n)),
+                            Expr::var("mde_i"),
+                        ),
+                    ),
                 )],
             )],
         )],
@@ -65,7 +78,10 @@ fn serial_column_sign(eigenvectors: &str, n: u32) -> Program {
     let cells = n * n;
     let cell = |r: &str, c: &str| Expr::add(Expr::mul(Expr::var(r), Expr::u32(n)), Expr::var(c));
     Program::wrapped(
-        vec![BufferDecl::storage(eigenvectors, 0, BufferAccess::ReadWrite, DataType::F32).with_count(cells)],
+        vec![
+            BufferDecl::storage(eigenvectors, 0, BufferAccess::ReadWrite, DataType::F32)
+                .with_count(cells),
+        ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             SIGN_OP_ID,
@@ -81,17 +97,37 @@ fn serial_column_sign(eigenvectors: &str, n: u32) -> Program {
                         Expr::u32(0),
                         Expr::u32(n),
                         vec![
-                            Node::let_bind("ecs_value", Expr::load(eigenvectors, cell("ecs_scan", "ecs_col"))),
-                            Node::let_bind("ecs_first", Expr::and(
-                                Expr::gt(Expr::abs(Expr::var("ecs_value")), Expr::f32(1e-6)),
-                                Expr::eq(Expr::var("ecs_found"), Expr::u32(0)),
-                            )),
-                            Node::assign("ecs_sign", Expr::select(
-                                Expr::var("ecs_first"),
-                                Expr::select(Expr::lt(Expr::var("ecs_value"), Expr::f32(0.0)), Expr::f32(-1.0), Expr::f32(1.0)),
-                                Expr::var("ecs_sign"),
-                            )),
-                            Node::assign("ecs_found", Expr::select(Expr::var("ecs_first"), Expr::u32(1), Expr::var("ecs_found"))),
+                            Node::let_bind(
+                                "ecs_value",
+                                Expr::load(eigenvectors, cell("ecs_scan", "ecs_col")),
+                            ),
+                            Node::let_bind(
+                                "ecs_first",
+                                Expr::and(
+                                    Expr::gt(Expr::abs(Expr::var("ecs_value")), Expr::f32(1e-6)),
+                                    Expr::eq(Expr::var("ecs_found"), Expr::u32(0)),
+                                ),
+                            ),
+                            Node::assign(
+                                "ecs_sign",
+                                Expr::select(
+                                    Expr::var("ecs_first"),
+                                    Expr::select(
+                                        Expr::lt(Expr::var("ecs_value"), Expr::f32(0.0)),
+                                        Expr::f32(-1.0),
+                                        Expr::f32(1.0),
+                                    ),
+                                    Expr::var("ecs_sign"),
+                                ),
+                            ),
+                            Node::assign(
+                                "ecs_found",
+                                Expr::select(
+                                    Expr::var("ecs_first"),
+                                    Expr::u32(1),
+                                    Expr::var("ecs_found"),
+                                ),
+                            ),
                         ],
                     ),
                     Node::loop_for(
@@ -101,7 +137,10 @@ fn serial_column_sign(eigenvectors: &str, n: u32) -> Program {
                         vec![Node::store(
                             eigenvectors,
                             cell("ecs_apply", "ecs_col"),
-                            Expr::mul(Expr::load(eigenvectors, cell("ecs_apply", "ecs_col")), Expr::var("ecs_sign")),
+                            Expr::mul(
+                                Expr::load(eigenvectors, cell("ecs_apply", "ecs_col")),
+                                Expr::var("ecs_sign"),
+                            ),
                         )],
                     ),
                 ],
@@ -121,7 +160,13 @@ fn main() {
         let serial_prog = serial_identity_fill("m", n);
         let coop_prog = matrix_identity_fill("m", n);
         let val = [Value::from(pack_f32(&vec![0.0f32; cells]))];
-        let iterations = if n <= 8 { 50 } else if n <= 16 { 10 } else { 3 };
+        let iterations = if n <= 8 {
+            50
+        } else if n <= 16 {
+            10
+        } else {
+            3
+        };
 
         // Warmup
         let _ = vyre_reference::reference_eval(&serial_prog, &val);
@@ -142,7 +187,10 @@ fn main() {
         let serial_us = serial_dur.as_secs_f64() * 1e6 / (iterations as f64);
         let coop_us = coop_dur.as_secs_f64() * 1e6 / (iterations as f64);
         let speedup = serial_us / coop_us;
-        println!("n = {:2} ({:4} cells): serial = {:9.2} µs | coop = {:9.2} µs | speedup = {:5.2}x", n, cells, serial_us, coop_us, speedup);
+        println!(
+            "n = {:2} ({:4} cells): serial = {:9.2} µs | coop = {:9.2} µs | speedup = {:5.2}x",
+            n, cells, serial_us, coop_us, speedup
+        );
     }
 
     // 2. matrix_diagonal_extract
@@ -150,7 +198,9 @@ fn main() {
     for &n in &[4u32, 8, 16, 32, 64] {
         let cells = (n * n) as usize;
         let mut mat = vec![0.0f32; cells];
-        for i in 0..cells { mat[i] = (i + 1) as f32; }
+        for i in 0..cells {
+            mat[i] = (i + 1) as f32;
+        }
         let serial_prog = serial_diagonal_extract("m", "diag", n);
         let coop_prog = matrix_diagonal_extract("m", "diag", n);
         let val = [
@@ -178,7 +228,10 @@ fn main() {
         let serial_us = serial_dur.as_secs_f64() * 1e6 / (iterations as f64);
         let coop_us = coop_dur.as_secs_f64() * 1e6 / (iterations as f64);
         let speedup = serial_us / coop_us;
-        println!("n = {:2} ({:4} cells): serial = {:9.2} µs | coop = {:9.2} µs | speedup = {:5.2}x", n, cells, serial_us, coop_us, speedup);
+        println!(
+            "n = {:2} ({:4} cells): serial = {:9.2} µs | coop = {:9.2} µs | speedup = {:5.2}x",
+            n, cells, serial_us, coop_us, speedup
+        );
     }
 
     // 3. eigenvector_column_sign
@@ -188,12 +241,20 @@ fn main() {
         let mut mat = vec![0.0f32; cells];
         for c in 0..(n as usize) {
             mat[0 * (n as usize) + c] = -1.0;
-            for r in 1..(n as usize) { mat[r * (n as usize) + c] = (r + c) as f32; }
+            for r in 1..(n as usize) {
+                mat[r * (n as usize) + c] = (r + c) as f32;
+            }
         }
         let serial_prog = serial_column_sign("evec", n);
         let coop_prog = eigenvector_column_sign("evec", n);
         let val = [Value::from(pack_f32(&mat))];
-        let iterations = if n <= 8 { 50 } else if n <= 16 { 10 } else { 3 };
+        let iterations = if n <= 8 {
+            50
+        } else if n <= 16 {
+            10
+        } else {
+            3
+        };
 
         // Warmup
         let _ = vyre_reference::reference_eval(&serial_prog, &val);
@@ -214,7 +275,10 @@ fn main() {
         let serial_us = serial_dur.as_secs_f64() * 1e6 / (iterations as f64);
         let coop_us = coop_dur.as_secs_f64() * 1e6 / (iterations as f64);
         let speedup = serial_us / coop_us;
-        println!("n = {:2} ({:4} cells): serial = {:9.2} µs | coop = {:9.2} µs | speedup = {:5.2}x", n, cells, serial_us, coop_us, speedup);
+        println!(
+            "n = {:2} ({:4} cells): serial = {:9.2} µs | coop = {:9.2} µs | speedup = {:5.2}x",
+            n, cells, serial_us, coop_us, speedup
+        );
     }
 
     // 4. symmetric_eigen_jacobi
@@ -243,6 +307,11 @@ fn main() {
         }
         let dur = t0.elapsed();
         let us = dur.as_secs_f64() * 1e6 / (iters as f64);
-        println!("n = {:2}: median execution time = {:9.2} µs across {} sweeps", n, us, vyre_libs::math::symmetric_eigen_jacobi::jacobi_sweeps(n));
+        println!(
+            "n = {:2}: median execution time = {:9.2} µs across {} sweeps",
+            n,
+            us,
+            vyre_libs::math::symmetric_eigen_jacobi::jacobi_sweeps(n)
+        );
     }
 }

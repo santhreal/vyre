@@ -126,8 +126,7 @@ fn every_cargo_fuzz_job_selects_nightly() {
                 "Fix: fuzz job `{job}` must select nightly before installing cargo-fuzz"
             );
             assert_eq!(
-                trimmed,
-                "run: cargo +nightly install --locked cargo-fuzz",
+                trimmed, "run: cargo +nightly install --locked cargo-fuzz",
                 "Fix: fuzz job `{job}` must install cargo-fuzz with the selected nightly toolchain"
             );
         }
@@ -144,8 +143,6 @@ fn every_cargo_fuzz_job_selects_nightly() {
                 "Fix: fuzz job `{job}` must invoke cargo-fuzz through the nightly toolchain: {trimmed}"
             );
         }
-
-
     }
 
     assert!(
