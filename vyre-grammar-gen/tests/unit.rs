@@ -1,12 +1,7 @@
 //! Unit tests: focused behavior of individual public functions and types.
 
+use vyre_grammar_gen::c11_lexer::C11_PATTERNS;
 use vyre_grammar_gen::c11_lexer::{build_c11_lexer_dfa, build_c11_lexer_dfa_for_host};
-use vyre_grammar_gen::c11_lexer::{
-    C11_PATTERNS, TOK_AND, TOK_ARROW, TOK_COLON, TOK_COMMA, TOK_COMMENT, TOK_DEC, TOK_DOT,
-    TOK_ELLIPSIS, TOK_EQ, TOK_IDENTIFIER, TOK_IF, TOK_INC, TOK_INT, TOK_INTEGER, TOK_LBRACE,
-    TOK_LPAREN, TOK_NE, TOK_OR, TOK_QUESTION, TOK_RBRACE, TOK_RETURN, TOK_RPAREN, TOK_SEMICOLON,
-    TOK_STRUCT, TOK_WHITESPACE,
-};
 use vyre_grammar_gen::dfa::DfaBuilder;
 use vyre_grammar_gen::host_preprocess::preprocess_c_host;
 use vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
@@ -15,6 +10,11 @@ use vyre_grammar_gen::lr::{Action, Production};
 use vyre_grammar_gen::max_munch_cpu::kinds_blake3;
 use vyre_grammar_gen::wire::{decode_dfa_from_bytes, decode_lr_from_bytes};
 use vyre_grammar_gen::wire::{BlobKind, PackedBlob, MAGIC, VERSION};
+use vyre_spec::c11_token::{
+    TOK_AND, TOK_ARROW, TOK_COLON, TOK_COMMA, TOK_COMMENT, TOK_DEC, TOK_DOT, TOK_ELLIPSIS, TOK_EQ,
+    TOK_IDENTIFIER, TOK_IF, TOK_INC, TOK_INT, TOK_INTEGER, TOK_LBRACE, TOK_LPAREN, TOK_NE, TOK_OR,
+    TOK_QUESTION, TOK_RBRACE, TOK_RETURN, TOK_RPAREN, TOK_SEMICOLON, TOK_STRUCT, TOK_WHITESPACE,
+};
 
 // ---------------------------------------------------------------------------
 // dfa::Action pack/unpack

@@ -1,10 +1,6 @@
 //! Integration tests: end-to-end exercise of the public API pipeline.
 
 use vyre_grammar_gen::c11_lexer::{build_c11_lexer_dfa, build_c11_lexer_dfa_for_host};
-use vyre_grammar_gen::c11_lexer::{
-    TOK_COMMA, TOK_COMMENT, TOK_IDENTIFIER, TOK_INT, TOK_INTEGER, TOK_LBRACE, TOK_LPAREN,
-    TOK_RBRACE, TOK_RETURN, TOK_RPAREN, TOK_SEMICOLON, TOK_STAR, TOK_STRUCT, TOK_WHITESPACE,
-};
 use vyre_grammar_gen::chunk_lexer_cpu::count_chunked_valid_tokens;
 use vyre_grammar_gen::host_preprocess::preprocess_c_host;
 use vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
@@ -13,6 +9,10 @@ use vyre_grammar_gen::lr::{validate_lr_table, LrBuilder};
 use vyre_grammar_gen::max_munch_cpu::kinds_blake3;
 use vyre_grammar_gen::wire::{decode_dfa_from_bytes, decode_lr_from_bytes};
 use vyre_grammar_gen::wire::{BlobKind, PackedBlob};
+use vyre_spec::c11_token::{
+    TOK_COMMA, TOK_COMMENT, TOK_IDENTIFIER, TOK_INT, TOK_INTEGER, TOK_LBRACE, TOK_LPAREN,
+    TOK_RBRACE, TOK_RETURN, TOK_RPAREN, TOK_SEMICOLON, TOK_STAR, TOK_STRUCT, TOK_WHITESPACE,
+};
 
 // ---------------------------------------------------------------------------
 // Full pipeline: preprocess → lex → hash
@@ -260,7 +260,7 @@ fn e2e_lex_function_declaration() {
     let src = b"static int foo(int *p, unsigned n);";
     let kinds = lex_c11_max_munch_kinds(src).expect("lex function decl");
     // Must contain: TOK_STATIC(130), TOK_INT(107), identifier, (, *, ,, unsigned(132), ), ;
-    use vyre_grammar_gen::c11_lexer::{TOK_STATIC, TOK_UNSIGNED};
+    use vyre_spec::c11_token::{TOK_STATIC, TOK_UNSIGNED};
     assert!(kinds.contains(&TOK_STATIC), "must see static: {kinds:?}");
     assert!(kinds.contains(&TOK_INT), "must see int: {kinds:?}");
     assert!(

@@ -61,7 +61,6 @@ pub struct vyre_grammar_gen::lr::LrBuilder
 pub struct vyre_grammar_gen::lr::LrTable
 pub struct vyre_grammar_gen::lr::Production
 pub struct vyre_grammar_gen::wire::PackedBlob
-pub use vyre_grammar_gen::c11_lexer::<<vyre_spec::c11_token::*>>
 pub vyre_grammar_gen::dfa::Action::Continue = 0
 pub vyre_grammar_gen::dfa::Action::EmitToken = 1
 pub vyre_grammar_gen::dfa::Action::Error = 3

@@ -1,7 +1,7 @@
 //! C11 max-munch lexer patterns for the host oracle.
 //!
-//! The token ids [`C11_PATTERNS`] emits are `vyre_spec::c11_token`, re-exported
-//! here so `vyre_grammar_gen::TOK_*` keeps resolving. The numbering
+//! The token ids [`C11_PATTERNS`] emits are `vyre_spec::c11_token`, which every
+//! caller names through that crate. The numbering
 //! is the wire contract between the blobs this crate emits and the GPU lexer
 //! and parser that decode them, so it has one declaration site in the
 //! foundation-layer spec crate that both sides depend down onto. A value
@@ -10,7 +10,7 @@
 
 use crate::dfa::{DfaBuilder, DfaTable};
 use regex_automata::MatchKind;
-pub use vyre_spec::c11_token::*;
+use vyre_spec::c11_token::*;
 
 /// `(token_id, regex source)` in **priority** order: earlier wins on tie length
 /// in [`crate::lex_c11_max_munch`].

@@ -10,8 +10,9 @@ use std::sync::OnceLock;
 
 use regex::bytes::Regex;
 
-use crate::c11_lexer::{C11_PATTERNS, TOK_PREPROC};
+use crate::c11_lexer::C11_PATTERNS;
 use crate::max_munch_cpu::LexCpuError;
+use vyre_spec::c11_token::TOK_PREPROC;
 
 /// One anchored regex per [`C11_PATTERNS`] entry, plus parallel kind ids.
 struct Compiled {
