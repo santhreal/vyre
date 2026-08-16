@@ -38,7 +38,7 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program::{
         BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, Scope,
-        ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION,
+        ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION, PORTABLE_WORKGROUP_INVOCATIONS,
     };
     pub use crate::ir_inner::model::program_graph::{
         GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,
