@@ -7,7 +7,7 @@ Layer `foundation`. Owner `specification`.
 Own stable schemas, operation definitions, and compatibility contracts without
 runtime dependencies.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-spec).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-spec).
 
 ## Must never contain
 

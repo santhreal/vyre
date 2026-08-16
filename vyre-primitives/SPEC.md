@@ -7,7 +7,7 @@ Layer `primitives`. Owner `primitive-library`.
 Own marker types and uncomposable hardware intrinsics. A composition belongs in
 vyre-libs, not here.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-primitives).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-primitives).
 
 ## Must never contain
 

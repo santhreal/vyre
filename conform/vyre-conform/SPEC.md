@@ -8,7 +8,7 @@ Execute production artifacts against independent reference semantics, minimize
 counterexamples, check algebraic laws, and issue versioned certificates and
 replay records through one library and thin CLI.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-conform-and-vyre-conform-spec).
+The chapter is [crate boundaries](../../docs/architecture/crates.md#vyre-conform-and-vyre-conform-spec).
 
 ## Must never contain
 

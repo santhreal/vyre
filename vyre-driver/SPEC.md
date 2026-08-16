@@ -8,7 +8,7 @@ Define backend-neutral device, target compiler registration, artifact
 materialization, binding, submission, completion, capability, dispatch, and
 evidence contracts.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-driver).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-driver).
 
 ## Must never contain
 

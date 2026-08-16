@@ -8,7 +8,7 @@ Validate safetensors metadata, shard indexes, compiler requirements, trusted
 shard digests, and immutable checkpoint identities without owning runtime
 residency.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-safetensors).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-safetensors).
 
 ## Must never contain
 

@@ -7,7 +7,7 @@ Layer `tooling`. Owner `debugging`.
 Inspect, explain, and diagnose typed programs, lowering, and product-library
 composition.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-debug).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-debug).
 
 ## Must never contain
 

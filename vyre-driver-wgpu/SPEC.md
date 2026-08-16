@@ -7,7 +7,7 @@ Layer `concrete-backend`. Owner `portable-driver`.
 Own pure WGSL target compilation, portable GPU acquisition, materialization,
 dispatch, graph execution, and backend evidence.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-driver-cuda-vyre-driver-wgpu-vyre-driver-spirv-vyre-driver-metal-vyre-driver-reference).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-driver-cuda-vyre-driver-wgpu-vyre-driver-spirv-vyre-driver-metal-vyre-driver-reference).
 
 ## Must never contain
 

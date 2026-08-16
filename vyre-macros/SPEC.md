@@ -7,7 +7,7 @@ Layer `foundation`. Owner `registration-macros`.
 Provide compile-time registration and declaration macros without depending on
 runtime crates.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-macros).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-macros).
 
 ## Must never contain
 

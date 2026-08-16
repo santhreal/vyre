@@ -7,7 +7,7 @@ Layer `registry-link`. Owner `registry-link`.
 Own every inventory registry link anchor, report which sources a build links,
 and assert that each linked source reached the registry it submits into.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-registry-link).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-registry-link).
 
 ## Must never contain
 

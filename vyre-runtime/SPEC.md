@@ -8,7 +8,7 @@ Execute the artifact's selected persistence: sessions, recovery, residency,
 scheduling, caches, telemetry, readback, and IO. Does not decide whether to be
 persistent.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-runtime).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-runtime).
 
 ## Must never contain
 

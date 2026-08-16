@@ -7,7 +7,7 @@ Layer `concrete-backend`. Owner `cuda-driver`.
 Own pure PTX target compilation, native device acquisition, materialization,
 dispatch, graphs, and release-path evidence.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-driver-cuda-vyre-driver-wgpu-vyre-driver-spirv-vyre-driver-metal-vyre-driver-reference).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-driver-cuda-vyre-driver-wgpu-vyre-driver-spirv-vyre-driver-metal-vyre-driver-reference).
 
 ## Must never contain
 

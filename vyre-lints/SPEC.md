@@ -6,7 +6,7 @@ Layer `tooling`. Owner `lint-policy`.
 
 Enforce source-level project policies without depending on runtime crates.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-lints).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-lints).
 
 ## Must never contain
 

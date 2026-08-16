@@ -1,17 +1,17 @@
 # external_backend_extension
 
 A dispatch backend that lives outside the workspace. It implements
-`vyre_driver::VyreBackend`, submits one `BackendRegistration` and one
-`BackendCapability`, and `vyre_driver::acquire` serves it exactly as it serves
-a driver crate shipped in the workspace.
+`vyre_driver::VyreBackend`, submits one `BackendRegistration`, one
+`BackendCapability` and one `BackendPrecedence`, and `vyre_driver::acquire`
+serves it exactly as it serves a driver crate shipped in the workspace.
 
 Program execution stays in `vyre-reference`. This backend translates buffers
 and delegates, so it adds no second host interpreter.
 
 ## Modules
 
-- `src/lib.rs`: the backend, its registration and capability submission, the
-  supported-operation sets, and `dispatch_probe`.
+- `src/lib.rs`: the backend, its registration, capability and precedence
+  submissions, the supported-operation sets, and `dispatch_probe`.
 - `src/main.rs`: acquires the backend by id through the registry and prints the
   probe output.
 - `tests/backend_probe.rs`: the registration reaches `acquire` and the probe

@@ -7,7 +7,7 @@ Layer `tooling`. Owner `release-tooling`.
 Own the subcommand registry and every gate that judges the tree from source
 text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#xtask-xtask-registry-xtask-evidence).
+The chapter is [crate boundaries](../docs/architecture/crates.md#xtask-xtask-registry-xtask-evidence).
 
 ## Must never contain
 

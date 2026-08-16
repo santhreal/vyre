@@ -7,7 +7,7 @@ Layer `packaging`. Owner `aot-artifacts`.
 Package the same megakernel artifact class ahead of time. Not a second compile
 path. No workspace crate currently depends on this one.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-aot).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-aot).
 
 ## Must never contain
 

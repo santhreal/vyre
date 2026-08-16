@@ -7,7 +7,7 @@ Layer `concrete-backend`. Owner `spirv-driver`.
 Own SPIR-V target compilation, immutable module-bundle emission, Vulkan
 materialization and dispatch integration, and backend evidence.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-driver-cuda-vyre-driver-wgpu-vyre-driver-spirv-vyre-driver-metal-vyre-driver-reference).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-driver-cuda-vyre-driver-wgpu-vyre-driver-spirv-vyre-driver-metal-vyre-driver-reference).
 
 ## Must never contain
 

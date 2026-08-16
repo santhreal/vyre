@@ -7,7 +7,7 @@ Layer `tooling`. Owner `release-tooling`.
 Own the xtask subcommands that decide whether a recorded benchmark or release
 measurement still describes this tree.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#xtask-xtask-registry-xtask-evidence).
+The chapter is [crate boundaries](../docs/architecture/crates.md#xtask-xtask-registry-xtask-evidence).
 
 ## Must never contain
 

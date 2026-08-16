@@ -7,7 +7,7 @@ Layer `facade`. Owner `public-facade`.
 Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no
 logic.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre).
 
 ## Must never contain
 

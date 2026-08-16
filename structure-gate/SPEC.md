@@ -8,7 +8,7 @@ Enforce the crate roster, one operation identity per semantic operation, one
 home per concept, and one place per module. Depends on no vyre crate so it
 keeps running while the workspace does not compile.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#structure-gate).
+The chapter is [crate boundaries](../docs/architecture/crates.md#structure-gate).
 
 ## Must never contain
 

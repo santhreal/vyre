@@ -6,7 +6,7 @@ Layer `test-tooling`. Owner `test-support`.
 
 Provide shared deterministic fixtures and assertions for workspace tests.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-test-support).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-test-support).
 
 ## Must never contain
 

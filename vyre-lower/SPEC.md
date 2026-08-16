@@ -7,7 +7,7 @@ Layer `lowering`. Owner `lowering`.
 Consume verified semantic programs and own the single backend-neutral lowering
 boundary and pre-emission transforms.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-lower).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-lower).
 
 ## Must never contain
 

@@ -7,7 +7,7 @@ Layer `emitter`. Owner `primary-text-emitter`.
 Consume verified lowering products and emit the primary text representation and
 related binary targets.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-emit-naga-vyre-emit-ptx-vyre-emit-spirv-vyre-emit-metal).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-emit-naga-vyre-emit-ptx-vyre-emit-spirv-vyre-emit-metal).
 
 ## Must never contain
 

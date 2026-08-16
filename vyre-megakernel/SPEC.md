@@ -9,7 +9,7 @@ SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never
 claim a measured winner that no clock produced. Does not own admission,
 execution, or lifecycle policy.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-megakernel).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-megakernel).
 
 ## Must never contain
 

@@ -7,7 +7,7 @@ Layer `semantics`. Owner `reference-semantics`.
 The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a
 backend and not a fallback.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-reference).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-reference).
 
 ## Must never contain
 

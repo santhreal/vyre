@@ -7,7 +7,7 @@ Layer `conformance`. Owner `conformance`.
 Define conformance case, result, and certificate schemas against the public
 facade.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-conform-and-vyre-conform-spec).
+The chapter is [crate boundaries](../../docs/architecture/crates.md#vyre-conform-and-vyre-conform-spec).
 
 ## Must never contain
 

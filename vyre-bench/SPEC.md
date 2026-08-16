@@ -7,7 +7,7 @@ Layer `tooling`. Owner `benchmarks`.
 Own reproducible workload benchmarks against the best available native baseline
 for each class, not against vyre's own unfused output.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-bench).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-bench).
 
 ## Must never contain
 

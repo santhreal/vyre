@@ -7,7 +7,7 @@ Layer `tooling`. Owner `release-tooling`.
 Own the xtask subcommands that must observe the live operation registry, the
 primitive catalog behind it, or a linked backend driver.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#xtask-xtask-registry-xtask-evidence).
+The chapter is [crate boundaries](../docs/architecture/crates.md#xtask-xtask-registry-xtask-evidence).
 
 ## Must never contain
 

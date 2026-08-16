@@ -8,7 +8,7 @@ Own every composition in the workspace: consumer dialects and compiler-internal
 solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No
 backend, no emitter, no host rewrite of IR.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-libs).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-libs).
 
 ## Must never contain
 

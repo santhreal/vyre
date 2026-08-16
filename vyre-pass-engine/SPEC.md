@@ -7,7 +7,7 @@ Layer `pass-engine`. Owner `pass-engine`.
 Execute the optimizer's own passes as Vyre Programs, dispatched through the
 ProgramDispatcher seam.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-pass-engine).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-pass-engine).
 
 ## Must never contain
 

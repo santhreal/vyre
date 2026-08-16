@@ -7,7 +7,7 @@ Layer `emitter`. Owner `metal-emitter`.
 Consume verified lowering products and emit native Apple shader source through
 the shared emitter path.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-emit-naga-vyre-emit-ptx-vyre-emit-spirv-vyre-emit-metal).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-emit-naga-vyre-emit-ptx-vyre-emit-spirv-vyre-emit-metal).
 
 ## Must never contain
 

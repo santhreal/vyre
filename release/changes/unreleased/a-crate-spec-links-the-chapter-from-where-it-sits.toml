@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Each crate SPEC.md links the crate-boundaries chapter by a path relative to the page, so the link resolves from the crate directory it is read in."

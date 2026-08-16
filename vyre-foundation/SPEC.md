@@ -8,7 +8,7 @@ Own typed IR and ProgramGraph contracts, validation, diagnostics,
 serialization, semantic operation registration, and backend-neutral
 optimization.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-foundation).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-foundation).
 
 ## Must never contain
 

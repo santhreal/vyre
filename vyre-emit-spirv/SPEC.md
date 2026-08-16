@@ -7,7 +7,7 @@ Layer `emitter`. Owner `spirv-emitter`.
 Consume verified lowering products and emit SPIR-V artifacts through the shared
 writer.
 
-The chapter is [crate boundaries](docs/architecture/crates.md#vyre-emit-naga-vyre-emit-ptx-vyre-emit-spirv-vyre-emit-metal).
+The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-emit-naga-vyre-emit-ptx-vyre-emit-spirv-vyre-emit-metal).
 
 ## Must never contain
 
