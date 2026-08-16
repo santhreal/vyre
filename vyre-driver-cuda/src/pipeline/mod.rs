@@ -25,6 +25,15 @@ pub(crate) use materialized_cache::{
 };
 use static_params::upload_static_launch_params;
 
+/// Mutually exclusive GPU execution strategy selected for a compiled CUDA pipeline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CudaPipelineExecutionStrategy {
+    /// Cached CUDA graph record and replay (with materialized output cache).
+    GraphReplay,
+    /// Direct stream-ordered kernel dispatch with trap readback and barrier synchronization.
+    DirectDispatch,
+}
+
 /// CUDA pipeline with PTX already lowered and loaded into the backend cache.
 #[derive(Debug)]
 pub(crate) struct CudaCompiledPipeline {
@@ -167,6 +176,32 @@ impl CudaCompiledPipeline {
             id: format!("cuda:{}", blake3::Hash::from(digest).to_hex()),
         })
     }
+
+    /// Select the primary GPU execution strategy for this pipeline.
+    ///
+    /// Graph capture cannot read back device-side trap records because stream
+    /// synchronization is forbidden during graph recording. Modules that declare
+    /// traps, or cooperative kernels requiring multi-grid synchronization, are
+    /// routed to direct stream-ordered dispatch so trap readback and grid barriers
+    /// remain fail-closed.
+    #[must_use]
+    pub(crate) fn execution_strategy(&self) -> CudaPipelineExecutionStrategy {
+        select_cuda_pipeline_execution_strategy(
+            cuda_graph_replay_enabled(),
+            self.prepared.cooperative,
+            self.declares_trap(),
+        )
+    }
+
+    /// Whether this pipeline's module declares a device-side trap record.
+    ///
+    /// Derived generically from module/program facts: the PTX text carrying
+    /// `_vyre_trap_sidecar` or the source program declaring `CAP_TRAP`.
+    #[must_use]
+    pub(crate) fn declares_trap(&self) -> bool {
+        crate::backend::module_cache::declares_trap_sidecar(&self.ptx_src)
+            || self.program.stats().trap()
+    }
 }
 
 impl Drop for CudaCompiledPipeline {
@@ -181,6 +216,18 @@ impl sealed::Sealed for CudaCompiledPipeline {}
 
 fn cuda_graph_replay_enabled() -> bool {
     crate::instrumentation::cuda_graph_replay_enabled()
+}
+
+fn select_cuda_pipeline_execution_strategy(
+    graph_replay_enabled: bool,
+    cooperative: bool,
+    declares_trap: bool,
+) -> CudaPipelineExecutionStrategy {
+    if graph_replay_enabled && !cooperative && !declares_trap {
+        CudaPipelineExecutionStrategy::GraphReplay
+    } else {
+        CudaPipelineExecutionStrategy::DirectDispatch
+    }
 }
 
 pub(crate) fn cuda_graph_lane_count_for_batch(
@@ -842,6 +889,59 @@ mod tests {
                 .expect("Fix: graph replay lane planning should fit");
 
             assert_eq!(lanes, 1);
+        }
+
+        #[test]
+        fn execution_strategy_covers_every_graph_cooperative_and_trap_combination() {
+            use crate::pipeline::{
+                select_cuda_pipeline_execution_strategy, CudaPipelineExecutionStrategy,
+            };
+
+            for graph_replay_enabled in [false, true] {
+                for cooperative in [false, true] {
+                    for declares_trap in [false, true] {
+                        let expected =
+                            if graph_replay_enabled && !cooperative && !declares_trap {
+                                CudaPipelineExecutionStrategy::GraphReplay
+                            } else {
+                                CudaPipelineExecutionStrategy::DirectDispatch
+                            };
+                        assert_eq!(
+                            select_cuda_pipeline_execution_strategy(
+                                graph_replay_enabled,
+                                cooperative,
+                                declares_trap,
+                            ),
+                            expected,
+                            "strategy mismatch for graph_replay_enabled={graph_replay_enabled}, cooperative={cooperative}, declares_trap={declares_trap}",
+                        );
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn trap_declaration_detection_identifies_ir_stats_and_ptx_sidecar() {
+            use vyre_foundation::ir::Program;
+
+            let prog_plain = Arc::new(Program::empty());
+            assert!(!prog_plain.stats().trap());
+
+            let prog_trap = Arc::new(vyre_foundation::composition::trap_program(
+                "test.trap.op",
+                None,
+                "domain violation",
+            ));
+            assert!(prog_trap.stats().trap());
+
+            let ptx_plain = ".version 7.0\n.target sm_70\n.address_size 64\n.visible .entry main() { ret; }\n";
+            assert!(!crate::backend::module_cache::declares_trap_sidecar(ptx_plain));
+
+            let ptx_trap = format!(
+                ".version 7.0\n.target sm_70\n.address_size 64\n.global .align 4 .u32 {}[4];\n.visible .entry main() {{ ret; }}\n",
+                vyre_emit_ptx::TRAP_SIDECAR_SYMBOL
+            );
+            assert!(crate::backend::module_cache::declares_trap_sidecar(&ptx_trap));
         }
     }
 }
