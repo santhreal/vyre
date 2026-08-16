@@ -408,6 +408,12 @@ fn fuse_nodes_with_counts(
             | Node::AllGather { .. }
             | Node::ReduceScatter { .. }
             | Node::Broadcast { .. }
+            | Node::TileLoad { .. }
+            | Node::TileStore { .. }
+            | Node::TileMatmul { .. }
+            | Node::TileReduce { .. }
+            | Node::TileElementwise { .. }
+            | Node::TileDecl { .. }
             | Node::Opaque(_) => {
                 replacements.flush_all(&mut fused);
                 fused.push(node.clone());

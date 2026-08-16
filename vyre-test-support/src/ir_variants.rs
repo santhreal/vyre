@@ -179,7 +179,16 @@ fn body_slot_samples(marker: &[Node]) -> Vec<NodeSample> {
             Node::Region {
                 generator: Ident::from("vyre.test_support.fixture_region"),
                 source_region: None,
-                body: Arc::new(body),
+                body: Arc::new(body.clone()),
+            },
+        ),
+        sample(
+            "TileElementwise",
+            Some("body"),
+            Node::TileElementwise {
+                out: Ident::from("fixture_out"),
+                inputs: vec![Ident::from("fixture_in")],
+                body,
             },
         ),
     ]
@@ -243,6 +252,31 @@ fn operand_samples(marker: &Expr) -> Vec<NodeSample> {
             Some("address"),
             Node::trap(marker.clone(), "fixture_trap"),
         ),
+        sample(
+            "TileLoad",
+            Some("origin"),
+            Node::TileLoad {
+                tile: Ident::from("fixture_tile"),
+                tile_type: vyre_foundation::ir::Tile::new(
+                    DataType::F32,
+                    vec![16, 16],
+                    vyre_foundation::ir::Layout::RowMajor,
+                    vyre_foundation::ir::Residency::Register,
+                ),
+                buffer: Ident::from("fixture_buffer"),
+                origin: vec![marker.clone()],
+                layout: vyre_foundation::ir::Layout::RowMajor,
+            },
+        ),
+        sample(
+            "TileStore",
+            Some("origin"),
+            Node::TileStore {
+                buffer: Ident::from("fixture_buffer"),
+                origin: vec![marker.clone()],
+                tile: Ident::from("fixture_tile"),
+            },
+        ),
     ]
 }
 
@@ -299,6 +333,34 @@ fn inert_samples() -> Vec<NodeSample> {
             },
         ),
         sample("Opaque", None, Node::opaque(FixtureExtension)),
+        sample(
+            "TileDecl",
+            None,
+            Node::tile_decl(
+                "fixture_tile",
+                vyre_foundation::ir::Tile::new(
+                    DataType::F32,
+                    vec![16, 16],
+                    vyre_foundation::ir::Layout::RowMajor,
+                    vyre_foundation::ir::Residency::Register,
+                ),
+            ),
+        ),
+        sample(
+            "TileMatmul",
+            None,
+            Node::tile_matmul("fixture_acc", "fixture_a", "fixture_b"),
+        ),
+        sample(
+            "TileReduce",
+            None,
+            Node::tile_reduce(
+                "fixture_out",
+                "fixture_tile",
+                vyre_foundation::ir::SubgroupReduceOp::Add,
+                0,
+            ),
+        ),
     ]
 }
 

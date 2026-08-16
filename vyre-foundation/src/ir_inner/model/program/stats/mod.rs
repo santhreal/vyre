@@ -47,7 +47,7 @@ pub const NODE_KIND_BARRIER: u32 = 1 << 12;
 pub const NODE_KIND_BLOCK: u32 = 1 << 13;
 /// `Node::Region`.
 pub const NODE_KIND_REGION: u32 = 1 << 14;
-/// `Node::Opaque`.
+/// `Node::AllReduce`.
 pub const NODE_KIND_ALL_REDUCE: u32 = 1 << 15;
 /// `Node::AllGather`.
 pub const NODE_KIND_ALL_GATHER: u32 = 1 << 16;
@@ -55,8 +55,20 @@ pub const NODE_KIND_ALL_GATHER: u32 = 1 << 16;
 pub const NODE_KIND_REDUCE_SCATTER: u32 = 1 << 17;
 /// `Node::Broadcast`.
 pub const NODE_KIND_BROADCAST: u32 = 1 << 18;
+/// `Node::TileLoad`.
+pub const NODE_KIND_TILE_LOAD: u32 = 1 << 19;
+/// `Node::TileStore`.
+pub const NODE_KIND_TILE_STORE: u32 = 1 << 20;
+/// `Node::TileMatmul`.
+pub const NODE_KIND_TILE_MATMUL: u32 = 1 << 21;
+/// `Node::TileReduce`.
+pub const NODE_KIND_TILE_REDUCE: u32 = 1 << 22;
+/// `Node::TileElementwise`.
+pub const NODE_KIND_TILE_ELEMENTWISE: u32 = 1 << 23;
+/// `Node::TileDecl`.
+pub const NODE_KIND_TILE_DECL: u32 = 1 << 24;
 /// `Node::Opaque`.
-pub const NODE_KIND_OPAQUE: u32 = 1 << 19;
+pub const NODE_KIND_OPAQUE: u32 = 1 << 25;
 
 /// Mask covering every node kind that owns an `Expr` tree, i.e. every
 /// kind a generic expression-rewriting pass (`canonicalize`, `const_fold`,
@@ -70,7 +82,9 @@ pub const NODE_KIND_EXPRESSION_BEARING_MASK: u32 = NODE_KIND_LET
     | NODE_KIND_LOOP
     | NODE_KIND_ASYNC_LOAD
     | NODE_KIND_ASYNC_STORE
-    | NODE_KIND_TRAP;
+    | NODE_KIND_TRAP
+    | NODE_KIND_TILE_LOAD
+    | NODE_KIND_TILE_STORE;
 
 /// Aggregated statistics computed from a single walk of a [`Program`].
 ///
@@ -368,6 +382,40 @@ fn walk_node(
             *kinds |= NODE_KIND_BROADCAST;
             *bits |= CAP_DISTRIBUTED_COLLECTIVES;
             ir.memory();
+        }
+        Node::TileLoad { origin, .. } => {
+            *kinds |= NODE_KIND_TILE_LOAD;
+            ir.memory();
+            for expr in origin {
+                walk_expr(expr, nodes, regions, calls, opaque, bits, kinds, ir);
+            }
+        }
+        Node::TileStore { origin, .. } => {
+            *kinds |= NODE_KIND_TILE_STORE;
+            ir.memory();
+            for expr in origin {
+                walk_expr(expr, nodes, regions, calls, opaque, bits, kinds, ir);
+            }
+        }
+        Node::TileMatmul { .. } => {
+            *kinds |= NODE_KIND_TILE_MATMUL;
+            ir.instruction();
+        }
+        Node::TileReduce { .. } => {
+            *kinds |= NODE_KIND_TILE_REDUCE;
+            ir.instruction();
+        }
+        Node::TileElementwise { body, .. } => {
+            *kinds |= NODE_KIND_TILE_ELEMENTWISE;
+            let saved = ir.enter_scope();
+            for child in body {
+                walk_node(child, nodes, regions, calls, opaque, bits, kinds, ir);
+            }
+            ir.leave_scope(saved);
+        }
+        Node::TileDecl { .. } => {
+            *kinds |= NODE_KIND_TILE_DECL;
+            ir.instruction();
         }
         Node::Opaque(_) => {
             *kinds |= NODE_KIND_OPAQUE;

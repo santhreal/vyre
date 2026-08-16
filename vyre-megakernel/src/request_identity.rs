@@ -71,6 +71,10 @@ impl From<BackendCapabilities> for DeviceCapabilityIdentity {
             has_shared_memory,
             has_transcendental_polynomial_emit,
             max_native_int_width,
+            supports_tensor_cores: _,
+            max_shared_memory_bytes: _,
+            regs_per_thread_max: _,
+            subgroup_size: _,
         } = capabilities;
         Self {
             supports_subgroup_ops,

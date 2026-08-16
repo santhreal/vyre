@@ -324,6 +324,39 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
                 .buffer_refs
                 .push((idx, buffer.duplicate_handle(), BufferRefKind::Write));
         }
+        Node::TileLoad { buffer, origin, .. } => {
+            let idx = record_node(facts, NodeKind::TileLoad, parent);
+            facts
+                .buffer_refs
+                .push((idx, buffer.duplicate_handle(), BufferRefKind::Read));
+            for expr in origin {
+                walk_expr(expr, idx, facts);
+            }
+        }
+        Node::TileStore { buffer, origin, .. } => {
+            let idx = record_node(facts, NodeKind::TileStore, parent);
+            facts
+                .buffer_refs
+                .push((idx, buffer.duplicate_handle(), BufferRefKind::Write));
+            for expr in origin {
+                walk_expr(expr, idx, facts);
+            }
+        }
+        Node::TileMatmul { .. } => {
+            record_node(facts, NodeKind::TileMatmul, parent);
+        }
+        Node::TileReduce { .. } => {
+            record_node(facts, NodeKind::TileReduce, parent);
+        }
+        Node::TileElementwise { body, .. } => {
+            let idx = record_node(facts, NodeKind::TileElementwise, parent);
+            for child in body {
+                walk_node(child, Some(idx), facts);
+            }
+        }
+        Node::TileDecl { .. } => {
+            record_node(facts, NodeKind::TileDecl, parent);
+        }
         Node::Opaque(_) => {
             record_node(facts, NodeKind::Opaque, parent);
         }

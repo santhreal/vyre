@@ -9,7 +9,7 @@
 //! every walk in the workspace from one exhaustive match.
 
 use super::expr_parts::{any_subexpr, expr_children, for_each_subexpr};
-use super::node_parts::{child_bodies, child_bodies_mut, node_operands};
+use super::node_parts::{child_bodies, child_bodies_mut, node_operands, node_variadic_operands};
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
@@ -52,6 +52,9 @@ pub fn for_each_expr<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Expr)) {
         for operand in node_operands(node).into_iter().flatten() {
             for_each_subexpr(operand, &mut f);
         }
+        for operand in node_variadic_operands(node) {
+            for_each_subexpr(operand, &mut f);
+        }
     });
 }
 
@@ -78,7 +81,11 @@ pub fn try_for_each_expr<B>(
     // so it is parked in `stopped` instead. The two must agree, or a break was
     // reported without a value and this would answer `Continue` after stopping.
     let signal = try_for_each_node(nodes, |node| {
-        for operand in node_operands(node).into_iter().flatten() {
+        for operand in node_operands(node)
+            .into_iter()
+            .flatten()
+            .chain(node_variadic_operands(node))
+        {
             let hit = any_subexpr(operand, &mut |expr| match f(expr) {
                 ControlFlow::Continue(()) => false,
                 ControlFlow::Break(value) => {
@@ -156,7 +163,11 @@ pub fn any_expr_in(nodes: &[Node], pred: &mut impl FnMut(&Expr) -> bool) -> bool
     let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
     stack.extend(nodes.iter().rev());
     while let Some(current) = stack.pop() {
-        for operand in node_operands(current).into_iter().flatten() {
+        for operand in node_operands(current)
+            .into_iter()
+            .flatten()
+            .chain(node_variadic_operands(current))
+        {
             if any_subexpr(operand, pred) {
                 return true;
             }
@@ -306,6 +317,8 @@ fn push_node_children_and_exprs<'a>(
     // Operand positions come from the single exhaustive owner. Pushed in
     // reverse so `drain_expr_stack` pops them in source order.
     expr_stack.extend(node_operands(node).into_iter().rev().flatten());
+    // Variable-length operand positions (TileLoad/TileStore origins).
+    expr_stack.extend(node_variadic_operands(node).iter().rev());
 }
 
 /// Visit every expression on `expr_stack` and everything below it.

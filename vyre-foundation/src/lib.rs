@@ -42,6 +42,7 @@ pub mod ir {
     pub use crate::ir_inner::model::node_kind::{
         EvalError, InterpCtx, NodeId, NodeStorage, OpId, RegionId, Value, VarId,
     };
+    pub use crate::ir_inner::model::tile::{Layout, Residency, Tile};
     pub use crate::ir_inner::model::program::{
         BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, Scope,
         ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION, PORTABLE_WORKGROUP_INVOCATIONS,
@@ -63,7 +64,8 @@ pub mod ir {
             NODE_KIND_BROADCAST, NODE_KIND_EXPRESSION_BEARING_MASK, NODE_KIND_IF,
             NODE_KIND_INDIRECT_DISPATCH, NODE_KIND_LET, NODE_KIND_LOOP, NODE_KIND_OPAQUE,
             NODE_KIND_REDUCE_SCATTER, NODE_KIND_REGION, NODE_KIND_RESUME, NODE_KIND_RETURN,
-            NODE_KIND_STORE, NODE_KIND_TRAP,
+            NODE_KIND_STORE, NODE_KIND_TILE_DECL, NODE_KIND_TILE_ELEMENTWISE, NODE_KIND_TILE_LOAD,
+            NODE_KIND_TILE_MATMUL, NODE_KIND_TILE_REDUCE, NODE_KIND_TILE_STORE, NODE_KIND_TRAP,
         };
     }
     pub use crate::ir_inner::model::program::ProgramStats;

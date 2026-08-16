@@ -26,6 +26,9 @@ tempfile.workspace = true
 [lints]
 workspace = true
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "structure-gate"
 path = "src/main.rs"

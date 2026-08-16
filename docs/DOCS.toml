@@ -69,11 +69,6 @@ title = "Contributing"
 audience = "contributor"
 
 [[root_page]]
-path = "GOAL.md"
-title = "Vyre goal"
-audience = "contributor"
-
-[[root_page]]
 path = "SECURITY.md"
 title = "Security policy"
 audience = "user"
@@ -185,6 +180,19 @@ section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
 covers = ["vyre-libs/src/parsing/**"]
+nav = true
+
+[[page]]
+path = "design/tile-values.md"
+title = "Tile values in the IR"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/ir_inner/model/tile.rs"]
 nav = true
 
 [[page]]

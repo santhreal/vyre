@@ -103,7 +103,7 @@ fn validate_node_inner(
             let duplicate_sibling = check_sibling_duplicate(
                 name,
                 region_bindings,
-                options.allow_shadowing,
+                false,
                 &mut report.errors,
             );
             if !duplicate_sibling {
@@ -305,6 +305,76 @@ fn validate_node_inner(
                 |_, _| {},
             );
         }
+        Node::TileLoad {
+            tile,
+            tile_type,
+            buffer,
+            origin,
+            ..
+        } => {
+            for expr in origin {
+                validate_expr(expr, buffers, scope, options, report, 0);
+            }
+            node_rules::check_tile_load(
+                tile,
+                tile_type,
+                buffer,
+                origin,
+                buffers,
+                options,
+                &mut report.errors,
+            );
+        }
+        Node::TileStore {
+            buffer,
+            origin,
+            tile,
+        } => {
+            for expr in origin {
+                validate_expr(expr, buffers, scope, options, report, 0);
+            }
+            node_rules::check_tile_store(
+                buffer,
+                origin,
+                tile,
+                buffers,
+                &mut report.errors,
+            );
+        }
+        Node::TileMatmul { acc, a, b } => {
+            node_rules::check_tile_matmul(acc, a, b, options, &mut report.errors);
+        }
+        Node::TileReduce { .. } => {}
+        Node::TileElementwise { inputs, body, .. } => {
+            validate_scoped_nested_nodes(
+                body,
+                buffers,
+                scope,
+                divergent,
+                depth,
+                limits,
+                options,
+                report,
+                |nested_scope, scope_log| {
+                    for input in inputs {
+                        insert_binding(
+                            nested_scope,
+                            input.clone(),
+                            Binding {
+                                ty: DataType::F32,
+                                ty_known: true,
+                                mutable: false,
+                                uniform: false,
+                            },
+                            Some(scope_log),
+                        );
+                    }
+                },
+            );
+        }
+        Node::TileDecl { name, tile } => {
+            node_rules::check_tile_residency(name, tile, options, &mut report.errors);
+        }
         Node::Opaque(extension) => {
             node_rules::check_opaque_node_extension(extension.as_ref(), &mut report.errors);
         }
@@ -339,4 +409,86 @@ fn validate_scoped_nested_nodes(
         Some(&mut scope_log),
     );
     restore_scope(scope, scope_log);
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir_inner::model::expr::Expr;
+    use rustc_hash::FxHashMap;
+
+    #[test]
+    fn same_scope_duplicate_lets_rejected_even_with_allow_shadowing() {
+        let nodes = vec![
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(1),
+            },
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(2),
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_allow_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        assert!(
+            report.errors.iter().any(|e| e.code().as_str() == "V032"),
+            "same-scope duplicate let must be rejected with V032 even when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
+
+    #[test]
+    fn nested_scope_shadowing_accepted_with_allow_shadowing() {
+        let nodes = vec![
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(1),
+            },
+            Node::If {
+                cond: Expr::bool(true),
+                then: vec![Node::Let {
+                    name: "x".into(),
+                    value: Expr::u32(2),
+                }],
+                otherwise: Vec::new(),
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_allow_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        assert!(
+            report.errors.is_empty(),
+            "nested-scope shadowing must be accepted when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
 }

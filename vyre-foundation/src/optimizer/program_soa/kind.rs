@@ -57,6 +57,18 @@ pub enum NodeKind {
     ReduceScatter,
     /// `Node::Broadcast { .. }`.
     Broadcast,
+    /// `Node::TileLoad { .. }`.
+    TileLoad,
+    /// `Node::TileStore { .. }`.
+    TileStore,
+    /// `Node::TileMatmul { .. }`.
+    TileMatmul,
+    /// `Node::TileReduce { .. }`.
+    TileReduce,
+    /// `Node::TileElementwise { .. }`.
+    TileElementwise,
+    /// `Node::TileDecl { .. }`.
+    TileDecl,
     /// `Node::Opaque(extension)`.
     Opaque,
 }
