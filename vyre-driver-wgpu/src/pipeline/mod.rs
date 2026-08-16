@@ -11,7 +11,7 @@ use smallvec::SmallVec;
 use std::hash::BuildHasherDefault;
 #[cfg(test)]
 pub(crate) use vyre_driver::enforce_actual_output_budget;
-use vyre_driver::resolve_launch_workgroup_for_mode;
+use vyre_driver::{resolve_launch_workgroup_for_geometry, LaunchGeometry};
 use vyre_driver::tuner::Mode;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::BackendLayoutFingerprint;
@@ -131,12 +131,14 @@ fn wgpu_effective_dispatch_config(
     program: &Program,
     config: &DispatchConfig,
     device: &wgpu::Device,
+    geometry: LaunchGeometry,
 ) -> Result<DispatchConfig, BackendError> {
     wgpu_effective_dispatch_config_for_limits(
         program,
         config,
         wgpu_launch_limits(device),
         Mode::from_env(),
+        geometry,
     )
 }
 
@@ -145,16 +147,25 @@ fn wgpu_effective_dispatch_config_for_limits(
     config: &DispatchConfig,
     limits: LaunchGeometryLimits,
     mode: Mode,
+    geometry: LaunchGeometry,
 ) -> Result<DispatchConfig, BackendError> {
     let mut effective = config.clone();
-    if effective.workgroup_override.is_some() {
+    if geometry == LaunchGeometry::Untracked && effective.workgroup_override.is_some() {
         return Ok(effective);
     }
     let element_count = wgpu_launch_element_count_for_tuning(program)?;
-    let selected =
-        resolve_launch_workgroup_for_mode(program, &effective, limits, element_count, mode);
+    let selected = resolve_launch_workgroup_for_geometry(
+        program,
+        &effective,
+        limits,
+        element_count,
+        mode,
+        geometry,
+    );
     if selected != program.workgroup_size() {
         effective.workgroup_override = Some(selected);
+    } else {
+        effective.workgroup_override = None;
     }
     Ok(effective)
 }
@@ -301,16 +312,14 @@ impl WgpuPipeline {
         let authenticated_wgsl = target.as_ref().map(|target| target.wgsl);
         let authenticated_descriptor = target.as_ref().map(|target| target.descriptor);
         let compile_program = program;
-        let mut target_config;
-        let config = if let Some(descriptor) = authenticated_descriptor {
-            target_config = config.clone();
-            target_config.workgroup_override = Some(descriptor.dispatch.workgroup_size);
-            &target_config
-        } else {
-            config
+        let geometry = match authenticated_descriptor {
+            Some(descriptor) => {
+                LaunchGeometry::from_recorded(descriptor.dispatch.workgroup_size, "wgpu")?
+            }
+            None => LaunchGeometry::Untracked,
         };
         let effective_config =
-            wgpu_effective_dispatch_config(compile_program, config, &device_queue.0)?;
+            wgpu_effective_dispatch_config(compile_program, config, &device_queue.0, geometry)?;
         let config = &effective_config;
         // Authenticated target bytes cannot reuse a Program-keyed cache entry
         // that may have been built from different module bytes.

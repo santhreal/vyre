@@ -96,6 +96,7 @@ impl vyre_driver::DispatchConfig
 impl vyre_driver::Distribution
 impl vyre_driver::ErrorCode
 impl vyre_driver::HostShimBuffer
+impl vyre_driver::LaunchGeometry
 impl vyre_driver::LaunchPlan
 impl vyre_driver::Migration
 impl vyre_driver::MigrationRegistry
@@ -292,6 +293,7 @@ pub enum vyre_driver::BindingRole
 pub enum vyre_driver::BoundResource
 pub enum vyre_driver::DeviceTimingQuality
 pub enum vyre_driver::IntrinsicRegistrationError
+pub enum vyre_driver::LaunchGeometry
 pub enum vyre_driver::PipelineCacheMissReason
 pub enum vyre_driver::RegexAcceleratorClass
 pub enum vyre_driver::RegexAcceleratorMatchSchema
@@ -328,7 +330,6 @@ pub enum vyre_driver::multi_query_execution::MultiQueryExecutionError
 pub enum vyre_driver::ordering::DensePermutationDefect
 pub enum vyre_driver::param_inlining::ParamInliningDecision
 pub enum vyre_driver::persistent::PersistentThreadMode
-pub enum vyre_driver::persistent_kernel_policy::PersistentKernelDecision
 pub enum vyre_driver::pipeline_fusion::CrossPipelineConflict
 pub enum vyre_driver::pipeline_fusion::CrossPipelineFusionDecision
 pub enum vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'a>
@@ -469,6 +470,7 @@ pub fn vyre_driver::HostShimBuffer::byte_len(&self) -> usize
 pub fn vyre_driver::HostShimBuffer::debug_label(&self) -> core::option::Option<&str>
 pub fn vyre_driver::HostShimBuffer::from_bytes(backend_id: &'static str, bytes: alloc::vec::Vec<u8>) -> alloc::boxed::Box<dyn vyre_driver::DeviceBuffer>
 pub fn vyre_driver::HostShimBuffer::set_label(&mut self, label: impl core::convert::Into<alloc::string::String>)
+pub fn vyre_driver::LaunchGeometry::from_recorded(workgroup: [u32; 3], backend: &str) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::LaunchPlan::default() -> Self
 pub fn vyre_driver::LaunchPlan::from_bindings(program: &vyre_foundation::ir_inner::model::program::definition::Program, bindings: &[vyre_driver::Binding], config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::LaunchPlan::new() -> Self
@@ -734,7 +736,7 @@ pub fn vyre_driver::dispatch_element_count_for_program(program: &vyre_foundation
 pub fn vyre_driver::dispatch_param_words_into(bindings: &[vyre_driver::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::dispatch_policy::DispatchPolicyVerdict::primary_execution_mode(&self) -> vyre_driver::dispatch_policy::DispatchExecutionMode
 pub fn vyre_driver::dispatch_policy::evaluate_dispatch_policy(inputs: &vyre_driver::dispatch_policy::DispatchPolicyInputs) -> vyre_driver::dispatch_policy::DispatchPolicyVerdict
-pub fn vyre_driver::dispatch_policy::select_primary_execution_mode(persistent: vyre_driver::persistent_kernel_policy::PersistentKernelDecision, command_reuse: vyre_driver::command_reuse_policy::CommandReuseDecision) -> vyre_driver::dispatch_policy::DispatchExecutionMode
+pub fn vyre_driver::dispatch_policy::select_primary_execution_mode(execution: vyre_megakernel::ExecutionMode, command_reuse: vyre_driver::command_reuse_policy::CommandReuseDecision) -> vyre_driver::dispatch_policy::DispatchExecutionMode
 pub fn vyre_driver::dispatch_policy_cache_digest(config: &vyre_driver::DispatchConfig) -> [u8; 32]
 pub fn vyre_driver::dispatch_policy_cache_string(config: &vyre_driver::DispatchConfig) -> alloc::string::String
 pub fn vyre_driver::dispatch_prefilter_confirm<B, F>(backend: &B, speculator: &vyre_driver::AdaptiveSpeculator, plan: vyre_driver::SpeculativeDispatchPlan<'_>, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, confirm_two_stage: F) -> core::result::Result<vyre_driver::SpeculativeDispatchOutcome, vyre_driver::BackendError> where B: vyre_driver::VyreBackend + ?core::marker::Sized, F: core::ops::function::FnMut(vyre_driver::OutputBuffers) -> core::result::Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>
@@ -943,7 +945,6 @@ pub fn vyre_driver::persistent::PersistentEngine::tail_counter(&self) -> u64
 pub fn vyre_driver::persistent::PersistentEngine::try_in_flight(&self) -> core::result::Result<u32, alloc::string::String>
 pub fn vyre_driver::persistent::PersistentEngine::try_new(ring_size: u32) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_driver::persistent::QueueFull::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_driver::persistent_kernel_policy::decide_persistent_kernel(inputs: vyre_driver::persistent_kernel_policy::PersistentKernelInputs) -> vyre_driver::persistent_kernel_policy::PersistentKernelDecision
 pub fn vyre_driver::pgo::PgoTable::certify_op(&mut self, op_id: impl core::convert::Into<alloc::string::String>, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig, backends: &[&dyn vyre_driver::VyreBackend]) -> core::result::Result<&vyre_driver::pgo::RouteDecision, vyre_driver::BackendError>
 pub fn vyre_driver::pgo::PgoTable::certify_op_borrowed(&mut self, op_id: impl core::convert::Into<alloc::string::String>, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, backends: &[&dyn vyre_driver::VyreBackend]) -> core::result::Result<&vyre_driver::pgo::RouteDecision, vyre_driver::BackendError>
 pub fn vyre_driver::pgo::PgoTable::fastest_backend(&self, op_id: &str) -> core::option::Option<&str>
@@ -1004,6 +1005,7 @@ pub fn vyre_driver::resident_transfer_fusion::push_resident_upload_copy<'a>(copi
 pub fn vyre_driver::resolve_fixpoint_iterations(config: &vyre_driver::DispatchConfig, backend: &str) -> core::result::Result<u32, vyre_driver::BackendError>
 pub fn vyre_driver::resolve_fixpoint_iterations_usize(config: &vyre_driver::DispatchConfig, backend: &str) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::resolve_launch_workgroup(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32) -> [u32; 3]
+pub fn vyre_driver::resolve_launch_workgroup_for_geometry(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32, mode: vyre_driver::tuner::Mode, geometry: vyre_driver::LaunchGeometry) -> [u32; 3]
 pub fn vyre_driver::resolve_launch_workgroup_for_mode(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32, mode: vyre_driver::tuner::Mode) -> [u32; 3]
 pub fn vyre_driver::result_compaction::ResultCompactionError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::result_compaction::ResultCompactionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1153,7 +1155,6 @@ pub mod vyre_driver::ordering
 pub mod vyre_driver::output_slots
 pub mod vyre_driver::param_inlining
 pub mod vyre_driver::persistent
-pub mod vyre_driver::persistent_kernel_policy
 pub mod vyre_driver::pgo
 pub mod vyre_driver::pipeline_fusion
 pub mod vyre_driver::reservation_policy
@@ -1308,7 +1309,6 @@ pub struct vyre_driver::param_inlining::ParamInliningPolicy
 pub struct vyre_driver::persistent::PersistentEngine
 pub struct vyre_driver::persistent::QueueFull
 pub struct vyre_driver::persistent::RingAtomics
-pub struct vyre_driver::persistent_kernel_policy::PersistentKernelInputs
 pub struct vyre_driver::pgo::BackendLatency
 pub struct vyre_driver::pgo::PgoTable
 pub struct vyre_driver::pgo::RouteDecision
@@ -1569,6 +1569,8 @@ pub vyre_driver::IndirectDispatch::count_buffer: vyre_foundation::ir_inner::mode
 pub vyre_driver::IndirectDispatch::count_offset: u64
 pub vyre_driver::IntrinsicRegistrationError::UnknownId
 pub vyre_driver::IntrinsicRegistrationError::UnknownId::id: &'static str
+pub vyre_driver::LaunchGeometry::Compiled([u32; 3])
+pub vyre_driver::LaunchGeometry::Untracked
 pub vyre_driver::LaunchPlan::element_count: u32
 pub vyre_driver::LaunchPlan::grid: [u32; 3]
 pub vyre_driver::LaunchPlan::max_binding_alignment: usize
@@ -1936,14 +1938,14 @@ pub vyre_driver::dispatch_policy::DispatchPolicyInputs::arm_a: vyre_driver::arm_
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::arm_b: vyre_driver::arm_independence::ArmBindingSummary
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::bindless: vyre_driver::bindless_policy::BindlessInputs
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::copy_dst_slot: core::option::Option<u32>
+pub vyre_driver::dispatch_policy::DispatchPolicyInputs::execution: vyre_megakernel::ExecutionMode
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::graph: vyre_driver::command_reuse_policy::CommandReuseInputs
-pub vyre_driver::dispatch_policy::DispatchPolicyInputs::persistent: vyre_driver::persistent_kernel_policy::PersistentKernelInputs
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::trace_jit: vyre_driver::trace_jit_policy::TraceJitInputs
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::arm_independence: vyre_driver::arm_independence::ArmIndependenceVerdict
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::bindless: vyre_driver::bindless_policy::BindlessDecision
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::command_reuse: vyre_driver::command_reuse_policy::CommandReuseDecision
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::copy_overlap: core::option::Option<vyre_driver::async_copy_overlap::CopyOverlapDecision>
-pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::persistent: vyre_driver::persistent_kernel_policy::PersistentKernelDecision
+pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::execution: vyre_megakernel::ExecutionMode
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::trace_jit: vyre_driver::trace_jit_policy::TraceJitDecision
 pub vyre_driver::extraction_cost::NodeHints::compile_time_constant: bool
 pub vyre_driver::extraction_cost::NodeHints::fp16_eligible: bool
@@ -2256,13 +2258,6 @@ pub vyre_driver::persistent::RingAtomics::done: alloc::vec::Vec<core::sync::atom
 pub vyre_driver::persistent::RingAtomics::head: core::sync::atomic::AtomicU64
 pub vyre_driver::persistent::RingAtomics::ready: alloc::vec::Vec<core::sync::atomic::AtomicU64>
 pub vyre_driver::persistent::RingAtomics::tail: core::sync::atomic::AtomicU64
-pub vyre_driver::persistent_kernel_policy::PersistentKernelDecision::PersistentKernel
-pub vyre_driver::persistent_kernel_policy::PersistentKernelDecision::PersistentKernel::savings_ns: u128
-pub vyre_driver::persistent_kernel_policy::PersistentKernelDecision::StandardLaunches
-pub vyre_driver::persistent_kernel_policy::PersistentKernelInputs::batch_size: u32
-pub vyre_driver::persistent_kernel_policy::PersistentKernelInputs::per_item_kernel_ns: u64
-pub vyre_driver::persistent_kernel_policy::PersistentKernelInputs::per_launch_overhead_ns: u64
-pub vyre_driver::persistent_kernel_policy::PersistentKernelInputs::persistent_setup_overhead_ns: u64
 pub vyre_driver::pgo::BackendLatency::backend: alloc::string::String
 pub vyre_driver::pgo::BackendLatency::latency_ns: u128
 pub vyre_driver::pgo::PgoTable::routes: alloc::collections::btree::map::BTreeMap<alloc::string::String, vyre_driver::pgo::RouteDecision>
