@@ -140,19 +140,19 @@ impl vyre_libs::visual::GaussianBlurStages
 impl vyre_libs::visual::GaussianKernel
 impl vyre_libs::visual::GlassHalfResPipeline
 impl vyre_libs::visual::GridShape
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::AuthCheckDominates
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::BufferSizeCheck
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::FormatStringCheck
 impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::IntegerOverflowArith
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::LockDominates
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::PathCanonical
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::SanitizerDominates
 impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::SinkIntersection
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::SqlParamBound
 impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::TaintKill
 impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::TaintPollution
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::auth_check_dominates::AuthCheckDominates
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::buffer_size_check::BufferSizeCheck
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::format_string_check::FormatStringCheck
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::lock_dominates::LockDominates
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::path_canonical::PathCanonical
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::sanitizer_dominates::SanitizerDominates
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::sql_param_bound::SqlParamBound
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::unchecked_return::UncheckedReturn
-impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::xss_escape::XssEscape
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::UncheckedReturn
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs::security::XssEscape
 impl<'dfa> vyre_libs::scan::AnchoredWindowValidator<'dfa>
 impl<T> vyre_libs::parsing::source_cache::ParsedSourceLru<T>
 pub const fn vyre_libs::analysis::effect_signature::check_signature(signature: vyre_foundation::lower::effects::ProgramEffects, observed: vyre_foundation::lower::effects::ProgramEffects) -> core::result::Result<(), vyre_libs::analysis::effect_signature::EffectTypeError>
@@ -815,9 +815,7 @@ pub fn vyre_libs::intern::PerfectHash::values(&self) -> &[u32]
 pub fn vyre_libs::intern::build_chd<I, S>(entries: I) -> vyre_libs::intern::PerfectHash where I: core::iter::traits::collect::IntoIterator<Item = (S, u32)>, S: core::convert::AsRef<str>
 pub fn vyre_libs::intern::try_build_chd<I, S>(entries: I) -> core::result::Result<vyre_libs::intern::PerfectHash, vyre_libs::intern::BuildError> where I: core::iter::traits::collect::IntoIterator<Item = (S, u32)>, S: core::convert::AsRef<str>
 pub fn vyre_libs::logical::nand(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::logical::nand::nand(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::logical::nor(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::logical::nor::nor(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::algebra::bool_semiring_matmul(a: &str, b: &str, out: &str, rows: u32, inner: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::algebra::lattice_join(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::algebra::lattice_meet(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -1333,23 +1331,28 @@ pub fn vyre_libs::security::AnalysisFactTable::new(facts: alloc::vec::Vec<vyre_l
 pub fn vyre_libs::security::AnalysisFactTable::to_columnar(&self) -> core::result::Result<vyre_libs::security::AnalysisFactColumns, vyre_libs::security::AnalysisFactError>
 pub fn vyre_libs::security::AnalysisFactTable::validate(&self) -> core::result::Result<(), vyre_libs::security::AnalysisFactError>
 pub fn vyre_libs::security::AnalysisSourceSpan::validate(&self, context: &str) -> core::result::Result<(), vyre_libs::security::AnalysisFactError>
+pub fn vyre_libs::security::AuthCheckDominates::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs::security::BufferSizeCheck::soundness(&self) -> vyre_spec::soundness::Soundness
 pub fn vyre_libs::security::FindingProofBundle::validate_against(&self, table: &vyre_libs::security::AnalysisFactTable) -> core::result::Result<(), vyre_libs::security::AnalysisFactError>
 pub fn vyre_libs::security::FindingProofStep::new(fact_id: vyre_libs::security::FactId, span: vyre_libs::security::AnalysisSourceSpan, role: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_libs::security::FormatStringCheck::soundness(&self) -> vyre_spec::soundness::Soundness
 pub fn vyre_libs::security::IntegerOverflowArith::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs::security::LockDominates::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs::security::PathCanonical::soundness(&self) -> vyre_spec::soundness::Soundness
 pub fn vyre_libs::security::SanitizedFlowSoundnessContract::primitive_soundness(&self) -> vyre_spec::soundness::DynamicPrimitiveSoundness
+pub fn vyre_libs::security::SanitizerDominates::soundness(&self) -> vyre_spec::soundness::Soundness
 pub fn vyre_libs::security::SecurityRelationAnalyzerError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::security::SecurityRelationAnalyzerError::from(error: vyre_libs::security::AnalysisFactError) -> Self
 pub fn vyre_libs::security::SinkIntersection::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs::security::SqlParamBound::soundness(&self) -> vyre_spec::soundness::Soundness
 pub fn vyre_libs::security::TaintKill::soundness(&self) -> vyre_spec::soundness::Soundness
 pub fn vyre_libs::security::TaintPollution::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs::security::UncheckedReturn::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs::security::XssEscape::soundness(&self) -> vyre_spec::soundness::Soundness
 pub fn vyre_libs::security::aliases_dataflow(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, x_buf: &str, y_buf: &str, reach_x_buf: &str, reach_y_buf: &str, hop_x_buf: &str, hop_y_buf: &str, x_in_y_buf: &str, y_in_x_buf: &str, out_buf: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::auth_check_dominates(node_count: u32, auth_doms: &str, sensitive_op_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::auth_check_dominates::AuthCheckDominates::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::auth_check_dominates::auth_check_dominates(node_count: u32, auth_doms: &str, sensitive_op_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::bounded_by_comparison(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::buffer_size_check(node_count: u32, size_compared: &str, user_input_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::buffer_size_check::BufferSizeCheck::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::buffer_size_check::buffer_size_check(node_count: u32, size_compared: &str, user_input_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::dominance_predecessors(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::family_mask::canonical_family_mask(family: &str) -> core::option::Option<u32>
 pub fn vyre_libs::security::family_mask::resolve_label_family_mask(family: &str) -> core::result::Result<u32, alloc::string::String>
@@ -1359,42 +1362,28 @@ pub fn vyre_libs::security::flows_to_alias_only(shape: vyre_primitives::graph::p
 pub fn vyre_libs::security::flows_to_to_sink(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, source_buf: &str, sink_buf: &str, reach_buf: &str, hits_buf: &str, out_scalar_buf: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::flows_to_with_sanitizer(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, source_buf: &str, sink_buf: &str, sanitizer_buf: &str, clean_buf: &str, reach_buf: &str, alive_buf: &str, hits_buf: &str, out_scalar_buf: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::format_string_check(node_count: u32, format_arg_pts: &str, non_literal_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::format_string_check::FormatStringCheck::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::format_string_check::format_string_check(node_count: u32, format_arg_pts: &str, non_literal_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::generated_relation_finding_fact_ids(findings: &[vyre_libs::security::FindingProofBundle]) -> alloc::vec::Vec<vyre_libs::security::FactId>
 pub fn vyre_libs::security::integer_overflow_arith(node_count: u32, arith_set: &str, attacker_reach: &str, overflow_check_dominates: &str, intermediate: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::label_by_family(node_tags: &str, nodeset_out: &str, node_count: u32, family_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::lock_dominates(node_count: u32, lock_doms: &str, shared_access_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::lock_dominates::LockDominates::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::lock_dominates::lock_dominates(node_count: u32, lock_doms: &str, shared_access_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::path_canonical(node_count: u32, canonicalizer_dominates: &str, fs_op_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::path_canonical::PathCanonical::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::path_canonical::path_canonical(node_count: u32, canonicalizer_dominates: &str, fs_op_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::render_security_reporter_output(findings: &[vyre_libs::security::SecurityReporterFinding], source_files: &[vyre_libs::security::SecurityReporterSourceFile]) -> core::result::Result<vyre_libs::security::SecurityReporterOutputBytes, vyre_libs::security::SecurityReporterError>
 pub fn vyre_libs::security::run_generated_security_relation_analyzer(table: &vyre_libs::security::AnalysisFactTable, spec: vyre_libs::security::GeneratedSecurityRelationAnalyzerSpec<'_>, stats: vyre_libs::security::GeneratedSecurityRelationAnalyzerRunStats) -> core::result::Result<vyre_libs::security::GeneratedSecurityRelationAnalyzerReport, vyre_libs::security::SecurityRelationAnalyzerError>
 pub fn vyre_libs::security::sanitized_by(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, frontier_in: &str, sanitizers_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::sanitized_flow_final_finding_soundness(mode: vyre_libs::security::SanitizedFlowExecutionMode) -> core::result::Result<vyre_spec::soundness::DynamicPrimitiveSoundness, vyre_libs::security::SanitizedFlowContractViolation>
 pub fn vyre_libs::security::sanitized_flow_final_soundness_contract(mode: vyre_libs::security::SanitizedFlowExecutionMode) -> core::result::Result<vyre_libs::security::SanitizedFlowSoundnessContract, vyre_libs::security::SanitizedFlowContractViolation>
 pub fn vyre_libs::security::sanitizer_dominates(node_count: u32, sanitizer_doms: &str, sink_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::sanitizer_dominates::SanitizerDominates::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::sanitizer_dominates::sanitizer_dominates(node_count: u32, sanitizer_doms: &str, sink_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::security_predicate_row_by_op_id(op_id: &str) -> core::option::Option<&'static vyre_libs::security::SecurityPredicateRow>
 pub fn vyre_libs::security::security_predicate_rows() -> &'static [vyre_libs::security::SecurityPredicateRow]
 pub fn vyre_libs::security::sink_intersection(node_count: u32, query_set: &str, sink_set: &str, intersect_buf: &str, out_scalar: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::sql_param_bound(node_count: u32, param_binding_set: &str, sql_query_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::sql_param_bound::SqlParamBound::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::sql_param_bound::sql_param_bound(node_count: u32, param_binding_set: &str, sql_query_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::taint_flow(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::taint_kill(node_count: u32, frontier_in: &str, kill_set: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::taint_pollution(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, source_buf: &str, label_set: &str, reach_buf: &str, hits_buf: &str, out_scalar: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::try_aliases_dataflow(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, x_buf: &str, y_buf: &str, reach_x_buf: &str, reach_y_buf: &str, hop_x_buf: &str, hop_y_buf: &str, x_in_y_buf: &str, y_in_x_buf: &str, out_buf: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_libs::security::try_security_predicate_rows() -> core::result::Result<&'static [vyre_libs::security::SecurityPredicateRow], &'static str>
 pub fn vyre_libs::security::unchecked_return(node_count: u32, use_set: &str, check_dominates: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::unchecked_return::UncheckedReturn::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::unchecked_return::unchecked_return(node_count: u32, use_set: &str, check_dominates: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::security::xss_escape(node_count: u32, escape_dominates: &str, render_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::security::xss_escape::XssEscape::soundness(&self) -> vyre_spec::soundness::Soundness
-pub fn vyre_libs::security::xss_escape::xss_escape(node_count: u32, escape_dominates: &str, render_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::solvers::amg_pass_solver::reference_smooth_matroid_flow(a: &[f64], b: &[f64], x: &[f64], r_mat: &[f64], p_mat: &[f64], a_c: &[f64], n_fine: u32, n_coarse: u32) -> alloc::vec::Vec<f64>
 pub fn vyre_libs::solvers::amg_pass_solver::reference_smooth_matroid_flow_into(a: &[f64], b: &[f64], x: &[f64], r_mat: &[f64], p_mat: &[f64], a_c: &[f64], n_fine: u32, n_coarse: u32, scratch: &mut vyre_primitives::math::amg_v_cycle::AmgVcycleScratch, out: &mut alloc::vec::Vec<f64>)
 pub fn vyre_libs::solvers::amg_pass_solver::smooth_matroid_flow_fixed_via(dispatcher: &impl vyre_foundation::program_dispatch::ProgramDispatcher, a_fixed: &[u32], b_fixed: &[u32], x_fixed: &[u32], r_mat_fixed: &[u32], p_mat_fixed: &[u32], a_c_fixed: &[u32], n_fine: u32, n_coarse: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
@@ -1685,8 +1674,6 @@ pub mod vyre_libs::graph::dispatch::vast_tree_walk
 pub mod vyre_libs::hash
 pub mod vyre_libs::intern
 pub mod vyre_libs::logical
-pub mod vyre_libs::logical::nand
-pub mod vyre_libs::logical::nor
 pub mod vyre_libs::math
 pub mod vyre_libs::math::algebra
 pub mod vyre_libs::math::avg_floor
@@ -1773,16 +1760,7 @@ pub mod vyre_libs::scheduling::polyhedral_fusion
 pub mod vyre_libs::scheduling::spectral_schedule
 pub mod vyre_libs::scheduling::submodular_cache_eviction
 pub mod vyre_libs::security
-pub mod vyre_libs::security::auth_check_dominates
-pub mod vyre_libs::security::buffer_size_check
 pub mod vyre_libs::security::family_mask
-pub mod vyre_libs::security::format_string_check
-pub mod vyre_libs::security::lock_dominates
-pub mod vyre_libs::security::path_canonical
-pub mod vyre_libs::security::sanitizer_dominates
-pub mod vyre_libs::security::sql_param_bound
-pub mod vyre_libs::security::unchecked_return
-pub mod vyre_libs::security::xss_escape
 pub mod vyre_libs::solvers
 pub mod vyre_libs::solvers::amg_pass_solver
 pub mod vyre_libs::solvers::bellman_tn_order
@@ -2013,33 +1991,33 @@ pub struct vyre_libs::security::AnalysisFact
 pub struct vyre_libs::security::AnalysisFactColumns
 pub struct vyre_libs::security::AnalysisFactTable
 pub struct vyre_libs::security::AnalysisSourceSpan
+pub struct vyre_libs::security::AuthCheckDominates
+pub struct vyre_libs::security::BufferSizeCheck
 pub struct vyre_libs::security::FactId(pub u64)
 pub struct vyre_libs::security::FindingProofBundle
 pub struct vyre_libs::security::FindingProofStep
+pub struct vyre_libs::security::FormatStringCheck
 pub struct vyre_libs::security::GeneratedSecurityRelationAnalyzerEvidence
 pub struct vyre_libs::security::GeneratedSecurityRelationAnalyzerReport
 pub struct vyre_libs::security::GeneratedSecurityRelationAnalyzerRunStats
 pub struct vyre_libs::security::GeneratedSecurityRelationAnalyzerSpec<'a>
 pub struct vyre_libs::security::IntegerOverflowArith
+pub struct vyre_libs::security::LockDominates
+pub struct vyre_libs::security::PathCanonical
 pub struct vyre_libs::security::SanitizedFlowContractViolation
 pub struct vyre_libs::security::SanitizedFlowSoundnessContract
+pub struct vyre_libs::security::SanitizerDominates
 pub struct vyre_libs::security::SecurityPredicateRow
 pub struct vyre_libs::security::SecurityReporterFinding
 pub struct vyre_libs::security::SecurityReporterOutputBytes
 pub struct vyre_libs::security::SecurityReporterSourceFile
 pub struct vyre_libs::security::SinkIntersection
 pub struct vyre_libs::security::SourceToSinkFindingRequest
+pub struct vyre_libs::security::SqlParamBound
 pub struct vyre_libs::security::TaintKill
 pub struct vyre_libs::security::TaintPollution
-pub struct vyre_libs::security::auth_check_dominates::AuthCheckDominates
-pub struct vyre_libs::security::buffer_size_check::BufferSizeCheck
-pub struct vyre_libs::security::format_string_check::FormatStringCheck
-pub struct vyre_libs::security::lock_dominates::LockDominates
-pub struct vyre_libs::security::path_canonical::PathCanonical
-pub struct vyre_libs::security::sanitizer_dominates::SanitizerDominates
-pub struct vyre_libs::security::sql_param_bound::SqlParamBound
-pub struct vyre_libs::security::unchecked_return::UncheckedReturn
-pub struct vyre_libs::security::xss_escape::XssEscape
+pub struct vyre_libs::security::UncheckedReturn
+pub struct vyre_libs::security::XssEscape
 pub struct vyre_libs::solvers::amg_pass_solver::AmgPassGpuScratch
 pub struct vyre_libs::solvers::bellman_tn_order::BellmanTnOrderGpuScratch
 pub struct vyre_libs::solvers::conv1d_latency_smoothing::Conv1dLatencySmoothingScratch

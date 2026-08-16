@@ -188,6 +188,12 @@ fn crate_rooted_path(line: &str) -> Option<(usize, &str)> {
 }
 
 /// Every item one snapshot publishes at more than one path, with those paths.
+///
+/// A `prelude` republishes on purpose: it is the one list a caller imports from,
+/// and the item still has exactly one owner. So a prelude path is not counted as
+/// a second path, while the owner path it republishes is. An item reachable only
+/// through a prelude keeps that path, because then the prelude is its owner and a
+/// second owner elsewhere is still the defect this measures.
 #[must_use]
 pub fn duplicates(snapshot: &str) -> BTreeMap<String, BTreeSet<String>> {
     let modules = declared_modules(snapshot);
@@ -199,9 +205,26 @@ pub fn duplicates(snapshot: &str) -> BTreeMap<String, BTreeSet<String>> {
     }
     paths
         .into_iter()
+        .map(|(item, modules)| {
+            let owned: BTreeSet<String> = modules
+                .iter()
+                .filter(|module| !republishes(module))
+                .cloned()
+                .collect();
+            let owners = if owned.is_empty() { modules } else { owned };
+            (item.tail, owners)
+        })
         .filter(|(_, modules)| modules.len() > 1)
-        .map(|(item, modules)| (item.tail, modules))
         .collect()
+}
+
+/// Whether a module path republishes what another module owns, which every
+/// language-wide `prelude` does by definition.
+fn republishes(module: &str) -> bool {
+    module
+        .rsplit("::")
+        .next()
+        .is_some_and(|segment| segment == "prelude")
 }
 
 /// Item names the crate declares more than once, so several sibling modules each
@@ -695,6 +718,40 @@ mod tests {
         assert!(
             found.is_empty(),
             "two structs, two fields of the same name: {found:?}"
+        );
+    }
+
+    /// WHY: `vyre_libs::prelude` is the seam a dialect imports a sibling's item
+    /// from, and lego-audit check 4 reports the direct path instead. Counting the
+    /// seam as a second owner asked for the one import rule the tree enforces to be
+    /// deleted.
+    #[test]
+    fn a_prelude_republish_is_not_a_second_owner() {
+        let found = duplicates(
+            "pub mod vyre_x::prelude\npub mod vyre_x::math\npub struct vyre_x::math::MatmulBias\npub struct vyre_x::prelude::MatmulBias\n",
+        );
+        assert!(found.is_empty(), "the seam owns nothing: {found:?}");
+    }
+
+    /// WHY: the exclusion must not hide a real second owner, and an item whose only
+    /// path is a prelude has that prelude as its owner.
+    #[test]
+    fn a_prelude_hides_no_second_owner_and_owns_what_only_it_publishes() {
+        let two_owners = duplicates(
+            "pub mod vyre_x::prelude\npub mod vyre_x::math\npub mod vyre_x::nn\npub struct vyre_x::math::MatmulBias\npub struct vyre_x::nn::MatmulBias\npub struct vyre_x::prelude::MatmulBias\n",
+        );
+        assert_eq!(
+            two_owners.get("MatmulBias").map(BTreeSet::len),
+            Some(2),
+            "two real owners survive the seam: {two_owners:?}"
+        );
+        let no_owner = duplicates(
+            "pub mod vyre_x::prelude\npub mod vyre_x::inner::prelude\npub fn vyre_x::prelude::helper() -> u32\npub fn vyre_x::inner::prelude::helper() -> u32\n",
+        );
+        assert_eq!(
+            no_owner.get("helper").map(BTreeSet::len),
+            Some(2),
+            "with no owner outside a prelude the two paths are the finding: {no_owner:?}"
         );
     }
 

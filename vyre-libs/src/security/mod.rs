@@ -28,8 +28,7 @@ macro_rules! define_bitset_and_security_op {
         $doc:literal,
         tests { $($test_name:ident: ($lhs:expr, $rhs:expr) => $expected:expr;)+ }
     ) => {
-        #[doc = $doc]
-        pub mod $module {
+        pub(crate) mod $module {
             use vyre_foundation::ir::Program;
             use vyre_primitives::bitset::and::bitset_and;
             use vyre_primitives::bitset::bitset_words;
@@ -76,6 +75,12 @@ macro_rules! define_bitset_and_security_op {
                 )+
             }
         }
+
+        #[doc = $doc]
+        pub use $module::$function;
+
+        #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
+        pub use $module::$marker;
     };
 }
 
@@ -90,8 +95,7 @@ macro_rules! define_bitset_and_not_security_op {
         $doc:literal,
         tests { $($test_name:ident: ($lhs:expr, $rhs:expr) => $expected:expr;)+ }
     ) => {
-        #[doc = $doc]
-        pub mod $module {
+        pub(crate) mod $module {
             use vyre_foundation::ir::Program;
             use vyre_primitives::bitset::and_not::bitset_and_not;
             use vyre_primitives::bitset::bitset_words;
@@ -138,6 +142,12 @@ macro_rules! define_bitset_and_not_security_op {
                 )+
             }
         }
+
+        #[doc = $doc]
+        pub use $module::$function;
+
+        #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
+        pub use $module::$marker;
     };
 }
 
@@ -315,9 +325,7 @@ define_bitset_and_security_op!(
 
 pub use aliases_dataflow::OP_ID;
 pub use aliases_dataflow::{aliases_dataflow, try_aliases_dataflow};
-pub use auth_check_dominates::auth_check_dominates;
 pub use bounded_by_comparison::bounded_by_comparison;
-pub use buffer_size_check::buffer_size_check;
 pub use dominance_predecessors::dominance_predecessors;
 pub use facts::{finding_from_sanitized_source_to_sink_query, SourceToSinkFindingRequest};
 pub use facts::{
@@ -343,12 +351,9 @@ pub use external_ifds::{
     SecurityFindingWitnessPath, SecurityWitnessPathError, SecurityWitnessStatement,
     EXTERNAL_IFDS_SECURITY_BACKEND_ID,
 };
-pub use format_string_check::format_string_check;
 pub use integer_overflow_arith::integer_overflow_arith;
 pub use integer_overflow_arith::IntegerOverflowArith;
 pub use label_by_family::label_by_family;
-pub use lock_dominates::lock_dominates;
-pub use path_canonical::path_canonical;
 pub use predicate_catalog::{
     security_predicate_row_by_op_id, security_predicate_rows, try_security_predicate_rows,
     SecurityPredicateOperation, SecurityPredicateRow,
@@ -366,17 +371,13 @@ pub use reporter::{
     SECURITY_REPORTER_SCHEMA_VERSION,
 };
 pub use sanitized_by::sanitized_by;
-pub use sanitizer_dominates::sanitizer_dominates;
 pub use sink_intersection::sink_intersection;
 pub use sink_intersection::SinkIntersection;
-pub use sql_param_bound::sql_param_bound;
 pub use taint_flow::taint_flow;
 pub use taint_kill::taint_kill;
 pub use taint_kill::TaintKill;
 pub use taint_pollution::taint_pollution;
 pub use taint_pollution::TaintPollution;
-pub use unchecked_return::unchecked_return;
-pub use xss_escape::xss_escape;
 
 /// Validate that a security composition's input shape + buffer names
 /// are non-degenerate. Panics with a `Fix:` message on violation so

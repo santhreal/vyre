@@ -5,8 +5,7 @@
 
 macro_rules! define_synthesized_logical_binary {
     ($module:ident, $function:ident, $op_id:literal, $expr:expr, $expected:expr, $doc:literal) => {
-        #[doc = $doc]
-        pub mod $module {
+        pub(crate) mod $module {
             use super::wrap::build_logical_binary;
             use vyre_foundation::ir::Program;
 
@@ -35,6 +34,9 @@ macro_rules! define_synthesized_logical_binary {
                 )
             }
         }
+
+        #[doc = $doc]
+        pub use $module::$function;
     };
 }
 
@@ -55,9 +57,6 @@ define_synthesized_logical_binary!(
     "Bitwise NOR."
 );
 mod wrap;
-
-pub use nand::nand;
-pub use nor::nor;
 
 #[cfg(test)]
 mod tests {

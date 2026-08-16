@@ -62,10 +62,6 @@ name = "vyre-foundation"
 duplicate_paths = 0
 
 [[crate]]
-name = "vyre-grammar-gen"
-duplicate_paths = 0
-
-[[crate]]
 name = "vyre-libs"
 duplicate_paths = 0
 
