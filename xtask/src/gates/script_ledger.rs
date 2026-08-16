@@ -42,6 +42,9 @@ const OPERATOR_ACTION: &str = "operator action";
 /// gate that has not been shown to judge anything.
 const PROVED_RED: &str = "proved red";
 
+/// The canonical ledger content, compiled into xtask so write mode can generate it when absent.
+const CANONICAL_LEDGER: &str = include_str!("../../script-assertion-ledger.md");
+
 /// One `### ` row of the ledger.
 #[derive(Debug)]
 struct Row {
@@ -275,7 +278,23 @@ pub struct ScriptLedger;
 impl crate::gate::GateBehavior for ScriptLedger {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
-        let text = tree.read(LEDGER)?;
+        let text = match tree.read(LEDGER) {
+            Ok(text) => text,
+            Err(_) => {
+                if !ctx.write {
+                    let mut report = Report::clean();
+                    report.produced(LEDGER);
+                    report.cover_complete("tracked script paths", tree.paths().len());
+                    report.find(Finding::in_file(
+                        LEDGER,
+                        format!("`{LEDGER}` does not exist"),
+                        FIX,
+                    ));
+                    return Ok(report);
+                }
+                CANONICAL_LEDGER.to_string()
+            }
+        };
         let ledger = parse(&text)?;
         let gates = registered();
         let tracked: BTreeSet<String> = tree
@@ -462,18 +481,27 @@ impl crate::gate::GateBehavior for ScriptLedger {
             ledger.lines[ledger.totals..ledger.rows_heading].join("\n")
         );
         if ctx.write {
-            if current != expected {
-                let mut rebuilt = String::new();
-                for line in &ledger.lines[..ledger.totals] {
-                    rebuilt.push_str(line);
-                    rebuilt.push('\n');
+            let mut rebuilt = String::new();
+            for line in &ledger.lines[..ledger.totals] {
+                rebuilt.push_str(line);
+                rebuilt.push('\n');
+            }
+            rebuilt.push_str(&expected);
+            for line in &ledger.lines[ledger.rows_heading..] {
+                rebuilt.push_str(line);
+                rebuilt.push('\n');
+            }
+            let target_path = ctx.root.join(LEDGER);
+            if !target_path.exists() || current != expected {
+                if let Some(parent) = target_path.parent() {
+                    fs::create_dir_all(parent).map_err(|error| {
+                        GateError::new(
+                            format!("cannot create directory `{}`: {error}", parent.display()),
+                            "make the directory writable",
+                        )
+                    })?;
                 }
-                rebuilt.push_str(&expected);
-                for line in &ledger.lines[ledger.rows_heading..] {
-                    rebuilt.push_str(line);
-                    rebuilt.push('\n');
-                }
-                fs::write(ctx.root.join(LEDGER), rebuilt).map_err(|error| {
+                fs::write(&target_path, rebuilt).map_err(|error| {
                     GateError::new(
                         format!("cannot write `{LEDGER}`: {error}"),
                         "make the ledger writable",
@@ -584,5 +612,39 @@ mod tests {
             panic!("a ledger with no totals cannot be judged");
         };
         assert!(error.to_string().contains("## Totals"), "got {error}");
+    }
+
+    #[test]
+    fn absent_ledger_reports_finding_in_read_only_and_generates_on_write() {
+        use crate::gate::GateBehavior;
+        use crate::gates::fixture_checkout;
+
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            ("scripts/apply-branch-protection.sh", "#!/bin/sh\n"),
+            ("scripts/final-launch.sh", "#!/bin/sh\n"),
+            ("scripts/lib/read_toml_values.py", "pass\n"),
+            ("scripts/lib/release_train.sh", "#!/bin/sh\n"),
+            ("scripts/lib/repo_boundary.sh", "#!/bin/sh\n"),
+            ("scripts/lib/toml_reader.sh", "#!/bin/sh\n"),
+            ("scripts/prove-release-shards.sh", "#!/bin/sh\n"),
+            ("scripts/publish-release.sh", "#!/bin/sh\n"),
+            ("scripts/wait-crates-index.sh", "#!/bin/sh\n"),
+        ]);
+
+        // 1. Read-only on absent ledger: reports finding, does not create file
+        let read_ctx = GateCtx::new(root.clone(), Vec::new());
+        let report = ScriptLedger.run(&read_ctx).expect("run succeeds");
+        assert!(!report.findings.is_empty());
+        assert!(!root.join(LEDGER).exists());
+
+        // 2. Write mode on absent ledger: creates file
+        let write_ctx = GateCtx::new(root.clone(), vec!["--write".to_string()]);
+        let write_report = ScriptLedger.run(&write_ctx).expect("run succeeds");
+        assert!(write_report.findings.is_empty());
+        assert!(root.join(LEDGER).exists());
+
+        // 3. Subsequent read-only comparison succeeds
+        let comp_report = ScriptLedger.run(&read_ctx).expect("run succeeds");
+        assert!(comp_report.findings.is_empty());
     }
 }
