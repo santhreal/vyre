@@ -41,18 +41,42 @@ pub(crate) fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileErro
     let entries = graph
         .nodes()
         .iter()
-        .map(|node| EntryAbiRecord {
-            node: ArtifactNodeId(node.id.0),
-            inputs: node
-                .inputs
-                .iter()
-                .map(|input| ArtifactValueId(input.value.0))
-                .collect(),
-            outputs: node
-                .outputs
-                .iter()
-                .map(|output| ArtifactValueId(output.0))
-                .collect(),
+        .map(|node| {
+            let mut inputs = Vec::new();
+            let mut outputs = Vec::new();
+            for buffer in node.program.buffers() {
+                let is_in = matches!(
+                    buffer.access(),
+                    BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
+                );
+                let is_out = matches!(
+                    buffer.access(),
+                    BufferAccess::WriteOnly | BufferAccess::ReadWrite
+                ) || buffer.is_output()
+                    || buffer.pipeline_live_out;
+
+                if is_in {
+                    if let Some(input) = node.inputs.iter().find(|i| i.buffer == buffer.name()) {
+                        inputs.push(ArtifactValueId(input.value.0));
+                    }
+                }
+                if is_out {
+                    if let Some(pos) = node
+                        .output_ports
+                        .iter()
+                        .position(|o| o.buffer == buffer.name())
+                    {
+                        if let Some(output_id) = node.outputs.get(pos) {
+                            outputs.push(ArtifactValueId(output_id.0));
+                        }
+                    }
+                }
+            }
+            EntryAbiRecord {
+                node: ArtifactNodeId(node.id.0),
+                inputs,
+                outputs,
+            }
         })
         .collect();
     Ok(ArtifactAbi { resources, entries })
@@ -195,6 +219,7 @@ pub(crate) fn build_resources(
                 ValueLifetime::Retained => ResourceLifetime::Retained,
                 ValueLifetime::Output => ResourceLifetime::Output,
             },
+            retained_predecessor: value.retained_successor_of.map(|id| ArtifactValueId(id.0)),
             first_stage: producer_stage,
             last_stage,
         });

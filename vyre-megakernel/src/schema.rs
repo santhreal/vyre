@@ -13,7 +13,7 @@ use crate::request::{SearchBudget, SearchWork};
 use crate::{cost, legality};
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 5;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 6;
 
 /// Canonical executable-node payload.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,6 +67,8 @@ pub struct ResourceRecord {
     pub byte_count: u64,
     /// Semantic lifetime class.
     pub lifetime: ResourceLifetime,
+    /// Prior retained value when this resource replaces retained state.
+    pub retained_predecessor: Option<ArtifactValueId>,
     /// First barrier stage needing the value.
     pub first_stage: u32,
     /// Last barrier stage needing the value.
@@ -542,6 +544,7 @@ mod tests {
             element_count: 1,
             byte_count: 4,
             lifetime: ResourceLifetime::Output,
+            retained_predecessor: None,
             first_stage: 0,
             last_stage: 0,
         }

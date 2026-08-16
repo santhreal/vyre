@@ -761,12 +761,12 @@ fn resource_shape_overflow_has_stable_diagnostic() {
     assert_eq!(error.diagnostic.code.as_str(), "MKC011_RESOURCE_OVERFLOW");
 }
 
-/// WHY: persisted v3 artifacts must be rejected after the v4 target-seam cutover.
+/// WHY: persisted v5 artifacts must be rejected after the v6 retained-predecessor cutover.
 #[test]
 fn stale_artifact_version_is_rejected_before_body_decode() {
     let artifact = compile(&request(LIMIT)).unwrap();
     let mut bytes = artifact.to_bytes().unwrap();
-    bytes[4..6].copy_from_slice(&3u16.to_le_bytes());
+    bytes[4..6].copy_from_slice(&5u16.to_le_bytes());
     let error = Artifact::from_bytes(&bytes).expect_err("stale schema must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC015_VERSION_SKEW");
     assert_eq!(diagnostic_path(&error), Some("artifact.schema_version"));
@@ -780,4 +780,147 @@ fn artifact_body_tampering_is_detected() {
     bytes[10] ^= 1;
     let error = Artifact::from_bytes(&bytes).expect_err("tampered body must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC016_DIGEST_MISMATCH");
+}
+/// WHY: entry ABI input and output records must preserve Program buffer order even when graph ports are declared in a different order.
+#[test]
+fn entry_abi_inputs_and_outputs_preserve_program_buffer_order_despite_port_reordering() {
+    let mut graph = ProgramGraph::new();
+    let val_x = graph
+        .add_external_value(
+            "x",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+    let val_y = graph
+        .add_external_value(
+            "y",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("first", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("second", 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(
+                Expr::load("first", Expr::u32(0)),
+                Expr::load("second", Expr::u32(0)),
+            ),
+        )],
+    );
+
+    graph
+        .add_node(
+            "node_rev",
+            program,
+            vec![
+                GraphInput {
+                    buffer: "second".into(),
+                    value: val_y,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+                GraphInput {
+                    buffer: "first".into(),
+                    value: val_x,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "res".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+
+    let mut symbols = BTreeMap::new();
+    symbols.insert("items".into(), 32);
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), symbols),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+    let entry = artifact.abi().entries.first().expect("entry must exist");
+
+    assert_eq!(entry.inputs, vec![ArtifactValueId(0), ArtifactValueId(1)]);
+}
+
+/// WHY: ResourceRecord retained_predecessor must serialize and round-trip through artifact framing.
+#[test]
+fn resource_record_retained_predecessor_round_trips() {
+    let mut graph = ProgramGraph::new();
+    let mut symbols = BTreeMap::new();
+    symbols.insert("items".into(), 32);
+    let state_init = graph
+        .add_external_value(
+            "state_init",
+            contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+        )
+        .unwrap();
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_s", 0, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::storage("out_s", 1, BufferAccess::ReadWrite, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out_s",
+            Expr::u32(0),
+            Expr::load("in_s", Expr::u32(0)),
+        )],
+    );
+    graph
+        .add_node(
+            "node0",
+            prog,
+            vec![GraphInput {
+                buffer: "in_s".into(),
+                value: state_init,
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![GraphOutput {
+                buffer: "out_s".into(),
+                name: "state_final".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                retained_successor_of: Some(state_init),
+            }],
+        )
+        .unwrap();
+
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), symbols),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+    let bytes = artifact.to_bytes().expect("artifact must encode");
+    let decoded = Artifact::from_bytes(&bytes).expect("artifact must decode");
+
+    let final_res = decoded
+        .resources()
+        .iter()
+        .find(|r| r.name == "state_final")
+        .expect("state_final resource must exist");
+    assert_eq!(
+        final_res.retained_predecessor,
+        Some(ArtifactValueId(state_init.0))
+    );
 }
