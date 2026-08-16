@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre::compiler::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre::compiler::{compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
 use vyre::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
@@ -37,6 +37,7 @@ fn facade_compiles_validated_graph_to_canonical_artifact() {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([9; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000),
         1_000_000,
     )

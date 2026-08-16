@@ -134,6 +134,7 @@ pub(crate) fn compiled_cuda_outputs_with_config(
             vyre_megakernel::Digest([0; 32]),
             std::collections::BTreeMap::new(),
         ),
+        vyre_megakernel::DeviceFacts::unknown(),
         vyre_megakernel::SearchBudget::new(128, 128, 0, 0, 128),
         60_000,
     )

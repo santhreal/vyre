@@ -1,23 +1,79 @@
+//! Open, reproducible whole-program candidate cost model.
+//!
+//! The unit is nanoseconds of expected device time, so every weight below is a
+//! duration read off a recorded `vyre-bench` result rather than a preference.
+//! The recorded files are `vyre-bench/snapshots/*.json` and
+//! `vyre-bench/baselines/rtx_5090/*.json`; each constant names the case and the
+//! metric that fixed it.
+//!
+//! Three things a fusion decision changes are priced: the launches it removes,
+//! the bytes it stops writing between kernels, and the occupancy it costs when
+//! the fused group needs more registers or more shared scratch than the device
+//! keeps resident. The third is why fusion is not always cheaper, and it is a
+//! cliff rather than a slope: a group that needs twice the resident budget runs
+//! its traffic in two passes instead of one.
+//!
+//! The launch width the search proposes is not priced. No recorded case varies
+//! width against a fixed program, so a width term would be a guess, and a guess
+//! that orders the widths is worse than no term: the analytic ranking would claim
+//! a result only a measurement has. Width candidates therefore tie on cost, are
+//! ordered deterministically by [`crate::select::rank`], and a measured
+//! compilation decides between them on device time.
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
     candidate::CandidatePlan, facts::PlanningFacts, DependencyEdge, DependencyEndpoint,
-    DependencyKind,
+    DependencyKind, DeviceFacts,
 };
 
-const LAUNCH_WEIGHT: u64 = 1_000;
-const MATERIALIZATION_WEIGHT: u64 = 100;
+/// Cost of one kernel launch.
+///
+/// `foundation.elementwise.add.1m` records `dispatch_ns` p50 4224
+/// (`vyre-bench/snapshots/07b0678d5f9ef8aeccda623e0012f0cd0b30d7fa.json`). It is
+/// the cheapest whole dispatch in any recorded snapshot, so no launch costs less
+/// than this and the launch term prices one at that floor.
+const LAUNCH_COST_NS: u64 = 4_224;
+
+/// Bytes of traffic one nanosecond moves.
+///
+/// The same `foundation.elementwise.add.1m` dispatch moves 12 MB in and 4 MB out
+/// (`input_bytes` 12000000, `output_bytes` 4000000) inside those 4224 ns, which
+/// is 3.8 bytes per nanosecond. Dividing by 4 prices 16 MB of traffic at that
+/// dispatch's measured duration, and the same figure prices both the bytes a
+/// materialization writes and the bytes an occupancy loss moves a second time.
+const TRAFFIC_BYTES_PER_NS: u64 = 4;
 
 /// Reproducible components of the open compiler selection cost model.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CostBreakdown {
     /// Sum of semantic IR nodes in the complete graph.
+    ///
+    /// Recorded as evidence and excluded from [`Self::total`]: it is the same for
+    /// every candidate over one graph, and no recorded snapshot separates
+    /// per-IR-node time from memory time, so pricing it would be a guess that
+    /// changes no ranking.
     pub semantic_work: u64,
     /// Number of generated kernel launches.
     pub launches: u64,
     /// Number of values crossing generated-kernel boundaries.
     pub materializations: u64,
-    /// Weighted total minimized by candidate selection.
+    /// Bytes those crossing values move.
+    pub materialized_bytes: u64,
+    /// Largest per-invocation live value count in any one fusion group.
+    pub live_value_peak: u64,
+    /// Largest shared scratch byte count any one fusion group declares.
+    pub shared_scratch_bytes: u64,
+    /// Largest number of resident passes any one group needs, one meaning the
+    /// group fits the device budgets.
+    pub occupancy_passes_peak: u64,
+    /// Launch term in nanoseconds.
+    pub launch_ns: u64,
+    /// Materialized-traffic term in nanoseconds.
+    pub materialization_ns: u64,
+    /// Occupancy term in nanoseconds.
+    pub occupancy_ns: u64,
+    /// Weighted total in nanoseconds, minimized by candidate selection.
     pub total: u64,
 }
 
@@ -25,6 +81,7 @@ pub(crate) fn evaluate(
     candidate: &CandidatePlan,
     facts: &PlanningFacts,
     dependencies: &[DependencyEdge],
+    device: DeviceFacts,
 ) -> CostBreakdown {
     let semantic_work = facts
         .node_work
@@ -32,27 +89,207 @@ pub(crate) fn evaluate(
         .copied()
         .fold(0_u64, u64::saturating_add);
     let launches = u64::try_from(candidate.group_count()).unwrap_or(u64::MAX);
-    let materializations = dependencies
-        .iter()
-        .filter(|edge| {
-            if edge.kind != DependencyKind::Data {
-                return false;
-            }
-            let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) =
-                (edge.from, edge.to)
-            else {
-                return false;
-            };
-            candidate.node_groups.get(from.0 as usize) != candidate.node_groups.get(to.0 as usize)
-        })
-        .count() as u64;
-    let total = semantic_work
-        .saturating_add(launches.saturating_mul(LAUNCH_WEIGHT))
-        .saturating_add(materializations.saturating_mul(MATERIALIZATION_WEIGHT));
+    let crossing = dependencies.iter().filter(|edge| {
+        if edge.kind != DependencyKind::Data {
+            return false;
+        }
+        let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) = (edge.from, edge.to)
+        else {
+            return false;
+        };
+        candidate.node_groups.get(from.0 as usize) != candidate.node_groups.get(to.0 as usize)
+    });
+    let mut materializations = 0_u64;
+    let mut materialized_bytes = 0_u64;
+    for edge in crossing {
+        materializations = materializations.saturating_add(1);
+        let bytes = edge
+            .value
+            .and_then(|value| facts.value_bytes.get(&value.0).copied())
+            .unwrap_or(0);
+        materialized_bytes = materialized_bytes.saturating_add(bytes);
+    }
+
+    let mut live_value_peak = 0_u64;
+    let mut shared_scratch_bytes = 0_u64;
+    let mut occupancy_passes_peak = 1_u64;
+    let mut occupancy_bytes = 0_u64;
+    for group in 0..u32::try_from(candidate.group_count()).unwrap_or(u32::MAX) {
+        let mut group_live = 0_u64;
+        let mut group_scratch = 0_u64;
+        let mut group_bytes = 0_u64;
+        for node in candidate.group_members(group) {
+            group_live =
+                group_live.saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
+            group_scratch = group_scratch.saturating_add(
+                facts
+                    .node_shared_scratch_bytes
+                    .get(node)
+                    .copied()
+                    .unwrap_or(0),
+            );
+            group_bytes =
+                group_bytes.saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
+        }
+        live_value_peak = live_value_peak.max(group_live);
+        shared_scratch_bytes = shared_scratch_bytes.max(group_scratch);
+        let passes = resident_passes(group_live, u64::from(device.registers_per_invocation()))
+            .max(resident_passes(
+                group_scratch,
+                u64::from(device.shared_scratch_bytes_per_workgroup()),
+            ));
+        occupancy_passes_peak = occupancy_passes_peak.max(passes);
+        occupancy_bytes =
+            occupancy_bytes.saturating_add(group_bytes.saturating_mul(passes.saturating_sub(1)));
+    }
+
+    let launch_ns = launches.saturating_mul(LAUNCH_COST_NS);
+    let materialization_ns = materialized_bytes / TRAFFIC_BYTES_PER_NS;
+    let occupancy_ns = occupancy_bytes / TRAFFIC_BYTES_PER_NS;
+    let total = launch_ns
+        .saturating_add(materialization_ns)
+        .saturating_add(occupancy_ns);
     CostBreakdown {
         semantic_work,
         launches,
         materializations,
+        materialized_bytes,
+        live_value_peak,
+        shared_scratch_bytes,
+        occupancy_passes_peak,
+        launch_ns,
+        materialization_ns,
+        occupancy_ns,
         total,
+    }
+}
+
+/// Resident passes a group needs when it wants `demand` of a `budget`.
+///
+/// A workgroup holds a fixed number of registers and a fixed shared-scratch
+/// allocation. A group that wants more than one budget's worth does not fail: the
+/// target compiler spills, or the device schedules fewer workgroups, and the
+/// group's traffic moves once per pass instead of once. The recorded shape of that
+/// loss is `foundation.reduce.sum.1m`, which declares a 256-entry u32 workgroup
+/// tile and records `dispatch_ns` p50 44448 against 4224 for
+/// `foundation.elementwise.add.1m` over the same element count with no scratch
+/// (`vyre-bench/baselines/rtx_5090/smoke_full_2026-04-30_11bccf28.json`), and
+/// `adversarial.register_exhaustion.u32_1024`, which holds 100 live variables
+/// across 1024 lanes for the register side of the same effect.
+///
+/// A zero budget means the backend reported none, so nothing is charged rather
+/// than a guess.
+fn resident_passes(demand: u64, budget: u64) -> u64 {
+    if budget == 0 || demand == 0 {
+        return 1;
+    }
+    demand.div_ceil(budget)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::facts::DataflowEdge;
+    use vyre_foundation::validate::BackendCapabilities;
+
+    fn device(registers_per_invocation: u32) -> DeviceFacts {
+        DeviceFacts::new(BackendCapabilities::default(), 256)
+            .with_occupancy(registers_per_invocation, 0)
+    }
+
+    /// Two nodes, one value of `value_bytes` between them, each holding
+    /// `live_values` live values and touching that value.
+    fn two_node_facts(live_values: u64, value_bytes: u64) -> PlanningFacts {
+        PlanningFacts {
+            node_work: vec![1, 1],
+            node_live_values: vec![live_values, live_values],
+            node_shared_scratch_bytes: vec![0, 0],
+            node_declared_invocations: vec![256, 256],
+            node_declared_workgroup: vec![[256, 1, 1], [256, 1, 1]],
+            node_accepts_width: vec![true, true],
+            node_touched_bytes: vec![value_bytes, value_bytes],
+            dataflow: vec![DataflowEdge {
+                from: crate::ArtifactNodeId(0),
+                to: crate::ArtifactNodeId(1),
+                value: crate::ArtifactValueId(0),
+            }],
+            value_bytes: [(0_u32, value_bytes)].into_iter().collect(),
+        }
+    }
+
+    fn dependencies() -> Vec<DependencyEdge> {
+        vec![DependencyEdge {
+            from: DependencyEndpoint::Node(crate::ArtifactNodeId(0)),
+            to: DependencyEndpoint::Node(crate::ArtifactNodeId(1)),
+            kind: DependencyKind::Data,
+            value: Some(crate::ArtifactValueId(0)),
+        }]
+    }
+
+    /// WHY: 150.13. Fusion is not free. When the fused group needs more registers
+    /// than one invocation holds, the device runs the group's traffic in more than
+    /// one resident pass, and past that cliff the unfused pair is cheaper even
+    /// though it launches twice and materializes the value between the launches.
+    /// A cost model with only launch and traffic terms ranks the fused candidate
+    /// first for every graph, which is what this test would have caught.
+    #[test]
+    fn occupancy_cliff_ranks_the_unfused_candidate_first() {
+        let facts = two_node_facts(96, 4 * 1024 * 1024);
+        let dependencies = dependencies();
+        let device = device(128);
+        let fused = CandidatePlan::from_edges(2, &facts.dataflow);
+        let unfused = CandidatePlan::baseline(2);
+        assert_eq!(fused.group_count(), 1, "fixture must fuse both nodes");
+        assert_eq!(unfused.group_count(), 2);
+
+        let fused_cost = evaluate(&fused, &facts, &dependencies, device);
+        let unfused_cost = evaluate(&unfused, &facts, &dependencies, device);
+        assert_eq!(
+            fused_cost.live_value_peak, 192,
+            "the fused group holds both members' live values"
+        );
+        assert_eq!(fused_cost.occupancy_passes_peak, 2, "192 live values exceed a 128-register invocation");
+        assert_eq!(unfused_cost.occupancy_passes_peak, 1);
+        assert!(
+            unfused_cost.total < fused_cost.total,
+            "past the cliff the unfused candidate must rank first: unfused {unfused_cost:?} fused {fused_cost:?}"
+        );
+    }
+
+    /// WHY: 150.13 boundary. Exactly at the register budget there is no cliff, so
+    /// fusion keeps its launch and traffic saving. This is the adversarial side of
+    /// the test above: an off-by-one in `resident_passes` would charge a group that
+    /// fits, and would rank every fusion below its unfused pair.
+    #[test]
+    fn fusion_wins_when_the_group_fits_the_register_budget() {
+        let facts = two_node_facts(64, 4 * 1024 * 1024);
+        let dependencies = dependencies();
+        let device = device(128);
+        let fused = evaluate(
+            &CandidatePlan::from_edges(2, &facts.dataflow),
+            &facts,
+            &dependencies,
+            device,
+        );
+        let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, device);
+        assert_eq!(fused.occupancy_passes_peak, 1, "128 live values fit a 128-register invocation");
+        assert_eq!(fused.occupancy_ns, 0);
+        assert!(fused.total < unfused.total, "fused {fused:?} unfused {unfused:?}");
+    }
+
+    /// WHY: an unknown budget is not a budget of zero. A backend that reports no
+    /// register count must not make every group look infinitely over budget.
+    #[test]
+    fn unknown_occupancy_budget_charges_nothing() {
+        let facts = two_node_facts(1_000_000, 4 * 1024 * 1024);
+        let dependencies = dependencies();
+        let cost = evaluate(
+            &CandidatePlan::from_edges(2, &facts.dataflow),
+            &facts,
+            &dependencies,
+            device(0),
+        );
+        assert_eq!(cost.occupancy_passes_peak, 1);
+        assert_eq!(cost.occupancy_ns, 0);
     }
 }

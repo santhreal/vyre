@@ -14,7 +14,7 @@ use vyre_foundation::ir::{
     ValueContract, ValueLifetime,
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
+use vyre_megakernel::{CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn artifact() -> vyre_megakernel::Artifact {
@@ -45,6 +45,7 @@ fn artifact() -> vyre_megakernel::Artifact {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
         1_000_000,
     )

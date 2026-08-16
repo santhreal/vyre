@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 
 use vyre::compiler::{
-    self, compile_selected_modules, CompileRequest, Digest, EmittedTargetModule, ExternalFacts,
+    self, compile_selected_modules, CompileRequest, DeviceFacts, Digest, EmittedTargetModule, ExternalFacts,
     SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
     TargetProfile,
 };
@@ -117,6 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
         1_000_000,
     )

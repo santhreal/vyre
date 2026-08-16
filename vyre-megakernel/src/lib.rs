@@ -20,6 +20,8 @@ pub mod cost;
 mod envelope;
 mod facts;
 mod frame;
+/// Whole-grid fence detection shared by the compiler and the driver.
+pub mod grid_sync;
 /// Stable semantic legality decisions for whole-program fusion.
 pub mod legality;
 mod normalize;
@@ -41,34 +43,23 @@ pub use target::{
 };
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 pub use vyre_foundation::diagnostics::Diagnostic;
 use vyre_foundation::diagnostics::{DiagnosticStage, OpLocation, RetryClass};
 use vyre_foundation::ir::{
-    BufferAccess, DataType, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime,
+    BufferAccess, DataType, GraphValueId, Program, ProgramGraph, ProgramGraphValue, ShapeDim,
+    ValueLifetime,
 };
+use vyre_foundation::program_caps;
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 4;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 5;
 const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
 const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v2\0";
-const COMPILER_IR_CAPABILITIES: BackendCapabilities = BackendCapabilities {
-    supports_subgroup_ops: true,
-    supports_indirect_dispatch: true,
-    supports_specialization_constants: true,
-    supports_distributed_collectives: true,
-    has_mul_high: true,
-    has_dual_issue_fp32_int32: true,
-    has_tensor_core_int: true,
-    has_native_f16: true,
-    has_warp_shuffle: true,
-    has_shared_memory: true,
-    has_transcendental_polynomial_emit: true,
-    max_native_int_width: u32::MAX,
-};
 
 /// Stable 256-bit content identity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -178,6 +169,163 @@ pub struct SearchWork {
     pub elapsed_ns: u64,
 }
 
+/// Live device facts the whole-program compiler selects against.
+///
+/// Every field is a fact about the device that will run the artifact. A zero
+/// occupancy budget or launch cost means the backend reported no number for
+/// it, and the cost term that field feeds is then omitted rather than guessed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DeviceFacts {
+    capabilities: BackendCapabilities,
+    supports_cooperative_launch: bool,
+    supports_device_timestamps: bool,
+    max_invocations_per_workgroup: u32,
+    registers_per_invocation: u32,
+    shared_scratch_bytes_per_workgroup: u32,
+    per_launch_overhead_ns: u64,
+    persistent_setup_overhead_ns: u64,
+}
+
+impl DeviceFacts {
+    /// Facts for a caller that has no device.
+    ///
+    /// Every capability is absent and every budget is zero, so validation grants
+    /// nothing: a program that needs a gated capability is rejected instead of
+    /// being compiled against an assumed device. A zero budget is unknown rather
+    /// than a limit of zero, so no size gate fires and no cost term is charged.
+    /// Use this only where no backend is reachable; a caller holding a backend
+    /// passes its live facts.
+    #[must_use]
+    pub const fn unknown() -> Self {
+        Self::new(
+            BackendCapabilities {
+                supports_subgroup_ops: false,
+                supports_indirect_dispatch: false,
+                supports_specialization_constants: false,
+                supports_distributed_collectives: false,
+                has_mul_high: false,
+                has_dual_issue_fp32_int32: false,
+                has_tensor_core_int: false,
+                has_native_f16: false,
+                has_warp_shuffle: false,
+                has_shared_memory: false,
+                has_transcendental_polynomial_emit: false,
+                max_native_int_width: 0,
+            },
+            0,
+        )
+    }
+
+    /// Construct facts from the live capability snapshot and invocation limit.
+    ///
+    /// Cooperative launch, launch timestamps, occupancy budgets, and launch
+    /// costs start absent. A backend that measures one supplies it through the
+    /// matching `with_` method.
+    #[must_use]
+    pub const fn new(capabilities: BackendCapabilities, max_invocations_per_workgroup: u32) -> Self {
+        Self {
+            capabilities,
+            supports_cooperative_launch: false,
+            supports_device_timestamps: false,
+            max_invocations_per_workgroup,
+            registers_per_invocation: 0,
+            shared_scratch_bytes_per_workgroup: 0,
+            per_launch_overhead_ns: 0,
+            persistent_setup_overhead_ns: 0,
+        }
+    }
+
+    /// Record whether the device can launch a cooperative grid.
+    #[must_use]
+    pub const fn with_cooperative_launch(mut self, supported: bool) -> Self {
+        self.supports_cooperative_launch = supported;
+        self
+    }
+
+    /// Record whether the device timestamps a launch on the device itself.
+    #[must_use]
+    pub const fn with_device_timestamps(mut self, supported: bool) -> Self {
+        self.supports_device_timestamps = supported;
+        self
+    }
+
+    /// Record the per-invocation register budget and the per-workgroup
+    /// shared-scratch budget.
+    #[must_use]
+    pub const fn with_occupancy(
+        mut self,
+        registers_per_invocation: u32,
+        shared_scratch_bytes_per_workgroup: u32,
+    ) -> Self {
+        self.registers_per_invocation = registers_per_invocation;
+        self.shared_scratch_bytes_per_workgroup = shared_scratch_bytes_per_workgroup;
+        self
+    }
+
+    /// Record measured host launch cost and persistent-mode setup cost.
+    #[must_use]
+    pub const fn with_launch_costs(
+        mut self,
+        per_launch_overhead_ns: u64,
+        persistent_setup_overhead_ns: u64,
+    ) -> Self {
+        self.per_launch_overhead_ns = per_launch_overhead_ns;
+        self.persistent_setup_overhead_ns = persistent_setup_overhead_ns;
+        self
+    }
+
+    /// Live IR capability snapshot advertised by the device.
+    #[must_use]
+    pub const fn capabilities(&self) -> BackendCapabilities {
+        self.capabilities
+    }
+
+    /// Whether a whole-grid fence can run inside one kernel on this device.
+    #[must_use]
+    pub const fn supports_cooperative_launch(&self) -> bool {
+        self.supports_cooperative_launch
+    }
+
+    /// Whether a search measurement can carry a device timestamp.
+    #[must_use]
+    pub const fn supports_device_timestamps(&self) -> bool {
+        self.supports_device_timestamps
+    }
+
+    /// Largest legal invocation count in one workgroup.
+    #[must_use]
+    pub const fn max_invocations_per_workgroup(&self) -> u32 {
+        self.max_invocations_per_workgroup
+    }
+
+    /// Registers one invocation holds before the target compiler spills, or zero
+    /// when the backend reports no budget.
+    #[must_use]
+    pub const fn registers_per_invocation(&self) -> u32 {
+        self.registers_per_invocation
+    }
+
+    /// Shared scratch bytes one workgroup holds, or zero when the backend
+    /// reports no budget.
+    #[must_use]
+    pub const fn shared_scratch_bytes_per_workgroup(&self) -> u32 {
+        self.shared_scratch_bytes_per_workgroup
+    }
+
+    /// Host cost of one kernel launch in nanoseconds, or zero when unmeasured.
+    #[must_use]
+    pub const fn per_launch_overhead_ns(&self) -> u64 {
+        self.per_launch_overhead_ns
+    }
+
+    /// One-time cost of bringing up persistent execution in nanoseconds, or
+    /// zero when unmeasured.
+    #[must_use]
+    pub const fn persistent_setup_overhead_ns(&self) -> u64 {
+        self.persistent_setup_overhead_ns
+    }
+}
+
 /// Stable external semantic facts not encoded by graph topology.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalFacts {
@@ -187,17 +335,31 @@ pub struct ExternalFacts {
     pub symbolic_bindings: BTreeMap<String, u64>,
     /// Verified content identity for every constant graph value.
     pub constant_identities: BTreeMap<GraphValueId, Digest>,
+    /// Launches the caller will submit against this artifact.
+    ///
+    /// Persistent execution pays a one-time setup cost and saves one launch
+    /// overhead per submission, so the count the caller expects decides whether
+    /// that trade is profitable. One submission never amortizes it.
+    pub expected_launch_batch: u32,
 }
 
 impl ExternalFacts {
-    /// Construct external facts with no constant identities.
+    /// Construct external facts with no constant identities and one launch.
     #[must_use]
     pub fn new(configuration_digest: Digest, symbolic_bindings: BTreeMap<String, u64>) -> Self {
         Self {
             configuration_digest,
             symbolic_bindings,
             constant_identities: BTreeMap::new(),
+            expected_launch_batch: 1,
         }
+    }
+
+    /// Record how many launches the caller will submit against the artifact.
+    #[must_use]
+    pub fn with_expected_launch_batch(mut self, expected_launch_batch: u32) -> Self {
+        self.expected_launch_batch = expected_launch_batch;
+        self
     }
 }
 
@@ -205,6 +367,7 @@ impl ExternalFacts {
 pub struct CompileRequest {
     graph: ProgramGraph,
     facts: ExternalFacts,
+    device: DeviceFacts,
     search_budget: SearchBudget,
     max_artifact_bytes: u64,
 }
@@ -215,18 +378,20 @@ impl CompileRequest {
     pub const fn new(
         graph: ProgramGraph,
         facts: ExternalFacts,
+        device: DeviceFacts,
         search_budget: SearchBudget,
         max_artifact_bytes: u64,
     ) -> Self {
         Self {
             graph,
             facts,
+            device,
             search_budget,
             max_artifact_bytes,
         }
     }
 
-    /// Validate topology, programs, external facts, and resource bounds.
+    /// Validate topology, programs, device facts, external facts, and bounds.
     pub fn validate(self) -> Result<ValidatedCompileRequest, CompileError> {
         if self.max_artifact_bytes == 0 {
             return Err(failure(
@@ -247,6 +412,14 @@ impl CompileRequest {
                 "supply explicit positive bounds for every mandatory search dimension",
             ));
         }
+        if self.facts.expected_launch_batch == 0 {
+            return Err(failure(
+                CompilerFailureKind::InvalidDeviceFacts,
+                "request.facts.expected_launch_batch",
+                "expected launch batch is zero, so the artifact would never run",
+                "supply the number of launches the caller will submit, at least one",
+            ));
+        }
         self.graph.analyze().map_err(|error| {
             failure(
                 CompilerFailureKind::InvalidProgram,
@@ -255,36 +428,162 @@ impl CompileRequest {
                 "supply a structurally valid acyclic ProgramGraph",
             )
         })?;
-        for node in self.graph.nodes() {
-            let report = validate_with_options(
-                &node.program,
-                ValidationOptions::universal().with_backend_capabilities(COMPILER_IR_CAPABILITIES),
-            );
-            if let Some(issue) = report.errors.into_iter().next() {
-                let path = format!("request.graph.nodes[{}].program", node.id.0);
-                let mut diagnostic = issue.diagnostic();
-                if let Some(location) = diagnostic.location.as_mut() {
-                    location.path = Some(path);
-                    location.graph_node = Some(node.id.0);
-                }
-                return Err(CompileError { diagnostic });
-            }
-        }
+        validate_node_programs(&self.graph, self.device.capabilities)?;
+        validate_device_support(&self.graph, self.device)?;
         validate_bindings(&self.graph, &self.facts.symbolic_bindings)?;
         validate_constant_identities(&self.graph, &self.facts.constant_identities)?;
         Ok(ValidatedCompileRequest {
             graph: self.graph,
             facts: self.facts,
+            device: self.device,
             search_budget: self.search_budget,
             max_artifact_bytes: self.max_artifact_bytes,
         })
     }
 }
 
+/// Validate every node program against the live capability snapshot.
+fn validate_node_programs(
+    graph: &ProgramGraph,
+    capabilities: BackendCapabilities,
+) -> Result<(), CompileError> {
+    for node in graph.nodes() {
+        let report = validate_with_options(
+            &node.program,
+            ValidationOptions::universal().with_backend_capabilities(capabilities),
+        );
+        if let Some(issue) = report.errors.into_iter().next() {
+            let path = format!("request.graph.nodes[{}].program", node.id.0);
+            let mut diagnostic = issue.diagnostic();
+            if let Some(location) = diagnostic.location.as_mut() {
+                location.path = Some(path);
+                location.graph_node = Some(node.id.0);
+            }
+            return Err(CompileError { diagnostic });
+        }
+    }
+    Ok(())
+}
+
+/// Reject a graph the live device cannot execute.
+///
+/// Foundation node validation covers the capability bits it knows about:
+/// subgroup expressions and distributed collectives. This gate covers the rest
+/// of the live snapshot, plus the two device facts no instruction expresses.
+///
+/// A whole-grid fence is a launch property, not an instruction property, so a
+/// program that fences the grid on a device that cannot launch a cooperative
+/// grid has no correct execution and is refused here instead of deadlocking at
+/// dispatch. The declared workgroup is checked against the live invocation and
+/// shared-scratch limits for the same reason: a group the device will not accept
+/// is a compile-time fact, not a dispatch failure.
+fn validate_device_support(graph: &ProgramGraph, device: DeviceFacts) -> Result<(), CompileError> {
+    let capabilities = device.capabilities;
+    for node in graph.nodes() {
+        let path = format!("request.graph.nodes[{}].program", node.id.0);
+        if grid_sync::requires_grid_sync(&node.program) && !device.supports_cooperative_launch {
+            return Err(failure(
+                CompilerFailureKind::InvalidProgram,
+                path,
+                "program fences the whole grid but the device cannot launch a cooperative grid",
+                "split the program at the grid fence into one node per segment, or compile for a device that reports cooperative launch",
+            ));
+        }
+        let required = program_caps::scan(&node.program);
+        let shared_scratch_bytes = workgroup_scratch_bytes(&node.program);
+        let unmet = [
+            (
+                required.tensor_ops && !capabilities.has_tensor_core_int,
+                "program uses tensor-core operands but the device reports no tensor-core integer support",
+                "lower the tensor operation to scalar arithmetic, or compile for a device with tensor cores",
+            ),
+            (
+                required.f16 && !capabilities.has_native_f16,
+                "program uses binary16 operands but the device reports no native f16 arithmetic",
+                "widen the f16 operands to f32, or compile for a device with native f16",
+            ),
+            (
+                required.subgroup_ops && !capabilities.has_warp_shuffle,
+                "program uses subgroup operations but the device reports no warp shuffle",
+                "remove the subgroup operation, or compile for a device with warp-level shuffle",
+            ),
+            (
+                required.indirect_dispatch && !capabilities.supports_indirect_dispatch,
+                "program dispatches indirectly but the device reports no indirect dispatch",
+                "resolve the dispatch extent on the host, or compile for a device with indirect dispatch",
+            ),
+            (
+                shared_scratch_bytes > 0 && !capabilities.has_shared_memory,
+                "program declares workgroup-scoped scratch but the device reports no shared memory",
+                "move the scratch buffer to global memory, or compile for a device with shared memory",
+            ),
+        ];
+        if let Some((_, message, fix)) = unmet.into_iter().find(|(unmet, _, _)| *unmet) {
+            return Err(failure(
+                CompilerFailureKind::InvalidProgram,
+                path,
+                message,
+                fix,
+            ));
+        }
+        let declared = node.program.workgroup_size;
+        let invocations = u64::from(declared[0])
+            .saturating_mul(u64::from(declared[1]))
+            .saturating_mul(u64::from(declared[2]));
+        if device.max_invocations_per_workgroup > 0
+            && invocations > u64::from(device.max_invocations_per_workgroup)
+        {
+            return Err(failure(
+                CompilerFailureKind::InvalidProgram,
+                path,
+                format!(
+                    "program declares {invocations} invocations per workgroup; the device accepts {}",
+                    device.max_invocations_per_workgroup
+                ),
+                "declare a workgroup within the live device invocation limit",
+            ));
+        }
+        if device.shared_scratch_bytes_per_workgroup > 0
+            && shared_scratch_bytes > u64::from(device.shared_scratch_bytes_per_workgroup)
+        {
+            return Err(failure(
+                CompilerFailureKind::InvalidProgram,
+                path,
+                format!(
+                    "program declares {shared_scratch_bytes} workgroup scratch bytes; the device accepts {}",
+                    device.shared_scratch_bytes_per_workgroup
+                ),
+                "reduce the workgroup-scoped scratch to the live device budget",
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Workgroup-scoped scratch bytes one program declares.
+fn workgroup_scratch_bytes(program: &Program) -> u64 {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| buffer.access == BufferAccess::Workgroup)
+        .fold(0_u64, |total, buffer| {
+            let count = usize::try_from(buffer.count).unwrap_or(usize::MAX);
+            let bytes = buffer
+                .element
+                .packed_size_bytes(count)
+                .ok()
+                .flatten()
+                .and_then(|bytes| u64::try_from(bytes).ok())
+                .unwrap_or(0);
+            total.saturating_add(bytes)
+        })
+}
+
 /// A graph and complete immutable facts that passed request validation.
 pub struct ValidatedCompileRequest {
     graph: ProgramGraph,
     facts: ExternalFacts,
+    device: DeviceFacts,
     search_budget: SearchBudget,
     max_artifact_bytes: u64,
 }
@@ -312,6 +611,12 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn max_artifact_bytes(&self) -> u64 {
         self.max_artifact_bytes
+    }
+
+    /// Return the live device facts the plan was selected against.
+    #[must_use]
+    pub const fn device(&self) -> DeviceFacts {
+        self.device
     }
 }
 
@@ -354,6 +659,10 @@ pub(crate) enum CompilerFailureKind {
     MissingConstantIdentity,
     /// A constant identity was supplied for a non-constant graph value.
     UnknownConstantIdentity,
+    /// Device facts contradict what any device can report.
+    InvalidDeviceFacts,
+    /// A finalist could not be compiled for the target or timed on the device.
+    FinalistEvaluation,
 }
 
 impl CompilerFailureKind {
@@ -379,6 +688,8 @@ impl CompilerFailureKind {
             Self::InvalidSearchBudget => "MKC022_INVALID_SEARCH_BUDGET",
             Self::MissingConstantIdentity => "MKC023_MISSING_CONSTANT_IDENTITY",
             Self::UnknownConstantIdentity => "MKC024_UNKNOWN_CONSTANT_IDENTITY",
+            Self::InvalidDeviceFacts => "MKC025_INVALID_DEVICE_FACTS",
+            Self::FinalistEvaluation => "MKC026_FINALIST_EVALUATION",
         }
     }
 }
@@ -390,8 +701,11 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::UnknownSymbol
         | CompilerFailureKind::InvalidSearchBudget
         | CompilerFailureKind::MissingConstantIdentity
-        | CompilerFailureKind::UnknownConstantIdentity => DiagnosticStage::Validate,
-        CompilerFailureKind::DependencyCycle => DiagnosticStage::Plan,
+        | CompilerFailureKind::UnknownConstantIdentity
+        | CompilerFailureKind::InvalidDeviceFacts => DiagnosticStage::Validate,
+        CompilerFailureKind::DependencyCycle | CompilerFailureKind::FinalistEvaluation => {
+            DiagnosticStage::Plan
+        }
         CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
             DiagnosticStage::Lower
         }
@@ -435,12 +749,17 @@ pub struct NodeRecord {
     pub program: Vec<u8>,
 }
 
-/// Neutral per-node logical geometry.
+/// Compiler-selected per-node launch geometry.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeometryRecord {
-    /// Node whose program declares the geometry.
+    /// Node this geometry launches.
     pub node: ArtifactNodeId,
-    /// Program-declared workgroup dimensions.
+    /// Workgroup dimensions the search selected for this node.
+    ///
+    /// Every consumer launches this geometry. The workgroup the node program
+    /// declares is an input to the search, not its result, so a consumer that
+    /// reads the program instead of this record can launch a shape the emitted
+    /// module does not have.
     pub workgroup_size: [u32; 3],
 }
 
@@ -594,6 +913,47 @@ pub struct MaterializationRecord {
     pub reason: MaterializationReason,
 }
 
+/// How the runtime executes one compiled artifact.
+///
+/// The compiler decides this, not the dispatcher: the decision needs the launch
+/// count the caller declared and the device launch costs, both of which are
+/// compile-time facts recorded in the request. A consumer executes the mode the
+/// artifact names.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionMode {
+    /// One kernel launch per stage per submission.
+    Static,
+    /// One resident kernel that polls a device-side work queue for the whole
+    /// launch batch, paying one setup cost instead of one launch per item.
+    Persistent {
+        /// Launch overhead this mode removes, less the setup it pays, in
+        /// nanoseconds. Computed from the device launch costs and the declared
+        /// launch batch, and always positive: a non-positive figure is recorded
+        /// as [`Self::Static`].
+        saved_ns: u64,
+    },
+}
+
+/// Whether a device measurement selected the plan, and what it measured.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlanMeasurement {
+    /// The search budget allowed no measurement, so the plan is the analytic
+    /// winner and carries no measured device time.
+    Unbudgeted,
+    /// The device reports no launch timestamp, so nothing measured on it would
+    /// be a device time.
+    UntimedDevice,
+    /// Selected by lowest median device time across measured finalists.
+    Measured {
+        /// Timestamped launches performed against the winning finalist.
+        launches: u32,
+        /// Median device time of those launches in nanoseconds.
+        median_ns: u64,
+    },
+}
+
 /// Immutable compiler-selected whole-program plan.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SelectedPlan {
@@ -613,6 +973,10 @@ pub struct SelectedPlan {
     pub selection_cost: cost::CostBreakdown,
     /// Illegal producer-consumer fusions pruned with stable reasons.
     pub pruned_fusions: Vec<FusionRejection>,
+    /// How the runtime executes this artifact.
+    pub execution: ExecutionMode,
+    /// Whether a device measurement chose this plan over its finalists.
+    pub measurement: PlanMeasurement,
 }
 
 /// Deterministic identities establishing how an artifact was produced.
@@ -766,8 +1130,19 @@ impl Artifact {
     }
 }
 
-/// Compile one validated typed graph into a canonical backend-neutral artifact.
-pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileError> {
+/// Everything one compilation derives once and every finalist reuses.
+struct CompileContext {
+    source_graph: Digest,
+    nodes: Vec<NodeRecord>,
+    dependencies: Vec<DependencyEdge>,
+    facts: facts::PlanningFacts,
+    ranked: Vec<select::Selection>,
+    pruned_fusions: Vec<FusionRejection>,
+    work: SearchWork,
+}
+
+/// Rank every legal candidate for one validated request.
+fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext, CompileError> {
     let canonical_wire = request.graph.to_wire().map_err(|error| {
         failure(
             CompilerFailureKind::InvalidProgram,
@@ -777,7 +1152,6 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         )
     })?;
     let source_graph = domain_digest(SOURCE_DIGEST_DOMAIN, &canonical_wire);
-
     let nodes = request
         .graph
         .nodes()
@@ -798,23 +1172,80 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
             })
         })
         .collect::<Result<Vec<_>, CompileError>>()?;
-    let geometry = request
-        .graph
-        .nodes()
-        .iter()
-        .map(|node| GeometryRecord {
-            node: ArtifactNodeId(node.id.0),
-            workgroup_size: node.program.workgroup_size,
-        })
-        .collect::<Vec<_>>();
-
     let normalized = normalize::normalize(&request.graph)?;
     let dependencies = normalized.dependencies;
+    let planning_facts = facts::derive(
+        &request.graph,
+        &dependencies,
+        &request.facts.symbolic_bindings,
+    )?;
+    let search = search::explore(
+        &request.graph,
+        &planning_facts,
+        &dependencies,
+        request.search_budget,
+        request.device,
+    );
+    let ranked = select::rank(
+        search.candidates,
+        &planning_facts,
+        &dependencies,
+        request.device,
+    );
+    if ranked.is_empty() {
+        return Err(failure(
+            CompilerFailureKind::InvalidSearchBudget,
+            "search.candidates",
+            "schedule search scored no candidate plan",
+            "raise the candidate bound so the unfused baseline plan is explored",
+        ));
+    }
+    let pruned_fusions = search
+        .rejected
+        .into_iter()
+        .map(|rejection| FusionRejection {
+            from: rejection.edge.from,
+            to: rejection.edge.to,
+            value: rejection.edge.value,
+            reason: rejection.reason,
+        })
+        .collect();
+    Ok(CompileContext {
+        source_graph,
+        nodes,
+        dependencies,
+        facts: planning_facts,
+        ranked,
+        pruned_fusions,
+        work: search.work,
+    })
+}
+
+/// Turn one ranked candidate into a complete canonical artifact.
+fn assemble(
+    request: &ValidatedCompileRequest,
+    context: &CompileContext,
+    selection: &select::Selection,
+    work: SearchWork,
+    measurement: PlanMeasurement,
+) -> Result<Artifact, CompileError> {
     let artifact::ArtifactPlan {
         node_groups,
         stages,
+        geometry,
         selected_plan,
-    } = artifact::plan(&request.graph, &dependencies, request.search_budget)?;
+    } = artifact::plan(artifact::PlanInputs {
+        graph: &request.graph,
+        dependencies: &context.dependencies,
+        facts: &context.facts,
+        selection,
+        pruned_fusions: &context.pruned_fusions,
+        external: &request.facts,
+        device: request.device,
+        budget: request.search_budget,
+        work,
+        measurement,
+    })?;
     let (resources, resource_envelope) = build_resources(
         &request.graph,
         &request.facts.symbolic_bindings,
@@ -825,14 +1256,14 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
     let request_bytes =
         serde_json::to_vec(&RequestIdentity::from(request)).map_err(serialization_failure)?;
     let provenance = Provenance {
-        source_graph,
+        source_graph: context.source_graph,
         request: domain_digest(REQUEST_DIGEST_DOMAIN, &request_bytes),
         compiler_version: env!("CARGO_PKG_VERSION").to_string(),
     };
     let payload = ArtifactPayload {
         schema_version: ARTIFACT_SCHEMA_VERSION,
-        nodes,
-        dependencies,
+        nodes: context.nodes.clone(),
+        dependencies: context.dependencies.clone(),
         selected_plan,
         abi,
         resources,
@@ -860,12 +1291,250 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
     })
 }
 
+/// Compile one validated typed graph into a canonical backend-neutral artifact.
+///
+/// This path ranks candidates with the open cost model alone and records the
+/// winner as [`PlanMeasurement::Unbudgeted`]. A request that budgets on-device
+/// measurements is rejected here rather than compiled without spending them:
+/// [`compile_measured`] is the only path that can honour that budget.
+pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileError> {
+    if request.search_budget.max_measurements > 0 {
+        return Err(failure(
+            CompilerFailureKind::InvalidSearchBudget,
+            "request.search_budget.max_measurements",
+            "analytic compilation cannot spend an on-device measurement budget",
+            "compile through compile_measured with a finalist evaluator, or set max_measurements to zero",
+        ));
+    }
+    let context = prepare(request)?;
+    let selection = first_ranked(&context)?;
+    assemble(
+        request,
+        &context,
+        selection,
+        context.work,
+        PlanMeasurement::Unbudgeted,
+    )
+}
+
+/// Device access the compiler borrows to time its finalists.
+///
+/// The compiler owns which plans are finalists and how their times are compared.
+/// The caller owns the device: it supplies the target compiler that turns one
+/// artifact into loadable bytes, and a launch that returns the device time of
+/// one execution. Nothing here acquires a device, so a caller without one calls
+/// [`compile`] instead.
+pub trait FinalistEvaluator {
+    /// Target compiler that turns one candidate artifact into target bytes.
+    fn target_compiler(&self) -> &dyn TargetCompiler;
+
+    /// Launch `payload` once and return the device time of that launch in
+    /// nanoseconds. The time must come from the device, not the host clock.
+    fn measure(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<u64, TargetCompileError>;
+}
+
+/// Compile with the ranked finalists compiled for the target and timed on the
+/// device, selecting the plan with the lowest median device time.
+///
+/// The analytic ranking chooses which plans are worth a target compilation. The
+/// top `max_target_compilations` of them are compiled and each launched
+/// `max_measurements` times; the winner is the finalist with the lowest median.
+/// [`SearchWork::target_compilations`] and [`SearchWork::measurements`] carry the
+/// counts actually spent, and the recorded [`PlanMeasurement`] states whether a
+/// measurement decided the plan at all: a zero measurement budget records
+/// [`PlanMeasurement::Unbudgeted`] and a device with no launch timestamps records
+/// [`PlanMeasurement::UntimedDevice`], neither of which is reported as a measured
+/// selection.
+pub fn compile_measured(
+    request: &ValidatedCompileRequest,
+    evaluator: &dyn FinalistEvaluator,
+) -> Result<Artifact, CompileError> {
+    let context = prepare(request)?;
+    let budget = request.search_budget;
+    if budget.max_measurements == 0 || budget.max_target_compilations == 0 {
+        return assemble(
+            request,
+            &context,
+            first_ranked(&context)?,
+            context.work,
+            PlanMeasurement::Unbudgeted,
+        );
+    }
+    if !request.device.supports_device_timestamps() {
+        return assemble(
+            request,
+            &context,
+            first_ranked(&context)?,
+            context.work,
+            PlanMeasurement::UntimedDevice,
+        );
+    }
+
+    let finalists = context
+        .ranked
+        .len()
+        .min(budget.max_target_compilations as usize);
+    let started = Instant::now();
+    let mut work = context.work;
+    let mut winner: Option<(usize, u64, u32)> = None;
+    for index in 0..finalists {
+        let elapsed = u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        if elapsed >= budget.max_elapsed_ns {
+            break;
+        }
+        let provisional = assemble(
+            request,
+            &context,
+            &context.ranked[index],
+            context.work,
+            PlanMeasurement::Unbudgeted,
+        )?;
+        let payload = evaluator
+            .target_compiler()
+            .compile(&provisional)
+            .map_err(|error| finalist_failure(index, &error))?;
+        work.target_compilations = work.target_compilations.saturating_add(1);
+        let mut samples = Vec::with_capacity(budget.max_measurements as usize);
+        for _ in 0..budget.max_measurements {
+            let sample = evaluator
+                .measure(&provisional, &payload)
+                .map_err(|error| finalist_failure(index, &error))?;
+            samples.push(sample);
+            work.measurements = work.measurements.saturating_add(1);
+        }
+        samples.sort_unstable();
+        let launches = u32::try_from(samples.len()).unwrap_or(u32::MAX);
+        let Some(median) = samples.get(samples.len() / 2).copied() else {
+            continue;
+        };
+        if winner.is_none_or(|(_, best, _)| median < best) {
+            winner = Some((index, median, launches));
+        }
+    }
+    work.elapsed_ns = work
+        .elapsed_ns
+        .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
+    match winner {
+        Some((index, median_ns, launches)) => assemble(
+            request,
+            &context,
+            &context.ranked[index],
+            work,
+            PlanMeasurement::Measured {
+                launches,
+                median_ns,
+            },
+        ),
+        None => assemble(
+            request,
+            &context,
+            first_ranked(&context)?,
+            work,
+            PlanMeasurement::Unbudgeted,
+        ),
+    }
+}
+
+fn first_ranked(context: &CompileContext) -> Result<&select::Selection, CompileError> {
+    context.ranked.first().ok_or_else(|| {
+        failure(
+            CompilerFailureKind::InvalidSearchBudget,
+            "search.candidates",
+            "schedule search scored no candidate plan",
+            "raise the candidate bound so the unfused baseline plan is explored",
+        )
+    })
+}
+
+fn finalist_failure(index: usize, error: &TargetCompileError) -> CompileError {
+    failure(
+        CompilerFailureKind::FinalistEvaluation,
+        format!("search.finalists[{index}]"),
+        error.to_string(),
+        "supply a finalist evaluator whose target compiler and device accept every ranked plan",
+    )
+}
+
+/// Every fact that makes one compilation of one graph produce one artifact.
+///
+/// Device facts belong here because the plan is selected against them: the same
+/// graph compiled for a device with a different capability snapshot, invocation
+/// limit, occupancy budget, or launch cost is a different compilation and must
+/// not reuse a cached artifact.
 #[derive(Serialize)]
 struct RequestIdentity<'a> {
     configuration_digest: Digest,
     symbolic_bindings: &'a BTreeMap<String, u64>,
     constant_identities: Vec<(u32, Digest)>,
+    expected_launch_batch: u32,
     search_budget: SearchBudget,
+    device_capabilities: DeviceCapabilityIdentity,
+    device_cooperative_launch: bool,
+    device_timestamps: bool,
+    device_max_invocations_per_workgroup: u32,
+    device_registers_per_invocation: u32,
+    device_shared_scratch_bytes_per_workgroup: u32,
+    device_per_launch_overhead_ns: u64,
+    device_persistent_setup_overhead_ns: u64,
+}
+
+/// Serializable projection of the live capability snapshot.
+///
+/// [`BackendCapabilities`] is owned by the foundation validator and carries no
+/// serialization, so artifact identity projects every field it exposes. A field
+/// added there and not added here would silently share one artifact identity
+/// between two devices that disagree.
+#[derive(Serialize)]
+struct DeviceCapabilityIdentity {
+    supports_subgroup_ops: bool,
+    supports_indirect_dispatch: bool,
+    supports_specialization_constants: bool,
+    supports_distributed_collectives: bool,
+    has_mul_high: bool,
+    has_dual_issue_fp32_int32: bool,
+    has_tensor_core_int: bool,
+    has_native_f16: bool,
+    has_warp_shuffle: bool,
+    has_shared_memory: bool,
+    has_transcendental_polynomial_emit: bool,
+    max_native_int_width: u32,
+}
+
+impl From<BackendCapabilities> for DeviceCapabilityIdentity {
+    fn from(capabilities: BackendCapabilities) -> Self {
+        let BackendCapabilities {
+            supports_subgroup_ops,
+            supports_indirect_dispatch,
+            supports_specialization_constants,
+            supports_distributed_collectives,
+            has_mul_high,
+            has_dual_issue_fp32_int32,
+            has_tensor_core_int,
+            has_native_f16,
+            has_warp_shuffle,
+            has_shared_memory,
+            has_transcendental_polynomial_emit,
+            max_native_int_width,
+        } = capabilities;
+        Self {
+            supports_subgroup_ops,
+            supports_indirect_dispatch,
+            supports_specialization_constants,
+            supports_distributed_collectives,
+            has_mul_high,
+            has_dual_issue_fp32_int32,
+            has_tensor_core_int,
+            has_native_f16,
+            has_warp_shuffle,
+            has_shared_memory,
+            has_transcendental_polynomial_emit,
+            max_native_int_width,
+        }
+    }
 }
 
 impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
@@ -879,7 +1548,18 @@ impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
                 .iter()
                 .map(|(id, digest)| (id.0, *digest))
                 .collect(),
+            expected_launch_batch: request.facts.expected_launch_batch,
             search_budget: request.search_budget,
+            device_capabilities: request.device.capabilities().into(),
+            device_cooperative_launch: request.device.supports_cooperative_launch(),
+            device_timestamps: request.device.supports_device_timestamps(),
+            device_max_invocations_per_workgroup: request.device.max_invocations_per_workgroup(),
+            device_registers_per_invocation: request.device.registers_per_invocation(),
+            device_shared_scratch_bytes_per_workgroup: request
+                .device
+                .shared_scratch_bytes_per_workgroup(),
+            device_per_launch_overhead_ns: request.device.per_launch_overhead_ns(),
+            device_persistent_setup_overhead_ns: request.device.persistent_setup_overhead_ns(),
         }
     }
 }
@@ -1148,6 +1828,70 @@ fn build_materializations(
     records
 }
 
+/// Exact element count of one graph value under validated bindings.
+fn value_element_count(
+    value: &ProgramGraphValue,
+    bindings: &BTreeMap<String, u64>,
+) -> Result<u64, CompileError> {
+    let mut element_count = 1u64;
+    for dim in &value.contract.shape {
+        let extent = match dim {
+            ShapeDim::Known(extent) => *extent,
+            ShapeDim::Symbol(symbol) => *bindings.get(symbol).ok_or_else(|| {
+                failure(
+                    CompilerFailureKind::MissingSymbol,
+                    format!("graph.values[{}].shape", value.name),
+                    format!("symbolic extent `{symbol}` has no exact binding"),
+                    "bind every symbolic graph dimension before compilation",
+                )
+            })?,
+        };
+        element_count = element_count.checked_mul(extent).ok_or_else(|| {
+            overflow(
+                format!("graph.values[{}].shape", value.name),
+                "shape element count exceeds u64",
+            )
+        })?;
+    }
+    Ok(element_count)
+}
+
+/// Exact packed byte length of one graph value under validated bindings.
+///
+/// The cost model prices materialized traffic in bytes and the resource records
+/// report the same number, so both read it here.
+fn value_byte_count(
+    value: &ProgramGraphValue,
+    bindings: &BTreeMap<String, u64>,
+) -> Result<u64, CompileError> {
+    let element_count = value_element_count(value, bindings)?;
+    let host_count = usize::try_from(element_count).map_err(|_| {
+        overflow(
+            format!("graph.values[{}].shape", value.name),
+            "shape element count exceeds addressable packed-size input",
+        )
+    })?;
+    let byte_count = value
+        .contract
+        .dtype
+        .packed_size_bytes(host_count)
+        .map_err(|message| overflow(format!("graph.values[{}].dtype", value.name), message))?
+        .ok_or_else(|| {
+            failure(
+                CompilerFailureKind::UnsizedResource,
+                format!("graph.values[{}].dtype", value.name),
+                "value representation has no fixed packed byte size",
+                "resolve the representation to a fixed-width typed value before compilation",
+            )
+        })?;
+    u64::try_from(byte_count).map_err(|_| {
+        overflow(
+            format!("graph.values[{}]", value.name),
+            "packed byte count exceeds u64",
+        )
+    })
+}
+
 fn build_resources(
     graph: &ProgramGraph,
     bindings: &BTreeMap<String, u64>,
@@ -1157,44 +1901,8 @@ fn build_resources(
     let final_stage = stages.iter().copied().max().unwrap_or(0);
     let mut resources = Vec::with_capacity(graph.values().len());
     for value in graph.values() {
-        let mut element_count = 1u64;
-        for dim in &value.contract.shape {
-            let extent = match dim {
-                ShapeDim::Known(extent) => *extent,
-                ShapeDim::Symbol(symbol) => bindings[symbol],
-            };
-            element_count = element_count.checked_mul(extent).ok_or_else(|| {
-                overflow(
-                    format!("graph.values[{}].shape", value.name),
-                    "shape element count exceeds u64",
-                )
-            })?;
-        }
-        let host_count = usize::try_from(element_count).map_err(|_| {
-            overflow(
-                format!("graph.values[{}].shape", value.name),
-                "shape element count exceeds addressable packed-size input",
-            )
-        })?;
-        let byte_count = value
-            .contract
-            .dtype
-            .packed_size_bytes(host_count)
-            .map_err(|message| overflow(format!("graph.values[{}].dtype", value.name), message))?
-            .ok_or_else(|| {
-                failure(
-                    CompilerFailureKind::UnsizedResource,
-                    format!("graph.values[{}].dtype", value.name),
-                    "value representation has no fixed packed byte size",
-                    "resolve the representation to a fixed-width typed value before compilation",
-                )
-            })?;
-        let byte_count = u64::try_from(byte_count).map_err(|_| {
-            overflow(
-                format!("graph.values[{}]", value.name),
-                "packed byte count exceeds u64",
-            )
-        })?;
+        let element_count = value_element_count(value, bindings)?;
+        let byte_count = value_byte_count(value, bindings)?;
         let producer_stage = value.producer.map_or(0, |producer| {
             stages[node_groups[producer.0 as usize].0 as usize]
         });

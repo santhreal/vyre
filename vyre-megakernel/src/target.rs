@@ -478,6 +478,12 @@ fn selected_abi(artifact: &Artifact, module: &SelectedModule) -> ArtifactAbi {
     }
 }
 
+/// Decode one selected group's programs at the geometry the search selected.
+///
+/// The workgroup a node program declares is an input to the compiler search, not
+/// its result. The artifact records the selected geometry per node, so the
+/// decoded programs are set to it before fusion and the emitted module declares
+/// the shape every consumer launches.
 fn decode_group(
     artifact: &Artifact,
     group: &FusionRecord,
@@ -497,12 +503,26 @@ fn decode_group(
                         group.id.0, node.0
                     ))
                 })?;
-            Program::from_wire(&record.program).map_err(|error| {
+            let mut program = Program::from_wire(&record.program).map_err(|error| {
                 TargetCompileError::InvalidArtifact(format!(
                     "node {} canonical Program failed to decode: {error}",
                     node.0
                 ))
-            })
+            })?;
+            let geometry = artifact
+                .geometry()
+                .iter()
+                .find(|geometry| geometry.node == *node)
+                .ok_or_else(|| {
+                    TargetCompileError::InvalidArtifact(format!(
+                        "node {} has no selected launch geometry",
+                        node.0
+                    ))
+                })?;
+            if program.workgroup_size != geometry.workgroup_size {
+                program.set_workgroup_size(geometry.workgroup_size);
+            }
+            Ok::<Program, TargetCompileError>(program)
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(SelectedModule {

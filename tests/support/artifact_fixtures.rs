@@ -24,7 +24,7 @@ use vyre_foundation::ir::{
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, Digest, ExternalFacts,
+    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     SearchBudget, TargetEntryPoint, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
@@ -108,6 +108,7 @@ pub(crate) fn compile_graph(graph: ProgramGraph, facts_seed: u8) -> Artifact {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([facts_seed; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
         1_000_000,
     )

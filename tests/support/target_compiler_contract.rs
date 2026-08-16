@@ -30,7 +30,7 @@ use vyre_foundation::ir::{
     ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    Artifact, ArtifactValueId, CompileRequest, Digest, ExternalFacts, SearchBudget,
+    Artifact, ArtifactValueId, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
     TargetModuleBundle, TargetPayload,
 };
 
@@ -91,6 +91,7 @@ pub(crate) fn single_lane_artifact(access: BufferAccess, facts_seed: u8) -> Arti
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([facts_seed; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
         1_000_000,
     )

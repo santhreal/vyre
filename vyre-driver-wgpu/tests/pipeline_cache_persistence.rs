@@ -12,7 +12,7 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
 const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";
@@ -38,6 +38,7 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(128, 128, 0, 0, 128),
         60_000,
     )
