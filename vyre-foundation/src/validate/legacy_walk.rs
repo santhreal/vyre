@@ -432,7 +432,7 @@ mod tests {
         let mut scope: Scope = FxHashMap::default();
         let mut limits = LimitState::default();
         let mut report = ValidationReport::default();
-        let options = ValidationOptions::default().with_allow_shadowing(true);
+        let options = ValidationOptions::default().with_shadowing(true);
 
         validate_nodes(
             &nodes,
@@ -472,7 +472,7 @@ mod tests {
         let mut scope: Scope = FxHashMap::default();
         let mut limits = LimitState::default();
         let mut report = ValidationReport::default();
-        let options = ValidationOptions::default().with_allow_shadowing(true);
+        let options = ValidationOptions::default().with_shadowing(true);
 
         validate_nodes(
             &nodes,
