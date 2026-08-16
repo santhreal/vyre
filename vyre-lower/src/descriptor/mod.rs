@@ -115,9 +115,35 @@ pub enum LiteralValue {
     /// Signed 32-bit literal.
     I32(i32),
     /// 32-bit floating-point literal.
-    F32(f32),
+    F32(#[serde(with = "literal_f32")] f32),
     /// Boolean literal.
     Bool(bool),
+}
+
+/// Serde representation of an f32 literal: its IEEE-754 bit pattern.
+///
+/// A descriptor travels to a materializer inside a target-module bundle, and
+/// that bundle is JSON, which has no non-finite number. `serde_json` writes
+/// `f32::NEG_INFINITY` as `null` and then refuses to read `null` back as an
+/// f32, so every op whose literal pool holds an infinity produced a bundle no
+/// backend could decode: `vyre-libs::nn::top_k` and `nn::softmax_top_k` seed a
+/// running maximum with negative infinity and failed target-module decode with
+/// `invalid type: null, expected f32`.
+///
+/// The bit pattern is exact for every f32, including each NaN payload, in every
+/// serde format, so the literal an emitter reads is the literal the lowering
+/// chose. Round-tripping is a documented property of this module, so the
+/// encoding belongs to the variant rather than to any one format's writer.
+mod literal_f32 {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub(super) fn serialize<S: Serializer>(value: &f32, serializer: S) -> Result<S::Ok, S::Error> {
+        value.to_bits().serialize(serializer)
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f32, D::Error> {
+        u32::deserialize(deserializer).map(f32::from_bits)
+    }
 }
 
 /// Stable identifier for a named entity (variable, region label, async
