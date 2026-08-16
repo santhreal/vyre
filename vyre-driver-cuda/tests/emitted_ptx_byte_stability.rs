@@ -28,7 +28,7 @@ use vyre_lower::artifact_golden::{
 };
 use vyre_lower::program_stability_corpus::{self, StabilityCase};
 use vyre_megakernel::{
-    Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompiler, TargetPayload,
+    Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetCompiler, TargetPayload,
 };
 
 fn golden_path() -> PathBuf {
@@ -50,6 +50,7 @@ fn artifact_for(case: &StabilityCase) -> Artifact {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
         1_000_000,
     )

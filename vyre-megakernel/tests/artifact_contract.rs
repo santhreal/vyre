@@ -11,7 +11,7 @@ use vyre_foundation::ir::{
 use vyre_megakernel::{
     compile,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
-    Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest, DependencyKind,
+    Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest, DeviceFacts, DependencyKind,
     Digest, ExternalFacts, SearchBudget,
 };
 
@@ -243,7 +243,7 @@ fn fusion_pair_graph(
 }
 
 fn budget() -> SearchBudget {
-    SearchBudget::new(128, 1_000_000, 8, 4, 1_000_000_000)
+    SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000)
 }
 
 fn facts() -> ExternalFacts {
@@ -259,7 +259,13 @@ fn request_with(
     budget: SearchBudget,
     max_artifact_bytes: u64,
 ) -> vyre_megakernel::ValidatedCompileRequest {
-    CompileRequest::new(whole_graph(), facts, budget, max_artifact_bytes)
+    CompileRequest::new(
+        whole_graph(),
+        facts,
+        DeviceFacts::unknown(),
+        budget,
+        max_artifact_bytes,
+    )
         .validate()
         .expect("fixture request must validate")
 }
@@ -431,7 +437,7 @@ fn external_facts_and_search_budget_change_artifact_identity() {
 
     let searched = compile(&request_with(
         facts(),
-        SearchBudget::new(64, 1_000_000, 8, 4, 1_000_000_000),
+        SearchBudget::new(64, 1_000_000, 8, 0, 1_000_000_000),
         LIMIT,
     ))
     .unwrap();
@@ -443,7 +449,13 @@ fn external_facts_and_search_budget_change_artifact_identity() {
 fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
     let mut missing_symbol = facts();
     missing_symbol.symbolic_bindings.clear();
-    let error = CompileRequest::new(whole_graph(), missing_symbol, budget(), LIMIT)
+    let error = CompileRequest::new(
+        whole_graph(),
+        missing_symbol,
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
         .validate()
         .err()
         .expect("missing symbol must fail");
@@ -455,7 +467,13 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
 
     let mut missing_constant = facts();
     missing_constant.constant_identities.clear();
-    let error = CompileRequest::new(whole_graph(), missing_constant, budget(), LIMIT)
+    let error = CompileRequest::new(
+        whole_graph(),
+        missing_constant,
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
         .validate()
         .err()
         .expect("missing constant identity must fail");
@@ -475,6 +493,7 @@ fn zero_mandatory_search_bound_is_rejected() {
     let error = CompileRequest::new(
         whole_graph(),
         facts(),
+        DeviceFacts::unknown(),
         SearchBudget::new(0, 1, 0, 0, 1),
         LIMIT,
     )
@@ -514,13 +533,109 @@ fn compile_request_accepts_semantically_valid_subgroup_ir() {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|capabilities| capabilities.supports_subgroup_ops = true),
         budget(),
         LIMIT,
     )
     .validate()
-    .expect("neutral compiler validation must accept subgroup semantics");
+    .expect("compiler validation must accept subgroup semantics on a subgroup device");
 
-    compile(&request).expect("semantically valid subgroup IR must compile neutrally");
+    compile(&request).expect("semantically valid subgroup IR must compile on a subgroup device");
+}
+
+/// WHY: 150.11. Validation reads the live capability snapshot, so a program that
+/// needs a capability the device lacks fails at compile with the device-support
+/// diagnostic. The pre-change compiler validated against a constant whose every
+/// flag was true, which admitted this program on every device.
+///
+/// The capability axis is derived from the program: `program_caps::scan` reports
+/// what the IR needs, and the test flips exactly the reported flag off.
+#[test]
+fn device_without_a_needed_capability_rejects_the_program() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32).with_count(1)],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::subgroup_add(Expr::u32(1)),
+        )],
+    );
+    let required = vyre_foundation::program_caps::scan(&program);
+    assert!(
+        required.subgroup_ops,
+        "fixture must need the capability the device denies"
+    );
+    let graph = ProgramGraph::from_program("subgroup", program).unwrap();
+    let error = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|capabilities| capabilities.supports_subgroup_ops = false),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .err()
+    .expect("a device without the needed capability must fail validation");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "V041",
+        "the live capability snapshot must reach IR validation"
+    );
+}
+
+/// WHY: 150.11. A whole-grid fence runs in one kernel only under a cooperative
+/// launch. Without one the plan is unrunnable, so the compiler rejects it instead
+/// of leaving the target emitter to fail later.
+#[test]
+fn grid_sync_without_cooperative_launch_fails_at_compile() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32).with_count(1)],
+        [32, 1, 1],
+        vec![
+            Node::store("out", Expr::u32(0), Expr::u32(1)),
+            Node::Barrier {
+                ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
+            },
+        ],
+    );
+    assert!(
+        vyre_megakernel::grid_sync::requires_grid_sync(&program),
+        "fixture must carry a whole-grid fence"
+    );
+    let graph = ProgramGraph::from_program("fence", program).unwrap();
+    let error = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .err()
+    .expect("a device without cooperative launch must reject a whole-grid fence");
+    assert_eq!(error.diagnostic.code.as_str(), "MKC001_INVALID_PROGRAM");
+}
+
+/// Device facts stating one capability decision, with every other capability
+/// present and generous budgets, so a test isolates the flag it flips.
+fn device_with(edit: impl FnOnce(&mut vyre_foundation::validate::BackendCapabilities)) -> DeviceFacts {
+    let mut capabilities = vyre_foundation::validate::BackendCapabilities {
+        supports_subgroup_ops: true,
+        supports_indirect_dispatch: true,
+        supports_specialization_constants: true,
+        supports_distributed_collectives: true,
+        has_mul_high: true,
+        has_dual_issue_fp32_int32: true,
+        has_tensor_core_int: true,
+        has_native_f16: true,
+        has_warp_shuffle: true,
+        has_shared_memory: true,
+        has_transcendental_polynomial_emit: true,
+        max_native_int_width: 64,
+    };
+    edit(&mut capabilities);
+    DeviceFacts::new(capabilities, 1024)
 }
 
 /// WHY: resource arithmetic must never wrap.
@@ -541,6 +656,7 @@ fn resource_shape_overflow_has_stable_diagnostic() {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         budget(),
         LIMIT,
     )

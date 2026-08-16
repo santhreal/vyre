@@ -2,7 +2,7 @@ use crate::{
     candidate::CandidatePlan,
     cost::{evaluate, CostBreakdown},
     facts::PlanningFacts,
-    DependencyEdge,
+    DependencyEdge, DeviceFacts,
 };
 
 #[derive(Debug)]
@@ -11,22 +11,34 @@ pub(crate) struct Selection {
     pub(crate) cost: CostBreakdown,
 }
 
-/// Lowest-cost candidate, or nothing when the search scored no plan at all.
-pub(crate) fn choose(
+/// Every scored candidate, cheapest first.
+///
+/// Ordering is total cost, then the group vector, then the proposed launch
+/// width, so two candidates that cost the same are ordered by content and one
+/// compilation of one graph selects one plan.
+pub(crate) fn rank(
     candidates: Vec<CandidatePlan>,
     facts: &PlanningFacts,
     dependencies: &[DependencyEdge],
-) -> Option<Selection> {
-    candidates
+    device: DeviceFacts,
+) -> Vec<Selection> {
+    let mut ranked = candidates
         .into_iter()
         .map(|candidate| {
-            let cost = evaluate(&candidate, facts, dependencies);
+            let cost = evaluate(&candidate, facts, dependencies, device);
             Selection { candidate, cost }
         })
-        .min_by(|left, right| {
-            left.cost
-                .total
-                .cmp(&right.cost.total)
-                .then_with(|| left.candidate.node_groups.cmp(&right.candidate.node_groups))
-        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|left, right| {
+        left.cost
+            .total
+            .cmp(&right.cost.total)
+            .then_with(|| left.candidate.node_groups.cmp(&right.candidate.node_groups))
+            .then_with(|| {
+                left.candidate
+                    .workgroup_width
+                    .cmp(&right.candidate.workgroup_width)
+            })
+    });
+    ranked
 }

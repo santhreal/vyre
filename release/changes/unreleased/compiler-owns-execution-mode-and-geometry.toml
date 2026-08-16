@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Persistent-kernel residency and launch geometry are compiler decisions. The dispatch policy bundle carries the artifact's ExecutionMode instead of deciding residency from a batch shape, so a Static artifact can never dispatch as a persistent kernel, and the driver launch resolver treats a recorded artifact geometry as authoritative over the launch tuner and dispatch overrides. A target descriptor that records no workgroup geometry fails the launch instead of falling back to a declared or tuned width."

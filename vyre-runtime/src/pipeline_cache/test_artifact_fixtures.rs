@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 use vyre_foundation::ir::{
     BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{compile, Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
 pub(crate) fn tiny_artifact() -> Artifact {
     artifact_for_program(Program::wrapped(
@@ -51,6 +51,7 @@ pub(crate) fn artifact_for_program(program: Program) -> Artifact {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
         1_000_000,
     )

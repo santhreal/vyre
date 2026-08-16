@@ -26,7 +26,7 @@ use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
 use vyre_libs::security::taint_pollution;
 use vyre_megakernel::{
-    CompileRequest, Digest, ExternalFacts, SearchBudget, ValidatedCompileRequest,
+    CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, ValidatedCompileRequest,
 };
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
@@ -49,6 +49,9 @@ fn validated(program: Program) -> ValidatedCompileRequest {
     CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        // A device with no cooperative launch is the point: the planner cut removes
+        // the fence before device admission, so admission must accept the program.
+        DeviceFacts::unknown(),
         SearchBudget::new(128, 1_000_000, 8, 4, 1_000_000_000),
         1 << 24,
     )

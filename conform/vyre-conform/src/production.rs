@@ -10,7 +10,7 @@ use vyre_runtime::artifact_admission::{ArtifactSession, ArtifactSessionError};
 
 const MAX_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 const CONFORMANCE_SEARCH_BUDGET: SearchBudget =
-    SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000);
+    SearchBudget::new(256, 100_000, 1, 1, 1_000_000_000);
 
 /// Failure in the production conformance route.
 #[derive(Debug, Error)]
@@ -41,9 +41,15 @@ impl ProductionSession {
     ) -> Result<Self, ProductionError> {
         let graph = ProgramGraph::from_program("main", program.clone())
             .map_err(|error| ProductionError::Compile(error.to_string()))?;
+        let device = registration
+            .acquire()
+            .map_err(|error| ProductionError::Dispatch(error.to_string()))?
+            .device_profile()
+            .compile_facts();
         let request = CompileRequest::new(
             graph,
             ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            device,
             CONFORMANCE_SEARCH_BUDGET,
             MAX_ARTIFACT_BYTES,
         )

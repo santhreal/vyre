@@ -3,8 +3,9 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use thiserror::Error;
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, CompileError, Diagnostic, TargetCompileError, TargetPayload,
-    TargetPayloadFormat, ValidatedCompileRequest,
+    Artifact, ArtifactEnvelope, CompileError, Diagnostic, FinalistEvaluator, ResourceAbiRecord,
+    TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
+    ValidatedCompileRequest,
 };
 
 use crate::pipeline_cache::{PipelineCacheStore, PipelineFingerprint};
@@ -170,8 +171,14 @@ impl ArtifactSession {
         request: &ValidatedCompileRequest,
         materializer: Arc<dyn ArtifactMaterializer>,
     ) -> Result<Self, ArtifactSessionError> {
-        let artifact = vyre_megakernel::compile(request)?;
         let compiler = registration.target_compiler()?;
+        let artifact = vyre_megakernel::compile_measured(
+            request,
+            &DeviceFinalists {
+                compiler: compiler.as_ref(),
+                materializer: materializer.as_ref(),
+            },
+        )?;
         let envelope = vyre_megakernel::attach_target(artifact, compiler.as_ref())?;
         Self::from_envelope_with_materializer(registration, envelope, materializer)
     }
@@ -401,21 +408,7 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         let artifact = state.admitted.neutral();
-        let mut resources = artifact
-            .abi()
-            .resources
-            .iter()
-            .filter(|resource| match resource.access {
-                AbiAccess::ReadOnly | AbiAccess::Uniform => true,
-                AbiAccess::ReadWrite => artifact
-                    .resources()
-                    .iter()
-                    .find(|record| record.value == resource.value)
-                    .is_none_or(|record| record.lifetime != ResourceLifetime::Output),
-                AbiAccess::WriteOnly => false,
-            })
-            .collect::<Vec<_>>();
-        resources.sort_unstable_by_key(|resource| resource.slot);
+        let resources = host_input_resources(artifact);
         if resources.len() != inputs.len() {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
@@ -616,4 +609,86 @@ fn validate_instance(
         });
     }
     Ok(())
+}
+
+/// Artifact ABI resources the caller supplies host bytes for, in slot order.
+///
+/// Write-only values and outputs are produced by the device, so only read-visible
+/// values need bytes. Measurement and caller submission select the same set: a
+/// measured launch that bound a different set would not be timing the launch the
+/// caller performs.
+fn host_input_resources(artifact: &Artifact) -> Vec<&ResourceAbiRecord> {
+    let mut resources = artifact
+        .abi()
+        .resources
+        .iter()
+        .filter(|resource| match resource.access {
+            AbiAccess::ReadOnly | AbiAccess::Uniform => true,
+            AbiAccess::ReadWrite => artifact
+                .resources()
+                .iter()
+                .find(|record| record.value == resource.value)
+                .is_none_or(|record| record.lifetime != ResourceLifetime::Output),
+            AbiAccess::WriteOnly => false,
+        })
+        .collect::<Vec<_>>();
+    resources.sort_unstable_by_key(|resource| resource.slot);
+    resources
+}
+
+/// Compiler finalist evaluation on the acquired device.
+///
+/// The compiler decides which plans are finalists; this supplies the device half:
+/// the registered target compiler, and one materialized launch per measurement
+/// whose duration is the device timestamp the backend reports. Inputs are zero
+/// filled because the measurement times the selected schedule, and a compiler
+/// has no caller data at compile time.
+struct DeviceFinalists<'a> {
+    compiler: &'a dyn TargetCompiler,
+    materializer: &'a dyn ArtifactMaterializer,
+}
+
+impl FinalistEvaluator for DeviceFinalists<'_> {
+    fn target_compiler(&self) -> &dyn TargetCompiler {
+        self.compiler
+    }
+
+    fn measure(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<u64, TargetCompileError> {
+        let instance = self
+            .materializer
+            .materialize(artifact, payload)
+            .map_err(measurement_failure)?;
+        let mut bindings = BindingSet::new(artifact.digest());
+        for resource in host_input_resources(artifact) {
+            let byte_count = artifact
+                .resources()
+                .iter()
+                .find(|record| record.value == resource.value)
+                .map_or(0, |record| record.byte_count);
+            let byte_count = usize::try_from(byte_count).map_err(|_| {
+                TargetCompileError::Unsupported(format!(
+                    "artifact value {} needs {byte_count} bytes, which exceeds host addressing",
+                    resource.value.0
+                ))
+            })?;
+            bindings.insert(resource.value, BoundResource::Host(vec![0; byte_count]));
+        }
+        let completion = instance
+            .submit(bindings)
+            .and_then(|submission| submission.wait())
+            .map_err(measurement_failure)?;
+        completion.device_ns.ok_or_else(|| {
+            TargetCompileError::Unsupported(
+                "device reported no launch duration for a finalist measurement".to_string(),
+            )
+        })
+    }
+}
+
+fn measurement_failure(error: BackendError) -> TargetCompileError {
+    TargetCompileError::Unsupported(format!("finalist measurement failed on device: {error}"))
 }

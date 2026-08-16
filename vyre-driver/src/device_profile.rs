@@ -45,6 +45,15 @@ pub struct DeviceProfile {
     pub supports_indirect_dispatch: bool,
     /// The backend lowers distributed collective communication nodes.
     pub supports_distributed_collectives: bool,
+    /// The device can launch a cooperative grid, so a whole-grid fence runs
+    /// inside one kernel instead of needing a launch boundary per fence.
+    pub supports_cooperative_launch: bool,
+    /// Measured host cost of one kernel launch in nanoseconds, or `0` when the
+    /// backend has not measured it.
+    pub per_launch_overhead_ns: u64,
+    /// Measured one-time cost of bringing up persistent execution in
+    /// nanoseconds, or `0` when the backend has not measured it.
+    pub persistent_setup_overhead_ns: u64,
     /// The backend supports compile-time specialization constants.
     pub supports_specialization_constants: bool,
     /// The backend lowers binary16 natively.
@@ -118,6 +127,9 @@ impl DeviceProfile {
             supports_subgroup_ops: false,
             supports_indirect_dispatch: false,
             supports_distributed_collectives: false,
+            supports_cooperative_launch: false,
+            per_launch_overhead_ns: 0,
+            persistent_setup_overhead_ns: 0,
             supports_specialization_constants: false,
             supports_f16: false,
             supports_bf16: false,
@@ -167,6 +179,9 @@ impl DeviceProfile {
             supports_specialization_constants: false,
             supports_f16: backend.supports_f16(),
             supports_bf16: backend.supports_bf16(),
+            supports_cooperative_launch: backend.supports_grid_sync(),
+            per_launch_overhead_ns: 0,
+            persistent_setup_overhead_ns: 0,
             supports_trap_propagation: false,
             supports_tensor_cores: backend.supports_tensor_cores(),
             has_mul_high: false,
@@ -212,6 +227,24 @@ impl DeviceProfile {
             supports_distributed_collectives: self.supports_distributed_collectives,
             max_native_int_width: self.max_native_int_width,
         }
+    }
+
+    /// Whole-program compile facts.
+    ///
+    /// The compiler validates and ranks against these, so every field is what the
+    /// backend reported. A zero means the backend measured nothing, and the
+    /// compiler treats a zero budget or a zero cost as unknown rather than as a
+    /// limit of zero.
+    #[must_use]
+    pub fn compile_facts(self) -> vyre_megakernel::DeviceFacts {
+        vyre_megakernel::DeviceFacts::new(
+            self.validation_capabilities(),
+            self.max_invocations_per_workgroup,
+        )
+        .with_cooperative_launch(self.supports_cooperative_launch)
+        .with_device_timestamps(self.supports_device_timestamps)
+        .with_occupancy(self.regs_per_thread_max, self.max_shared_memory_bytes)
+        .with_launch_costs(self.per_launch_overhead_ns, self.persistent_setup_overhead_ns)
     }
 
     /// Optimizer capability projection.
@@ -289,6 +322,9 @@ mod tests {
             supports_subgroup_ops: true,
             supports_indirect_dispatch: true,
             supports_distributed_collectives: true,
+            supports_cooperative_launch: true,
+            per_launch_overhead_ns: 5_000,
+            persistent_setup_overhead_ns: 25_000,
             supports_specialization_constants: true,
             supports_f16: true,
             supports_bf16: false,

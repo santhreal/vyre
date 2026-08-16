@@ -9,7 +9,9 @@ use vyre_foundation::ir::{
     BufferAccess, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_libs::math::scan::scan_prefix_sum;
-use vyre_megakernel::{compile, Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{
+    compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
+};
 
 const ELEMENTS: u32 = 256;
 
@@ -70,6 +72,7 @@ fn compile_artifact(program: &Program) -> Result<Artifact, Box<dyn std::error::E
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
         1_000_000,
     )

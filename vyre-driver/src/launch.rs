@@ -206,6 +206,43 @@ pub fn resolve_launch_workgroup(
     resolve_launch_workgroup_for_mode(program, config, limits, element_count, Mode::from_env())
 }
 
+/// Where a launch's workgroup shape comes from.
+///
+/// A program compiled through the whole-program compiler carries a geometry the
+/// compiler searched for and recorded in the artifact, and the emitted module
+/// declares that shape. Launching such a module at another width runs a kernel
+/// nobody compiled, so the recorded geometry is authoritative and the launch
+/// tuner never sees the launch.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LaunchGeometry {
+    /// No compiled artifact governs this launch, so the tuner may choose a width.
+    Untracked,
+    /// The artifact recorded this workgroup for the node being launched.
+    Compiled([u32; 3]),
+}
+
+impl LaunchGeometry {
+    /// Read the geometry a target descriptor recorded for one artifact node.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError::InvalidProgram`] when the record is absent. A
+    /// descriptor with a zero extent recorded nothing, and falling back to a
+    /// declared or tuned width there would launch a shape the artifact never
+    /// authenticated.
+    pub fn from_recorded(workgroup: [u32; 3], backend: &str) -> Result<Self, BackendError> {
+        if workgroup.contains(&0) {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: backend `{backend}` received an authenticated target whose descriptor records no workgroup geometry ({workgroup:?}). \
+                     Recompile the artifact with a compiler that records the selected geometry for every node; the driver must not choose one."
+                ),
+            });
+        }
+        Ok(Self::Compiled(workgroup))
+    }
+}
+
 /// Resolve the backend-visible workgroup shape with an explicit tuner mode.
 ///
 /// This is public so backends whose shader/pipeline compilation must include
@@ -218,6 +255,33 @@ pub fn resolve_launch_workgroup_for_mode(
     element_count: u32,
     mode: Mode,
 ) -> [u32; 3] {
+    resolve_launch_workgroup_for_geometry(
+        program,
+        config,
+        limits,
+        element_count,
+        mode,
+        LaunchGeometry::Untracked,
+    )
+}
+
+/// Resolve the backend-visible workgroup shape against a launch's geometry source.
+///
+/// A recorded compiled geometry outranks every dispatch override and the launch
+/// tuner. Only an untracked launch reaches the tuner, so a compiled group's
+/// workgroup cannot change between compilation and dispatch.
+#[must_use]
+pub fn resolve_launch_workgroup_for_geometry(
+    program: &Program,
+    config: &DispatchConfig,
+    limits: LaunchGeometryLimits,
+    element_count: u32,
+    mode: Mode,
+    geometry: LaunchGeometry,
+) -> [u32; 3] {
+    if let LaunchGeometry::Compiled(workgroup) = geometry {
+        return workgroup;
+    }
     if let Some(workgroup) = config.workgroup_override {
         return workgroup;
     }

@@ -228,6 +228,7 @@ impl BenchContext {
         let request = vyre::compiler::CompileRequest::new(
             graph,
             vyre::compiler::ExternalFacts::new(vyre::compiler::Digest([0; 32]), BTreeMap::new()),
+            vyre::compiler::DeviceFacts::unknown(),
             vyre::compiler::SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000),
             64 * 1024 * 1024,
         )

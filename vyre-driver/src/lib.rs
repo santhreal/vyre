@@ -99,12 +99,6 @@ pub mod param_inlining;
 /// Elementwise parity-gate scaffolding shared by the concrete driver crates.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod parity_harness;
-/// Persistent-kernel-mode decision policy (ROADMAP D1). Decides
-/// whether to replace N small kernel launches with one persistent
-/// kernel that polls a device-side work queue, based on measured
-/// per-launch overhead and persistent-setup cost. Pure decision,
-/// no Program walk.
-pub mod persistent_kernel_policy;
 /// Compiled-pipeline cache, dispatch config, batched dispatch.
 pub(crate) mod pipeline;
 /// N4 substrate: cross-pipeline disjoint-binding fusion analysis.
@@ -264,7 +258,8 @@ pub use dispatch_shape::{
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
 pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
 pub use launch::{
-    record_launch_measurement, resolve_launch_workgroup, resolve_launch_workgroup_for_mode,
+    record_launch_measurement, resolve_launch_workgroup, resolve_launch_workgroup_for_geometry,
+    resolve_launch_workgroup_for_mode, LaunchGeometry,
 };
 pub use pipeline::{
     dispatch_policy_cache_digest, dispatch_policy_cache_string, normalized_program_cache_digest,
