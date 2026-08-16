@@ -162,6 +162,13 @@ impl CudaModuleCache {
     /// second cache probe, and a second module load on a miss. The caller must
     /// already know from the program whether a grid barrier is REQUIRED, and
     /// treat a missing one on a grid-sync program as a codegen failure.
+    ///
+    /// A hit charges no counter. Every caller reaches this after resolving the
+    /// launch function from the same key, so the module was already counted for
+    /// this dispatch; charging again reported two lookups per launch and roughly
+    /// doubled the hit count `pipeline_cache_snapshot` publishes. A miss is
+    /// charged, because a module evicted between the two calls really was
+    /// reloaded.
     pub(crate) fn module_globals_for_ptx(
         &self,
         ptx_src: &str,
@@ -170,7 +177,6 @@ impl CudaModuleCache {
     ) -> Result<ModuleGlobals, BackendError> {
         if let Some(module) = self.modules.get(&key) {
             increment_cache_access_u32(&module.access_count, "CUDA module cache access count");
-            increment_cache_counter_u64(&self.hits, "CUDA module cache hits");
             return Ok(module.globals.clone());
         }
         increment_cache_counter_u64(&self.misses, "CUDA module cache misses");
@@ -179,12 +185,14 @@ impl CudaModuleCache {
             self.evict_submodular();
         }
         match self.modules.entry(key) {
+            // The miss above is already charged. Another dispatch inserted the
+            // module between the probe and this entry call, which is one lookup
+            // and one accounting event, not two.
             Entry::Occupied(existing) => {
                 increment_cache_access_u32(
                     &existing.get().access_count,
                     "CUDA module cache access count",
                 );
-                increment_cache_counter_u64(&self.hits, "CUDA module cache hits");
                 Ok(existing.get().globals.clone())
             }
             Entry::Vacant(entry) => {
