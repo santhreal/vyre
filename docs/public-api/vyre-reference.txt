@@ -68,12 +68,14 @@ pub const vyre_reference::dual_impls::bitwise::shift_right::OP_ID: &str
 pub const vyre_reference::dual_impls::bitwise::xor::OP_ID: &str
 pub const vyre_reference::dual_impls::compare::eq::OP_ID: &str
 pub const vyre_reference::dual_impls::compare::lt::OP_ID: &str
+pub const vyre_reference::host_oracle_migration::HOST_FUNCTION_DISCOVERY_FLOOR: usize
 pub const vyre_reference::ieee754::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_reference::sequential::MAX_SHARED_BYTES: usize
 pub const vyre_reference::workgroup::InvocationIds::ZERO: Self
 pub const vyre_reference::workgroup::MAX_WORKGROUP_BYTES: usize
+pub enum vyre_reference::host_oracle_migration::HostFunctionClassification
 pub fn vyre_primitives::markers::ArithAdd::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
 pub fn vyre_primitives::markers::ArithMul::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
 pub fn vyre_primitives::markers::Clz::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
@@ -108,6 +110,9 @@ pub fn vyre_reference::atomics::atomic_max(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_min(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_or(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_xor(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::composition_witness::csr_bfs_witness(node_count: usize, row_offsets: &[u32], col_indices: &[u32], source: usize) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::prefix_scan_witness(input: &[u32], inclusive: bool, combine_op: impl core::ops::function::Fn(u32, u32) -> u32, identity: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::semiring_gemm_witness(a: &[u32], b: &[u32], m: usize, n: usize, k: usize, semiring: vyre_spec::semiring::Semiring) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::dialect_dispatch::dispatch_op(op_id: &str, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
 pub fn vyre_reference::dual::DualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual::DualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
@@ -157,9 +162,12 @@ pub fn vyre_reference::dual_impls::compare::lt::reference_b::reference(input: &[
 pub fn vyre_reference::dual_op_ids() -> &'static [&'static str]
 pub fn vyre_reference::expr::Buffer::into_value(self) -> vyre_reference::value::Value
 pub fn vyre_reference::expr::Buffer::new(bytes: alloc::vec::Vec<u8>, element: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_reference::expr::buffer<'a>(memory: &'a vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str) -> core::result::Result<&'a vyre_reference::expr::Buffer, vyre_reference::ReferenceError>
 pub fn vyre_reference::expr::buffer_mut<'a>(memory: &'a mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str) -> core::result::Result<&'a mut vyre_reference::expr::Buffer, vyre_reference::ReferenceError>
 pub fn vyre_reference::expr::eval(expr: &vyre_foundation::ir_inner::model::generated::Expr, invocation: &mut vyre_reference::workgroup::Invocation<'_>, memory: &mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_reference::value::Value, vyre_reference::ReferenceError>
 pub fn vyre_reference::flat_cpu::run_flat(program: &vyre_foundation::ir_inner::model::program::definition::Program, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::host_oracle_migration::assert_host_oracle_migration_complete(workspace_root: &std::path::Path)
+pub fn vyre_reference::host_oracle_migration::derive_host_function_inventory(workspace_root: &std::path::Path) -> core::result::Result<alloc::vec::Vec<vyre_reference::host_oracle_migration::DiscoveredHostFunction>, alloc::string::String>
 pub fn vyre_reference::ieee754::canonical_acos(x: f32) -> f32
 pub fn vyre_reference::ieee754::canonical_asin(x: f32) -> f32
 pub fn vyre_reference::ieee754::canonical_atan(x: f32) -> f32
@@ -241,6 +249,7 @@ pub fn vyre_reference::workgroup::Invocation<'a>::local(&self, name: &str) -> co
 pub fn vyre_reference::workgroup::Invocation<'a>::new(ids: vyre_reference::workgroup::InvocationIds, entry: &'a [vyre_foundation::ir_inner::model::generated::Node]) -> Self
 pub fn vyre_reference::workgroup::Invocation<'a>::pop_scope(&mut self)
 pub fn vyre_reference::workgroup::Invocation<'a>::push_scope(&mut self)
+pub fn vyre_reference::workgroup::Invocation<'a>::unbind(&mut self, name: &str) -> core::option::Option<vyre_reference::value::Value>
 pub fn vyre_reference::workgroup::LocalSlots::for_nodes(nodes: &[vyre_foundation::ir_inner::model::generated::Node]) -> Self
 pub fn vyre_reference::workgroup::LocalSlots::for_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
 pub fn vyre_reference::workgroup::LocalSlots::visit_assign(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -258,6 +267,7 @@ pub fn vyre_reference::workgroup::LocalSlots::visit_region(&mut self, _: &vyre_f
 pub fn vyre_reference::workgroup::LocalSlots::visit_resume(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_return(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_store(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, index: &vyre_foundation::ir_inner::model::generated::Expr, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_tile(&mut self, node: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_trap(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, address: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::ident::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::Memory::bytes(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::workgroup::Memory::empty() -> Self
@@ -267,6 +277,7 @@ pub fn vyre_reference::workgroup::Memory::with_storage(self, name: impl core::co
 pub fn vyre_reference::workgroup::Memory::with_workgroup(self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::expr::Buffer) -> Self
 pub mod vyre_reference
 pub mod vyre_reference::atomics
+pub mod vyre_reference::composition_witness
 pub mod vyre_reference::cpu_op
 pub mod vyre_reference::dialect_dispatch
 pub mod vyre_reference::dual
@@ -340,6 +351,7 @@ pub mod vyre_reference::dual_impls::workgroup::shuffle
 pub mod vyre_reference::dual_impls::workgroup::shuffle::reference
 pub mod vyre_reference::expr
 pub mod vyre_reference::flat_cpu
+pub mod vyre_reference::host_oracle_migration
 pub mod vyre_reference::ieee754
 pub mod vyre_reference::node
 pub mod vyre_reference::op_count
@@ -361,6 +373,7 @@ pub struct vyre_reference::dual_impls::bitwise::xor::XorDualReference
 pub struct vyre_reference::dual_impls::compare::eq::EqDualReference
 pub struct vyre_reference::dual_impls::compare::lt::LtDualReference
 pub struct vyre_reference::expr::Buffer
+pub struct vyre_reference::host_oracle_migration::DiscoveredHostFunction
 pub struct vyre_reference::sequential::SequentialWorkgroup
 pub struct vyre_reference::subgroup::SubgroupSimulator
 pub struct vyre_reference::workgroup::BufferMap
@@ -372,9 +385,36 @@ pub trait vyre_reference::dual::DualReference
 pub trait vyre_reference::dual_impls::ReferenceEvaluator
 pub type vyre_reference::dual::ReferenceFn = fn(&[u8]) -> alloc::vec::Vec<u8>
 pub type vyre_reference::workgroup::LocalSlots::Break = core::convert::Infallible
+pub use vyre_reference::FP4_DECODE_TABLE
+pub use vyre_reference::I4_DECODE_TABLE
+pub use vyre_reference::InfinityBehavior
+pub use vyre_reference::NF4_QUANTILE_TABLE
+pub use vyre_reference::NUMERIC_SEMANTICS_SCHEMA_VERSION
+pub use vyre_reference::NanBehavior
+pub use vyre_reference::NumericFormat
+pub use vyre_reference::NumericSemantics
+pub use vyre_reference::OverflowBehavior
+pub use vyre_reference::RoundingMode
+pub use vyre_reference::SaturationBehavior
+pub use vyre_reference::SignedZeroBehavior
+pub use vyre_reference::SubnormalBehavior
 pub use vyre_reference::cpu_op::CategoryAOp
 pub use vyre_reference::cpu_op::CpuFn
 pub use vyre_reference::cpu_op::CpuOp
+pub use vyre_reference::dequantize_grouped_f32
+pub use vyre_reference::f32_to_f8e4m3
+pub use vyre_reference::f32_to_f8e5m2
+pub use vyre_reference::f32_to_fp4
+pub use vyre_reference::f32_to_nf4
+pub use vyre_reference::f8e4m3_decode_table
+pub use vyre_reference::f8e4m3_to_f32
+pub use vyre_reference::f8e5m2_decode_table
+pub use vyre_reference::f8e5m2_to_f32
+pub use vyre_reference::fp4_to_f32
+pub use vyre_reference::i32_to_i4
+pub use vyre_reference::i4_to_i32
+pub use vyre_reference::nf4_to_f32
+pub use vyre_reference::numeric_semantics_for
 pub vyre_reference::DualReferenceFacet::operation_id: &'static str
 pub vyre_reference::DualReferenceFacet::reference_a: vyre_reference::dual::ReferenceFn
 pub vyre_reference::DualReferenceFacet::reference_b: vyre_reference::dual::ReferenceFn
@@ -383,6 +423,15 @@ pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
 pub vyre_reference::ReferenceFacet::execute: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_reference::ReferenceFacet::operation_id: &'static str
+pub vyre_reference::host_oracle_migration::DiscoveredHostFunction::classification: vyre_reference::host_oracle_migration::HostFunctionClassification
+pub vyre_reference::host_oracle_migration::DiscoveredHostFunction::classification_reason: &'static str
+pub vyre_reference::host_oracle_migration::DiscoveredHostFunction::crate_name: alloc::string::String
+pub vyre_reference::host_oracle_migration::DiscoveredHostFunction::function_name: alloc::string::String
+pub vyre_reference::host_oracle_migration::DiscoveredHostFunction::relative_path: std::path::PathBuf
+pub vyre_reference::host_oracle_migration::HostFunctionClassification::CompileTimeBuilder
+pub vyre_reference::host_oracle_migration::HostFunctionClassification::NonExecutionUtility
+pub vyre_reference::host_oracle_migration::HostFunctionClassification::SemanticOracle
+pub vyre_reference::host_oracle_migration::HostFunctionClassification::TestHelper
 pub vyre_reference::sequential::SequentialWorkgroup::size: [u32; 3]
 pub vyre_reference::value::Value::Array(alloc::vec::Vec<vyre_reference::value::Value>)
 pub vyre_reference::value::Value::Bool(bool)

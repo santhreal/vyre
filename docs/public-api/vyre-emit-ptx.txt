@@ -1,6 +1,12 @@
 impl core::default::Default for vyre_emit_ptx::ComputeCapability
 impl core::default::Default for vyre_emit_ptx::PtxEmitOptions
+impl core::default::Default for vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness
+impl core::default::Default for vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule
+impl core::default::Default for vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::EpilogueOverlap
+impl core::default::Default for vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy
+impl core::error::Error for vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError
 impl core::fmt::Display for vyre_emit_ptx::patterns::PtxAuditReport
+impl core::fmt::Display for vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError
 impl vyre_emit_ptx::ComputeCapability
 impl vyre_emit_ptx::PtxEmitOptions
 impl vyre_emit_ptx::patterns::PtxAuditReport
@@ -26,6 +32,10 @@ pub const vyre_emit_ptx::patterns::PtxAuditReport::FINDING_NOUN: &'static str
 pub const vyre_emit_ptx::patterns::instruction_scheduling::LONG_CHAIN_THRESHOLD: u32
 pub const vyre_emit_ptx::patterns::predicated_execution::PREDICATION_OP_THRESHOLD: u32
 pub enum vyre_emit_ptx::EmitError
+pub enum vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp
+pub enum vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError
+pub enum vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp
+pub enum vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError
 pub enum vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
 pub enum vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind
 pub fn vyre_emit_ptx::ComputeCapability::default() -> Self
@@ -48,6 +58,13 @@ pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::schedul
 pub fn vyre_emit_ptx::patterns::instruction_scheduling::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
 pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::candidate_count(&self) -> usize
 pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::analyze(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::plan_double_buffer_schedule(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability, plan: &vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan, buffer_slots: &[u32], register_budget: usize) -> core::result::Result<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan, vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError>
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness::default() -> Self
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule::default() -> Self
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::EpilogueOverlap::default() -> Self
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy::default() -> Self
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::plan_double_buffer_schedule(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability, plan: &vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan, buffer_slots: &[u32], register_budget: usize) -> core::result::Result<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan, vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError>
 pub fn vyre_emit_ptx::patterns::predicated_execution::PredicationPlan::safe_candidate_count(&self) -> usize
 pub fn vyre_emit_ptx::patterns::predicated_execution::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
 pub fn vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::dims(&self) -> (u32, u32, u32)
@@ -59,6 +76,7 @@ pub mod vyre_emit_ptx
 pub mod vyre_emit_ptx::patterns
 pub mod vyre_emit_ptx::patterns::instruction_scheduling
 pub mod vyre_emit_ptx::patterns::ldmatrix_cp_async
+pub mod vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule
 pub mod vyre_emit_ptx::patterns::predicated_execution
 pub mod vyre_emit_ptx::patterns::tensor_core_fragment
 pub mod vyre_emit_ptx::patterns::vec_memory_fusion
@@ -67,8 +85,18 @@ pub struct vyre_emit_ptx::PtxEmitOptions
 pub struct vyre_emit_ptx::patterns::PtxAuditReport
 pub struct vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain
 pub struct vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::AccumulatorLiveness
 pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate
 pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::DoubleBufferSchedule
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::EpilogueOverlap
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::PingPongPlan
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::WaitGroupPolicy
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::EpilogueOverlap
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy
 pub struct vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate
 pub struct vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
 pub struct vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate
@@ -101,6 +129,9 @@ pub vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain::start_op_i
 pub vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::kernel_id: alloc::string::String
 pub vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::long_chains: alloc::vec::Vec<vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain>
 pub vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::total_op_count: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AccumulatorLiveness::causes_register_spill: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AccumulatorLiveness::live_accumulator_registers: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AccumulatorLiveness::register_file_budget: usize
 pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate::global_binding_slot: u32
 pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate::load_op_index: usize
 pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate::shared_binding_slot: u32
@@ -109,6 +140,91 @@ pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::candidates: alloc
 pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::kernel_id: alloc::string::String
 pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::target_supports_cp_async: bool
 pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::target_supports_ldmatrix: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::DoubleBufferSchedule::accumulator_liveness: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::DoubleBufferSchedule::buffer_slots: alloc::vec::Vec<u32>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::DoubleBufferSchedule::epilogue_overlap: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::EpilogueOverlap
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::DoubleBufferSchedule::stages: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::DoubleBufferSchedule::wait_group_policy: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::EpilogueOverlap::epilogue_wait_depth: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::EpilogueOverlap::overlap_with_next_tile: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PingPongPlan::epilogue: alloc::vec::Vec<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PingPongPlan::kernel_id: alloc::string::String
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PingPongPlan::prologue: alloc::vec::Vec<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PingPongPlan::schedule: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PingPongPlan::steady_state: alloc::vec::Vec<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PingPongPlan::target: vyre_emit_ptx::ComputeCapability
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::AsyncCopyIssue
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::AsyncCopyIssue::global_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::AsyncCopyIssue::shared_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::AsyncCopyIssue::stage: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::BlockBarrier
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::CommitGroup
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::LdMatrix
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::LdMatrix::matrix_reg_count: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::LdMatrix::shared_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::LdMatrix::stage: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::MmaCompute
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::MmaCompute::stage: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::RotateStage
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::WaitGroup
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::PipelineStageOp::WaitGroup::depth: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::ExcessiveRegisterPressure
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::ExcessiveRegisterPressure::limit: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::ExcessiveRegisterPressure::required: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::InsufficientBufferSlots
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::InsufficientBufferSlots::actual: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::InsufficientBufferSlots::required: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::NoEligibleCandidates
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::UnsupportedTarget
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::UnsupportedTarget::reason: &'static str
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError::UnsupportedTarget::target: vyre_emit_ptx::ComputeCapability
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::WaitGroupPolicy::drain_at_epilogue: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::WaitGroupPolicy::loop_wait_group_depth: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::WaitGroupPolicy::max_in_flight_groups: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness::causes_register_spill: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness::live_accumulator_registers: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness::register_file_budget: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule::accumulator_liveness: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::AccumulatorLiveness
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule::buffer_slots: alloc::vec::Vec<u32>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule::epilogue_overlap: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::EpilogueOverlap
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule::stages: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule::wait_group_policy: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::EpilogueOverlap::epilogue_wait_depth: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::EpilogueOverlap::overlap_with_next_tile: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan::epilogue: alloc::vec::Vec<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan::kernel_id: alloc::string::String
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan::prologue: alloc::vec::Vec<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan::schedule: vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::DoubleBufferSchedule
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan::steady_state: alloc::vec::Vec<vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PingPongPlan::target: vyre_emit_ptx::ComputeCapability
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::AsyncCopyIssue
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::AsyncCopyIssue::global_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::AsyncCopyIssue::shared_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::AsyncCopyIssue::stage: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::BlockBarrier
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::CommitGroup
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::LdMatrix
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::LdMatrix::matrix_reg_count: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::LdMatrix::shared_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::LdMatrix::stage: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::MmaCompute
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::MmaCompute::stage: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::RotateStage
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::WaitGroup
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::PipelineStageOp::WaitGroup::depth: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::ExcessiveRegisterPressure
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::ExcessiveRegisterPressure::limit: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::ExcessiveRegisterPressure::required: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::InsufficientBufferSlots
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::InsufficientBufferSlots::actual: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::InsufficientBufferSlots::required: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::NoEligibleCandidates
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::UnsupportedTarget
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::UnsupportedTarget::reason: &'static str
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::ScheduleError::UnsupportedTarget::target: vyre_emit_ptx::ComputeCapability
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy::drain_at_epilogue: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy::loop_wait_group_depth: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::schedule::WaitGroupPolicy::max_in_flight_groups: u32
 pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::else_body_op_count: u32
 pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::has_global_store: bool
 pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::has_unsafe_effect: bool

@@ -24,7 +24,10 @@ impl core::convert::From<vyre_driver::backend::error::BackendError> for vyre_run
 impl core::convert::From<vyre_megakernel::error::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
 impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
+impl core::default::Default for vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits
+impl core::default::Default for vyre_runtime::mtp::MtpConfig
 impl core::default::Default for vyre_runtime::pipeline_cache::InMemoryPipelineCache
+impl core::default::Default for vyre_runtime::prefix_cache::PrefixCacheLimits
 impl core::default::Default for vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings
 impl core::default::Default for vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings
 impl core::default::Default for vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings
@@ -33,8 +36,11 @@ impl core::default::Default for vyre_runtime::resident_work_queue::planner::Resi
 impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry
 impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy
+impl core::default::Default for vyre_runtime::safetensors_transfer::DeviceTransferCapabilities
 impl core::default::Default for vyre_runtime::tenant::TenantRegistry
 impl core::error::Error for vyre_runtime::pipeline_cache::PipelineCacheMetricError
+impl core::fmt::Debug for vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
+impl core::fmt::Debug for vyre_runtime::prefix_cache::PrefixCacheManager
 impl core::fmt::Debug for vyre_runtime::resource_residency::ArtifactInstanceBinding
 impl core::fmt::Debug for vyre_runtime::resource_residency::ResourceResidency
 impl core::fmt::Debug for vyre_runtime::tenant::TenantHandle
@@ -52,6 +58,13 @@ impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
+impl vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
+impl vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
+impl vyre_runtime::mtp::MtpCoordinator
+impl vyre_runtime::paged_residency::BlockTableSpec
+impl vyre_runtime::paged_residency::PagedKVSlabSpec
+impl vyre_runtime::paged_residency::PagedResidencyPlanner
+impl vyre_runtime::paged_residency::PagedResourceBinding
 impl vyre_runtime::persistent_executor::PersistentExecutor
 impl vyre_runtime::pipeline_cache::DiskCache
 impl vyre_runtime::pipeline_cache::InMemoryPipelineCache
@@ -64,6 +77,10 @@ impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline
 impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::RemoteCache
 impl vyre_runtime::pipeline_cache::PipelineFingerprint
 impl vyre_runtime::pipeline_cache::RemoteCache
+impl vyre_runtime::prefix_cache::PrefixCache
+impl vyre_runtime::prefix_cache::PrefixCacheKey
+impl vyre_runtime::prefix_cache::PrefixCacheLayout
+impl vyre_runtime::prefix_cache::PrefixCacheManager
 impl vyre_runtime::replay::ReplayFailureEvidence
 impl vyre_runtime::replay::RingLog
 impl vyre_runtime::resident_work_queue::ResidentWorkQueue
@@ -130,6 +147,7 @@ impl vyre_runtime::resource_residency::ResidentResourceDevice for vyre_runtime::
 impl vyre_runtime::resource_residency::ResourceResidency
 impl vyre_runtime::routing::RoutingEngine
 impl vyre_runtime::routing::RoutingPolicy for vyre_runtime::routing::standard_policy::StandardPolicy
+impl vyre_runtime::safetensors_transfer::TransferLifecycleEngine
 impl vyre_runtime::scheduler::WorkStealingScheduler
 impl vyre_runtime::tenant::TenantHandle
 impl vyre_runtime::tenant::TenantQuota
@@ -150,6 +168,8 @@ impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRe
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::schema::Artifact
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
+pub const fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
+pub const fn vyre_runtime::mtp::MtpCoordinator::config(&self) -> &vyre_runtime::mtp::MtpConfig
 pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::new(state_id: u32, byte_index: u32) -> Self
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode::as_str(self) -> &'static str
@@ -217,6 +237,7 @@ pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len
 pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
 pub const fn vyre_runtime::tenant::TenantQuota::unbounded() -> Self
 pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
+pub const vyre_runtime::paged_residency::PAGED_RESOURCE_MIN_ALIGNMENT_BYTES: usize
 pub const vyre_runtime::replay::HEADER_BYTES: u64
 pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
 pub const vyre_runtime::replay::LOG_VERSION: u32
@@ -332,9 +353,18 @@ pub const vyre_runtime::tenant::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::tenant::TENANT_ID_MAX: u32
 pub const vyre_runtime::tenant::TENANT_OPCODE_BASE: u32
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
+pub enum vyre_runtime::SafetensorTransferPath
+pub enum vyre_runtime::TransferError
+pub enum vyre_runtime::TransferState
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
+pub enum vyre_runtime::expert_scheduling::ExpertSchedulingError
+pub enum vyre_runtime::mtp::MtpError
+pub enum vyre_runtime::mtp::MtpStorageCandidate
+pub enum vyre_runtime::paged_residency::PagedResidencyError
+pub enum vyre_runtime::paged_residency::PagingCandidateStrategy
 pub enum vyre_runtime::pipeline_cache::InMemoryEvictionReason
+pub enum vyre_runtime::prefix_cache::PrefixCacheError
 pub enum vyre_runtime::replay::ReplayFailureClass
 pub enum vyre_runtime::resident_work_queue::RingSlotTransition
 pub enum vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode
@@ -356,6 +386,9 @@ pub enum vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceL
 pub enum vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
 pub enum vyre_runtime::resource_residency::ResourceAdmissionStatus
 pub enum vyre_runtime::resource_residency::ResourceResidencyError
+pub enum vyre_runtime::safetensors_transfer::SafetensorTransferPath
+pub enum vyre_runtime::safetensors_transfer::TransferError
+pub enum vyre_runtime::safetensors_transfer::TransferState
 pub enum vyre_runtime::uring::GpuDirectCapability
 pub enum vyre_runtime::uring::NativeReadPath
 pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
@@ -385,8 +418,11 @@ pub fn vyre_runtime::artifact_admission::ArtifactSession::host_bindings(&self, i
 pub fn vyre_runtime::artifact_admission::ArtifactSession::ordered_outputs(&self, completion: &vyre_driver::backend::artifact_lifecycle::Completion) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::payload(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::program_outputs(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, completion: &vyre_driver::backend::artifact_lifecycle::Completion) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::program_resident_bindings(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, resources: &[vyre_driver::backend::resource::Resource]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::rematerialize(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings(&self, resources: &[vyre_driver::backend::resource::Resource]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_by_name<'a, I>(&self, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (&'a str, &'a vyre_driver::backend::resource::Resource)>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_by_value<I>(&self, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (vyre_megakernel::identity::ArtifactValueId, vyre_driver::backend::resource::Resource)>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resource(&self, name: &str) -> core::result::Result<vyre_megakernel::identity::ArtifactValueId, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::Submission>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -403,6 +439,25 @@ pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::submit_and_wai
 pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
+pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::new(topology: vyre_driver::peer_transfer::PeerTopology) -> Self
+pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::route_all_to_all(&mut self, tokens: alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<u32, alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>>, vyre_runtime::expert_scheduling::ExpertSchedulingError>
+pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::default() -> Self
+pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::cancel(&mut self, ticket: u64)
+pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::dequeue_expert_work(&mut self, expert_id: u32, max_batch: usize) -> alloc::vec::Vec<vyre_runtime::expert_scheduling::ExpertWorkItem>
+pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::enqueue(&mut self, item: vyre_runtime::expert_scheduling::ExpertWorkItem) -> core::result::Result<(), vyre_runtime::expert_scheduling::ExpertSchedulingError>
+pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::new(limits: vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits) -> Self
+pub fn vyre_runtime::mtp::MtpConfig::default() -> Self
+pub fn vyre_runtime::mtp::MtpCoordinator::new(config: vyre_runtime::mtp::MtpConfig, prefix_cache: vyre_runtime::prefix_cache::PrefixCache) -> Self
+pub fn vyre_runtime::mtp::MtpCoordinator::rollback_all(&self, provisional: vyre_runtime::mtp::MtpProvisionalState) -> core::result::Result<(), vyre_runtime::mtp::MtpError>
+pub fn vyre_runtime::mtp::MtpCoordinator::stage_speculative_step(&self, request_id: u64, cache_key: &vyre_runtime::prefix_cache::PrefixCacheKey, base_prefix: &[u32], draft_proposals: &[(u32, f32)]) -> core::result::Result<vyre_runtime::mtp::MtpProvisionalState, vyre_runtime::mtp::MtpError>
+pub fn vyre_runtime::mtp::MtpCoordinator::verify_and_commit(&self, provisional: vyre_runtime::mtp::MtpProvisionalState, verified_ground_truth: &[u32]) -> core::result::Result<vyre_runtime::mtp::MtpVerificationResult, vyre_runtime::mtp::MtpError>
+pub fn vyre_runtime::paged_residency::BlockTableSpec::required_table_bytes(&self) -> usize
+pub fn vyre_runtime::paged_residency::PagedKVSlabSpec::required_slab_bytes(&self) -> usize
+pub fn vyre_runtime::paged_residency::PagedResidencyPlanner::select_strategy(device_supports_paging: bool, max_context_tokens: u32) -> vyre_runtime::paged_residency::PagingCandidateStrategy
+pub fn vyre_runtime::paged_residency::PagedResourceBinding::complete_execution(&mut self, completed_ticket: u64)
+pub fn vyre_runtime::paged_residency::PagedResourceBinding::mark_in_flight(&mut self, ticket: u64)
+pub fn vyre_runtime::paged_residency::PagedResourceBinding::validate(&self, table_byte_len: usize, k_byte_len: usize, v_byte_len: usize) -> core::result::Result<(), vyre_runtime::paged_residency::PagedResidencyError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::from_bytes(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope_bytes: &[u8], initial: vyre_runtime::persistent_executor::ResidentQueueState) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -454,6 +509,32 @@ pub fn vyre_runtime::pipeline_cache::RemoteCache::metrics(&self) -> vyre_runtime
 pub fn vyre_runtime::pipeline_cache::RemoteCache::new(base_url: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_runtime::pipeline_cache::RemoteCache::put(&self, _fp: vyre_runtime::pipeline_cache::PipelineFingerprint, _artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::pipeline_cache::RemoteCache::with_required_metadata(self, source_provenance: impl core::convert::Into<alloc::string::String>, device_compatibility: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_runtime::prefix_cache::PrefixCache::clear_in_flight(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::insert_or_extend(&self, key: &vyre_runtime::prefix_cache::PrefixCacheKey, tokens: &[u32], existing_pages: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::invalidate_generation(&self, new_gen: u64) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::lookup(&self, key: &vyre_runtime::prefix_cache::PrefixCacheKey, tokens: &[u32]) -> core::result::Result<vyre_runtime::prefix_cache::PrefixMatchResult, vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::mark_in_flight(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::metrics(&self) -> core::result::Result<vyre_runtime::prefix_cache::PrefixCacheMetrics, vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::new(limits: vyre_runtime::prefix_cache::PrefixCacheLimits, initial_generation: u64) -> Self
+pub fn vyre_runtime::prefix_cache::PrefixCache::pin(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::release(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCache::unpin(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCacheKey::fingerprint(&self) -> vyre_runtime::prefix_cache::PrefixCacheKeyFingerprint
+pub fn vyre_runtime::prefix_cache::PrefixCacheKey::model_fingerprint(&self) -> vyre_runtime::prefix_cache::PrefixCacheKeyFingerprint
+pub fn vyre_runtime::prefix_cache::PrefixCacheLayout::page_bytes(&self, dtype: &vyre_spec::data_type::DataType) -> u64
+pub fn vyre_runtime::prefix_cache::PrefixCacheLimits::default() -> Self
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::clear_in_flight(&mut self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::current_generation(&self) -> u64
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::insert_or_extend_prefix(&mut self, key: &vyre_runtime::prefix_cache::PrefixCacheKey, tokens: &[u32], existing_pages: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::invalidate_generation(&mut self, new_generation: u64)
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::lookup_prefix(&mut self, key: &vyre_runtime::prefix_cache::PrefixCacheKey, tokens: &[u32]) -> core::result::Result<vyre_runtime::prefix_cache::PrefixMatchResult, vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::mark_in_flight(&mut self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::metrics(&self) -> &vyre_runtime::prefix_cache::PrefixCacheMetrics
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::new(limits: vyre_runtime::prefix_cache::PrefixCacheLimits, initial_generation: u64) -> Self
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::pin_pages(&mut self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::release_pages(&mut self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
+pub fn vyre_runtime::prefix_cache::PrefixCacheManager::unpin_pages(&mut self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::prefix_cache::PrefixCacheError>
 pub fn vyre_runtime::recovery::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::RetryClass
 pub fn vyre_runtime::recovery::recover_artifact_session(session: &vyre_runtime::artifact_admission::ArtifactSession, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::replay::ReplayFailureEvidence::from_backend_error(slot_status: u32, error: &vyre_driver::backend::error::BackendError, output_bytes: &[u8]) -> Self
@@ -802,6 +883,16 @@ pub fn vyre_runtime::routing::RoutingPolicy::route_with_explanation(&self, plan:
 pub fn vyre_runtime::routing::standard_policy::StandardPolicy::name(&self) -> &'static str
 pub fn vyre_runtime::routing::standard_policy::StandardPolicy::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision
 pub fn vyre_runtime::routing::standard_policy::StandardPolicy::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
+pub fn vyre_runtime::safetensors_transfer::DeviceTransferCapabilities::default() -> Self
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::cancel_transfer(&mut self, tensor_name: &str)
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::complete_transfer(&mut self, tensor_name: &str, completion_event: u64, actual_digest: [u8; 32]) -> core::result::Result<(), vyre_runtime::safetensors_transfer::TransferError>
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::fail_transfer(&mut self, tensor_name: &str, error: vyre_runtime::safetensors_transfer::TransferError)
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::handle_device_loss(&mut self, new_generation: u64)
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::initiate_transfer(&mut self, descriptor: vyre_runtime::safetensors_transfer::TransferDescriptor) -> core::result::Result<(), vyre_runtime::safetensors_transfer::TransferError>
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::is_dispatch_visible(&self, tensor_name: &str) -> bool
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::new(caps: vyre_runtime::safetensors_transfer::DeviceTransferCapabilities, device_generation: u64) -> Self
+pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::progress_transfer(&mut self, tensor_name: &str, bytes: u64) -> core::result::Result<(), vyre_runtime::safetensors_transfer::TransferError>
+pub fn vyre_runtime::safetensors_transfer::select_transfer_path(caps: &vyre_runtime::safetensors_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::safetensors_transfer::PathSelectionDecision
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::claim_next_unit(&self) -> usize
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::new(backend_ids: alloc::vec::Vec<&'static str>) -> Self
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::partition(&self, total_len: usize) -> alloc::vec::Vec<vyre_runtime::scheduler::Shard>
@@ -809,9 +900,11 @@ pub fn vyre_runtime::scheduler::WorkStealingScheduler::partition_into(&self, tot
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::reset_unit_cursor(&self)
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::try_partition(&self, total_len: usize) -> core::result::Result<alloc::vec::Vec<vyre_runtime::scheduler::Shard>, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::try_partition_into(&self, total_len: usize, out: &mut alloc::vec::Vec<vyre_runtime::scheduler::Shard>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::select_transfer_path(caps: &vyre_runtime::safetensors_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::safetensors_transfer::PathSelectionDecision
 pub fn vyre_runtime::tenant::TenantHandle::base_opcode(&self) -> u32
 pub fn vyre_runtime::tenant::TenantHandle::drained_count(&self) -> u64
 pub fn vyre_runtime::tenant::TenantHandle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::tenant::TenantHandle::generation(&self) -> u32
 pub fn vyre_runtime::tenant::TenantHandle::global_opcode(&self, local: u32) -> core::result::Result<u32, vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::id(&self) -> u32
 pub fn vyre_runtime::tenant::TenantHandle::label(&self) -> &str
@@ -888,8 +981,12 @@ pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::observe_epoch(&self, con
 pub fn vyre_runtime::uring::encode_nvme_read_sqe(namespace_id: u32, starting_lba: u64, blocks: u32, dest_bar1_ptr: u64) -> [u8; 64]
 pub mod vyre_runtime
 pub mod vyre_runtime::artifact_admission
+pub mod vyre_runtime::expert_scheduling
+pub mod vyre_runtime::mtp
+pub mod vyre_runtime::paged_residency
 pub mod vyre_runtime::persistent_executor
 pub mod vyre_runtime::pipeline_cache
+pub mod vyre_runtime::prefix_cache
 pub mod vyre_runtime::recovery
 pub mod vyre_runtime::replay
 pub mod vyre_runtime::resident_work_queue
@@ -927,14 +1024,33 @@ pub mod vyre_runtime::resident_work_queue::workspace_layout
 pub mod vyre_runtime::resource_residency
 pub mod vyre_runtime::routing
 pub mod vyre_runtime::routing::standard_policy
+pub mod vyre_runtime::safetensors_transfer
 pub mod vyre_runtime::scheduler
 pub mod vyre_runtime::tenant
 pub mod vyre_runtime::uring
+pub struct vyre_runtime::DeviceTransferCapabilities
+pub struct vyre_runtime::PathSelectionDecision
+pub struct vyre_runtime::TransferDescriptor
+pub struct vyre_runtime::TransferLifecycleEngine
 pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
 pub struct vyre_runtime::artifact_admission::ArtifactSession
 pub struct vyre_runtime::artifact_admission::RetainedArtifactSession
+pub struct vyre_runtime::expert_scheduling::ExpertWorkItem
+pub struct vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
+pub struct vyre_runtime::expert_scheduling::InterDeviceToken
+pub struct vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits
+pub struct vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
+pub struct vyre_runtime::mtp::MtpConfig
+pub struct vyre_runtime::mtp::MtpCoordinator
+pub struct vyre_runtime::mtp::MtpDraftToken
+pub struct vyre_runtime::mtp::MtpProvisionalState
+pub struct vyre_runtime::mtp::MtpVerificationResult
+pub struct vyre_runtime::paged_residency::BlockTableSpec
+pub struct vyre_runtime::paged_residency::PagedKVSlabSpec
+pub struct vyre_runtime::paged_residency::PagedResidencyPlanner
+pub struct vyre_runtime::paged_residency::PagedResourceBinding
 pub struct vyre_runtime::persistent_executor::PersistentExecutor
 pub struct vyre_runtime::persistent_executor::ResidentQueueCompletion
 pub struct vyre_runtime::persistent_executor::ResidentQueueState
@@ -948,6 +1064,14 @@ pub struct vyre_runtime::pipeline_cache::PipelineCacheMetricError
 pub struct vyre_runtime::pipeline_cache::PipelineCacheMetrics
 pub struct vyre_runtime::pipeline_cache::PipelineFingerprint(pub [u8; 32])
 pub struct vyre_runtime::pipeline_cache::RemoteCache
+pub struct vyre_runtime::prefix_cache::PrefixCache
+pub struct vyre_runtime::prefix_cache::PrefixCacheKey
+pub struct vyre_runtime::prefix_cache::PrefixCacheKeyFingerprint(pub [u8; 32])
+pub struct vyre_runtime::prefix_cache::PrefixCacheLayout
+pub struct vyre_runtime::prefix_cache::PrefixCacheLimits
+pub struct vyre_runtime::prefix_cache::PrefixCacheManager
+pub struct vyre_runtime::prefix_cache::PrefixCacheMetrics
+pub struct vyre_runtime::prefix_cache::PrefixMatchResult
 pub struct vyre_runtime::replay::RecordedSlot
 pub struct vyre_runtime::replay::ReplayFailureEvidence
 pub struct vyre_runtime::replay::ReplayRecord
@@ -1033,6 +1157,10 @@ pub struct vyre_runtime::resource_residency::StateLease
 pub struct vyre_runtime::routing::RoutingEngine
 pub struct vyre_runtime::routing::RoutingExplanation
 pub struct vyre_runtime::routing::standard_policy::StandardPolicy
+pub struct vyre_runtime::safetensors_transfer::DeviceTransferCapabilities
+pub struct vyre_runtime::safetensors_transfer::PathSelectionDecision
+pub struct vyre_runtime::safetensors_transfer::TransferDescriptor
+pub struct vyre_runtime::safetensors_transfer::TransferLifecycleEngine
 pub struct vyre_runtime::scheduler::Shard
 pub struct vyre_runtime::scheduler::WorkStealingScheduler
 pub struct vyre_runtime::tenant::TenantHandle
@@ -1071,6 +1199,13 @@ pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
 pub unsafe fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, nvme_fd: i32, namespace_id: u32, starting_lba: u64, blocks: u32, bytes_per_block: u32, slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::UringResidentQueuePump<'a>::submit_file_scan(&mut self, fd: i32, file_offset: u64, len: u32, chunk_idx: u32, slot_idx: u32, tenant_id: u32, opcode: u32, args: [u32; 3]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub vyre_runtime::DeviceTransferCapabilities::max_transfer_queue_depth: usize
+pub vyre_runtime::DeviceTransferCapabilities::required_direct_alignment_bytes: u64
+pub vyre_runtime::DeviceTransferCapabilities::supports_direct_storage: bool
+pub vyre_runtime::DeviceTransferCapabilities::supports_pinned_host_memory: bool
+pub vyre_runtime::PathSelectionDecision::is_zero_copy: bool
+pub vyre_runtime::PathSelectionDecision::reason: &'static str
+pub vyre_runtime::PathSelectionDecision::selected_path: vyre_runtime::safetensors_transfer::SafetensorTransferPath
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
 pub vyre_runtime::PipelineError::DrainIncomplete
 pub vyre_runtime::PipelineError::DrainIncomplete::claimed: u32
@@ -1086,6 +1221,49 @@ pub vyre_runtime::PipelineError::NvmePassthroughDisabled
 pub vyre_runtime::PipelineError::QueueFull
 pub vyre_runtime::PipelineError::QueueFull::fix: &'static str
 pub vyre_runtime::PipelineError::QueueFull::queue: &'static str
+pub vyre_runtime::SafetensorTransferPath::DirectStorage
+pub vyre_runtime::SafetensorTransferPath::RegisteredHostMemory
+pub vyre_runtime::SafetensorTransferPath::StagedUpload
+pub vyre_runtime::TransferDescriptor::content_digest: [u8; 32]
+pub vyre_runtime::TransferDescriptor::destination_resource: alloc::string::String
+pub vyre_runtime::TransferDescriptor::device_generation: u64
+pub vyre_runtime::TransferDescriptor::file_identity: [u8; 32]
+pub vyre_runtime::TransferDescriptor::length: u64
+pub vyre_runtime::TransferDescriptor::offset: u64
+pub vyre_runtime::TransferDescriptor::path: vyre_runtime::safetensors_transfer::SafetensorTransferPath
+pub vyre_runtime::TransferDescriptor::tensor_name: alloc::string::String
+pub vyre_runtime::TransferError::AlignmentFailure
+pub vyre_runtime::TransferError::AlignmentFailure::offset: u64
+pub vyre_runtime::TransferError::AlignmentFailure::required_alignment: u64
+pub vyre_runtime::TransferError::DeviceLoss
+pub vyre_runtime::TransferError::DeviceLoss::actual_gen: u64
+pub vyre_runtime::TransferError::DeviceLoss::device_id: u32
+pub vyre_runtime::TransferError::DeviceLoss::expected_gen: u64
+pub vyre_runtime::TransferError::DigestMismatch
+pub vyre_runtime::TransferError::DigestMismatch::tensor_name: alloc::string::String
+pub vyre_runtime::TransferError::FileReplaced
+pub vyre_runtime::TransferError::FileReplaced::tensor_name: alloc::string::String
+pub vyre_runtime::TransferError::PartialUploadCleanedUp
+pub vyre_runtime::TransferError::PartialUploadCleanedUp::bytes_reverted: u64
+pub vyre_runtime::TransferError::QueueBackpressure
+pub vyre_runtime::TransferError::QueueBackpressure::max_depth: usize
+pub vyre_runtime::TransferError::QueueBackpressure::queue_depth: usize
+pub vyre_runtime::TransferError::ShortRead
+pub vyre_runtime::TransferError::ShortRead::actual: u64
+pub vyre_runtime::TransferError::ShortRead::expected: u64
+pub vyre_runtime::TransferError::ShortRead::tensor_name: alloc::string::String
+pub vyre_runtime::TransferError::Truncation
+pub vyre_runtime::TransferError::Truncation::file_len: u64
+pub vyre_runtime::TransferError::Truncation::required_end: u64
+pub vyre_runtime::TransferState::Cancelled
+pub vyre_runtime::TransferState::Completed
+pub vyre_runtime::TransferState::Completed::completion_event: u64
+pub vyre_runtime::TransferState::Failed
+pub vyre_runtime::TransferState::Failed::error: vyre_runtime::safetensors_transfer::TransferError
+pub vyre_runtime::TransferState::InProgress
+pub vyre_runtime::TransferState::InProgress::bytes_transferred: u64
+pub vyre_runtime::TransferState::Initiated
+pub vyre_runtime::TransferState::Validating
 pub vyre_runtime::UringPollState::Completed(u32)
 pub vyre_runtime::UringPollState::Detached
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
@@ -1093,6 +1271,96 @@ pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver:
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::error::CompileError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::State(alloc::string::String)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakernel::target::TargetCompileError)
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExchangeError(alloc::string::String)
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::expert_id: u32
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::num_experts: u32
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::LockPoisoned
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::QueueSaturated
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::QueueSaturated::capacity: usize
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::QueueSaturated::expert_id: u32
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::TaskCancelled
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::TaskCancelled::ticket: u64
+pub vyre_runtime::expert_scheduling::ExpertWorkItem::enqueue_tick: u64
+pub vyre_runtime::expert_scheduling::ExpertWorkItem::expert_id: u32
+pub vyre_runtime::expert_scheduling::ExpertWorkItem::payload: alloc::vec::Vec<f32>
+pub vyre_runtime::expert_scheduling::ExpertWorkItem::request_id: u64
+pub vyre_runtime::expert_scheduling::ExpertWorkItem::routing_weight: f32
+pub vyre_runtime::expert_scheduling::ExpertWorkItem::ticket: u64
+pub vyre_runtime::expert_scheduling::ExpertWorkItem::token_idx: u32
+pub vyre_runtime::expert_scheduling::InterDeviceToken::dst_device: u32
+pub vyre_runtime::expert_scheduling::InterDeviceToken::hidden_state: alloc::vec::Vec<f32>
+pub vyre_runtime::expert_scheduling::InterDeviceToken::src_device: u32
+pub vyre_runtime::expert_scheduling::InterDeviceToken::target_expert_id: u32
+pub vyre_runtime::expert_scheduling::InterDeviceToken::token_id: u64
+pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::max_queued_per_expert: usize
+pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::max_starvation_ticks: u64
+pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::num_experts: u32
+pub vyre_runtime::mtp::MtpConfig::hidden_dim: usize
+pub vyre_runtime::mtp::MtpConfig::max_depth: usize
+pub vyre_runtime::mtp::MtpConfig::storage_candidate: vyre_runtime::mtp::MtpStorageCandidate
+pub vyre_runtime::mtp::MtpConfig::vocab_size: usize
+pub vyre_runtime::mtp::MtpDraftToken::confidence: f32
+pub vyre_runtime::mtp::MtpDraftToken::depth: usize
+pub vyre_runtime::mtp::MtpDraftToken::provisional_page_ids: alloc::vec::Vec<u32>
+pub vyre_runtime::mtp::MtpDraftToken::token_id: u32
+pub vyre_runtime::mtp::MtpError::Cancelled
+pub vyre_runtime::mtp::MtpError::DepthExceeded
+pub vyre_runtime::mtp::MtpError::DepthExceeded::depth: usize
+pub vyre_runtime::mtp::MtpError::DepthExceeded::max_depth: usize
+pub vyre_runtime::mtp::MtpError::PrefixCacheError(vyre_runtime::prefix_cache::PrefixCacheError)
+pub vyre_runtime::mtp::MtpError::VerificationFailure(alloc::string::String)
+pub vyre_runtime::mtp::MtpProvisionalState::base_prefix_tokens: alloc::vec::Vec<u32>
+pub vyre_runtime::mtp::MtpProvisionalState::cache_key: vyre_runtime::prefix_cache::PrefixCacheKey
+pub vyre_runtime::mtp::MtpProvisionalState::draft_tokens: alloc::vec::Vec<vyre_runtime::mtp::MtpDraftToken>
+pub vyre_runtime::mtp::MtpProvisionalState::request_id: u64
+pub vyre_runtime::mtp::MtpStorageCandidate::GlobalResidentBuffer
+pub vyre_runtime::mtp::MtpStorageCandidate::RegisterForwarded
+pub vyre_runtime::mtp::MtpStorageCandidate::SharedResidentMemory
+pub vyre_runtime::mtp::MtpVerificationResult::accepted_draft_count: usize
+pub vyre_runtime::mtp::MtpVerificationResult::accepted_tokens: alloc::vec::Vec<u32>
+pub vyre_runtime::mtp::MtpVerificationResult::committed_pages: alloc::vec::Vec<u32>
+pub vyre_runtime::mtp::MtpVerificationResult::released_pages: alloc::vec::Vec<u32>
+pub vyre_runtime::mtp::MtpVerificationResult::rolled_back_count: usize
+pub vyre_runtime::paged_residency::BlockTableSpec::blocks_per_sequence: u32
+pub vyre_runtime::paged_residency::BlockTableSpec::sequences: u32
+pub vyre_runtime::paged_residency::PagedKVSlabSpec::block_tokens: u32
+pub vyre_runtime::paged_residency::PagedKVSlabSpec::blocks: u32
+pub vyre_runtime::paged_residency::PagedKVSlabSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_runtime::paged_residency::PagedKVSlabSpec::head_dim: u32
+pub vyre_runtime::paged_residency::PagedKVSlabSpec::kv_heads: u32
+pub vyre_runtime::paged_residency::PagedResidencyError::BackendError(alloc::string::String)
+pub vyre_runtime::paged_residency::PagedResidencyError::CapacityMismatch
+pub vyre_runtime::paged_residency::PagedResidencyError::CapacityMismatch::actual_bytes: usize
+pub vyre_runtime::paged_residency::PagedResidencyError::CapacityMismatch::expected_bytes: usize
+pub vyre_runtime::paged_residency::PagedResidencyError::CapacityMismatch::name: alloc::string::String
+pub vyre_runtime::paged_residency::PagedResidencyError::DeviceOwnershipMismatch
+pub vyre_runtime::paged_residency::PagedResidencyError::DeviceOwnershipMismatch::actual_device: u32
+pub vyre_runtime::paged_residency::PagedResidencyError::DeviceOwnershipMismatch::expected_device: u32
+pub vyre_runtime::paged_residency::PagedResidencyError::DeviceOwnershipMismatch::name: alloc::string::String
+pub vyre_runtime::paged_residency::PagedResidencyError::MisalignedBuffer
+pub vyre_runtime::paged_residency::PagedResidencyError::MisalignedBuffer::alignment: usize
+pub vyre_runtime::paged_residency::PagedResidencyError::MisalignedBuffer::name: alloc::string::String
+pub vyre_runtime::paged_residency::PagedResidencyError::MisalignedBuffer::offset: usize
+pub vyre_runtime::paged_residency::PagedResidencyError::ResidencyError(vyre_runtime::resource_residency::ResourceResidencyError)
+pub vyre_runtime::paged_residency::PagedResidencyError::StaleLeaseGeneration
+pub vyre_runtime::paged_residency::PagedResidencyError::StaleLeaseGeneration::actual_gen: u64
+pub vyre_runtime::paged_residency::PagedResidencyError::StaleLeaseGeneration::expected_gen: u64
+pub vyre_runtime::paged_residency::PagedResidencyError::StaleLeaseGeneration::state: vyre_runtime::resource_residency::StateId
+pub vyre_runtime::paged_residency::PagedResidencyError::UnsupportedPaging
+pub vyre_runtime::paged_residency::PagedResidencyError::UnsupportedPaging::device: alloc::string::String
+pub vyre_runtime::paged_residency::PagedResourceBinding::block_table_resource: vyre_driver::backend::resource::Resource
+pub vyre_runtime::paged_residency::PagedResourceBinding::completion_ticket: u64
+pub vyre_runtime::paged_residency::PagedResourceBinding::device_id: u32
+pub vyre_runtime::paged_residency::PagedResourceBinding::in_flight: bool
+pub vyre_runtime::paged_residency::PagedResourceBinding::k_cache_resource: vyre_driver::backend::resource::Resource
+pub vyre_runtime::paged_residency::PagedResourceBinding::lease: vyre_runtime::resource_residency::StateLease
+pub vyre_runtime::paged_residency::PagedResourceBinding::slab_spec: vyre_runtime::paged_residency::PagedKVSlabSpec
+pub vyre_runtime::paged_residency::PagedResourceBinding::table_spec: vyre_runtime::paged_residency::BlockTableSpec
+pub vyre_runtime::paged_residency::PagedResourceBinding::v_cache_resource: vyre_driver::backend::resource::Resource
+pub vyre_runtime::paged_residency::PagingCandidateStrategy::ExplicitContiguousFallback
+pub vyre_runtime::paged_residency::PagingCandidateStrategy::ExplicitContiguousFallback::max_context_tokens: u32
+pub vyre_runtime::paged_residency::PagingCandidateStrategy::PagedAttention
 pub vyre_runtime::persistent_executor::ResidentQueueCompletion::device_ns: core::option::Option<u64>
 pub vyre_runtime::persistent_executor::ResidentQueueCompletion::state: vyre_runtime::persistent_executor::ResidentQueueState
 pub vyre_runtime::persistent_executor::ResidentQueueState::control: alloc::vec::Vec<u8>
@@ -1128,6 +1396,59 @@ pub vyre_runtime::pipeline_cache::PipelineCacheMetrics::lookups: u64
 pub vyre_runtime::pipeline_cache::PipelineCacheMetrics::misses: u64
 pub vyre_runtime::pipeline_cache::PipelineCacheMetrics::puts: u64
 pub vyre_runtime::pipeline_cache::PipelineCacheMetrics::rejected_puts: u64
+pub vyre_runtime::prefix_cache::PrefixCacheError::BackpressureLimitExceeded
+pub vyre_runtime::prefix_cache::PrefixCacheError::BackpressureLimitExceeded::reason: &'static str
+pub vyre_runtime::prefix_cache::PrefixCacheError::CapacityExceeded
+pub vyre_runtime::prefix_cache::PrefixCacheError::CapacityExceeded::available: usize
+pub vyre_runtime::prefix_cache::PrefixCacheError::CapacityExceeded::needed: usize
+pub vyre_runtime::prefix_cache::PrefixCacheError::DuplicateRelease(u32)
+pub vyre_runtime::prefix_cache::PrefixCacheError::EmptyTokens
+pub vyre_runtime::prefix_cache::PrefixCacheError::IsolationViolation
+pub vyre_runtime::prefix_cache::PrefixCacheError::IsolationViolation::tenant_a: alloc::string::String
+pub vyre_runtime::prefix_cache::PrefixCacheError::IsolationViolation::tenant_b: alloc::string::String
+pub vyre_runtime::prefix_cache::PrefixCacheError::LockPoisoned
+pub vyre_runtime::prefix_cache::PrefixCacheError::PageNotFound(u32)
+pub vyre_runtime::prefix_cache::PrefixCacheError::PinnedPageEvictionRejected(u32)
+pub vyre_runtime::prefix_cache::PrefixCacheError::StaleDeviceGeneration
+pub vyre_runtime::prefix_cache::PrefixCacheError::StaleDeviceGeneration::actual: u64
+pub vyre_runtime::prefix_cache::PrefixCacheError::StaleDeviceGeneration::expected: u64
+pub vyre_runtime::prefix_cache::PrefixCacheError::TenantQuotaExceeded
+pub vyre_runtime::prefix_cache::PrefixCacheError::TenantQuotaExceeded::limit: usize
+pub vyre_runtime::prefix_cache::PrefixCacheError::TenantQuotaExceeded::tenant: alloc::string::String
+pub vyre_runtime::prefix_cache::PrefixCacheError::UnscrubbedPageReassignment(u32)
+pub vyre_runtime::prefix_cache::PrefixCacheKey::cache_schema_version: u32
+pub vyre_runtime::prefix_cache::PrefixCacheKey::config_digest: [u8; 32]
+pub vyre_runtime::prefix_cache::PrefixCacheKey::device_generation: u64
+pub vyre_runtime::prefix_cache::PrefixCacheKey::dtype: vyre_spec::data_type::DataType
+pub vyre_runtime::prefix_cache::PrefixCacheKey::isolation_domain: alloc::string::String
+pub vyre_runtime::prefix_cache::PrefixCacheKey::layout: vyre_runtime::prefix_cache::PrefixCacheLayout
+pub vyre_runtime::prefix_cache::PrefixCacheKey::model_id: [u8; 32]
+pub vyre_runtime::prefix_cache::PrefixCacheKey::tokenizer_id: [u8; 32]
+pub vyre_runtime::prefix_cache::PrefixCacheKey::trust_domain: core::option::Option<alloc::string::String>
+pub vyre_runtime::prefix_cache::PrefixCacheKey::weights_digest: [u8; 32]
+pub vyre_runtime::prefix_cache::PrefixCacheLayout::block_tokens: u32
+pub vyre_runtime::prefix_cache::PrefixCacheLayout::head_dim: u32
+pub vyre_runtime::prefix_cache::PrefixCacheLayout::kv_heads: u32
+pub vyre_runtime::prefix_cache::PrefixCacheLimits::max_active_requests: usize
+pub vyre_runtime::prefix_cache::PrefixCacheLimits::max_bytes: u64
+pub vyre_runtime::prefix_cache::PrefixCacheLimits::max_pages: usize
+pub vyre_runtime::prefix_cache::PrefixCacheLimits::max_queued_tokens: usize
+pub vyre_runtime::prefix_cache::PrefixCacheLimits::per_tenant_page_limit: usize
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::allocated_pages: usize
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::backpressure_rejections: u64
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::cache_hits: u64
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::cache_misses: u64
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::cow_copies: u64
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::evicted_pages: usize
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::free_pages: usize
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::in_flight_pages: usize
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::pinned_pages: usize
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::rejected_stale_generations: u64
+pub vyre_runtime::prefix_cache::PrefixCacheMetrics::scrubbed_bytes: u64
+pub vyre_runtime::prefix_cache::PrefixMatchResult::generation: u64
+pub vyre_runtime::prefix_cache::PrefixMatchResult::matched_tokens: usize
+pub vyre_runtime::prefix_cache::PrefixMatchResult::page_count: usize
+pub vyre_runtime::prefix_cache::PrefixMatchResult::page_ids: alloc::vec::Vec<u32>
 pub vyre_runtime::replay::RecordedSlot::args: [u32; 4]
 pub vyre_runtime::replay::RecordedSlot::epoch: u32
 pub vyre_runtime::replay::RecordedSlot::opcode: u32
@@ -1759,6 +2080,56 @@ pub vyre_runtime::routing::RoutingDecision::PersistentMegakernel
 pub vyre_runtime::routing::RoutingExplanation::decision: vyre_runtime::routing::RoutingDecision
 pub vyre_runtime::routing::RoutingExplanation::policy: &'static str
 pub vyre_runtime::routing::RoutingExplanation::reason: &'static str
+pub vyre_runtime::safetensors_transfer::DeviceTransferCapabilities::max_transfer_queue_depth: usize
+pub vyre_runtime::safetensors_transfer::DeviceTransferCapabilities::required_direct_alignment_bytes: u64
+pub vyre_runtime::safetensors_transfer::DeviceTransferCapabilities::supports_direct_storage: bool
+pub vyre_runtime::safetensors_transfer::DeviceTransferCapabilities::supports_pinned_host_memory: bool
+pub vyre_runtime::safetensors_transfer::PathSelectionDecision::is_zero_copy: bool
+pub vyre_runtime::safetensors_transfer::PathSelectionDecision::reason: &'static str
+pub vyre_runtime::safetensors_transfer::PathSelectionDecision::selected_path: vyre_runtime::safetensors_transfer::SafetensorTransferPath
+pub vyre_runtime::safetensors_transfer::SafetensorTransferPath::DirectStorage
+pub vyre_runtime::safetensors_transfer::SafetensorTransferPath::RegisteredHostMemory
+pub vyre_runtime::safetensors_transfer::SafetensorTransferPath::StagedUpload
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::content_digest: [u8; 32]
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::destination_resource: alloc::string::String
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::device_generation: u64
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::file_identity: [u8; 32]
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::length: u64
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::offset: u64
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::path: vyre_runtime::safetensors_transfer::SafetensorTransferPath
+pub vyre_runtime::safetensors_transfer::TransferDescriptor::tensor_name: alloc::string::String
+pub vyre_runtime::safetensors_transfer::TransferError::AlignmentFailure
+pub vyre_runtime::safetensors_transfer::TransferError::AlignmentFailure::offset: u64
+pub vyre_runtime::safetensors_transfer::TransferError::AlignmentFailure::required_alignment: u64
+pub vyre_runtime::safetensors_transfer::TransferError::DeviceLoss
+pub vyre_runtime::safetensors_transfer::TransferError::DeviceLoss::actual_gen: u64
+pub vyre_runtime::safetensors_transfer::TransferError::DeviceLoss::device_id: u32
+pub vyre_runtime::safetensors_transfer::TransferError::DeviceLoss::expected_gen: u64
+pub vyre_runtime::safetensors_transfer::TransferError::DigestMismatch
+pub vyre_runtime::safetensors_transfer::TransferError::DigestMismatch::tensor_name: alloc::string::String
+pub vyre_runtime::safetensors_transfer::TransferError::FileReplaced
+pub vyre_runtime::safetensors_transfer::TransferError::FileReplaced::tensor_name: alloc::string::String
+pub vyre_runtime::safetensors_transfer::TransferError::PartialUploadCleanedUp
+pub vyre_runtime::safetensors_transfer::TransferError::PartialUploadCleanedUp::bytes_reverted: u64
+pub vyre_runtime::safetensors_transfer::TransferError::QueueBackpressure
+pub vyre_runtime::safetensors_transfer::TransferError::QueueBackpressure::max_depth: usize
+pub vyre_runtime::safetensors_transfer::TransferError::QueueBackpressure::queue_depth: usize
+pub vyre_runtime::safetensors_transfer::TransferError::ShortRead
+pub vyre_runtime::safetensors_transfer::TransferError::ShortRead::actual: u64
+pub vyre_runtime::safetensors_transfer::TransferError::ShortRead::expected: u64
+pub vyre_runtime::safetensors_transfer::TransferError::ShortRead::tensor_name: alloc::string::String
+pub vyre_runtime::safetensors_transfer::TransferError::Truncation
+pub vyre_runtime::safetensors_transfer::TransferError::Truncation::file_len: u64
+pub vyre_runtime::safetensors_transfer::TransferError::Truncation::required_end: u64
+pub vyre_runtime::safetensors_transfer::TransferState::Cancelled
+pub vyre_runtime::safetensors_transfer::TransferState::Completed
+pub vyre_runtime::safetensors_transfer::TransferState::Completed::completion_event: u64
+pub vyre_runtime::safetensors_transfer::TransferState::Failed
+pub vyre_runtime::safetensors_transfer::TransferState::Failed::error: vyre_runtime::safetensors_transfer::TransferError
+pub vyre_runtime::safetensors_transfer::TransferState::InProgress
+pub vyre_runtime::safetensors_transfer::TransferState::InProgress::bytes_transferred: u64
+pub vyre_runtime::safetensors_transfer::TransferState::Initiated
+pub vyre_runtime::safetensors_transfer::TransferState::Validating
 pub vyre_runtime::scheduler::Shard::backend_id: &'static str
 pub vyre_runtime::scheduler::Shard::work_range: core::ops::range::Range<usize>
 pub vyre_runtime::tenant::TenantError::Backpressure

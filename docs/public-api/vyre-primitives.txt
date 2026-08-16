@@ -71,6 +71,7 @@ pub fn vyre_primitives::wire::try_pack_u32_slice_into(words: &[u32], out: &mut a
 pub fn vyre_primitives::wire::unpack_f32_slice(bytes: &[u8], count: usize, label: &str) -> core::result::Result<alloc::vec::Vec<f32>, alloc::string::String>
 pub fn vyre_primitives::wire::unpack_f32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<f32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::wire::unpack_u32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub macro vyre_primitives::submit_intrinsic_operation!
 pub mod vyre_primitives
 pub mod vyre_primitives::hardware
 pub mod vyre_primitives::hardware::bit_reverse_u32
