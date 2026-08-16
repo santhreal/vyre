@@ -1468,7 +1468,7 @@ seam = "foundation-ir"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["nn-linear-4bit"]
+features = ["bitset", "graph", "nn-linear-4bit"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1490,7 +1490,7 @@ seam = "lowering"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["bitset", "cpu-parity", "graph", "hardware"]
+features = ["cpu-parity", "hardware"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
