@@ -685,7 +685,7 @@ fn every_owner_call_names_a_function_in_the_traversal_surface() {
     }
     let absent: Vec<&&str> = OWNER_CALLS
         .iter()
-        .filter(|call| !declared.contains(*call))
+        .filter(|call| !declared.contains(**call))
         .collect();
     assert!(
         absent.is_empty(),
