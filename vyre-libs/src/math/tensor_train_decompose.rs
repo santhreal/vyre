@@ -13,7 +13,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
 use crate::math::symmetric_eigen_jacobi::{
-    jacobi_eigen_region, jacobi_scratch_buffers, JACOBI_TILE,
+    jacobi_eigen_region, jacobi_scratch_buffers, jacobi_workgroup,
 };
 
 /// `row * cols + col` flat index for a row-major matrix.
@@ -272,7 +272,7 @@ pub fn tensor_train_decompose_step(
     buffers.extend(jacobi_scratch_buffers());
     Program::wrapped(
         buffers,
-        [JACOBI_TILE, 1, 1],
+        jacobi_workgroup(),
         vec![wrap_anonymous_region(
             OP_ID,
             vec![

@@ -22,7 +22,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::builder::cooperative::{for_each_index, Argmax, KeyKind};
+use crate::builder::cooperative::{for_each_index, Argmax, KeyKind, LANES};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::sheaf_laplacian_eigenvalue";
@@ -36,16 +36,10 @@ pub const OP_ID: &str = "vyre-primitives::math::sheaf_laplacian_eigenvalue";
 const POWER_ITERATION_PHASE_OP_ID: &str =
     "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase";
 
-/// Lanes one workgroup runs.
-///
-/// The scan is an argmax over `n * d` diagonal entries, so lanes cut its serial length directly.
-/// 64 is one subgroup on every backend this ships to.
-const SHEAF_TILE: u32 = 64;
-
-/// Workgroup scratch the diagonal entry reduces through, `SHEAF_TILE` u32 entries.
+/// Workgroup scratch the diagonal entry reduces through, one u32 entry per lane.
 const SHEAF_MAX_SCRATCH: &str = "eig_max_scratch";
 
-/// Workgroup scratch the arg-max index reduces through, `SHEAF_TILE` u32 entries.
+/// Workgroup scratch the arg-max index reduces through, one u32 entry per lane.
 const SHEAF_ARGMAX_SCRATCH: &str = "eig_argmax_scratch";
 
 /// Build a sheaf Laplacian eigenvalue Program.
@@ -92,7 +86,7 @@ pub fn sheaf_laplacian_eigenvalue(
     let scan = Argmax {
         op_id: OP_ID,
         count: cells,
-        tile: SHEAF_TILE,
+        tile: LANES,
         key_scratch: SHEAF_MAX_SCRATCH,
         key_kind: KeyKind::U32,
         index_scratch: SHEAF_ARGMAX_SCRATCH,
@@ -120,7 +114,7 @@ pub fn sheaf_laplacian_eigenvalue(
             Expr::is_first_workgroup(),
             vec![for_each_index(
                 cells,
-                SHEAF_TILE,
+                LANES,
                 "eig_write_j",
                 vec![Node::store(
                     v,
@@ -143,10 +137,10 @@ pub fn sheaf_laplacian_eigenvalue(
             BufferDecl::storage(lambda, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
             BufferDecl::storage("one_fp_buf", 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(1),
-            BufferDecl::workgroup(SHEAF_MAX_SCRATCH, SHEAF_TILE, DataType::U32),
-            BufferDecl::workgroup(SHEAF_ARGMAX_SCRATCH, SHEAF_TILE, DataType::U32),
+            BufferDecl::workgroup(SHEAF_MAX_SCRATCH, LANES, DataType::U32),
+            BufferDecl::workgroup(SHEAF_ARGMAX_SCRATCH, LANES, DataType::U32),
         ],
-        [SHEAF_TILE, 1, 1],
+        [LANES, 1, 1],
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::Region {

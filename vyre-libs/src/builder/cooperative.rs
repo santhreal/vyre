@@ -25,6 +25,17 @@ use crate::reduce::workgroup_tree::{
     max_f32_child, max_u32_child, min_u32_child, WorkgroupReductionScope,
 };
 
+/// Lanes a cooperative walk runs on, and the width of the scratch it reduces
+/// through.
+///
+/// One number, one owner: a kernel that picks its own width has to keep that
+/// width, its scratch declaration and its workgroup size in agreement, and the
+/// three drift independently. 64 covers one subgroup on every backend this
+/// ships to, so the reduction tree's first strides stay within a subgroup and
+/// the scratch traffic is smallest. A kernel needing a different width states
+/// why at its own constant rather than editing this one.
+pub(crate) const LANES: u32 = 64;
+
 /// Chunks a workgroup of `tile` lanes needs to cover `count` indices.
 ///
 /// At least one: a body behind the bounds guard costs nothing when the count is

@@ -17,6 +17,12 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
+/// Mapping an index space onto the lanes of one workgroup.
+///
+/// Behind `reduce` because the argmax collapses its lane partials with the
+/// workgroup reduction children, which that feature owns. Every consumer of a
+/// cooperative walk already enables it.
+#[cfg(feature = "reduce")]
 pub(crate) mod cooperative;
 pub(crate) mod elementwise;
 /// Domain-neutral byte-range ordering predicates over the scanner output

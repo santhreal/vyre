@@ -8,10 +8,10 @@
 //! One sweep is sequential in the matrix: it picks the largest off-diagonal entry and applies one
 //! Givens rotation that depends on the current matrix, so sweep `k + 1` cannot start before sweep
 //! `k`'s rotation has landed. The pivot SEARCH inside a sweep is not sequential — it is an argmax
-//! over the `n²` index pairs — so the kernel runs `JACOBI_TILE` lanes: the search is a cooperative
+//! over the `n²` index pairs — so the kernel runs a workgroup of lanes: the search is a cooperative
 //! reduction ([`crate::builder::cooperative::Argmax`]) and only the rotation, the identity seeding,
 //! the sign pass and the diagonal read-out stay on one lane, each behind a barrier. The serial work
-//! per sweep drops from `n²` iterations in one lane to `n² / JACOBI_TILE` plus a log-depth tree. It
+//! per sweep drops from `n²` iterations in one lane to `n² / lanes` plus a log-depth tree. It
 //! mirrors the CPU reference [`crate::math::tensor_train_decompose`]'s `symmetric_eigen_jacobi_into`
 //! step for step, so the two agree up to f32-vs-f64 rounding; the kernel is verified by the
 //! basis/order-invariant eigenpair contract (`A·vᵢ ≈ λᵢ·vᵢ` and `VᵀV ≈ I`) rather than element-wise,
@@ -21,7 +21,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_chi
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::builder::cooperative::{Argmax, KeyKind};
+use crate::builder::cooperative::{Argmax, KeyKind, LANES};
 use crate::math::eigenvector_column_sign::eigenvector_column_sign_region;
 use crate::math::jacobi_apply_rotation::jacobi_apply_rotation_region;
 use crate::math::matrix_diagonal_extract::matrix_diagonal_extract_region;
@@ -35,29 +35,28 @@ pub const OP_ID: &str = "vyre-primitives::math::symmetric_eigen_jacobi";
 /// usable precision.
 const JACOBI_EPS: f32 = 1.0e-6;
 
-/// Lanes one Jacobi workgroup runs.
-///
-/// The pivot search is an argmax over `n²` pairs, so wider lanes cut the serial length of a sweep
-/// directly. 64 is one subgroup on every backend this ships to, which is the width where the
-/// reduction tree's first strides stay within a subgroup and the scratch traffic is smallest.
-pub const JACOBI_TILE: u32 = 64;
-
-/// Workgroup scratch the pivot key reduces through, `JACOBI_TILE` f32 entries.
+/// Workgroup scratch the pivot key reduces through, one f32 entry per lane.
 const JACOBI_PIVOT_KEY: &str = "jac_pivot_key";
 
-/// Workgroup scratch the pivot index reduces through, `JACOBI_TILE` u32 entries.
+/// Workgroup scratch the pivot index reduces through, one u32 entry per lane.
 const JACOBI_PIVOT_INDEX: &str = "jac_pivot_index";
+
+/// The workgroup shape a program splicing [`jacobi_eigen_body`] dispatches.
+#[must_use]
+pub fn jacobi_workgroup() -> [u32; 3] {
+    [LANES, 1, 1]
+}
 
 /// The two workgroup scratch buffers [`jacobi_eigen_body`] reduces the pivot through.
 ///
-/// Every program that splices the body declares these, so the two callers cannot disagree about a
-/// name or a width. A missing declaration is not a wrong answer, it is a program the backend
-/// refuses to lower.
+/// Every program that splices the body declares these and dispatches
+/// [`jacobi_workgroup`], so the two callers cannot disagree about a name or a width. A missing
+/// declaration is not a wrong answer, it is a program the backend refuses to lower.
 #[must_use]
 pub fn jacobi_scratch_buffers() -> Vec<BufferDecl> {
     vec![
-        BufferDecl::workgroup(JACOBI_PIVOT_KEY, JACOBI_TILE, DataType::F32),
-        BufferDecl::workgroup(JACOBI_PIVOT_INDEX, JACOBI_TILE, DataType::U32),
+        BufferDecl::workgroup(JACOBI_PIVOT_KEY, LANES, DataType::F32),
+        BufferDecl::workgroup(JACOBI_PIVOT_INDEX, LANES, DataType::U32),
     ]
 }
 
@@ -84,7 +83,7 @@ pub fn jacobi_sweeps(n: u32) -> u32 {
 ///
 /// The body binds `local` and reduces the pivot through the scratch of
 /// [`jacobi_scratch_buffers`], so a program that splices it declares those buffers and runs
-/// `[JACOBI_TILE, 1, 1]` lanes. It guards its own writes: the identity seeding, the rotation, the
+/// [`jacobi_workgroup`] lanes. It guards its own writes: the identity seeding, the rotation, the
 /// sign pass and the diagonal read-out run on lane 0 of the first workgroup, and every barrier sits
 /// outside those guards, so a wider dispatch computes the same pivot without a second workgroup
 /// touching `a`.
@@ -94,7 +93,7 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
     let pivot = Argmax {
         op_id: OP_ID,
         count: n.saturating_mul(n),
-        tile: JACOBI_TILE,
+        tile: LANES,
         key_scratch: JACOBI_PIVOT_KEY,
         key_kind: KeyKind::F32,
         index_scratch: JACOBI_PIVOT_INDEX,
@@ -210,7 +209,7 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
     // a guard around the whole thing would put every barrier inside a non-uniform branch.
     Program::wrapped(
         buffers,
-        [JACOBI_TILE, 1, 1],
+        jacobi_workgroup(),
         vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
