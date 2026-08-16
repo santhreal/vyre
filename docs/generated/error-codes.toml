@@ -82,7 +82,7 @@ corrective_action = "Mark at most one result buffer with `BufferDecl::output(...
 [[rule]]
 code = "V023"
 phase = "expression"
-invariant = "Cast to `Bytes` is unsupported in WGSL lowering"
+invariant = "Cast to `Bytes` is unsupported in secondary text lowering"
 corrective_action = "Use buffer load/store directly for byte data."
 
 [[rule]]
@@ -594,3 +594,9 @@ code = "V133"
 phase = "memory"
 invariant = "async transfer tag `…` may still be in flight where the invocation ends"
 corrective_action = "Wait the tag with AsyncWait on every path that starts it, before the Return that ends the invocation."
+
+[[rule]]
+code = "V134"
+phase = "memory"
+invariant = "async transfer writes into non-writable buffer `…`"
+corrective_action = "Declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup, or name a storage tier the dispatch does not bind."

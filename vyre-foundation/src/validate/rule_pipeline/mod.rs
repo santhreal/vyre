@@ -586,23 +586,26 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
     /// the per-node rule family this belongs to; `V117` sat in the
     /// malformed-frame-stream range and is gone.
     ///
-    /// `source` and `destination` are storage-tier tags, not buffer-table
-    /// entries: a transfer names an endpoint outside the dispatch's buffers, so
-    /// neither is resolved. `extension_adversarial::async_extension_tags_remain_structural`
-    /// pins that.
+    /// `source` and `destination` are storage-tier tags first: a transfer may
+    /// name an endpoint outside the dispatch's buffers, so neither is required
+    /// to resolve. `extension_adversarial::async_extension_tags_remain_structural`
+    /// pins that. A destination that DOES resolve is a buffer the target
+    /// compilers store through, so it carries the writability rule every other
+    /// write carries; `bytes_rejection::check_async_destination` owns it.
     ///
     /// What this does NOT do is record alias accesses. `V116` is owned by
     /// `super::fusion_safety`, which records all four operands; recording two of
     /// them here as well is what produced two answers for one rule.
     fn validate_async_transfer(
         &mut self,
+        destination: &Ident,
         offset: &Expr,
         size: &Expr,
         tag: &Ident,
     ) -> ControlFlow<Infallible> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
-        node_rules::check_async_tag(tag, &mut self.errors);
+        node_rules::check_async_transfer(destination, tag, &self.buffers, &mut self.errors);
         // The offset and size operands are expressions like any other, and
         // going unvalidated meant a load from an undeclared buffer inside a
         // transfer size was accepted while the same load in a store index was
@@ -642,24 +645,24 @@ macro_rules! async_transfer_visitors {
             &mut self,
             _node: &Node,
             _source: &Ident,
-            _destination: &Ident,
+            destination: &Ident,
             offset: &Expr,
             size: &Expr,
             tag: &Ident,
         ) -> ControlFlow<Self::Break> {
-            self.validate_async_transfer(offset, size, tag)
+            self.validate_async_transfer(destination, offset, size, tag)
         }
 
         fn visit_async_store(
             &mut self,
             _node: &Node,
             _source: &Ident,
-            _destination: &Ident,
+            destination: &Ident,
             offset: &Expr,
             size: &Expr,
             tag: &Ident,
         ) -> ControlFlow<Self::Break> {
-            self.validate_async_transfer(offset, size, tag)
+            self.validate_async_transfer(destination, offset, size, tag)
         }
     };
 }

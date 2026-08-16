@@ -271,6 +271,21 @@ pub(crate) fn check_async_tag(tag: &Ident, errors: &mut Vec<ValidationError>) {
     }
 }
 
+/// Every per-node rule an `AsyncLoad` or an `AsyncStore` carries.
+///
+/// One entry point, because both the preorder validator and the differential
+/// walk apply it and a rule reached from only one of them is a rule the
+/// property test reports as a traversal disagreement.
+pub(crate) fn check_async_transfer(
+    destination: &Ident,
+    tag: &Ident,
+    buffers: &BufferTable<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    check_async_tag(tag, errors);
+    bytes_rejection::check_async_destination(destination.as_str(), buffers, errors);
+}
+
 /// The buffers a collective node names, in operand order.
 ///
 /// One match over the collective variants, so a rule that reads a collective's

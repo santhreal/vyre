@@ -120,6 +120,12 @@ impl LoopLicm {
 /// value on every iteration and may leave the loop with the binding that reads
 /// it. This is the alias proof the hoist needs, and the buffer table is where
 /// the program states it.
+///
+/// Two rules make the table a proof rather than a convention: `V063` refuses a
+/// `Store` into a buffer that admits no store, and `V134` refuses an async
+/// transfer whose destination is such a buffer. Without the second, a DMA could
+/// write a read-only destination inside the loop and the hoisted load would
+/// answer a value from before the transfer.
 fn read_only_buffers(program: &Program) -> FxHashSet<Ident> {
     program
         .buffers()

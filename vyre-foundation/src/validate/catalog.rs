@@ -620,6 +620,12 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         invariant: "async transfer tag `…` may still be in flight where the invocation ends",
         corrective_action: "Wait the tag with AsyncWait on every path that starts it, before the Return that ends the invocation.",
     },
+    ValidationRule {
+        code: "V134",
+        phase: ValidationPhase::Memory,
+        invariant: "async transfer writes into non-writable buffer `…`",
+        corrective_action: "Declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup, or name a storage tier the dispatch does not bind.",
+    },
 ];
 
 /// Every registered validation rule, ordered by code.
