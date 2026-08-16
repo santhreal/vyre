@@ -10,7 +10,11 @@ jobs:
     name: Every registered gate
     runs-on: ubuntu-latest
     steps:
+      # docs-coupling compares this head against the base branch, so this job
+      # reads history rather than one tree. Every other job here clones shallow.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
 
       # Runs every registered gate and holds each to the number pinned in
@@ -59,7 +63,7 @@ jobs:
       # reference in a tracked file against the live registry, so a renamed case
       # fails here instead of at the next release benchmark.
       - name: Benchmark registry covers every claimed dimension
-        run: bash scripts/check_deep_bench_coverage.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- bench-coverage
 
   tree-rules:
     name: Rules the sweep owns, named by domain

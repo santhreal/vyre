@@ -298,7 +298,7 @@ fn stamp_provenance(
             "Record evidence from a checkout git can identify. An artifact that names no tree proves nothing about one.",
         )
     })?;
-    for issue in crate::source_provenance::issues(fingerprint) {
+    if let Some(issue) = crate::source_provenance::issues(fingerprint).into_iter().next() {
         return Err(Finding::in_file(
             path.to_path_buf(),
             format!("`{}` was not written because the {}", path.display(), issue.predicate()),

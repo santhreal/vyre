@@ -52,10 +52,6 @@ members = [
     "vyre-emit-spirv",
     "vyre-emit-metal",
     "vyre-debug",
-    # Host-side C11 grammar-table generator for the vyre GPU C parser.
-    # Formerly `surgec-grammar-gen` in libs/shared, renamed + folded in so
-    # vyre owns its parser tables and depends on nothing surge-named.
-    "vyre-grammar-gen",
 ]
 
 exclude = [
@@ -236,7 +232,6 @@ vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
 vyre-lints = { version = "0.7.2", path = "vyre-lints" }
 vyre-debug = { version = "0.7.2", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
-c-grammar-gen = { package = "vyre-grammar-gen", version = "0.7.2", path = "vyre-grammar-gen" }
 
 # Shared third-party pins; every member agrees on versions.
 serde = { version = "=1.0.229", features = ["derive", "rc"] }

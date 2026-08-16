@@ -52,7 +52,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use super::planner::plan_flash_attention_scalar;
 use super::scaled_dot_product::{attention_score_nodes, direct_attention_program};
-use crate::nn::attention_stability::{bounded_exp_arg, flush_tiny, positive_denominator};
+use crate::nn::attention_stability::{bounded_exp_arg, positive_denominator};
+use crate::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::nn::flash_attention";
 

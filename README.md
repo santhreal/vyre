@@ -170,10 +170,6 @@ Inspection: descriptor dumps and diffs, naga traces, source assignments, danglin
 
 Not here: anything a user's program depends on. This crate reads what other crates produced.
 
-### vyre-grammar-gen
-
-The host-side generator for the C11 lexer DFA and LR(1) tables that the parsing compositions load as read-only data.
-
 Host-side is the point: table construction happens once at build time, and the device consumes the table. Not here: parsing. The parser is a composition and lives in `vyre-libs`.
 
 ### vyre-safetensors

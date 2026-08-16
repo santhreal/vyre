@@ -40,6 +40,7 @@ The crate lives at `vyre-reference`. The `reference-semantics` owner maintains i
 | `test` | `atomic_oracle_contract` | `vyre-reference/tests/atomic_oracle_contract.rs` | None | `./cargo_full test -p vyre-reference --test atomic_oracle_contract` |
 | `test` | `atomic_property_contracts` | `vyre-reference/tests/atomic_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test atomic_property_contracts` |
 | `test` | `byte_prefix_property_contracts` | `vyre-reference/tests/byte_prefix_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test byte_prefix_property_contracts` |
+| `test` | `core_contracts` | `vyre-reference/tests/core_contracts.rs` | None | `./cargo_full test -p vyre-reference --test core_contracts` |
 | `test` | `dual_arith_reference_contracts` | `vyre-reference/tests/dual_arith_reference_contracts.rs` | None | `./cargo_full test -p vyre-reference --test dual_arith_reference_contracts` |
 | `test` | `dual_reference_parity` | `vyre-reference/tests/dual_reference_parity.rs` | None | `./cargo_full test -p vyre-reference --test dual_reference_parity` |
 | `test` | `dual_reference_property_contracts` | `vyre-reference/tests/dual_reference_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test dual_reference_property_contracts` |

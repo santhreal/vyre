@@ -423,7 +423,7 @@ impl LowerCtx {
 
         // Names reassigned inside the region whose pre-region binding lives
         // in the enclosing scope. The parent body cannot reference an SSA
-        // id emitted inside the child KernelBody (Naga's `Statement::Block`
+        // id emitted inside the child KernelBody (the emitter's block statement
         // closes the inner scope), so reassignments must round-trip through
         // a function-local. Reuses the same `LoopCarrierInit/LoopCarrier/
         // LoopCarrierEnd` machinery loops use  -  the local-allocation and
@@ -531,6 +531,7 @@ impl LowerCtx {
     }
 }
 
+// Inline: covers items in the crate-private `descriptor` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::super::lower;

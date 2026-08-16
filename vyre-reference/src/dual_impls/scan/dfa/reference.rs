@@ -44,6 +44,7 @@ impl evaluator::ReferenceEvaluator for PatternMatchDfa {
     }
 }
 
+// Inline: covers items in the crate-private `dual_impls::evaluator` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

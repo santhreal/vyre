@@ -69,6 +69,7 @@ impl SequentialWorkgroup {
 /// sequential driver and workgroup memory model agree on bounds.
 pub const MAX_SHARED_BYTES: usize = MAX_WORKGROUP_BYTES;
 
+// Inline: covers the crate-private `SequentialWorkgroup` and `for_program`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

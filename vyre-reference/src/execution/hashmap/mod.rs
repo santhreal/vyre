@@ -245,7 +245,7 @@ pub(crate) fn run_hashmap_reference(
         // The oracle must refuse exactly what the device backends refuse. A
         // backend-allocated output with no static count has no size source on any
         // path: answering it with an empty buffer here certified programs that
-        // CUDA and WGPU both reject, which is a certification hole rather than a
+        // both device backends reject, which is a certification hole rather than a
         // cosmetic inconsistency.
         decl.require_static_readback_size()
             .map_err(|message| ReferenceError::new(message))?;
@@ -771,6 +771,7 @@ fn eval_atomic(
 /// reading Pass-A's not-yet-written per-block totals). These pin the private splitting
 /// helpers IN the crate that owns them, the end-to-end value parity lives downstream in
 /// `vyre-primitives`'s multi_block/line_index tests, but the split MECHANICS belong here.
+// Inline: covers the crate-private `contains_grid_sync` and `flatten_grid_sync_scopes`, which no integration test can reach.
 #[cfg(test)]
 mod grid_sync_segmentation {
     use super::*;

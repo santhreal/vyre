@@ -100,7 +100,7 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
     // into a u32 (doc: "Unpack lower/upper N-bits of a u8/u32 into a u32"). They
     // are SHARED across operand type, handled here before per-type dispatch,
     // mirroring the Min/Max/AbsDiff shared-binop path. They match the emit
-    // lowering (`vyre-emit-naga` op_lookup `unpack_shift_mask`: `(v >> shift) &
+    // lowering (the text emitter's `unpack_shift_mask`: `(v >> shift) &
     // mask`) and foundation `ir_eval`. The reference previously REJECTED them
     // (the integer-unop macro's `_ => Err` arm), so an Unpack-bearing program
     // could not be evaluated by the oracle even though every backend + ir_eval
@@ -132,7 +132,7 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
 }
 
 /// `(shift, mask)` for the bit-unpack unary ops, identical to the emit lowering
-/// (`vyre-emit-naga` `op_lookup::unpack_shift_mask`) and foundation `ir_eval`:
+/// (the text emitter's `op_lookup::unpack_shift_mask`) and foundation `ir_eval`:
 /// `Unpack4Low = v & 0x0F`, `Unpack4High = (v >> 4) & 0x0F`,
 /// `Unpack8Low = v & 0xFF`, `Unpack8High = (v >> 24) & 0xFF`. `None` for every
 /// other unary op so the normal per-type dispatch handles them.
@@ -544,6 +544,7 @@ fn unop_bool(op: &UnOp, value: bool) -> Result<Value, crate::ReferenceError> {
     }
 }
 
+// Inline: covers the crate-private `eval_binop` and `eval_unop`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

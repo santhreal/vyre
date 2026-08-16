@@ -243,6 +243,7 @@ fn priority_for_speedup(speedup: f32) -> u32 {
     }
 }
 
+// Inline: covers the crate-private `format_short` and `is_clean`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -39,6 +39,7 @@ mod binding_layout;
 mod intent;
 mod kernel;
 mod kernel_op;
+// Inline: supplies descriptor fixtures to the crate-private `descriptor` tests that stay inline.
 #[cfg(test)]
 pub(crate) mod test_descriptors;
 
@@ -59,8 +60,8 @@ pub enum MemoryClass {
     /// alongside `Global` writers.
     Constant,
     /// True uniform-buffer memory backed by `BufferDecl::uniform`.
-    /// Maps to WGSL `var<uniform>` / Vulkan `uniform_buffer` descriptor
-    /// and binds in group 1 per `bind_group_for`. Distinct from
+    /// Maps to a uniform-buffer descriptor in the emitted dialect and binds
+    /// in group 1 per `bind_group_for`. Distinct from
     /// `Constant` so the emitter can pick `AddressSpace::Uniform` and
     /// the layout builder can reserve the second bind group.
     Uniform,
@@ -507,8 +508,8 @@ pub struct KernelOpsIter<'a> {
 /// Backend-neutral scan intent attached beside a [`KernelDescriptor`].
 ///
 /// These intents describe why descriptor regions exist, not how a backend must
-/// implement them. CUDA, WGPU, Metal, SPIR-V, and CPU emitters can route from
-/// these strategy classes without owning scan compiler policy.
+/// implement them. Every emitter, device or CPU, can route from these strategy
+/// classes without owning scan compiler policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DescriptorIntentKind {
     /// Literal candidate prefiltering.

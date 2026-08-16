@@ -17,6 +17,6 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Build Docs
-        run: ./scripts/docs.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- workspace-docs
       - name: Validate CLI documentation
         run: ./cargo_full run -p xtask --bin xtask -- cli-docs

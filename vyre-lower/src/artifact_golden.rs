@@ -203,6 +203,7 @@ fn first_differing_case(expected: &str, actual: &str) -> String {
     }
 }
 
+// Inline: covers the crate-private `CASE_MARKER` and `first_differing_case`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

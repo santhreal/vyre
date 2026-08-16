@@ -17,8 +17,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use super::planner::plan_flash_attention_tiled;
 use crate::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
+    bounded_exp_arg, bounded_score, positive_denominator,
 };
+use crate::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::nn::flash_attention_2";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::flash_attention_2_reference";

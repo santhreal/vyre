@@ -29,5 +29,6 @@ pub use entry::{emit_module, emit_module_with_capabilities, prepared_program};
 pub use entry::{trap_sidecar_decl, trap_tags};
 pub use trap_sidecar::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 
+// Inline: covers the private `scan_buffer_targets` and the extension scan registry, which no integration test can reach.
 #[cfg(test)]
 mod tests;

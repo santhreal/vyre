@@ -93,6 +93,7 @@ impl LowerCtx {
     }
 }
 
+// Inline: covers items in the crate-private `lower` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::super::lower;

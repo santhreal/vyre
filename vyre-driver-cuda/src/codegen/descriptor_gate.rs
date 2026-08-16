@@ -54,7 +54,7 @@ pub(crate) fn compute_capability(target_sm: u32) -> vyre_emit_ptx::ComputeCapabi
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
-    use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialBackend};
+    use vyre_lower::emit_adversarial_corpus;
 
     #[test]
     fn validates_simple_store_program() {
@@ -90,11 +90,6 @@ mod tests {
 
     #[test]
     fn adversarial_success_corpus_passes_verification_and_ptx_emit() {
-        assert!(
-            emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Cuda),
-            "Fix: shared emit adversarial corpus must register CUDA as a required consumer."
-        );
-
         for case in emit_adversarial_corpus::success_cases() {
             let descriptor =
                 vyre_lower::verify_descriptor(&case.descriptor).unwrap_or_else(|error| {

@@ -102,6 +102,7 @@ fn bytes_per_element(t: &DataType) -> u32 {
     }
 }
 
+// Inline: covers the crate-private `analyze` and `bytes_per_element`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -240,9 +240,7 @@ mod tests {
     #[test]
     fn the_allowance_window_is_bounded() {
         let mut lines = vec!["if probe().is_err() { return; }"];
-        for _ in 0..25 {
-            lines.push("    // filler");
-        }
+        lines.resize(26, "    // filler");
         lines.push("    let backend = Backend::acquire_or_panic();");
         assert!(!loud_within_window(&lines, 0));
         let near = vec![

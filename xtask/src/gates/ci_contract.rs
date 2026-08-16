@@ -164,6 +164,35 @@ impl Gate for CiRequired {
             sections.len()
         ));
 
+        let blocking: BTreeSet<&str> = sections
+            .iter()
+            .map(|section| section.workflow.as_str())
+            .collect();
+        for (line, workflow) in named_workflows(&document) {
+            let live = tree.exists(&format!(".github/workflows/{workflow}"));
+            let paused = tree.exists(&format!(".github/workflows-paused/{workflow}"));
+            if !live && !paused {
+                report.find(Finding::at(
+                    REQUIRED,
+                    line,
+                    format!("`{workflow}` names a workflow file the checkout does not carry"),
+                    "name a workflow under .github/workflows or .github/workflows-paused, or \
+                     delete the row; a filename in prose was checked by nothing, so this \
+                     document promised two lanes that had been paused for months",
+                ));
+                continue;
+            }
+            if paused && blocking.contains(workflow.as_str()) {
+                report.find(Finding::at(
+                    REQUIRED,
+                    line,
+                    format!("`{workflow}` is paused and is also named as a blocking section"),
+                    "restore the workflow, or move its contexts under the deep-gate heading; a \
+                     paused workflow cannot report a context branch protection waits for",
+                ));
+            }
+        }
+
         for section in &sections {
             let path = format!(".github/workflows/{}", section.workflow);
             if !tree.exists(&path) {
@@ -246,6 +275,35 @@ fn required_sections(document: &str) -> Vec<RequiredSection> {
         }
     }
     sections
+}
+
+/// Every workflow file name the document quotes, with the line it is on.
+///
+/// The section headings and the deep-gate rows both name files, and the rows are
+/// where the rot lived: `parse_required_ci_statuses` resolves the contexts under
+/// a heading against real workflows, so a filename written as prose under the
+/// deep-gate heading was read by nothing at all. Two of them named workflows
+/// that had been moved to `workflows-paused`, and the document went on claiming
+/// them as lanes for as long as nobody opened the directory.
+fn named_workflows(document: &str) -> Vec<(u32, String)> {
+    let mut named = Vec::new();
+    for (number, line) in crate::gates::scan::numbered(document) {
+        let mut rest = line;
+        while let Some(quoted) = next_quoted(&mut rest) {
+            if quoted.ends_with(".yml") || quoted.ends_with(".yaml") {
+                named.push((number, quoted));
+            }
+        }
+    }
+    named
+}
+
+/// The next backtick-quoted span, advancing past it.
+fn next_quoted(text: &mut &str) -> Option<String> {
+    let (_, after_open) = text.split_once('`')?;
+    let (inner, after_close) = after_open.split_once('`')?;
+    *text = after_close;
+    (!inner.is_empty()).then(|| inner.to_string())
 }
 
 /// The text between the first pair of backticks.
@@ -569,6 +627,56 @@ mod tests {
             fail_closed_findings("demo.yml", &jobs[0]).is_empty(),
             "a job that does not always run is not a fan-in job"
         );
+    }
+
+    /// WHY: `parse_required_ci_statuses` resolves the contexts under a heading,
+    /// so a workflow file named as prose under the deep-gate heading was read by
+    /// nothing. Two rows named workflows that had been moved to
+    /// `workflows-paused` and the document kept claiming them as lanes. Every
+    /// quoted file name on a line must be seen, not just the first, or a row that
+    /// names two workflows hides the second.
+    #[test]
+    fn every_quoted_workflow_file_name_is_read() {
+        let document = "# Required\n\n\
+            The `ci-required` gate reads this.\n\n\
+            ## From `ci.yml` (every PR)\n\
+            - `CI release gate`\n\n\
+            ## Scheduled or Manual Deep Gates\n\n\
+            - `fuzz.yml`  -  once targets exist.\n\
+            - `gone.yml` replaces `also-gone.yaml`.\n";
+        assert_eq!(
+            named_workflows(document),
+            vec![
+                (5, "ci.yml".to_string()),
+                (10, "fuzz.yml".to_string()),
+                (11, "gone.yml".to_string()),
+                (11, "also-gone.yaml".to_string()),
+            ]
+        );
+    }
+
+    /// WHY: the live document is the payload of branch protection, so the rule
+    /// has to hold on the tree it ships with. A rule that only passes on a
+    /// fixture proves the fixture.
+    #[test]
+    fn the_live_required_document_names_only_workflows_that_exist() {
+        let root = crate::checkout::checkout_root();
+        let tree = Tree::open(&root).expect("Fix: the checkout must be listable");
+        let document = tree
+            .read(REQUIRED)
+            .expect("Fix: the document must be readable");
+        let named = named_workflows(&document);
+        assert!(
+            !named.is_empty(),
+            "the document must name at least one workflow"
+        );
+        for (line, workflow) in named {
+            assert!(
+                tree.exists(&format!(".github/workflows/{workflow}"))
+                    || tree.exists(&format!(".github/workflows-paused/{workflow}")),
+                "{REQUIRED}:{line} names `{workflow}`, which is in neither workflow directory"
+            );
+        }
     }
 
     /// WHY: the rows under the deep-gate heading name lanes that report on a

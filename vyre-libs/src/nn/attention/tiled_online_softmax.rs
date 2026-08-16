@@ -10,7 +10,8 @@
 
 use vyre_foundation::ir::{Expr, Node, UnOp};
 
-use crate::nn::attention_stability::{bounded_exp_arg, flush_tiny, positive_denominator};
+use crate::nn::attention_stability::{bounded_exp_arg, positive_denominator};
+use crate::nn::f32_stability::flush_tiny;
 
 pub(super) struct TiledOnlineSoftmaxSpec<'a> {
     pub(super) q: &'a str,

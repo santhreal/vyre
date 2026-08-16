@@ -130,6 +130,7 @@ fn format_verify_failure(error: &VerifyFailure) -> String {
     out
 }
 
+// Inline: covers the crate-private `message` and `new`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -8,10 +8,10 @@ use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, TypeInner};
 use proptest::prelude::*;
 use vyre_lower::emit_adversarial_corpus::{
-    self, EmitAdversarialBackend, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
+    self, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
 };
 
-#[path = "../src/tests/naga_probe.rs"]
+#[path = "support/naga_probe.rs"]
 mod naga_probe;
 use naga_probe::{block_has_atomic, block_has_barrier, block_has_loop, block_if_count, entry_body};
 
@@ -102,11 +102,6 @@ fn validate_module(module: &naga::Module, label: &str) {
 
 #[test]
 fn hostile_success_corpus_emits_structured_naga_modules() {
-    assert!(
-        emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Naga),
-        "Fix: shared emit adversarial corpus must register Naga as a required consumer."
-    );
-
     for case in emit_adversarial_corpus::success_cases() {
         let module = vyre_emit_naga::emit(
             &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),

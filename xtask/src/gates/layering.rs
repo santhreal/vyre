@@ -1,10 +1,14 @@
 //! Whether the resolved crate graph stays inside the layering the ownership
 //! registry declares.
 //!
-//! Two rules over one graph. A member may reach another member only if its
+//! Three rules over one graph. A member may reach another member only if its
 //! `docs/CRATE_OWNERSHIP.toml` entry allows it, directly or through a declared
 //! edge. A member in a substrate-neutral layer may not reach a backend API crate
-//! at all, whatever the intermediate was.
+//! at all, whatever the intermediate was, and may not name a concrete backend,
+//! vendor or dialect in its own production sources: a neutral crate that
+//! describes its work in one vendor's words is where a rule meant for every
+//! backend ends up written for one, which is the drift the third rule reports
+//! before the code follows the prose.
 //!
 //! The graph comes from the manifests and the lockfile, never from cargo. The
 //! shell form ran `cargo tree` once per member and once more per violation, so a
@@ -19,7 +23,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::manifest_contract::{dep_lines, dependency_hosts, entries, target_package};
-use crate::gates::scan::Tree;
+use crate::gates::scan::{self, Tree};
 
 /// Production dependency tables. Development edges are excluded because a test
 /// may depend upward deliberately, which is the same allowance `check-tier-deps`
@@ -103,6 +107,47 @@ const NEUTRAL_LAYERS: &[(&str, bool)] = &[
 /// one of these has crossed it whatever the intermediate was.
 const BACKEND_APIS: &[&str] = &["ash", "cudarc", "metal", "naga", "wgpu"];
 
+/// Concrete backend, vendor and dialect names. A crate in a substrate-neutral
+/// layer names the neutral concept instead: primary text, primary binary,
+/// secondary text, native module, backend, target, device, artifact.
+///
+/// Matched case-insensitively and only where the hit is a whole word, so
+/// `cudarc` is not `CUDA` and `hash` is not `ash`. Every spelling of a workspace
+/// member name is masked out first, because a crate that must name
+/// `vyre-driver-wgpu` is naming a package rather than describing its own work in
+/// one substrate's words.
+const BACKEND_WORDS: &[&str] = &[
+    "cubin", "CUDA", "cudarc", "GLSL", "HLSL", "Metal", "MSL", "naga", "NVIDIA", "NVRTC", "NVVM",
+    "OpenCL", "PTX", "ptxas", "SPIR-V", "SPIRV", "Vulkan", "WGPU", "WGSL",
+];
+
+/// Substrate-neutral layers whose crates may still name a concrete backend, and
+/// the reason each may.
+///
+/// A crate whose job is to police the backends names every one of them: a roster
+/// it may not write is a roster it cannot check. Every other neutral layer
+/// describes work that must read the same for every target, so this list stays
+/// short and each row carries why. A row naming a layer no member declares is
+/// fatal, because an exemption nothing uses records a rule that stopped covering
+/// anything.
+const VOCABULARY_EXEMPT_LAYERS: &[(&str, &str)] = &[(
+    "standalone-tooling",
+    "a tooling crate names the backends its own rules police",
+)];
+
+/// Directory prefix, word, and reason for a backend word that identifies an
+/// external interface instead of describing the crate's own work.
+///
+/// A name the kernel exports cannot be restated in neutral words: the probe
+/// opens that exact path, and a rename would make it read the wrong file or
+/// nothing. Every other site states the neutral concept, so each row here
+/// carries the reason it is not one of them.
+const INTERFACE_NAMES: &[(&str, &str, &str)] = &[(
+    "vyre-runtime/src/uring/",
+    "nvidia-fs",
+    "the Linux kernel module, and the /proc path it exports, that the GPUDirect probe reads",
+)];
+
 /// Every internal edge stays inside its declared closure, and no substrate-neutral
 /// crate reaches a backend API.
 pub struct Layering;
@@ -113,7 +158,7 @@ impl Gate for Layering {
     }
 
     fn help(&self) -> &'static str {
-        "hold every member inside the dependency closure its ownership entry declares, and keep substrate-neutral layers away from backend API crates"
+        "hold every member inside the dependency closure its ownership entry declares, and keep substrate-neutral layers away from backend API crates and from concrete backend vocabulary"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -122,6 +167,7 @@ impl Gate for Layering {
         let registry = Registry::read(&tree, &graph.members)?;
         let mut report = Report::clean();
         let mut edges = 0usize;
+        let mut scanned = 0usize;
 
         for member in &graph.members {
             let allowed = registry.closure(member);
@@ -158,6 +204,25 @@ impl Gate for Layering {
                      backend, or move this crate out of the neutral layer",
                 ));
             }
+            if exempt_from_vocabulary(registry.layer(member)) {
+                continue;
+            }
+            for (file, line, words) in backend_vocabulary(&tree, graph.directory(member))? {
+                scanned += 1;
+                report.find(Finding::at(
+                    file,
+                    line,
+                    format!(
+                        "`{member}` is in the substrate-neutral layer `{}` and names {words} in \
+                         production source",
+                        registry.layer(member)
+                    ),
+                    "state the neutral concept the rule names (primary text, primary binary, \
+                     secondary text, native module, backend, target, device, artifact), or move \
+                     the code into the crate that owns that backend when the concrete detail is \
+                     load-bearing",
+                ));
+            }
         }
 
         report.note(format!(
@@ -165,16 +230,165 @@ impl Gate for Layering {
             graph.members.len()
         ));
         report.note(format!(
-            "{} member(s) in a substrate-neutral layer, checked against {}",
+            "{} member(s) in a substrate-neutral layer, checked against {} and {} backend word(s)",
             graph
                 .members
                 .iter()
                 .filter(|member| registry.neutral(member))
                 .count(),
-            BACKEND_APIS.join(", ")
+            BACKEND_APIS.join(", "),
+            BACKEND_WORDS.len()
         ));
+        if scanned != 0 {
+            report.note(format!("{scanned} line(s) name a backend word"));
+        }
+        for (layer, reason) in VOCABULARY_EXEMPT_LAYERS {
+            report.note(format!(
+                "the `{layer}` layer is excused from the vocabulary rule: {reason}"
+            ));
+        }
+        for (prefix, name, reason) in INTERFACE_NAMES {
+            report.note(format!(
+                "`{name}` under {prefix} is read as an interface name rather than vocabulary: \
+                 {reason}"
+            ));
+        }
         Ok(report)
     }
+}
+
+/// Whether `layer` is excused from the vocabulary rule by
+/// [`VOCABULARY_EXEMPT_LAYERS`].
+fn exempt_from_vocabulary(layer: &str) -> bool {
+    VOCABULARY_EXEMPT_LAYERS
+        .iter()
+        .any(|(exempt, _)| *exempt == layer)
+}
+
+/// Backend words in the production source under `directory`, one entry per line.
+///
+/// Test code is excluded twice over: a file the tree reaches only as test support
+/// is skipped by path, and a line inside a `#[cfg(test)]` item is skipped by the
+/// same reader the hot-path scan uses. A backend word in a test is the test
+/// naming the backend it drives, which is what a backend test is for.
+fn backend_vocabulary(
+    tree: &Tree,
+    directory: &str,
+) -> Result<Vec<(String, u32, String)>, GateError> {
+    let prefix = format!("{directory}/src/");
+    let mut found = Vec::new();
+    for path in tree.paths() {
+        let Some(relative) = path.to_str() else {
+            continue;
+        };
+        if !relative.starts_with(&prefix) || !relative.ends_with(".rs") || is_test_source(relative)
+        {
+            continue;
+        }
+        let text = tree.read(relative)?;
+        let lines: Vec<&str> = text.lines().collect();
+        let test_only = scan::cfg_test_lines(&lines);
+        for (number, line) in scan::numbered(&text) {
+            let index = usize::try_from(number)
+                .unwrap_or(usize::MAX)
+                .saturating_sub(1);
+            if test_only.get(index).copied().unwrap_or(false) {
+                continue;
+            }
+            let words = words_in(&mask_interface_names(line, relative));
+            if !words.is_empty() {
+                found.push((relative.to_string(), number, words.join(", ")));
+            }
+        }
+    }
+    Ok(found)
+}
+
+/// Whether the tree reaches `relative` only as test support.
+///
+/// A `tests` directory or a `tests.rs` module is test code whatever declared it,
+/// and the `#[cfg(test)]` attribute that gates it sits in the parent file rather
+/// than in the file being read, so the line reader cannot see it from here.
+fn is_test_source(relative: &str) -> bool {
+    relative
+        .split('/')
+        .any(|part| part == "tests" || part == "tests.rs")
+}
+
+/// `line` with every interface name allowed for its directory blanked to spaces
+/// of the same width.
+///
+/// Blanked rather than removed so a reported column still maps to the source, and
+/// so a blanked name cannot join its neighbours into a word that was never there.
+fn mask_interface_names(line: &str, relative: &str) -> String {
+    let mut masked = line.to_string();
+    for (_, name, _) in INTERFACE_NAMES
+        .iter()
+        .filter(|(prefix, _, _)| relative.starts_with(prefix))
+    {
+        while let Some(at) = masked.find(name) {
+            masked.replace_range(at..at + name.len(), &" ".repeat(name.len()));
+        }
+    }
+    masked
+}
+
+/// The backend words `line` names, in [`BACKEND_WORDS`] order, without repeats.
+///
+/// Compared segment by segment rather than by substring. A name is a run of
+/// identifier segments, split on every non-alphanumeric byte and at camel-case
+/// boundaries, so `CudaDevice` names `CUDA`, `barracuda` does not, and a word
+/// spelled with a separator matches the run its own spelling splits into.
+/// Substring matching would need an allowance for every unrelated identifier that
+/// happens to carry a vendor's letters, and camel case is where a backend type
+/// name hides from a whole-word rule.
+fn words_in(line: &str) -> Vec<String> {
+    let segments = segments_of(line);
+    let mut found = Vec::new();
+    for word in BACKEND_WORDS {
+        let wanted = segments_of(word);
+        if !wanted.is_empty()
+            && segments
+                .windows(wanted.len())
+                .any(|run| run == wanted.as_slice())
+        {
+            found.push(format!("`{word}`"));
+        }
+    }
+    found
+}
+
+/// `text` as lowercase identifier segments.
+///
+/// A byte that cannot sit inside an identifier ends the current segment, and an
+/// uppercase letter starts a new one when it follows a lowercase letter or digit
+/// or precedes a lowercase letter, which splits `WGSLModule` into `wgsl` and
+/// `module` rather than one run nothing matches.
+fn segments_of(text: &str) -> Vec<String> {
+    let bytes = text.as_bytes();
+    let mut segments = Vec::new();
+    let mut current = String::new();
+    for (index, letter) in text.char_indices() {
+        if !letter.is_ascii_alphanumeric() {
+            if !current.is_empty() {
+                segments.push(std::mem::take(&mut current));
+            }
+            continue;
+        }
+        let previous = index.checked_sub(1).map(|at| bytes[at]);
+        let next = bytes.get(index + 1).copied();
+        let starts_segment = letter.is_ascii_uppercase()
+            && (previous.is_some_and(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+                || next.is_some_and(|byte| byte.is_ascii_lowercase()));
+        if starts_segment && !current.is_empty() {
+            segments.push(std::mem::take(&mut current));
+        }
+        current.push(letter.to_ascii_lowercase());
+    }
+    if !current.is_empty() {
+        segments.push(current);
+    }
+    segments
 }
 
 /// No named neutral crate carries a production edge to a backend, driver product
@@ -583,6 +797,24 @@ impl Registry {
                  anything",
             ));
         }
+        let vacant: Vec<&str> = VOCABULARY_EXEMPT_LAYERS
+            .iter()
+            .map(|(layer, _)| *layer)
+            .filter(|layer| {
+                !used.contains(*layer) || !neutrality.get(*layer).copied().unwrap_or(false)
+            })
+            .collect();
+        if !vacant.is_empty() {
+            return Err(GateError::new(
+                format!(
+                    "vocabulary exemption(s) for a layer no member declares as substrate-neutral: {}",
+                    vacant.join(", ")
+                ),
+                "delete the entry from VOCABULARY_EXEMPT_LAYERS in xtask/src/gates/layering.rs; \
+                 the vocabulary rule only reaches neutral layers, so an exemption outside them \
+                 excuses nothing",
+            ));
+        }
 
         Ok(Self {
             declared,
@@ -838,7 +1070,10 @@ mod tests {
             graph.reachable_backend_apis("neutral"),
             ["wgpu".to_string()].into_iter().collect::<BTreeSet<_>>()
         );
-        assert_eq!(graph.path_to("neutral", "wgpu"), "neutral -> middle -> wgpu");
+        assert_eq!(
+            graph.path_to("neutral", "wgpu"),
+            "neutral -> middle -> wgpu"
+        );
         assert!(graph.reachable_members("neutral").is_empty());
     }
 
@@ -865,5 +1100,110 @@ mod tests {
         );
         assert!(registry.neutral("top"));
         assert!(!registry.neutral("unknown"));
+    }
+
+    #[test]
+    fn every_backend_word_is_reported_from_the_list_rather_than_a_sample() {
+        for word in BACKEND_WORDS {
+            let line = format!("/// the {word} path");
+            assert_eq!(
+                words_in(&line),
+                vec![format!("`{word}`")],
+                "Fix: every entry of BACKEND_WORDS must be reportable; `{word}` was not."
+            );
+        }
+    }
+
+    #[test]
+    fn a_backend_word_that_is_only_a_substring_of_an_unrelated_name_is_not_a_hit() {
+        for line in [
+            "let hash = compute();",
+            "let barracuda = 1;",
+            "let metallic = 1;",
+            "let vulkanish = 0;",
+            "fn aims_lower() {}",
+        ] {
+            assert!(
+                words_in(line).is_empty(),
+                "Fix: a vendor's letters inside an unrelated name are not vocabulary: {line}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_backend_word_in_camel_case_or_under_scores_is_a_hit() {
+        for (line, expected) in [
+            ("let device = CudaDevice::new();", "`CUDA`"),
+            ("const MAX_NVIDIA_FS_BYTES: u64 = 1;", "`NVIDIA`"),
+            ("fn ptxas_like() {}", "`ptxas`"),
+            ("struct WGSLModule;", "`WGSL`"),
+            ("let words = SpirvWords;", "`SPIRV`"),
+            ("let table = spir_v_table;", "`SPIR-V`"),
+        ] {
+            assert!(
+                words_in(line).contains(&expected.to_string()),
+                "Fix: {expected} must be found in {line}, got {:?}",
+                words_in(line)
+            );
+        }
+    }
+
+    #[test]
+    fn a_member_crate_name_is_still_vocabulary_when_a_neutral_crate_writes_it() {
+        assert_eq!(
+            words_in("/// the vyre-driver-cuda fork answered a per-launch topology"),
+            vec!["`CUDA`".to_string()],
+            "Fix: naming the crate that owns a backend states the backend; only a layer \
+             exempted by VOCABULARY_EXEMPT_LAYERS may write the roster."
+        );
+    }
+
+    #[test]
+    fn every_vocabulary_exemption_names_a_neutral_layer() {
+        for (layer, _) in VOCABULARY_EXEMPT_LAYERS {
+            assert!(exempt_from_vocabulary(layer));
+            assert!(
+                NEUTRAL_LAYERS
+                    .iter()
+                    .any(|(name, neutral)| name == layer && *neutral),
+                "Fix: `{layer}` is excused from the vocabulary rule but is not a neutral layer, \
+                 so the exemption excuses nothing."
+            );
+        }
+        assert!(
+            !exempt_from_vocabulary("lowering"),
+            "Fix: a product layer is never excused from the vocabulary rule."
+        );
+    }
+
+    #[test]
+    fn an_interface_name_is_allowed_only_under_the_directory_that_reads_it() {
+        let line = "let mut file = fs::File::open(\"/proc/driver/nvidia-fs/stats\")?;";
+        let inside = mask_interface_names(line, "vyre-runtime/src/uring/gpudirect.rs");
+        assert!(
+            words_in(&inside).is_empty(),
+            "Fix: the path the GPUDirect probe opens is an interface name under its own module."
+        );
+        assert_eq!(
+            inside.len(),
+            line.len(),
+            "Fix: masking must preserve width so a reported column still maps to the source."
+        );
+        let outside = mask_interface_names(line, "vyre-foundation/src/lib.rs");
+        assert_eq!(
+            words_in(&outside),
+            vec!["`NVIDIA`".to_string()],
+            "Fix: the allowance must not reach a crate that does not read the interface."
+        );
+    }
+
+    #[test]
+    fn a_test_only_directory_or_module_is_not_production_source() {
+        assert!(is_test_source(
+            "vyre-libs/src/solvers/tests/dot_contracts.rs"
+        ));
+        assert!(is_test_source("vyre-libs/src/solvers/tests.rs"));
+        assert!(!is_test_source("vyre-libs/src/solvers/contracts.rs"));
+        assert!(!is_test_source("vyre-libs/src/tested/mod.rs"));
     }
 }

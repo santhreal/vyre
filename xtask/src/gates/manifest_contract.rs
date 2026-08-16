@@ -597,9 +597,7 @@ fn resolved_manifest(manifest: &Path, raw: &str) -> Option<PathBuf> {
         match component {
             Component::Normal(part) => parts.push(part.to_string_lossy().to_string()),
             Component::ParentDir => {
-                if parts.pop().is_none() {
-                    return None;
-                }
+                parts.pop()?;
             }
             Component::CurDir => {}
             Component::RootDir | Component::Prefix(_) => return None,

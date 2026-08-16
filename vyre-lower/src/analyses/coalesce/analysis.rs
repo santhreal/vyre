@@ -138,6 +138,7 @@ fn classify_pool_operand(body: &KernelBody, operand_id: u32) -> AccessPattern {
     }
 }
 
+// Inline: covers the crate-private `analyze`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

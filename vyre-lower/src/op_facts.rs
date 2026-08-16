@@ -2,7 +2,7 @@
 //!
 //! Three questions used to each carry their own list of the same variant
 //! universe: which operand of an op names a child body, whether an op must be
-//! kept when its results are unused, and, in the PTX backend, whether an op can
+//! kept when its results are unused, and, where a backend has them, whether an op can
 //! sit under an instruction predicate. Three lists of one enum is three answers
 //! that drift apart, and the drift is silent: a list that omits a variant reads
 //! as "this variant is ordinary" rather than as an omission.
@@ -102,6 +102,7 @@ pub(crate) fn kernel_op_kind_is_dce_pure(kind: &KernelOpKind) -> bool {
     !facts_for(kind).retained_effect
 }
 
+// Inline: covers the crate-private `kernel_op_kind_is_dce_pure`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

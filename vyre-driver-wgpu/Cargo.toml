@@ -98,12 +98,6 @@ vyre-reference = { path = "../vyre-reference" }
 vyre-conform = { path = "../conform/vyre-conform", default-features = false }
 tracing-subscriber.workspace = true
 libc.workspace = true
-# PATH-ONLY (package = vyre-grammar-gen): a versioned dev-dep here would pin a
-# registry version of a crate this workspace also builds from path, and it fell out of
-# the publish train once already that way. cargo strips path-only dev-deps from the
-# published manifest, so this creates no publish-ordering constraint; local test builds
-# still link it via the path.
-c-grammar-gen = { package = "vyre-grammar-gen", path = "../vyre-grammar-gen" }
 
 [package.metadata.docs.rs]
 all-features = true

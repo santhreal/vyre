@@ -23,5 +23,6 @@ mod report;
 pub use analysis::analyze;
 pub use report::{IntRange, ValueRangeReport};
 
+// Inline: covers the crate-private `analysis` and `carrier_staleness` submodules, which no integration test can reach.
 #[cfg(test)]
 mod tests;

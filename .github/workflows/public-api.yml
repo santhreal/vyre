@@ -19,6 +19,6 @@ jobs:
       - name: Install cargo-public-api
         run: cargo +nightly install cargo-public-api --locked
       - name: Diff every publishable crate
-        run: bash scripts/check_public_api_snapshot.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- public-api-snapshot
       - name: One public path per published item
         run: ./cargo_full run -p xtask --bin xtask -- public-api-paths

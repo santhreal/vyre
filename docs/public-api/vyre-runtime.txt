@@ -6,13 +6,16 @@
 #[non_exhaustive] pub enum vyre_runtime::routing::RoutingDecision
 #[non_exhaustive] pub enum vyre_runtime::tenant::TenantError
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::planner::ResidentWorkItem
+#[repr(C)] pub struct vyre_runtime::resident_work_queue::rule_catalog::RuleMeta
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::task::TaskWorkItem
 #[repr(C)] pub struct vyre_runtime::uring::Iovec
 #[repr(u32)] pub enum vyre_runtime::resident_work_queue::task::TaskPriority
 #[repr(u32)] pub enum vyre_runtime::resident_work_queue::task::TaskState
 impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem
+impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::rule_catalog::RuleMeta
 impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::task::TaskWorkItem
 impl bytemuck::zeroable::Zeroable for vyre_runtime::resident_work_queue::planner::ResidentWorkItem
+impl bytemuck::zeroable::Zeroable for vyre_runtime::resident_work_queue::rule_catalog::RuleMeta
 impl bytemuck::zeroable::Zeroable for vyre_runtime::resident_work_queue::task::TaskWorkItem
 impl core::clone::Clone for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 impl core::cmp::Eq for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
@@ -22,6 +25,9 @@ impl core::convert::From<vyre_megakernel::CompileError> for vyre_runtime::artifa
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
 impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
 impl core::default::Default for vyre_runtime::pipeline_cache::InMemoryPipelineCache
+impl core::default::Default for vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings
+impl core::default::Default for vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings
+impl core::default::Default for vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings
 impl core::default::Default for vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentQueueConfig
 impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry
@@ -55,7 +61,9 @@ impl vyre_runtime::pipeline_cache::PipelineCacheMetrics
 impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::DiskCache
 impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::InMemoryPipelineCache
 impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::LayeredPipelineCache
+impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::RemoteCache
 impl vyre_runtime::pipeline_cache::PipelineFingerprint
+impl vyre_runtime::pipeline_cache::RemoteCache
 impl vyre_runtime::replay::ReplayFailureEvidence
 impl vyre_runtime::replay::RingLog
 impl vyre_runtime::resident_work_queue::ResidentWorkQueue
@@ -98,6 +106,7 @@ impl vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 impl vyre_runtime::resident_work_queue::ring::HostRing
 impl vyre_runtime::resident_work_queue::ring::RingConsumer for vyre_runtime::resident_work_queue::ring::HostRing
 impl vyre_runtime::resident_work_queue::ring::RingProducer for vyre_runtime::resident_work_queue::ring::HostRing
+impl vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram
 impl vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow
 impl vyre_runtime::resident_work_queue::task::TaskPriority
 impl vyre_runtime::resident_work_queue::task::TaskQueueSnapshot
@@ -299,6 +308,8 @@ pub const vyre_runtime::resident_work_queue::protocol::slot::REQUEUE: u32
 pub const vyre_runtime::resident_work_queue::protocol::slot::WAIT_IO: u32
 pub const vyre_runtime::resident_work_queue::protocol::slot::YIELD: u32
 pub const vyre_runtime::resident_work_queue::ring::SLOT_BYTES: usize
+pub const vyre_runtime::resident_work_queue::rule_catalog::ALPHABET_SIZE: u32
+pub const vyre_runtime::resident_work_queue::rule_catalog::RULE_META_WORDS: usize
 pub const vyre_runtime::resident_work_queue::scheduler::PRIORITY_LEVELS: u32
 pub const vyre_runtime::resident_work_queue::scheduler::PRIORITY_OFFSETS_BASE: u32
 pub const vyre_runtime::resident_work_queue::scheduler::PRIORITY_STARVATION_COUNTER: u32
@@ -435,6 +446,13 @@ pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::metrics(&self) -> vyre_
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::hex(&self) -> alloc::string::String
 pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::of(artifact: &vyre_megakernel::Artifact) -> Self
+pub fn vyre_runtime::pipeline_cache::RemoteCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::RemoteCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
+pub fn vyre_runtime::pipeline_cache::RemoteCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
+pub fn vyre_runtime::pipeline_cache::RemoteCache::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
+pub fn vyre_runtime::pipeline_cache::RemoteCache::new(base_url: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_runtime::pipeline_cache::RemoteCache::put(&self, _fp: vyre_runtime::pipeline_cache::PipelineFingerprint, _artifact: alloc::vec::Vec<u8>)
+pub fn vyre_runtime::pipeline_cache::RemoteCache::with_required_metadata(self, source_provenance: impl core::convert::Into<alloc::string::String>, device_compatibility: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_runtime::recovery::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::RetryClass
 pub fn vyre_runtime::recovery::recover_artifact_session(session: &vyre_runtime::artifact_admission::ArtifactSession, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::replay::ReplayFailureEvidence::from_backend_error(slot_status: u32, error: &vyre_driver::backend::error::BackendError, output_bytes: &[u8]) -> Self
@@ -482,6 +500,15 @@ pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_epoch(cont
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_metrics(control_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<(u32, u32)>, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_metrics_into(control_bytes: &[u8], out: &mut alloc::vec::Vec<(u32, u32)>) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_observable(control_bytes: &[u8], index: u32) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::default() -> Self
+pub fn vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::record_hit_to_ring_hierarchical(is_hit_var: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::record_hit_to_ring_hierarchical_with(is_hit_var: &str, bindings: &vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::default() -> Self
+pub fn vyre_runtime::resident_work_queue::advanced::parallel_dfa::dfa_byte_scanner_parallel_composition() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_runtime::resident_work_queue::advanced::parallel_dfa::dfa_byte_scanner_parallel_composition_with(bindings: &vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings::default() -> Self
+pub fn vyre_runtime::resident_work_queue::advanced::zero_copy_io::pull_file_async_direct() -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_runtime::resident_work_queue::advanced::zero_copy_io::pull_file_async_direct_with(bindings: &vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_runtime::resident_work_queue::atomic_relaxed::atomic_load_relaxed(buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_runtime::resident_work_queue::atomic_relaxed::atomic_store_relaxed(name: &str, buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr, value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::to_task_work_item(self, task_id: u32, tenant_id: u32, priority: vyre_runtime::resident_work_queue::task::TaskPriority, op_handle: u32, input_handle: u32, output_handle: u32) -> vyre_runtime::resident_work_queue::task::TaskWorkItem
@@ -554,6 +581,12 @@ pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry::defau
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::calculate_optimal_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default() -> Self
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::geometry_from_slots(&self, slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
+pub fn vyre_runtime::resident_work_queue::planner::build_bellman_tn_order_program(buffers: vyre_primitives::math::bellman_shortest_path::BellmanBuffers<'_>, extents: vyre_primitives::math::bellman_shortest_path::BellmanExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_kfac_autotune_step_program(blocks_out: &str, blocks_in: &str, scratch: &str, num_blocks: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_persistent_fixpoint_program(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_scallop_provenance_wide_program(state: &str, next: &str, join_rules: &str, changed: &str, n: u32, w: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_full_clustering_program(buffers: vyre_primitives::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_primitives::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::planner::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
 pub fn vyre_runtime::resident_work_queue::planner::elide_value_flow_barriers(program: vyre_foundation::ir_inner::model::program::definition::Program) -> (vyre_foundation::ir_inner::model::program::definition::Program, vyre_runtime::resident_work_queue::planner::BarrierElisionReport)
@@ -649,6 +682,16 @@ pub fn vyre_runtime::resident_work_queue::ring::RingConsumer::try_done_count(&se
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::name(&self) -> &'static str
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::publish(&mut self, slot_idx: u32, encoded: &[u8]) -> core::result::Result<(), vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::slot_count(&self) -> u32
+pub fn vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram::new(rule_idx: u32, transitions: alloc::vec::Vec<u32>, accept: alloc::vec::Vec<u32>, state_count: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::rule_catalog::accepted_rule_fingerprints(rules: &[vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram]) -> (alloc::vec::Vec<[u8; 32]>, alloc::vec::Vec<vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection>)
+pub fn vyre_runtime::resident_work_queue::rule_catalog::accepted_rule_fingerprints_and_rejections_into(rules: &[vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram], fingerprints: &mut alloc::vec::Vec<[u8; 32]>, occupied: &mut alloc::vec::Vec<bool>, addressed: &mut alloc::vec::Vec<bool>, rejections: &mut alloc::vec::Vec<vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection>)
+pub fn vyre_runtime::resident_work_queue::rule_catalog::accepted_rule_fingerprints_into(rules: &[vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram], fingerprints: &mut alloc::vec::Vec<[u8; 32]>, occupied: &mut alloc::vec::Vec<bool>, addressed: &mut alloc::vec::Vec<bool>) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection>
+pub fn vyre_runtime::resident_work_queue::rule_catalog::build_byte_class_map_for_table(transitions: &[u32], state_count: usize, out: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_runtime::resident_work_queue::rule_catalog::compress_dense_transitions_into(dense: &[u32], state_count: usize, class_map: &[u32], num_classes: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_runtime::resident_work_queue::rule_catalog::pack_rule_catalog(rules: &[vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram]) -> core::result::Result<vyre_runtime::resident_work_queue::rule_catalog::PackedRuleCatalog, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::rule_catalog::pack_rule_catalog_into(rules: &[vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram], scratch: &mut vyre_runtime::resident_work_queue::rule_catalog::RuleCatalogPackingScratch) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::rule_catalog::try_pack_u16_transitions_into(compressed: &[u32], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::rule_catalog::unpack_u16_transition(packed: &[u32], flat_index: usize) -> u32
 pub fn vyre_runtime::resident_work_queue::scheduler::check_priority_fairness(priority: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_runtime::resident_work_queue::scheduler::check_tenant_fairness(tenant_id: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_runtime::resident_work_queue::scheduler::default_priority_offsets_array(total_slots: u32) -> [u32; 6]
@@ -663,6 +706,7 @@ pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::
 pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::len(&self) -> u32
 pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::observation(&self) -> vyre_driver::speculation_verdict::SpeculationObservation
 pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::record_sample(&mut self, store: &mut vyre_driver::autotune_store::AutotuneStore, keys: vyre_driver::speculate::SpeculativeVariantKeys<'_>, sample: vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample) -> vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate
+pub fn vyre_runtime::resident_work_queue::task::TaskQueueSnapshot::build_state_convergence_program(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current_buffer: &str, next_buffer: &str, changed_buffer: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::task::TaskQueueSnapshot::from_tasks(tasks: &[vyre_runtime::resident_work_queue::task::TaskWorkItem]) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::task::TaskQueueSnapshot::try_apply_to_launch_request(&self, request: vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::task::TaskQueueSnapshot::try_continuation_pressure_count(&self) -> core::result::Result<u64, vyre_driver::backend::error::BackendError>
@@ -848,6 +892,10 @@ pub mod vyre_runtime::pipeline_cache
 pub mod vyre_runtime::recovery
 pub mod vyre_runtime::replay
 pub mod vyre_runtime::resident_work_queue
+pub mod vyre_runtime::resident_work_queue::advanced
+pub mod vyre_runtime::resident_work_queue::advanced::hierarchical_atomics
+pub mod vyre_runtime::resident_work_queue::advanced::parallel_dfa
+pub mod vyre_runtime::resident_work_queue::advanced::zero_copy_io
 pub mod vyre_runtime::resident_work_queue::atomic_relaxed
 pub mod vyre_runtime::resident_work_queue::automata_worklist
 pub mod vyre_runtime::resident_work_queue::descriptor
@@ -867,6 +915,7 @@ pub mod vyre_runtime::resident_work_queue::protocol::slot
 pub mod vyre_runtime::resident_work_queue::readback
 pub mod vyre_runtime::resident_work_queue::resident
 pub mod vyre_runtime::resident_work_queue::ring
+pub mod vyre_runtime::resident_work_queue::rule_catalog
 pub mod vyre_runtime::resident_work_queue::scheduler
 pub mod vyre_runtime::resident_work_queue::scheduler::priority
 pub mod vyre_runtime::resident_work_queue::speculation
@@ -897,11 +946,15 @@ pub struct vyre_runtime::pipeline_cache::LayeredPromotionReport
 pub struct vyre_runtime::pipeline_cache::PipelineCacheMetricError
 pub struct vyre_runtime::pipeline_cache::PipelineCacheMetrics
 pub struct vyre_runtime::pipeline_cache::PipelineFingerprint(pub [u8; 32])
+pub struct vyre_runtime::pipeline_cache::RemoteCache
 pub struct vyre_runtime::replay::RecordedSlot
 pub struct vyre_runtime::replay::ReplayFailureEvidence
 pub struct vyre_runtime::replay::ReplayRecord
 pub struct vyre_runtime::replay::RingLog
 pub struct vyre_runtime::resident_work_queue::ResidentWorkQueue
+pub struct vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings
+pub struct vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings
+pub struct vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings
 pub struct vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex
 pub struct vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence
 pub struct vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy
@@ -943,6 +996,10 @@ pub struct vyre_runtime::resident_work_queue::readback::ResidentQueueReadback
 pub struct vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters
 pub struct vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 pub struct vyre_runtime::resident_work_queue::ring::HostRing
+pub struct vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram
+pub struct vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection
+pub struct vyre_runtime::resident_work_queue::rule_catalog::PackedRuleCatalog
+pub struct vyre_runtime::resident_work_queue::rule_catalog::RuleCatalogPackingScratch
 pub struct vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample
 pub struct vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate
 pub struct vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow
@@ -999,7 +1056,7 @@ pub trait vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspac
 pub trait vyre_runtime::resource_residency::ResidentResourceDevice: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::routing::RoutingPolicy: core::marker::Send + core::marker::Sync
 pub unsafe fn vyre_runtime::UringCompletionPump<'a>::wait_for_observable(host_visible_addr: *const u32, current: u32, timeout_ns: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_nvme_passthrough(&mut self, _fd: i32, _user_data: u64, _nvme_sqe_bytes: &[u8]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_nvme_passthrough(&mut self, fd: i32, user_data: u64, nvme_sqe_bytes: &[u8]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_fixed(&mut self, fd: i32, offset: u64, len: u32, chunk_idx: usize, buf_index: u16) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_fixed_at(&mut self, fd: i32, offset: u64, len: u32, target_offset: u64, buf_index: u16, user_data: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::AsyncUringStream<'a>::submit_read_to_gpu(&mut self, fd: i32, offset: u64, len: u32, chunk_idx: usize, iovs_storage: &mut [vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
@@ -1011,7 +1068,7 @@ pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::duplicate(&self) -> Self
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_bar1_peer_with_owner<O: ?core::marker::Sized>(_owner: &'a mut O, peer_ptr: *mut u8, len: usize) -> Self
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<O: ?core::marker::Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
-pub unsafe fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, _nvme_fd: i32, _namespace_id: u32, _starting_lba: u64, _blocks: u32, _bytes_per_block: u32, _slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, nvme_fd: i32, namespace_id: u32, starting_lba: u64, blocks: u32, bytes_per_block: u32, slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::UringResidentQueuePump<'a>::submit_file_scan(&mut self, fd: i32, file_offset: u64, len: u32, chunk_idx: u32, slot_idx: u32, tenant_id: u32, opcode: u32, args: [u32; 3]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
 pub vyre_runtime::PipelineError::DrainIncomplete
@@ -1102,6 +1159,29 @@ pub vyre_runtime::resident_work_queue::RingSlotTransition::Claim
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Done
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Fault
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Publish
+pub vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::byte_pos: &'static str
+pub vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::file_idx: &'static str
+pub vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::file_start: &'static str
+pub vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::hit_ring: &'static str
+pub vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::layer_idx: &'static str
+pub vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::queue_state: &'static str
+pub vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::rule_idx: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::file_end: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::file_start: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::haystack: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::initial_state: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::lane_next: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::lane_prefix: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::out_state_by_lane: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::state_count: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::subgroup_width: u32
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::transition_base: &'static str
+pub vyre_runtime::resident_work_queue::advanced::parallel_dfa::ParallelDfaBindings::transitions: &'static str
+pub vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings::destination: &'static str
+pub vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings::file_end: &'static str
+pub vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings::file_start: &'static str
+pub vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings::source: &'static str
+pub vyre_runtime::resident_work_queue::advanced::zero_copy_io::DirectIoBindings::tag: &'static str
 pub vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::byte_index: u32
 pub vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::state_id: u32
 pub vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence::blocking_active_time_ns: u64
@@ -1419,6 +1499,27 @@ pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::debug
 pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::io_queue_bytes: usize
 pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::ring_bytes: usize
 pub vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters::total_bytes: usize
+pub vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram::accept: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram::rule_idx: u32
+pub vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram::state_count: u32
+pub vyre_runtime::resident_work_queue::rule_catalog::BatchRuleProgram::transitions: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection::reason: alloc::string::String
+pub vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection::rule_idx: core::option::Option<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::PackedRuleCatalog::accept: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::PackedRuleCatalog::class_maps: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::PackedRuleCatalog::rejected_rules: alloc::vec::Vec<vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection>
+pub vyre_runtime::resident_work_queue::rule_catalog::PackedRuleCatalog::rule_meta: alloc::vec::Vec<vyre_runtime::resident_work_queue::rule_catalog::RuleMeta>
+pub vyre_runtime::resident_work_queue::rule_catalog::PackedRuleCatalog::transitions: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleCatalogPackingScratch::accept: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleCatalogPackingScratch::class_maps: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleCatalogPackingScratch::rejected_rules: alloc::vec::Vec<vyre_runtime::resident_work_queue::rule_catalog::BatchRuleRejection>
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleCatalogPackingScratch::rule_meta: alloc::vec::Vec<vyre_runtime::resident_work_queue::rule_catalog::RuleMeta>
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleCatalogPackingScratch::transitions: alloc::vec::Vec<u32>
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleMeta::accept_base: u32
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleMeta::class_map_base: u32
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleMeta::num_classes: u32
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleMeta::state_count: u32
+pub vyre_runtime::resident_work_queue::rule_catalog::RuleMeta::transition_base: u32
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::conservative_compile_ns: u64
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::conservative_dispatch_ns: u64
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::conservative_record: vyre_driver::autotune_store::AutotuneRecord

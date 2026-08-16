@@ -135,9 +135,7 @@ impl Gate for BackendExtension {
 
             let sources = tree.rust(&[&format!("{backend}/src")])?;
             for (message, matcher) in backend_source_requirements() {
-                let found = !tree
-                    .hits(&sources, |line| matcher(line))?
-                    .is_empty();
+                let found = !tree.hits(&sources, |line| matcher(line))?.is_empty();
                 if !found {
                     report.find(Finding::in_file(
                         format!("{backend}/src"),
@@ -149,12 +147,62 @@ impl Gate for BackendExtension {
             }
         }
 
+        for emitter in emit_members(&tree)? {
+            let sources = tree.rust(&[&format!("{emitter}/src"), &format!("{emitter}/tests")])?;
+            if tree
+                .hits(&sources, |line| line.contains("emit_adversarial_corpus"))?
+                .is_empty()
+            {
+                report.find(Finding::in_file(
+                    emitter.clone(),
+                    format!("{emitter} never consumes vyre_lower::emit_adversarial_corpus"),
+                    "run the shared hostile descriptor corpus in the crate's own tests; an \
+                     emitter that never sees the corpus is the one that regresses on it",
+                ));
+            }
+        }
+
         Ok(report)
     }
 }
 
+/// One thing a backend crate's own sources must contain: the sentence a missing
+/// one reads as, and the line predicate that finds it.
+type SourceRequirement = (&'static str, fn(&str) -> bool);
+/// Workspace members that emit a target representation, read from the root
+/// manifest so a new emitter joins the rule by being declared rather than by
+/// someone remembering to name it.
+fn emit_members(tree: &Tree) -> Result<Vec<String>, GateError> {
+    let root = tree.read_toml("Cargo.toml")?;
+    let members = root
+        .get("workspace")
+        .and_then(toml::Value::as_table)
+        .and_then(|workspace| workspace.get("members"))
+        .and_then(toml::Value::as_array)
+        .ok_or_else(|| {
+            GateError::new(
+                "the root Cargo.toml declares no workspace members",
+                "declare workspace.members; a rule over an empty roster reports success forever",
+            )
+        })?;
+    let emitters: Vec<String> = members
+        .iter()
+        .filter_map(toml::Value::as_str)
+        .filter(|member| member.starts_with("vyre-emit-"))
+        .map(str::to_string)
+        .collect();
+    if emitters.is_empty() {
+        return Err(GateError::new(
+            "the workspace declares no vyre-emit-* member",
+            "point the rule at the prefix the emitter crates use; a roster that matches nothing \
+             reports success forever",
+        ));
+    }
+    Ok(emitters)
+}
+
 /// What every backend crate's own sources must contain.
-fn backend_source_requirements() -> Vec<(&'static str, fn(&str) -> bool)> {
+fn backend_source_requirements() -> Vec<SourceRequirement> {
     vec![
         (
             "does not implement the backend trait in its own crate",
@@ -225,7 +273,10 @@ impl Gate for ReadbackRing {
         let mut report = Report::clean();
         let sources = tree.rust(&[RECORD, RECORD_MODULES])?;
         for needle in REQUIRED {
-            if tree.hits(&sources, |line| line.contains(needle))?.is_empty() {
+            if tree
+                .hits(&sources, |line| line.contains(needle))?
+                .is_empty()
+            {
                 report.find(Finding::in_file(
                     RECORD,
                     format!("the record and readback modules no longer contain `{needle}`"),
@@ -642,8 +693,8 @@ pub trait Example {
 
 pub trait Other {}
 ";
-        let block = extract_declaration(text, "pub trait Example")
-            .expect("the declaration is found");
+        let block =
+            extract_declaration(text, "pub trait Example").expect("the declaration is found");
         assert_eq!(
             block,
             "pub trait Example {\nfn one(&self);\nfn two(&self);\n}\n"
@@ -755,7 +806,10 @@ pub struct Other {
 ";
         let fields = program_fields(text, 1);
         assert_eq!(
-            fields.iter().map(|(_, name)| name.as_str()).collect::<Vec<_>>(),
+            fields
+                .iter()
+                .map(|(_, name)| name.as_str())
+                .collect::<Vec<_>>(),
             vec!["entry", "buffers"]
         );
     }
@@ -764,14 +818,22 @@ pub struct Other {
     /// Only the macro invocation opening a block is a submission.
     #[test]
     fn a_needle_counts_only_when_its_terminator_follows() {
-        assert!(followed_by("inventory::submit! {", "inventory::submit!", '{'));
+        assert!(followed_by(
+            "inventory::submit! {",
+            "inventory::submit!",
+            '{'
+        ));
         assert!(followed_by("    supported_ops: &[],", "supported_ops", ':'));
         assert!(!followed_by(
             "use inventory::submit;",
             "inventory::submit!",
             '{'
         ));
-        assert!(!followed_by("// supported_ops is advertised", "supported_ops", ':'));
+        assert!(!followed_by(
+            "// supported_ops is advertised",
+            "supported_ops",
+            ':'
+        ));
     }
 
     /// WHY: the frozen set is a table in this file and the snapshots are files on

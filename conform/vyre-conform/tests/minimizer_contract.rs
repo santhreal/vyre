@@ -94,3 +94,21 @@ fn shrink_converges_to_zero_for_universal_predicate() {
     let again = CounterexampleMinimizer::shrink_u32(reduced, predicate);
     assert_eq!(again, 0, "convergence failed at zero boundary");
 }
+
+#[test]
+fn shrinks_to_boundary() {
+    let min = CounterexampleMinimizer::shrink_u32(1_000_000, |v| v >= 42);
+    assert_eq!(min, 42);
+}
+
+#[test]
+fn shrinks_to_zero_when_all_fail() {
+    let min = CounterexampleMinimizer::shrink_u32(500, |_| true);
+    assert_eq!(min, 0);
+}
+
+#[test]
+fn shrinks_minimal_input_stays_same() {
+    let min = CounterexampleMinimizer::shrink_u32(7, |v| v == 7);
+    assert_eq!(min, 7);
+}

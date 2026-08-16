@@ -2,8 +2,8 @@
 //!
 //! Backends that dispatch adjacent stages with compatible memory layouts can
 //! fuse them into fewer launches when the fused memory envelope fits an
-//! explicit budget. This module owns the pure planning algorithm so CUDA and
-//! future backends do not carry divergent launch-fusion logic.
+//! explicit budget. This module owns the pure planning algorithm so no backend
+//! carries divergent launch-fusion logic.
 
 use rustc_hash::FxHashSet;
 

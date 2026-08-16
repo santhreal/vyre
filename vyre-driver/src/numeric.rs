@@ -322,7 +322,7 @@ pub fn rounded_f64_to_u64(value: f64, label: &str, backend: &str) -> Result<u64,
 /// Compute `part / whole` as floor basis points with explicit zero-denominator
 /// policy and saturating telemetry overflow.
 ///
-/// CUDA release-path planners use the same ratio encoding for memory pressure,
+/// Release-path planners use the same ratio encoding for memory pressure,
 /// readback savings, and device-side compaction. Keeping the arithmetic here
 /// prevents each backend module from carrying its own unchecked `as u32` cast.
 #[must_use]
@@ -629,7 +629,7 @@ pub fn checked_ceil_div_u64(value: u64, divisor: u64) -> Option<u64> {
 
 /// Multiply three `u32` dimensions into a `u64` without wraparound.
 ///
-/// CUDA, WGPU, and runtime launch geometry all cross this same host/device
+/// Backend and runtime launch geometry all cross this same host/device
 /// boundary. Keeping the primitive here prevents each backend from carrying a
 /// slightly different overflow policy for `[x, y, z]` launch dimensions.
 #[must_use]

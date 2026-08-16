@@ -69,7 +69,7 @@ pub enum VerifyErrorKind {
     },
     /// Two ops in DIFFERENT bodies of the same descriptor assign the
     /// same result id. `vyre-lower` allocates result ids globally, and
-    /// backends rely on that: the PTX emitter keeps one flat
+    /// backends rely on that: a binary emitter keeps one flat
     /// result-id → register map for the whole kernel, so a reused id
     /// silently resolves to whichever producer the emitter walked last.
     /// A `GlobalInvocationId` store index that collided with a sibling
@@ -106,7 +106,7 @@ pub enum VerifyErrorKind {
     },
     /// A host-bound binding (`Global` / `Constant` / `Uniform`) sits
     /// in the workgroup-reserved slot range (`>= 1<<24`). Backend
-    /// bind-group layouts cap at 1000 bindings on wgpu and similar
+    /// bind-group layouts cap at 1000 bindings on a portable backend and similar
     /// limits elsewhere; a host slot in the reserved range fails
     /// layout creation with a "binding index N greater than maximum"
     /// validator error. Earlier rewrites should have allocated the

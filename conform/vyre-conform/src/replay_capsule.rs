@@ -133,6 +133,7 @@ fn first_replay_mismatch(
     }
 }
 
+// Inline: covers the private `build_replay_capsule`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

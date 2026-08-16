@@ -265,9 +265,7 @@ mod tests {
     #[test]
     fn a_reserve_block_is_bounded() {
         let mut lines = vec!["buffer.try_reserve("];
-        for _ in 0..40 {
-            lines.push("    more");
-        }
+        lines.resize(41, "    more");
         lines.push("    x.capacity()");
         let (uses, end) = block_uses_capacity(&lines, 0);
         assert!(!uses);
@@ -296,17 +294,7 @@ mod tests {
         let report = ReserveArgument
             .run(&GateCtx::new(root, Vec::new()))
             .expect("the gate reads the fixture tree");
-        let named: Vec<String> = report
-            .findings
-            .iter()
-            .map(|finding| {
-                finding
-                    .file
-                    .as_ref()
-                    .map(|path| path.display().to_string())
-                    .unwrap_or_default()
-            })
-            .collect();
+        let named = report.named_files();
         assert_eq!(
             named,
             ["real.rs"],

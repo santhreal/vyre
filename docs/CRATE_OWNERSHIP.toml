@@ -1766,21 +1766,3 @@ optional = false
 default_features = false
 boundary = "private"
 seam = "primitive-library"
-
-[[crate]]
-package = "vyre-grammar-gen"
-path = "vyre-grammar-gen"
-owner = "grammar-generation"
-layer = "tooling"
-responsibility = "Generate host-side grammar tables consumed by frontend and parsing crates."
-
-[[crate.dependency]]
-package = "vyre-spec"
-purpose = "C11 token ids, the wire contract between the emitted tables and the GPU parser that decodes them"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "specification"

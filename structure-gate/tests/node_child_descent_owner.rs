@@ -189,9 +189,14 @@ const WAIVERS: &[Waiver] = &[
         reason: "tooling walk over IR for documentation generation",
     },
     Waiver {
-        path: "xtask-registry/src/gates/lego_audit.rs",
+        path: "xtask-registry/src/gates/lego_audit/fingerprint.rs",
         owner: "ToolingFrontend",
-        reason: "tooling walk over IR for a gate",
+        reason: "tooling walk over IR for a gate, emitting one fingerprint byte per node kind, so the arm set is the measurement",
+    },
+    Waiver {
+        path: "xtask-registry/src/gates/lego_audit/ops.rs",
+        owner: "ToolingFrontend",
+        reason: "tooling walk over IR for a gate, counting nodes per variant, so the arm set is the measurement",
     },
     Waiver {
         path: "xtask-registry/src/print_composition.rs",

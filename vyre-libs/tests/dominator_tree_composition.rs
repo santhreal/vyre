@@ -30,6 +30,7 @@ use std::collections::BTreeSet;
 use vyre_foundation::composition::is_anonymous_generator;
 use vyre_foundation::ir::{Node, Program};
 use vyre_foundation::operation::OperationRegistry;
+use vyre_foundation::visit::child_bodies;
 use vyre_libs::graph::dominator_tree::{
     dominator_tree_depth, dominator_tree_intersect_step, dominator_tree_program, IDOM_NONE,
     OP_ID as DOMINATOR_TREE_OP_ID,
@@ -42,26 +43,18 @@ const PHASE_PREFIX: &str = "vyre-primitives::graph::dominator_tree_";
 /// Generators of every child region in `nodes`, at any depth.
 fn child_generators(nodes: &[Node], out: &mut BTreeSet<String>) {
     for node in nodes {
-        match node {
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => {
-                if source_region.is_some() {
-                    out.insert(generator.as_str().to_string());
-                }
-                child_generators(body.as_ref(), out);
+        if let Node::Region {
+            generator,
+            source_region,
+            ..
+        } = node
+        {
+            if source_region.is_some() {
+                out.insert(generator.as_str().to_string());
             }
-            Node::Block(children) => child_generators(children, out),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                child_generators(then, out);
-                child_generators(otherwise, out);
-            }
-            Node::Loop { body, .. } => child_generators(body, out),
-            _ => {}
+        }
+        for body in child_bodies(node) {
+            child_generators(body, out);
         }
     }
 }

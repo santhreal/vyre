@@ -40,6 +40,7 @@ impl BindingVisibility {
     }
 }
 
+// Inline: covers the crate-private `is_global_visibility` and `is_readable`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

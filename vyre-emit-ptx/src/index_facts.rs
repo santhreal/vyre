@@ -344,10 +344,11 @@ fn symbolic_affine_root(op: &KernelOp, result_id: u32) -> u32 {
     }
 }
 
+// Inline: covers the private `IndexFacts` and its index-shape predicates, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::f16_mma_kind;
+    use vyre_lower::descriptor_builder::mma_f16_m16n8k16;
     use vyre_lower::descriptor_builder::{body, effect, lit, op};
     use vyre_lower::{KernelBody, KernelOp, LiteralValue};
 
@@ -462,7 +463,7 @@ mod tests {
     fn matrix_mma_consecutive_fragment_results_are_producers() {
         let body = body()
             .ops([
-                op(f16_mma_kind(), [0; 10], 10),
+                op(mma_f16_m16n8k16(), [0; 10], 10),
                 op(KernelOpKind::Copy, [12], 20),
             ])
             .build();
@@ -565,7 +566,7 @@ mod tests {
     /// restating how wide the tuple is.
     #[test]
     fn mma_fragment_ids_resolve_to_the_producing_op() {
-        let mma = op(f16_mma_kind(), [], 10);
+        let mma = op(mma_f16_m16n8k16(), [], 10);
         let expected: Vec<u32> = mma.result_ids().collect();
         assert_eq!(expected, vec![10, 11, 12, 13]);
         let body = body().op(mma).build();

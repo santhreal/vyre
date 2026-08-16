@@ -197,6 +197,7 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
     }
 }
 
+// Inline: covers the crate-private `analyze` and `dominant`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

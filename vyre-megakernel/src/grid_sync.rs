@@ -127,7 +127,7 @@ fn add_segments(
         let only = segments
             .into_iter()
             .next()
-            .expect("a segment list of length one yields its only segment");
+            .expect("a segment list of length one yields its only segment. Fix: keep the splitter from returning an empty segment list; add_segments reads its length before consuming it");
         let produced = insert(rebuilt, node.name.clone(), only, 0, inputs, outputs)?;
         record_ports(value_map, node, &produced);
         return Ok(());
@@ -177,7 +177,7 @@ fn add_segments(
 
     let (index, segment) = segments
         .next()
-        .expect("a segment list of length last + 1 yields a final segment");
+        .expect("a segment list of length last + 1 yields a final segment. Fix: keep the splitter from shrinking the list after its length was read; the loop above consumes exactly last items");
     let mut inputs = remap_inputs(value_map, node)?;
     set_chain_input(&mut inputs, &chain.buffer, current);
     let mut outputs = remap_ports(value_map, node)?;

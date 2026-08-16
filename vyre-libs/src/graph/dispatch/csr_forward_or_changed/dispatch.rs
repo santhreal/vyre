@@ -57,8 +57,8 @@ impl ForwardChangedGpuScratch {
 /// Terminates when no new bits land in the frontier or after `max_iters`.
 /// Returns the saturated frontier.
 ///
-/// Uses the supplied `ProgramDispatcher` so callers can swap CUDA /
-/// WGPU / reference backends without touching this layer.
+/// Uses the supplied `ProgramDispatcher` so callers can swap device and
+/// reference backends without touching this layer.
 ///
 /// # Errors
 ///

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The gates sweep now reads the gate sources and fails a registered gate whose run path cannot construct a finding, so a gate that only prints notes can no longer pass as coverage. A gate whose honest output is a note is declared with the gate that carries its failing form, and the sweep also fails a declaration whose gate can find or whose name is not registered."

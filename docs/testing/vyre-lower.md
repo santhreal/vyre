@@ -33,6 +33,7 @@ The crate lives at `vyre-lower`. The `lowering` owner maintains its
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_lower` | `vyre-lower/src/lib.rs` | None | `./cargo_full test -p vyre-lower` |
 | `test` | `analysis_fixture_corpuses` | `vyre-lower/tests/analysis_fixture_corpuses.rs` | None | `./cargo_full test -p vyre-lower --test analysis_fixture_corpuses` |
+| `test` | `lowering_contracts` | `vyre-lower/tests/lowering_contracts.rs` | None | `./cargo_full test -p vyre-lower --test lowering_contracts` |
 | `test` | `rewrite_layer_contract` | `vyre-lower/tests/rewrite_layer_contract.rs` | None | `./cargo_full test -p vyre-lower --test rewrite_layer_contract` |
 | `test` | `target_capabilities` | `vyre-lower/tests/target_capabilities.rs` | None | `./cargo_full test -p vyre-lower --test target_capabilities` |
 | `test` | `verify_result_id_uniqueness` | `vyre-lower/tests/verify_result_id_uniqueness.rs` | None | `./cargo_full test -p vyre-lower --test verify_result_id_uniqueness` |

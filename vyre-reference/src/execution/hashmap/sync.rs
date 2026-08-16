@@ -81,6 +81,7 @@ pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, R
     u32 :: try_from (elements) . map_err (| _ | { ReferenceError::new(format ! ("buffer `{}` has {} bytes for stride {} and overflows u32 elements. Fix: shrink declaration footprint or split work." , decl . name () , byte_len , stride ,)) })
 }
 
+// Inline: covers the crate-private `element_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

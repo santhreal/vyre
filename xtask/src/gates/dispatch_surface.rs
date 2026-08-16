@@ -450,22 +450,18 @@ fn overwrite_findings(path: &Path, declaration: &Declaration) -> Vec<Finding> {
 
 /// Whether `code` assigns a whole new value through `slot`.
 fn assigns_through(code: &str, slot: &str) -> bool {
-    let mut rest = code;
-    while let Some(position) = rest.find('*') {
-        rest = &rest[position + 1..];
-        let Some(after) = rest.trim_start().strip_prefix(slot) else {
-            continue;
+    code.match_indices('*').any(|(position, _)| {
+        let Some(after) = code[position + 1..].trim_start().strip_prefix(slot) else {
+            return false;
         };
         if after.starts_with(|character: char| character.is_alphanumeric() || character == '_') {
-            continue;
+            return false;
         }
-        if let Some(assigned) = after.trim_start().strip_prefix('=') {
-            if !assigned.starts_with('=') {
-                return true;
-            }
-        }
-    }
-    false
+        after
+            .trim_start()
+            .strip_prefix('=')
+            .is_some_and(|assigned| !assigned.starts_with('='))
+    })
 }
 
 #[cfg(test)]

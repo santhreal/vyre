@@ -127,5 +127,6 @@ impl ExprVisitor for AtomicTargetScanner<'_> {
     }
 }
 
+// Inline: covers the private `scan_buffer_targets` and `BufferTargets`, which no integration test can reach.
 #[cfg(test)]
 mod tests;

@@ -38,7 +38,7 @@ pub struct NaturalDifferentiableAutotuneGpuScratch {
 ///
 /// `pre_exp_fixed[i]` is `exp(-cost[i] / temperature)` in 16.16 fixed-point.
 /// The temperature/exp stage is intentionally composed before this primitive
-/// so CUDA callers can fuse it with their own cost-model kernel.
+/// so a backend caller can fuse it with its own cost-model kernel.
 ///
 /// # Errors
 ///

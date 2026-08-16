@@ -167,20 +167,6 @@ impl CudaCompiledPipeline {
             id: format!("cuda:{}", blake3::Hash::from(digest).to_hex()),
         })
     }
-
-    /// Dispatch authenticated resident bindings with the compiler-selected launch shape.
-    pub(crate) fn dispatch_artifact_resident_timed(
-        &self,
-        resources: &[vyre_driver::Resource],
-        invocation_grid: Option<[u32; 3]>,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
-        let mut config = self.compiled_config.clone();
-        if let Some(grid) = invocation_grid {
-            config.grid_override = Some(grid);
-            config.dispatch_grid = Some(grid);
-        }
-        vyre_driver::CompiledPipeline::dispatch_persistent_handles_timed(self, resources, &config)
-    }
 }
 
 impl Drop for CudaCompiledPipeline {

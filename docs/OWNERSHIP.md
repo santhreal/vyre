@@ -316,19 +316,6 @@ Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization,
 | `vyre-macros` | compile-time registration generation | `private` | `registration-macros` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
-### `vyre-grammar-gen`
-
-Generate host-side grammar tables consumed by frontend and parsing crates.
-
-- Path: `vyre-grammar-gen`
-- Owner: `grammar-generation`
-- Layer: `tooling`
-- Internal production dependencies: `vyre-spec`
-
-| Dependency | Purpose | Boundary | Owning seam |
-| --- | --- | --- | --- |
-| `vyre-spec` | C11 token ids, the wire contract between the emitted tables and the GPU parser that decodes them | `public` | `specification` |
-
 ### `vyre-libs`
 
 Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR.
@@ -336,13 +323,12 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 - Path: `vyre-libs`
 - Owner: `product-libraries`
 - Layer: `libraries`
-- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
-| `vyre-reference` | reference interpreter behind the test-fixtures dispatcher | `private` | `reference-semantics` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-lints`
