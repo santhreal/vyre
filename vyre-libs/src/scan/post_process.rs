@@ -6,7 +6,12 @@
 //! deterministic entropy and confidence signals.
 
 use vyre_foundation::match_result::ByteRange;
-use crate::matching::{dedup_regions_inplace, RegionTriple};
+use crate::matching::RegionTriple;
+// `dedup_regions_inplace` is a host oracle. Only `try_reference_post_process`
+// calls it, and that is gated the same way, so the import carries the gate too
+// rather than making every build of this module reach a CPU reference.
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::matching::dedup_regions_inplace;
 
 /// Post-processing contract violation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

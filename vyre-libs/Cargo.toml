@@ -60,7 +60,9 @@ cpu-parity = ["vyre-primitives/cpu-parity"]
 # kernels with stable op ids, moved here from vyre-primitives. A domain names
 # only the domains its own source reaches, so enabling one never compiles a
 # sibling it does not call.
-bitset = []
+# `bitset` names `reduce` because `bitset/relation.rs` builds `equal` and
+# `subset_of` on `reduce::atomic_scalar::atomic_grid_stride_u32`.
+bitset = ["reduce"]
 reduce = []
 fixpoint = ["bitset"]
 label = ["bitset"]
@@ -69,7 +71,9 @@ label = ["bitset"]
 # The reverse edge does not exist: `math-kernels` compiles no graph module.
 graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels"]
 predicate = ["graph", "bitset", "label"]
-math-kernels = []
+# `math-kernels` names `reduce` because `math/prefix_scan.rs` sweeps
+# `reduce::workgroup_tree::blelloch_inclusive_sum_nodes`.
+math-kernels = ["reduce"]
 nn-kernels = ["math-kernels"]
 # `matching-kernels` names `hash` because `matching/nfa_to_dfa.rs` imports
 # `hash::fnv1a` unconditionally.
@@ -85,12 +89,20 @@ hash = []
 # `math-dialect` gates the dialect-level math surface (atomics, clamp, conv,
 # fft, the f32 reductions). Each `math-*` sub-feature names it so the surface
 # is not compiled by a consumer that only wants `math::fixed`.
-math-dialect = []
+# `math-dialect` names `reduce` because `math/reduce_mean.rs` folds through
+# `reduce::workgroup_tree`.
+math-dialect = ["reduce"]
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
 matching = ["matching-substring", "matching-dfa"]
 crypto = ["crypto-blake3"]
-decode = ["cpu-parity", "matching-kernels"]
+# `decode` names `text` because `decode/encodex.rs` builds its classifier from
+# `text::byte_histogram_256_child` and `text::encoding_classify_child`.
+#
+# It does not name `cpu-parity`. That edge put host reference oracles into
+# every default build of this crate and hid the domain edges the sweep exists
+# to find, because the oracle modules re-enabled whatever a domain forgot.
+decode = ["matching-kernels", "text"]
 text = ["reduce"]
 logical = ["bitset"]
 rule = ["dep:regex"]
@@ -101,10 +113,19 @@ telemetry = []
 device = []
 graph-dispatch = ["device", "telemetry", "math-kernels", "graph"]
 solvers = ["device", "telemetry", "math-kernels", "topology"]
-encoding = ["device", "telemetry", "matching-kernels", "math-kernels", "nn-kernels", "parsing-kernels"]
+# `encoding` names `bitset` because `encoding/bitset_mask_algebra.rs` composes
+# eight `bitset::` builders, and `graph` plus `fixpoint` because
+# `matroid_exact_megakernel.rs` and `scallop_provenance.rs` reach
+# `math::matroid_intersection_full` and `math::scallop_join`, which are gated
+# on those two.
+encoding = ["device", "telemetry", "matching-kernels", "math-kernels", "nn-kernels", "parsing-kernels", "bitset", "graph", "fixpoint"]
 reasoning = ["analysis", "graph"]
-analysis = ["device", "telemetry", "math-kernels"]
-scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels"]
+# `analysis` names `graph` because `analysis/cost_model.rs` dispatches
+# `graph::level_wave` and `graph::sum_product_circuit`.
+analysis = ["device", "telemetry", "math-kernels", "graph"]
+# `scheduling` names `graph` because `scheduling/spectral_schedule.rs` builds on
+# `graph::chebyshev_filter`.
+scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
 
 # Every dialect feature whose module invokes `impl_cat_a_builder_options!`
 # declares that it needs the macro. The macro's own gate then names one
@@ -115,7 +136,9 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels"]
 "math-scan" = ["math-dialect", "math-kernels"]
 "math-broadcast" = ["math-dialect", "math-kernels"]
 "math-algebra" = ["math-dialect", "math-kernels"]
-"math-succinct" = ["math-dialect", "math-kernels"]
+# `math-succinct` names `graph` because `math/succinct.rs` parents its rank
+# superblock region on `graph::path_reconstruct::OP_ID`.
+"math-succinct" = ["math-dialect", "math-kernels", "graph"]
 "nn-activation" = ["nn-kernels"]
 "nn-linear" = ["cat-a-builder-options", "math-linalg", "nn-activation", "nn-kernels"]
 "nn-linear-4bit" = ["nn-linear"]
@@ -123,15 +146,20 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels"]
 "nn-attention" = ["cat-a-builder-options", "nn-norm", "math-linalg", "nn-kernels"]
 "nn-moe" = ["nn-attention"]
 "nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
-"matching-substring" = ["cpu-parity", "matching-dfa", "matching-kernels"]
-"matching-dfa" = ["cpu-parity", "matching-kernels"]
+# Neither matching domain names `cpu-parity`, for the same reason `decode` does
+# not: it compiled the host oracles into every default build and masked the
+# edges the sweep is for.
+"matching-substring" = ["matching-dfa", "matching-kernels"]
+"matching-dfa" = ["matching-kernels"]
 "matching-nfa" = ["matching-dfa", "nfa"]
 "matching-regex" = ["matching-nfa", "dep:regex-syntax"]
 "intern" = ["hash"]
 "crypto-blake3" = ["hash"]
 "visual" = ["math-kernels"]
 "parsing" = ["go-parser", "python-parser"]
-"go-parser" = []
+# `go-parser` names `reduce` because `parsing/go/lex.rs` scans quote flags with
+# `reduce::multi_block_prefix_scan`.
+"go-parser" = ["reduce"]
 "python-parser" = ["parsing-kernels"]
 "test-fixtures" = []
 security = ["label", "predicate"]
