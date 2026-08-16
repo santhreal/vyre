@@ -296,17 +296,7 @@ mod tests {
         let report = ReserveArgument
             .run(&GateCtx::new(root, Vec::new()))
             .expect("the gate reads the fixture tree");
-        let named: Vec<String> = report
-            .findings
-            .iter()
-            .map(|finding| {
-                finding
-                    .file
-                    .as_ref()
-                    .map(|path| path.display().to_string())
-                    .unwrap_or_default()
-            })
-            .collect();
+        let named = report.named_files();
         assert_eq!(
             named,
             ["real.rs"],

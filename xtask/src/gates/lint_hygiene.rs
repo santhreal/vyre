@@ -509,10 +509,10 @@ mod tests {
             .run(&GateCtx::new(root, Vec::new()))
             .expect("the gate reads the fixture tree");
         assert_eq!(
-            reported_files(&report),
+            report.named_files(),
             ["bare.rs"],
             "a quoted block is data, a wrapped justification is a justification: {:?}",
-            reported_files(&report)
+            report.named_files()
         );
     }
 
@@ -542,7 +542,7 @@ mod tests {
         assert!(
             report.findings.is_empty(),
             "the reviewed file carries the override and no other file does: {:?}",
-            reported_files(&report)
+            report.named_files()
         );
         assert!(
             report
@@ -552,20 +552,5 @@ mod tests {
             "the note counts the surface: {:?}",
             report.notes
         );
-    }
-
-    /// The files a report names, in the order it named them.
-    fn reported_files(report: &Report) -> Vec<String> {
-        report
-            .findings
-            .iter()
-            .map(|finding| {
-                finding
-                    .file
-                    .as_ref()
-                    .map(|path| path.display().to_string())
-                    .unwrap_or_default()
-            })
-            .collect()
     }
 }

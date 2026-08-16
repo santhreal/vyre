@@ -546,14 +546,7 @@ mod tests {
         report
             .findings
             .iter()
-            .map(|finding| {
-                let file = finding
-                    .file
-                    .as_ref()
-                    .map(|path| path.display().to_string())
-                    .unwrap_or_default();
-                format!("{file} {}", finding.message)
-            })
+            .map(|finding| format!("{} {}", finding.named_file(), finding.message))
             .collect::<Vec<_>>()
             .join("\n")
     }
