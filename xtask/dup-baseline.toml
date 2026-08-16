@@ -173,8 +173,8 @@ total_lines = 28908
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 176
-total_lines = 8125
+duplicate_lines = 171
+total_lines = 7509
 
 [[crate]]
 name = "vyre-test-support"
