@@ -7,7 +7,7 @@
 //! 3. Parity across lowering widths (1024 vs 256) for multi-block operations.
 
 use vyre_driver::{DeviceProfile, DeviceTimingQuality};
-use vyre_foundation::geometry::{
+use vyre_foundation::{
     CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
     Uniformity,
 };
@@ -200,8 +200,8 @@ fn multi_block_prefix_scan_lowers_at_target_admitted_widths() {
     let profile_1024 = test_profile_1024();
     let profile_256 = test_profile_256();
 
-    let req = vyre_foundation::geometry::GeometryRequirements::cooperative(
-        vyre_foundation::geometry::CooperativeWidth::Agnostic,
+    let req = GeometryRequirements::cooperative(
+        CooperativeWidth::Agnostic,
     );
     let n = 4096_u32;
 
