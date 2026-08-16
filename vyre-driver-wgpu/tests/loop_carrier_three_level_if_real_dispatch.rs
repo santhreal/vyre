@@ -1,4 +1,4 @@
-//! Real-GPU regression test for the c-parser scope-walker bug shape:
+//! Real-GPU regression test for the brace scope-walker bug shape:
 //! a loop body whose only outer-var Assign is nested 3-deep inside
 //! `if_then(cond_a) { if_then(cond_b) { if_then_else(cond_c) { assign(out_var, ..) } } }`.
 //!
@@ -17,17 +17,15 @@ use vyre_spec::c11_token::{TOK_LBRACE, TOK_RBRACE};
 
 const SENTINEL: u32 = u32::MAX;
 
-/// The two sequential conditionals the c-parser scope walker emits, reading
+/// The two sequential conditionals a brace scope walker emits, reading
 /// `scope_kind` and latching `scope_open` to `latch`.
 ///
-/// This is the shape under test, and it is the same shape
-/// `vyre_libs::parsing::c::parse::vast` emits in
-/// `c11_typedef_scope_open_for_row`: an unconditional depth bump on `}`, then a
-/// three-level nest whose innermost arm is the only writer of `scope_open`.
-/// Both gates read `scope_open`, so the merge between the two conditionals is
-/// the chokepoint a carrier lowering has to get right. Three of the programs
-/// below differ only in how they reach `scope_kind`, so restating the nest per
-/// program let them drift apart from the production shape they exist to pin.
+/// An unconditional depth bump on `}`, then a three-level nest whose innermost
+/// arm is the only writer of `scope_open`. Both gates read `scope_open`, so the
+/// merge between the two conditionals is the chokepoint a carrier lowering has
+/// to get right. Three of the programs below differ only in how they reach
+/// `scope_kind`, so restating the nest per program let them drift apart from
+/// the shape they exist to pin.
 fn scope_latch(latch: Expr) -> Vec<Node> {
     vec![
         Node::if_then(
@@ -93,7 +91,7 @@ fn dispatch_words(prog: &Program, kinds: [u32; 4]) -> Vec<u32> {
         .collect()
 }
 
-/// Mirrors the c-parser `c11_annotate_typedef_names` scope walker shape:
+/// A typedef-annotation scope walker shape:
 /// outer `let scope_open = SENTINEL`, then a loop iterating `i = 0..N`,
 /// where the assign to `scope_open` lives 3 levels deep:
 /// `if (scope_open == SENTINEL) { if (kind == LBRACE) { if_then_else (depth == 0) { assign scope_open = i } { assign depth-=1 } } }`.
@@ -217,7 +215,7 @@ fn nested_outer_loop_with_inner_scope_walker_per_row() {
     );
 }
 
-/// Closer to the actual c-parser scope walker: TWO sequential conditionals in
+/// Closer to a full scope walker: TWO sequential conditionals in
 /// the loop body, both writing outer-scope vars. The first writes `scope_depth`
 /// only; the second is the 3-level nest that writes `scope_open` OR
 /// `scope_depth`. Both conditional gates read `scope_open`, so the merge
@@ -248,7 +246,7 @@ fn two_sequential_conditionals_with_shared_carrier_propagate() {
         )],
     );
 
-    // Test fixture mirrors c-parser scope_open_before(idx=2) where tokens
+    // Test fixture mirrors scope_open_before(idx=2) where tokens
     // are [RBRACE, LBRACE, LBRACE, ...]. Walking i=0..3:
     //   i=0 (RBRACE): cond1 fires, scope_depth=1
     //   i=1 (LBRACE): cond2 fires, kind==LBRACE, scope_depth(1)==0 FALSE, scope_depth=0

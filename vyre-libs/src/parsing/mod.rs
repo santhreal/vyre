@@ -7,8 +7,13 @@
 //!
 //! - `core`  -  substrate-neutral parsing primitives (AST node kinds,
 //!   delimiter handling, grammar table walkers).
-//! - `c`  -  C11 pipeline: lex / preprocess / parse / sema / lower.
-//!   Feature-gated behind `c-parser`.
+//! - `lr_tables`  -  precomputed LR action/goto tables and the CPU reference
+//!   parser that walks them.
+//! - `vast`  -  the packed AST wire format and its host walks.
+//! - `source_cache`  -  content-hash LRU cache for parsed source artifacts.
+//! - `parallel_parse`  -  parallel corpus parse on top of that cache.
+//! - `go`  -  Go 1.21 lex + structural extraction.
+//!   Feature-gated behind `go-parser`.
 //! - `python`  -  Python 3.12 sparse lex + structural extraction.
 //!   Feature-gated behind `python-parser`.
 
@@ -32,10 +37,6 @@ pub mod lr_tables;
 
 /// Packed AST (VAST) wire + host walks  -  re-export from `vyre-foundation`.
 pub mod vast;
-
-/// C11 pipeline (lex / preprocess / parse / sema / lower).
-#[cfg(feature = "c-parser")]
-pub mod c;
 
 /// Go 1.21 pipeline (lex / structural parse / AST ops).
 #[cfg(feature = "go-parser")]

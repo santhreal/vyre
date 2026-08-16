@@ -105,10 +105,10 @@ nvidia-smi
 ./cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
 ```
 
-C parser, VAST, program graph, or object sections:
+Go or Python parsing, VAST, program graph, or object sections:
 
 ```bash
-./cargo_full test -p vyre-libs --features c-parser --test c11_parser_integration --test c11_build_vast_nodes --test c_lower_ast_to_pg_nodes --test c_lower_ast_to_pg_nodes_gpu_parity --test c11_sema_scope
+./cargo_full test -p vyre-libs --features parsing --test parsing_walker_clone_family --test go_frontend_corpus --test go_tokenizer_semantics
 ```
 
 Repository discipline, CI, review metadata, or community files:

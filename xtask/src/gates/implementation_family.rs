@@ -348,26 +348,6 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::nn::softmax",
         "vyre-libs::builder::tiled_reduce",
     ),
-    (
-        "vyre-libs::parsing::c_sema_scope.scope",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.scope.brace",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.scope.function_parameters",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.decl",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.identifier_intern",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
 ];
 
 /// Family pairs that emit the same shape from deliberately separate builders.

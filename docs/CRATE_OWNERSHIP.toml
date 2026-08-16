@@ -1457,7 +1457,7 @@ seam = "foundation-ir"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["c-parser", "nn-linear-4bit"]
+features = ["nn-linear-4bit"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1737,7 +1737,7 @@ seam = "foundation-ir"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["c-parser"]
+features = ["python-parser"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

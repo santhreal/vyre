@@ -29,7 +29,7 @@ unwind_policy = "panic-cannot-cross-ffi-boundary"
 diagnostic = "VYRE_FFI_CUDA_BOUNDARY_REFUSED"
 
 [[boundary]]
-boundary_id = "c-parser-callback"
+boundary_id = "foreign-callback"
 abi = "C-unwind"
 symbol_class = "foreign-callback-boundary"
 pointer_policy = "opaque-user-data-pointer-validated-before-callback"

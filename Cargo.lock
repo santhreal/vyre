@@ -3745,7 +3745,6 @@ dependencies = [
  "vyre-emit-naga",
  "vyre-emit-ptx",
  "vyre-foundation",
- "vyre-grammar-gen",
  "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",

@@ -28,7 +28,7 @@ vyre-registry-link = { workspace = true, features = [
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
-vyre-libs = { workspace = true, features = ["nn-linear-4bit", "c-parser"] }
+vyre-libs = { workspace = true, features = ["nn-linear-4bit"] }
 vyre-primitives = { workspace = true, features = ["bitset", "graph", "cpu-parity", "hardware"] }
 vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }

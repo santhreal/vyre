@@ -14,9 +14,11 @@ use std::collections::BTreeSet;
 ///
 /// The three `frontend.rust.*` lexer and loop workloads are absent for the same
 /// reason: the crate they lexed moved to `software/frontend-rust`, so no case in
-/// this workspace can execute them. Parsing stays a proven class through the C
-/// front end that remains in `vyre-libs`, which is what the two `c_lexer` and
-/// `c_ast_traversal` ids below measure.
+/// this workspace can execute them. `parser.c_lexer.small_state_transition.4k`
+/// joined them when the C frontend left `vyre-libs`; there is no builder left
+/// to emit its lexer state-transition pass. Parsing stays a proven class
+/// through `release.c_ast_traversal.1m`, a synthetic IR traversal that needs no
+/// frontend.
 #[test]
 fn benchmark_registry_contains_program_level_thesis_workloads() {
     let registry = vyre_bench::registry::collect_all();
@@ -26,7 +28,6 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
         .collect::<BTreeSet<_>>();
 
     for required_id in [
-        "parser.c_lexer.small_state_transition.4k",
         "release.c_ast_traversal.1m",
         "dataflow.ifds.skewed.closure.1m",
         "dataflow.ifds.skewed.step.1m",

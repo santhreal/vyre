@@ -4,16 +4,21 @@ jobs = 16
 [env]
 PROPTEST_DISABLE_FAILURE_PERSISTENCE = "1"
 
-# No checkout-identifying variable is declared here on purpose. Cargo hashes a
-# workspace member by its path relative to the workspace root and checks
-# freshness by mtime, so two checkouts sharing one target directory compute the
-# same unit hash and hand each other compiled binaries. A `VYRE_CHECKOUT_ROOT`
-# with `relative = true` was supposed to break that tie through `env!` and each
-# crate's dep-info, and it did not: cargo does not export such a variable to the
-# process it runs, so every gate fell through to its compiled-in value and the
-# shared `xtask` binary reported a worktree's numbers as this tree's. The gates
-# resolve the root from the working directory at run time instead, which is
-# correct whichever binary cargo reuses.
+# The target directory is not declared here. This file is tracked, so it is
+# identical in every checkout of this workspace, and a target directory that is
+# the same in every checkout is exactly the defect: cargo hashes a workspace
+# member by its path relative to the workspace root and checks freshness by
+# mtime, so two checkouts compute the same unit hash and hand each other
+# compiled binaries. `./cargo_full` derives a per-checkout directory under the
+# shared archive root from its own location, which is the only place that can
+# differ per checkout without a per-command override.
+#
+# A `VYRE_CHECKOUT_ROOT` with `relative = true` was tried here first, to break
+# the tie through `env!` and each crate's dep-info. Cargo does not export such a
+# variable to the process it runs, so every gate fell through to its compiled-in
+# value and a shared `xtask` binary reported another checkout's numbers as this
+# tree's. The gates resolve the root from the working directory at run time
+# instead, which is correct whichever binary cargo reuses.
 
 [alias]
 xtask = "run -p xtask --bin xtask --"

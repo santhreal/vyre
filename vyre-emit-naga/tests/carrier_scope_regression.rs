@@ -398,9 +398,9 @@ fn loop_carrier_with_let_bind_shadowing_in_body() {
 }
 
 #[test]
-fn dump_c11_lexer_naga() {
-    use vyre_libs::parsing::c::lex::lexer::c11_lexer;
-    let prog = c11_lexer(
+fn dump_python312_lexer_naga() {
+    use vyre_libs::parsing::python::lex::python312_lexer;
+    let prog = python312_lexer(
         "haystack",
         "out_tok_types",
         "out_tok_starts",
@@ -408,8 +408,9 @@ fn dump_c11_lexer_naga() {
         "out_counts",
         256,
     );
-    let lk = vyre_lower::lower_verified(&prog).expect("c11_lexer lower_verified must succeed");
-    let module = vyre_emit_naga::emit(&lk.descriptor).expect("c11_lexer emit must succeed");
+    let lk =
+        vyre_lower::lower_verified(&prog).expect("python312_lexer lower_verified must succeed");
+    let module = vyre_emit_naga::emit(&lk.descriptor).expect("python312_lexer emit must succeed");
     let wgsl = naga::back::wgsl::write_string(
         &module,
         &naga::valid::Validator::new(
