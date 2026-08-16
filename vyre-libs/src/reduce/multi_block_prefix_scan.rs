@@ -36,7 +36,9 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
+};
 
 /// Canonical op id for inclusive sum-scan over arbitrary `n`.
 pub const OP_ID_INCLUSIVE_SUM: &str =
@@ -49,28 +51,17 @@ pub const OP_ID_EXCLUSIVE_SUM: &str =
 
 /// Return the execution geometry requirements for multi-block prefix scan.
 #[must_use]
-pub const fn multi_block_prefix_scan_requirements() -> vyre_foundation::geometry::GeometryRequirements {
+pub const fn multi_block_prefix_scan_requirements(
+) -> vyre_foundation::geometry::GeometryRequirements {
     vyre_foundation::geometry::GeometryRequirements::cooperative(
         vyre_foundation::geometry::CooperativeWidth::Agnostic,
     )
 }
-/// Lanes per Pass-A block.
-///
-/// One block is one workgroup, so the width has to be one every target admits:
-/// this op declares its geometry when it builds its program, with no device in
-/// hand. The claim that 1024 is the universal maximum was false for the
-/// structured-compute target, whose profile admits 256, and the payload was
-/// refused at admission with `target workgroup extent 1024 exceeds profile limit
-/// 256` on every proof run. The portable extent is owned by
-/// `vyre_foundation::ir`, and a backend that cannot clear it fails its own
-/// profile contract instead of taking this op out of the certificate.
-pub const BLOCK_LANES: u32 = vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
-
 /// Historical direct-scan threshold retained for callers/tests that size
 /// around one level of block-total recursion. The implementation recurses and
-/// bottoms out at the guarded single-workgroup scan once
-/// `num_blocks <= BLOCK_LANES`.
-pub const SOFT_MAX_N: u32 = BLOCK_LANES * BLOCK_LANES;
+/// bottoms out at the guarded single-workgroup scan once the block count fits
+/// the portable workgroup width.
+pub const SOFT_MAX_N: u32 = PORTABLE_WORKGROUP_INVOCATIONS * PORTABLE_WORKGROUP_INVOCATIONS;
 fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
     usize::try_from(words)
         .ok()
@@ -92,14 +83,19 @@ fn total_partial_words(num_blocks: u32, block_lanes: u32, context: &str) -> Resu
 
 /// Build an inclusive parallel prefix-sum Program over arbitrary `n`.
 ///
-/// Backed by the guarded single-workgroup scan for `n ≤ BLOCK_LANES`;
+/// Backed by the guarded single-workgroup scan for `n ≤ PORTABLE_WORKGROUP_INVOCATIONS`;
 /// otherwise a 3-pass Blelloch chain (Pass A local scan + per-block
 /// totals → Pass B scan of totals → Pass C broadcast offsets).
 ///
 /// `n == 0` returns an empty Program.
 #[must_use]
 pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Program {
-    multi_block_prefix_scan_sum_u32_with_block_lanes(input, output, n, 1024)
+    multi_block_prefix_scan_sum_u32_with_block_lanes(
+        input,
+        output,
+        n,
+        PORTABLE_WORKGROUP_INVOCATIONS,
+    )
 }
 
 /// Build an inclusive parallel prefix-sum Program with explicit lowered block lanes.
@@ -130,7 +126,7 @@ pub fn multi_block_prefix_scan_sum_u32_with_geometry(
 // Registration so the op id is known to `harness::all_entries()`.
 // region_chain_invariant resolves the three sub-region generators below
 // (`<OP_ID_INCLUSIVE_SUM>::{guarded_single_block,pass_a,pass_c}`) against this
-// registered id. `n = 64 (<= BLOCK_LANES)` keeps the build on the guarded
+// registered id. `n = 64` fits the portable default and keeps the build on the guarded
 // single-block path (no GridSync), so the entry constructs cleanly without a
 // host-split.
 //
@@ -163,7 +159,7 @@ inventory::submit! {
 
 /// Element count of the registered inclusive-scan fixture.
 ///
-/// At or below 1024 lanes so the build stays on the guarded single-block
+/// At or below the portable workgroup width so the build stays on the guarded single-block
 /// path, which is the shape the sub-region generators resolve against.
 const SCAN_FIXTURE_LEN: u32 = 64;
 
@@ -172,7 +168,12 @@ fn try_multi_block_prefix_scan_sum_u32(
     output: &str,
     n: u32,
 ) -> Result<Program, String> {
-    try_multi_block_prefix_scan_sum_u32_with_block_lanes(input, output, n, 1024)
+    try_multi_block_prefix_scan_sum_u32_with_block_lanes(
+        input,
+        output,
+        n,
+        PORTABLE_WORKGROUP_INVOCATIONS,
+    )
 }
 
 fn try_multi_block_prefix_scan_sum_u32_with_block_lanes(
@@ -187,7 +188,7 @@ fn try_multi_block_prefix_scan_sum_u32_with_block_lanes(
     let lanes = if block_lanes.is_power_of_two() && block_lanes >= 2 {
         block_lanes
     } else {
-        1024
+        PORTABLE_WORKGROUP_INVOCATIONS
     };
     if n <= lanes {
         return try_guarded_single_block_scan(input, output, n, lanes);
@@ -214,7 +215,12 @@ fn try_multi_block_prefix_scan_sum_u32_with_block_lanes(
 /// `n == 0` returns an empty Program.
 #[must_use]
 pub fn multi_block_prefix_scan_sum_exclusive_u32(input: &str, output: &str, n: u32) -> Program {
-    multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(input, output, n, 1024)
+    multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
+        input,
+        output,
+        n,
+        PORTABLE_WORKGROUP_INVOCATIONS,
+    )
 }
 
 /// Build an exclusive parallel prefix-sum Program with explicit lowered block lanes.
@@ -225,7 +231,12 @@ pub fn multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
     n: u32,
     block_lanes: u32,
 ) -> Program {
-    match try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(input, output, n, block_lanes) {
+    match try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
+        input,
+        output,
+        n,
+        block_lanes,
+    ) {
         Ok(program) => program,
         Err(error) => trap_program(OP_ID_EXCLUSIVE_SUM, Some((output, DataType::U32)), error),
     }
@@ -239,7 +250,12 @@ pub fn multi_block_prefix_scan_sum_exclusive_u32_with_geometry(
     n: u32,
     geometry: &vyre_foundation::geometry::LaunchGeometry,
 ) -> Program {
-    multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(input, output, n, geometry.workgroup[0])
+    multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
+        input,
+        output,
+        n,
+        geometry.workgroup[0],
+    )
 }
 
 fn try_multi_block_prefix_scan_sum_exclusive_u32(
@@ -247,7 +263,12 @@ fn try_multi_block_prefix_scan_sum_exclusive_u32(
     output: &str,
     n: u32,
 ) -> Result<Program, String> {
-    try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(input, output, n, 1024)
+    try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
+        input,
+        output,
+        n,
+        PORTABLE_WORKGROUP_INVOCATIONS,
+    )
 }
 
 fn try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
@@ -262,7 +283,7 @@ fn try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
     let lanes = if block_lanes.is_power_of_two() && block_lanes >= 2 {
         block_lanes
     } else {
-        1024
+        PORTABLE_WORKGROUP_INVOCATIONS
     };
     let inclusive = format!("__{output}_mbps_inclusive");
     let scan = try_multi_block_prefix_scan_sum_u32_with_block_lanes(input, &inclusive, n, lanes)?;
@@ -279,7 +300,7 @@ fn try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
 
 /// Element-difference pass: `output[i] = inclusive[i] - input[i]` for `i < n`.
 /// A flat one-lane-per-element Region (no GridSync), so it composes after the
-/// inclusive scan and executes on the reference interpreter for `n ≤ BLOCK_LANES`.
+/// inclusive scan and executes on the reference interpreter for `n ≤ block_lanes`.
 fn try_exclusive_difference_pass(
     inclusive: &str,
     input: &str,
@@ -328,11 +349,22 @@ fn try_multi_block_prefix_scan_chain(
     let block_totals = format!("__{output}_mbps_block_totals");
     let block_totals_scanned = format!("__{output}_mbps_block_totals_scanned");
 
-    let pass_a = try_pass_a_local_scan(input, &partials, &block_totals, n, num_blocks, block_lanes)?;
-    let pass_b =
-        try_multi_block_prefix_scan_chain(&block_totals, &block_totals_scanned, num_blocks, block_lanes)?;
-    let pass_c =
-        try_pass_c_broadcast_offsets(&partials, &block_totals_scanned, output, n, num_blocks, block_lanes)?;
+    let pass_a =
+        try_pass_a_local_scan(input, &partials, &block_totals, n, num_blocks, block_lanes)?;
+    let pass_b = try_multi_block_prefix_scan_chain(
+        &block_totals,
+        &block_totals_scanned,
+        num_blocks,
+        block_lanes,
+    )?;
+    let pass_c = try_pass_c_broadcast_offsets(
+        &partials,
+        &block_totals_scanned,
+        output,
+        n,
+        num_blocks,
+        block_lanes,
+    )?;
 
     vyre_foundation::execution_plan::fusion::fuse_programs(&[pass_a, pass_b, pass_c])
         .map(|program| crate::plumbing::program::outputs::demote_intermediate_outputs(program, output))
@@ -373,14 +405,12 @@ fn try_guarded_single_block_scan(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    scan_body.extend(
-        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            block_lanes,
-        ),
-    );
+    scan_body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+        &scratch_a,
+        &scratch_b,
+        &lane,
+        block_lanes,
+    ));
 
     scan_body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(n)),
@@ -429,7 +459,14 @@ pub fn pass_a_local_scan(
     n: u32,
     num_blocks: u32,
 ) -> Program {
-    pass_a_local_scan_with_block_lanes(input, partials, block_totals, n, num_blocks, 1024)
+    pass_a_local_scan_with_block_lanes(
+        input,
+        partials,
+        block_totals,
+        n,
+        num_blocks,
+        PORTABLE_WORKGROUP_INVOCATIONS,
+    )
 }
 
 /// Build Pass A with explicit block lanes.
@@ -487,14 +524,12 @@ fn try_pass_a_local_scan(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    body.extend(
-        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            block_lanes,
-        ),
-    );
+    body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+        &scratch_a,
+        &scratch_b,
+        &lane,
+        block_lanes,
+    ));
 
     // Write per-element partial out (only for lanes whose global id is in range).
     body.push(Node::if_then(
@@ -553,7 +588,7 @@ fn try_pass_a_local_scan(
 
 /// Pass C  -  broadcast scanned per-block totals back to per-element output.
 ///
-/// `out[B*BLOCK_LANES + L] = partials[B*BLOCK_LANES + L] + offset`,
+/// `out[B*block_lanes + L] = partials[B*block_lanes + L] + offset`,
 /// where `offset = scanned_block_totals[B - 1]` (or `0` for block 0).
 ///
 /// Uses an `if_then` (not `Expr::select`) for the `offset` lookup so the
@@ -572,7 +607,14 @@ pub fn pass_c_broadcast_offsets(
     n: u32,
     num_blocks: u32,
 ) -> Program {
-    pass_c_broadcast_offsets_with_block_lanes(partials, block_totals_scanned, output, n, num_blocks, 1024)
+    pass_c_broadcast_offsets_with_block_lanes(
+        partials,
+        block_totals_scanned,
+        output,
+        n,
+        num_blocks,
+        PORTABLE_WORKGROUP_INVOCATIONS,
+    )
 }
 
 /// Build Pass C with explicit block lanes.
@@ -585,7 +627,14 @@ pub fn pass_c_broadcast_offsets_with_block_lanes(
     num_blocks: u32,
     block_lanes: u32,
 ) -> Program {
-    match try_pass_c_broadcast_offsets(partials, block_totals_scanned, output, n, num_blocks, block_lanes) {
+    match try_pass_c_broadcast_offsets(
+        partials,
+        block_totals_scanned,
+        output,
+        n,
+        num_blocks,
+        block_lanes,
+    ) {
         Ok(program) => program,
         Err(error) => trap_program(OP_ID_INCLUSIVE_SUM, Some((output, DataType::U32)), error),
     }
@@ -801,7 +850,8 @@ mod tests {
         let n = input.len() as u32;
         let program = try_exclusive_difference_pass("inclusive", "input", "output", n, 1024)
             .expect("difference pass builds");
-        let to_value = |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+        let to_value =
+            |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
         let inputs = vec![
             to_value(&inclusive),
             to_value(&input),
@@ -861,18 +911,13 @@ mod tests {
 
     #[test]
     fn inclusive_multi_block_chain_matches_oracle_at_large_n() {
-        // n > BLOCK_LANES routes through the fused three-pass GridSync chain, a
+        // n exceeds the portable default and routes through the fused three-pass GridSync chain, a
         // different algorithm than the single-block scan. The other large-n
         // tests (`large_n_emits_three_pass_chain`,
         // `recursion_handles_million_elements`) assert only STRUCTURE; this
         // checks the VALUES through reference_eval across exact and off block
         // boundaries so a broken cross-block carry cannot pass as green.
-        for n in [
-            1025,
-            1024 + 512,
-            2048,
-            3072 + 7,
-        ] {
+        for n in [1025, 1024 + 512, 2048, 3072 + 7] {
             // under u32::MAX: this isolates carry correctness from wrap.
             let input: Vec<u32> = (0..n).map(|i| (i % 251) + 1).collect();
             let program = multi_block_prefix_scan_sum_u32("input", "output", n);
@@ -1010,11 +1055,24 @@ mod tests {
     #[test]
     fn oversized_pass_builders_return_trap_programs_instead_of_panicking() {
         let pass_a = pass_a_local_scan("in_buf", "partials", "block_totals", 1, u32::MAX);
-        let pass_a_lanes = pass_a_local_scan_with_block_lanes("in_buf", "partials", "block_totals", 1, u32::MAX, 256);
+        let pass_a_lanes = pass_a_local_scan_with_block_lanes(
+            "in_buf",
+            "partials",
+            "block_totals",
+            1,
+            u32::MAX,
+            256,
+        );
         let pass_c =
             pass_c_broadcast_offsets("partials", "block_totals_scanned", "out_buf", 1, u32::MAX);
-        let pass_c_lanes =
-            pass_c_broadcast_offsets_with_block_lanes("partials", "block_totals_scanned", "out_buf", 1, u32::MAX, 256);
+        let pass_c_lanes = pass_c_broadcast_offsets_with_block_lanes(
+            "partials",
+            "block_totals_scanned",
+            "out_buf",
+            1,
+            u32::MAX,
+            256,
+        );
 
         assert_eq!(pass_a.buffers()[0].name(), "partials");
         assert!(program_contains_trap(&pass_a));
@@ -1027,13 +1085,12 @@ mod tests {
     }
 
     #[test]
-    fn small_n_falls_through_to_single_block_path() {
-        // n ≤ 1024 routes to the guarded single-block path; verify the
-        // builder produces a non-empty Program for representative small sizes.
-        for &n in &[1u32, 2, 64, 1023, 1024] {
-            let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", n);
-            let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
-            assert_eq!(prog.workgroup_size(), [1024, 1, 1]);
+    fn every_default_builder_uses_the_portable_workgroup_width() {
+        let portable = [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1];
+        for &n in &[1u32, 2, 64, 255, 256] {
+            let program = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", n);
+            let names: Vec<&str> = program.buffers().iter().map(BufferDecl::name).collect();
+            assert_eq!(program.workgroup_size(), portable, "inclusive n={n}");
             assert!(
                 names.contains(&"in_buf"),
                 "n={n} must declare in_buf, got {names:?}"
@@ -1043,11 +1100,45 @@ mod tests {
                 "n={n} must declare out_buf, got {names:?}"
             );
         }
+
+        assert_eq!(
+            multi_block_prefix_scan_sum_exclusive_u32("in_buf", "out_buf", 64).workgroup_size(),
+            portable,
+            "exclusive default"
+        );
+        assert_eq!(
+            pass_a_local_scan("in_buf", "partials", "block_totals", 64, 1).workgroup_size(),
+            portable,
+            "Pass A default"
+        );
+        assert_eq!(
+            pass_c_broadcast_offsets("partials", "block_totals_scanned", "out_buf", 64, 1,)
+                .workgroup_size(),
+            portable,
+            "Pass C default"
+        );
+
+        for invalid in [0, 1, 3, 255] {
+            assert_eq!(
+                multi_block_prefix_scan_sum_u32_with_block_lanes("in_buf", "out_buf", 64, invalid,)
+                    .workgroup_size(),
+                portable,
+                "inclusive invalid width {invalid}"
+            );
+            assert_eq!(
+                multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
+                    "in_buf", "out_buf", 64, invalid,
+                )
+                .workgroup_size(),
+                portable,
+                "exclusive invalid width {invalid}"
+            );
+        }
     }
 
     #[test]
     fn large_n_emits_three_pass_chain() {
-        // n = 2048 → exactly 2 blocks of 1024, no recursion needed.
+        // n = 2048 emits eight portable blocks; the totals fit one workgroup.
         let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", 2048);
         let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
         assert!(
@@ -1076,8 +1167,8 @@ mod tests {
 
     #[test]
     fn recursion_bottoms_out_at_one_workgroup_for_the_soft_maximum() {
-        // n = SOFT_MAX_N = BLOCK_LANES^2, so Pass A emits BLOCK_LANES blocks and
-        // Pass B falls through to the single-workgroup `prefix_scan`. Verify build.
+        // SOFT_MAX_N emits one portable workgroup of Pass-A blocks, so Pass B
+        // falls through to the single-workgroup `prefix_scan`. Verify build.
         let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", SOFT_MAX_N);
         let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
         assert!(names.contains(&"in_buf"));
@@ -1089,7 +1180,8 @@ mod tests {
         for &lanes in &[256, 1024] {
             let n = lanes * 2 + 17;
             let input: Vec<u32> = (0..n).map(|i| (i % 251) + 1).collect();
-            let prog = multi_block_prefix_scan_sum_u32_with_block_lanes("input", "output", n, lanes);
+            let prog =
+                multi_block_prefix_scan_sum_u32_with_block_lanes("input", "output", n, lanes);
             assert_eq!(prog.workgroup_size(), [lanes, 1, 1]);
             let actual = run_full_scan(&prog, &input);
             assert_eq!(actual, cpu_ref(&input));
@@ -1098,12 +1190,15 @@ mod tests {
                 workgroup: [lanes, 1, 1],
                 ..Default::default()
             };
-            let prog_geom = multi_block_prefix_scan_sum_u32_with_geometry("input", "output", n, &geom);
+            let prog_geom =
+                multi_block_prefix_scan_sum_u32_with_geometry("input", "output", n, &geom);
             assert_eq!(prog_geom.workgroup_size(), [lanes, 1, 1]);
             let actual_geom = run_full_scan(&prog_geom, &input);
             assert_eq!(actual_geom, cpu_ref(&input));
 
-            let prog_excl = multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes("input", "output", n, lanes);
+            let prog_excl = multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
+                "input", "output", n, lanes,
+            );
             assert_eq!(prog_excl.workgroup_size(), [lanes, 1, 1]);
             let actual_excl = run_full_scan(&prog_excl, &input);
             assert_eq!(actual_excl, cpu_ref_exclusive(&input));
