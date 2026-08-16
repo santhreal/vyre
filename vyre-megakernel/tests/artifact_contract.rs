@@ -1,8 +1,10 @@
 //! Whole-program request, identity, ABI, artifact, and corruption contracts.
 //!
-//! A whole-grid fence under a divergent guard never reaches device admission: IR
-//! validation refuses it first as V010, because a barrier only part of a
-//! workgroup reaches is invalid on any device.
+//! The fence fixtures below guard on a uniform condition, which every lane of a
+//! workgroup takes together, so the fence reaches device admission and the two
+//! outcomes there are what the tests read. A fence under a divergent guard
+//! never gets that far: IR validation refuses it first as V010, because a
+//! barrier only part of a workgroup reaches is invalid on any device.
 
 #![forbid(unsafe_code)]
 
