@@ -78,7 +78,7 @@ pub const C_CLOSE_BRACKET: u32 = 30;
 pub const C_OTHER: u32 = 31;
 
 /// Stable op id for the registered Tier 2.5 primitive.
-pub const CHAR_CLASS_OP_ID: &str = "vyre-primitives::text::char_class";
+pub const CHAR_CLASS_OP_ID: &str = "vyre-libs::text::char_class";
 /// Byte-lane workgroup used by the table-driven classifier.
 pub const CHAR_CLASS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn primitive_id_names_the_primitive_tier() {
-        assert_eq!(CHAR_CLASS_OP_ID, "vyre-primitives::text::char_class");
+        assert_eq!(CHAR_CLASS_OP_ID, "vyre-libs::text::char_class");
     }
 }
 

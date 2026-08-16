@@ -26,6 +26,7 @@ pub mod delegate;
 pub mod docs;
 pub mod fixture_checkout;
 pub mod gate;
+pub mod gate_metadata;
 pub mod gates;
 pub mod generated_document;
 pub mod hash;

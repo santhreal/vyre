@@ -26,7 +26,7 @@ use crate::graph::frontier_bits::when_bit_set;
 use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::reachable_program";
+pub const OP_ID: &str = "vyre-libs::graph::reachable_program";
 
 /// Error returned by [`reachable`] when the edge list contains a
 /// node index outside `0..node_count`.

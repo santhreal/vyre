@@ -198,6 +198,20 @@ impl OpLocation {
         self.path = Some(path.into());
         self
     }
+
+    /// Attach a source byte span.
+    #[must_use]
+    pub const fn with_source_span(mut self, start: u32, end: u32) -> Self {
+        self.source_span = Some([start, end]);
+        self
+    }
+
+    /// Attach a source byte span array.
+    #[must_use]
+    pub const fn with_span(mut self, span: [u32; 2]) -> Self {
+        self.source_span = Some(span);
+        self
+    }
 }
 
 /// Structured cause preserved across owner boundaries.
@@ -243,6 +257,9 @@ pub struct Diagnostic {
         deserialize_with = "deserialize_optional_cow_static"
     )]
     pub doc_url: Option<Cow<'static, str>>,
+    /// Additional contextual notes attached to this diagnostic.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<Cow<'static, str>>,
 }
 
 impl Diagnostic {
@@ -275,6 +292,7 @@ impl Diagnostic {
             cause: None,
             retry: RetryClass::Never,
             doc_url: None,
+            notes: Vec::new(),
         }
     }
 
@@ -323,6 +341,22 @@ impl Diagnostic {
         self
     }
 
+    /// Attach an informational note.
+    #[must_use]
+    pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
+        self.notes.push(note.into());
+        self
+    }
+
+    /// Attach multiple informational notes.
+    #[must_use]
+    pub fn with_notes(
+        mut self,
+        notes: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
+    ) -> Self {
+        self.notes.extend(notes.into_iter().map(Into::into));
+        self
+    }
     /// Render a deterministic rustc-style diagnostic.
     #[must_use]
     pub fn render_human(&self) -> String {
@@ -350,6 +384,11 @@ impl Diagnostic {
             if let Some(path) = &location.path {
                 output.push_str(" at ");
                 output.push_str(path);
+                if let Some([start, end]) = location.source_span {
+                    let _ = write!(output, ":{start}..{end}");
+                }
+            } else if let Some([start, end]) = location.source_span {
+                let _ = write!(output, " at span {start}..{end}");
             }
         }
         if let Some(fix) = &self.suggested_fix {
@@ -362,6 +401,10 @@ impl Diagnostic {
         if let Some(url) = &self.doc_url {
             output.push_str("\n  = note: ");
             output.push_str(url);
+        }
+        for note in &self.notes {
+            output.push_str("\n  = note: ");
+            output.push_str(note);
         }
         output
     }

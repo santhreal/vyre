@@ -26,6 +26,7 @@ This crate declares no Cargo features.
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_conform_spec` | `conform/vyre-conform-spec/src/lib.rs` | None | `./cargo_full test -p vyre-conform-spec` |
+| `test` | `cert_contracts` | `conform/vyre-conform-spec/tests/cert_contracts.rs` | None | `./cargo_full test -p vyre-conform-spec --test cert_contracts` |
 | `test` | `schema_contract` | `conform/vyre-conform-spec/tests/schema_contract.rs` | None | `./cargo_full test -p vyre-conform-spec --test schema_contract` |
 | `test` | `witness_contract` | `conform/vyre-conform-spec/tests/witness_contract.rs` | None | `./cargo_full test -p vyre-conform-spec --test witness_contract` |
 

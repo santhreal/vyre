@@ -15,7 +15,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Where release evidence lives.
@@ -34,15 +34,7 @@ struct Citation {
 /// Cited paths in release evidence resolve, and reach a reader.
 pub struct EvidencePaths;
 
-impl Gate for EvidencePaths {
-    fn name(&self) -> &'static str {
-        "evidence-paths"
-    }
-
-    fn help(&self) -> &'static str {
-        "paths cited inside release evidence that are missing or gitignored"
-    }
-
+impl crate::gate::GateBehavior for EvidencePaths {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         if !tree.exists(EVIDENCE_DIR) {
@@ -68,6 +60,7 @@ impl Gate for EvidencePaths {
             .into_iter()
             .collect::<Vec<_>>();
         artifacts.sort();
+        report.cover_complete("release evidence artifacts", artifacts.len());
         for artifact in &artifacts {
             let text = tree.read(artifact)?;
             let document: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
@@ -128,15 +121,7 @@ impl Gate for EvidencePaths {
 /// option: an invariant that cites nothing asserts nothing.
 pub struct InvariantPaths;
 
-impl Gate for InvariantPaths {
-    fn name(&self) -> &'static str {
-        "invariant-paths"
-    }
-
-    fn help(&self) -> &'static str {
-        "conformance tests cited by invariant descriptors that do not exist"
-    }
-
+impl crate::gate::GateBehavior for InvariantPaths {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         const INVARIANTS: &str = "vyre-spec/src/invariants.rs";
         /// The path in a doc comment showing the citation form, not a citation.
@@ -163,6 +148,7 @@ impl Gate for InvariantPaths {
                 ));
             }
         }
+        report.cover_complete("invariant test citations", cited.len());
         report.note(format!("{} cited conformance test(s)", cited.len()));
         Ok(report)
     }
@@ -421,6 +407,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout;
 
     fn vocabulary() -> BTreeSet<String> {

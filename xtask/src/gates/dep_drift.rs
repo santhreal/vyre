@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use toml::Value;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 
 const MAX_DEP_DRIFT_MANIFEST_BYTES: u64 = 1_048_576;
 
@@ -16,15 +16,7 @@ const FIX: &str = "pin the dependency with `workspace = true`, or align the vers
 /// Holds every manifest to the version the workspace table manages.
 pub struct DepDrift;
 
-impl Gate for DepDrift {
-    fn name(&self) -> &'static str {
-        "dep-drift"
-    }
-
-    fn help(&self) -> &'static str {
-        "Reject a manifest that pins a workspace-managed dependency to a different version"
-    }
-
+impl crate::gate::GateBehavior for DepDrift {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let workspace_manifest = ctx.root.join("Cargo.toml");
         let workspace_text = read_text_bounded(&workspace_manifest).map_err(|error| {
@@ -43,6 +35,7 @@ impl Gate for DepDrift {
         let mut report = Report::clean();
         collect_manifests(&ctx.root, &mut manifests, &mut report);
         manifests.remove(&workspace_manifest);
+        report.cover_complete("workspace manifests", manifests.len());
 
         report.note(format!(
             "{} workspace-managed dependencies across {} manifests",
@@ -212,4 +205,39 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         MAX_DEP_DRIFT_MANIFEST_BYTES,
         "dependency drift manifest",
     )
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dep_drift_detects_mismatched_dependency_versions_and_ignores_workspace_inheritance() {
+        let root = Path::new("/workspace");
+        let mut managed = BTreeMap::new();
+        managed.insert("serde".to_string(), "1.0.200".to_string());
+        managed.insert("tokio".to_string(), "1.38.0".to_string());
+
+        let mut table = toml::map::Map::new();
+        table.insert("serde".to_string(), Value::String("1.0.200".to_string()));
+        table.insert("tokio".to_string(), Value::String("1.30.0".to_string()));
+        let mut ws_table = toml::map::Map::new();
+        ws_table.insert("workspace".to_string(), Value::Boolean(true));
+        table.insert("serde_json".to_string(), Value::Table(ws_table));
+
+        let mut report = Report::clean();
+        check_dependency_table(
+            Path::new("crates/my_crate/Cargo.toml"),
+            "dependencies",
+            Some(&table),
+            &managed,
+            root,
+            &mut report,
+        );
+
+        assert_eq!(report.findings.len(), 1);
+        let finding = &report.findings[0];
+        assert!(finding.message.contains(
+            "`tokio` in [dependencies] pins `1.30.0` but the workspace manages `1.38.0`"
+        ));
+    }
 }

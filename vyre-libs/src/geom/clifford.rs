@@ -37,7 +37,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::geom::clifford2_geometric_product";
+pub const OP_ID: &str = "vyre-libs::geom::clifford2_geometric_product";
 
 /// Component count for Cl(2, 0) multivectors.
 pub const MV_COMPONENTS: u32 = 4;

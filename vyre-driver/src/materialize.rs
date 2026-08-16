@@ -1140,6 +1140,72 @@ impl InstanceCore {
         Ok(self.ready(host(state, invocation_grid)))
     }
 
+    /// Resolve one Program buffer name by authenticated identity for a resident launch.
+    ///
+    /// Active entry-boundary buffers resolve through the named neutral ABI or
+    /// module named resources. Inactive or segment-internal declarations resolve
+    /// through the exact target `(group, slot)` descriptor metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns `unmapped_buffer` when neither projection contains the name.
+    pub fn value_for_resident_name(
+        &self,
+        module_index: usize,
+        name: &str,
+    ) -> Result<ArtifactValueId, BackendError> {
+        if let Some(canonical) = self
+            .module_named_resources
+            .get(module_index)
+            .and_then(|resources| resources.get(name))
+            .copied()
+        {
+            return Ok(canonical);
+        }
+        if let Some(&(group, slot)) = self
+            .module_buffer_slots
+            .get(module_index)
+            .and_then(|slots| slots.get(name))
+        {
+            if let Some(canonical) = self
+                .module_resources
+                .get(module_index)
+                .and_then(|resources| resources.get(&(group, slot)))
+                .copied()
+            {
+                return Ok(canonical);
+            }
+        }
+        self.value_for_buffer(name)
+    }
+
+    /// Lookup one bound resident resource, honoring transitive retained lineage.
+    #[must_use]
+    pub fn lookup_resident_resource<'a>(
+        &self,
+        value: ArtifactValueId,
+        resources: &'a BTreeMap<ArtifactValueId, Resource>,
+    ) -> Option<&'a Resource> {
+        if let Some(resource) = resources.get(&value) {
+            return Some(resource);
+        }
+        if let Some(priors) = self.retained_predecessors.get(&value) {
+            for prior in priors {
+                if let Some(resource) = resources.get(prior) {
+                    return Some(resource);
+                }
+            }
+        }
+        for (bound_val, resource) in resources {
+            if let Some(priors) = self.retained_predecessors.get(bound_val) {
+                if priors.contains(&value) {
+                    return Some(resource);
+                }
+            }
+        }
+        None
+    }
+
     /// Resolve resident handles into the order `names` declares.
     ///
     /// A resident launch takes an ordered handle list, and the order is the
@@ -1164,8 +1230,42 @@ impl InstanceCore {
         let names = names.into_iter();
         let mut ordered = Vec::with_capacity(names.size_hint().0);
         for name in names {
-            let value = self.value_for_buffer(name)?;
-            let resource = resources.get(&value).ok_or_else(|| unbound(value, name))?;
+            let value = self.value_for_resident_name(0, name)?;
+            let resource = self
+                .lookup_resident_resource(value, resources)
+                .ok_or_else(|| unbound(value, name))?;
+            ordered.push(resource.clone());
+        }
+        Ok(ordered)
+    }
+
+    /// Resolve resident handles for one module by authenticated identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns `unmapped_buffer` for a binding outside the artifact ABI, and
+    /// `unbound` for a declared resident binding whose canonical value carries no
+    /// resource.
+    pub fn ordered_resident_resources_for_module(
+        &self,
+        module_index: usize,
+        plan: &BindingPlan,
+        program: &Program,
+        resources: &BTreeMap<ArtifactValueId, Resource>,
+        unbound: impl Fn(ArtifactValueId, &str) -> BackendError,
+    ) -> Result<Vec<Resource>, BackendError> {
+        let non_shared = plan
+            .bindings
+            .iter()
+            .filter(|binding| binding.role != BindingRole::Shared);
+        let mut ordered = Vec::new();
+        for binding in non_shared {
+            let buffer = &program.buffers()[binding.buffer_index];
+            let name = buffer.name();
+            let value = self.value_for_resident_name(module_index, name)?;
+            let resource = self
+                .lookup_resident_resource(value, resources)
+                .ok_or_else(|| unbound(value, name))?;
             ordered.push(resource.clone());
         }
         Ok(ordered)
@@ -1501,8 +1601,10 @@ pub trait ResidentInstance: MaterializedInstance {
         plan: &BindingPlan,
         resources: &BTreeMap<ArtifactValueId, Resource>,
     ) -> Result<Vec<Resource>, BackendError> {
-        self.core().ordered_resident_resources(
-            resident_buffer_names(plan, module.program()),
+        self.core().ordered_resident_resources_for_module(
+            0,
+            plan,
+            module.program(),
             resources,
             unbound_resident_buffer,
         )
@@ -1920,6 +2022,45 @@ mod tests {
             completion.outputs.get(&ArtifactValueId(res_id.0)).unwrap(),
             &[3, 0, 0, 0]
         );
+
+        let owner = crate::ResidentOwner::new().expect("resident owner identity");
+        let res_x = Resource::Resident(owner.handle(10));
+        let res_y = Resource::Resident(owner.handle(20));
+        let res_out = Resource::Resident(owner.handle(30));
+
+        let mut resident_map = BTreeMap::new();
+        resident_map.insert(ArtifactValueId(val_x.0), res_x.clone());
+        resident_map.insert(ArtifactValueId(val_y.0), res_y.clone());
+        resident_map.insert(ArtifactValueId(res_id.0), res_out.clone());
+
+        let ordered = core
+            .ordered_resident_resources_for_module(
+                0,
+                &plan0,
+                &program0,
+                &resident_map,
+                unbound_resident_buffer,
+            )
+            .expect("ordered resident resources must resolve by authenticated identity");
+
+        // Binding plan order: in_b (0), in_a (1), out_0 (2)
+        assert_eq!(ordered[0], res_y);
+        assert_eq!(ordered[1], res_x);
+        assert_eq!(ordered[2], res_out);
+
+        // Unbound resource fails closed
+        let mut missing_map = resident_map.clone();
+        missing_map.remove(&ArtifactValueId(val_x.0));
+        let unbound_err = core
+            .ordered_resident_resources_for_module(
+                0,
+                &plan0,
+                &program0,
+                &missing_map,
+                unbound_resident_buffer,
+            )
+            .expect_err("missing resident resource must fail closed");
+        assert!(unbound_err.to_string().contains("in_a"));
     }
 
     /// WHY: multi-segment dispatches with whole-grid fences or fused pipelines

@@ -14,20 +14,12 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use vyre::ir::{Node, Program};
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 /// Delta-debugs the registered corpus cases that fail their oracle.
 pub struct Shrink;
 
-impl Gate for Shrink {
-    fn name(&self) -> &'static str {
-        "shrink"
-    }
-
-    fn help(&self) -> &'static str {
-        "Delta-debug every registered corpus case that fails its oracle down to a minimal reproducer; --program ID narrows to one, --oracle PATH replaces the oracle"
-    }
-
+impl xtask::gate::GateBehavior for Shrink {
     fn usage(&self) -> &'static [&'static str] {
         &[
             "--program ID narrows the run to one registered corpus case",
@@ -44,6 +36,7 @@ impl Gate for Shrink {
 
         let work_dir = ctx.root.join("target").join("shrink");
         let mut report = Report::clean();
+        report.cover_complete("corpus cases", cases.len());
         report.note(format!("{} corpus case(s) checked", cases.len()));
         let mut failing = 0usize;
         for (id, program) in &cases {
@@ -53,13 +46,13 @@ impl Gate for Shrink {
             failing += 1;
             let minimal = reduce(&oracle, &work_dir, id, program)?;
             report.find(Finding::new(
-                format!(
-                    "corpus case `{id}` fails its oracle: {reason}. The smallest program that still fails has {} of {} top-level node(s)",
-                    minimal.entry().len(),
-                    program.entry().len()
-                ),
-                "repair the path this reproducer exercises; the reduced program is written under target/shrink",
-            ));
+            format!(
+                "corpus case `{id}` fails its oracle: {reason}. The smallest program that still fails has {} of {} top-level node(s)",
+                minimal.entry().len(),
+                program.entry().len()
+            ),
+            "repair the path this reproducer exercises; the reduced program is written under target/shrink",
+        ));
         }
         report.note(format!("{failing} case(s) failed the oracle"));
         Ok(report)
@@ -163,4 +156,22 @@ fn reduce(
         write_wire(work_dir, &format!("{id}.minimal"), &wire)?;
     }
     Ok(smallest)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn wire_round_trip_oracle_verifies_node_count_integrity() {
+        let program = Program::empty();
+        let oracle = Oracle::WireRoundTrip;
+        let verdict = oracle.verdict(Path::new("target/shrink"), "empty_case", &program);
+        assert!(verdict.is_ok());
+        assert_eq!(
+            verdict.unwrap(),
+            None,
+            "empty program must survive round trip"
+        );
+    }
 }

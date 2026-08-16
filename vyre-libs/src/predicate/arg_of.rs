@@ -17,7 +17,7 @@ use crate::predicate::traversal::backward_edge_program;
 use crate::predicate::traversal::{cpu_ref_backward, cpu_ref_backward_into};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::predicate::arg_of";
+pub const OP_ID: &str = "vyre-libs::predicate::arg_of";
 
 /// Build a Program traversing CALL_ARG edges restricted to argument
 /// slot `slot`. Slot 0 catches the first arg, slot 1 the second, etc.

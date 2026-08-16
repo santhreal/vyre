@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// Files every checkout carries.
@@ -74,18 +74,11 @@ const SILENT_SKIP_RULE_SOURCES: &[&str] = &[
 /// Instruction files, redirects and backlog files hold their agreed shape.
 pub struct RepoHygiene;
 
-impl Gate for RepoHygiene {
-    fn name(&self) -> &'static str {
-        "repo-hygiene"
-    }
-
-    fn help(&self) -> &'static str {
-        "required repository files, and artifacts a source tree must not carry"
-    }
-
+impl crate::gate::GateBehavior for RepoHygiene {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("repository paths", tree.paths().len());
 
         for required in REQUIRED {
             if !tree.exists(required) {
@@ -251,15 +244,7 @@ impl Gate for RepoHygiene {
 /// One execution queue, and no committed parallel plan surface.
 pub struct SingleBacklog;
 
-impl Gate for SingleBacklog {
-    fn name(&self) -> &'static str {
-        "single-backlog"
-    }
-
-    fn help(&self) -> &'static str {
-        "committed parallel execution-plan documents beside the one backlog"
-    }
-
+impl crate::gate::GateBehavior for SingleBacklog {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         /// Names that mark a document as a second execution queue.
         const PLAN_MARKERS: &[&str] = &[
@@ -282,6 +267,8 @@ impl Gate for SingleBacklog {
 
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        let tree = Tree::open(&ctx.root)?;
+        report.cover_complete("tracked paths", tree.paths().len());
 
         if !tree.exists("CHANGELOG.md") {
             report.find(Finding::in_file(

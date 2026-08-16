@@ -15,7 +15,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Dependency tables a manifest can declare, at the top level or under a target.
@@ -24,19 +24,12 @@ const DEP_TABLES: &[&str] = &["dependencies", "dev-dependencies", "build-depende
 /// Every manifest on disk is a workspace member or its own workspace root.
 pub struct WorkspaceMembership;
 
-impl Gate for WorkspaceMembership {
-    fn name(&self) -> &'static str {
-        "workspace-membership"
-    }
-
-    fn help(&self) -> &'static str {
-        "every Cargo.toml is a workspace member or its own workspace root"
-    }
-
+impl crate::gate::GateBehavior for WorkspaceMembership {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let declared: BTreeSet<String> = tree.members()?.into_iter().collect();
+        report.cover_complete("declared workspace members", declared.len());
         if declared.is_empty() {
             return Err(GateError::new(
                 "the root manifest declares no workspace members",
@@ -79,19 +72,12 @@ impl Gate for WorkspaceMembership {
 /// Every path edge and inherited key resolves to a tracked manifest or table entry.
 pub struct PathDepsResolve;
 
-impl Gate for PathDepsResolve {
-    fn name(&self) -> &'static str {
-        "path-deps-resolve"
-    }
-
-    fn help(&self) -> &'static str {
-        "path dependencies, members, patches and workspace inheritance all resolve"
-    }
-
+impl crate::gate::GateBehavior for PathDepsResolve {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let manifests = manifests(&tree);
+        report.cover_complete("workspace manifests", manifests.len());
         if manifests.is_empty() {
             return Err(GateError::new(
                 "no tracked Cargo.toml found",
@@ -335,20 +321,12 @@ impl Resolver<'_> {
 /// that member is published.
 pub struct InternalDepVersions;
 
-impl Gate for InternalDepVersions {
-    fn name(&self) -> &'static str {
-        "internal-dep-versions"
-    }
-
-    fn help(&self) -> &'static str {
-        "internal dependencies of publishable crates carry a version, and \
-         dependencies on unpublishable members carry none"
-    }
-
+impl crate::gate::GateBehavior for InternalDepVersions {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let members = tree.member_manifests()?;
+        report.cover_complete("workspace members", members.len());
         let roster: BTreeMap<String, bool> = members
             .iter()
             .map(|member| (member.name.clone(), member.publishable()))

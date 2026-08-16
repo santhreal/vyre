@@ -9,7 +9,7 @@ use vyre_foundation::ir::Program;
 use crate::bitset::relation::{bitset_relation_program, BitsetRelation};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::equal";
+pub const OP_ID: &str = "vyre-libs::bitset::equal";
 
 /// Build a Program: `out_scalar[0] = (forall w: lhs[w] == rhs[w]) ? 1 : 0`.
 ///

@@ -33,7 +33,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::qsvt_block_encode";
+pub const OP_ID: &str = "vyre-libs::math::qsvt_block_encode";
 
 /// Emit `A_scaled[i, j] = A[i, j] / norm` for `n × n` matrix `A`.
 ///

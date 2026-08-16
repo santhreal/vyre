@@ -37,7 +37,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::natural_gradient_block_apply";
+pub const OP_ID: &str = "vyre-libs::math::natural_gradient_block_apply";
 
 /// Apply a precomputed `M^{-1/2}` block to a gradient slice.
 ///

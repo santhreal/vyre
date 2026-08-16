@@ -12,6 +12,7 @@ use vyre::ir::Program;
 use vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
+
 use vyre_libs::math::prefix_scan::MAX_SINGLE_BLOCK_SCAN;
 use vyre_libs::math::scan::scan_prefix_sum;
 

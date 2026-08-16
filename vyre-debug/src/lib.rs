@@ -20,6 +20,8 @@ pub(crate) mod naga_trace;
 pub mod source_assignments;
 /// WGSL emission and source-line mapping.
 pub(crate) mod wgsl;
+/// Sanitizer correctness failures and PMU performance expectations.
+pub mod sanitizer;
 
 pub use artifact_report::{ArtifactReport, TargetPayloadReport};
 pub use carriers::{carrier_summary, find_uncarriered_assigns, CarrierSummary, UncarrieredAssign};
@@ -29,5 +31,8 @@ pub use descriptor_dump::{dump_descriptor, DescriptorDump, DescriptorDumpOptions
 pub use naga_dump::{dump_naga_module, NagaDump};
 pub use naga_trace::{
     failure_trace, failure_trace_wgsl, load_bind_result_log, BindResultLogError, FailureTrace,
+};
+pub use sanitizer::{
+    PmuExpectation, PmuMeasurement, PmuWarning, PmuWorkloadClass, SanitizerFailure, SanitizerKind,
 };
 pub use wgsl::{dump_wgsl, dump_wgsl_with_lines, WgslDump};

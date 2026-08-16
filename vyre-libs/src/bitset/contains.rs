@@ -9,7 +9,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::contains";
+pub const OP_ID: &str = "vyre-libs::bitset::contains";
 
 /// Build a Program: `out[0]` = bit at `index_buffer[0]` of `input`.
 #[must_use]

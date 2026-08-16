@@ -30,7 +30,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::iht_threshold";
+pub const OP_ID: &str = "vyre-libs::math::iht_threshold";
 
 /// Emit the hard-threshold Program.
 ///

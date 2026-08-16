@@ -36,7 +36,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::opt::homotopy_euler_predictor";
+pub const OP_ID: &str = "vyre-libs::opt::homotopy_euler_predictor";
 
 /// Emit the Euler predictor Program: `x_pred = x_curr + dt · v`
 /// elementwise across `n_paths` independent paths × `n_dim` solution

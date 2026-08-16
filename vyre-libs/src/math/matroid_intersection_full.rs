@@ -23,7 +23,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::matroid_intersection_full";
+pub const OP_ID: &str = "vyre-libs::math::matroid_intersection_full";
 
 /// Build a full matroid intersection Program.
 #[must_use]

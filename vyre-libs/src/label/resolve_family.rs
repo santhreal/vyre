@@ -11,7 +11,7 @@ use crate::label::nodeset_filter::{nodeset_filter_cpu_ref, nodeset_filter_cpu_re
 use crate::label::nodeset_filter::{nodeset_filter_program, NodeSetFilter};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::label::resolve_family";
+pub const OP_ID: &str = "vyre-libs::label::resolve_family";
 
 /// Build a Program: for each node `v`, if
 /// `node_tags[v] & family_mask != 0`, set bit `v` in `nodeset_out`.

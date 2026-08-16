@@ -259,13 +259,13 @@ fn diff_flash_attention_regression() {
 #[test]
 fn diff_ast_cse_structural_hash_primitive_regression() {
     run_primitive_entry_diff(&primitive_entry_by_id(
-        "vyre-primitives::parsing::ast_cse_structural_hash",
+        "vyre-libs::parsing::ast_cse_structural_hash",
     ));
 }
 
 #[test]
 fn diff_fnv1a64_primitive_regression() {
-    run_primitive_entry_diff(&primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
+    run_primitive_entry_diff(&primitive_entry_by_id("vyre-libs::hash::fnv1a64"));
 }
 
 /// FINDING-GPU-7 regression. `substring_search` (binding 0 haystack, 1 needle,

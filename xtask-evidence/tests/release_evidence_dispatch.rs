@@ -18,7 +18,7 @@
 
 #![forbid(unsafe_code)]
 
-use xtask::subcommands::{owned_by, registry};
+use xtask::subcommands::{find, owned_by, registry, subset};
 use xtask_evidence::release::release_evidence::covered_subcommands;
 
 /// WHY: a covered name that no gate answers to is an artifact with no owner.
@@ -33,11 +33,10 @@ fn every_covered_generator_is_a_registered_gate() {
          table is wrong, and an empty roster makes every assertion here vacuous",
         covered.len()
     );
-    let registered: Vec<&str> = registry().into_iter().map(|gate| gate.name()).collect();
     let unregistered: Vec<&str> = covered
         .iter()
         .copied()
-        .filter(|name| !registered.contains(name))
+        .filter(|name| find(name).is_none() && subset(name).is_none())
         .collect();
     assert!(
         unregistered.is_empty(),
@@ -76,16 +75,33 @@ fn the_census_reaches_past_this_crate() {
 fn every_delegated_generator_has_a_buildable_home() {
     let gates = registry();
     for name in covered_subcommands() {
-        let gate = gates
-            .iter()
-            .find(|gate| gate.name() == name)
-            .expect("checked by the registration contract");
-        if let Some(package) = gate.package() {
+        if let Some(gate) = gates.iter().find(|gate| gate.name() == name) {
+            let package = gate.package();
+            if package == "xtask" {
+                continue;
+            }
             assert!(
                 !owned_by(package).is_empty(),
                 "Fix: `{name}` is homed in `{package}`, which owns no gates. The \
-                 home and the delegate table disagree."
+                 home and descriptor registry disagree."
             );
+        } else if let Some(sub) = subset(name) {
+            for gate_name in sub.gates {
+                let gate = gates
+                    .iter()
+                    .find(|gate| gate.name() == gate_name)
+                    .expect("subset gate must be in registry");
+                let package = gate.package();
+                if package != "xtask" {
+                    assert!(
+                        !owned_by(package).is_empty(),
+                        "Fix: `{gate_name}` is homed in `{package}`, which owns no gates. The \
+                         home and descriptor registry disagree."
+                    );
+                }
+            }
+        } else {
+            panic!("Fix: `{name}` is neither a registered gate nor a subset");
         }
     }
 }

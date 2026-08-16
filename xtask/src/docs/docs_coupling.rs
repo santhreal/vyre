@@ -37,7 +37,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan;
 use crate::output_arg::read_text_bounded;
 
@@ -69,15 +69,7 @@ struct Covering {
 /// Holds an authored page to the code it names, and to the diff that changes it.
 pub struct DocsCoupling;
 
-impl Gate for DocsCoupling {
-    fn name(&self) -> &'static str {
-        "docs-coupling"
-    }
-
-    fn help(&self) -> &'static str {
-        "Whether an authored page still names code that exists, and whether a change to that code arrived with the page; --base REF compares against that ref"
-    }
-
+impl crate::gate::GateBehavior for DocsCoupling {
     fn usage(&self) -> &'static [&'static str] {
         &["--base REF compares the working tree against that git ref"]
     }
@@ -85,6 +77,7 @@ impl Gate for DocsCoupling {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let pages = load_covering(&ctx.root, &mut report)?;
+        report.cover_complete("authored documentation pages", pages.len());
         if pages.is_empty() {
             return Ok(report);
         }

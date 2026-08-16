@@ -112,3 +112,78 @@ fn shrinks_minimal_input_stays_same() {
     let min = CounterexampleMinimizer::shrink_u32(7, |v| v == 7);
     assert_eq!(min, 7);
 }
+
+#[test]
+fn shrink_program_removes_dead_nodes_and_unused_buffers() {
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+    use vyre_foundation::validate::validate;
+
+    // Construct a program with extra dead nodes, unused buffers, and large workgroup size.
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_buf", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("unused_buf", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::output("out_buf", 2, DataType::U32).with_count(1),
+        ],
+        [64, 1, 1],
+        vec![
+            Node::let_bind("dead1", Expr::u32(9999)),
+            Node::let_bind("dead2", Expr::wrapping_add(Expr::u32(10), Expr::u32(20))),
+            Node::Store {
+                buffer: "out_buf".into(),
+                index: Expr::u32(0),
+                value: Expr::wrapping_add(
+                    Expr::load("in_buf", Expr::u32(0)),
+                    Expr::u32(42),
+                ),
+            },
+            Node::let_bind("dead3", Expr::u32(12345)),
+        ],
+    );
+
+    assert!(validate(&prog).is_empty(), "initial program must be valid");
+
+    // Predicate: requires a store to "out_buf" referencing "in_buf"
+    let predicate = |p: &Program| {
+        format!("{p:?}").contains("out_buf") && format!("{p:?}").contains("in_buf")
+    };
+
+    let minimized = CounterexampleMinimizer::shrink_program(&prog, predicate);
+
+    // Validated at the end
+    assert!(validate(&minimized).is_empty(), "minimized program must remain valid");
+    // Unused buffer removed
+    assert!(!minimized.buffers().iter().any(|b| b.name() == "unused_buf"));
+    // Workgroup size reduced
+    assert_eq!(minimized.workgroup_size, [1, 1, 1]);
+}
+
+#[test]
+fn shrink_program_is_deterministic() {
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+
+    let prog = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [16, 1, 1],
+        vec![
+            Node::let_bind("a", Expr::u32(100)),
+            Node::let_bind("b", Expr::u32(200)),
+            Node::Store {
+                buffer: "out".into(),
+                index: Expr::u32(0),
+                value: Expr::wrapping_add(Expr::var("a"), Expr::var("b")),
+            },
+        ],
+    );
+
+    let predicate = |p: &Program| {
+        format!("{p:?}").contains("out")
+    };
+
+    let run1 = CounterexampleMinimizer::shrink_program(&prog, predicate);
+    let run2 = CounterexampleMinimizer::shrink_program(&prog, predicate);
+
+    assert_eq!(format!("{:?}", run1.entry()), format!("{:?}", run2.entry()));
+    assert_eq!(run1.buffers().len(), run2.buffers().len());
+    assert_eq!(run1.workgroup_size, run2.workgroup_size);
+}

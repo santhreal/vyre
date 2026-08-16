@@ -17,7 +17,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 use workspace_sources::workspace_root;
-use xtask::gate::{Gate, GateCtx, Report};
+use xtask::gate::{GateBehavior, GateCtx, Report};
 use xtask::gates::docs_references::DocsReferences;
 
 fn judge(root: &Path) -> Report {

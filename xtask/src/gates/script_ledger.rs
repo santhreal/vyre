@@ -21,7 +21,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 use crate::subcommands;
 
@@ -272,19 +272,7 @@ fn render(ledger: &Ledger, tracked: &BTreeSet<String>) -> String {
 /// The ledger, and the two lists and totals it derives from the tree.
 pub struct ScriptLedger;
 
-impl Gate for ScriptLedger {
-    fn name(&self) -> &'static str {
-        "script-ledger"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the script assertion ledger to the tracked scripts and the gate registry; --write regenerates its totals and lists"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for ScriptLedger {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let text = tree.read(LEDGER)?;
@@ -298,6 +286,8 @@ impl Gate for ScriptLedger {
             .map(str::to_string)
             .collect();
         let mut report = Report::clean();
+        report.produced(LEDGER);
+        report.cover_complete("tracked script paths", tree.paths().len());
 
         let mut seen: BTreeMap<&str, u32> = BTreeMap::new();
         for row in &ledger.rows {

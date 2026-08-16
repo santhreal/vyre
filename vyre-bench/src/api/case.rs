@@ -340,7 +340,7 @@ impl BenchContext {
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         let session = self.artifact_session_for(prog)?;
         let mut bindings = session
-            .resident_bindings(resources)
+            .program_resident_bindings(prog, resources)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         if let Some(grid) = config.grid_override {
             bindings.set_invocation_grid(grid)?;
@@ -453,7 +453,7 @@ impl BenchContext {
         }
         let session = self.artifact_session_for(step.program)?;
         let mut bindings = session
-            .resident_bindings(step.resources)
+            .program_resident_bindings(step.program, step.resources)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         if let Some(grid) = step.grid_override {
             bindings.set_invocation_grid(grid)?;

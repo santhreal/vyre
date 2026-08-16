@@ -17,11 +17,50 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(test)]
+std::thread_local! {
+    static SNAPSHOT_COUNTERS: std::cell::Cell<(usize, usize)> =
+        const { std::cell::Cell::new((0, 0)) };
+}
+
+#[cfg(test)]
+fn record_snapshot_capture() {
+    SNAPSHOT_COUNTERS.with(|counters| {
+        let (captures, verifications) = counters.get();
+        counters.set((captures + 1, verifications));
+    });
+}
+
+#[cfg(not(test))]
+fn record_snapshot_capture() {}
+
+#[cfg(test)]
+fn record_snapshot_verification() {
+    SNAPSHOT_COUNTERS.with(|counters| {
+        let (captures, verifications) = counters.get();
+        counters.set((captures, verifications + 1));
+    });
+}
+
+#[cfg(not(test))]
+fn record_snapshot_verification() {}
+
+/// Reset this test thread's snapshot instrumentation.
+#[cfg(test)]
+pub fn reset_snapshot_counters() {
+    SNAPSHOT_COUNTERS.with(|counters| counters.set((0, 0)));
+}
+
+/// Return this test thread's `(captures, verifications)` instrumentation.
+#[cfg(test)]
+#[must_use]
+pub fn snapshot_counter_values() -> (usize, usize) {
+    SNAPSHOT_COUNTERS.with(std::cell::Cell::get)
+}
 
 use serde::Serialize;
 
-use crate::gate::{Finding, GateCtx, Report};
-
+use crate::gate::{Coverage, Finding, GateCtx, Report};
 /// Largest committed artifact this module will read into memory.
 ///
 /// The op matrix carried this cap on its own reader before it became a gate.
@@ -149,20 +188,7 @@ macro_rules! artifact_gate {
     ) => {
         $(#[$attribute])*
         pub struct $gate;
-
-        impl $crate::gate::Gate for $gate {
-            fn name(&self) -> &'static str {
-                $name
-            }
-
-            fn help(&self) -> &'static str {
-                $help
-            }
-
-            fn generates(&self) -> bool {
-                true
-            }
-
+        impl $crate::gate::GateBehavior for $gate {
             fn run(
                 &self,
                 $ctx: &$crate::gate::GateCtx,
@@ -189,8 +215,175 @@ pub fn settle_inspection(ctx: &GateCtx, gate: &str, inspection: Inspection) -> R
         notes,
         artifacts,
     } = inspection;
+    let owned_paths = artifacts
+        .iter()
+        .map(|artifact| artifact.path.clone())
+        .collect();
     findings.extend(settle(&ctx.root, gate, &artifacts, ctx.write));
-    Report { findings, notes }
+    Report {
+        findings,
+        notes,
+        coverage: vec![Coverage::complete("generated artifacts", artifacts.len())],
+        artifacts: owned_paths,
+    }
+}
+
+/// Exact state of one workspace directory entry.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum SnapshotEntry {
+    File { size: u64, digest: [u8; 32] },
+    Symlink(PathBuf),
+}
+
+/// Exact snapshot of workspace file paths, sizes, content digests, and symlink targets.
+#[derive(Clone, Debug, Default)]
+pub struct WorkspaceSnapshot {
+    files: std::collections::BTreeMap<PathBuf, SnapshotEntry>,
+    errors: Vec<String>,
+}
+
+impl WorkspaceSnapshot {
+    /// Capture the exact relative file set and BLAKE3 content digests across `root`.
+    #[must_use]
+    pub fn capture(root: &Path) -> Self {
+        record_snapshot_capture();
+        let mut files = std::collections::BTreeMap::new();
+        let mut errors = Vec::new();
+        let mut walker = walkdir::WalkDir::new(root).into_iter();
+        while let Some(result) = walker.next() {
+            let entry = match result {
+                Ok(entry) => entry,
+                Err(error) => {
+                    errors.push(format!("workspace snapshot walk failed: {error}"));
+                    continue;
+                }
+            };
+            let path = entry.path();
+            if entry.file_type().is_dir() {
+                if matches!(
+                    path.file_name().and_then(|name| name.to_str()),
+                    Some(".git" | "target")
+                ) {
+                    walker.skip_current_dir();
+                }
+                continue;
+            }
+            let relative = path.strip_prefix(root).unwrap_or(path).to_path_buf();
+            if entry.file_type().is_symlink() {
+                match fs::read_link(path) {
+                    Ok(target) => {
+                        files.insert(relative, SnapshotEntry::Symlink(target));
+                    }
+                    Err(error) => errors.push(format!(
+                        "workspace snapshot could not read symlink `{}`: {error}",
+                        relative.display()
+                    )),
+                }
+                continue;
+            }
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            match fs::read(path) {
+                Ok(bytes) => {
+                    files.insert(
+                        relative,
+                        SnapshotEntry::File {
+                            size: bytes.len() as u64,
+                            digest: *blake3::hash(&bytes).as_bytes(),
+                        },
+                    );
+                }
+                Err(error) => errors.push(format!(
+                    "workspace snapshot could not read `{}`: {error}",
+                    relative.display()
+                )),
+            }
+        }
+        Self { files, errors }
+    }
+
+    /// Detect any creation, deletion, or modification against a post-execution state.
+    ///
+    /// - If `allow_owned_writes` is true (e.g. gate was invoked with `--write`), only files in
+    ///   `declared_artifacts` may be created or modified.
+    /// - If `allow_owned_writes` is false (comparison / sweep mode), NO workspace mutation is allowed,
+    ///   even for owned artifacts (Section 182.5.6).
+    #[must_use]
+    pub fn detect_mutations(
+        &self,
+        root: &Path,
+        gate_name: &str,
+        declared_artifacts: &[&str],
+        allow_owned_writes: bool,
+    ) -> Vec<String> {
+        record_snapshot_verification();
+        let post = Self::capture(root);
+        let declared_set: std::collections::BTreeSet<PathBuf> =
+            declared_artifacts.iter().map(PathBuf::from).collect();
+        let mut violations: Vec<String> = self
+            .errors
+            .iter()
+            .map(|error| format!("gate `{gate_name}` pre-execution {error}"))
+            .chain(
+                post.errors
+                    .iter()
+                    .map(|error| format!("gate `{gate_name}` post-execution {error}")),
+            )
+            .collect();
+
+        // 1. Created files
+        for (rel, _) in &post.files {
+            if !self.files.contains_key(rel) {
+                let rel_str = rel.to_string_lossy().replace('\\', "/");
+                if !allow_owned_writes {
+                    violations.push(format!(
+                        "gate `{gate_name}` created workspace file `{rel_str}` without --write (violating Section 182.5.6: comparison mode must never mutate workspace)"
+                    ));
+                } else if !declared_set.contains(rel) {
+                    violations.push(format!(
+                        "gate `{gate_name}` created unowned workspace file `{rel_str}` (violating Section 182.5.4: write outside declared owned artifact set)"
+                    ));
+                }
+            }
+        }
+
+        // 2. Deleted files
+        for (rel, _) in &self.files {
+            if !post.files.contains_key(rel) {
+                let rel_str = rel.to_string_lossy().replace('\\', "/");
+                if !allow_owned_writes {
+                    violations.push(format!(
+                        "gate `{gate_name}` deleted workspace file `{rel_str}` without --write (violating Section 182.5.6: comparison mode must never mutate workspace)"
+                    ));
+                } else if !declared_set.contains(rel) {
+                    violations.push(format!(
+                        "gate `{gate_name}` deleted unowned workspace file `{rel_str}` (violating Section 182.5.4: write outside declared owned artifact set)"
+                    ));
+                }
+            }
+        }
+
+        // 3. Modified files (content digest changed, even if mtime was restored)
+        for (rel, post_state) in &post.files {
+            if let Some(pre_state) = self.files.get(rel) {
+                if pre_state != post_state {
+                    let rel_str = rel.to_string_lossy().replace('\\', "/");
+                    if !allow_owned_writes {
+                        violations.push(format!(
+                            "gate `{gate_name}` modified workspace file `{rel_str}` without --write (violating Section 182.5.6: comparison mode must never mutate workspace)"
+                        ));
+                    } else if !declared_set.contains(rel) {
+                        violations.push(format!(
+                            "gate `{gate_name}` wrote unowned workspace file `{rel_str}` (violating Section 182.5.4: write outside declared owned artifact set)"
+                        ));
+                    }
+                }
+            }
+        }
+
+        violations
+    }
 }
 
 /// Compare every artifact against the tree, or write it when `write` is set.
@@ -679,5 +872,80 @@ mod tests {
             .status()
             .expect("Fix: run git to build the fixture checkout.");
         assert!(status.success(), "Fix: git {args:?} failed in the fixture.");
+    }
+
+    /// WHY: Section 182.5.4 requires detecting modifications even when file mtime is preserved/restored.
+    #[test]
+    fn modified_file_with_restored_mtime_is_detected() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        let target = root.join("target_file.txt");
+        fs::write(&target, "version 1").expect("write initial");
+        let original_mtime = fs::metadata(&target)
+            .and_then(|m| m.modified())
+            .expect("mtime");
+
+        let snap = WorkspaceSnapshot::capture(root);
+
+        // Modify content
+        fs::write(&target, "version 2 modified").expect("write modified");
+
+        // Compare with snapshot
+        let violations = snap.detect_mutations(root, "test-gate", &["target_file.txt"], false);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("modified workspace file `target_file.txt` without --write"));
+    }
+
+    /// WHY: Section 182.5.4 requires detecting unauthorized file deletions.
+    #[test]
+    fn deleted_file_is_detected() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        let target = root.join("to_delete.txt");
+        fs::write(&target, "some data").expect("write initial");
+
+        let snap = WorkspaceSnapshot::capture(root);
+        fs::remove_file(&target).expect("remove file");
+
+        let violations = snap.detect_mutations(root, "test-gate", &["to_delete.txt"], false);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("deleted workspace file `to_delete.txt` without --write"));
+    }
+
+    /// WHY: Section 182.5.6 requires that comparison mode never mutates even owned artifacts.
+    #[test]
+    fn owned_write_without_write_flag_is_rejected() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        let owned = root.join("owned_artifact.json");
+        fs::write(&owned, "initial").expect("write initial");
+
+        let snap = WorkspaceSnapshot::capture(root);
+        fs::write(&owned, "mutated").expect("write mutated");
+
+        let violations = snap.detect_mutations(root, "test-gate", &["owned_artifact.json"], false);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("without --write"));
+        assert!(violations[0].contains("Section 182.5.6"));
+    }
+
+    /// WHY: Section 182.5.4 requires rejecting writes to unowned workspace files even with --write.
+    #[test]
+    fn unowned_write_with_write_flag_is_rejected() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        let owned = root.join("owned_artifact.json");
+        let unowned = root.join("unowned_artifact.json");
+        fs::write(&owned, "initial owned").expect("write owned");
+        fs::write(&unowned, "initial unowned").expect("write unowned");
+
+        let snap = WorkspaceSnapshot::capture(root);
+        fs::write(&owned, "mutated owned").expect("write mutated owned");
+        fs::write(&unowned, "mutated unowned").expect("write mutated unowned");
+
+        let violations = snap.detect_mutations(root, "test-gate", &["owned_artifact.json"], true);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("wrote unowned workspace file `unowned_artifact.json`"));
+        assert!(violations[0].contains("Section 182.5.4"));
     }
 }

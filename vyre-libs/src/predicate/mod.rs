@@ -358,7 +358,7 @@ pub mod arg_of;
 define_fixed_forward_edge_predicate!(
     call_to,
     call_to,
-    "vyre-primitives::predicate::call_to",
+    "vyre-libs::predicate::call_to",
     crate::predicate::edge_kind::CALL_ARG,
     2,
     &[0, 1, 2, 2, 2],
@@ -374,7 +374,7 @@ mod traversal;
 define_tag_family_predicate!(
     in_file,
     in_file,
-    "vyre-primitives::predicate::in_file",
+    "vyre-libs::predicate::in_file",
     crate::predicate::tag_family::FILE,
     &[2, 2, 0, 0],
     &[0b0011],
@@ -383,7 +383,7 @@ define_tag_family_predicate!(
 define_tag_family_predicate!(
     in_function,
     in_function,
-    "vyre-primitives::predicate::in_function",
+    "vyre-libs::predicate::in_function",
     crate::predicate::tag_family::FUNCTION,
     &[1, 0, 1, 0],
     &[0b0101],
@@ -392,7 +392,7 @@ define_tag_family_predicate!(
 define_tag_family_predicate!(
     in_package,
     in_package,
-    "vyre-primitives::predicate::in_package",
+    "vyre-libs::predicate::in_package",
     crate::predicate::tag_family::PACKAGE,
     &[4, 0, 4, 0],
     &[0b0101],
@@ -403,7 +403,7 @@ pub mod node_kind_eq;
 define_fixed_forward_edge_predicate!(
     return_value_of,
     return_value_of,
-    "vyre-primitives::predicate::return_value_of",
+    "vyre-libs::predicate::return_value_of",
     crate::predicate::edge_kind::RETURN,
     1,
     &[0, 1, 1, 1, 1],

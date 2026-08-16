@@ -6,9 +6,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_foundation::vast::{NODE_STRIDE_U32, SENTINEL};
 
 /// Primitive op id for preorder VAST tree traversal.
-pub const PREORDER_OP_ID: &str = "vyre-primitives::graph::vast_walk_preorder";
+pub const PREORDER_OP_ID: &str = "vyre-libs::graph::vast_walk_preorder";
 /// Primitive op id for postorder VAST tree traversal.
-pub const POSTORDER_OP_ID: &str = "vyre-primitives::graph::vast_walk_postorder";
+pub const POSTORDER_OP_ID: &str = "vyre-libs::graph::vast_walk_postorder";
 
 /// Traversal order for VAST first-child / next-sibling tree walks.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

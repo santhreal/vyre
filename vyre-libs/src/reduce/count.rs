@@ -6,7 +6,7 @@ use vyre_foundation::ir::Program;
 use super::atomic_scalar::{atomic_reduce_u32, AtomicReduceKind};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::reduce::count";
+pub const OP_ID: &str = "vyre-libs::reduce::count";
 
 /// Build a Program: `out[0] = sum_{w} popcount(bitset[w])`.
 #[must_use]

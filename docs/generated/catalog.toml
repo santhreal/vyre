@@ -5,29 +5,29 @@ schema_version = 1
 [[subsystem]]
 id = "bitset"
 operations = [
-  "vyre-primitives::bitset::and",
-  "vyre-primitives::bitset::and_into",
-  "vyre-primitives::bitset::and_not",
-  "vyre-primitives::bitset::and_not_into",
-  "vyre-primitives::bitset::any",
-  "vyre-primitives::bitset::clear_bit",
-  "vyre-primitives::bitset::contains",
-  "vyre-primitives::bitset::copy",
-  "vyre-primitives::bitset::equal",
-  "vyre-primitives::bitset::four_russians_apply_byte_lut",
-  "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut",
-  "vyre-primitives::bitset::not",
-  "vyre-primitives::bitset::or",
-  "vyre-primitives::bitset::or_into",
-  "vyre-primitives::bitset::popcount",
-  "vyre-primitives::bitset::select1_query",
-  "vyre-primitives::bitset::set_bit",
-  "vyre-primitives::bitset::stochastic_and_mul",
-  "vyre-primitives::bitset::subset_of",
-  "vyre-primitives::bitset::test_bit",
-  "vyre-primitives::bitset::xor",
-  "vyre-primitives::bitset::xor_into",
-  "vyre-primitives::bitset::zero",
+  "vyre-libs::bitset::and",
+  "vyre-libs::bitset::and_into",
+  "vyre-libs::bitset::and_not",
+  "vyre-libs::bitset::and_not_into",
+  "vyre-libs::bitset::any",
+  "vyre-libs::bitset::clear_bit",
+  "vyre-libs::bitset::contains",
+  "vyre-libs::bitset::copy",
+  "vyre-libs::bitset::equal",
+  "vyre-libs::bitset::four_russians_apply_byte_lut",
+  "vyre-libs::bitset::four_russians_dense_matvec_byte_lut",
+  "vyre-libs::bitset::not",
+  "vyre-libs::bitset::or",
+  "vyre-libs::bitset::or_into",
+  "vyre-libs::bitset::popcount",
+  "vyre-libs::bitset::select1_query",
+  "vyre-libs::bitset::set_bit",
+  "vyre-libs::bitset::stochastic_and_mul",
+  "vyre-libs::bitset::subset_of",
+  "vyre-libs::bitset::test_bit",
+  "vyre-libs::bitset::xor",
+  "vyre-libs::bitset::xor_into",
+  "vyre-libs::bitset::zero",
 ]
 
 [[subsystem]]
@@ -44,22 +44,22 @@ operations = [
   "vyre-libs::decode::encodex",
   "vyre-libs::decode::hex",
   "vyre-libs::decode::inflate_stored_block",
-  "vyre-primitives::decode::rle_segment_lengths",
-  "vyre-primitives::decode::ziftsieve_literal_copy",
+  "vyre-libs::decode::rle_segment_lengths",
+  "vyre-libs::decode::ziftsieve_literal_copy",
 ]
 
 [[subsystem]]
 id = "fixpoint"
 operations = [
-  "vyre-primitives::fixpoint::bitset_fixpoint",
-  "vyre-primitives::fixpoint::persistent_fixpoint",
+  "vyre-libs::fixpoint::bitset_fixpoint",
+  "vyre-libs::fixpoint::persistent_fixpoint",
 ]
 
 [[subsystem]]
 id = "geom"
 operations = [
-  "vyre-primitives::geom::clifford2_geometric_product",
-  "vyre-primitives::geom::tfn_scalar_mix",
+  "vyre-libs::geom::clifford2_geometric_product",
+  "vyre-libs::geom::tfn_scalar_mix",
 ]
 
 [[subsystem]]
@@ -67,31 +67,31 @@ id = "graph"
 operations = [
   "vyre-libs::graph::ast_walk_postorder",
   "vyre-libs::graph::ast_walk_preorder",
-  "vyre-primitives::graph::csr_backward_or_changed",
-  "vyre-primitives::graph::csr_backward_traverse",
-  "vyre-primitives::graph::csr_forward_or_changed",
-  "vyre-primitives::graph::csr_forward_traverse",
-  "vyre-primitives::graph::csr_forward_traverse_excluding",
-  "vyre-primitives::graph::csr_frontier_degree_sum",
-  "vyre-primitives::graph::csr_queue_strided_forward_traverse",
-  "vyre-primitives::graph::dominator_frontier",
-  "vyre-primitives::graph::dominator_tree",
-  "vyre-primitives::graph::dominator_tree_depth",
-  "vyre-primitives::graph::dominator_tree_intersect_step",
-  "vyre-primitives::graph::functor_apply",
-  "vyre-primitives::graph::monoidal_compose",
-  "vyre-primitives::graph::motif",
-  "vyre-primitives::graph::path_reconstruct",
-  "vyre-primitives::graph::persistent_bfs",
-  "vyre-primitives::graph::persistent_bfs_step",
-  "vyre-primitives::graph::scc_decompose",
-  "vyre-primitives::graph::sheaf_diffusion_step",
-  "vyre-primitives::graph::sum_product_evaluate",
-  "vyre-primitives::graph::sum_product_evaluate_leveled",
-  "vyre-primitives::graph::tensor_flow_forward",
-  "vyre-primitives::graph::union_find",
-  "vyre-primitives::graph::vast_walk_postorder",
-  "vyre-primitives::graph::vast_walk_preorder",
+  "vyre-libs::graph::csr_backward_or_changed",
+  "vyre-libs::graph::csr_backward_traverse",
+  "vyre-libs::graph::csr_forward_or_changed",
+  "vyre-libs::graph::csr_forward_traverse",
+  "vyre-libs::graph::csr_forward_traverse_excluding",
+  "vyre-libs::graph::csr_frontier_degree_sum",
+  "vyre-libs::graph::csr_queue_strided_forward_traverse",
+  "vyre-libs::graph::dominator_frontier",
+  "vyre-libs::graph::dominator_tree",
+  "vyre-libs::graph::dominator_tree_depth",
+  "vyre-libs::graph::dominator_tree_intersect_step",
+  "vyre-libs::graph::functor_apply",
+  "vyre-libs::graph::monoidal_compose",
+  "vyre-libs::graph::motif",
+  "vyre-libs::graph::path_reconstruct",
+  "vyre-libs::graph::persistent_bfs",
+  "vyre-libs::graph::persistent_bfs_step",
+  "vyre-libs::graph::scc_decompose",
+  "vyre-libs::graph::sheaf_diffusion_step",
+  "vyre-libs::graph::sum_product_evaluate",
+  "vyre-libs::graph::sum_product_evaluate_leveled",
+  "vyre-libs::graph::tensor_flow_forward",
+  "vyre-libs::graph::union_find",
+  "vyre-libs::graph::vast_walk_postorder",
+  "vyre-libs::graph::vast_walk_preorder",
 ]
 
 [[subsystem]]
@@ -111,22 +111,32 @@ operations = [
 [[subsystem]]
 id = "hash"
 operations = [
+  "vyre-libs::hash::adler32",
   "vyre-libs::hash::blake3_compress",
-  "vyre-primitives::hash::adler32",
-  "vyre-primitives::hash::blake3_g",
-  "vyre-primitives::hash::blake3_round",
-  "vyre-primitives::hash::crc32",
-  "vyre-primitives::hash::fnv1a32",
-  "vyre-primitives::hash::fnv1a64",
-  "vyre-primitives::hash::multi_hash",
-  "vyre-primitives::hash::ntt_butterfly_stage",
-  "vyre-primitives::hash::sparse_fft_bin_hash",
+  "vyre-libs::hash::blake3_g",
+  "vyre-libs::hash::blake3_round",
+  "vyre-libs::hash::crc32",
+  "vyre-libs::hash::fnv1a32",
+  "vyre-libs::hash::fnv1a64",
+  "vyre-libs::hash::multi_hash",
+  "vyre-libs::hash::ntt_butterfly_stage",
+  "vyre-libs::hash::sparse_fft_bin_hash",
 ]
 
 [[subsystem]]
 id = "label"
 operations = [
-  "vyre-primitives::label::resolve_family",
+  "vyre-libs::label::resolve_family",
+]
+
+[[subsystem]]
+id = "llm"
+operations = [
+  "vyre-libs::llm::logit_adjust",
+  "vyre-libs::llm::nucleus_select",
+  "vyre-libs::llm::paged_kv_append",
+  "vyre-libs::llm::paged_kv_gather",
+  "vyre-libs::llm::sample_token",
 ]
 
 [[subsystem]]
@@ -140,10 +150,10 @@ operations = [
 id = "matching"
 operations = [
   "vyre-libs::matching::aho_corasick",
+  "vyre-libs::matching::bracket_match",
   "vyre-libs::matching::compact_hits",
   "vyre-libs::matching::cooperative_dfa",
   "vyre-libs::matching::emit_hit",
-  "vyre-primitives::matching::bracket_match",
 ]
 
 [[subsystem]]
@@ -154,6 +164,9 @@ operations = [
   "vyre-libs::math::algebra::meet",
   "vyre-libs::math::algebra::minplus_mul",
   "vyre-libs::math::algebra::sketch_mix",
+  "vyre-libs::math::amg_jacobi_step",
+  "vyre-libs::math::amg_v_cycle",
+  "vyre-libs::math::amg_v_cycle::v_cycle_phase",
   "vyre-libs::math::atomic::atomic_add_u32",
   "vyre-libs::math::atomic::atomic_and_u32",
   "vyre-libs::math::atomic::atomic_compare_exchange_u32",
@@ -164,16 +177,29 @@ operations = [
   "vyre-libs::math::atomic::atomic_xor_u32",
   "vyre-libs::math::atomic::lru_update_u32",
   "vyre-libs::math::avg_floor",
+  "vyre-libs::math::bellman_shortest_path",
+  "vyre-libs::math::bhattacharyya_coefficient",
+  "vyre-libs::math::bigint_add_carry",
   "vyre-libs::math::broadcast",
   "vyre-libs::math::clamp_u32",
+  "vyre-libs::math::conformal_threshold",
+  "vyre-libs::math::conv1d",
   "vyre-libs::math::conv::conv2d_3x3_direct",
   "vyre-libs::math::conv::im2col_3x3",
   "vyre-libs::math::dot",
+  "vyre-libs::math::dot_partial",
+  "vyre-libs::math::eigenvector_column_sign",
   "vyre-libs::math::fft::fft4_complex",
   "vyre-libs::math::fft::fft_convolve_circular_complex",
   "vyre-libs::math::fft::fft_radix2",
   "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
   "vyre-libs::math::fft::scale_conjugate_inverse",
+  "vyre-libs::math::gaussian_rdp_step",
+  "vyre-libs::math::givens_rotate_pair",
+  "vyre-libs::math::hensel_lift_step",
+  "vyre-libs::math::iht_threshold",
+  "vyre-libs::math::interval_merge",
+  "vyre-libs::math::jacobi_apply_rotation",
   "vyre-libs::math::linalg::matmul_strassen_2x2",
   "vyre-libs::math::lzcnt_u32",
   "vyre-libs::math::matmul",
@@ -181,64 +207,52 @@ operations = [
   "vyre-libs::math::matmul_bias::scalar",
   "vyre-libs::math::matmul_bias_tiled",
   "vyre-libs::math::matmul_tiled",
+  "vyre-libs::math::matrix_diagonal_extract",
+  "vyre-libs::math::matrix_identity_fill",
+  "vyre-libs::math::mori_zwanzig_project_step",
+  "vyre-libs::math::mp_edge_clip",
+  "vyre-libs::math::newton_schulz_poly5_f32",
+  "vyre-libs::math::qsvt_block_encode",
+  "vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled",
+  "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
+  "vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled",
+  "vyre-libs::math::quantized::i4x8_dot_f32_scaled",
+  "vyre-libs::math::quantized::i4x8_dot_i32",
+  "vyre-libs::math::quantized::i4x8_matvec_f32_scaled",
+  "vyre-libs::math::quantized::unpack_i4x8",
+  "vyre-libs::math::randomized_projection_step",
   "vyre-libs::math::reduce_mean",
   "vyre-libs::math::reduce_variance",
+  "vyre-libs::math::scallop_join",
   "vyre-libs::math::scan_prefix_sum",
+  "vyre-libs::math::semiring_gemm",
+  "vyre-libs::math::sheaf_laplacian_eigenvalue",
+  "vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase",
+  "vyre-libs::math::sinkhorn_iterate",
+  "vyre-libs::math::sinkhorn_scale",
+  "vyre-libs::math::softmax_step",
   "vyre-libs::math::square",
   "vyre-libs::math::succinct::rank1_query",
   "vyre-libs::math::succinct::rank1_superblocks",
+  "vyre-libs::math::symmetric_eigen_jacobi",
+  "vyre-libs::math::tensor_network_pair_contract",
+  "vyre-libs::math::tensor_train_decompose",
   "vyre-libs::math::tzcnt_u32",
   "vyre-libs::math::weighted_sum_fma_f32",
   "vyre-libs::math::wrapping_neg",
-  "vyre-primitives::math::amg_jacobi_step",
-  "vyre-primitives::math::amg_v_cycle",
-  "vyre-primitives::math::amg_v_cycle::v_cycle_phase",
-  "vyre-primitives::math::bellman_shortest_path",
-  "vyre-primitives::math::bhattacharyya_coefficient",
-  "vyre-primitives::math::bigint_add_carry",
-  "vyre-primitives::math::conformal_threshold",
-  "vyre-primitives::math::conv1d",
-  "vyre-primitives::math::dot_partial",
-  "vyre-primitives::math::eigenvector_column_sign",
-  "vyre-primitives::math::gaussian_rdp_step",
-  "vyre-primitives::math::givens_rotate_pair",
-  "vyre-primitives::math::hensel_lift_step",
-  "vyre-primitives::math::iht_threshold",
-  "vyre-primitives::math::interval_merge",
-  "vyre-primitives::math::jacobi_apply_rotation",
-  "vyre-primitives::math::matrix_diagonal_extract",
-  "vyre-primitives::math::matrix_identity_fill",
-  "vyre-primitives::math::mori_zwanzig_project_step",
-  "vyre-primitives::math::mp_edge_clip",
-  "vyre-primitives::math::newton_schulz_poly5_f32",
-  "vyre-primitives::math::qsvt_block_encode",
-  "vyre-primitives::math::quantized::i4x8_batched_matmul_f32_scaled",
-  "vyre-primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
-  "vyre-primitives::math::quantized::i4x8_batched_matvec_f32_scaled",
-  "vyre-primitives::math::quantized::i4x8_dot_f32_scaled",
-  "vyre-primitives::math::quantized::i4x8_dot_i32",
-  "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
-  "vyre-primitives::math::quantized::unpack_i4x8",
-  "vyre-primitives::math::randomized_projection_step",
-  "vyre-primitives::math::scallop_join",
-  "vyre-primitives::math::semiring_gemm",
-  "vyre-primitives::math::sheaf_laplacian_eigenvalue",
-  "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase",
-  "vyre-primitives::math::sinkhorn_iterate",
-  "vyre-primitives::math::sinkhorn_scale",
-  "vyre-primitives::math::softmax_step",
-  "vyre-primitives::math::symmetric_eigen_jacobi",
-  "vyre-primitives::math::tensor_network_pair_contract",
-  "vyre-primitives::math::tensor_train_decompose",
 ]
 
 [[subsystem]]
 id = "nn"
 operations = [
   "vyre-libs::nn::attention",
+  "vyre-libs::nn::attention::online_softmax",
   "vyre-libs::nn::attention::quest_paging",
   "vyre-libs::nn::attention::turboquant",
+  "vyre-libs::nn::attention_max_pass",
   "vyre-libs::nn::attention_reference",
+  "vyre-libs::nn::attention_sum_pass",
+  "vyre-libs::nn::attention_write_pass",
   "vyre-libs::nn::cross_entropy",
   "vyre-libs::nn::embedding",
   "vyre-libs::nn::flash_attention",
@@ -269,6 +283,9 @@ operations = [
   "vyre-libs::nn::partial_rope_backward",
   "vyre-libs::nn::qk_gain",
   "vyre-libs::nn::qk_gain_backward",
+  "vyre-libs::nn::quest_score_pages",
+  "vyre-libs::nn::quest_select_top_k",
+  "vyre-libs::nn::quest_zero_fill",
   "vyre-libs::nn::relu",
   "vyre-libs::nn::residual_add",
   "vyre-libs::nn::residual_block_backward",
@@ -282,18 +299,12 @@ operations = [
   "vyre-libs::nn::softmax_top_k",
   "vyre-libs::nn::swiglu",
   "vyre-libs::nn::top_k",
-  "vyre-primitives::nn::attention_max_pass",
-  "vyre-primitives::nn::attention_sum_pass",
-  "vyre-primitives::nn::attention_write_pass",
-  "vyre-primitives::nn::quest_score_pages",
-  "vyre-primitives::nn::quest_select_top_k",
-  "vyre-primitives::nn::quest_zero_fill",
 ]
 
 [[subsystem]]
 id = "opt"
 operations = [
-  "vyre-primitives::opt::homotopy_euler_predictor",
+  "vyre-libs::opt::homotopy_euler_predictor",
 ]
 
 [[subsystem]]
@@ -311,34 +322,34 @@ id = "parsing"
 operations = [
   "vyre-libs::parsing::ast_binding_strength",
   "vyre-libs::parsing::ast_cfg_blocks",
+  "vyre-libs::parsing::ast_cse_structural_hash",
   "vyre-libs::parsing::ast_shunting_yard",
+  "vyre-libs::parsing::core_delimiter_match",
+  "vyre-libs::parsing::line_splice_classify",
+  "vyre-libs::parsing::planar_rewrite_schedule",
   "vyre-libs::parsing::python312_extract_calls",
   "vyre-libs::parsing::python312_extract_decorators",
   "vyre-libs::parsing::python312_extract_imports",
   "vyre-libs::parsing::python312_extract_structure",
   "vyre-libs::parsing::python312_extract_with_blocks",
   "vyre-libs::parsing::python312_lexer",
-  "vyre-primitives::parsing::ast_cse_structural_hash",
-  "vyre-primitives::parsing::core_delimiter_match",
-  "vyre-primitives::parsing::line_splice_classify",
-  "vyre-primitives::parsing::planar_rewrite_schedule",
-  "vyre-primitives::parsing::ssa_dominance_scan",
-  "vyre-primitives::parsing::whitespace_classify_word",
+  "vyre-libs::parsing::ssa_dominance_scan",
+  "vyre-libs::parsing::whitespace_classify_word",
 ]
 
 [[subsystem]]
 id = "predicate"
 operations = [
-  "vyre-primitives::predicate::arg_of",
-  "vyre-primitives::predicate::call_to",
-  "vyre-primitives::predicate::edge",
-  "vyre-primitives::predicate::in_file",
-  "vyre-primitives::predicate::in_function",
-  "vyre-primitives::predicate::in_package",
-  "vyre-primitives::predicate::literal_of",
-  "vyre-primitives::predicate::node_kind_eq",
-  "vyre-primitives::predicate::return_value_of",
-  "vyre-primitives::predicate::size_argument_of",
+  "vyre-libs::predicate::arg_of",
+  "vyre-libs::predicate::call_to",
+  "vyre-libs::predicate::edge",
+  "vyre-libs::predicate::in_file",
+  "vyre-libs::predicate::in_function",
+  "vyre-libs::predicate::in_package",
+  "vyre-libs::predicate::literal_of",
+  "vyre-libs::predicate::node_kind_eq",
+  "vyre-libs::predicate::return_value_of",
+  "vyre-libs::predicate::size_argument_of",
 ]
 
 [[subsystem]]
@@ -362,24 +373,27 @@ operations = [
 [[subsystem]]
 id = "reduce"
 operations = [
-  "vyre-primitives::reduce::all",
-  "vyre-primitives::reduce::any",
-  "vyre-primitives::reduce::count",
-  "vyre-primitives::reduce::count_non_zero",
-  "vyre-primitives::reduce::gather",
-  "vyre-primitives::reduce::histogram",
-  "vyre-primitives::reduce::max",
-  "vyre-primitives::reduce::min",
-  "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum",
-  "vyre-primitives::reduce::radix_sort",
-  "vyre-primitives::reduce::range_counts_u32",
-  "vyre-primitives::reduce::scatter",
-  "vyre-primitives::reduce::segment_reduce_sum",
-  "vyre-primitives::reduce::sum",
-  "vyre-primitives::reduce::workgroup_any_u32",
-  "vyre-primitives::reduce::workgroup_max_f32",
-  "vyre-primitives::reduce::workgroup_sum_f32",
-  "vyre-primitives::reduce::workgroup_sum_u32",
+  "vyre-libs::reduce::all",
+  "vyre-libs::reduce::any",
+  "vyre-libs::reduce::count",
+  "vyre-libs::reduce::count_non_zero",
+  "vyre-libs::reduce::gather",
+  "vyre-libs::reduce::histogram",
+  "vyre-libs::reduce::max",
+  "vyre-libs::reduce::min",
+  "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum",
+  "vyre-libs::reduce::radix_sort",
+  "vyre-libs::reduce::range_counts_u32",
+  "vyre-libs::reduce::scatter",
+  "vyre-libs::reduce::segment_reduce_sum",
+  "vyre-libs::reduce::sum",
+  "vyre-libs::reduce::workgroup_any_u32",
+  "vyre-libs::reduce::workgroup_max_f32",
+  "vyre-libs::reduce::workgroup_max_u32",
+  "vyre-libs::reduce::workgroup_min_f32",
+  "vyre-libs::reduce::workgroup_min_u32",
+  "vyre-libs::reduce::workgroup_sum_f32",
+  "vyre-libs::reduce::workgroup_sum_u32",
 ]
 
 [[subsystem]]
@@ -424,18 +438,18 @@ operations = [
 [[subsystem]]
 id = "text"
 operations = [
-  "vyre-primitives::text::byte_histogram_256",
-  "vyre-primitives::text::char_class",
-  "vyre-primitives::text::encoding_classify",
-  "vyre-primitives::text::line_index",
-  "vyre-primitives::text::utf8_shape_counts",
-  "vyre-primitives::text::utf8_validate",
+  "vyre-libs::text::byte_histogram_256",
+  "vyre-libs::text::char_class",
+  "vyre-libs::text::encoding_classify",
+  "vyre-libs::text::line_index",
+  "vyre-libs::text::utf8_shape_counts",
+  "vyre-libs::text::utf8_validate",
 ]
 
 [[subsystem]]
 id = "vfs"
 operations = [
-  "vyre-primitives::vfs::resolve",
+  "vyre-libs::vfs::resolve",
 ]
 
 [[subsystem]]
@@ -450,6 +464,6 @@ operations = [
   "vyre-libs::visual::glass",
   "vyre-libs::visual::glyph_grid",
   "vyre-libs::visual::gradient",
+  "vyre-libs::visual::packed_rgba_map",
   "vyre-libs::visual::upsample",
-  "vyre-primitives::visual::packed_rgba_map",
 ]

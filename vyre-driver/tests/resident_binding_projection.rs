@@ -56,3 +56,23 @@ fn the_names_follow_binding_order() {
 
     assert_eq!(names, ordered);
 }
+
+/// WHY: buffer declarations in reverse or arbitrary order must still produce
+/// deterministic binding-order names for the resident launch path.
+#[test]
+fn resident_buffer_names_with_reordered_declarations() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("buf_c", 2, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("buf_a", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::output("buf_b", 1, DataType::U32),
+        ],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    let plan = BindingPlan::build(&program)
+        .expect("Fix: binding plan must build for reordered declarations.");
+
+    let names = resident_buffer_names(&plan, &program).collect::<Vec<_>>();
+    assert_eq!(names, ["buf_a", "buf_b", "buf_c"]);
+}

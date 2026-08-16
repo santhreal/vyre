@@ -17,7 +17,7 @@ use vyre_foundation::ir::{DataType, Program};
 use crate::math::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::graph::monoidal_compose";
+pub const OP_ID: &str = "vyre-libs::graph::monoidal_compose";
 
 const MATMUL_CONTEXT: FixedMatmulContext = FixedMatmulContext {
     op_id: OP_ID,

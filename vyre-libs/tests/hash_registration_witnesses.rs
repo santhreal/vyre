@@ -44,7 +44,7 @@ fn assert_registered_witness(id: &str, expected: Vec<Vec<Vec<u8>>>) {
 fn adler32_witness_is_pinned() {
     // Adler-32("abc") = 0x024D0127.
     assert_registered_witness(
-        "vyre-primitives::hash::adler32",
+        "vyre-libs::hash::adler32",
         vec![vec![vec![0x27, 0x01, 0x4d, 0x02]]],
     );
 }
@@ -53,7 +53,7 @@ fn adler32_witness_is_pinned() {
 fn crc32_witness_is_pinned() {
     // CRC-32("abc") = 0x352441C2 (reflected polynomial 0xEDB88320).
     assert_registered_witness(
-        "vyre-primitives::hash::crc32",
+        "vyre-libs::hash::crc32",
         vec![vec![vec![0xc2, 0x41, 0x24, 0x35]]],
     );
 }
@@ -62,7 +62,7 @@ fn crc32_witness_is_pinned() {
 fn fnv1a32_witness_is_pinned() {
     // FNV-1a32("a") = 0xE40C292C.
     assert_registered_witness(
-        "vyre-primitives::hash::fnv1a32",
+        "vyre-libs::hash::fnv1a32",
         vec![vec![vec![0x2c, 0x29, 0x0c, 0xe4]]],
     );
 }
@@ -71,7 +71,7 @@ fn fnv1a32_witness_is_pinned() {
 fn fnv1a64_witness_is_pinned() {
     // FNV-1a64("a") = 0xAF63DC4C8601EC8C, stored as low then high word.
     assert_registered_witness(
-        "vyre-primitives::hash::fnv1a64",
+        "vyre-libs::hash::fnv1a64",
         vec![vec![vec![0x8c, 0xec, 0x01, 0x86, 0x4c, 0xdc, 0x63, 0xaf]]],
     );
 }
@@ -80,7 +80,7 @@ fn fnv1a64_witness_is_pinned() {
 fn multi_hash_witness_is_pinned() {
     // One walk over "abc" emitting CRC-32, FNV-1a32, Adler-32 in that order.
     assert_registered_witness(
-        "vyre-primitives::hash::multi_hash",
+        "vyre-libs::hash::multi_hash",
         vec![vec![vec![
             0xc2, 0x41, 0x24, 0x35, 0x0b, 0xe9, 0x47, 0x1a, 0x27, 0x01, 0x4d, 0x02,
         ]]],

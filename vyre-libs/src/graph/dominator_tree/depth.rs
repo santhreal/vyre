@@ -24,7 +24,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::program::IDOM_NONE;
 
 /// Canonical op id for one idom-forest depth recomputation.
-pub const OP_ID: &str = "vyre-primitives::graph::dominator_tree_depth";
+pub const OP_ID: &str = "vyre-libs::graph::dominator_tree_depth";
 
 /// Build the depth recomputation over `node_count` nodes of `idom` into
 /// `depth`.

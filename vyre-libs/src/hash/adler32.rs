@@ -14,7 +14,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 pub const ADLER32_MOD: u32 = 65_521;
 
 /// Stable Tier 2.5 op id for the Adler-32 serial byte walker.
-pub const ADLER32_OP_ID: &str = "vyre-primitives::hash::adler32";
+pub const ADLER32_OP_ID: &str = "vyre-libs::hash::adler32";
 
 /// Self-contained Adler-32 chunk summary for tree reductions.
 ///

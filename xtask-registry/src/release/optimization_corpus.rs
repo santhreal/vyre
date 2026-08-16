@@ -318,3 +318,44 @@ fn hex(bytes: &[u8]) -> String {
     }
     output
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn corpus_completeness_and_hex_encoding_are_exact() {
+        assert_eq!(hex(b"\x00\x0f\x10\xff"), "000f10ff");
+
+        let mut inspection = Inspection::new();
+        let manifest = OptimizationCorpusManifest {
+            schema_version: 1,
+            required_min_cases: 100,
+            generated_cases: 80,
+            verified_cases: 75,
+            optimized_cases: 0,
+            non_converged_cases: 2,
+            total_nodes_before: 1000,
+            total_nodes_after: 900,
+            pass_instance_count: 50,
+            changed_pass_instances: 0,
+            families: Vec::new(),
+            blockers: vec!["custom blocker".to_string()],
+        };
+
+        report_corpus_completeness(&manifest, &mut inspection);
+        let blocked = &inspection.findings;
+        assert!(blocked
+            .iter()
+            .any(|f| f.message.contains("below the release floor")));
+        assert!(blocked
+            .iter()
+            .any(|f| f.message.contains("verified after optimization")));
+        assert!(blocked
+            .iter()
+            .any(|f| f.message.contains("no corpus case was optimized")));
+        assert!(blocked
+            .iter()
+            .any(|f| f.message.contains("corpus case(s) did not converge")));
+        assert!(blocked.iter().any(|f| f.message.contains("custom blocker")));
+    }
+}

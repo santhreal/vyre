@@ -6,7 +6,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for summing a half-open histogram range.
-pub const RANGE_COUNTS_U32_OP_ID: &str = "vyre-primitives::reduce::range_counts_u32";
+pub const RANGE_COUNTS_U32_OP_ID: &str = "vyre-libs::reduce::range_counts_u32";
 
 /// Build a body that assigns `out_var = sum(histogram[start..end])`.
 ///

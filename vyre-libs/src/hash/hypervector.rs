@@ -37,9 +37,9 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for the binding primitive.
-pub const BIND_OP_ID: &str = "vyre-primitives::hash::hypervector_xor_bind";
+pub const BIND_OP_ID: &str = "vyre-libs::hash::hypervector_xor_bind";
 /// Canonical op id for the bundling primitive.
-pub const BUNDLE_OP_ID: &str = "vyre-primitives::hash::hypervector_majority_bundle";
+pub const BUNDLE_OP_ID: &str = "vyre-libs::hash::hypervector_majority_bundle";
 
 /// Standard BSC hypervector dimensionality (in bits). 10240 bits =
 /// 320 u32 words. Plate / Kanerva established that dimensions in the

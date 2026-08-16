@@ -115,11 +115,11 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::fixpoint::persistent_fixpoint";
+pub const OP_ID: &str = "vyre-libs::fixpoint::persistent_fixpoint";
 
 /// Canonical op id of the grid-correct sibling
 /// [`persistent_fixpoint_grid`].
-pub const OP_ID_GRID: &str = "vyre-primitives::fixpoint::persistent_fixpoint_grid";
+pub const OP_ID_GRID: &str = "vyre-libs::fixpoint::persistent_fixpoint_grid";
 
 /// Workgroup size both builders emit.
 ///

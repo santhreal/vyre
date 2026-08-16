@@ -137,6 +137,12 @@ impl PassScheduler {
         self
     }
 
+    /// Returns the configured maximum iteration budget for fixpoint execution.
+    #[must_use]
+    pub fn max_iterations(&self) -> usize {
+        self.max_iterations
+    }
+
     /// Attach reproducibility metadata to pass metrics for one optimizer pass.
     ///
     /// This keeps innovation/audit evidence at the scheduler boundary instead

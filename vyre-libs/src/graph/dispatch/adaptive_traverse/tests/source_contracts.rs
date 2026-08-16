@@ -72,7 +72,7 @@ fn the_sparse_dense_release_path_dispatches_the_primitive_traversal_program() {
     assert_eq!(
         launched[2], expected,
         "the traversal Program the release path launches must be the one \
-         vyre-primitives::graph::adaptive_traverse::adaptive_sparse_dense_step builds"
+         vyre-libs::graph::adaptive_traverse::adaptive_sparse_dense_step builds"
     );
 }
 
@@ -111,6 +111,6 @@ fn the_four_russians_release_path_dispatches_the_primitive_dense_program() {
         dispatcher.last_step_programs(),
         vec![expected],
         "the Four-Russians dense step must launch exactly the Program \
-         vyre-primitives::graph::adaptive_traverse::adaptive_four_russians_dense_step builds"
+         vyre-libs::graph::adaptive_traverse::adaptive_four_russians_dense_step builds"
     );
 }

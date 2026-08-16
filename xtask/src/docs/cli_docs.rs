@@ -36,7 +36,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::sweep::RUNNER;
 
 /// The manifest that declares every documented binary.
@@ -66,9 +66,9 @@ const REQUIRED: [&str; 9] = [
     "package",
     "readme",
 ];
-/// How to regenerate what this gate owns.
+/// How to regenerate the owning README artifacts.
 const REGENERATE: &str =
-    "regenerate the README sections with `./cargo_full run --bin xtask -- cli-docs --write`";
+    "regenerate all generated README sections with `./cargo_full run --bin xtask -- crate-readmes --write`";
 
 /// One `[[binary]]` row of the manifest.
 struct Binary {
@@ -123,24 +123,14 @@ impl Binary {
 /// The gate.
 pub struct CliDocs;
 
-impl Gate for CliDocs {
-    fn name(&self) -> &'static str {
-        "cli-docs"
-    }
-
-    fn help(&self) -> &'static str {
-        "Run every documented help route and hold the README command sections to it"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for CliDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = ctx.root.clone();
+        let write = ctx.write && ctx.gate_name()? == "crate-readmes";
         let mut report = Report::clean();
         let manifest = read_manifest(&root)?;
         let rows: Vec<Binary> = manifest.iter().map(Binary::from_row).collect();
+        report.cover_complete("documented command binaries", rows.len());
         report.findings.extend(row_findings(&rows));
         if !report.findings.is_empty() {
             return Ok(report);
@@ -178,6 +168,10 @@ impl Gate for CliDocs {
             commands.insert(row.key(), discovered);
         }
 
+        if write && !report.findings.is_empty() {
+            return Ok(report);
+        }
+
         let counted: usize = commands.values().map(Vec::len).sum();
         let mut wrote = 0;
         for (readme, rows) in by_readme(&rows) {
@@ -203,7 +197,7 @@ impl Gate for CliDocs {
             if current == expected {
                 continue;
             }
-            if ctx.write {
+            if write {
                 fs::write(&path, expected).map_err(|error| {
                     GateError::new(
                         format!("{readme} could not be written: {error}"),
@@ -220,7 +214,7 @@ impl Gate for CliDocs {
             }
         }
 
-        if ctx.write {
+        if write {
             report.note(format!("wrote {wrote} README section(s)"));
         }
         report.note(format!(
@@ -229,6 +223,14 @@ impl Gate for CliDocs {
         ));
         Ok(report)
     }
+}
+
+/// Refresh CLI sections as part of the sole README artifact owner.
+pub(crate) fn refresh_readmes(ctx: &GateCtx) -> Result<Report, GateError> {
+    if !ctx.root.join(MANIFEST).is_file() {
+        return Ok(Report::clean());
+    }
+    <CliDocs as crate::gate::GateBehavior>::run(&CliDocs, ctx)
 }
 
 /// The `[[binary]]` rows, or the reason the manifest cannot be judged at all.
@@ -639,7 +641,7 @@ fn subcommand_token(word: Option<&str>) -> Option<String> {
 fn registry_findings(documented: &[String]) -> Vec<Finding> {
     let mut expected: BTreeSet<&str> = crate::subcommands::registry()
         .into_iter()
-        .map(Gate::name)
+        .map(|gate| gate.name())
         .collect();
     expected.insert(RUNNER);
     let documented: BTreeSet<&str> = documented.iter().map(String::as_str).collect();

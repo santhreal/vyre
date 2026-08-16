@@ -10,7 +10,7 @@ use super::workspace_sources::{run_gate, track_fixture, workspace_root};
 
 /// Run the gate over a fixture checkout.
 fn run(root: &Path) -> Report {
-    run_gate(&CrateOwnership, root, false)
+    run_gate("crate-ownership", &CrateOwnership, root, false)
 }
 
 /// Every message the gate reported, joined for a failure diagnostic.

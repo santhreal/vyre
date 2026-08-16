@@ -46,7 +46,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::chebyshev_filter";
+pub const OP_ID: &str = "vyre-libs::graph::chebyshev_filter";
 
 /// Maximum supported polynomial order (K). Larger orders rarely help  -
 /// the Chebyshev approximation error decays super-exponentially in K.
@@ -633,7 +633,7 @@ mod tests {
             .expect_err("checked Chebyshev builder must reject dense matrix overflow");
 
         assert!(
-            error.contains("vyre-primitives::graph::chebyshev_filter shape")
+            error.contains("vyre-libs::graph::chebyshev_filter shape")
                 && error.contains("overflows the u32 cell count"),
             "error should name the op and the shape that overflowed: {error}"
         );

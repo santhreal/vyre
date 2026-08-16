@@ -247,41 +247,41 @@ mod tests {
     fn program_builders_emit_expected_primitives() {
         assert_eq!(
             program_generator(&dispatch_bitset_fixpoint("cur", "next", "changed", 4)),
-            "vyre-primitives::fixpoint::bitset_fixpoint"
+            "vyre-libs::fixpoint::bitset_fixpoint"
         );
         assert_eq!(
             program_generator(&dispatch_bitset_fixpoint_warm_start(
                 "cur", "next", "changed", "seed", 4
             )),
-            "vyre-primitives::fixpoint::bitset_fixpoint_warm_start"
+            "vyre-libs::fixpoint::bitset_fixpoint_warm_start"
         );
         assert_eq!(
             program_generator(&dispatch_stream_compact(
                 "payloads", "flags", "offsets", "out", "live", 8
             )),
-            "vyre-primitives::math::stream_compact"
+            "vyre-libs::math::stream_compact"
         );
         assert_eq!(
             program_generator(&dispatch_interval_merge(
                 "amin", "amax", "bmin", "bmax", "omin", "omax", 8
             )),
-            "vyre-primitives::math::interval_merge"
+            "vyre-libs::math::interval_merge"
         );
         assert_eq!(
             program_generator(&dispatch_iht_threshold("z", "threshold", "out", 8)),
-            "vyre-primitives::math::iht_threshold"
+            "vyre-libs::math::iht_threshold"
         );
         assert_eq!(
             program_generator(&dispatch_dp_clip_per_sample("g", "n", "c", "out", 2, 2)),
-            "vyre-primitives::math::dp_clip_per_sample"
+            "vyre-libs::math::dp_clip_per_sample"
         );
         assert_eq!(
             program_generator(&dispatch_dot_partial("q", "k", "out", 4)),
-            "vyre-primitives::math::dot_partial"
+            "vyre-libs::math::dot_partial"
         );
         assert_eq!(
             program_generator(&dispatch_stochastic_and_mul("a", "b", "out", 4)),
-            "vyre-primitives::bitset::stochastic_and_mul"
+            "vyre-libs::bitset::stochastic_and_mul"
         );
     }
 

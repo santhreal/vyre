@@ -101,10 +101,10 @@ mod tests {
     fn row(family: &str, op: &str) -> OpRecord {
         OpRecord {
             family: family.to_string(),
-            tier: OpTier::Foundation,
-            owners: vec!["vyre-foundation".to_string()],
+            tier: OpTier::Library,
+            owners: vec!["vyre-libs".to_string()],
             ops: vec![op.to_string()],
-            registry_sources: vec!["vyre-foundation::operation".to_string()],
+            registry_sources: vec!["vyre-libs::bitset".to_string()],
             duplicate_ok: false,
             reference: "supported",
             foundation_ir: "supported",
@@ -112,7 +112,7 @@ mod tests {
             wgpu: "supported",
             spirv: "experimental",
             release_blocking_notes: String::new(),
-            tests: vec!["vyre-foundation/tests/op.rs".to_string()],
+            tests: vec!["vyre-libs/tests/op.rs".to_string()],
         }
     }
 
@@ -121,9 +121,9 @@ mod tests {
     /// silent on a registered one. It proves nothing about what the registry contains.
     #[test]
     fn an_op_with_no_live_registration_blocks_the_matrix() {
-        let registered = BTreeSet::from(["vyre-primitives::bitset::and"]);
+        let registered = BTreeSet::from(["vyre-libs::bitset::and"]);
 
-        let registered_row = [row("bitset_and", "vyre-primitives::bitset::and")];
+        let registered_row = [row("bitset_and", "vyre-libs::bitset::and")];
         let live = validate_records(&registered_row, &registered);
         assert!(live.is_empty(), "registered op must not block: {live:?}");
 
@@ -135,9 +135,7 @@ mod tests {
         assert_eq!(
             invented,
             vec!["Fix: op `mul_power_of_two_to_shift` in OP_MATRIX family \
-                 `integer_strength_reduction` has no live registration. The matrix carries op \
-                 families whose rows resolve to a registered id. An IR-level rewrite belongs to \
-                 the optimizer pass catalog and its generated pass artifact, not here."
+                 `integer_strength_reduction` has no live registration. Delete the row or restore the registration."
                 .to_string()]
         );
     }

@@ -10,9 +10,9 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id for the BLAKE3 `G` mixing function.
-pub const BLAKE3_G_OP_ID: &str = "vyre-primitives::hash::blake3_g";
+pub const BLAKE3_G_OP_ID: &str = "vyre-libs::hash::blake3_g";
 /// Stable Tier 2.5 op id for one BLAKE3 round.
-pub const BLAKE3_ROUND_OP_ID: &str = "vyre-primitives::hash::blake3_round";
+pub const BLAKE3_ROUND_OP_ID: &str = "vyre-libs::hash::blake3_round";
 
 /// Message permutation applied between rounds.
 pub const MSG_SCHEDULE: [[usize; 16]; 7] = [
