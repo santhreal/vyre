@@ -185,6 +185,22 @@ fn manual_walk_node(
         Node::Opaque(_) => {
             *opaque = opaque.saturating_add(1);
         }
+        Node::TileLoad { origin, .. } => {
+            for offset in origin {
+                manual_walk_expr(offset, nodes, regions, calls, opaque, bits);
+            }
+        }
+        Node::TileStore { origin, .. } => {
+            for offset in origin {
+                manual_walk_expr(offset, nodes, regions, calls, opaque, bits);
+            }
+        }
+        Node::TileElementwise { body, .. } => {
+            for child in body {
+                manual_walk_node(child, nodes, regions, calls, opaque, bits);
+            }
+        }
+        Node::TileDecl { .. } | Node::TileMatmul { .. } | Node::TileReduce { .. } => {}
         Node::Return | Node::Barrier { .. } | Node::Resume { .. } => {}
         _ => {}
     }

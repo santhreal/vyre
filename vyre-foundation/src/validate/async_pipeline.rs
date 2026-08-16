@@ -260,6 +260,7 @@ fn walk_node(node: &Node, state: &mut InFlight, found: &mut Vec<Finding>) -> Seq
         }
         Node::Block(body) => walk_sequence(body, state, found),
         Node::Region { body, .. } => walk_sequence(body, state, found),
+        Node::TileElementwise { body, .. } => walk_sequence(body, state, found),
         Node::Let { .. }
         | Node::Assign { .. }
         | Node::Store { .. }
@@ -271,6 +272,11 @@ fn walk_node(node: &Node, state: &mut InFlight, found: &mut Vec<Finding>) -> Seq
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => SequenceOutcome::Continues,
     }
 }
