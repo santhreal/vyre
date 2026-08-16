@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=7aa6f646821e67ad47098581c63561f3020799ac626306bb13152939a14bfe84",
+  "source_fingerprint": "git:e069d4413d0cd25acdc2211d13426d34f43842a5:dirty=true:worktree=d1903b4e82cac65dc396a8bcb974619c583b3d72592dd229413b4ba5e133961d",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -171,11 +171,10 @@
     {
       "name": "vyre-driver-wgpu",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
-      "feature_count": 10,
+      "feature_count": 9,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "c-parser",
         "default",
         "matching-dfa",
         "matching-nfa",
@@ -287,7 +286,7 @@
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 46,
+      "feature_count": 45,
       "has_default_feature": true,
       "default_feature_members": [
         "math-linalg",
@@ -303,7 +302,6 @@
       ],
       "features": [
         "analysis",
-        "c-parser",
         "cat-a-builder-options",
         "cpu-parity",
         "crypto",

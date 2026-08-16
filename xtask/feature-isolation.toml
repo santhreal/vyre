@@ -691,7 +691,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "(default),bitset,cpu-parity,graph,hardware"
+feature = "(default),bitset,cpu-parity,graph,hardware,predicate"
 outcome = "compiles"
 
 [[pair]]
