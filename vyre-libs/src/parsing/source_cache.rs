@@ -593,8 +593,8 @@ mod tests {
             .or_else(|| panic.downcast_ref::<&'static str>().copied())
             .unwrap_or("<non-string panic>");
         assert!(
-            message.contains("parsed-source LRU cache lock was poisoned"),
-            "{message}"
+            message.contains("parsed-source LRU lock is poisoned") && message.contains("Fix: "),
+            "a poisoned cache must name the lock it lost and the action that recovers: {message}"
         );
     }
 }
