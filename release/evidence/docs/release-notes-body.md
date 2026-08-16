@@ -1625,6 +1625,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   that only a plain global or shared store is maskable by a `@%p` instruction
   predicate. Adding a variant now fails to compile until both facts are stated
   for it, rather than defaulting to no child body and removable.
+- Launch geometry is a lowering decision produced by backend GeometryStrategy
+  from neutral GeometryRequirements rather than hardcoded in library
+  operations.
 - `scripts/check_layering.sh` discarded `cargo tree` stderr, so a cargo that
   could not resolve the workspace printed a green result and exited 0. It now
   derives every workspace member, requires a `docs/CRATE_OWNERSHIP.toml`
@@ -4200,6 +4203,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and the consumer boundary went through that compiled-in path and now ask the
   helper. `ConsumerBoundaryScan::for_crate` takes the crate directory as a
   path.
+- All remaining compile-time checkout root derivations in `vyre-foundation`,
+  `vyre-megakernel`, and `vyre-driver-cuda` resolve repository and fixture
+  paths at run time through `vyre_test_support::monorepo` delegations
+  (`vyre_workspace_root` and `vyre_crate_directory`). `structure-gate` checkout
+  provenance gates enforce runtime path derivation across all member sources
+  and test binaries, catching both `env!` and `option_env!` variants without
+  waivers.
+- The workspace cargo runner no longer exports a workstation-specific target
+  directory, so hosted CI and new checkouts use their own writable Cargo
+  configuration.
 - Two CI jobs named cargo test targets that do not exist and would have failed
   with `no test target named` on the first run that reached them. The
   architecture gate ran `--test architecture_docs --test
@@ -4597,6 +4610,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   compiling to the selections that have no row yet, so recording one decision
   no longer costs a sweep of the whole axis, which is how the recorded set went
   stale.
+- The feature-msrv gate writes only the advertised toolchain version on stdout
+  when invoked with --print-toolchain, returning cleanly without printing notes
+  or finding counts.
 - The shared gate fixture checkout states the corrective action when a
   temporary directory or git is unavailable, and the recorded backend
   feature-marker matrix matches what the tree produces.
@@ -4616,6 +4632,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   implementations gave one program two answers depending on which arm read it.
   `V113`, the malformed-alias-frame code the deleted copy raised, is retired
   from the registry and the code catalog.
+- Every cargo-fuzz job now installs and selects nightly, matching the sanitizer
+  flags the libFuzzer runner passes to rustc.
 - Every gate now resolves the checkout it reports on from the working directory
   at run time. Two checkouts of this repository that share one cargo target
   directory compute the same unit hash for a member, so cargo hands one
@@ -5824,6 +5842,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now takes `vyre-libs` with `default-features = false`, since it uses only
   `dispatch_buffers` and `graph`, so an optimizer-only consumer resolves seven
   primitive features instead of thirteen.
+- The workspace lockfile now records the TOML parser already declared by
+  vyre-libs, so locked builds resolve without modifying the checkout.
 - `vyre-lints` resolves the workspace root by walking ancestors for a manifest
   that declares `[workspace]`, and `--print-default-roots` prints those roots
   relative to it. A run from inside a member directory previously enumerated no

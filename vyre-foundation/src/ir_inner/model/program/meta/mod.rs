@@ -179,6 +179,19 @@ impl Program {
         self.invalidate_caches_for(ProgramMutationProvenance::ParallelRegionSize);
     }
 
+    /// Apply lowered launch geometry dimensions to this program.
+    #[inline]
+    pub fn set_launch_geometry(&mut self, geometry: &crate::geometry::LaunchGeometry) {
+        self.set_workgroup_size(geometry.workgroup);
+    }
+
+    /// Return a clone of this program with lowered launch geometry applied.
+    #[must_use]
+    #[inline]
+    pub fn with_launch_geometry(&self, geometry: &crate::geometry::LaunchGeometry) -> Self {
+        self.with_rewritten_workgroup_size_and_entry(geometry.workgroup, self.entry.as_ref().clone())
+    }
+
     /// Entry-point nodes.
     #[must_use]
     #[inline]

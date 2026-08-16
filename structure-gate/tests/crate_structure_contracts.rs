@@ -21,9 +21,9 @@ use structure_gate::module_layout::{
     sibling_module_failures,
 };
 use structure_gate::{
-    category_home_failures, frontend_owner_failures, operation_identity_failures,
-    registration_owner_failures, registry_link_failures, roster_failures, scan,
-    substrate_home_failures, workspace_root, Workspace,
+    category_home_failures, frontend_owner_failures, geometry_constant_failures,
+    operation_identity_failures, registration_owner_failures, registry_link_failures,
+    roster_failures, scan, substrate_home_failures, workspace_root, Workspace,
 };
 
 fn workspace() -> Workspace {
@@ -267,6 +267,19 @@ fn no_file_repeats_the_directory_holding_it() {
         failures.is_empty(),
         "{}",
         report("directory-stutter", &failures)
+    );
+}
+
+/// Operations in `vyre-libs` and `vyre-primitives` declare `GeometryRequirements`
+/// and lower through `GeometryStrategy`, never declaring hardcoded geometry constants.
+#[test]
+fn no_operation_declares_hardcoded_geometry_constants() {
+    let failures = geometry_constant_failures(&workspace_root());
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("geometry-constants", &failures)
     );
 }
 

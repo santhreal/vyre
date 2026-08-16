@@ -155,10 +155,12 @@ fn no_source_file_resolves_the_checkout_from_a_compiled_in_path() {
 /// itself gets an exemption, and an exemption list is a hole of exactly the kind
 /// this test exists to close.
 fn banned_spellings() -> Vec<String> {
-    ["CARGO_MANIFEST_DIR", "VYRE_CHECKOUT_ROOT"]
-        .iter()
-        .map(|name| format!("env{}({name:?})", "!"))
-        .collect()
+    let mut spellings = Vec::new();
+    for name in ["CARGO_MANIFEST_DIR", "VYRE_CHECKOUT_ROOT"] {
+        spellings.push(format!("env{}({name:?})", "!"));
+        spellings.push(format!("option_env{}({name:?})", "!"));
+    }
+    spellings
 }
 
 /// Every directory the scan reads, paired with the member that owns it.

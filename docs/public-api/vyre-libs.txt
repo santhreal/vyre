@@ -771,7 +771,6 @@ pub const vyre_libs::math::preconditioner::POLY5_F32_OP_ID: &str
 pub const vyre_libs::math::prefix_scan::MAX_SINGLE_BLOCK_SCAN: u32
 pub const vyre_libs::math::prefix_scan::OP_ID_EXCLUSIVE_SUM: &str
 pub const vyre_libs::math::prefix_scan::OP_ID_INCLUSIVE_SUM: &str
-pub const vyre_libs::math::prefix_scan::SCAN_WORKGROUP_LANES: u32
 pub const vyre_libs::math::qsvt::OP_ID: &str
 pub const vyre_libs::math::quantized::I4_BATCHED_MATMUL_F32_SCALED_OP_ID: &str
 pub const vyre_libs::math::quantized::I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID: &str
@@ -944,10 +943,7 @@ pub const vyre_libs::reduce::gather::OP_ID: &str
 pub const vyre_libs::reduce::histogram::OP_ID: &str
 pub const vyre_libs::reduce::max::OP_ID: &str
 pub const vyre_libs::reduce::min::OP_ID: &str
-pub const vyre_libs::reduce::multi_block_prefix_scan::BLOCK_LANES: u32
 pub const vyre_libs::reduce::multi_block_prefix_scan::OP_ID_EXCLUSIVE_SUM: &str
-pub const vyre_libs::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM: &str
-pub const vyre_libs::reduce::multi_block_prefix_scan::SOFT_MAX_N: u32
 pub const vyre_libs::reduce::radix_sort::OP_ID: &str
 pub const vyre_libs::reduce::range_counts::RANGE_COUNTS_U32_OP_ID: &str
 pub const vyre_libs::reduce::scatter::OP_ID: &str
