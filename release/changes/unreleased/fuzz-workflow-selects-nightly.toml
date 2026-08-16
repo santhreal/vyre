@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every cargo-fuzz job now installs and selects nightly, matching the sanitizer flags the libFuzzer runner passes to rustc."
