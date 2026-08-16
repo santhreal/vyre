@@ -240,6 +240,47 @@ pub struct OperationEffects {
 
 impl OperationEffects {
     /// Conservative strongest applicable effects (all effects active).
+    /// Pure computation with no side-effects or external storage access.
+    pub const NONE: Self = Self {
+        reads: false,
+        writes: false,
+        atomics: false,
+        synchronizes: false,
+    };
+
+    /// Standard read-write storage access without atomics or barriers.
+    pub const READ_WRITE: Self = Self {
+        reads: true,
+        writes: true,
+        atomics: false,
+        synchronizes: false,
+    };
+
+    /// Read-only storage access.
+    pub const READ_ONLY: Self = Self {
+        reads: true,
+        writes: false,
+        atomics: false,
+        synchronizes: false,
+    };
+
+    /// Barrier synchronization effect.
+    pub const SYNCHRONIZES: Self = Self {
+        reads: false,
+        writes: false,
+        atomics: false,
+        synchronizes: true,
+    };
+
+    /// Read-write storage access with synchronization barrier.
+    pub const READ_WRITE_SYNCHRONIZES: Self = Self {
+        reads: true,
+        writes: true,
+        atomics: false,
+        synchronizes: true,
+    };
+
+    /// Conservative strongest applicable effects (all effects active).
     pub const ALL: Self = Self {
         reads: true,
         writes: true,
@@ -373,6 +414,32 @@ impl OperationRegistration {
             test_inputs,
             expected_output,
         )
+    }
+
+    /// Construct a Category C intrinsic hardware operation registration.
+    #[must_use]
+    pub const fn intrinsic(
+        id: &'static str,
+        signature: Signature,
+        build: Option<fn() -> Program>,
+        test_inputs: Option<OperationFixtures>,
+        expected_output: Option<OperationFixtures>,
+    ) -> Self {
+        Self {
+            id,
+            semantic_version: 1,
+            signature: Some(signature),
+            tier: OperationTier::Intrinsic,
+            category: Some("hardware"),
+            build,
+            test_inputs,
+            expected_output,
+            laws: &[],
+            tolerance: TolerancePolicy::EXACT,
+            geometry_requirements: None,
+            explicit_effects: None,
+            explicit_capabilities: None,
+        }
     }
 
     /// Attach an explicit signature.
