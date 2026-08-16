@@ -212,6 +212,21 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 /// embed a shared child region and were unaffected.
 /// `clone_family_entry_points_carry_the_pinned_region_identities` now names
 /// such a rename directly instead of leaving it as an opaque digest change.
+///
+/// Four entries are re-pinned by the collapses on this branch, and each moves
+/// for a stated structural reason rather than a value change.
+/// `layer_norm` embeds the shared strided writeback child instead of a private
+/// copy of the same loop, so it gains one region identity and nothing else:
+/// the guard, the chunk loop, the index, the bound and the stored expression
+/// are the ones it already emitted.
+/// `recurrent_gated_delta/f32` and `/f16` are built from the same node builders
+/// as the chunked schedule, which takes the head remainder rather than a
+/// subtraction, accumulates the key and query magnitudes in two loops rather
+/// than one fused loop, and orders the scaled product's operands the way the
+/// chunked schedule already did. Each is an exact identity on u32 and on IEEE
+/// multiplication, so the values do not move.
+/// `turboquant_attention` lost the unrolled small-shape schedule, so its
+/// fixture now builds the lane-parallel loop the larger shapes always used.
 const EXPECTED: [(&str, &str); 26] = [
     (
         "recurrent_gated_delta/f32",
@@ -477,6 +492,7 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
     (
         "layer_norm",
         &[
+            "anonymous::vyre-libs::builder::strided_writeback",
             "vyre-libs::builder::strided_accumulate",
             "vyre-libs::nn::layer_norm",
             "vyre-primitives::reduce::workgroup_sum_f32",

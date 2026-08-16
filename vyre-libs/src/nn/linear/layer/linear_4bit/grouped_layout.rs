@@ -163,3 +163,81 @@ pub(super) fn push_group_affine_terms(
 pub(super) fn broadcast_from_lane0(name: &str) -> Expr {
     Expr::subgroup_shuffle(Expr::var(name), Expr::u32(0))
 }
+
+/// The workgroup lane decomposition every grouped INT4 lowering opens with:
+/// the local invocation, the warp that owns one output, and the lane within it.
+pub(super) fn lane_decomposition() -> Vec<Node> {
+    vec![
+        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::let_bind(
+            "warp",
+            Expr::div(
+                Expr::var("local"),
+                Expr::u32(AFFINE_GROUPED_LANES_PER_OUTPUT),
+            ),
+        ),
+        Node::let_bind(
+            "lane",
+            Expr::rem(
+                Expr::var("local"),
+                Expr::u32(AFFINE_GROUPED_LANES_PER_OUTPUT),
+            ),
+        ),
+    ]
+}
+
+/// Index of the packed `u32` word holding `word_leader_k`'s eight nibbles for
+/// output column `out_idx`.
+pub(super) fn packed_column_index(out_dim: u32, out_idx: Expr) -> Expr {
+    Expr::add(
+        Expr::mul(
+            Expr::div(Expr::var("word_leader_k"), Expr::u32(8)),
+            Expr::u32(out_dim),
+        ),
+        out_idx,
+    )
+}
+
+/// This lane's 4-bit weight, selected out of the word
+/// [`push_packed_word_fetch`] bound.
+pub(super) fn packed_nibble() -> Expr {
+    Expr::bitand(
+        Expr::shr(
+            Expr::var("packed_word"),
+            Expr::mul(Expr::var("lane_in_word"), Expr::u32(4)),
+        ),
+        Expr::u32(0xF),
+    )
+}
+
+/// This lane's dequantized weight, from the nibble and the affine terms
+/// [`push_group_affine_terms`] bound.
+pub(super) fn dequantized_weight() -> Expr {
+    Expr::fma(
+        Expr::cast(DataType::F32, packed_nibble()),
+        Expr::var("group_scale"),
+        Expr::var("group_zero_offset"),
+    )
+}
+
+/// The warp reduction and the lane-0 biased store that ends every grouped INT4
+/// lowering.
+pub(super) fn push_warp_reduction_store(
+    nodes: &mut Vec<Node>,
+    lane: Expr,
+    b: &str,
+    out: &str,
+    out_idx: Expr,
+) {
+    nodes.extend([
+        Node::let_bind("warp_sum", Expr::subgroup_add(Expr::var("local_acc"))),
+        Node::if_then(
+            Expr::eq(lane, Expr::u32(0)),
+            vec![Node::store(
+                out,
+                Expr::var("linear_out_idx"),
+                Expr::add(Expr::load(b, out_idx), Expr::var("warp_sum")),
+            )],
+        ),
+    ]);
+}
