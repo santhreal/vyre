@@ -2,8 +2,9 @@
 //! contract or truth-data directories.
 //!
 //! Run via `./cargo_full run -p xtask --bin audit_rule_contracts`. The binary exits
-//! non-zero when any rule deviates from `rules/SCHEMA.md`. `rule_tree` owns the
-//! layout it audits, so the auditor and `scaffold_rule` cannot disagree.
+//! non-zero when any rule deviates from the layout `xtask::rule_tree` declares in
+//! `TRUTH_DIRS` and `TRUTH_FILES`. That module owns the layout it audits, so the
+//! auditor and `scaffold_rule` cannot disagree.
 
 use std::fs;
 

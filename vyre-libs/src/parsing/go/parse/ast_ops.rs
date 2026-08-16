@@ -1,4 +1,3 @@
-use crate::parsing::go::lex::{TOK_ARROW, TOK_IDENTIFIER, TOK_LPAREN};
 use crate::parsing::go::parse::structure::GO_SPAN_RECORD_WORDS;
 use crate::parsing::go::parse::token_predicates::{
     token_is_chan_keyword, token_is_keyword, token_is_receive_leading_keyword, token_len,
@@ -6,6 +5,7 @@ use crate::parsing::go::parse::token_predicates::{
 };
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::go_token::{TOK_ARROW, TOK_IDENTIFIER, TOK_LPAREN};
 
 macro_rules! define_go_keyword_call_extractor {
     ($name:ident, $keyword:literal, $op_id:literal, $doc:literal) => {

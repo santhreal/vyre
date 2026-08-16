@@ -635,7 +635,8 @@ pub(super) fn inspect_backend_suite_artifact(
                     source_fingerprint,
                     current_source_fingerprint,
                 } => blockers.push(format!(
-                    "{field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+                    "{field} `{source_fingerprint}` {predicate} `{current_source_fingerprint}`",
+                    predicate = xtask::source_provenance::STALE_SOURCE_PREDICATE
                 )),
             }
         }
