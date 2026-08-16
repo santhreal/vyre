@@ -117,13 +117,7 @@ impl MaterializedInstance for SpirvArtifactInstance {
         // words were validated as aligned SPIR-V and Program metadata came
         // from the authenticated neutral artifact.
         let outputs = unsafe {
-            vulkan::dispatch_program(
-                &self.native,
-                &module.program,
-                &module.words,
-                inputs,
-                config,
-            )
+            vulkan::dispatch_program(&self.native, &module.program, &module.words, inputs, config)
         }?;
         Ok(TimedDispatchResult {
             outputs,

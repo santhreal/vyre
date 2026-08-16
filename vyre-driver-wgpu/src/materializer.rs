@@ -7,8 +7,8 @@ use vyre_driver::materialize::{
     MaterializerDevice, ResidentInstance,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, CompiledPipeline,
-    Device, DeviceIdentity, DispatchConfig, Resource, ResidentOwner, Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
+    CompiledPipeline, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Resource, Submission,
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
