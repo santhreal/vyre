@@ -140,13 +140,12 @@ pub enum LiteralValue {
 /// through `f32::from_bits`.
 ///
 /// The escape is asked for only where the format is self-describing and the
-/// plain encoding is lossy. A compact format cannot answer `deserialize_any`,
-/// and three shipped paths use one: `vyre-debug` decodes a dumped descriptor
-/// with bincode, the wgpu emitter writes that dump, and the metal emitter
-/// hashes a descriptor through the same encoding. Such a format carries all 32
-/// bits in a number and wants no escape at all, so it reads and writes exactly
-/// what the derived impl did, byte for byte: a descriptor hash keeps its value
-/// and a dumped descriptor stays readable across this change.
+/// plain encoding is lossy. A compact format cannot answer `deserialize_any`.
+/// Descriptor dumps and descriptor hashes both use compact binary encoding,
+/// which carries all 32 bits in a number and wants no escape at all. It reads
+/// and writes exactly what the derived implementation did, byte for byte: a
+/// descriptor hash keeps its value and a dumped descriptor stays readable
+/// across this change.
 mod literal_f32 {
     use std::fmt;
 
