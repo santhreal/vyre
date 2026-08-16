@@ -78,20 +78,17 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        id: OP_ID,
-        semantic_version: 1,
-        signature: Some(crate::hardware::catalog::U32_UNARY_SIGNATURE),
-        tier: vyre_foundation::operation::OperationTier::Intrinsic,
-        category: Some("hardware"),
-        build: Some(|| subgroup_add("values", "out", 4)),
-        test_inputs: Some(test_inputs),
-        expected_output: Some(expected_output),
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        geometry_requirements: None,
-        source_file: file!(),
-    }
+    vyre_foundation::operation::OperationRegistration::intrinsic(
+        OP_ID,
+        crate::hardware::catalog::U32_UNARY_SIGNATURE,
+        Some(|| subgroup_add("values", "out", 4)),
+        Some(test_inputs),
+        Some(expected_output),
+    )
+    .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
+    .with_explicit_capabilities(
+        vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
+    )
 }
 
 inventory::submit! {

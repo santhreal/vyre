@@ -351,3 +351,33 @@ fn global_operation_registry_integrates_call_graph_closure() {
         assert!(comp_ver > 0, "Composite version must be computed");
     }
 }
+
+/// WHY (182.9.5): Every registered intrinsic or library operation must have an explicit
+/// or derived semantic contract (effects and capabilities) and cannot omit a decision.
+#[test]
+fn every_registered_operation_has_explicit_or_derived_semantic_contract() {
+    let registry = OperationRegistry::global();
+    for op in registry.iter() {
+        let eff = op.effects().unwrap_or_else(|| {
+            panic!("Fix: operation `{}` omitted semantic effects", op.id);
+        });
+        let caps = op.required_capabilities().unwrap_or_else(|| {
+            panic!("Fix: operation `{}` omitted semantic capabilities", op.id);
+        });
+
+        if op.id.contains("subgroup") {
+            assert!(
+                caps.subgroup_ops,
+                "Fix: subgroup intrinsic `{}` must declare subgroup_ops capability",
+                op.id
+            );
+        }
+        if op.id.contains("barrier") {
+            assert!(
+                eff.synchronizes,
+                "Fix: barrier intrinsic `{}` must declare synchronizes effect",
+                op.id
+            );
+        }
+    }
+}

@@ -57,12 +57,35 @@ pub struct RequiredCapabilities {
 }
 
 impl RequiredCapabilities {
+    /// Empty capability set.
+    pub const NONE: Self = Self {
+        subgroup_ops: false,
+        f16: false,
+        bf16: false,
+        f64: false,
+        async_dispatch: false,
+        indirect_dispatch: false,
+        tensor_ops: false,
+        trap: false,
+        distributed_collectives: false,
+        local_single_rank_collectives: 0,
+        transport_collectives: 0,
+        max_workgroup_size: [0, 0, 0],
+        static_storage_bytes: 0,
+    };
+
     /// Empty set  -  the Program needs nothing beyond the minimum substrate.
     #[must_use]
-    pub fn none() -> Self {
-        Self::default()
+    pub const fn none() -> Self {
+        Self::NONE
     }
 
+    /// Enable subgroup operations.
+    #[must_use]
+    pub const fn with_subgroup_ops(mut self) -> Self {
+        self.subgroup_ops = true;
+        self
+    }
     /// Strongest applicable capability set (all capability flags active, maximum limits).
     #[must_use]
     pub fn all() -> Self {
