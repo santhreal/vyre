@@ -78,9 +78,6 @@ pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError::fmt(
 pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::build_const_fold_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::build_const_fold_program_fused(expr_count: u32, max_depth_iter_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError>
-pub fn vyre_pass_engine::optimizer::const_prop::apply_const_prop(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_pass_engine::optimizer::cross_scope_cse::apply_cross_scope_cse(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_pass_engine::optimizer::cross_scope_cse::apply_cross_scope_cse_with_lookup<C: vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &C) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup::canonical_of(&self, id: u32) -> u32
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup::is_empty(&self) -> bool
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::CseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -88,6 +85,8 @@ pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::canonic
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::from_compacted_pair_words(expr_count: u32, pair_count: u32, pair_words: &[u32], context: &str) -> core::result::Result<Self, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::is_empty(&self) -> bool
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::override_count(&self) -> usize
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cross_scope_cse(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cross_scope_cse_with_lookup<C: vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &C) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cse_canonicals(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cse_let_dedupe(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cse_let_dedupe_with_lookup<C: vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &C) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -99,7 +98,6 @@ pub fn vyre_pass_engine::optimizer::dce_program::build_dce_bfs_program(shape: vy
 pub fn vyre_pass_engine::optimizer::dce_program::build_persistent_bfs_program(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, max_iters: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::dce_via_encoded::DceError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::dce_via_encoded::DceError>
-pub fn vyre_pass_engine::optimizer::dead_branch::apply_dead_branch(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::encode::apply_live_bitset_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_pass_engine::optimizer::encode::EncodedProgram, live_words: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::encode::apply_live_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_pass_engine::optimizer::encode::EncodedProgram, live: &[bool]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::encode::collect_expr_var_refs(expr: &vyre_foundation::ir_inner::model::generated::Expr, out: &mut alloc::vec::Vec<vyre_foundation::ir_inner::model::expr::ident::Ident>)
@@ -109,7 +107,6 @@ pub fn vyre_pass_engine::optimizer::expr_arena::bin_op_from_tag(tag: u32) -> cor
 pub fn vyre_pass_engine::optimizer::expr_arena::encode_expr_arena(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, vyre_pass_engine::optimizer::encode::EncodeError>
 pub fn vyre_pass_engine::optimizer::expr_arena::structural_hashes(arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding) -> alloc::vec::Vec<u64>
 pub fn vyre_pass_engine::optimizer::expr_arena::un_op_from_tag(tag: u32) -> core::option::Option<vyre_spec::un_op::UnOp>
-pub fn vyre_pass_engine::optimizer::licm::apply_licm(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::build_pattern_match_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::build_pattern_match_program_with_cse(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -146,18 +143,14 @@ pub mod vyre_pass_engine
 pub mod vyre_pass_engine::optimizer
 pub mod vyre_pass_engine::optimizer::canonicalize_via_encoded
 pub mod vyre_pass_engine::optimizer::const_fold_via_encoded
-pub mod vyre_pass_engine::optimizer::const_prop
-pub mod vyre_pass_engine::optimizer::cross_scope_cse
 pub mod vyre_pass_engine::optimizer::cse_via_encoded
 pub mod vyre_pass_engine::optimizer::dce_program
 pub mod vyre_pass_engine::optimizer::dce_via_encoded
-pub mod vyre_pass_engine::optimizer::dead_branch
 pub mod vyre_pass_engine::optimizer::encode
 pub mod vyre_pass_engine::optimizer::encode::edge_kind
 pub mod vyre_pass_engine::optimizer::encode::node_tag
 pub mod vyre_pass_engine::optimizer::expr_arena
 pub mod vyre_pass_engine::optimizer::expr_arena::expr_kind
-pub mod vyre_pass_engine::optimizer::licm
 pub mod vyre_pass_engine::optimizer::pattern_match_via_encoded
 pub mod vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action
 pub mod vyre_pass_engine::optimizer::pipeline
