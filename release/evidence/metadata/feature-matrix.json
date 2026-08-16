@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:7a82c191b17971aaffcfc9cc7eadc593c612cf76:dirty=false",
+  "source_fingerprint": "git:6cbb924091db8af320478a53ab1f5b6218729c2f:dirty=false",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -275,7 +275,7 @@
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 60,
+      "feature_count": 64,
       "has_default_feature": true,
       "default_feature_members": [
         "math-linalg",
@@ -292,6 +292,7 @@
       "features": [
         "analysis",
         "bitset",
+        "builder-ops",
         "cat-a-builder-options",
         "cpu-parity",
         "crypto",
@@ -309,6 +310,7 @@
         "hash",
         "intern",
         "label",
+        "llm",
         "logical",
         "matching",
         "matching-dfa",
@@ -341,6 +343,7 @@
         "python-parser",
         "reasoning",
         "reduce",
+        "representation",
         "rule",
         "scheduling",
         "security",
@@ -349,6 +352,7 @@
         "test-fixtures",
         "text",
         "topology",
+        "vfs",
         "visual"
       ],
       "malformed_features": [],
