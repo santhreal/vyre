@@ -55,13 +55,20 @@ a count above the pin already written. A gate that owns a generated artifact
 checks it by default and rewrites it only when you pass `--write`.
 
 `xtask/ci-registry.toml` declares the wiring: which subsets hold each gate,
-which workflows run it, every check CI runs that is not a gate, and every paused
-workflow with the condition that ends the pause. Regenerate it with
+which workflows run it, every check CI runs that is not a gate, and every
+workflow path the tree carries or once carried. Regenerate it with
 `./cargo_full run -p xtask --bin xtask -- ci-registry --write` after adding a
 gate, a subset or a workflow step. The `ci-registry` gate compares the file
 against the registry, the subsets and the steps in both directions, and
 `ci-steps` resolves every package, test, bench, example, binary and feature a
 step names against the workspace manifests.
+
+A `[[workflow]]` row states what happened to the path it names. `live` runs.
+`paused` carries the reason and the condition that ends the pause. `superseded`
+names the workflow that runs its checks and the gate that carries them.
+`unprotected` names the verification class nothing performs. A row outlives its
+file: deleting a workflow leaves the row naming a path the checkout does not
+carry, and the gate fails until the row records where the checks went.
 
 Run the smallest gate that owns the contract you changed, then the subset that
 contains it.

@@ -25,7 +25,8 @@ Not blocking on individual PRs. Tracked in cycle reports.
 
 - `fuzz.yml`  -  full fuzz lane once active fuzz targets exist.
 
-A workflow that is paused is declared in `xtask/ci-registry.toml` with the
-condition for its return. It is not named here: this document is the payload of
+A workflow that is paused, superseded or left unprotected is declared in
+`xtask/ci-registry.toml`, which keeps a row for every workflow path the tree
+carries or once carried. It is not named here: this document is the payload of
 branch protection, and a name here that no workflow file answers to declares a
 lane that cannot run.

@@ -87,22 +87,50 @@ pub struct ExternalRow {
     pub workflows: Vec<String>,
 }
 
-/// One workflow that is parked rather than run.
+/// One workflow path the tree carries or once carried.
 ///
 /// A workflow moved out of `.github/workflows` stops running and keeps every
 /// appearance of a lane: `.github/CI_REQUIRED.md` named two parked workflows as
-/// deep gates for months, and nothing was red. A pause is a decision, so it is
-/// written down with the condition that ends it, or the file is deleted.
+/// deep gates for months, and nothing was red. Deleting the file is quieter
+/// still, because the wiring this file records is derived from the tree and a
+/// deleted lane derives to nothing at all. Every path therefore keeps a row for
+/// as long as the repository exists, and the row says what happened to it.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PausedRow {
-    /// File name under `.github/workflows-paused`.
-    pub workflow: String,
-    /// Why it does not run.
+pub struct WorkflowRow {
+    /// Repository-relative path, live or parked.
+    pub path: String,
+    /// `live`, `paused`, `superseded` or `unprotected`.
+    pub state: String,
+    /// Why it does not run. Required unless the state is `live`.
+    #[serde(default)]
     pub reason: String,
-    /// What has to be true before it runs again.
+    /// What has to be true before it runs again. Paused rows only.
+    #[serde(default)]
     pub returns_when: String,
+    /// The workflow path that runs the checks this one ran. Superseded rows
+    /// only.
+    #[serde(default)]
+    pub superseded_by: String,
+    /// The registered gate that carries the checks. Superseded rows only, and
+    /// optional: a workflow can supersede another without a gate of its own.
+    #[serde(default)]
+    pub gate: String,
+    /// The verification class no check covers. Unprotected rows only.
+    #[serde(default)]
+    pub class: String,
 }
+
+/// A workflow file that runs.
+pub const LIVE: &str = "live";
+/// A workflow file that is parked and expected back.
+pub const PAUSED_STATE: &str = "paused";
+/// A deleted workflow whose checks another workflow runs.
+pub const SUPERSEDED: &str = "superseded";
+/// A deleted workflow whose verification class nothing covers.
+pub const UNPROTECTED: &str = "unprotected";
+/// Every state a row may declare.
+const STATES: &[&str] = &[LIVE, PAUSED_STATE, SUPERSEDED, UNPROTECTED];
 
 /// The declaration file.
 #[derive(Debug, Deserialize)]
@@ -116,9 +144,9 @@ pub struct Registry {
     /// One row per check CI runs that is not an xtask gate.
     #[serde(default)]
     pub external: Vec<ExternalRow>,
-    /// One row per workflow that is parked rather than run.
+    /// One row per workflow path the tree carries or once carried.
     #[serde(default)]
-    pub paused: Vec<PausedRow>,
+    pub workflow: Vec<WorkflowRow>,
 }
 
 /// Where the declaration lives in `root`.
@@ -344,40 +372,48 @@ pub fn derived_externals(names: &WorkflowNames) -> BTreeMap<String, BTreeSet<Str
     map
 }
 
-/// Every workflow parked under `.github/workflows-paused`.
+/// Every workflow file the checkout carries, by path, with the state its
+/// directory gives it.
 #[must_use]
-pub fn paused_workflows(root: &Path) -> BTreeSet<String> {
-    let mut names = BTreeSet::new();
-    let Ok(entries) = fs::read_dir(root.join(PAUSED)) else {
-        return names;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path
-            .extension()
-            .is_some_and(|extension| extension == "yml" || extension == "yaml")
-        {
-            if let Some(name) = path.file_name() {
-                names.insert(name.to_string_lossy().into_owned());
+pub fn workflow_files(root: &Path) -> BTreeMap<String, &'static str> {
+    let mut files = BTreeMap::new();
+    for (directory, state) in [(WORKFLOWS, LIVE), (PAUSED, PAUSED_STATE)] {
+        let Ok(entries) = fs::read_dir(root.join(directory)) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path
+                .extension()
+                .is_some_and(|extension| extension == "yml" || extension == "yaml")
+            {
+                continue;
             }
+            let Some(name) = path.file_name() else {
+                continue;
+            };
+            files.insert(format!("{directory}/{}", name.to_string_lossy()), state);
         }
     }
-    names
+    files
 }
 
 /// Render the declaration from derived wiring.
 ///
-/// A pause carries prose no derivation can produce, so the writer copies the
-/// rows it was given and emits an empty row for a workflow that has none. An
-/// empty row is red, which is the point: the writer never invents a reason.
+/// A pause and a retirement carry prose no derivation can produce, so the
+/// writer copies the rows it was given and emits an empty row for a workflow
+/// that has none. An empty row is red, which is the point: the writer never
+/// invents a reason. A row whose file the checkout no longer carries is copied
+/// out unchanged rather than dropped, so deleting a lane cannot delete the
+/// record of it.
 #[must_use]
 pub fn render(
     gate_names: &[&str],
     subsets: &BTreeMap<String, BTreeSet<String>>,
     workflows: &BTreeMap<String, BTreeSet<String>>,
     externals: &BTreeMap<String, BTreeSet<String>>,
-    paused: &[PausedRow],
-    parked: &BTreeSet<String>,
+    recorded: &[WorkflowRow],
+    files: &BTreeMap<String, &'static str>,
 ) -> String {
     let mut text = String::from(
         "# Every check CI runs, declared once, written by\n\
@@ -410,20 +446,46 @@ pub fn render(
         text.push_str(&format!("run = \"{run}\"\n"));
         text.push_str(&format!("workflows = {}\n", list(files.clone())));
     }
-    for workflow in parked {
-        let recorded = paused.iter().find(|row| row.workflow == *workflow);
-        text.push_str("\n[[paused]]\n");
-        text.push_str(&format!("workflow = \"{workflow}\"\n"));
+    let mut paths: BTreeSet<&str> = files.keys().map(String::as_str).collect();
+    paths.extend(recorded.iter().map(|row| row.path.as_str()));
+    for path in paths {
+        let row = recorded.iter().find(|row| row.path == path);
+        let state = match (row.map(|row| row.state.as_str()), files.get(path).copied()) {
+            (Some(declared), None) => declared,
+            (Some(declared), Some(on_disk)) if declared == on_disk => declared,
+            (_, Some(on_disk)) => on_disk,
+            (None, None) => "",
+        };
+        text.push_str("\n[[workflow]]\n");
+        text.push_str(&format!("path = \"{path}\"\n"));
+        text.push_str(&format!("state = \"{state}\"\n"));
+        if state == LIVE {
+            continue;
+        }
         text.push_str(&format!(
             "reason = \"{}\"\n",
-            recorded.map(|row| row.reason.as_str()).unwrap_or_default()
+            row.map(|row| row.reason.as_str()).unwrap_or_default()
         ));
-        text.push_str(&format!(
-            "returns_when = \"{}\"\n",
-            recorded
-                .map(|row| row.returns_when.as_str())
-                .unwrap_or_default()
-        ));
+        match state {
+            PAUSED_STATE => text.push_str(&format!(
+                "returns_when = \"{}\"\n",
+                row.map(|row| row.returns_when.as_str()).unwrap_or_default()
+            )),
+            SUPERSEDED => {
+                text.push_str(&format!(
+                    "superseded_by = \"{}\"\n",
+                    row.map(|row| row.superseded_by.as_str()).unwrap_or_default()
+                ));
+                text.push_str(&format!(
+                    "gate = \"{}\"\n",
+                    row.map(|row| row.gate.as_str()).unwrap_or_default()
+                ));
+            }
+            _ => text.push_str(&format!(
+                "class = \"{}\"\n",
+                row.map(|row| row.class.as_str()).unwrap_or_default()
+            )),
+        }
     }
     text
 }
@@ -556,68 +618,143 @@ pub fn findings(
     }
 
     findings.extend(external_findings(root, registry, names));
-    findings.extend(paused_findings(root, registry));
+    findings.extend(workflow_findings(root, registry, gate_names));
     findings
 }
 
-/// Every disagreement about a workflow that is parked rather than run.
+/// Every disagreement about a workflow path the tree carries or once carried.
 ///
 /// A parked workflow is invisible: it keeps its name, its steps and its place
-/// in the reader's head, and runs nothing. Either it is deleted, or the reason
-/// and the condition that ends the pause are written down where the rest of the
-/// CI surface is declared.
-fn paused_findings(root: &Path, registry: &Registry) -> Vec<Finding> {
+/// in the reader's head, and runs nothing. A deleted one is quieter still,
+/// because the wiring this file records is derived from the tree, so the lane
+/// leaves no trace to go red. Every path keeps a row, and the row says which of
+/// four things happened to it: it runs, it is parked with a way back, another
+/// workflow runs its checks, or its verification class is uncovered.
+fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> Vec<Finding> {
     let mut findings = Vec::new();
-    let parked = paused_workflows(root);
+    let files = workflow_files(root);
     let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
-    for row in &registry.paused {
-        *seen.entry(row.workflow.as_str()).or_default() += 1;
+    for row in &registry.workflow {
+        *seen.entry(row.path.as_str()).or_default() += 1;
     }
-    for workflow in &parked {
-        match seen.get(workflow.as_str()).copied().unwrap_or_default() {
+    for (path, state) in &files {
+        match seen.get(path.as_str()).copied().unwrap_or_default() {
             0 => findings.push(Finding::in_file(
                 REGISTRY,
-                format!("`{workflow}` is parked under {PAUSED} and no row records the pause"),
-                "add a `[[paused]]` row naming why it does not run and what has to be true \
-                 before it does, or delete the workflow",
+                format!("`{path}` is in the checkout and no `[[workflow]]` row records it"),
+                format!("add a row declaring it `{state}`"),
             )),
             1 => {}
             count => findings.push(Finding::in_file(
                 REGISTRY,
-                format!("`{workflow}` has {count} paused rows"),
-                "a pause is recorded once; delete the duplicate row",
+                format!("`{path}` has {count} rows"),
+                "a workflow is recorded once; delete the duplicate row",
             )),
         }
     }
-    for row in &registry.paused {
-        if !parked.contains(&row.workflow) {
+    for row in &registry.workflow {
+        let on_disk = files.get(row.path.as_str()).copied();
+        if !STATES.contains(&row.state.as_str()) {
             findings.push(Finding::in_file(
                 REGISTRY,
-                format!(
-                    "paused row `{}` names no file under {PAUSED}",
-                    row.workflow
-                ),
-                "delete the row; the workflow it names was restored or deleted",
+                format!("`{}` declares state `{}`", row.path, row.state),
+                format!("a workflow is one of {}", STATES.join(", ")),
             ));
+            continue;
+        }
+        let declared_present = row.state == LIVE || row.state == PAUSED_STATE;
+        match (declared_present, on_disk) {
+            (true, None) => {
+                findings.push(Finding::in_file(
+                    REGISTRY,
+                    format!(
+                        "`{}` is declared `{}` and the checkout does not carry it",
+                        row.path, row.state
+                    ),
+                    format!(
+                        "restore the file, or record where its checks went: `{SUPERSEDED}` naming \
+                         the workflow that runs them, or `{UNPROTECTED}` naming the class nothing \
+                         covers"
+                    ),
+                ));
+                continue;
+            }
+            (false, Some(state)) => {
+                findings.push(Finding::in_file(
+                    REGISTRY,
+                    format!(
+                        "`{}` is declared `{}` and the checkout carries it",
+                        row.path, row.state
+                    ),
+                    format!("the lane is back; declare it `{state}`"),
+                ));
+                continue;
+            }
+            (true, Some(state)) if state != row.state => {
+                findings.push(Finding::in_file(
+                    REGISTRY,
+                    format!(
+                        "`{}` is declared `{}` and sits under the `{state}` directory",
+                        row.path, row.state
+                    ),
+                    "the directory decides; correct the row or move the file",
+                ));
+                continue;
+            }
+            _ => {}
+        }
+        if row.state == LIVE {
             continue;
         }
         if row.reason.trim().is_empty() {
             findings.push(Finding::in_file(
                 REGISTRY,
-                format!("paused row `{}` records no reason", row.workflow),
-                "state why the workflow does not run, or delete the workflow",
+                format!("`{}` records no reason", row.path),
+                "state why it does not run",
             ));
         }
-        if row.returns_when.trim().is_empty() {
-            findings.push(Finding::in_file(
-                REGISTRY,
-                format!(
-                    "paused row `{}` records no condition for its return",
-                    row.workflow
-                ),
-                "state what has to be true before it runs again; a pause with no way back is \
-                 a deletion nobody performed",
-            ));
+        match row.state.as_str() {
+            PAUSED_STATE => {
+                if row.returns_when.trim().is_empty() {
+                    findings.push(Finding::in_file(
+                        REGISTRY,
+                        format!("`{}` records no condition for its return", row.path),
+                        "state what has to be true before it runs again; a pause with no way \
+                         back is a deletion nobody performed",
+                    ));
+                }
+            }
+            SUPERSEDED => {
+                if !files.contains_key(row.superseded_by.as_str()) {
+                    findings.push(Finding::in_file(
+                        REGISTRY,
+                        format!(
+                            "`{}` is superseded by `{}`, which the checkout does not carry",
+                            row.path, row.superseded_by
+                        ),
+                        format!(
+                            "name the workflow that runs its checks, or declare it \
+                             `{UNPROTECTED}` with the class nothing covers"
+                        ),
+                    ));
+                }
+                if !row.gate.is_empty() && !gate_names.contains(&row.gate.as_str()) {
+                    findings.push(Finding::in_file(
+                        REGISTRY,
+                        format!("`{}` names gate `{}`, which is not registered", row.path, row.gate),
+                        "name the gate that carries the checks, or leave the field empty",
+                    ));
+                }
+            }
+            _ => {
+                if row.class.trim().is_empty() {
+                    findings.push(Finding::in_file(
+                        REGISTRY,
+                        format!("`{}` records no uncovered class", row.path),
+                        "name the verification nothing performs, so the gap is readable",
+                    ));
+                }
+            }
         }
     }
     findings
@@ -689,30 +826,36 @@ fn external_findings(root: &Path, registry: &Registry, names: &WorkflowNames) ->
 /// Derive the declaration from the tree and write it.
 ///
 /// Nothing here measures a gate, because no column is a measurement: the
-/// subsets come from the registry and the workflows from the steps. A pause
-/// carries prose no derivation can produce, so a recorded reason survives the
-/// rewrite and a newly parked workflow comes out empty, and red.
+/// subsets come from the registry and the workflows from the steps. A pause and
+/// a retirement carry prose no derivation can produce, so a recorded row
+/// survives the rewrite, a newly parked workflow comes out empty and red, and a
+/// row whose file is gone keeps the state it was given rather than being
+/// dropped.
 fn write(root: &Path) -> Result<Report, GateError> {
     let names = workflow_names(root);
     let subsets = derived_subsets();
     let workflows = derived_workflows(&names, &subsets);
     let externals = derived_externals(&names);
-    let parked = paused_workflows(root);
-    let recorded = load(root).map(|registry| registry.paused).unwrap_or_default();
+    let files = workflow_files(root);
+    let recorded = load(root).map(|registry| registry.workflow).unwrap_or_default();
     let gates = subcommands::registry();
     let gate_names: Vec<&str> = gates.iter().map(|gate| gate.name()).collect();
-    let text = render(&gate_names, &subsets, &workflows, &externals, &recorded, &parked);
+    let text = render(&gate_names, &subsets, &workflows, &externals, &recorded, &files);
     let path = registry_path(root);
     fs::write(&path, text).map_err(|error| GateError {
         message: format!("cannot write {}: {error}", path.display()),
         fix: "check the permissions on the xtask directory".to_string(),
     })?;
+    let mut rows = files.len();
+    rows += recorded
+        .iter()
+        .filter(|row| !files.contains_key(row.path.as_str()))
+        .count();
     let mut report = Report::clean();
     report.note(format!(
-        "wrote {} gate row(s), {} external row(s) and {} paused row(s) to {}",
+        "wrote {} gate row(s), {} external row(s) and {rows} workflow row(s) to {}",
         gate_names.len(),
         externals.len(),
-        parked.len(),
         REGISTRY
     ));
     Ok(report)
@@ -745,10 +888,10 @@ impl Gate for CiRegistry {
             &gate_names,
         ));
         report.note(format!(
-            "{} gate row(s), {} external row(s), {} paused row(s), {} subset(s), {} workflow file(s) read",
+            "{} gate row(s), {} external row(s), {} workflow row(s), {} subset(s), {} workflow file(s) read",
             registry.gate.len(),
             registry.external.len(),
-            registry.paused.len(),
+            registry.workflow.len(),
             SUBSETS.len(),
             names
                 .invoked
@@ -821,7 +964,7 @@ mod tests {
             schema_version: SCHEMA_VERSION,
             gate: rows,
             external: Vec::new(),
-            paused: Vec::new(),
+            workflow: Vec::new(),
         }
     }
 
@@ -988,7 +1131,7 @@ mod tests {
                 schema_version: SCHEMA_VERSION,
                 gate: Vec::new(),
                 external: Vec::new(),
-                paused: Vec::new(),
+                workflow: Vec::new(),
             },
             &scanned,
         );
@@ -1007,7 +1150,7 @@ mod tests {
                     run: "-p gone".to_string(),
                     workflows: vec!["gates.yml".to_string()],
                 }],
-                paused: Vec::new(),
+                workflow: Vec::new(),
             },
             &WorkflowNames::default(),
         );
@@ -1050,7 +1193,7 @@ mod tests {
                     workflows: vec!["gates.yml".to_string()],
                 },
             ],
-            paused: Vec::new(),
+            workflow: Vec::new(),
         };
         let found = external_findings(&root, &declaration, &scanned);
         fs::remove_dir_all(&root).ok();
@@ -1062,32 +1205,43 @@ mod tests {
         );
     }
 
+    fn workflow_row(path: &str, state: &str) -> WorkflowRow {
+        WorkflowRow {
+            path: path.to_string(),
+            state: state.to_string(),
+            reason: String::new(),
+            returns_when: String::new(),
+            superseded_by: String::new(),
+            gate: String::new(),
+            class: String::new(),
+        }
+    }
+
     /// WHY: a workflow moved out of `.github/workflows` keeps every appearance
     /// of a lane and runs nothing. The required-context document named two
     /// parked workflows as deep gates for months while nothing was red. Every
     /// direction has to fail: no row, an empty reason, no way back, and a row
-    /// naming a file that is not parked at all.
+    /// naming a file the checkout does not carry.
     #[test]
     fn a_pause_without_a_reason_or_a_way_back_fails() {
         let root = std::env::temp_dir().join(format!("vyre-ci-paused-{}", std::process::id()));
         fs::create_dir_all(root.join(PAUSED)).expect("the fixture tree is created");
         fs::write(root.join(PAUSED).join("book.yml"), "name: book\n")
             .expect("the workflow is written");
+        let parked = format!("{PAUSED}/book.yml");
 
-        let unrecorded = paused_findings(&root, &registry(Vec::new()));
+        let unrecorded = workflow_findings(&root, &registry(Vec::new()), &[]);
         assert!(
-            messages(&unrecorded).contains("`book.yml` is parked under"),
+            messages(&unrecorded).contains(&format!("`{parked}` is in the checkout")),
             "{}",
             messages(&unrecorded)
         );
 
         let mut declaration = registry(Vec::new());
-        declaration.paused.push(PausedRow {
-            workflow: "book.yml".to_string(),
-            reason: String::new(),
-            returns_when: "  ".to_string(),
-        });
-        let empty = paused_findings(&root, &declaration);
+        let mut row = workflow_row(&parked, PAUSED_STATE);
+        row.returns_when = "  ".to_string();
+        declaration.workflow.push(row);
+        let empty = workflow_findings(&root, &declaration, &[]);
         assert!(
             messages(&empty).contains("records no reason"),
             "{}",
@@ -1100,24 +1254,110 @@ mod tests {
         );
 
         let mut declaration = registry(Vec::new());
-        declaration.paused.push(PausedRow {
-            workflow: "book.yml".to_string(),
-            reason: "the build path names a directory the checkout does not carry".to_string(),
-            returns_when: "the path names the book this repository ships".to_string(),
-        });
-        declaration.paused.push(PausedRow {
-            workflow: "restored.yml".to_string(),
-            reason: "recorded once".to_string(),
-            returns_when: "recorded once".to_string(),
-        });
-        let stale = paused_findings(&root, &declaration);
+        let mut row = workflow_row(&parked, PAUSED_STATE);
+        row.reason = "the build path names a directory the checkout does not carry".to_string();
+        row.returns_when = "the path names the book this repository ships".to_string();
+        declaration.workflow.push(row);
+        declaration
+            .workflow
+            .push(workflow_row(&format!("{PAUSED}/restored.yml"), PAUSED_STATE));
+        let stale = workflow_findings(&root, &declaration, &[]);
         fs::remove_dir_all(&root).ok();
-        assert_eq!(stale.len(), 1, "{}", messages(&stale));
         assert!(
-            stale[0].message.contains("paused row `restored.yml` names no file"),
+            messages(&stale).contains("`.github/workflows-paused/restored.yml` is declared `paused` and the checkout does not carry it"),
             "{}",
             messages(&stale)
         );
+    }
+
+    /// WHY: the wiring in this file is derived from the tree, so deleting a
+    /// workflow deletes every trace of it and nothing goes red. Seven lanes
+    /// went that way in one commit. The row outlives the file: a deletion
+    /// leaves the row naming a file nobody carries until someone records where
+    /// the checks went, and the writer copies that row out rather than dropping
+    /// it.
+    #[test]
+    fn a_deleted_workflow_leaves_a_row_that_fails() {
+        let root = std::env::temp_dir().join(format!("vyre-ci-deleted-{}", std::process::id()));
+        fs::create_dir_all(root.join(WORKFLOWS)).expect("the fixture tree is created");
+        let live = root.join(WORKFLOWS).join("adversarial.yml");
+        fs::write(&live, "name: Adversarial\n").expect("the workflow is written");
+        let path = format!("{WORKFLOWS}/adversarial.yml");
+
+        let mut declaration = registry(Vec::new());
+        declaration.workflow.push(workflow_row(&path, LIVE));
+        assert!(
+            workflow_findings(&root, &declaration, &[]).is_empty(),
+            "a live workflow with a row is clean"
+        );
+
+        fs::remove_file(&live).expect("the workflow is deleted");
+        let deleted = workflow_findings(&root, &declaration, &[]);
+        assert!(
+            messages(&deleted).contains(&format!(
+                "`{path}` is declared `live` and the checkout does not carry it"
+            )),
+            "{}",
+            messages(&deleted)
+        );
+
+        let written = render(
+            &[],
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            &declaration.workflow,
+            &workflow_files(&root),
+        );
+        fs::remove_dir_all(&root).ok();
+        assert!(written.contains(&format!("path = \"{path}\"")), "{written}");
+    }
+
+    /// WHY: the three ways a lane can end are the three a row may declare, and
+    /// each carries the fact that makes it readable. A retirement that names a
+    /// successor nobody carries, or an uncovered class nobody states, records
+    /// nothing while reading as a decision.
+    #[test]
+    fn a_retirement_states_where_the_checks_went() {
+        let root = std::env::temp_dir().join(format!("vyre-ci-retired-{}", std::process::id()));
+        fs::create_dir_all(root.join(WORKFLOWS)).expect("the fixture tree is created");
+        fs::write(root.join(WORKFLOWS).join("gates.yml"), "name: gates\n")
+            .expect("the workflow is written");
+        let mut declaration = registry(Vec::new());
+        declaration
+            .workflow
+            .push(workflow_row(&format!("{WORKFLOWS}/gates.yml"), LIVE));
+
+        let mut superseded = workflow_row(&format!("{WORKFLOWS}/catalog.yml"), SUPERSEDED);
+        superseded.reason = "the gate registry runs the catalog check".to_string();
+        superseded.superseded_by = format!("{WORKFLOWS}/departed.yml");
+        superseded.gate = "not-a-gate".to_string();
+        declaration.workflow.push(superseded);
+        let mut unprotected = workflow_row(&format!("{WORKFLOWS}/mutation.yml"), UNPROTECTED);
+        unprotected.reason = "the budget was never validated".to_string();
+        declaration.workflow.push(unprotected);
+
+        let found = messages(&workflow_findings(&root, &declaration, &["catalog"]));
+        assert!(found.contains("which the checkout does not carry"), "{found}");
+        assert!(found.contains("names gate `not-a-gate`"), "{found}");
+        assert!(found.contains("records no uncovered class"), "{found}");
+
+        let mut declaration = registry(Vec::new());
+        declaration
+            .workflow
+            .push(workflow_row(&format!("{WORKFLOWS}/gates.yml"), LIVE));
+        let mut superseded = workflow_row(&format!("{WORKFLOWS}/catalog.yml"), SUPERSEDED);
+        superseded.reason = "the gate registry runs the catalog check".to_string();
+        superseded.superseded_by = format!("{WORKFLOWS}/gates.yml");
+        superseded.gate = "catalog".to_string();
+        declaration.workflow.push(superseded);
+        let mut unprotected = workflow_row(&format!("{WORKFLOWS}/mutation.yml"), UNPROTECTED);
+        unprotected.reason = "the budget was never validated".to_string();
+        unprotected.class = "mutation coverage of the verifier".to_string();
+        declaration.workflow.push(unprotected);
+        let clean = workflow_findings(&root, &declaration, &["catalog"]);
+        fs::remove_dir_all(&root).ok();
+        assert!(clean.is_empty(), "{}", messages(&clean));
     }
 
     /// WHY: the file used to carry per-row prose that let a failing gate stay

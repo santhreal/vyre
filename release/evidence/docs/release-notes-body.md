@@ -16,6 +16,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   red. The rule lived in a test in an unrelated crate and shelled out to git;
   it now reads the tracked source set through the scanner, reports the file and
   line, and is exercised on 4511 files.
+- The CI registry keeps a row for every workflow path the tree carries or once
+  carried, and the row says whether it runs, is paused with a way back, is
+  superseded by the workflow and gate that run its checks, or leaves a
+  verification class uncovered. Seven lanes were deleted in one commit and
+  nothing went red, because the wiring is derived from the tree and a deleted
+  lane derives to nothing: adversarial input generation, CODEOWNERS
+  trust-boundary coverage, mutation coverage of the verifier and the bitset
+  primitives, and repeat-dispatch determinism on CUDA are recorded as uncovered
+  rather than gone, the catalog, book and randomized-order lanes name what runs
+  their checks now, and a workflow deleted from here on leaves a row that fails
+  the gate until someone records where its checks went.
 - The gates sweep now reads the gate sources and fails a registered gate whose
   run path cannot construct a finding, so a gate that only prints notes can no
   longer pass as coverage. A gate whose honest output is a note is declared

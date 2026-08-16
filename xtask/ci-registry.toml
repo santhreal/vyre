@@ -561,12 +561,135 @@ workflows = ["gates.yml"]
 run = "scripts/run_volume_sweep_shard.sh"
 workflows = ["gates.yml"]
 
-[[paused]]
-workflow = "reproducible-build.yml"
+[[workflow]]
+path = ".github/workflows-paused/adversarial.yml"
+state = "unprotected"
+reason = "the adversarial gauntlet test it ran was deleted with the conformance registry suite"
+class = "adversarial input generation against the registered operation set"
+
+[[workflow]]
+path = ".github/workflows-paused/book.yml"
+state = "superseded"
+reason = "the mdbook it built and deployed was deleted, and the documentation tree that replaced it is held by docs-check"
+superseded_by = ".github/workflows/gates.yml"
+gate = "docs-check"
+
+[[workflow]]
+path = ".github/workflows-paused/catalog-consistency.yml"
+state = "superseded"
+reason = "the catalog gate holds docs/generated/catalog.toml to the live operation inventory, which is what the test it ran compared"
+superseded_by = ".github/workflows/gates.yml"
+gate = "catalog"
+
+[[workflow]]
+path = ".github/workflows-paused/codeowners-coverage.yml"
+state = "unprotected"
+reason = "the coverage test it ran was deleted with the conformance suite, and repo-hygiene requires the CODEOWNERS file to exist without reading a path in it"
+class = "every path inside the trust boundary resolves to a CODEOWNERS owner"
+
+[[workflow]]
+path = ".github/workflows-paused/mutation-testing.yml"
+state = "unprotected"
+reason = "the four-hour mutation budget it needed was never validated against the runner time limit"
+class = "mutation coverage of the conformance verifier, its algebra and the bitset primitives"
+
+[[workflow]]
+path = ".github/workflows-paused/parity-determinism.yml"
+state = "unprotected"
+reason = "the composition parity and determinism stress tests it ran were deleted, and the parity half is measured by the parity matrix that conform.yml and gpu-parity.yml run"
+class = "byte-identical output across 100 repeat dispatches of one composition on CUDA"
+
+[[workflow]]
+path = ".github/workflows-paused/random-order.yml"
+state = "superseded"
+reason = "test-random-order.yml is the surviving randomized-order lane and carries the pause for it"
+superseded_by = ".github/workflows-paused/test-random-order.yml"
+gate = ""
+
+[[workflow]]
+path = ".github/workflows-paused/reproducible-build.yml"
+state = "paused"
 reason = "a full clean release build twice per run exceeds the runner time budget for a nightly schedule"
 returns_when = "the second pass reuses a warm cache, or a hosted runner with a larger time budget is available"
 
-[[paused]]
-workflow = "test-random-order.yml"
+[[workflow]]
+path = ".github/workflows-paused/test-random-order.yml"
+state = "paused"
 reason = "the nightly toolchain it needs for randomized test order fails to install on the hosted runner"
 returns_when = "randomized order lands on the stable toolchain, or the nightly install is fixed"
+
+[[workflow]]
+path = ".github/workflows/architectural-invariants.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/bench-regression.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/bench.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/ci.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/conform.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/coverage.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/deny.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/dependency-audit.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/docs-ci.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/fuzz.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/gates.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/gpu-parity.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/loom.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/miri.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/public-api.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/release-evidence.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/semver-checks.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/strict.yml"
+state = "live"
+
+[[workflow]]
+path = ".github/workflows/udeps.yml"
+state = "live"
