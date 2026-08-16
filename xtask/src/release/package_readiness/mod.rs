@@ -406,7 +406,7 @@ fn audit_package_contents(
     step: &PublishStep,
     publish_order: &[PublishStep],
 ) -> PackageContentCheck {
-    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
+    let cargo = crate::cargo_runner::binary();
     let patch_args = match cargo_package_patch_args(root, step, publish_order) {
         Ok(args) => args,
         Err(error) => {

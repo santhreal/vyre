@@ -1,36 +1,36 @@
 {
-  "source_fingerprint": "git:261d5680b496cb24fb7b6a690cb85803ef552597:dirty=true:worktree=2c18660c3b1d404b74dcf146623918242bf56bdcb18f09756f8b07bcd80e30d4",
+  "source_fingerprint": "git:aa05ecde5b38160f55fd4ea8484ce2ab240a0fd4:dirty=true:worktree=4c3a03aa8bc22bfd454f3e7b89b8a2cf3f7d79ea1e2f03f4f0ccfea3e253391c",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 252,
+      "line": 273,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 254,
+      "line": 275,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 933,
+      "line": 980,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 953,
-      "pattern": "documented_panic_contract",
+      "line": 1020,
+      "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 955,
-      "pattern": "documented_panic_contract",
+      "line": 1022,
+      "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
     {
@@ -100,10 +100,70 @@
       "text": "panic!(\"vyre-pass-engine homotopy schedule generation failed: {error}\");"
     },
     {
+      "path": "vyre-libs/src/graph/vast_tree_walk.rs",
+      "line": 68,
+      "pattern": "documented_panic_contract",
+      "text": "try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/vast_tree_walk.rs",
+      "line": 93,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/dominator_frontier.rs",
+      "line": 409,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/persistent_bfs/program.rs",
+      "line": 495,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/persistent_bfs/program.rs",
+      "line": 567,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/exploded/canonicalize.rs",
+      "line": 33,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives CSR row canonicalization failed: {error}\");"
+    },
+    {
+      "path": "vyre-libs/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
+      "line": 67,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/csr_forward_or_changed/program_parallel_batch.rs",
+      "line": 34,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
       "path": "vyre-libs/src/graph/ast_walk.rs",
-      "line": 46,
+      "line": 45,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\")),"
+    },
+    {
+      "path": "vyre-libs/src/graph/program_graph.rs",
+      "line": 114,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/csr_bidirectional.rs",
+      "line": 875,
+      "pattern": "documented_panic_contract",
+      "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/graph/dispatch/vast_tree_walk/builders.rs",
@@ -142,10 +202,76 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-libs/src/fixpoint/persistent_fixpoint.rs",
+      "line": 739,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: the program must declare a buffer named `{buffer}`.\");"
+    },
+    {
+      "path": "vyre-libs/src/matching/nfa_to_dfa.rs",
+      "line": 326,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-libs/src/matching/dfa_compile/compile.rs",
+      "line": 29,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "vyre-libs/src/matching/dfa_compile/compile.rs",
+      "line": 74,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
       "path": "vyre-libs/src/security/predicate_catalog.rs",
       "line": 91,
       "pattern": "documented_panic_contract",
       "text": "try_security_predicate_rows().expect("
+    },
+    {
+      "path": "vyre-libs/src/math/fractional.rs",
+      "line": 57,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives Grünwald-Letnikov kernel generation failed: {error}\");"
+    },
+    {
+      "path": "vyre-libs/src/math/fractional.rs",
+      "line": 69,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives Grünwald-Letnikov kernel generation failed: {error}\");"
+    },
+    {
+      "path": "vyre-libs/src/math/fractional.rs",
+      "line": 114,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives 16.16 fixed-point kernel conversion failed: {error}\");"
+    },
+    {
+      "path": "vyre-libs/src/math/fractional.rs",
+      "line": 126,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives 16.16 fixed-point kernel conversion failed: {error}\");"
+    },
+    {
+      "path": "vyre-libs/src/bitset/stochastic_compute.rs",
+      "line": 66,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"vyre-primitives stochastic bitstream encode failed: {error}\"),"
+    },
+    {
+      "path": "vyre-libs/src/bitset/stochastic_compute.rs",
+      "line": 77,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives stochastic bitstream encode_into failed: {error}\");"
+    },
+    {
+      "path": "vyre-libs/src/bitset/four_russians.rs",
+      "line": 123,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives dense boolean-matvec LUT build failed: {error}\");"
     },
     {
       "path": "vyre-libs/src/parsing/source_cache.rs",
@@ -155,7 +281,7 @@
     },
     {
       "path": "vyre-libs/src/scratch.rs",
-      "line": 73,
+      "line": 179,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
@@ -203,13 +329,13 @@
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 417,
+      "line": 463,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 480,
+      "line": 526,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
@@ -299,13 +425,13 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 114,
+      "line": 144,
       "pattern": "documented_panic_contract",
       "text": "let executable = std::env::current_exe().expect(\"Fix: the test binary path must be readable\");"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 120,
+      "line": 150,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -392,132 +518,6 @@
       "line": 83,
       "pattern": "documented_panic_contract",
       "text": "panic!("
-    },
-    {
-      "path": "vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 68,
-      "pattern": "documented_panic_contract",
-      "text": "try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 93,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/dominator_frontier.rs",
-      "line": 409,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/persistent_bfs/program.rs",
-      "line": 495,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/persistent_bfs/program.rs",
-      "line": 567,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/exploded/canonicalize.rs",
-      "line": 33,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-primitives CSR row canonicalization failed: {error}\");"
-    },
-    {
-      "path": "vyre-primitives/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
-      "line": 67,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/csr_forward_or_changed/program_parallel_batch.rs",
-      "line": 34,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/program_graph.rs",
-      "line": 114,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/graph/csr_bidirectional.rs",
-      "line": 875,
-      "pattern": "documented_panic_contract",
-      "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-primitives/src/fixpoint/persistent_fixpoint.rs",
-      "line": 735,
-      "pattern": "panic_macro",
-      "text": "panic!(\"Fix: the program must declare a buffer named `{buffer}`.\");"
-    },
-    {
-      "path": "vyre-primitives/src/matching/nfa_to_dfa.rs",
-      "line": 326,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
-      "line": 29,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
-      "line": 74,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-primitives/src/math/fractional.rs",
-      "line": 57,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-primitives Grünwald-Letnikov kernel generation failed: {error}\");"
-    },
-    {
-      "path": "vyre-primitives/src/math/fractional.rs",
-      "line": 69,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-primitives Grünwald-Letnikov kernel generation failed: {error}\");"
-    },
-    {
-      "path": "vyre-primitives/src/math/fractional.rs",
-      "line": 114,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-primitives 16.16 fixed-point kernel conversion failed: {error}\");"
-    },
-    {
-      "path": "vyre-primitives/src/math/fractional.rs",
-      "line": 126,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-primitives 16.16 fixed-point kernel conversion failed: {error}\");"
-    },
-    {
-      "path": "vyre-primitives/src/bitset/stochastic_compute.rs",
-      "line": 66,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!(\"vyre-primitives stochastic bitstream encode failed: {error}\"),"
-    },
-    {
-      "path": "vyre-primitives/src/bitset/stochastic_compute.rs",
-      "line": 77,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-primitives stochastic bitstream encode_into failed: {error}\");"
-    },
-    {
-      "path": "vyre-primitives/src/bitset/four_russians.rs",
-      "line": 123,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-primitives dense boolean-matvec LUT build failed: {error}\");"
     },
     {
       "path": "vyre-primitives/src/wire.rs",
@@ -725,43 +725,43 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 239,
+      "line": 210,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 364,
+      "line": 335,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 370,
+      "line": 341,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },
     {
       "path": "xtask/src/bin/audit_rule_contracts.rs",
-      "line": 44,
+      "line": 34,
       "pattern": "unwrap_call",
       "text": "for entry in fs::read_dir(launch_dir).unwrap() {"
     },
     {
       "path": "xtask/src/bin/audit_rule_contracts.rs",
-      "line": 45,
+      "line": 35,
       "pattern": "unwrap_call",
       "text": "let entry = entry.unwrap();"
     },
     {
       "path": "xtask/src/bin/audit_rule_contracts.rs",
-      "line": 48,
+      "line": 38,
       "pattern": "unwrap_call",
       "text": "let slug = path.file_name().unwrap().to_str().unwrap();"
     },
     {
       "path": "xtask-evidence/src/bench/release_benchmarks/cpu_sota_proof.rs",
-      "line": 275,
+      "line": 276,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: the 100x proof evidence is a JSON object.\")"
     },

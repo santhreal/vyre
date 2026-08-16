@@ -107,12 +107,12 @@ jobs:
       # Every step above names its targets one by one, so a parity test added
       # later is gated by nothing, which is how fifty-five of them came to run
       # in no workflow at all while the four named here did. This roster is
-      # derived from the tree instead: each vyre-driver-cuda/tests/*gpu_parity*
-      # target plus the six backend contract suites, so target fifty-six is
-      # covered without editing this file. The gate fails when nvidia-smi does,
-      # so a runner that lost its device cannot report a clean tree.
+      # derived from the tree instead: every tracked vyre-driver-cuda test
+      # target, so target fifty-six is covered without editing this file. The
+      # gate fails when nvidia-smi does, so a runner that lost its device
+      # cannot report a clean tree.
       - name: Every derived CUDA parity target on the real device
-        run: bash scripts/check_cuda_parity_perf_gate.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- cuda-parity --device
 
   composition-parity-gpu:
     name: Composition parity on real GPU

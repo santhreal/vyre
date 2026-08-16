@@ -52,7 +52,8 @@ fn only_the_two_category_crates_register_operations() {
 /// One kernel carries exactly one operation identity.
 #[test]
 fn no_operation_is_registered_under_two_identities() {
-    let failures = operation_identity_failures(&workspace().registrations);
+    let workspace = workspace();
+    let failures = operation_identity_failures(&workspace.registrations, &workspace.members);
 
     assert!(
         failures.is_empty(),

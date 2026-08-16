@@ -139,36 +139,29 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         if tier == "unknown" {
             errors.push(format!("operation `{}` has an unknown tier", entry.id));
         }
+        // `placement::read` already reported an id it could not place, naming
+        // the cause. A second message here named the wrong one.
         let (crate_name, features) = match placements.get(entry.id) {
             Some(found) => (found.crate_name.clone(), found.features.clone()),
             None => (String::new(), Vec::new()),
         };
-        if crate_name.is_empty() {
-            errors.push(format!(
-                "operation `{}` has no defining crate in the checkout",
-                entry.id
-            ));
-        } else if features.is_empty() {
-            errors.push(format!(
-                "operation `{}` is defined in `{crate_name}` behind no feature; a registration that always links cannot be selected out",
-                entry.id
-            ));
-        }
-        match manifest_features.get(&crate_name) {
-            Some(available) => {
-                for feature in &features {
-                    if !available.contains(feature) {
-                        errors.push(format!(
-                            "operation `{}` feature `{feature}` is not declared by `{crate_name}`",
-                            entry.id
-                        ));
+        if !crate_name.is_empty() {
+            match manifest_features.get(&crate_name) {
+                Some(available) => {
+                    for feature in &features {
+                        if !available.contains(feature) {
+                            errors.push(format!(
+                                "operation `{}` feature `{feature}` is not declared by `{crate_name}`",
+                                entry.id
+                            ));
+                        }
                     }
                 }
+                None => errors.push(format!(
+                    "operation `{}` has no owning manifest feature catalog",
+                    entry.id
+                )),
             }
-            None => errors.push(format!(
-                "operation `{}` has no owning manifest feature catalog",
-                entry.id
-            )),
         }
         let support = backend_rows.remove(entry.id).unwrap_or_default();
         for backend in ["reference", "cuda", "wgpu"] {

@@ -1,7 +1,9 @@
 //! The matrix rows derived from the live operation registry.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
+use structure_gate::source_scan::carries_rust_source;
 use vyre_foundation::operation::OperationTier as OpTier;
 
 use super::record::OpRecord;
@@ -122,34 +124,14 @@ fn namespace_source_dir(id: &str) -> String {
     };
     let domain = rest.split("::").next().unwrap_or("unknown");
     let minted = format!("{crate_name}/src/{domain}");
-    if carries_rust_source(&minted) {
+    if carries_rust_source(Path::new(&minted)) {
         return minted;
     }
     let moved = format!("vyre-libs/src/{domain}");
-    if carries_rust_source(&moved) {
+    if carries_rust_source(Path::new(&moved)) {
         return moved;
     }
     minted
-}
-
-/// Whether the directory holds a Rust file, at any depth below it.
-fn carries_rust_source(dir: &str) -> bool {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return false;
-    };
-    let mut nested = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "rs") {
-            return true;
-        }
-        if path.is_dir() {
-            nested.push(path);
-        }
-    }
-    nested
-        .into_iter()
-        .any(|path| path.to_str().is_some_and(carries_rust_source))
 }
 
 fn namespace_domain<'a>(id: &'a str, prefix: &str) -> &'a str {

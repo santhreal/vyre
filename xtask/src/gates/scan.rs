@@ -806,7 +806,8 @@ pub fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
 /// different claim: it compiles in a release build with that feature on, and the
 /// 864 items carrying it in this workspace are shipped code. `not(test)` is the
 /// opposite of a test item.
-fn is_test_only_attribute(code: &str) -> bool {
+#[must_use]
+pub fn is_test_only_attribute(code: &str) -> bool {
     let trimmed = code.trim();
     if trimmed == "#[test]" || trimmed.ends_with("::test]") {
         return true;

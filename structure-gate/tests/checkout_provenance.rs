@@ -178,14 +178,14 @@ fn scanned_directories(root: &Path) -> Vec<(String, PathBuf)> {
         let crate_dir = root.join(&member);
         for area in ["src", "tests", "benches"] {
             let candidate = crate_dir.join(area);
-            if candidate.is_dir() {
+            if structure_gate::source_scan::carries_rust_source(&candidate) {
                 directories.push((member.clone(), candidate));
             }
         }
     }
 
     let root_tests = root.join("tests");
-    if root_tests.is_dir() {
+    if structure_gate::source_scan::carries_rust_source(&root_tests) {
         directories.push(("tests".to_string(), root_tests));
     }
 

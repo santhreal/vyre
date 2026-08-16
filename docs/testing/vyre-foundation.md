@@ -99,8 +99,8 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `node_variant_traversal_closure` | `vyre-foundation/tests/node_variant_traversal_closure.rs` | None | `./cargo_full test -p vyre-foundation --test node_variant_traversal_closure` |
 | `test` | `opaque_payload_endian` | `vyre-foundation/tests/opaque_payload_endian.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_payload_endian` |
 | `test` | `opaque_wire_round_trip` | `vyre-foundation/tests/opaque_wire_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_wire_round_trip` |
+| `test` | `operation_namespace` | `vyre-foundation/tests/operation_namespace.rs` | None | `./cargo_full test -p vyre-foundation --test operation_namespace` |
 | `test` | `operation_registry` | `vyre-foundation/tests/operation_registry.rs` | None | `./cargo_full test -p vyre-foundation --test operation_registry` |
-| `test` | `operation_tier_classification` | `vyre-foundation/tests/operation_tier_classification.rs` | None | `./cargo_full test -p vyre-foundation --test operation_tier_classification` |
 | `test` | `optimizer_algebraic_rules_contracts` | `vyre-foundation/tests/optimizer_algebraic_rules_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_algebraic_rules_contracts` |
 | `test` | `optimizer_dataflow_value_differential` | `vyre-foundation/tests/optimizer_dataflow_value_differential.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_dataflow_value_differential` |
 | `test` | `optimizer_idempotence_proptest` | `vyre-foundation/tests/optimizer_idempotence_proptest.rs` | None | `./cargo_full test -p vyre-foundation --test optimizer_idempotence_proptest` |

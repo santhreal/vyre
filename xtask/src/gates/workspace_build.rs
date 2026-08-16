@@ -175,7 +175,11 @@ impl Gate for WorkspaceClippy {
     }
 }
 
-/// Rustdoc builds the whole workspace without a broken link or a bad doctest.
+/// Rustdoc builds the whole workspace without a broken item or a broken link.
+///
+/// `cargo doc` renders documentation; it does not run doctests, so nothing here
+/// judges whether an example compiles. `workspace-tests` runs the doctests of
+/// the crates it names, and that is the only doctest coverage the registry has.
 pub struct WorkspaceDocs;
 
 impl Gate for WorkspaceDocs {

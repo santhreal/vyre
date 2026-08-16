@@ -1,8 +1,60 @@
 {
-  "source_fingerprint": "git:261d5680b496cb24fb7b6a690cb85803ef552597:dirty=true:worktree=4d5090a9f12145cd1afa49f05334e42bb55f5d2442fa25dc1e736d104b6fc8fc",
+  "source_fingerprint": "git:aa05ecde5b38160f55fd4ea8484ce2ab240a0fd4:dirty=true:worktree=4c3a03aa8bc22bfd454f3e7b89b8a2cf3f7d79ea1e2f03f4f0ccfea3e253391c",
   "schema_version": 1,
   "scan": "cargo-wrapper",
-  "findings": [],
-  "release_blocking_findings": [],
-  "blockers": []
+  "findings": [
+    {
+      "path": "xtask/src/gates/feature_isolation.rs",
+      "line": 615,
+      "pattern": "raw_workspace_cargo",
+      "text": "format!(\"cannot run cargo check for `{}`: {error}\", pair.label()),"
+    },
+    {
+      "path": "xtask/src/gates/backend_parity.rs",
+      "line": 269,
+      "pattern": "raw_workspace_cargo",
+      "text": "format!(\"cannot run cargo test for `{package}`: {error}\"),"
+    },
+    {
+      "path": "xtask/src/gates/oracle_sweeps.rs",
+      "line": 325,
+      "pattern": "raw_workspace_cargo",
+      "text": "format!(\"cannot run cargo test for `{crate_dir}`: {error}\"),"
+    }
+  ],
+  "release_blocking_findings": [
+    {
+      "path": "xtask/src/gates/feature_isolation.rs",
+      "line": 615,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask/src/gates/backend_parity.rs",
+      "line": 269,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "xtask/src/gates/oracle_sweeps.rs",
+      "line": 325,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    }
+  ],
+  "blockers": [
+    "3 release-blocking `cargo-wrapper` finding(s) remain"
+  ]
 }

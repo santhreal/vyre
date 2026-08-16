@@ -29,7 +29,7 @@ use std::path::Path;
 
 use toml::Value;
 
-use crate::source_scan::mask_comments_and_strings;
+use crate::source_scan::{carries_rust_source, mask_comments_and_strings};
 use crate::{cfg_test_line_mask, read_source_bounded, relative, source_tree_files};
 
 /// The contract data, inside the directory of the crate that owns the rule.
@@ -480,9 +480,9 @@ pub fn contract_failures(root: &Path, neutrality: &Neutrality) -> Vec<String> {
         }
     }
     for interface in &contract.interfaces {
-        if !root.join(&interface.prefix).is_dir() {
+        if !carries_rust_source(&root.join(&interface.prefix)) {
             failures.push(format!(
-                "{DATA_FILE} allows `{}` under `{}`, which is not a directory in this checkout; point the row at the directory that reads the interface, or delete it",
+                "{DATA_FILE} allows `{}` under `{}`, which holds no Rust source in this checkout; point the row at the directory that reads the interface, or delete it",
                 interface.name, interface.prefix
             ));
             continue;

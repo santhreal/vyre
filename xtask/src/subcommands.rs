@@ -158,16 +158,19 @@ pub static SUBSETS: &[Subset] = &[
             "neutral-crates",
             "feature-matrix",
             "feature-isolation",
+            "feature-msrv",
         ],
     },
     Subset {
         name: "source-rules",
-        help: "What every tracked source file must be: compiled by a target, parseable, and inside its size cap",
+        help: "What every tracked source file must be: compiled by a target, run by a runner, parseable, inside its size cap, and product rather than test material",
         gates: &[
             "source-reachability",
             "source-include-module",
             "source-parses",
+            "oracle-sweeps",
             "file-size",
+            "test-material-placement",
         ],
     },
     Subset {
@@ -196,7 +199,7 @@ pub static SUBSETS: &[Subset] = &[
     },
     Subset {
         name: "contract-rules",
-        help: "Frozen public surfaces, wire field parity, device loudness and the unification ratchets",
+        help: "Frozen public surfaces, wire field parity, backend parity registration, device loudness and the unification ratchets",
         gates: &[
             "frozen-contracts",
             "backend-extension",
@@ -206,6 +209,10 @@ pub static SUBSETS: &[Subset] = &[
             "public-api-snapshot",
             "readback-ring",
             "unification",
+            "cuda-parity",
+            "metal-parity",
+            "spirv-parity",
+            "wire-determinism",
             "gpu-loudness",
             "shader-source",
         ],
@@ -224,6 +231,8 @@ pub static SUBSETS: &[Subset] = &[
             "ci-matrix",
             "ci-required",
             "gate-canon",
+            "placement-predicates",
+            "script-ledger",
         ],
     },
 ];

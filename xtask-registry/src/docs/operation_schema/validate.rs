@@ -6,6 +6,14 @@ use vyre_foundation::operation::OperationTier;
 
 use super::schema::{OperationSchema, SCHEMA_VERSION};
 
+/// Registrations the defining crate links whatever features are selected.
+///
+/// Measured over the 327 registrations in the checkout: the `vyre-libs`
+/// modules that carry them are declared with no `cfg`, so nothing selects
+/// them out. The count falls when a registration gains a gate or leaves the
+/// tree, and a rise is a new registration nobody can compile away.
+const UNCONDITIONAL_REGISTRATIONS: usize = 9;
+
 pub(crate) fn validate_schema(
     schema: &OperationSchema,
     expected: Option<&OperationSchema>,
@@ -81,12 +89,7 @@ pub(crate) fn validate_schema(
                 op.id
             ));
         }
-        if op.features.is_empty() {
-            errors.push(format!(
-                "operation `{}` records no enabling feature; a registration that always links cannot be selected out",
-                op.id
-            ));
-        }
+
         let reference_status = op
             .backend_support
             .get("reference")
@@ -151,6 +154,19 @@ pub(crate) fn validate_schema(
         }
         *tiers.entry(op.tier.clone()).or_insert(0) += 1;
         *categories.entry(op.category.clone()).or_insert(0) += 1;
+    }
+    let unconditional: Vec<&str> = schema
+        .operations
+        .iter()
+        .filter(|op| op.features.is_empty())
+        .map(|op| op.id.as_str())
+        .collect();
+    if unconditional.len() != UNCONDITIONAL_REGISTRATIONS {
+        errors.push(format!(
+            "{} operation(s) record no enabling feature where {UNCONDITIONAL_REGISTRATIONS} do; a registration that always links cannot be selected out: {}",
+            unconditional.len(),
+            unconditional.join(", ")
+        ));
     }
     if tiers != schema.tier_counts {
         errors.push("tier_counts do not match operation records".to_string());

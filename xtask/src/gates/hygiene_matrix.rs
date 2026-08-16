@@ -1058,16 +1058,32 @@ fn hygiene_finding_is_hot_path(
     hot_paths.contains(&relative)
 }
 
+/// Whether `.github/workflows` holds a workflow file.
+///
+/// The directory itself survives the deletion of every workflow in it, so its
+/// presence is not coverage.
+fn holds_workflow(vyre_root: &Path) -> bool {
+    let Ok(entries) = fs::read_dir(vyre_root.join(".github/workflows")) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        entry
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "yml" || extension == "yaml")
+    })
+}
+
 fn release_surface_coverage(vyre_root: &Path) -> ReleaseSurfaceCoverage {
     ReleaseSurfaceCoverage {
-        vyre_workspace: vyre_root.join("vyre").is_dir(),
+        vyre_workspace: vyre_root.join("vyre/src/lib.rs").is_file(),
         cuda_driver_crate: vyre_root.join("vyre-driver-cuda/src/lib.rs").is_file(),
         wgpu_driver_crate: vyre_root.join("vyre-driver-wgpu/src/lib.rs").is_file(),
         release_scripts: vyre_root
             .join("scripts/apply-branch-protection.sh")
             .is_file()
             && vyre_root.join("xtask/src/gates/layering.rs").is_file(),
-        github_workflows: vyre_root.join(".github/workflows").is_dir(),
+        github_workflows: holds_workflow(vyre_root),
         branch_protection_controls: vyre_root.join(".github/CI_REQUIRED.md").is_file()
             && vyre_root
                 .join("scripts/apply-branch-protection.sh")

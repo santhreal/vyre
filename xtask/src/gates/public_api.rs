@@ -19,6 +19,7 @@
 
 use std::collections::BTreeSet;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -112,11 +113,11 @@ impl Gate for PublicApiSnapshot {
                 }
             }
             let source_root = format!("{}/src", row.directory);
-            if !ctx.root.join(&source_root).is_dir() {
+            if !structure_gate::source_scan::carries_rust_source(&ctx.root.join(&source_root)) {
                 report.find(Finding::in_file(
                     source_root.clone(),
                     format!(
-                        "publishable package `{}` has no source root at `{source_root}`",
+                        "publishable package `{}` has no Rust source under `{source_root}`",
                         row.package
                     ),
                     "restore the source root, or stop publishing the package so the gate stops promising a surface for it",
@@ -241,16 +242,17 @@ fn summarize(committed: &str, current: &str) -> String {
 /// Snapshot files naming no publishable package.
 fn unowned_snapshots(root: &Path, owned: &BTreeSet<&str>) -> Result<Vec<PathBuf>, GateError> {
     let directory = root.join(SNAPSHOT_DIR);
-    if !directory.is_dir() {
-        return Ok(Vec::new());
-    }
     let mut stale = Vec::new();
-    let entries = fs::read_dir(&directory).map_err(|error| {
-        GateError::new(
-            format!("cannot list `{SNAPSHOT_DIR}`: {error}"),
-            "restore the snapshot directory",
-        )
-    })?;
+    let entries = match fs::read_dir(&directory) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => {
+            return Err(GateError::new(
+                format!("cannot list `{SNAPSHOT_DIR}`: {error}"),
+                "restore the snapshot directory",
+            ))
+        }
+    };
     for entry in entries {
         let entry = entry.map_err(|error| {
             GateError::new(

@@ -49,6 +49,8 @@ use walkdir::WalkDir;
 pub mod backend_vocabulary;
 pub mod source_scan;
 
+use crate::source_scan::carries_rust_source;
+
 /// Category A owner: every composition, meaning anything that returns a
 /// `Program` built from existing IR, including compiler-internal domains such
 /// as solvers, encoding, analysis, scheduling, device and graph dispatch. Who
@@ -226,7 +228,10 @@ pub fn violations(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();
     failures.extend(roster_failures(&workspace.members));
     failures.extend(registration_owner_failures(&workspace.registrations));
-    failures.extend(operation_identity_failures(&workspace.registrations));
+    failures.extend(operation_identity_failures(
+        &workspace.registrations,
+        &workspace.members,
+    ));
     failures.extend(category_home_failures(&workspace.registrations));
     failures.extend(substrate_home_failures(&workspace.substrate_paths));
     failures.extend(frontend_owner_failures(&workspace.frontend_paths));
@@ -364,9 +369,21 @@ pub fn registration_owner_failures(registrations: &[Registration]) -> Vec<String
         .collect()
 }
 
-/// Reject one semantic operation carrying two identities, and ids that claim a
-/// namespace their owning crate does not have.
-pub fn operation_identity_failures(registrations: &[Registration]) -> Vec<String> {
+/// Reject one semantic operation carrying two identities, and ids that name a
+/// crate the workspace does not have.
+///
+/// The namespace of an id is the crate that minted it, frozen from then on.
+/// This rule used to require it to equal the crate the registration lives in,
+/// which reported all 130 operations that moved to `vyre-libs` keeping their
+/// `vyre-primitives::` ids. Where an operation lives is
+/// [`registration_owner_failures`] and [`category_home_failures`], both of
+/// which read the file the registration is written in. What is left here is
+/// what the id itself can answer: two crates must not claim one kernel, and a
+/// namespace must name a member the workspace carries.
+pub fn operation_identity_failures(
+    registrations: &[Registration],
+    members: &[String],
+) -> Vec<String> {
     let mut failures = Vec::new();
     let mut by_leaf: BTreeMap<&str, Vec<&Registration>> = BTreeMap::new();
     for reg in registrations {
@@ -385,11 +402,16 @@ pub fn operation_identity_failures(registrations: &[Registration]) -> Vec<String
             ));
         }
     }
+    let member_crates: BTreeSet<&str> = members
+        .iter()
+        .map(|member| member.rsplit('/').next().unwrap_or(member))
+        .collect();
     for reg in registrations {
-        if reg.claimed_crate() != reg.crate_name {
+        let claimed = reg.claimed_crate();
+        if claimed.starts_with("vyre-") && !member_crates.contains(claimed) {
             failures.push(format!(
-                "{} registers `{}` but lives in {}; the operation id namespace names its owning crate",
-                reg.file, reg.op_id, reg.crate_name
+                "{} registers `{}`, whose namespace names `{claimed}`; no workspace member carries that name, so the id was minted by a crate that never existed or was renamed without a migration",
+                reg.file, reg.op_id
             ));
         }
     }
@@ -397,6 +419,12 @@ pub fn operation_identity_failures(registrations: &[Registration]) -> Vec<String
 }
 
 /// Reject a Category A operation in the Category C crate and the reverse.
+///
+/// Both sides are read from the tree. The tier is the one the registration
+/// declares in its own source, and the home is the crate whose `src` holds the
+/// file that registration is written in. Neither is the operation id: the id
+/// namespace is frozen at mint time, so 130 operations that moved crate still
+/// spell the crate they left.
 pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
     let mut failures = Vec::new();
     for reg in registrations {
@@ -1034,8 +1062,10 @@ fn source_tree_files(directory: &Path) -> Vec<PathBuf> {
 /// rules judge tree shape and a crate outside the workspace grows the same
 /// pairs and the same nameless modules: the external extension examples are
 /// separate packages on purpose. A directory earns a place here by declaring
-/// `[package]` and holding a `src/`, so a crate added anywhere in the checkout
-/// is judged without an edit here. This crate is included; [`source_files`]
+/// `[package]` and holding Rust source under `src/`, so a crate added anywhere
+/// in the checkout is judged without an edit here. A `src/` emptied by a
+/// deletion is not a crate root: the directory survives the pull that removed
+/// every file in it. This crate is included; [`source_files`]
 /// exempts it only because its registration fixtures name other crates, and a
 /// rule over file names has no such fixtures.
 fn crate_source_roots(root: &Path) -> Vec<CrateRoot> {
@@ -1047,7 +1077,7 @@ fn crate_source_roots(root: &Path) -> Vec<CrateRoot> {
         .filter_map(|entry| {
             let ident = manifest_crate_ident(entry.path())?;
             let directory = entry.path().parent()?.to_path_buf();
-            directory.join("src").is_dir().then(|| CrateRoot {
+            carries_rust_source(&directory.join("src")).then(|| CrateRoot {
                 directory: relative(root, &directory),
                 ident,
             })
@@ -1939,12 +1969,20 @@ mod tests {
         assert!(failures.is_empty(), "{failures:?}");
     }
 
+    /// Every workspace member the identity rule judges against.
+    fn roster() -> Vec<String> {
+        ALLOWED_MEMBERS.iter().map(|name| (*name).to_string()).collect()
+    }
+
     #[test]
     fn one_kernel_registered_under_two_namespaces_is_rejected() {
-        let failures = operation_identity_failures(&[
-            registration("vyre-foundation", "vyre-foundation::hash::adler32", None),
-            registration("vyre-libs", "vyre-libs::hash::adler32", None),
-        ]);
+        let failures = operation_identity_failures(
+            &[
+                registration("vyre-foundation", "vyre-foundation::hash::adler32", None),
+                registration("vyre-libs", "vyre-libs::hash::adler32", None),
+            ],
+            &roster(),
+        );
 
         assert!(
             failures
@@ -1956,26 +1994,52 @@ mod tests {
 
     #[test]
     fn same_leaf_under_one_namespace_is_accepted() {
-        let failures = operation_identity_failures(&[
-            registration("vyre-foundation", "vyre-foundation::hash::adler32", None),
-            registration("vyre-foundation", "vyre-foundation::graph::toposort", None),
-        ]);
+        let failures = operation_identity_failures(
+            &[
+                registration("vyre-foundation", "vyre-foundation::hash::adler32", None),
+                registration("vyre-foundation", "vyre-foundation::graph::toposort", None),
+            ],
+            &roster(),
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    /// A frozen id keeps the namespace of the crate that minted it.
+    ///
+    /// Requiring the namespace to equal the crate the registration lives in
+    /// reported all 130 operations that moved to `vyre-libs` and kept their
+    /// `vyre-primitives::` ids. Where an operation lives is judged by the rules
+    /// that read the file it is written in.
+    #[test]
+    fn an_operation_that_moved_crate_keeps_its_minting_namespace() {
+        let failures = operation_identity_failures(
+            &[registration(
+                "vyre-libs",
+                "vyre-primitives::graph::toposort",
+                None,
+            )],
+            &roster(),
+        );
 
         assert!(failures.is_empty(), "{failures:?}");
     }
 
     #[test]
-    fn an_id_claiming_another_crates_namespace_is_rejected() {
-        let failures = operation_identity_failures(&[registration(
-            "vyre-libs",
-            "vyre-foundation::hash::adler32",
-            None,
-        )]);
+    fn an_id_naming_no_workspace_member_is_rejected() {
+        let failures = operation_identity_failures(
+            &[registration(
+                "vyre-libs",
+                "vyre-departed::hash::adler32",
+                None,
+            )],
+            &roster(),
+        );
 
         assert!(
             failures
                 .iter()
-                .any(|failure| failure.contains("names its owning crate")),
+                .any(|failure| failure.contains("no workspace member carries that name")),
             "{failures:?}"
         );
     }

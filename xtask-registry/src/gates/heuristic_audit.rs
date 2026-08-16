@@ -229,7 +229,8 @@ fn production_markers(body: &str) -> Vec<(usize, &'static str, &'static str)> {
 }
 
 fn resolve_vyre_dir(workspace_root: &Path) -> PathBuf {
-    if workspace_root.join("vyre-foundation").join("src").is_dir() {
+    let foundation = workspace_root.join("vyre-foundation").join("src");
+    if structure_gate::source_scan::carries_rust_source(&foundation) {
         workspace_root.to_path_buf()
     } else {
         workspace_root.join(VYRE_ROOT)

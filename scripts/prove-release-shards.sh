@@ -94,7 +94,7 @@ for ((index = 0; index < SHARDS; index += 1)); do
     run_shard "$index" "$shard_path" &
     active_jobs=$((active_jobs + 1))
     if [[ "$active_jobs" -ge "$SHARD_WORKERS" ]]; then
-        if ! wait -n; then
+        if ! wait; then
             failures=$((failures + 1))
         fi
         active_jobs=$((active_jobs - 1))

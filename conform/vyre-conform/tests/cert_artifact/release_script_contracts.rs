@@ -22,16 +22,10 @@ fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
         "Fix: release proof must build vyre-conform once, then use the binary for prove and merge."
     );
 
-    let signoff =
-        std::fs::read_to_string(repo.join("scripts/check_signed_conformance_certificate.sh"))
-            .expect("Fix: signed conformance gate must be readable");
-    assert!(
-        signoff.contains("scripts/prove-release-shards.sh")
-            && signoff.contains("VYRE_RELEASE_BACKEND")
-            && signoff.contains("VYRE_RELEASE_SHARDS"),
-        "Fix: signed conformance gate must execute sharded all-backend proof, not a narrow one-off test."
-    );
-
+    // The signed-conformance wrapper is gone. It exported the four defaults
+    // `prove-release-shards.sh` already carries at lines 5 to 8 and then checked
+    // that the merged certificate was non-empty, which the merge step and the
+    // certificate suite in this crate both assert.
     let final_launch = std::fs::read_to_string(repo.join("scripts/final-launch.sh"))
         .expect("Fix: final launch script must be readable");
     assert!(

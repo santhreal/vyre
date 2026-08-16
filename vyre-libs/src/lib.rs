@@ -308,10 +308,6 @@ pub use signatures::{
 };
 /// Owner-local byte fixtures for semantic operation registrations and tests.
 pub(crate) mod fixture_bytes;
-/// Pre-sweep shader snapshot migration entries, collected via inventory.
-/// `pub(crate)` because the registry is an internal pre-sweep tool  -
-/// downstream dialects do not submit through this path.
-pub(crate) mod test_migration;
 
 /// Program composition helpers for parity suites, in-tree and downstream.
 #[cfg(any(test, feature = "test-fixtures"))]

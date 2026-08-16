@@ -89,6 +89,28 @@ fn rust_sources(root: &Path) -> Vec<PathBuf> {
     found
 }
 
+/// Whether `directory` holds a Rust source, at any depth below it.
+///
+/// The question every placement answer has to ask. Git tracks files, not
+/// directories, so a domain deleted in one commit leaves its directory behind
+/// in every checkout that pulled the deletion, and asking whether the directory
+/// is there names an empty shell as the owner of code that lives somewhere
+/// else. A directory holding a `.rs` file holds code.
+#[must_use]
+pub fn carries_rust_source(directory: &Path) -> bool {
+    WalkDir::new(directory)
+        .into_iter()
+        .filter_entry(|entry| !is_pruned(entry))
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .any(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "rs")
+        })
+}
+
 /// Whether the walk should refuse to descend into `entry`.
 ///
 /// The root itself is never pruned: the checkout may sit in a hidden directory

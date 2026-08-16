@@ -1,6 +1,6 @@
 # vyre-macros
 
-Proc-macros for the [`vyre`](../core) GPU compute IR compiler.
+Proc-macros for the [`vyre`](../vyre) GPU compute IR compiler.
 
 This crate is consumed at compile time only: you do not depend on it directly
 in most cases. The `vyre` crate re-exports everything you need:

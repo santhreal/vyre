@@ -51,9 +51,6 @@ fn baselines_or_exit(root: &Path) -> Vec<Baseline> {
     })
 }
 
-/// A glob a workflow may name, because a glob names a set rather than a file.
-const SCRIPT_GLOBS: &[&str] = &["check_*.sh"];
-
 /// What the in-repo workflows name: xtask subcommands, subsets, and scripts.
 struct WorkflowNames {
     /// Every `xtask <name>` subcommand a workflow invokes.
@@ -174,18 +171,18 @@ fn strip_yaml_comment(line: &str) -> &str {
 
 /// Every workflow reference to a script the checkout does not carry.
 ///
-/// A glob is a set, so it is checked against the accepted globs rather than
-/// against the filesystem.
+/// A glob is rejected outright. It was accepted while `scripts/check_*.sh`
+/// carried assertions a workflow ran as a set; every one of those is a
+/// registered gate now, so a workflow step naming a set of scripts is a step
+/// that reaches whatever a future checkout happens to leave in the directory.
 fn script_failures(root: &Path, scripts: &[(String, usize, String)]) -> Vec<String> {
     let directory = root.join("scripts");
     let mut failures = Vec::new();
     for (file, line, name) in scripts {
         if name.contains('*') {
-            if !SCRIPT_GLOBS.contains(&name.as_str()) {
-                failures.push(format!(
-                    "{file}:{line} names `scripts/{name}`, which is not an accepted glob; name the script, or add the glob"
-                ));
-            }
+            failures.push(format!(
+                "{file}:{line} names `scripts/{name}`; a workflow step names one script or one gate, never a glob"
+            ));
             continue;
         }
         if !directory.join(name).exists() {
@@ -600,20 +597,21 @@ mod tests {
         let present = vec![("gates.yml".to_string(), 7, "present.sh".to_string())];
         let absent = vec![("gates.yml".to_string(), 9, "retired.sh".to_string())];
         let glob = vec![("gates.yml".to_string(), 11, "check_*.sh".to_string())];
-        let unknown_glob = vec![("gates.yml".to_string(), 13, "run_*.sh".to_string())];
+        let other_glob = vec![("gates.yml".to_string(), 13, "run_*.sh".to_string())];
 
         let clean = script_failures(&root, &present);
         let missing = script_failures(&root, &absent);
-        let accepted = script_failures(&root, &glob);
-        let rejected = script_failures(&root, &unknown_glob);
+        let globbed = script_failures(&root, &glob);
+        let other = script_failures(&root, &other_glob);
 
         fs::remove_dir_all(&root).expect("the fixture is removed");
         assert_eq!(clean, Vec::<String>::new());
-        assert_eq!(accepted, Vec::<String>::new());
         assert_eq!(missing.len(), 1, "got {missing:?}");
         assert!(missing[0].contains("gates.yml:9"), "got {missing:?}");
         assert!(missing[0].contains("scripts/retired.sh"), "got {missing:?}");
-        assert_eq!(rejected.len(), 1, "got {rejected:?}");
-        assert!(rejected[0].contains("run_*.sh"), "got {rejected:?}");
+        assert_eq!(globbed.len(), 1, "got {globbed:?}");
+        assert!(globbed[0].contains("check_*.sh"), "got {globbed:?}");
+        assert_eq!(other.len(), 1, "got {other:?}");
+        assert!(other[0].contains("run_*.sh"), "got {other:?}");
     }
 }

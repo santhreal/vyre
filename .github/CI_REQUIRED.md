@@ -7,6 +7,14 @@ The `ci-required` gate holds this list to the workflows that define it, and
 ## From `ci.yml` (run on every PR + push to main)
 - `CI release gate`
 
+## From `gates.yml` (run on every PR + push to main)
+- `registered-gates`
+- `tree-rules`
+- `feature-msrv`
+- `feature-isolation`
+- `feature-gated-sweeps`
+- `spirv-validation`
+
 ## From `bench.yml` (run on every PR and push to main)
 - `criterion-regression`
 

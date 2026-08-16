@@ -234,15 +234,23 @@ impl Gate for GateCanon {
 
 /// The ref the caller asked to compare against, before it is resolved.
 fn requested_base(flag: Option<&str>) -> Option<String> {
-    let named = flag
-        .map(str::to_string)
+    flag.map(str::to_string)
         .or_else(|| std::env::var("GITHUB_BASE_REF").ok())
-        .filter(|reference| !reference.is_empty())?;
-    Some(if named.contains('/') {
-        named
-    } else {
-        format!("origin/{named}")
-    })
+        .filter(|reference| !reference.is_empty())
+}
+
+/// The ref that resolves in this checkout, given the name the caller supplied.
+///
+/// `GITHUB_BASE_REF` carries a bare branch name that only exists as a remote
+/// ref, so a bare name falls back to `origin/<name>`. Prefixing unconditionally
+/// told a caller who named a local revision to fetch a ref that was already in
+/// front of it.
+fn resolvable_base(root: &Path, named: &str) -> Option<String> {
+    if revision_exists(root, named) {
+        return Some(named.to_string());
+    }
+    let remote = format!("origin/{named}");
+    revision_exists(root, &remote).then_some(remote)
 }
 
 /// The revision every before-state is read from.
@@ -251,12 +259,10 @@ fn requested_base(flag: Option<&str>) -> Option<String> {
 /// request proposes to change. Without one it is `HEAD`, so the comparison is
 /// the uncommitted worktree, which is what a local caller is about to commit.
 fn base_revision(root: &Path, flag: Option<&str>) -> Option<String> {
-    let Some(reference) = requested_base(flag) else {
+    let Some(named) = requested_base(flag) else {
         return revision_exists(root, "HEAD").then(|| "HEAD".to_string());
     };
-    if !revision_exists(root, &reference) {
-        return None;
-    }
+    let reference = resolvable_base(root, &named)?;
     let output = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -641,6 +647,29 @@ fn constant_findings(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// WHY: `GITHUB_BASE_REF` carries a bare branch name that exists only as a
+    /// remote ref, so a bare name has to try `origin/<name>`. Prefixing before
+    /// looking told a caller who named a revision this checkout already holds
+    /// to go and fetch it, and the gate then reported one finding about the ref
+    /// instead of judging the tree.
+    #[test]
+    fn resolves_a_local_revision_before_reaching_for_the_remote() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("Fix: the xtask manifest sits one level below the workspace root")
+            .to_path_buf();
+        assert_eq!(
+            resolvable_base(&root, "HEAD"),
+            Some("HEAD".to_string()),
+            "a revision this checkout resolves is the base, unprefixed"
+        );
+        assert_eq!(
+            resolvable_base(&root, "a-branch-no-checkout-has"),
+            None,
+            "a name that resolves neither locally nor on origin has no base"
+        );
+    }
 
     /// WHY: the direction is decided by the constant's name, and a name that
     /// carries no direction is not a ratchet. Reading a tuning constant as a

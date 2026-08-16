@@ -9,6 +9,7 @@
 //! registered gate connected to a pinned baseline and a workflow.
 
 pub mod architecture_contract;
+pub mod backend_parity;
 pub mod bench;
 pub mod check_tier_deps;
 pub mod ci_contract;
@@ -23,6 +24,7 @@ pub mod dup_scan;
 pub mod evidence_paths;
 pub mod example_capability;
 pub mod feature_isolation;
+pub mod feature_msrv;
 pub mod file_size;
 pub mod finding_capability;
 #[cfg(test)]
@@ -40,9 +42,12 @@ pub mod lego_quick;
 pub mod lint_hygiene;
 pub mod lockfile;
 pub mod manifest_contract;
+pub mod metal_parity;
 pub mod op_names;
+pub mod oracle_sweeps;
 pub mod ownership;
 pub mod parity_testing;
+pub mod placement_predicate;
 pub mod platform_boundary;
 pub mod platform_docs;
 pub mod proptest_coverage;
@@ -50,12 +55,15 @@ pub mod public_api;
 pub mod public_api_paths;
 pub mod repo_hygiene;
 pub mod scan;
+pub mod script_ledger;
 pub mod shader_source;
 pub mod source_reachability;
 pub mod sweep;
+pub mod test_material;
 pub mod testing_guides;
 pub mod unification;
 pub mod use_paths;
+pub mod wire_determinism;
 pub mod workspace_build;
 
 use crate::gate::Gate;
@@ -67,6 +75,8 @@ use crate::gate::Gate;
 /// yields, which is why a gate cannot be registered and left unswept.
 pub static GATES: &[&dyn Gate] = &[
     &architecture_contract::ArchitectureContract,
+    &backend_parity::CudaParity,
+    &backend_parity::SpirvParity,
     &bench::BenchBaselines,
     &bench::BenchCoverage,
     &bench::BenchSmokeRuntime,
@@ -86,6 +96,7 @@ pub static GATES: &[&dyn Gate] = &[
     &evidence_paths::InvariantPaths,
     &example_capability::ExampleCapability,
     &feature_isolation::FeatureIsolation,
+    &feature_msrv::FeatureMsrv,
     &file_size::FileSize,
     &frozen_contract::BackendExtension,
     &frozen_contract::FrozenContracts,
@@ -111,8 +122,11 @@ pub static GATES: &[&dyn Gate] = &[
     &manifest_contract::InternalDepVersions,
     &manifest_contract::PathDepsResolve,
     &manifest_contract::WorkspaceMembership,
+    &metal_parity::MetalParity,
     &op_names::OpNames,
+    &oracle_sweeps::OracleSweeps,
     &parity_testing::ParityTestingIsolated,
+    &placement_predicate::PlacementPredicates,
     &platform_boundary::PlatformBoundary,
     &platform_docs::PlatformConsumerDocs,
     &proptest_coverage::ProptestCoverage,
@@ -120,12 +134,15 @@ pub static GATES: &[&dyn Gate] = &[
     &public_api_paths::PublicApiPaths,
     &repo_hygiene::RepoHygiene,
     &repo_hygiene::SingleBacklog,
+    &script_ledger::ScriptLedger,
     &shader_source::ShaderSource,
     &source_reachability::IncludeIsNotAModule,
     &source_reachability::SourceParses,
     &source_reachability::SourceReachability,
+    &test_material::TestMaterialPlacement,
     &testing_guides::TestingGuides,
     &unification::Unification,
+    &wire_determinism::WireDeterminism,
     &workspace_build::WorkspaceCheck,
     &workspace_build::WorkspaceClippy,
     &workspace_build::WorkspaceDocs,

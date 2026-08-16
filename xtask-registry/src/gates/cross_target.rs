@@ -40,7 +40,6 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
@@ -173,9 +172,8 @@ enum TripleResult {
 /// thing that must differ, and everything else has to be the build the tree
 /// declares in its own configuration or the answer is about a build nobody runs.
 fn check_triple(root: &Path, triple: &str) -> TripleResult {
-    let mut command = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string()));
+    let mut command = xtask::cargo_runner::command(root);
     command
-        .current_dir(root)
         .arg("check")
         .arg("--target")
         .arg(triple);

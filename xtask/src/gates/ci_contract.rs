@@ -193,6 +193,23 @@ impl Gate for CiRequired {
             }
         }
 
+        for (workflow, line) in sweep_workflows(&tree)? {
+            if blocking.contains(workflow.as_str()) {
+                continue;
+            }
+            report.find(Finding::at(
+                &format!(".github/workflows/{workflow}"),
+                line,
+                format!(
+                    "`{workflow}` runs the gate sweep on a pull request and no section of \
+                     {REQUIRED} makes it blocking"
+                ),
+                "list the workflow's sweep jobs under a `## From `<workflow>`` heading in \
+                 .github/CI_REQUIRED.md; every registered gate is judged by this workflow, so \
+                 leaving it advisory lets a pull request merge with the whole registry red",
+            ));
+        }
+
         for section in &sections {
             let path = format!(".github/workflows/{}", section.workflow);
             if !tree.exists(&path) {
@@ -233,6 +250,65 @@ impl Gate for CiRequired {
 
         Ok(report)
     }
+}
+
+/// Every workflow that runs the gate sweep on a pull request, with the line it
+/// runs it on.
+///
+/// Read from the workflow set rather than from a name, because the rule is that
+/// whichever workflow judges the registry on a change is the one branch
+/// protection has to wait for. A gate registered in a subset a workflow runs is
+/// exactly as binding as that workflow's status context, and a sweep nothing
+/// blocks on lets a pull request merge with every gate red.
+///
+/// A workflow that runs the sweep on a tag or on demand is not held to this: it
+/// judges a release rather than a change, and it reports no context a pull
+/// request could wait for.
+fn sweep_workflows(tree: &Tree) -> Result<Vec<(String, u32)>, GateError> {
+    let mut found = Vec::new();
+    for path in tree.paths() {
+        let relative = path.to_string_lossy();
+        let Some(name) = workflow_file(&relative) else {
+            continue;
+        };
+        let text = tree.read(path)?;
+        let triggers = text.split("\njobs:").next().unwrap_or(&text);
+        if !triggers.lines().any(|line| line.trim() == "pull_request:") {
+            continue;
+        }
+        if let Some((number, _)) = crate::gates::scan::numbered(&text)
+            .into_iter()
+            .find(|(_, line)| line.contains("xtask") && invokes_sweep(line))
+        {
+            found.push((name, number));
+        }
+    }
+    Ok(found)
+}
+
+/// The file name of a workflow, for a path that is one.
+fn workflow_file(relative: &str) -> Option<String> {
+    let name = relative.strip_prefix(".github/workflows/")?;
+    if name.contains('/') || !(name.ends_with(".yml") || name.ends_with(".yaml")) {
+        return None;
+    }
+    Some(name.to_string())
+}
+
+/// Whether one command line invokes the `gates` subcommand.
+fn invokes_sweep(line: &str) -> bool {
+    let mut rest = line;
+    while let Some(at) = rest.find("-- ") {
+        rest = &rest[at + 3..];
+        let token: String = rest
+            .chars()
+            .take_while(|character| character.is_ascii_alphanumeric() || *character == '-')
+            .collect();
+        if token == "gates" {
+            return true;
+        }
+    }
+    false
 }
 
 /// One `## From `<workflow>`` section of the required-context document.
@@ -717,5 +793,54 @@ mod tests {
             trigger_findings("demo.yml", WORKFLOW).is_empty(),
             "the live trigger shape is the passing one"
         );
+    }
+
+    /// WHY: the registry is only as binding as the status context that reports
+    /// it. `gates.yml` ran every registered gate on every pull request and was
+    /// named nowhere in the required document, so a pull request could merge
+    /// with the whole registry red. A release lane that runs the same sweep on a
+    /// tag is not a pull request context and is deliberately not held to this.
+    #[test]
+    fn a_pull_request_sweep_is_told_from_a_release_sweep() {
+        assert!(invokes_sweep("run: ./cargo_full run -p xtask -- gates --subset cat-a"));
+        assert!(invokes_sweep(
+            "run: ./cargo_full run -q -p xtask --bin xtask -- gates"
+        ));
+        assert!(
+            !invokes_sweep("run: ./cargo_full run -p xtask -- gate-canon"),
+            "one gate is not the sweep"
+        );
+        assert!(
+            !invokes_sweep("run: ./cargo_full test -- --nocapture"),
+            "a test argument is not a subcommand"
+        );
+        assert_eq!(
+            workflow_file(".github/workflows/gates.yml"),
+            Some("gates.yml".to_string())
+        );
+        assert_eq!(workflow_file(".github/workflows-paused/book.yml"), None);
+        assert_eq!(workflow_file(".github/workflows/actions/x/action.yml"), None);
+
+        let root = crate::checkout::checkout_root();
+        let tree = Tree::open(&root).expect("Fix: the checkout must be listable");
+        let document = tree
+            .read(REQUIRED)
+            .expect("Fix: the document must be readable");
+        let blocking: BTreeSet<String> = required_sections(&document)
+            .into_iter()
+            .map(|section| section.workflow)
+            .collect();
+        let sweeps = sweep_workflows(&tree).expect("Fix: the workflows must be readable");
+        assert!(
+            !sweeps.is_empty(),
+            "some workflow must run the sweep on a pull request"
+        );
+        for (workflow, line) in sweeps {
+            assert!(
+                blocking.contains(&workflow),
+                "{workflow}:{line} runs the sweep on a pull request and {REQUIRED} does not \
+                 make it blocking"
+            );
+        }
     }
 }

@@ -6,6 +6,12 @@
 //! script that no workflow invoked. `.github/CI_REQUIRED.md` required two
 //! workflows that were never files.
 //!
+//! A markdown link target is the same claim in another grammar: a reader clicks
+//! it. Reading only spans and commands left `[Architecture](docs/ARCHITECTURE.md)`
+//! in `CONTRIBUTING.md` held by nothing, so a deleted page broke every link to
+//! it in silence. A target inside a fence is an example, and a target inside a
+//! code span is already read as a span, so neither is read twice.
+//!
 //! The document set is every tracked Markdown file. Restricting it to the root,
 //! `.github/` and `docs/` left a crate's own `ARCHITECTURE.md`, `CONFIG.md`,
 //! `SKILL.md` and `benches/RESULTS.md` unread, and those are where a citation of
@@ -80,8 +86,13 @@ const OUTPUT_FLAGS: &[&str] = &[
 /// Fence languages whose body is a command example.
 const COMMAND_LANGUAGES: &[&str] = &["console", "bash", "sh", "shell"];
 
-/// The one document whose whole body is a generated table of other documents.
-const GENERATED_INDEX: &str = "docs/INDEX.md";
+/// The generated navigation, whose every claim its generator writes.
+///
+/// `docs-check` renders both from the documentation manifest and judges their
+/// links after writing them, so a stale copy never blocks the regeneration that
+/// repairs it. Reading them here would report the stale copy's dead link as a
+/// prose defect and send the reader to hand-edit a generated file.
+const GENERATED_NAVIGATION: &[&str] = &["docs/INDEX.md", "docs/SUMMARY.md"];
 
 /// What an unresolved reference costs, and how to close it.
 const FIX: &str = "publish the referenced input, correct the path, or delete the claim; an output destination belongs behind --output or --write, which this gate does not follow";
@@ -93,10 +104,33 @@ struct Reference {
     line: u32,
     raw: String,
     resolved: String,
-    source: &'static str,
+    source: Source,
 }
 
-/// Every path-like code span and command input resolves to a published path.
+/// The grammar one reference was written in.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum Source {
+    /// A single-backtick span in prose.
+    CodeSpan,
+    /// An inline-link or reference-definition target.
+    Link,
+    /// A token of a command example.
+    Command,
+}
+
+impl Source {
+    /// How a finding names the grammar.
+    fn label(self) -> &'static str {
+        match self {
+            Self::CodeSpan => "code span",
+            Self::Link => "link target",
+            Self::Command => "command",
+        }
+    }
+}
+
+/// Every path-like code span, link target and command input resolves to a
+/// published path.
 pub struct DocsReferences;
 
 impl Gate for DocsReferences {
@@ -105,7 +139,7 @@ impl Gate for DocsReferences {
     }
 
     fn help(&self) -> &'static str {
-        "Hold every path a published document names in a code span or a command example to a published path"
+        "Hold every path a published document names in a code span, a link target or a command example to a published path"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -128,7 +162,7 @@ impl Gate for DocsReferences {
             ));
         }
         report.note(format!(
-            "{} path-like code span(s) and command input(s) across {} document(s)",
+            "{} path-like code span(s), link target(s) and command input(s) across {} document(s)",
             references.len(),
             documents.len()
         ));
@@ -144,7 +178,8 @@ fn judge(tree: &Tree, reference: &Reference) -> Option<String> {
     if reference.resolved == OUTSIDE {
         return Some(format!(
             "{} `{}` names a path outside this repository",
-            reference.source, reference.raw
+            reference.source.label(),
+            reference.raw
         ));
     }
     if reference.resolved.contains('*') || reference.resolved.contains('?') {
@@ -153,7 +188,9 @@ fn judge(tree: &Tree, reference: &Reference) -> Option<String> {
         } else {
             Some(format!(
                 "{} `{}` expands to `{}`, which matches nothing published",
-                reference.source, reference.raw, reference.resolved
+                reference.source.label(),
+                reference.raw,
+                reference.resolved
             ))
         };
     }
@@ -161,11 +198,15 @@ fn judge(tree: &Tree, reference: &Reference) -> Option<String> {
         Resolution::Listed => None,
         Resolution::Excluded => Some(format!(
             "{} `{}` resolves to `{}`, which an ignore rule excludes from the checkout",
-            reference.source, reference.raw, reference.resolved
+            reference.source.label(),
+            reference.raw,
+            reference.resolved
         )),
         Resolution::Missing => Some(format!(
             "{} `{}` resolves to `{}`, which the checkout does not carry",
-            reference.source, reference.raw, reference.resolved
+            reference.source.label(),
+            reference.raw,
+            reference.resolved
         )),
     }
 }
@@ -283,33 +324,135 @@ fn collect(
 ) -> Result<(), GateError> {
     let relative = document.to_string_lossy().to_string();
     let text = tree.read(document)?;
-    if relative != GENERATED_INDEX {
+    if !GENERATED_NAVIGATION.contains(&relative.as_str()) {
         for (line, span) in code_spans(&text) {
-            if let Some(resolved) = resolve(tree, document, &span, false) {
-                references.insert(Reference {
-                    document: relative.clone(),
-                    line,
-                    raw: span,
-                    resolved,
-                    source: "code span",
-                });
-            }
+            record(
+                tree,
+                document,
+                &relative,
+                line,
+                span,
+                Source::CodeSpan,
+                references,
+            );
+        }
+        for (line, target) in link_targets(&text) {
+            record(
+                tree,
+                document,
+                &relative,
+                line,
+                target,
+                Source::Link,
+                references,
+            );
         }
     }
     for (line, command) in command_lines(&text) {
         for token in command_path_tokens(tree, &command) {
-            if let Some(resolved) = resolve(tree, document, &token, true) {
-                references.insert(Reference {
-                    document: relative.clone(),
-                    line,
-                    raw: token,
-                    resolved,
-                    source: "command",
-                });
-            }
+            record(
+                tree,
+                document,
+                &relative,
+                line,
+                token,
+                Source::Command,
+                references,
+            );
         }
     }
     Ok(())
+}
+
+/// Record one reference, when the token it carries names a path at all.
+#[allow(clippy::too_many_arguments)]
+fn record(
+    tree: &Tree,
+    document: &Path,
+    relative: &str,
+    line: u32,
+    raw: String,
+    source: Source,
+    references: &mut BTreeSet<Reference>,
+) {
+    let Some(resolved) = resolve(tree, document, &raw, source) else {
+        return;
+    };
+    references.insert(Reference {
+        document: relative.to_string(),
+        line,
+        raw,
+        resolved,
+        source,
+    });
+}
+
+/// Every markdown link target, with the line it sits on.
+///
+/// Both grammars a document links with: the inline `[text](target)` form and the
+/// `[label]: target` definition. A fence body is an example rather than a link,
+/// and a target already inside a code span is read as a span, so a line is split
+/// on backticks and only the segments outside them are read. Splitting per line
+/// rather than across the file is what a span is: a span that opens on one line
+/// and closes on another is not a span in Markdown.
+///
+/// A title after the target (`(a.md "Title")`) and an angle-bracketed target
+/// (`(<a.md>)`) are both stripped, so the token handed on is the destination.
+fn link_targets(text: &str) -> Vec<(u32, String)> {
+    let mut targets = Vec::new();
+    let mut in_fence = false;
+    for (index, line) in text.lines().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            in_fence = !in_fence;
+            continue;
+        }
+        if in_fence {
+            continue;
+        }
+        let number = u32::try_from(index + 1).unwrap_or(u32::MAX);
+        for (position, segment) in line.split('`').enumerate() {
+            if position % 2 == 1 {
+                continue;
+            }
+            for target in segment_targets(segment) {
+                targets.push((number, target));
+            }
+        }
+    }
+    targets
+}
+
+/// Every link target one segment of a line carries.
+fn segment_targets(segment: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    let mut rest = segment;
+    while let Some(open) = rest.find("](") {
+        rest = &rest[open + 2..];
+        let end = rest.find(')').unwrap_or(rest.len());
+        let (target, tail) = rest.split_at(end);
+        targets.push(link_target(target));
+        rest = tail;
+    }
+    let trimmed = segment.trim_start();
+    if trimmed.starts_with('[') {
+        if let Some((label, definition)) = trimmed.split_once("]:") {
+            if !label.contains(']') {
+                targets.push(link_target(definition));
+            }
+        }
+    }
+    targets.retain(|target| !target.is_empty());
+    targets
+}
+
+/// The destination a link target names, without its title or angle brackets.
+fn link_target(raw: &str) -> String {
+    let destination = raw.trim().split_whitespace().next().unwrap_or("");
+    destination
+        .trim_start_matches('<')
+        .trim_end_matches('>')
+        .to_string()
 }
 
 /// Every single-backtick code span, with the line it starts on.
@@ -495,7 +638,7 @@ fn command_path_tokens(tree: &Tree, line: &str) -> Vec<String> {
         if token.starts_with('-') || (token.contains('=') && !relative_prefix) {
             continue;
         }
-        if is_path_candidate(tree, &token) {
+        if is_path_candidate(tree, &token, Source::Command) {
             paths.push(token);
         }
     }
@@ -563,7 +706,12 @@ fn has_existing_root_prefix(tree: &Tree, token: &str) -> bool {
 }
 
 /// Whether a token is a path claim rather than prose, a URL or Rust syntax.
-fn is_path_candidate(tree: &Tree, raw: &str) -> bool {
+///
+/// A link target names a destination by grammar, so a sibling page reached as
+/// `[code style](code-style.md)` is a claim with no slash in it. A slashless name
+/// in prose is not: `mod.rs` in a sentence names a kind of file, and resolving it
+/// against the writer's own directory would report a path nobody claimed.
+fn is_path_candidate(tree: &Tree, raw: &str, source: Source) -> bool {
     let token = path_token(raw);
     if token.is_empty() || token.chars().any(char::is_whitespace) {
         return false;
@@ -586,6 +734,9 @@ fn is_path_candidate(tree: &Tree, raw: &str) -> bool {
         return true;
     }
     if ROOT_PREFIXES.iter().any(|prefix| token.starts_with(prefix)) {
+        return true;
+    }
+    if source == Source::Link && PATH_SUFFIXES.iter().any(|suffix| token.ends_with(suffix)) {
         return true;
     }
     if token.contains('/') && PATH_SUFFIXES.iter().any(|suffix| token.ends_with(suffix)) {
@@ -630,9 +781,9 @@ fn owning_member(tree: &Tree, document: &Path) -> Option<PathBuf> {
 /// in order of specificity and the first published one wins; when none resolves
 /// the most specific is reported, because that is the path the writer's own
 /// directory makes of it.
-fn resolve(tree: &Tree, document: &Path, raw: &str, from_command: bool) -> Option<String> {
+fn resolve(tree: &Tree, document: &Path, raw: &str, source: Source) -> Option<String> {
     let token = path_token(raw);
-    if !is_path_candidate(tree, &token) {
+    if !is_path_candidate(tree, &token, source) {
         return None;
     }
     let document_parent = document.parent().unwrap_or(Path::new(""));
@@ -657,7 +808,7 @@ fn resolve(tree: &Tree, document: &Path, raw: &str, from_command: bool) -> Optio
     {
         candidates.push(tree.absolute(&token));
     }
-    if from_command && token.starts_with("./") {
+    if source == Source::Command && token.starts_with("./") {
         candidates.push(tree.absolute(&token[2..]));
     }
     candidates.push(tree.absolute(document_parent).join(&token));
@@ -708,6 +859,10 @@ fn normalize(path: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    //! The extractors are crate-private: an integration test reaches only the
+    //! whole report, which cannot say whether a link target was read at all or
+    //! read and resolved.
+
     use super::*;
 
     #[test]
@@ -773,5 +928,44 @@ mod tests {
             normalize(Path::new("/a/b/../c/./d")),
             PathBuf::from("/a/c/d")
         );
+    }
+
+    #[test]
+    fn an_inline_link_and_a_reference_definition_are_both_read() {
+        let text = "see [Architecture](docs/ARCHITECTURE.md) and [b][ref]\n\n[ref]: docs/b.md\n";
+        assert_eq!(
+            link_targets(text),
+            vec![
+                (1, "docs/ARCHITECTURE.md".to_string()),
+                (3, "docs/b.md".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn a_link_inside_a_fence_or_a_code_span_is_not_a_link_target() {
+        assert!(link_targets("```md\n[a](docs/a.md)\n```\n").is_empty());
+        assert!(link_targets("prose `[a](docs/a.md)` more\n").is_empty());
+    }
+
+    #[test]
+    fn a_title_and_an_angle_bracketed_target_are_stripped_and_a_fragment_is_not_a_path() {
+        let tree = Tree::open(&crate::checkout::checkout_root()).expect("the checkout lists");
+        assert_eq!(
+            link_targets("[a](docs/a.md \"Title\") [b](<docs/b.md>) [c](#heading)\n"),
+            vec![
+                (1, "docs/a.md".to_string()),
+                (1, "docs/b.md".to_string()),
+                (1, "#heading".to_string())
+            ]
+        );
+        assert!(!is_path_candidate(&tree, "#heading", Source::Link));
+    }
+
+    #[test]
+    fn a_slashless_page_name_is_a_claim_in_a_link_and_prose_in_a_span() {
+        let tree = Tree::open(&crate::checkout::checkout_root()).expect("the checkout lists");
+        assert!(is_path_candidate(&tree, "code-style.md", Source::Link));
+        assert!(!is_path_candidate(&tree, "code-style.md", Source::CodeSpan));
     }
 }

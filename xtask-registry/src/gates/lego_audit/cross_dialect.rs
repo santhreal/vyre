@@ -137,16 +137,16 @@ pub(super) fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
 /// module is never in that set to begin with. Five rows named single-file
 /// modules or a path that no longer exists and were removed for that reason:
 /// `region`, `tensor_ref`, `buffer_names`, `descriptor` and `test_support`.
-/// `check_0_every_exemption_is_live` holds each remaining row to an existing
-/// directory, so the next row that goes the same way fails instead of reading
-/// as coverage.
+/// `check_0_every_exemption_is_live` holds each remaining row to a directory
+/// that still carries Rust source, so the next row that goes the same way fails
+/// instead of reading as coverage.
 pub(super) const SHARED_PLUMBING_DIRS: [&str; 1] = ["builder"];
 
-/// Shared-plumbing rows that name no directory under `libs_src`.
+/// Shared-plumbing rows whose directory under `libs_src` carries no Rust source.
 pub(super) fn dead_plumbing_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
     SHARED_PLUMBING_DIRS
         .into_iter()
-        .filter(|dir| !libs_src.join(dir).is_dir())
+        .filter(|dir| !structure_gate::source_scan::carries_rust_source(&libs_src.join(dir)))
         .collect()
 }
 
@@ -195,11 +195,11 @@ pub(super) fn is_substrate_target(name: &str) -> bool {
     KERNEL_SUBSTRATE_DIRS.contains(&name)
 }
 
-/// Kernel-substrate rows that name no directory under `libs_src`.
+/// Kernel-substrate rows whose directory under `libs_src` carries no Rust source.
 pub(super) fn dead_substrate_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
     KERNEL_SUBSTRATE_DIRS
         .into_iter()
-        .filter(|dir| !libs_src.join(dir).is_dir())
+        .filter(|dir| !structure_gate::source_scan::carries_rust_source(&libs_src.join(dir)))
         .collect()
 }
 
