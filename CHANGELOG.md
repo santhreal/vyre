@@ -4609,6 +4609,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   compiling to the selections that have no row yet, so recording one decision
   no longer costs a sweep of the whole axis, which is how the recorded set went
   stale.
+- The feature-msrv gate writes only the advertised toolchain version on stdout
+  when invoked with --print-toolchain, returning cleanly without printing notes
+  or finding counts.
 - The shared gate fixture checkout states the corrective action when a
   temporary directory or git is unavailable, and the recorded backend
   feature-marker matrix matches what the tree produces.

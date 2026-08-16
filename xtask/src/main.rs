@@ -44,6 +44,9 @@ fn main() {
             process::exit(1);
         }
         Ok(report) => {
+            if ctx.has("--print-toolchain") && report.findings.is_empty() {
+                return;
+            }
             print!("{}", gate::render(name, &report));
             // A finding is a failure. There is no informational mode: a gate
             // that reported a problem and exited 0 is how 32 gates judged
