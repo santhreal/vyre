@@ -1,0 +1,5 @@
+name = "vyre-registry-link"
+concern = "Own every inventory registry link anchor, report which sources a build links, and assert that each linked source reached the registry it submits into."
+pages = { spec = "vyre-registry-link/SPEC.md", readme = "vyre-registry-link/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-metal", "vyre-driver-reference", "vyre-driver-spirv", "vyre-driver-wgpu", "vyre-foundation", "vyre-libs", "vyre-primitives"]

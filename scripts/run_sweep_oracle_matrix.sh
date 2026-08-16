@@ -22,8 +22,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
 
 mapfile -t ROSTER < <(python3 scripts/lib/sweep_targets.py "$ROOT" matrix)
 if ((${#ROSTER[@]} == 0)); then
@@ -62,10 +60,10 @@ for crate in "${CRATES[@]}"; do
     echo
     if [[ -n "$features" ]]; then
         echo "▶ $crate: $count target(s), --features $features"
-        "$CARGO_RUNNER" test -p "$crate" --features "$features" "${args[@]}"
+        ./cargo_full test -p "$crate" --features "$features" "${args[@]}"
     else
         echo "▶ $crate: $count target(s), default features"
-        "$CARGO_RUNNER" test -p "$crate" "${args[@]}"
+        ./cargo_full test -p "$crate" "${args[@]}"
     fi
     total=$((total + count))
 done

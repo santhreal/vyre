@@ -1,0 +1,4 @@
+path = "scripts/check_external_ir_extension_ci.sh"
+state = "holds_logic"
+destination = "example-capability"
+reason = "counts the demo LOC, requires its own [workspace] table and builds it with --locked outside the workspace"

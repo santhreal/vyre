@@ -1,0 +1,5 @@
+name = "vyre-lower"
+concern = "Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms."
+pages = { spec = "vyre-lower/SPEC.md", readme = "vyre-lower/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation"]

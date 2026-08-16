@@ -1,0 +1,5 @@
+name = "vyre-aot"
+concern = "Package the same megakernel artifact class ahead of time. Not a second compile path. No workspace crate currently depends on this one."
+pages = { spec = "vyre-aot/SPEC.md", readme = "vyre-aot/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-foundation", "vyre-megakernel", "vyre-primitives", "vyre-spec"]

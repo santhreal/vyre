@@ -22,8 +22,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
 
 SHARD="${1:-${VYRE_VOLUME_SHARD:-0}}"
 SHARDS="${2:-${VYRE_VOLUME_SHARDS:-4}}"
@@ -90,10 +88,10 @@ for crate in "${CRATES[@]}"; do
     features="$(tr ',' '\n' <<< "${CRATE_FEATURES[$crate]}" | sed '/^$/d' | sort -u | paste -sd,)"
     if [[ -n "$features" ]]; then
         echo "  $crate: $count target(s), --features $features"
-        "$CARGO_RUNNER" test -p "$crate" --features "$features" "${args[@]}" -q
+        ./cargo_full test -p "$crate" --features "$features" "${args[@]}" -q
     else
         echo "  $crate: $count target(s), default features"
-        "$CARGO_RUNNER" test -p "$crate" "${args[@]}" -q
+        ./cargo_full test -p "$crate" "${args[@]}" -q
     fi
 done
 

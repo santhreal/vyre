@@ -1,0 +1,12 @@
+lane = "conform-conform-cpu"
+workflow = ".github/workflows/conform.yml"
+job = "conform-cpu"
+state = "live"
+required_status = "Conformance / Vyre conformance CPU"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = "./cargo_full test -p vyre-conform" },
+  { command = "./cargo_full test -p vyre-primitives --features hardware,cpu-parity,inventory-registry --test registry_oob_clean" },
+  { command = "./cargo_full test -p vyre-libs --features cpu-parity,graph --test sweep_graph_motif_oracle_matrix --test sweep_graph_path_reconstruct_oracle_matrix --test sweep_graph_csr_bidirectional_oracle_matrix --test sweep_graph_csr_forward_traverse_volume_oracle_matrix --test sweep_graph_csr_backward_traverse_volume_oracle_matrix --test sweep_graph_reachable_volume_oracle_matrix --test sweep_graph_csr_forward_or_changed_volume_oracle_matrix --test sweep_graph_persistent_bfs_volume_oracle_matrix --test sweep_graph_scc_decompose_volume_oracle_matrix --test graph_fixpoint_adversarial_generated --test csr_backward_or_changed_ir_fixpoint --test graph_builders_emit_valid_ir" },
+  { gate = "conformance-matrix", args = ["--output", "release/evidence/conformance/conformance-matrix.json"] },
+]
