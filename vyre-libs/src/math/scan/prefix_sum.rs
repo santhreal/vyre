@@ -7,7 +7,7 @@
 //! chooses.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::{GeneratorRef, Node, Program};
+use vyre_foundation::ir::{Ident, Node, Program};
 use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
@@ -63,13 +63,7 @@ fn compose_scan_primitive(child_id: &'static str, program: Program) -> Program {
     };
     let tagged = vec![wrap_anonymous_region(
         OP_ID,
-        vec![wrap_child_region(
-            child_id,
-            GeneratorRef {
-                name: OP_ID.to_string(),
-            },
-            body,
-        )],
+        vec![wrap_child_region(child_id, Ident::from(OP_ID), body)],
     )];
     program.with_rewritten_wrapped_entry(tagged)
 }
