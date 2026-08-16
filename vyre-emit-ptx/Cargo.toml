@@ -34,5 +34,6 @@ nvrtc = []
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-test-support.workspace = true
 vyre-emit-naga = { path = "../vyre-emit-naga" }
+naga = { workspace = true }
 cudarc = { workspace = true }
 proptest.workspace = true

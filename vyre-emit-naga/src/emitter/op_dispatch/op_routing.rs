@@ -720,7 +720,7 @@ impl BodyBuilder<'_> {
             // the continuation resume instruction.
             OpDispatchRoute::Resume => Ok(()),
             OpDispatchRoute::Barrier => with_route_kind!(op, route, KernelOpKind::Barrier { ordering } => {
-                let barrier = barrier_flags(*ordering)?;
+                let barrier = barrier_flags(*ordering, body)?;
                 self.function
                     .body
                     .push(Statement::Barrier(barrier), Span::UNDEFINED);
