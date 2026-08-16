@@ -212,6 +212,7 @@ fn char_class_with_source_type(
 /// Reference oracle: classify each source byte through the lookup table.
 ///
 /// Pure function, exposed for fixture generation + harness oracles.
+#[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
     source

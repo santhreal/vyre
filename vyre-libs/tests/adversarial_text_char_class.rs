@@ -1,4 +1,6 @@
 //! Adversarial oracle tests for `text::char_class` reference mapping.
+#![cfg(all(feature = "text", feature = "cpu-parity"))]
+
 mod text_char_class_runner;
 
 use text_char_class_runner::run_packed_u8_program;

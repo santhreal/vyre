@@ -36,6 +36,13 @@ pub const NUCLEUS_SELECT_OP_ID: &str = "vyre-libs::llm::nucleus_select";
 /// Canonical op id of the composed sampler.
 pub const SAMPLE_TOKEN_OP_ID: &str = "vyre-libs::llm::sample_token";
 
+/// Rescaled logit row handed from the elementwise stage to the selection.
+const ADJUSTED_BUFFER: &str = "__vyre_llm_sampling_adjusted";
+/// Candidate token ids the selection keeps for the draw.
+const CANDIDATES_BUFFER: &str = "__vyre_llm_sampling_candidates";
+/// Normalized candidate weights the draw accumulates mass over.
+const WEIGHTS_BUFFER: &str = "__vyre_llm_sampling_weights";
+
 /// Rejected sampling parameters.
 #[derive(Debug, Clone, PartialEq, Error)]
 pub enum SamplingError {
@@ -115,9 +122,9 @@ impl TokenSampler<'_> {
     /// when the stages cannot share one dispatch.
     pub fn program(&self) -> Result<Program, SamplingError> {
         self.check()?;
-        let adjusted = "sample_adjusted";
-        let selected = "sample_candidates";
-        let weights = "sample_weights";
+        let adjusted = ADJUSTED_BUFFER;
+        let selected = CANDIDATES_BUFFER;
+        let weights = WEIGHTS_BUFFER;
 
         let adjust = attribute_child(
             SAMPLE_TOKEN_OP_ID,

@@ -17,9 +17,9 @@
 //! fourth kind of move added to the base fails here until its launch is
 //! decided, because a move whose grid nobody chose inherits the inferred one.
 
+mod harness;
+
 use std::collections::BTreeSet;
-use std::fs;
-use std::path::PathBuf;
 
 use vyre_foundation::ir::{DataType, Program};
 use vyre_libs::llm::paged_kv::{
@@ -57,25 +57,10 @@ fn lanes(grid: [u32; 3]) -> u32 {
 /// The variant set is the axis this file judges, and reading it from the base
 /// is what makes a new kind of move fail here instead of joining silently.
 fn declared_index_map_variants() -> BTreeSet<String> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/nn/attention/layout.rs");
-    let source = fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("Fix: the layout base must be readable: {error}"));
-    let body = source
-        .split_once("enum IndexMap {")
-        .unwrap_or_else(|| panic!("Fix: {} no longer declares `enum IndexMap`", path.display()))
-        .1
-        .split_once("\n}")
-        .unwrap_or_else(|| panic!("Fix: the IndexMap declaration is unterminated"))
-        .0;
-    body.lines()
-        .filter_map(|line| {
-            let name = line.trim().strip_suffix(" {")?;
-            name.chars()
-                .next()
-                .is_some_and(char::is_uppercase)
-                .then(|| name.to_string())
-        })
-        .collect()
+    harness::declared_enum_variants(
+        &harness::crate_file("src/nn/attention/layout.rs"),
+        "enum IndexMap {",
+    )
 }
 
 /// Every layout move a public entry point emits, by the index map it uses.
@@ -172,6 +157,37 @@ fn every_declared_index_map_variant_has_a_launched_move() {
     assert_eq!(
         declared, exercised,
         "Fix: every index map the layout base declares needs a move here whose launch is judged."
+    );
+}
+
+/// WHY: the coverage assertion above is worth exactly what its parser sees. A
+/// parser keyed on the struct-like form reports a tuple or unit variant as
+/// absent, and the set comparison then agrees with itself while the axis it
+/// judges has grown. This states the parser against all three variant forms so
+/// a blind spot fails here rather than passing there.
+#[test]
+fn the_variant_parser_reads_every_declaration_form() {
+    let source = r"pub enum Shape {
+    /// Struct-like.
+    Named { field: u32 },
+    /// Tuple.
+    Positional(u32, String),
+    /// Unit.
+    Bare,
+    #[doc(hidden)]
+    Multiline {
+        Field: u32,
+    },
+}
+";
+    let declared = harness::declared_enum_variants(source, "enum Shape {");
+    assert_eq!(
+        declared,
+        ["Bare", "Multiline", "Named", "Positional"]
+            .into_iter()
+            .map(str::to_string)
+            .collect::<BTreeSet<_>>(),
+        "Fix: the variant parser reads one declaration form and calls the others absent."
     );
 }
 

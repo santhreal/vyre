@@ -12,8 +12,9 @@
 //! their sum. It does not catch a wrong `count()` on a buffer, since both sides
 //! read the same declaration.
 
+mod harness;
+
 use std::collections::BTreeSet;
-use std::path::Path;
 
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_libs::nn::attention::{
@@ -53,27 +54,10 @@ fn assert_plan_reports_its_scratch(plan: &FlashAttentionWorkPlan, program: &Prog
 /// failure as having no coverage check: a third kernel would ship with its
 /// shared-memory accounting unjudged.
 fn declared_kernel_kinds() -> BTreeSet<String> {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/nn/attention/planner.rs");
-    let source = std::fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", path.display()));
-    let body = source
-        .split_once("pub enum FlashAttentionKernelKind {")
-        .unwrap_or_else(|| {
-            panic!(
-                "Fix: {} no longer declares `pub enum FlashAttentionKernelKind`",
-                path.display()
-            )
-        })
-        .1;
-    let body = body
-        .split_once("\n}")
-        .unwrap_or_else(|| panic!("Fix: unterminated FlashAttentionKernelKind body"))
-        .0;
-    body.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with("///") && !line.starts_with('#'))
-        .map(|line| line.trim_end_matches(',').to_string())
-        .collect()
+    harness::declared_enum_variants(
+        &harness::crate_file("src/nn/attention/planner.rs"),
+        "pub enum FlashAttentionKernelKind {",
+    )
 }
 
 #[test]

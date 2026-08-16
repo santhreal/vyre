@@ -178,6 +178,10 @@ impl PagedKvCache<'_> {
 /// contiguous key-value tensor, and paging is a property of where those tokens
 /// are stored rather than of the attention itself.
 ///
+/// The block table is data, so its entries carry the same range precondition
+/// documented on [`paged_kv_append`]: an entry at or past `blocks` reads past
+/// the end of the cache buffer, and no guard here can bound it.
+///
 /// # Errors
 ///
 /// Returns `Err` for a zero dimension, a non-float dtype, a window longer than
@@ -229,6 +233,14 @@ pub fn paged_kv_gather(
 /// one dispatch. The emitted program cannot check this: the table is data, the
 /// guard bounds the chunk rather than the cache, and there is no read of the
 /// destination to compare against.
+///
+/// Range is the second precondition and a separate failure. Every entry of the
+/// block table must name a physical block below `blocks`. The guard bounds the
+/// chunk index, which decides how many invocations store, and the table lookup
+/// then decides where; an entry at or past `blocks` addresses past the end of
+/// the cache buffer. [`paged_kv_gather`] reads through the same lookup and has
+/// the same requirement, with an out-of-range read in place of a store. Both
+/// belong to whoever allocates blocks, because the table is an input here.
 ///
 /// # Errors
 ///

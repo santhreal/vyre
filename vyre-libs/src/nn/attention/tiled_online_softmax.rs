@@ -438,7 +438,6 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&[0.0_f32; 9]),
                 vyre_primitives::wire::pack_f32_slice(&[0.0_f32; 9]),
                 vyre_primitives::wire::pack_f32_slice(&[0.0_f32, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
-                vec![0u8; 9 * core::mem::size_of::<f32>()],
             ]]
         }),
         Some(|| {

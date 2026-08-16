@@ -1551,7 +1551,7 @@
           },
           {
             "binding": 2,
-            "name": "sample_adjusted",
+            "name": "__vyre_llm_sampling_adjusted",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "F32",
@@ -1560,7 +1560,7 @@
           },
           {
             "binding": 3,
-            "name": "sample_candidates",
+            "name": "__vyre_llm_sampling_candidates",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "U32",
@@ -1569,7 +1569,7 @@
           },
           {
             "binding": 4,
-            "name": "sample_weights",
+            "name": "__vyre_llm_sampling_weights",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "F32",
