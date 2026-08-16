@@ -240,7 +240,7 @@ impl ProgramGraph {
                 dtype: buffer.element(),
                 shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
                 access: buffer.access(),
-                lifetime: if buffer.is_output() || buffer.access() == BufferAccess::WriteOnly {
+                lifetime: if buffer.is_backend_allocated_output() {
                     ValueLifetime::Output
                 } else if buffer.access() == BufferAccess::ReadWrite {
                     ValueLifetime::Retained
