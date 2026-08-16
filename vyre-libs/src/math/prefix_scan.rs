@@ -14,26 +14,30 @@
 //!
 //! # Algorithm
 //!
-//! Hillis-Steele scan over `N` elements, O(N log N) work,
-//! `log2(N)` rounds. One invocation per output lane. Round `k`:
+//! Work-efficient Blelloch scan over `N` elements in one workgroup of at most
+//! [`SCAN_WORKGROUP_LANES`] lanes. A lane owns a contiguous run of
+//! `ceil(N / lanes)` elements: it sums its run, the workgroup scans the run
+//! sums with [`reduce::workgroup_tree`](crate::reduce::workgroup_tree), and the
+//! lane replays its run from the resulting offset.
 //!
 //! ```text
-//!   if lane >= 2^k:
-//!       out[lane] = in[lane - 2^k] op in[lane]
-//!   else:
-//!       out[lane] = in[lane]
+//!   stage:   scratch[lane] = sum(in[lane*r .. lane*r+r])
+//!   sweep:   scratch      = exclusive scan of the run sums
+//!   replay:  out[lane*r+k] = scratch[lane] + sum(in[lane*r ..= lane*r+k])
 //! ```
 //!
-//! `op` is `+` for sum-scan; the emitted Program ping-pongs through
-//! two workgroup-local scratch buffers with a barrier after every
-//! round. The public builder accepts any `N` in `1..=1024` and pads
-//! the workgroup to the next power of two internally.
+//! Total work is `2N` element reads plus the `2*lanes-2` additions of the
+//! sweep. The workgroup is never inflated past [`SCAN_WORKGROUP_LANES`], so
+//! `N = 1024` dispatches 256 lanes of four elements rather than 1024 lanes of
+//! one, and `N = 513` dispatches 256 rather than the 1024 a
+//! next-power-of-two lane count would ask for.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
+use vyre_primitives::ir_safe::clamped_load_to;
+use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
 
 /// Canonical op id for inclusive sum-scan.
 pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_inclusive_sum";
@@ -49,11 +53,26 @@ pub enum ScanKind {
     ExclusiveSum,
 }
 
-/// Emit a Hillis-Steele prefix-sum Program.
+/// Lanes a single-workgroup scan dispatches at most.
 ///
-/// `n` is the number of input slots. The emitted workgroup size is
-/// `n.next_power_of_two()` so non-power-of-two lengths execute with
-/// inactive padded lanes.
+/// A scan reaches [`MAX_SINGLE_BLOCK_SCAN`] elements by giving each lane a run
+/// of elements, not by adding lanes. 256 is the workgroup size the fleet
+/// schedules at full occupancy; past it a scan spends lanes on a sweep whose
+/// active fraction halves every round.
+pub const SCAN_WORKGROUP_LANES: u32 = 256;
+
+/// Largest element count one workgroup scans.
+///
+/// Above this the scan is a multi-block chain, which
+/// `reduce::multi_block_prefix_scan` owns and `vyre-libs::math::scan_prefix_sum`
+/// selects. This builder traps instead of silently scanning a prefix.
+pub const MAX_SINGLE_BLOCK_SCAN: u32 = 1024;
+
+/// Emit a single-workgroup prefix-sum Program.
+///
+/// `n` is the number of input slots, in `1..=`[`MAX_SINGLE_BLOCK_SCAN`]. The
+/// emitted workgroup holds `min(n.next_power_of_two(), SCAN_WORKGROUP_LANES)`
+/// lanes and each lane walks `ceil(n / lanes)` elements.
 #[must_use]
 pub fn prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Program {
     let op_id = match kind {
@@ -63,7 +82,8 @@ pub fn prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Progr
     prefix_scan_with_op_id(in_buf, out_buf, n, kind, op_id)
 }
 
-/// Emit a Hillis-Steele prefix-sum Program with an explicit region generator id.
+/// Emit a single-workgroup prefix-sum Program with an explicit region generator
+/// id, so a composition can carry its own op id over the shared body.
 #[must_use]
 pub fn prefix_scan_with_op_id(
     in_buf: &str,
@@ -72,60 +92,65 @@ pub fn prefix_scan_with_op_id(
     kind: ScanKind,
     op_id: &'static str,
 ) -> Program {
-    if n == 0 || n > 1024 {
+    if n == 0 || n > MAX_SINGLE_BLOCK_SCAN {
         return trap_program(
             op_id,
             Some((out_buf, DataType::U32)),
-            format!("Fix: prefix_scan requires n in 1..=1024, got {n}."),
+            format!(
+                "Fix: prefix_scan scans one workgroup and requires n in 1..={MAX_SINGLE_BLOCK_SCAN}, got {n}. Build larger scans with vyre-libs::math::scan_prefix_sum, which selects the multi-block chain."
+            ),
         );
     }
 
-    let lanes = n.next_power_of_two();
+    let lanes = n.next_power_of_two().min(SCAN_WORKGROUP_LANES);
+    let run = n.div_ceil(lanes);
     let lane = Expr::InvocationId { axis: 0 };
     let scratch_a = format!("__{out_buf}_scan_a");
     let scratch_b = format!("__{out_buf}_scan_b");
+    let run_base = Expr::mul(lane.clone(), Expr::u32(run));
 
-    let mut body: Vec<Node> = Vec::new();
-    body.push(Node::store(&scratch_a, lane.clone(), Expr::u32(0)));
-    match kind {
-        ScanKind::InclusiveSum => body.push(Node::if_then(
-            Expr::lt(lane.clone(), Expr::u32(n)),
-            vec![Node::store(
-                &scratch_a,
-                lane.clone(),
-                Expr::load(in_buf, lane.clone()),
-            )],
-        )),
-        ScanKind::ExclusiveSum => body.push(Node::if_then(
-            Expr::and(
-                Expr::lt(Expr::u32(0), lane.clone()),
-                Expr::lt(lane.clone(), Expr::u32(n)),
-            ),
-            vec![Node::store(
-                &scratch_a,
-                lane.clone(),
-                Expr::load(in_buf, Expr::add(lane.clone(), Expr::u32(u32::MAX))),
-            )],
-        )),
+    // Stage: one lane, one run sum. Every lane writes, so the sweep reads a
+    // fully initialized buffer without a separate zero-fill pass.
+    let mut staged = Expr::u32(0);
+    for step in 0..run {
+        staged = Expr::add(staged, run_element(in_buf, &run_base, step, n));
     }
-    body.push(Node::Barrier {
-        ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
-    });
+    let mut body = vec![
+        Node::store(&scratch_a, lane.clone(), staged),
+        Node::barrier(),
+    ];
 
-    body.extend(
-        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
-            &scratch_a, &scratch_b, &lane, lanes,
-        ),
-    );
-
-    body.push(Node::if_then(
-        Expr::lt(lane.clone(), Expr::u32(n)),
-        vec![Node::store(
-            out_buf,
-            lane.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        )],
+    body.extend(blelloch_inclusive_sum_nodes(
+        &scratch_a, &scratch_b, &lane, lanes,
     ));
+
+    // Replay: the sweep leaves the INCLUSIVE run-sum prefix in `scratch_a` and
+    // this lane's own run sum in `scratch_b`, so their difference is the
+    // exclusive offset the run starts from.
+    let offset = format!("__{out_buf}_scan_offset");
+    body.push(Node::let_bind(
+        offset.as_str(),
+        Expr::load(&scratch_a, lane.clone()).wrapping_sub(Expr::load(&scratch_b, lane.clone())),
+    ));
+    let mut running = Expr::var(offset.as_str());
+    for step in 0..run {
+        let element = run_element(in_buf, &run_base, step, n);
+        let inclusive = format!("__{out_buf}_scan_run_{step}");
+        body.push(Node::let_bind(
+            inclusive.as_str(),
+            Expr::add(running, element.clone()),
+        ));
+        let index = Expr::add(run_base.clone(), Expr::u32(step));
+        let value = match kind {
+            ScanKind::InclusiveSum => Expr::var(inclusive.as_str()),
+            ScanKind::ExclusiveSum => Expr::var(inclusive.as_str()).wrapping_sub(element),
+        };
+        body.push(Node::if_then(
+            Expr::lt(index.clone(), Expr::u32(n)),
+            vec![Node::store(out_buf, index, value)],
+        ));
+        running = Expr::var(inclusive.as_str());
+    }
 
     let output_bytes = usize::try_from(n).unwrap_or(usize::MAX).saturating_mul(4);
     let buffers = vec![
@@ -144,52 +169,19 @@ pub fn prefix_scan_with_op_id(
     )
 }
 
-/// Emit a parallel inclusive scan for inputs too large for one workgroup.
+/// Element `step` of the run based at `run_base`, or zero when the run overruns
+/// `n`.
 ///
-/// The returned program uses the reduce-domain multi-block scan and wraps it
-/// with the math-domain op id so existing callers keep a stable builder
-/// identity while large buffers execute through the GPU prefix-scan chain.
-#[must_use]
-pub fn prefix_scan_large(in_buf: &str, out_buf: &str, n: u32) -> Program {
-    prefix_scan_large_with_op_id(in_buf, out_buf, n, OP_ID_INCLUSIVE_SUM)
-}
-
-/// Emit a parallel inclusive scan with an explicit region generator id.
-#[must_use]
-pub fn prefix_scan_large_with_op_id(
-    in_buf: &str,
-    out_buf: &str,
-    n: u32,
-    op_id: &'static str,
-) -> Program {
-    if n == 0 {
-        return empty_large_scan_program(in_buf, out_buf, op_id);
-    }
-    if n <= 1024 {
-        return prefix_scan_with_op_id(in_buf, out_buf, n, ScanKind::InclusiveSum, op_id);
-    }
-
-    wrap_large_scan_program(multi_block_prefix_scan_sum_u32(in_buf, out_buf, n), op_id)
-}
-
-fn empty_large_scan_program(in_buf: &str, out_buf: &str, op_id: &'static str) -> Program {
-    let input_decl = BufferDecl::storage(in_buf, 0, BufferAccess::ReadOnly, DataType::U32);
-    let output_decl = BufferDecl::output(out_buf, 1, DataType::U32)
-        .with_count(1)
-        .with_output_byte_range(0..0);
-
-    Program::wrapped(
-        vec![input_decl, output_decl],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(op_id, Vec::new())],
+/// The load is clamped as well as selected: a lane whose run overruns the input
+/// still issues the load on every backend that evaluates both arms of a select,
+/// and an unclamped index would read past the buffer there.
+fn run_element(in_buf: &str, run_base: &Expr, step: u32, n: u32) -> Expr {
+    let index = Expr::add(run_base.clone(), Expr::u32(step));
+    Expr::select(
+        Expr::lt(index.clone(), Expr::u32(n)),
+        clamped_load_to(in_buf, index, Expr::u32(n)),
+        Expr::u32(0),
     )
-}
-
-fn wrap_large_scan_program(program: Program, op_id: &'static str) -> Program {
-    // Only the entry changes, so rebuild only the entry. `Program::wrapped`
-    // would deep-clone the buffer table and reset the metadata flags.
-    let tagged = vec![wrap_anonymous_region(op_id, program.entry().to_vec())];
-    program.with_rewritten_wrapped_entry(tagged)
 }
 
 /// CPU-reference prefix scan. Conformance tests verify the GPU

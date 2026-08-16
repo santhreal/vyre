@@ -125,12 +125,10 @@ pub fn frontier_word_counts_scan_pass_a(
     });
 
     body.extend(
-        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            FRONTIER_WORD_SCAN_BLOCK_LANES,
-        ),
+        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(&scratch_a,
+        &scratch_b,
+        &lane,
+        FRONTIER_WORD_SCAN_BLOCK_LANES,),
     );
 
     body.push(Node::if_then(
@@ -237,12 +235,10 @@ fn frontier_word_block_offsets_single_workgroup(
     });
 
     body.extend(
-        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            FRONTIER_WORD_SCAN_BLOCK_LANES,
-        ),
+        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(&scratch_a,
+        &scratch_b,
+        &lane,
+        FRONTIER_WORD_SCAN_BLOCK_LANES,),
     );
 
     body.push(Node::if_then(
