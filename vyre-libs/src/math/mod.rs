@@ -337,15 +337,13 @@ pub mod bellman_shortest_path;
 #[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 mod scallop_persistent;
 
-/// Scallop-style probabilistic Datalog join (#39). Emits a lineage semiring
-/// join inside a GPU-resident fixpoint kernel.
+/// Scallop-style probabilistic Datalog join (#39). Emits a lineage
+/// semiring join inside a GPU-resident fixpoint kernel over `w`-word
+/// lineage cells. User dialect: probabilistic Datalog.
+/// Self-consumer: rule-provenance tracking
+/// (`vyre_libs::encoding::scallop_provenance`).
 #[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 pub mod scallop_join;
-/// Wide-tile variant of the Scallop lineage semiring join.
-#[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
-pub mod scallop_join_wide;
-#[cfg(all(test, feature = "math-kernels", feature = "fixpoint"))]
-mod scallop_join_wide_tests;
 /// Prefix-scan backed stream compaction over live-lane flags.
 #[cfg(feature = "math-kernels")]
 pub mod stream_compact;

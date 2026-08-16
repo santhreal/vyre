@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `decode::inflate_stored` IR (DEFLATE
+//! Tier 3 - Property: differential proptest driving the ACTUAL `decode::inflate_stored_block` IR (DEFLATE
 //! BTYPE=0 stored-block decode) through `reference_eval` vs `inflate_stored_reference_words`. The op
 //! had `reference_eval` = 0 in tests/.
 //!
@@ -14,7 +14,8 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::decode::inflate::{inflate_stored, inflate_stored_reference_words};
+use vyre_libs::decode::inflate::inflate_stored_reference_words;
+use vyre_libs::decode::inflate_stored_block;
 
 const HEADER_WORDS: usize = 5;
 
@@ -36,7 +37,7 @@ fn build_stored_block(payload: &[u8], bfinal: u32, trailing_pad: usize) -> Vec<u
 /// Run the IR; returns (data, inflated_len).
 fn run_ir(input_words: &[u32]) -> (Vec<u32>, u32) {
     let input_len = input_words.len() as u32;
-    let program = inflate_stored("input", "output", "inflated_len", input_len);
+    let program = inflate_stored_block("input", "output", input_len);
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
     let outputs = vyre_reference::reference_eval(
         &program,

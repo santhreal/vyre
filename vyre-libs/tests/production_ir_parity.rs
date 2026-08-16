@@ -55,7 +55,7 @@ fn evaluate(program: &Program, inputs: Vec<Value>) -> Vec<Value> {
 fn hex_decode_real_ir_matches_oracle_for_mixed_case_and_invalid_nibbles() {
     let bytes = b"4D6aZ1";
     let input: Vec<u32> = bytes.iter().map(|byte| u32::from(*byte)).collect();
-    let program = hex::hex_decode("input", "output", "table", input.len() as u32);
+    let program = hex::hex_decode("input", "output", input.len() as u32);
     let outputs = evaluate(
         &program,
         vec![
@@ -234,7 +234,7 @@ fn dp_accountant_real_ir_matches_documented_lane_formula() {
 #[test]
 fn production_ir_invalid_boundaries_fail_loudly() {
     for program in [
-        hex::hex_decode("input", "output", "table", 3),
+        hex::hex_decode("input", "output", 3),
         radix_sort::radix_sort("input", "output", 0, 8),
         stochastic_compute::stochastic_and_mul("lhs", "rhs", "output", 0),
         spectral_shape::mp_edge_clip("values", "edge", "output", 0),

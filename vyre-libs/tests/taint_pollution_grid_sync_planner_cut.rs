@@ -28,7 +28,7 @@ use vyre_libs::security::taint_pollution;
 use vyre_megakernel::{
     CompileRequest, Digest, ExternalFacts, SearchBudget, ValidatedCompileRequest,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 /// 33 nodes puts the bitset one node past a word boundary, which is the shape the
 /// family guard already pins as the interesting one.
