@@ -49,7 +49,7 @@ use vyre_foundation::ir::{
 };
 
 /// Canonical op id.
-pub const OP_ID: &str = "anonymous::vyre-libs::graph::level_wave";
+pub const OP_ID: &str = "vyre-libs::graph::level_wave";
 /// Workgroup shape for per-node depth-wave traversal.
 pub const LEVEL_WAVE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
