@@ -422,11 +422,10 @@
     {
       "name": "vyre-primitives",
       "manifest": "vyre-primitives/Cargo.toml",
-      "feature_count": 7,
+      "feature_count": 6,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "all-lego",
         "cpu-parity",
         "default",
         "gpu",
