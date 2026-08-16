@@ -197,7 +197,7 @@ The third pass dissolved them:
 
 | Proposed primitive | Where it went | Why |
 |---|---|---|
-| Separable convolution | `vyre-primitives` `math::conv1d` | A 1D convolution is domain-neutral: signal processing, audio, natural language and image work all use it. |
+| Separable convolution | `vyre-libs` `math::conv1d` | A 1D convolution is domain-neutral: signal processing, audio, natural language and image work all use it. |
 | Pixel pack and unpack | Existing IR | `Expr::bitand`, `Expr::shr`, `Expr::shl` and `Expr::bitor` do it directly. |
 | Color interpolation | Existing IR | `a + (b - a) * t` is three expressions. A color is a value. |
 | Signed distance to a rounded rectangle | Private to its one consumer | Only the shadow op needs it, so it stays private until a second caller appears. |

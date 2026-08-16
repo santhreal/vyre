@@ -1,7 +1,7 @@
 //! The declared exploded-supergraph (IFDS) CPU-reference case table.
 //!
 //! Two suites drove the same generated case stream against the same CSR
-//! contract: the primitive reference in `vyre_primitives::graph::exploded` and
+//! contract: the primitive reference in `vyre_libs::graph::exploded` and
 //! the substrate consumer in `vyre_libs::graph::dispatch::exploded`. Each
 //! carried its own copy of the construction, and the copies had already drifted
 //! in breadth: the primitive suite ran 1024 mixed-flow cases and the substrate

@@ -10,7 +10,7 @@ use crate::{
 };
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::nn::rms_norm";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::rms_norm_reference";

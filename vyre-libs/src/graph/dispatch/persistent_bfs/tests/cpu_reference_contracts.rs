@@ -1,6 +1,6 @@
 use super::super::*;
-use vyre_primitives::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
-use vyre_primitives::graph::persistent_bfs::cpu_ref as reference_persistent_bfs;
+use crate::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
+use crate::graph::persistent_bfs::cpu_ref as reference_persistent_bfs;
 
 #[test]
 fn checked_reference_surfaces_bad_frontier_width() {

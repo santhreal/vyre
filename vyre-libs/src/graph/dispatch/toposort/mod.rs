@@ -1,6 +1,6 @@
 //! DAG topological-sort dispatch wrapper.
 //!
-//! Wires `vyre_primitives::graph::toposort::toposort` (zero prior
+//! Wires `crate::graph::toposort::toposort` (zero prior
 //! consumers) and `reachable::reachable` so the optimizer's pass
 //! scheduler / megakernel scheduler / dispatch ordering can rely on
 //! the same primitive shipped to user dialects. Replaces ad-hoc
@@ -13,7 +13,7 @@ mod reference;
 mod tests;
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
-use vyre_primitives::graph::toposort::ToposortCsrStaticInputKey;
+use crate::graph::toposort::ToposortCsrStaticInputKey;
 
 pub use dispatch::{
     topo_order_csr_via, topo_order_csr_via_with_scratch, topo_order_csr_via_with_scratch_into,

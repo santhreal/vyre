@@ -138,7 +138,7 @@ impl BodyCtx<'_> {
                  memory, or an atomic's returned value is treated as varying. Fix: gate the exit \
                  on a grid-uniform value (the established shape is a flag word written with \
                  `atomic_or` and read back after a barrier, as \
-                 vyre_primitives::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does), \
+                 vyre_libs::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does), \
                  or express the per-invocation case as a guarded body instead of an early return."
                     .to_string(),
             ));

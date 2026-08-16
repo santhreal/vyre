@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use vyre_primitives::graph::reachable::{reachable as reachable_cpu, UnknownNode};
-use vyre_primitives::graph::toposort::{toposort as toposort_cpu, ToposortError};
+use crate::graph::reachable::{reachable as reachable_cpu, UnknownNode};
+use crate::graph::toposort::{toposort as toposort_cpu, ToposortError};
 
 /// Topologically sort `(node_count, edges)`. Edges encode "from
 /// depends on to", so `to` is emitted before `from`. Bumps the

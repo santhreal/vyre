@@ -43,9 +43,9 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::natural_gradient::natural_gradient_block_apply;
+use crate::math::natural_gradient::natural_gradient_block_apply;
 #[cfg(test)]
-use vyre_primitives::math::natural_gradient::{
+use crate::math::natural_gradient::{
     natural_gradient_block_apply_cpu, natural_gradient_block_apply_cpu_into,
 };
 

@@ -1,12 +1,12 @@
 //! Alias-registry dispatch wrapper.
 //!
-//! Wires `vyre_primitives::graph::alias_registry::register_alias_ops`
+//! Wires `crate::graph::alias_registry::register_alias_ops`
 //! into the dispatch path so the optimizer can stand up the
 //! lock-free alias-union descriptor table at startup. Registry
 //! lookups (a hot path during alias-analysis) bump a dedicated substrate
 //! counter so observability dashboards see the consumption rate.
 
-use vyre_primitives::graph::alias_registry::{
+use crate::graph::alias_registry::{
     alias_union_registered as primitive_alias_union_registered,
     default_alias_registry as primitive_default_alias_registry, AliasOpDescriptor, AliasRegistry,
 };

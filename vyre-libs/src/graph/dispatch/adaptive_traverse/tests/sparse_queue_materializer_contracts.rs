@@ -90,7 +90,7 @@ struct MaterializerCase {
 
 /// Packed frontier words `node_count` nodes occupy.
 fn words_for(node_count: u32) -> usize {
-    vyre_primitives::bitset::bitset_words(node_count) as usize
+    crate::bitset::bitset_words(node_count) as usize
 }
 
 /// The widest graph whose frontier still fits inside the inline block-offset
@@ -101,7 +101,7 @@ fn words_for(node_count: u32) -> usize {
 const NODES_PER_WORD: u32 = 32;
 
 fn last_inline_offset_node_count() -> u32 {
-    vyre_primitives::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES
+    crate::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES
         * WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS
         * NODES_PER_WORD
 }

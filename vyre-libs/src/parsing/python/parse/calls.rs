@@ -223,7 +223,7 @@ pub fn python312_extract_calls(
 
     let pass = TokenPass {
         op_id: OP_ID,
-        child_op_id: vyre_primitives::parsing::core_delimiter_match::OP_ID,
+        child_op_id: crate::parsing::core_delimiter_match::OP_ID,
         tok_types,
         tok_starts,
         tok_lens,

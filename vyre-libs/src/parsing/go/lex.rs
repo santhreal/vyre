@@ -379,7 +379,7 @@ pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) 
 /// so each stage of the Go pipeline reads as what it is.
 #[must_use]
 pub fn go_scan_quote_flags(quote_flags: &str, quote_ranks: &str, haystack_len: u32) -> Program {
-    vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
+    crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
         quote_flags,
         quote_ranks,
         haystack_len,
@@ -395,7 +395,7 @@ pub fn go_scan_quote_flags(quote_flags: &str, quote_ranks: &str, haystack_len: u
 /// position `i`'s token belongs at.
 #[must_use]
 pub fn go_scan_emit_flags(emit_flags: &str, emit_offsets: &str, haystack_len: u32) -> Program {
-    vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
+    crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
         emit_flags,
         emit_offsets,
         haystack_len,

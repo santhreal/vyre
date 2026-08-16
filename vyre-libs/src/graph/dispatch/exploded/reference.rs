@@ -1,4 +1,4 @@
-use vyre_primitives::graph::exploded::{canonicalize_csr_within_rows, try_build_cpu_reference};
+use crate::graph::exploded::{canonicalize_csr_within_rows, try_build_cpu_reference};
 
 /// Build an exploded supergraph and return its CSR `(row_ptr, col_idx)`.
 /// Inputs match the underlying primitive's contract; the wrapper bumps

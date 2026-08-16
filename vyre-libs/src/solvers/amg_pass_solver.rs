@@ -1,6 +1,6 @@
 //! Algebraic-multigrid V-cycle for matroid-intersection LP relaxation.
 //!
-//! Self-consumer for [#3 `amg_v_cycle`](vyre_primitives::math::amg_v_cycle).
+//! Self-consumer for [#3 `amg_v_cycle`](crate::math::amg_v_cycle).
 //!
 //! The matroid scheduler currently uses a single `matroid_solve_step` Jacobi
 //! smoothing step to weight augmenting BFS layers. That's a 1-step relaxation  -
@@ -31,9 +31,9 @@ use crate::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::amg_v_cycle::amg_v_cycle;
+use crate::math::amg_v_cycle::amg_v_cycle;
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::math::amg_v_cycle::{cpu_ref, cpu_ref_into, AmgVcycleScratch};
+use crate::math::amg_v_cycle::{cpu_ref, cpu_ref_into, AmgVcycleScratch};
 
 /// Caller-owned dispatch scratch for fixed-point AMG V-cycle execution.
 #[derive(Debug, Default)]

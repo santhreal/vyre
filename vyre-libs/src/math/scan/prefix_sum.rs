@@ -6,8 +6,8 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
-use vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
+use crate::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
+use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 

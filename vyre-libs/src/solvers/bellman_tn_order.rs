@@ -7,11 +7,11 @@
 //! - Edge = contracting two adjacent sub-networks.
 //! - Weight = FLOP cost of that specific contraction step.
 //!
-//! We dispatch `vyre_primitives::math::bellman_shortest_path` to find the
+//! We dispatch `crate::math::bellman_shortest_path` to find the
 //! globally optimal sequence of pairwise fusions.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::bellman_shortest_path::{
+use crate::math::bellman_shortest_path::{
     bellman_shortest_path, BellmanBuffers, BellmanExtents,
 };
 
@@ -19,7 +19,7 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;
+use crate::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;
 
 /// Canonical self-substrate op ID for the Bellman TN order.
 pub const OP_ID: &str = "vyre-libs::self_substrate::bellman_tn_order";
@@ -239,7 +239,7 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use crate::test_parity_oracles::NeverDispatches;
-    use vyre_primitives::math::bellman_shortest_path::cpu_ref;
+    use crate::math::bellman_shortest_path::cpu_ref;
 
     /// Terse binding names, for the tests that only care about the program.
     const FIXTURE: BellmanBuffers<'static> = BellmanBuffers::TERSE;

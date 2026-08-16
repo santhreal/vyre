@@ -8,7 +8,7 @@ use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::exploded::{
     build_ifds_csr_via, reference_canonicalize_csr_within_rows,
 };
-use vyre_primitives::graph::exploded::build_cpu_reference;
+use vyre_libs::graph::exploded::build_cpu_reference;
 
 fn assert_csr_equiv(cpu: &(Vec<u32>, Vec<u32>), gpu: &(Vec<u32>, Vec<u32>), label: &str) {
     let (cpu_row, cpu_col) = reference_canonicalize_csr_within_rows(&cpu.0, &cpu.1);

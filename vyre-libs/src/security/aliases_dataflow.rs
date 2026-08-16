@@ -32,12 +32,12 @@ use vyre_foundation::composition::{tag_program, trap_program};
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::Program;
 use vyre_foundation::ir::{BufferAccess, DataType};
-use vyre_primitives::bitset::and::bitset_and;
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::bitset::or_into::bitset_or_into;
-use vyre_primitives::bitset::zero::bitset_zero;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::bitset::and::bitset_and;
+use crate::bitset::bitset_words;
+use crate::bitset::or_into::bitset_or_into;
+use crate::bitset::zero::bitset_zero;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 
 use crate::security::flows_to::flows_to_alias_only;
 
@@ -402,7 +402,7 @@ mod tests {
     #[test]
     fn fused_program_uses_two_canonical_bitset_zero_regions() {
         use vyre_foundation::visit::walk_nodes;
-        use vyre_primitives::bitset::zero::OP_ID as BITSET_ZERO_OP_ID;
+        use crate::bitset::zero::OP_ID as BITSET_ZERO_OP_ID;
 
         let program = witness_program();
         let mut primitive_zeros = 0usize;

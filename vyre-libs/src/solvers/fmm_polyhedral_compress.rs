@@ -48,7 +48,7 @@ use crate::dispatch_buffers::{
 #[cfg(test)]
 use crate::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
+use crate::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
 
 /// Caller-owned GPU dispatch scratch for zeroth-moment FMM compression.
 #[derive(Debug, Default)]

@@ -55,7 +55,7 @@ pub fn run_fixpoint_to_convergence(
 ) -> Result<Vec<Vec<u8>>, ConvergenceError> {
     let (current_name, next_name, words) = infer_fixpoint_buffers(program)?;
     let changed_name = "fp_changed";
-    let bitset_program = vyre_primitives::fixpoint::bitset_fixpoint::bitset_fixpoint(
+    let bitset_program = vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint(
         current_name,
         next_name,
         changed_name,

@@ -6,8 +6,8 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::graph::tensor_flow_forward::{
+use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::tensor_flow_forward::{
     tensor_flow_forward, tensor_flow_forward_dispatch_grid, tensor_words,
     try_tensor_flow_forward_cpu,
 };

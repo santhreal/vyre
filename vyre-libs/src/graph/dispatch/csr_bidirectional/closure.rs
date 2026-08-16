@@ -3,10 +3,10 @@ use crate::graph::dispatch::csr_bidirectional::dispatch::{
     bidirectional_step_dispatch_prepared_inputs_into, refresh_bidirectional_step_inputs,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::csr_bidirectional::{
+use crate::graph::csr_bidirectional::{
     plan_csr_bidirectional_step, run_csr_bidirectional_closure_plan_with_step,
 };
-use vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs;
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 
 /// Dispatcher-backed bidirectional closure.
 ///

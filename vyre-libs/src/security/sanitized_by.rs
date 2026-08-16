@@ -8,9 +8,9 @@
 //! clean-frontier buffer or cross-dispatch synchronization is required.
 
 use vyre_foundation::composition::tag_program;
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_excluding;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::graph::csr_forward_traverse::csr_forward_traverse_excluding;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 
 const OP_ID: &str = "vyre-libs::security::sanitized_by";
 
@@ -87,7 +87,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::predicate::edge_kind;
+    use crate::predicate::edge_kind;
 
     #[test]
     fn sanitized_by_declares_sanitizer_buffer() {

@@ -63,7 +63,7 @@ const MARKERS: &[(&str, &str)] = &[
     // Sequential host-driven fixpoint loops → persistent_fixpoint.
     (
         "host-side fixpoint",
-        "use vyre_primitives::fixpoint::persistent_fixpoint",
+        "use vyre_libs::fixpoint::persistent_fixpoint",
     ),
     // LRU eviction / hit-rate heuristics → submodular_cache_eviction (#45).
     (

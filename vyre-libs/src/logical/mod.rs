@@ -1,6 +1,6 @@
 //! Elementwise logical operations (nand, nor).
 //!
-//! `and`, `or`, and `xor` are registered once, in `vyre_primitives::bitset`.
+//! `and`, `or`, and `xor` are registered once, in `crate::bitset`.
 //! Only the synthesized combinations with no single-kernel equivalent live here.
 
 macro_rules! define_synthesized_logical_binary {

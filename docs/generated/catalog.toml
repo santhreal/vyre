@@ -44,9 +44,6 @@ operations = [
   "vyre-libs::decode::encodex",
   "vyre-libs::decode::hex",
   "vyre-libs::decode::inflate_stored_block",
-  "vyre-primitives::decode::base64_decode",
-  "vyre-primitives::decode::hex_decode",
-  "vyre-primitives::decode::inflate_stored",
   "vyre-primitives::decode::rle_segment_lengths",
   "vyre-primitives::decode::ziftsieve_literal_copy",
 ]
@@ -224,7 +221,6 @@ operations = [
   "vyre-primitives::math::quantized::unpack_i4x8",
   "vyre-primitives::math::randomized_projection_step",
   "vyre-primitives::math::scallop_join",
-  "vyre-primitives::math::scallop_join_wide",
   "vyre-primitives::math::semiring_gemm",
   "vyre-primitives::math::sheaf_laplacian_eigenvalue",
   "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase",

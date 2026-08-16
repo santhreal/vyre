@@ -1,6 +1,6 @@
 //! GPU DCE program with early-exit on convergence.
 //!
-//! `vyre_primitives::graph::persistent_bfs` always runs its full
+//! `vyre_libs::graph::persistent_bfs` always runs its full
 //! `max_iters` loop because its `changed` flag is never reset between
 //! iterations. For shallow DAGs (most real Programs) the BFS frontier
 //! converges in a handful of hops while the kernel keeps churning
@@ -21,11 +21,11 @@ use std::sync::Arc;
 
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::persistent_bfs::{
+use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::persistent_bfs::{
     BINDING_CHANGED, BINDING_CONVERGED, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT,
 };
-use vyre_primitives::graph::program_graph::{
+use vyre_libs::graph::program_graph::{
     ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
 };
 
@@ -205,7 +205,7 @@ fn parallel_csr_step_per_thread_masked(node_count: u32, allow_mask: u32) -> Vec<
 /// Identical buffer layout to `build_dce_bfs_program`; differs only
 /// in that the edge-follow check is `(kind_mask & allow_mask) != 0`
 /// instead of `kind_mask != 0`. Use this when porting
-/// `vyre_primitives::graph::persistent_bfs::cpu_ref` to GPU dispatch.
+/// `vyre_libs::graph::persistent_bfs::cpu_ref` to GPU dispatch.
 ///
 /// DISPATCH THIS AS EXACTLY ONE WORKGROUP, the same requirement
 /// `build_dce_bfs_program` carries, because it is the same kernel with a

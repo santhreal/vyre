@@ -6,7 +6,7 @@
 //! is a family-tagged node set rather than a sink-tagged one.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use crate::graph::program_graph::ProgramGraphShape;
 
 #[cfg(test)]
 use crate::security::flow_composition::dataflow_hit_cpu_ref;
@@ -62,7 +62,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::predicate::edge_kind;
+    use crate::predicate::edge_kind;
 
     #[test]
     fn one_hop_to_labeled_returns_one() {

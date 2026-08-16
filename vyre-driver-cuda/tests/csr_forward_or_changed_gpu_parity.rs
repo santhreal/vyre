@@ -2,7 +2,7 @@
 
 #![cfg(test)]
 
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
@@ -10,11 +10,11 @@ use vyre_driver::DispatchConfig;
 use vyre_libs::graph::dispatch::csr_forward_or_changed::{
     forward_closure_via_change_flag_gpu, reference_forward_closure_via_change_flag,
 };
-use vyre_primitives::graph::csr_forward_or_changed::{
+use vyre_libs::graph::csr_forward_or_changed::{
     csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
     csr_forward_or_changed_parallel_batch_grid, csr_forward_or_changed_parallel_grid,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 fn set_bit(words: &mut [u32], node: u32) {
     let word = (node / 32) as usize;

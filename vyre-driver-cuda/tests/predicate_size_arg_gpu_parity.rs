@@ -6,11 +6,11 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
-use vyre_primitives::predicate::node_kind;
-use vyre_primitives::predicate::size_argument_of::{cpu_ref as size_arg_cpu, size_argument_of};
+use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_libs::predicate::edge_kind;
+use vyre_libs::predicate::node_kind;
+use vyre_libs::predicate::size_argument_of::{cpu_ref as size_arg_cpu, size_argument_of};
 
 fn run(
     node_count: u32,

@@ -24,7 +24,7 @@ pub use reference::{
     reference_build_ifds_csr, reference_canonicalize_csr_within_rows, try_reference_build_ifds_csr,
 };
 
-use vyre_primitives::graph::exploded::{
+use crate::graph::exploded::{
     dense_to_encoded, encoded_to_dense, ifds_node_count_saturating, IfdsCsrProgramCacheKey,
     IfdsCsrRuleColumns, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
 };

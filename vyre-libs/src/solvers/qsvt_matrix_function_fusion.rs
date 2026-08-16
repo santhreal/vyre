@@ -54,9 +54,9 @@ use crate::dispatch_buffers::{
 };
 use crate::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
+use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 #[cfg(test)]
-use vyre_primitives::math::qsvt::{qsvt_apply_cpu_into, qsvt_block_encode_cpu_into};
+use crate::math::qsvt::{qsvt_apply_cpu_into, qsvt_block_encode_cpu_into};
 
 /// Caller-owned dispatch scratch for fixed-point QSVT transport residuals.
 #[derive(Debug, Default)]

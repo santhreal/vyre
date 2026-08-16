@@ -13,7 +13,7 @@ use vyre_libs::solvers::dataflow_compaction_pipeline::dispatch_softmax;
 use vyre_pass_engine::optimizer::dce_program::{
     build_dce_bfs_program, build_persistent_bfs_program,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_reference::value::Value;
 
 fn pack(words: &[u32]) -> Vec<u8> {

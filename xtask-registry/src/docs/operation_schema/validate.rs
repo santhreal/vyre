@@ -77,7 +77,7 @@ pub(crate) fn validate_schema(
                 op.id
             ));
         }
-        let expected_features = feature_route(&op.id, &op.category);
+        let (_, expected_features) = feature_route(&op.id, &op.category);
         if op.features != expected_features {
             errors.push(format!(
                 "operation `{}` feature route {:?} does not match {:?}",

@@ -1,6 +1,6 @@
 //! Pattern sharding for subgroup-sized NFA plans.
 
-use vyre_primitives::nfa::subgroup_nfa::MAX_STATES_PER_SUBGROUP;
+use crate::nfa::subgroup_nfa::MAX_STATES_PER_SUBGROUP;
 
 /// Shard a pattern set across multiple NFA plans so each shard fits
 /// in [`MAX_STATES_PER_SUBGROUP`]. Greedy first-fit.

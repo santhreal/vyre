@@ -11,14 +11,14 @@ use crate::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::bitset::{
+use crate::bitset::{
     and::bitset_and, clear_bit::bitset_clear_bit, contains::bitset_contains, equal::bitset_equal,
     not::bitset_not, or::bitset_or, set_bit::bitset_set_bit, subset_of::bitset_subset_of,
     test_bit::bitset_test_bit, xor::bitset_xor,
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::bitset::{
+use crate::bitset::{
     and::cpu_ref as primitive_and, clear_bit::cpu_ref as primitive_clear_bit,
     contains::cpu_ref as primitive_contains, equal::cpu_ref as primitive_equal,
     not::cpu_ref as primitive_not, or::cpu_ref as primitive_or,
@@ -493,39 +493,39 @@ mod tests {
                 })
                 .expect("Fix: primitive program should contain region generator");
             match op_id {
-                vyre_primitives::bitset::and::OP_ID => {
+                crate::bitset::and::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     binary(inputs, |a, b| a & b)
                 }
-                vyre_primitives::bitset::or::OP_ID => {
+                crate::bitset::or::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     binary(inputs, |a, b| a | b)
                 }
-                vyre_primitives::bitset::xor::OP_ID => {
+                crate::bitset::xor::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     binary(inputs, |a, b| a ^ b)
                 }
-                vyre_primitives::bitset::not::OP_ID => {
+                crate::bitset::not::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     Ok(vec![u32_slice_to_le_bytes(
                         &input.iter().map(|word| !word).collect::<Vec<_>>(),
                     )])
                 }
-                vyre_primitives::bitset::equal::OP_ID => {
+                crate::bitset::equal::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let lhs = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     let rhs = crate::dispatch_buffers::read_u32s(&inputs[1]);
                     Ok(vec![u32_slice_to_le_bytes(&[u32::from(lhs == rhs)])])
                 }
-                vyre_primitives::bitset::subset_of::OP_ID => {
+                crate::bitset::subset_of::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let lhs = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     let rhs = crate::dispatch_buffers::read_u32s(&inputs[1]);
                     let ok = lhs.iter().zip(rhs.iter()).all(|(a, b)| (a & !b) == 0);
                     Ok(vec![u32_slice_to_le_bytes(&[u32::from(ok)])])
                 }
-                vyre_primitives::bitset::contains::OP_ID => {
+                crate::bitset::contains::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     let index = crate::dispatch_buffers::read_u32s(&inputs[1])[0];
@@ -533,17 +533,17 @@ mod tests {
                         &input, index,
                     )])])
                 }
-                vyre_primitives::bitset::test_bit::OP_ID => {
+                crate::bitset::test_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     Ok(vec![u32_slice_to_le_bytes(&[1])])
                 }
-                vyre_primitives::bitset::set_bit::OP_ID => {
+                crate::bitset::set_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let mut target = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     primitive_set_bit(&mut target, 1);
                     Ok(vec![u32_slice_to_le_bytes(&target)])
                 }
-                vyre_primitives::bitset::clear_bit::OP_ID => {
+                crate::bitset::clear_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let mut target = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     primitive_clear_bit(&mut target, 1);

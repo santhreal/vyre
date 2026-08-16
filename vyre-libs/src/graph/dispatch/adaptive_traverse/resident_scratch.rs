@@ -1,9 +1,9 @@
 use crate::graph::dispatch::plan_cache::GraphPlanCache;
 use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey;
+use crate::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey;
 
-pub(super) use vyre_primitives::graph::adaptive_traverse::{
+pub(super) use crate::graph::adaptive_traverse::{
     adaptive_four_russians_graph_content_hash as adaptive_four_russians_layout_hash,
     adaptive_traversal_graph_content_hash as adaptive_traversal_layout_hash,
 };

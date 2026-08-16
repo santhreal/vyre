@@ -8,22 +8,22 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::bitset::and_into::{bitset_and_into, cpu_ref as and_into_cpu};
-use vyre_primitives::bitset::and_not_into::{bitset_and_not_into, cpu_ref as and_not_into_cpu};
-use vyre_primitives::bitset::clear_bit::{bitset_clear_bit, cpu_ref as clear_bit_cpu};
-use vyre_primitives::bitset::contains::{bitset_contains, cpu_ref as contains_cpu};
-use vyre_primitives::bitset::copy::{bitset_copy, cpu_ref as copy_cpu};
-use vyre_primitives::bitset::equal::{bitset_equal, cpu_ref as equal_cpu};
-use vyre_primitives::bitset::frontier::{
+use vyre_libs::bitset::and_into::{bitset_and_into, cpu_ref as and_into_cpu};
+use vyre_libs::bitset::and_not_into::{bitset_and_not_into, cpu_ref as and_not_into_cpu};
+use vyre_libs::bitset::clear_bit::{bitset_clear_bit, cpu_ref as clear_bit_cpu};
+use vyre_libs::bitset::contains::{bitset_contains, cpu_ref as contains_cpu};
+use vyre_libs::bitset::copy::{bitset_copy, cpu_ref as copy_cpu};
+use vyre_libs::bitset::equal::{bitset_equal, cpu_ref as equal_cpu};
+use vyre_libs::bitset::frontier::{
     absorb_new_frontier_bits, frontier_absorb_new_bits_no_counts_for_node_count_program,
 };
-use vyre_primitives::bitset::not::{bitset_not, cpu_ref as not_cpu};
-use vyre_primitives::bitset::or::{bitset_or, cpu_ref as or_cpu};
-use vyre_primitives::bitset::or_into::{bitset_or_into, cpu_ref as or_into_cpu};
-use vyre_primitives::bitset::subset_of::{bitset_subset_of, cpu_ref as subset_of_cpu};
-use vyre_primitives::bitset::test_bit::{bitset_test_bit, cpu_ref as test_bit_cpu};
-use vyre_primitives::bitset::xor_into::{bitset_xor_into, cpu_ref as xor_into_cpu};
-use vyre_primitives::bitset::zero::{bitset_zero, cpu_ref as zero_cpu};
+use vyre_libs::bitset::not::{bitset_not, cpu_ref as not_cpu};
+use vyre_libs::bitset::or::{bitset_or, cpu_ref as or_cpu};
+use vyre_libs::bitset::or_into::{bitset_or_into, cpu_ref as or_into_cpu};
+use vyre_libs::bitset::subset_of::{bitset_subset_of, cpu_ref as subset_of_cpu};
+use vyre_libs::bitset::test_bit::{bitset_test_bit, cpu_ref as test_bit_cpu};
+use vyre_libs::bitset::xor_into::{bitset_xor_into, cpu_ref as xor_into_cpu};
+use vyre_libs::bitset::zero::{bitset_zero, cpu_ref as zero_cpu};
 
 fn dispatch_grid(program: &vyre::ir::Program, inputs: &[Vec<u8>], grid_x: u32) -> Vec<Vec<u8>> {
     let mut config = DispatchConfig::default();

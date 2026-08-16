@@ -278,7 +278,7 @@ fn negative_primitive_builder_call_not_flagged() {
         r#"
     fn build() {
         let _ = vyre_primitives::storage::store_strided("buf", 0, 1);
-        let _ = vyre_primitives::nn::attention_max_pass();
+        let _ = vyre_libs::nn::attention_max_pass();
     }
     "#,
     );

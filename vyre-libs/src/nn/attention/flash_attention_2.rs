@@ -16,10 +16,10 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::planner::plan_flash_attention_tiled;
-use vyre_primitives::nn::attention_stability::{
+use crate::nn::attention_stability::{
     bounded_exp_arg, bounded_score, positive_denominator,
 };
-use vyre_primitives::nn::f32_stability::flush_tiny;
+use crate::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::nn::flash_attention_2";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::flash_attention_2_reference";

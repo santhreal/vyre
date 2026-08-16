@@ -9,7 +9,7 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
-use vyre_primitives::matching::CompiledDfa;
+use crate::matching::CompiledDfa;
 
 use super::super::{
     ac_ranges_output_records_len, bounded_ranges_presence_and_positions_by_region_nodes,

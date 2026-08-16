@@ -26,8 +26,8 @@
 //! contract every other reachability primitive in this module honours.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 use vyre_spec::{
     analysis::AnalysisFactKind,
     soundness::{DynamicPrimitiveSoundness, Soundness},

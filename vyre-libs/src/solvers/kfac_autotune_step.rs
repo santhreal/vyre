@@ -4,12 +4,12 @@
 //! variables (e.g. tile sizes, fusion probabilities) with Fisher-
 //! preconditioned updates.
 //!
-//! Dispatches the `vyre_primitives::math::kfac_block_inverse` primitive
+//! Dispatches the `crate::math::kfac_block_inverse` primitive
 //! to invert the block-diagonal Fisher information matrix of the
 //! autotuner's policy network.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::kfac_block_inverse::kfac_block_inverse;
+use crate::math::kfac_block_inverse::kfac_block_inverse;
 
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
@@ -148,7 +148,7 @@ pub fn kfac_autotune_step_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::f32_slice_to_le_bytes;
-    use vyre_primitives::math::kfac_block_inverse::cpu_ref;
+    use crate::math::kfac_block_inverse::cpu_ref;
 
     struct KfacDispatcher;
 

@@ -1,5 +1,5 @@
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::union_find::{
+use crate::graph::union_find::{
     union_find_dispatch_grid, union_find_program, validate_union_find_inputs,
 };
 

@@ -1,4 +1,4 @@
-//! Parity test: `vyre_primitives::predicate::edge` on CUDA matches its CPU
+//! Parity test: `vyre_libs::predicate::edge` on CUDA matches its CPU
 //! reference for bare CSR forward traversal under an edge-kind mask.
 
 #![cfg(test)]
@@ -7,10 +7,10 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge::{cpu_ref as edge_cpu, edge};
-use vyre_primitives::predicate::edge_kind;
+use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_libs::predicate::edge::{cpu_ref as edge_cpu, edge};
+use vyre_libs::predicate::edge_kind;
 
 fn run_edge(
     node_count: u32,

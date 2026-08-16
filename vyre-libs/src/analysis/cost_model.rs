@@ -9,15 +9,15 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::level_wave::level_wave_dispatch_grid;
+use crate::graph::level_wave::level_wave_dispatch_grid;
 #[cfg(test)]
-use vyre_primitives::graph::sum_product_circuit::sum_product_evaluate_cpu;
-use vyre_primitives::graph::sum_product_circuit::{
+use crate::graph::sum_product_circuit::sum_product_evaluate_cpu;
+use crate::graph::sum_product_circuit::{
     sum_product_depths, sum_product_evaluate_leveled,
 };
 #[cfg(test)]
-use vyre_primitives::math::conformal::conformal_threshold_cpu;
-use vyre_primitives::math::conformal::{conformal_threshold, try_conformal_rank};
+use crate::math::conformal::conformal_threshold_cpu;
+use crate::math::conformal::{conformal_threshold, try_conformal_rank};
 
 /// Caller-owned dispatch scratch for probabilistic runtime prediction.
 #[derive(Debug, Default)]
@@ -316,7 +316,7 @@ fn validate_sorted_residuals(residuals: &[u32]) -> Result<(), DispatchError> {
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_primitives::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
+    use crate::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
 
     #[test]
     fn predict_returns_point_plus_conformal_interval() {

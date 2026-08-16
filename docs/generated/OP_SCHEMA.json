@@ -1,15 +1,15 @@
 {
   "schema_version": 4,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 331,
+  "operation_count": 327,
   "tier_counts": {
-    "intrinsic": 167,
+    "intrinsic": 163,
     "libs": 164
   },
   "category_counts": {
     "bitset": 23,
     "builder": 2,
-    "decode": 9,
+    "decode": 6,
     "fixpoint": 2,
     "geom": 2,
     "graph": 27,
@@ -18,7 +18,7 @@
     "label": 1,
     "logical": 2,
     "matching": 4,
-    "math": 82,
+    "math": 81,
     "nn": 71,
     "opt": 1,
     "parsing": 15,
@@ -300,11 +300,6 @@
           "depth": 0,
           "operation": "vyre-libs::decode::base64",
           "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-primitives::decode::base64_decode",
-          "registered": true
         }
       ]
     },
@@ -499,11 +494,6 @@
           "depth": 0,
           "operation": "vyre-libs::decode::hex",
           "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-primitives::decode::hex_decode",
-          "registered": true
         }
       ]
     },
@@ -590,11 +580,6 @@
         {
           "depth": 0,
           "operation": "vyre-libs::decode::inflate_stored_block",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-primitives::decode::inflate_stored",
           "registered": true
         }
       ]
@@ -16525,8 +16510,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -16604,8 +16588,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -16692,8 +16675,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -16771,8 +16753,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -16850,8 +16831,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -16920,8 +16900,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17008,8 +16987,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17087,8 +17065,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17175,8 +17152,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17272,8 +17248,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17360,8 +17335,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17439,8 +17413,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17527,8 +17500,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17606,8 +17578,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17685,8 +17656,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17773,8 +17743,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17843,8 +17812,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17931,8 +17899,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18019,8 +17986,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18098,8 +18064,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18186,8 +18151,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18265,8 +18229,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18335,8 +18298,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "bitset",
-        "inventory-registry"
+        "bitset"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18383,279 +18345,6 @@
       ]
     },
     {
-      "id": "vyre-primitives::decode::base64_decode",
-      "tier": "intrinsic",
-      "category": "decode",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "input",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "table",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 256,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "output",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 3,
-            "pipeline_live_out": true
-          },
-          {
-            "binding": 3,
-            "name": "decoded_len",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "decode",
-        "inventory-registry"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-primitives::decode::base64_decode",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-primitives::decode::hex_decode",
-      "tier": "intrinsic",
-      "category": "decode",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "input",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 6,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "output",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 3,
-            "pipeline_live_out": true
-          },
-          {
-            "binding": 2,
-            "name": "table",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 256,
-            "pipeline_live_out": false
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "decode",
-        "inventory-registry"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-primitives::decode::hex_decode",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-primitives::decode::inflate_stored",
-      "tier": "intrinsic",
-      "category": "decode",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "input",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 10,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "output",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 10,
-            "pipeline_live_out": true
-          },
-          {
-            "binding": 2,
-            "name": "inflated_len",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "decode",
-        "inventory-registry"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-primitives::decode::inflate_stored",
-          "registered": true
-        }
-      ]
-    },
-    {
       "id": "vyre-primitives::decode::rle_segment_lengths",
       "tier": "intrinsic",
       "category": "decode",
@@ -18696,8 +18385,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "decode",
-        "inventory-registry"
+        "decode"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18802,8 +18490,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "decode",
-        "inventory-registry"
+        "decode"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18890,8 +18577,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "fixpoint",
-        "inventory-registry"
+        "fixpoint"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18978,8 +18664,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "fixpoint",
-        "inventory-registry"
+        "fixpoint"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19066,8 +18751,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "geom",
-        "inventory-registry"
+        "geom"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19154,8 +18838,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "geom",
-        "inventory-registry"
+        "geom"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19278,8 +18961,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19402,8 +19084,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19526,8 +19207,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19650,8 +19330,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19783,8 +19462,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19907,8 +19585,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20022,8 +19699,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20137,8 +19813,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20252,8 +19927,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20346,8 +20020,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20452,8 +20125,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20540,8 +20212,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20628,8 +20299,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20752,8 +20422,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20849,8 +20518,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21009,8 +20677,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21202,8 +20869,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21300,8 +20966,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21397,8 +21062,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21521,8 +21185,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21654,8 +21317,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21778,8 +21440,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21866,8 +21527,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21945,8 +21605,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22024,8 +21683,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "graph",
-        "inventory-registry"
+        "graph"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22841,8 +22499,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22929,8 +22586,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23017,8 +22673,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23136,8 +22791,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23215,8 +22869,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23294,8 +22947,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23373,8 +23025,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23452,8 +23103,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23531,8 +23181,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "hash",
-        "inventory-registry"
+        "hash"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23610,8 +23259,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "label",
-        "inventory-registry"
+        "label"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23698,8 +23346,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "matching",
-        "inventory-registry"
+        "matching-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23804,8 +23451,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -23964,8 +23610,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24048,8 +23693,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24163,8 +23807,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24256,8 +23899,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24353,8 +23995,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24432,8 +24073,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24529,8 +24169,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24617,8 +24256,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24687,8 +24325,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24775,8 +24412,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24854,8 +24490,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -24951,8 +24586,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25039,8 +24673,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25154,8 +24787,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25233,8 +24865,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25327,8 +24958,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25397,8 +25027,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25485,8 +25114,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25573,8 +25201,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25652,8 +25279,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25740,8 +25366,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25846,8 +25471,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25952,8 +25576,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26049,8 +25672,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26155,8 +25777,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26243,8 +25864,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26340,8 +25960,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26419,8 +26038,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26507,8 +26125,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26604,8 +26221,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26652,103 +26268,6 @@
       ]
     },
     {
-      "id": "vyre-primitives::math::scallop_join_wide",
-      "tier": "intrinsic",
-      "category": "math",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "state",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 8,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "next",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 8,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "changed",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 3,
-            "name": "join_rules",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 8,
-            "pipeline_live_out": false
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "math",
-        "inventory-registry"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-primitives/tests/integration.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-primitives::math::scallop_join_wide",
-          "registered": true
-        }
-      ]
-    },
-    {
       "id": "vyre-primitives::math::semiring_gemm",
       "tier": "intrinsic",
       "category": "math",
@@ -26789,8 +26308,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26886,8 +26404,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26970,8 +26487,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27121,8 +26637,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27214,8 +26729,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27293,8 +26807,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27381,8 +26894,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27504,8 +27016,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27619,8 +27130,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math",
-        "inventory-registry"
+        "math-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27752,8 +27262,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn",
-        "inventory-registry"
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27849,8 +27358,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn",
-        "inventory-registry"
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -27964,8 +27472,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn",
-        "inventory-registry"
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28052,8 +27559,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn",
-        "inventory-registry"
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28131,8 +27637,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn",
-        "inventory-registry"
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28201,8 +27706,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn",
-        "inventory-registry"
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28298,8 +27802,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "opt",
-        "inventory-registry"
+        "opt"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28413,8 +27916,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "inventory-registry"
+        "parsing-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28492,8 +27994,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "inventory-registry"
+        "parsing-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28571,8 +28072,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "inventory-registry"
+        "parsing-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28650,8 +28150,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "inventory-registry"
+        "parsing-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28765,8 +28264,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "inventory-registry"
+        "parsing-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28844,8 +28342,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "inventory-registry"
+        "parsing-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -28968,8 +28465,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29092,8 +28588,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29216,8 +28711,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29295,8 +28789,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29379,8 +28872,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29463,8 +28955,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29547,8 +29038,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29626,8 +29116,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29750,8 +29239,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29874,8 +29362,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "predicate",
-        "inventory-registry"
+        "predicate"
       ],
       "oracle": {
         "reference_eval": true,
@@ -29953,8 +29440,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30032,8 +29518,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30111,8 +29596,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30190,8 +29674,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30278,8 +29761,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30357,8 +29839,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30436,8 +29917,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30515,8 +29995,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30612,8 +30091,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30691,8 +30169,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30770,8 +30247,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30858,8 +30334,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -30946,8 +30421,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31025,8 +30499,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31104,8 +30577,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31192,8 +30664,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31280,8 +30751,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31368,8 +30838,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "reduce",
-        "inventory-registry"
+        "reduce"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31447,8 +30916,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "text",
-        "inventory-registry"
+        "text"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31535,8 +31003,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "text",
-        "inventory-registry"
+        "text"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31614,8 +31081,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "text",
-        "inventory-registry"
+        "text"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31730,8 +31196,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "text",
-        "inventory-registry"
+        "text"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31819,8 +31284,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "text",
-        "inventory-registry"
+        "text"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31898,8 +31362,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "text",
-        "inventory-registry"
+        "text"
       ],
       "oracle": {
         "reference_eval": true,
@@ -31986,7 +31449,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
+        "vyre-foundation",
         "inventory-registry"
       ],
       "oracle": {
@@ -32065,8 +31528,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "visual",
-        "inventory-registry"
+        "visual"
       ],
       "oracle": {
         "reference_eval": true,

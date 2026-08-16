@@ -19,7 +19,7 @@ use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_primitives::hash::crc32::{crc32, crc32_program};
+use vyre_libs::hash::crc32::{crc32, crc32_program};
 
 /// Dispatch the real `crc32_program` on the GPU: one U32 word per source byte
 /// (the update masks each to its low 8 bits), single u32 CRC out at `out[0]`.

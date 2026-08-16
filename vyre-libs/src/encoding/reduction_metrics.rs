@@ -11,14 +11,14 @@ use crate::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::reduce::{
+use crate::reduce::{
     all::reduce_all, any::reduce_any, count_non_zero::reduce_count_non_zero,
     histogram::histogram_atomic_scatter, max::reduce_max, min::reduce_min,
     segment_reduce::segment_reduce_sum, sum::reduce_sum,
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::reduce::{
+use crate::reduce::{
     all::cpu_ref as primitive_all, any::cpu_ref as primitive_any,
     count_non_zero::cpu_ref as primitive_count_non_zero, histogram::cpu_ref as primitive_histogram,
     max::cpu_ref as primitive_max, min::cpu_ref as primitive_min,
@@ -410,7 +410,7 @@ mod tests {
                 .expect("Fix: reduction primitive should expose a region generator");
             let values = crate::dispatch_buffers::read_u32s(&inputs[0]);
             match op_id {
-                vyre_primitives::reduce::sum::OP_ID => {
+                crate::reduce::sum::OP_ID => {
                     assert_scalar_metric_dispatch(
                         program,
                         grid_override,
@@ -419,7 +419,7 @@ mod tests {
                     );
                     scalar(primitive_sum(&values))
                 }
-                vyre_primitives::reduce::max::OP_ID => {
+                crate::reduce::max::OP_ID => {
                     assert_scalar_metric_dispatch(
                         program,
                         grid_override,
@@ -428,7 +428,7 @@ mod tests {
                     );
                     scalar(primitive_max(&values))
                 }
-                vyre_primitives::reduce::min::OP_ID => {
+                crate::reduce::min::OP_ID => {
                     assert_scalar_metric_dispatch(
                         program,
                         grid_override,
@@ -437,7 +437,7 @@ mod tests {
                     );
                     scalar(primitive_min(&values))
                 }
-                vyre_primitives::reduce::count_non_zero::OP_ID => {
+                crate::reduce::count_non_zero::OP_ID => {
                     assert_scalar_metric_dispatch(
                         program,
                         grid_override,
@@ -446,7 +446,7 @@ mod tests {
                     );
                     scalar(primitive_count_non_zero(&values))
                 }
-                vyre_primitives::reduce::any::OP_ID => {
+                crate::reduce::any::OP_ID => {
                     assert_scalar_metric_dispatch(
                         program,
                         grid_override,
@@ -455,7 +455,7 @@ mod tests {
                     );
                     scalar(primitive_any(&values))
                 }
-                vyre_primitives::reduce::all::OP_ID => {
+                crate::reduce::all::OP_ID => {
                     assert_scalar_metric_dispatch(
                         program,
                         grid_override,
@@ -464,7 +464,7 @@ mod tests {
                     );
                     scalar(primitive_all(&values))
                 }
-                vyre_primitives::reduce::segment_reduce::OP_ID => {
+                crate::reduce::segment_reduce::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     assert_eq!(program.workgroup_size(), [256, 1, 1]);
                     let offsets = crate::dispatch_buffers::read_u32s(&inputs[1]);
@@ -472,7 +472,7 @@ mod tests {
                         &values, &offsets,
                     ))])
                 }
-                vyre_primitives::reduce::histogram::OP_ID => {
+                crate::reduce::histogram::OP_ID => {
                     assert_eq!(
                         grid_override,
                         Some([ceil_div_u32(values.len() as u32, 256), 1, 1]),

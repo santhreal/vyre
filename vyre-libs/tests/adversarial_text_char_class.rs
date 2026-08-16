@@ -1,0 +1,143 @@
+//! Adversarial oracle tests for `text::char_class` reference mapping.
+mod text_char_class_runner;
+
+use text_char_class_runner::run_packed_u8_program;
+use vyre_foundation::ir::DataType;
+use vyre_libs::text::{char_class, char_class_u8, reference_char_class};
+use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
+use vyre_reference::value::Value;
+
+#[test]
+fn char_class_masks_high_bit_source_and_records_no_interpreter_oob() {
+    // The compat char_class path reads a U32 source; an element > 255 must be
+    // masked (& 0xFF) into the 256-entry table, never read past it. Assert the
+    // interpreter records ZERO OOB accesses, proving the mask (not the interpreter's
+    // silent zero-fill) keeps the index in bounds, and that the element classifies
+    // as its low byte. Removing the `& 0xFF` would OOB-read the table (UB on CUDA)
+    // and this test would see report.total() > 0.
+    let mut table = [0u32; 256];
+    table[0x41] = 0xABCD; // low byte of 0x0141 is 0x41
+    let program = char_class("source", "classified", 1);
+    let (outputs, report) = vyre_reference::reference_eval_oob_report(
+        &program,
+        &[
+            Value::from(pack_u32s(&[0x0141])), // > 255
+            Value::from(pack_u32s(&table)),
+            Value::from(vec![0u8; 4]),
+        ],
+    )
+    .expect("Fix: char_class must reference-evaluate a high-bit source element");
+    assert_eq!(
+        report.total(),
+        0,
+        "Fix: masked table index must stay in bounds without relying on interpreter OOB masking"
+    );
+    let out = unpack_u32s(&outputs[0].to_bytes());
+    assert_eq!(
+        out[0], 0xABCD,
+        "Fix: 0x0141 must classify as its low byte 0x41 via the `& 0xFF` mask"
+    );
+}
+
+fn run_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
+    let n = source.len();
+    let program = char_class("source", "classified", n as u32);
+    let cap = n.max(1);
+    let mut input_bytes = Vec::with_capacity(cap * 4);
+    for &b in source {
+        input_bytes.extend_from_slice(&(b as u32).to_le_bytes());
+    }
+    while input_bytes.len() < cap * 4 {
+        input_bytes.extend_from_slice(&0u32.to_le_bytes());
+    }
+    let table_bytes = pack_u32s(table);
+    let zero_classified = vec![0u8; cap * 4];
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[
+            Value::from(input_bytes),
+            Value::from(table_bytes),
+            Value::from(zero_classified),
+        ],
+    )
+    .expect("Fix: char_class reference evaluation must succeed");
+    let out_bytes = outputs[0].to_bytes();
+    let mut out_u32s = unpack_u32s(&out_bytes);
+    out_u32s.truncate(n);
+    out_u32s
+}
+
+#[test]
+fn char_class_hostile_corpus_table_driven() {
+    const ZEROS: [u32; 256] = [0u32; 256];
+    const MAXES: [u32; 256] = [0xffff_ffffu32; 256];
+    let cases: &[(&[u8], &[u32; 256], &[u32])] = &[
+        (b"", &ZEROS, &[]),
+        (b"\x00", &ZEROS, &[0]),
+        (b"\xff", &MAXES, &[0xffff_ffff]),
+        (b"vyre", &ZEROS, &[0, 0, 0, 0]),
+        (
+            b"\x00\xff\xfe",
+            &MAXES,
+            &[0xffff_ffff, 0xffff_ffff, 0xffff_ffff],
+        ),
+    ];
+    for (idx, (source, table, expected)) in cases.iter().enumerate() {
+        let got = reference_char_class(source, table);
+        assert_eq!(
+            got,
+            *expected,
+            "Fix: char_class oracle mismatch on hostile case {idx} (len={})",
+            source.len()
+        );
+        assert_eq!(
+            run_program(source, table),
+            *expected,
+            "Fix: char_class compiled program mismatch on hostile case {idx} (len={})",
+            source.len()
+        );
+        assert_eq!(
+            run_packed_u8_program(source, table),
+            *expected,
+            "Fix: packed-u8 char_class compiled program mismatch on hostile case {idx} (len={})",
+            source.len()
+        );
+    }
+}
+
+#[test]
+fn packed_u8_char_class_uses_one_source_byte_per_element() {
+    let program = char_class_u8("source", "classified", 1024);
+    let source = program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "source")
+        .expect("Fix: packed-u8 char_class source buffer must be declared");
+    let table = program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "table")
+        .expect("Fix: char_class table buffer must be declared");
+    let classified = program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "classified")
+        .expect("Fix: char_class output buffer must be declared");
+
+    assert_eq!(source.element(), DataType::U8);
+    assert_eq!(source.count(), 1024);
+    assert_eq!(
+        source.count() as usize * DataType::U8.min_bytes(),
+        1024,
+        "Fix: packed-u8 char_class must consume one byte per source byte."
+    );
+    assert_eq!(
+        source.count() as usize * DataType::U32.min_bytes(),
+        4096,
+        "Fix: compatibility char_class remains the four-byte-per-source-byte path."
+    );
+    assert_eq!(table.element(), DataType::U32);
+    assert_eq!(table.count(), 256);
+    assert_eq!(classified.element(), DataType::U32);
+    assert_eq!(classified.count(), 1024);
+}

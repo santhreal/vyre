@@ -42,14 +42,14 @@ pub(crate) mod gradient;
 /// GPU-computed box shadow with SDF falloff.
 pub(crate) mod shadow;
 pub(crate) mod u32_word_bytes;
+/// Packed-RGBA invocation skeletons shared by the pixel-map compositions.
+pub mod packed_rgba_map;
 /// 2× nearest-neighbor upsample for the half-resolution blur return path.
 pub(crate) mod upsample;
 
 // Re-exports for the public API surface.
 pub use blur::{gaussian_blur_2pass, GaussianBlurStages};
-pub use blur::{
-    gaussian_blur_2pass_with_kernel, gaussian_weights, GaussianKernel, GaussianKernelError,
-};
+pub use blur::{gaussian_blur_2pass_with_kernel, GaussianKernel, GaussianKernelError};
 pub use cell_grid::{cell_grid_fill, GridShape};
 pub use composite::alpha_over;
 pub use downsample::downsample_2x;
@@ -78,7 +78,11 @@ pub(crate) fn wide_mul_shr_u32(left: Expr, right: Expr, shift: u32) -> Expr {
     )
 }
 
-/// Return `(left * right) >> 16` for unsigned 16.16 fixed-point pixel math.
-pub(crate) fn fixed_mul_16_16_expr(left: Expr, right: Expr) -> Expr {
+/// Return `(left * right) >> 16` for UNSIGNED 16.16 fixed-point pixel math.
+///
+/// Pixel channels, coverage and filter coefficients are all non-negative, so no
+/// sign correction is emitted. A kernel whose operands may be negative needs
+/// `math::fixed::fixed_mul_16_16_expr` instead.
+pub(crate) fn fixed_mul_16_16_unsigned_expr(left: Expr, right: Expr) -> Expr {
     wide_mul_shr_u32(left, right, 16)
 }

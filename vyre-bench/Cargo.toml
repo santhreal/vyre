@@ -28,12 +28,13 @@ vyre-registry-link = { workspace = true, features = [
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
-vyre-libs = { workspace = true, features = ["nn-linear-4bit"] }
-# `predicate` carries the node-kind constants
-# `src/cases/dataflow_irregular/fixture.rs` builds its IFDS fixture from. It
-# used to ride in on `vyre-libs/c-parser`; the consumer that reads it declares
-# it now.
-vyre-primitives = { workspace = true, features = ["bitset", "graph", "cpu-parity", "hardware", "predicate"] }
+vyre-libs = { workspace = true, features = [
+    "bitset",
+    "graph",
+    "nn-linear-4bit",
+    "predicate",
+] }
+vyre-primitives = { workspace = true, features = ["cpu-parity", "hardware"] }
 vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }

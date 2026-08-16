@@ -25,14 +25,14 @@ use vyre_libs::graph::dispatch::adaptive_traverse::{
     adaptive_traverse_resident_graph_step_with_scratch_into,
     adaptive_traverse_resident_sparse_queue_step_with_scratch_into, adaptive_traverse_step,
     upload_resident_adaptive_sparse_queue_graph, upload_resident_adaptive_traversal_graph,
-    AdaptiveTraversalMode, AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch,
+    AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch,
 };
-use vyre_primitives::graph::adaptive_traverse::{
+use vyre_libs::graph::adaptive_traverse::{
     adaptive_dense_step, adaptive_node_dispatch_grid, adaptive_sparse_dense_step, cpu_dense_step,
-    cpu_sparse_dense_step,
+    cpu_sparse_dense_step, AdaptiveTraversalMode,
 };
-use vyre_primitives::graph::vast_tree_walk::ast_walk_preorder;
-use vyre_primitives::reduce::count::reduce_count;
+use vyre_libs::graph::vast_tree_walk::ast_walk_preorder;
+use vyre_libs::reduce::count::reduce_count;
 
 fn bitset_words(node_count: u32) -> u32 {
     node_count.div_ceil(32).max(1)

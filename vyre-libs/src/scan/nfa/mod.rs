@@ -1,6 +1,6 @@
 //! Subgroup-cooperative NFA scan.
 //!
-//! Composes [`vyre_primitives::nfa::subgroup_nfa::nfa_step`] semantics
+//! Composes [`crate::nfa::subgroup_nfa::nfa_step`] semantics
 //! into a full scan loop that walks an input byte stream, advances
 //! NFA state across bytes, and emits `(pattern_id, start, end)` hits
 //! into `hit_buf` whenever an accept state fires.
@@ -16,7 +16,7 @@
 //!   from state `src` on byte `byte`. The source state is the outermost
 //!   index, so one subgroup load fetches every lane's word for one
 //!   `(src, byte)` pair. This layout is required by
-//!   [`vyre_primitives::nfa::subgroup_nfa::nfa_step`]; the composition
+//!   [`crate::nfa::subgroup_nfa::nfa_step`]; the composition
 //!   must not diverge from the primitive's contract.
 //! - `nfa_epsilon` (ReadOnly, u32): state-major
 //!   `[num_states × LANES_PER_SUBGROUP]`. All zero for literal-only
@@ -32,7 +32,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_primitives::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
+use crate::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
 
 /// Canonical op id for the end-to-end scan kernel.
 pub const OP_ID: &str = "vyre-libs::matching::nfa_scan";

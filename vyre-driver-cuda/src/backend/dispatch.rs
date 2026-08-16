@@ -193,7 +193,7 @@ mod tests {
                 ),
             )],
         )];
-        let program = vyre_primitives::fixpoint::persistent_fixpoint::persistent_fixpoint_grid(
+        let program = vyre_libs::fixpoint::persistent_fixpoint::persistent_fixpoint_grid(
             transfer_body,
             "current",
             "next",

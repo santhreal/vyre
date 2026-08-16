@@ -6,7 +6,7 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::math::tensor_scc::{cpu_ref, tensor_scc_fixpoint};
+use vyre_libs::math::tensor_scc::{cpu_ref, tensor_scc_fixpoint};
 
 fn run(matrix_rows: &[u32], seed_mask: u32, group_mask: u32, iteration_limit: u32) -> u32 {
     let program = tensor_scc_fixpoint(

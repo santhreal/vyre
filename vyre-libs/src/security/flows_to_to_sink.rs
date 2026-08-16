@@ -27,7 +27,7 @@
 //! step, `Exact` when iterated to fixpoint with sanitizer gating.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use crate::graph::program_graph::ProgramGraphShape;
 
 #[cfg(test)]
 use crate::security::flow_composition::dataflow_hit_cpu_ref;

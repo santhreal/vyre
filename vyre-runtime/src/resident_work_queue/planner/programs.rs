@@ -1,7 +1,7 @@
 //! Program builders surfaced through the megakernel planner.
 
-use vyre_primitives::math::bellman_shortest_path::{BellmanBuffers, BellmanExtents};
-use vyre_primitives::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
+use vyre_libs::math::bellman_shortest_path::{BellmanBuffers, BellmanExtents};
+use vyre_libs::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
 
 /// Full Sinkhorn-balanced clustering Program builder. Wraps
 /// [`vyre_libs::solvers::sinkhorn_full_clustering::sinkhorn_full_clustering_program`]

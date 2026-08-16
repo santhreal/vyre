@@ -130,14 +130,13 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         if tier == "unknown" {
             errors.push(format!("operation `{}` has an unknown tier", entry.id));
         }
-        let features = feature_route(entry.id, &category);
+        let (crate_name, features) = feature_route(entry.id, &category);
         if features.is_empty() {
             errors.push(format!(
                 "operation `{}` has no enabling feature route",
                 entry.id
             ));
         }
-        let crate_name = entry.id.split("::").next().unwrap_or("");
         match manifest_features.get(crate_name) {
             Some(available) => {
                 for feature in &features {

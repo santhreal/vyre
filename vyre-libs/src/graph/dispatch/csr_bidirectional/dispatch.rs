@@ -1,6 +1,6 @@
 use super::{BidirectionalGpuScratch, CachedBidirectionalProgram};
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_bidirectional::{
+use crate::graph::csr_bidirectional::{
     plan_csr_bidirectional_step, CsrBidirectionalDispatchPlan, CsrBidirectionalStaticInputKey,
     CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER, CSR_BIDIRECTIONAL_NODES_BUFFER,
     CSR_BIDIRECTIONAL_NODE_TAGS_BUFFER,

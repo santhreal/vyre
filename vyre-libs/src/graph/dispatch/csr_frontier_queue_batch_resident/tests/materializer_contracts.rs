@@ -10,7 +10,7 @@ fn large_sparse_batch_queries_use_atomic_word_materializer() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge large resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let mut first = vec![0u32; words];
     first[0] = 1;
     let second = vec![0u32; words];
@@ -74,7 +74,7 @@ fn large_dense_batch_queries_use_word_prefix_queue_materializer() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge large resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let first = vec![u32::MAX; words];
     let second = vec![0u32; words];
     let frontiers: [&[u32]; 2] = [&first, &second];
@@ -142,7 +142,7 @@ fn small_multiblock_batch_queries_inline_block_offsets() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge multiblock resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let first = vec![u32::MAX; words];
     let second = vec![0u32; words];
     let frontiers: [&[u32]; 2] = [&first, &second];
@@ -202,7 +202,7 @@ fn many_block_batch_queries_scan_block_offsets_once_per_query() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge many-block resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let first = vec![u32::MAX; words];
     let second = vec![0u32; words];
     let frontiers: [&[u32]; 2] = [&first, &second];

@@ -52,9 +52,9 @@ use crate::dispatch_buffers::{
 };
 use crate::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate;
+use crate::graph::knowledge_compile::ddnnf_evaluate;
 #[cfg(test)]
-use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate_cpu;
+use crate::graph::knowledge_compile::ddnnf_evaluate_cpu;
 
 /// Caller-owned scratch for pass-precondition d-DNNF dispatch.
 #[derive(Debug, Default)]
@@ -393,7 +393,7 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
-    use vyre_primitives::graph::knowledge_compile::{AND_NODE, LITERAL_TRUE};
+    use crate::graph::knowledge_compile::{AND_NODE, LITERAL_TRUE};
 
     #[test]
     fn unconditional_pass_always_applies() {

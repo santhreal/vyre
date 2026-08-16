@@ -59,8 +59,8 @@ use crate::dispatch_buffers::{
 use crate::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::math::submodular_greedy::argmax_of_marginals_cpu;
-use vyre_primitives::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
+use crate::math::submodular_greedy::argmax_of_marginals_cpu;
+use crate::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
 
 /// Caller-owned GPU dispatch scratch for submodular cache eviction.
 #[derive(Debug, Default)]
@@ -129,7 +129,7 @@ pub fn reference_select_retention_set_into(
 ///
 /// This is the production path for callers with a concrete backend dispatcher. It performs the
 /// same simple independent-access greedy loop as `reference_select_retention_set_into`, dispatching
-/// `vyre_primitives::math::submodular_greedy::argmax_of_marginals` once per retained item.
+/// `crate::math::submodular_greedy::argmax_of_marginals` once per retained item.
 ///
 /// # Errors
 ///

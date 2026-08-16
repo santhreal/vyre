@@ -1,5 +1,5 @@
 use super::*;
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 #[test]
 fn step_flips_change_flag_when_new_bits_added() {

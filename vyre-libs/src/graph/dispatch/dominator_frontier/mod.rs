@@ -1,6 +1,6 @@
 //! Region-graph dominance-frontier substrate consumer.
 //!
-//! Wires `vyre_primitives::graph::dominator_frontier` into the dispatch
+//! Wires `crate::graph::dominator_frontier` into the dispatch
 //! path. The dominator tree of a Region graph identifies which Region's
 //! writes a Region depends on; the dominance frontier of a Region set
 //! tells the optimizer where phi-style merges (or vyre's analogue:
@@ -28,7 +28,7 @@ mod reference;
 #[cfg(test)]
 mod tests;
 
-use vyre_primitives::graph::dominator_frontier::{
+use crate::graph::dominator_frontier::{
     frontier_size as primitive_frontier_size, DominatorFrontierProgramShape,
     DominatorFrontierStaticInputKey,
 };

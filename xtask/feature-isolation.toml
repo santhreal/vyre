@@ -315,16 +315,6 @@ feature = "serde"
 outcome = "compiles"
 
 [[pair]]
-member = "vyre-grammar-gen"
-feature = "(default)"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-grammar-gen"
-feature = "(none)"
-outcome = "compiles"
-
-[[pair]]
 member = "vyre-libs"
 feature = "(default)"
 outcome = "compiles"
@@ -336,7 +326,12 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),cpu-parity,crypto-blake3,matching,nn-attention,parsing"
+feature = "(default),bitset,graph,nn-linear-4bit"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),cpu-parity,crypto-blake3,hash,matching,nn-attention,parsing"
 outcome = "compiles"
 
 [[pair]]
@@ -361,11 +356,6 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),nn-linear-4bit"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-libs"
 feature = "(default),python-parser"
 outcome = "compiles"
 
@@ -382,6 +372,11 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-libs"
 feature = "analysis"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "bitset"
 outcome = "compiles"
 
 [[pair]]
@@ -421,12 +416,27 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "fixpoint"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "full"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "geom"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "go-parser"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "graph"
 outcome = "compiles"
 
 [[pair]]
@@ -446,6 +456,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "label"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "logical"
 outcome = "compiles"
 
@@ -457,6 +472,11 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-libs"
 feature = "matching-dfa"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "matching-kernels"
 outcome = "compiles"
 
 [[pair]]
@@ -491,6 +511,16 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "math-dialect"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-kernels"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "math-linalg"
 outcome = "compiles"
 
@@ -502,6 +532,11 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-libs"
 feature = "math-succinct"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nfa"
 outcome = "compiles"
 
 [[pair]]
@@ -526,6 +561,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "nn-kernels"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "nn-linear"
 outcome = "compiles"
 
@@ -546,7 +586,22 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "opt"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "parsing"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "parsing-kernels"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "predicate"
 outcome = "compiles"
 
 [[pair]]
@@ -557,6 +612,11 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-libs"
 feature = "reasoning"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "reduce"
 outcome = "compiles"
 
 [[pair]]
@@ -592,6 +652,11 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-libs"
 feature = "text"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "topology"
 outcome = "compiles"
 
 [[pair]]
@@ -691,12 +756,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "(default),bitset,cpu-parity,graph,hardware,predicate"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "(default),graph,inventory-registry,text"
+feature = "(default),cpu-parity,hardware"
 outcome = "compiles"
 
 [[pair]]
@@ -706,12 +766,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "(default),hash,matching"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "(default),math"
+feature = "(default),inventory-registry"
 outcome = "compiles"
 
 [[pair]]
@@ -731,11 +786,6 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "bitset"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
 feature = "cpu-parity"
 outcome = "compiles"
 
@@ -746,27 +796,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "decode"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "fixpoint"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "geom"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
 feature = "gpu"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "graph"
 outcome = "compiles"
 
 [[pair]]
@@ -776,77 +806,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "hash"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "hash,inventory-registry,parsing"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
 feature = "inventory-registry"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "label"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "matching"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "math"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "nfa"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "nn"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "opt"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "parsing"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "predicate"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "reduce"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "text"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "topology"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "visual"
 outcome = "compiles"
 
 [[pair]]

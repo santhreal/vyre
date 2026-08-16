@@ -3,7 +3,7 @@ use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::toposort::{
+use crate::graph::toposort::{
     plan_toposort_csr_dispatch, validate_toposort_csr_order, ToposortCsrDispatchPlan,
     ToposortCsrError, ToposortCsrStaticInputKey, TOPOSORT_INDEGREE_SCRATCH_BUFFER,
     TOPOSORT_ORDER_OUT_BUFFER, TOPOSORT_QUEUE_SCRATCH_BUFFER,
@@ -154,11 +154,12 @@ fn refresh_toposort_inputs(
 }
 
 fn map_toposort_csr_error(error: ToposortCsrError) -> DispatchError {
+    // `ToposortCsrError` is `#[non_exhaustive]`, which stops another crate from
+    // matching it without a wildcard. Both ends live in `vyre-libs` now, so a
+    // new variant fails this match at compile time instead of falling into a
+    // catch-all that reported the variant name to the caller as a backend error.
     match error {
         ToposortCsrError::BadCsr { message } => DispatchError::BadInputs(message),
         ToposortCsrError::BadOrder { message } => DispatchError::BackendError(message),
-        other => DispatchError::BackendError(format!(
-            "Fix: topo_order_csr_via received unknown primitive CSR validation error: {other:?}."
-        )),
     }
 }

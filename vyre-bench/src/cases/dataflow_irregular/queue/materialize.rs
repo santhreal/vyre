@@ -19,10 +19,10 @@ use crate::cases::queue_materialize::{
 use crate::cases::queue_stage::QUEUE_RESET_GRID;
 use crate::cases::queue_traverse_plan::queue_traverse_plan;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_frontier_queue::{
+use vyre_libs::graph::csr_frontier_queue::{
     frontier_queue_len_init, frontier_words_to_queue_clear_out_parallel,
 };
-use vyre_primitives::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
+use vyre_libs::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 
 use super::super::fixture::{
     build_ifds_skewed_fixture, ifds_active_high_degree_sources, ifds_queue_inputs,

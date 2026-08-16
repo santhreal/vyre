@@ -15,15 +15,11 @@
 //! time, which is what turns pass-precondition evaluation from exponential per
 //! pass per Program into linear per gate.
 //!
-//! [`compile_dnnf`] and [`model_count`] run on the host. [`ddnnf_evaluate`]
-//! builds the device program that evaluates a compiled DAG bottom-up, over the
-//! graph wave scheduler.
+//! [`compile_dnnf`] and [`model_count`] run on the host. The device program
+//! that evaluates a compiled DAG bottom-up over the graph wave scheduler is
+//! [`crate::graph::knowledge_compile::ddnnf_evaluate`], which owns the gate
+//! encoding constants and the registered op id along with it.
 
 pub(crate) mod compile;
 
 pub use compile::{compile_dnnf, is_satisfiable, is_tautology, model_count, DnnfDag, DnnfGate};
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate_cpu;
-pub use vyre_primitives::graph::knowledge_compile::{
-    ddnnf_evaluate, AND_NODE, LITERAL_FALSE, LITERAL_TRUE, OR_NODE,
-};

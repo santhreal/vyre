@@ -28,7 +28,7 @@ mod blur {
     #[test]
     fn program_radius_zero_has_single_weight() {
         // radius=0 → diameter=1 → only center weight (65536 = 1.0)
-        let weights = vyre_primitives::math::conv1d::gaussian_weights(0, 1.0);
+        let weights = vyre_libs::math::conv1d::gaussian_weights(0, 1.0);
         assert_eq!(weights.len(), 1);
         assert_eq!(weights[0], 65536, "single weight must be exactly 1.0 fp16");
     }
@@ -37,7 +37,7 @@ mod blur {
     fn gaussian_weights_sum_to_one() {
         for radius in [1, 2, 4, 8, 16] {
             let sigma = radius as f32 / 3.0;
-            let weights = vyre_primitives::math::conv1d::gaussian_weights(radius, sigma);
+            let weights = vyre_libs::math::conv1d::gaussian_weights(radius, sigma);
             let sum: u32 = weights.iter().sum();
             let diameter = weights.len() as u32;
             // Should sum to 65536 (1.0 in fp16.16) ±diameter for rounding.
@@ -52,7 +52,7 @@ mod blur {
 
     #[test]
     fn gaussian_weights_are_symmetric() {
-        let weights = vyre_primitives::math::conv1d::gaussian_weights(4, 1.5);
+        let weights = vyre_libs::math::conv1d::gaussian_weights(4, 1.5);
         let n = weights.len();
         for i in 0..n / 2 {
             assert_eq!(

@@ -8,7 +8,7 @@ use crate::graph::dispatch::dispatch_bridge::{
     resident_dispatch_three_u32_outputs_into, upload_resident_dispatch_inputs, DispatchInput,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
-use vyre_primitives::graph::persistent_bfs::{
+use crate::graph::persistent_bfs::{
     persistent_bfs_layout_hash as primitive_persistent_bfs_layout_hash,
     plan_persistent_bfs_resident_batch_dispatch, plan_persistent_bfs_resident_dispatch,
     validate_persistent_bfs_changed_flag, validate_persistent_bfs_converged_flag,

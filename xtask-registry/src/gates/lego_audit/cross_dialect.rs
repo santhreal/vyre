@@ -102,12 +102,15 @@ pub(super) fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
                     if other_name == dialect_name || other_name.is_empty() {
                         continue;
                     }
+                    if is_substrate_target(other_name) {
+                        continue;
+                    }
                     if use_path.imports_dialect(other_name) {
                         report.find(violation(format!(
                             "  ✗ {relative} line {}: `{}` → reaches into the `{other_name}` \
                              dialect. Fix: re-export the item from vyre-libs/src/prelude.rs and \
-                             import it as `crate::prelude::…`, or hoist the shared piece into \
-                             vyre-primitives.",
+                             import it as `crate::prelude::…`, or move the shared piece down into \
+                             the kernel substrate the dialects compose from.",
                             use_path.line,
                             use_path.segments.join("::")
                         )));
@@ -142,6 +145,59 @@ pub(super) const SHARED_PLUMBING_DIRS: [&str; 1] = ["builder"];
 /// Shared-plumbing rows that name no directory under `libs_src`.
 pub(super) fn dead_plumbing_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
     SHARED_PLUMBING_DIRS
+        .into_iter()
+        .filter(|dir| !libs_src.join(dir).is_dir())
+        .collect()
+}
+
+/// Directories under `vyre-libs/src` that hold the kernel substrate: the
+/// composition domains every dialect is built out of. A dialect naming one is
+/// composing, not reaching, so an edge into these is not a cross-dialect edge.
+///
+/// These are the domains that used to sit in `vyre-primitives` and were reached
+/// as `vyre_primitives::<domain>::…`. The path is now `crate::<domain>::…`
+/// because both ends live in `vyre-libs`; the edge itself is the same one, and
+/// the fix line that told a caller to hoist the shared piece into
+/// `vyre-primitives` no longer names a place a composition can go.
+///
+/// A substrate directory is still walked as a source dialect, so an edge the
+/// other way, from the substrate up into a dialect, is still flagged. That
+/// direction is a layering inversion and never legal.
+pub(super) const KERNEL_SUBSTRATE_DIRS: [&str; 18] = [
+    "bitset",
+    "decode",
+    "fixpoint",
+    "geom",
+    "graph",
+    "hash",
+    "label",
+    "matching",
+    "math",
+    "nfa",
+    "nn",
+    "opt",
+    "parsing",
+    "predicate",
+    "reduce",
+    "text",
+    "topology",
+    "visual",
+];
+
+/// Whether an edge whose target is the directory `name` is composition rather
+/// than reach-through.
+///
+/// Only the target side of an edge is exempt. The substrate directory itself
+/// stays in the dialect set `list_dialect_dirs` returns, so its own files are
+/// still walked and an import from the substrate into a dialect is still a
+/// finding.
+pub(super) fn is_substrate_target(name: &str) -> bool {
+    KERNEL_SUBSTRATE_DIRS.contains(&name)
+}
+
+/// Kernel-substrate rows that name no directory under `libs_src`.
+pub(super) fn dead_substrate_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
+    KERNEL_SUBSTRATE_DIRS
         .into_iter()
         .filter(|dir| !libs_src.join(dir).is_dir())
         .collect()
@@ -229,4 +285,89 @@ mod tests {
         );
     }
 
+    /// WHY: the composition domains moved out of `vyre-primitives` into
+    /// `vyre-libs/src`, so an edge a dialect always had, and always spelled
+    /// `vyre_primitives::<domain>::…`, is now spelled `crate::<domain>::…`. The
+    /// reach-through audit read the new spelling as a cross-dialect edge and
+    /// produced 440 findings for edges nobody changed. The exemption is on the
+    /// target side only, which is the whole contract: composing downward onto
+    /// the substrate is legal, and importing upward out of the substrate into a
+    /// dialect is a layering inversion that must stay a finding.
+    ///
+    /// The tempting wrong fix is to drop the substrate directories out of
+    /// `list_dialect_dirs`. That silences the same 440 findings and also stops
+    /// walking the substrate as a source, so the inversion goes unaudited. This
+    /// test goes red on that fix.
+    ///
+    /// What this does not catch: a substrate row added for a directory that is
+    /// really a dialect. That judgement is the reviewer's and the row carries
+    /// it, exactly as a shared-plumbing row does.
+    #[test]
+    fn the_substrate_is_an_exempt_target_and_still_an_audited_source() {
+        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+        let substrate = KERNEL_SUBSTRATE_DIRS[0];
+        let dialect = "solvers";
+        assert!(
+            !KERNEL_SUBSTRATE_DIRS.contains(&dialect),
+            "the control directory must not itself be substrate"
+        );
+        for dir in [substrate, dialect] {
+            std::fs::create_dir(libs_src.path().join(dir)).expect("directory");
+        }
+
+        assert!(
+            is_substrate_target(substrate),
+            "a dialect composing onto the substrate is not reaching through"
+        );
+        assert!(
+            !is_substrate_target(dialect),
+            "a dialect naming another dialect is still reaching through"
+        );
+
+        let (dialects, errors) = list_dialect_dirs(libs_src.path());
+        assert!(errors.is_empty(), "the temporary tree reads cleanly");
+        let mut names = dialects
+            .iter()
+            .filter_map(|path| path.file_name().and_then(|name| name.to_str()))
+            .collect::<Vec<_>>();
+        names.sort_unstable();
+        let mut expected = vec![substrate, dialect];
+        expected.sort_unstable();
+        assert_eq!(
+            names, expected,
+            "the substrate is still walked as a source dialect, so an import out of it into a dialect is still audited"
+        );
+    }
+
+    /// WHY: the kernel-substrate list is consumed by a directory filter, the
+    /// same shape as the shared-plumbing list, so a row naming a directory that
+    /// moved or was renamed suppresses nothing and reads as a reviewed
+    /// exemption. Both directions are proved against a tree the check is handed.
+    #[test]
+    fn a_substrate_row_without_a_directory_behind_it_is_dead() {
+        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+
+        assert_eq!(
+            dead_substrate_rows(libs_src.path()),
+            KERNEL_SUBSTRATE_DIRS.to_vec(),
+            "every row is dead against a tree that holds none of them"
+        );
+
+        for dir in KERNEL_SUBSTRATE_DIRS {
+            std::fs::create_dir(libs_src.path().join(dir)).expect("substrate directory");
+        }
+        assert_eq!(
+            dead_substrate_rows(libs_src.path()),
+            Vec::<&str>::new(),
+            "no row is dead once every one of them names a directory"
+        );
+
+        let first = KERNEL_SUBSTRATE_DIRS[0];
+        std::fs::remove_dir(libs_src.path().join(first)).expect("remove one substrate directory");
+        assert_eq!(
+            dead_substrate_rows(libs_src.path()),
+            vec![first],
+            "the row whose directory went away is the one reported"
+        );
+    }
 }

@@ -4,7 +4,7 @@
 //! executable IR and reference contracts stay in `vyre-primitives`.
 
 use vyre_foundation::ir::{Node, Program};
-use vyre_primitives::reduce::{
+use crate::reduce::{
     multi_block_prefix_scan::{
         multi_block_prefix_scan_sum_u32, pass_a_local_scan, pass_c_broadcast_offsets, BLOCK_LANES,
     },
@@ -21,7 +21,7 @@ use vyre_primitives::reduce::{
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::reduce::{
+use crate::reduce::{
     multi_block_prefix_scan::cpu_ref as primitive_prefix_sum,
     radix_sort::cpu_ref as primitive_radix_sort, range_counts::cpu_ref as primitive_range_count,
     workgroup_any::cpu_ref as primitive_workgroup_any,

@@ -26,7 +26,7 @@
 //! evaluation.
 
 use rustc_hash::FxHashSet;
-use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
+use crate::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 /// Space-factor α: table size = ⌈n × α⌉. 1.23 is the CHD paper's
 /// recommended sweet spot for 1k..1M-entry corpora.
 const ALPHA: f64 = 1.23;

@@ -1,6 +1,6 @@
 //! Path-reconstruction substrate consumer.
 //!
-//! Wires `vyre_primitives::graph::path_reconstruct` so the optimizer can
+//! Wires `crate::graph::path_reconstruct` so the optimizer can
 //! recover an explicit walk from a parent vector. Used by call-graph
 //! diagnostics (which path led from entry to a region flagged by an analysis
 //! pass), megakernel chain reconstruction, and schedule-explanation telemetry.
@@ -20,7 +20,7 @@ pub use dispatch::{
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
 #[cfg(test)]
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::path_reconstruct::PathReconstructStaticInputKey;
+use crate::graph::path_reconstruct::PathReconstructStaticInputKey;
 
 #[cfg(test)]
 mod reference;

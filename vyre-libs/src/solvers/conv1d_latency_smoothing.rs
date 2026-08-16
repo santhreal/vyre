@@ -13,8 +13,8 @@ use crate::dispatch_buffers::{
 use vyre_foundation::ir::Node;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(test)]
-use vyre_primitives::math::conv1d::cpu_conv1d;
-use vyre_primitives::math::conv1d::{conv1d_node, conv1d_program, gaussian_weights, pack_params};
+use crate::math::conv1d::cpu_conv1d;
+use crate::math::conv1d::{conv1d_node, conv1d_program, gaussian_weights, pack_params};
 
 /// Caller-owned scratch for latency-trace smoothing dispatches.
 #[derive(Debug, Default)]
@@ -172,7 +172,7 @@ mod tests {
         let node = latency_smoothing_node("latency", "smoothed", "weights", "params");
         match node {
             Node::Region { generator, .. } => {
-                assert_eq!(generator.as_str(), vyre_primitives::math::conv1d::OP_ID);
+                assert_eq!(generator.as_str(), crate::math::conv1d::OP_ID);
             }
             other => panic!("expected conv1d region node, got {other:?}"),
         }

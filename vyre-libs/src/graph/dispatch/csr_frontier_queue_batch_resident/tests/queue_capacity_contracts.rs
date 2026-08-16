@@ -9,7 +9,7 @@ fn batch_queries_bucket_graph_sized_capacity_from_max_frontier_popcount() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let mut first = vec![0u32; words];
     first[0] = 1;
     let mut second = vec![0u32; words];
@@ -56,7 +56,7 @@ fn batch_queries_reuse_larger_queue_scratch_for_smaller_effective_capacity() {
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
         .expect("Fix: zero-edge resident CSR graph is valid");
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let mut larger = vec![0u32; words];
     for node in 0..257u32 {
         larger[(node / 32) as usize] |= 1 << (node % 32);

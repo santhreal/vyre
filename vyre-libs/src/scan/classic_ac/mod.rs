@@ -14,7 +14,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_primitives::matching::{dfa_compile, CompiledDfa};
+use crate::matching::{dfa_compile, CompiledDfa};
 
 /// THE Aho-Corasick walk. Scan-level builders reach it directly rather than
 /// through a second re-export path in this module.

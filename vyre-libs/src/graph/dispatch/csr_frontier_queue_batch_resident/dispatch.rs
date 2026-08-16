@@ -1,5 +1,5 @@
 use super::{ResidentCsrQueueBatchScratch, ResidentCsrQueueBatchShape};
-use vyre_primitives::graph::csr_frontier_queue::validate_frontier_queue_batch;
+use crate::graph::csr_frontier_queue::validate_frontier_queue_batch;
 
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan;

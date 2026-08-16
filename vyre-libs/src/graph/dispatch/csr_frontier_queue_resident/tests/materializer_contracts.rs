@@ -6,7 +6,7 @@ use crate::graph::dispatch::csr_frontier_queue_scratch::ResidentCsrQueueMaterial
 fn large_single_word_resident_query_uses_atomic_word_materializer() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 8_193u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,
@@ -71,7 +71,7 @@ fn large_single_word_resident_query_uses_atomic_word_materializer() {
 fn large_dense_resident_query_uses_word_prefix_queue_materializer() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 8_193u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,
@@ -143,7 +143,7 @@ fn large_dense_resident_query_uses_word_prefix_queue_materializer() {
 fn small_multiblock_resident_query_inlines_block_offsets() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 32_897u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,
@@ -208,7 +208,7 @@ fn small_multiblock_resident_query_inlines_block_offsets() {
 fn many_block_resident_query_scans_block_offsets_once() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 262_177u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,

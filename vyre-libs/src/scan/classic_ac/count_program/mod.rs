@@ -6,7 +6,7 @@ use crate::scan::builders::load_packed_byte_expr;
 use super::bounded_ranges::{
     bounded_walk_prologue_nodes, candidate_end_gate_nodes, classic_ac_dfa_buffer_decls,
 };
-use vyre_primitives::matching::CompiledDfa;
+use crate::matching::CompiledDfa;
 
 mod suffix2;
 mod suffix3;

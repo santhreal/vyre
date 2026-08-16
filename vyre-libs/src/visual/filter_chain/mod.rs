@@ -57,7 +57,7 @@ pub fn filter_chain(
         vec![wrap_anonymous_region(
             OP_ID,
             vec![wrap_child_region(
-                vyre_primitives::visual::packed_rgba_map::OP_ID,
+                crate::visual::packed_rgba_map::OP_ID,
                 GeneratorRef {
                     name: OP_ID.to_string(),
                 },
@@ -86,15 +86,15 @@ pub fn filter_chain(
                             // 1. Brightness: channel = channel * brightness >> 16
                             Node::assign(
                                 "r",
-                                super::fixed_mul_16_16_expr(Expr::var("r"), Expr::u32(br_fp)),
+                                super::fixed_mul_16_16_unsigned_expr(Expr::var("r"), Expr::u32(br_fp)),
                             ),
                             Node::assign(
                                 "g",
-                                super::fixed_mul_16_16_expr(Expr::var("g"), Expr::u32(br_fp)),
+                                super::fixed_mul_16_16_unsigned_expr(Expr::var("g"), Expr::u32(br_fp)),
                             ),
                             Node::assign(
                                 "b",
-                                super::fixed_mul_16_16_expr(Expr::var("b"), Expr::u32(br_fp)),
+                                super::fixed_mul_16_16_unsigned_expr(Expr::var("b"), Expr::u32(br_fp)),
                             ),
                         ];
                         body.extend(clamp255("r"));
@@ -115,14 +115,14 @@ pub fn filter_chain(
                             vec![
                                 Node::let_bind(
                                     &delta_pos,
-                                    super::fixed_mul_16_16_expr(
+                                    super::fixed_mul_16_16_unsigned_expr(
                                         Expr::sub(Expr::var(ch), Expr::u32(128)),
                                         Expr::u32(ct_fp),
                                     ),
                                 ),
                                 Node::let_bind(
                                     &delta_neg,
-                                    super::fixed_mul_16_16_expr(
+                                    super::fixed_mul_16_16_unsigned_expr(
                                         Expr::sub(Expr::u32(128), Expr::var(ch)),
                                         Expr::u32(ct_fp),
                                     ),
@@ -153,10 +153,10 @@ pub fn filter_chain(
                             "luma",
                             Expr::add(
                                 Expr::add(
-                                    super::fixed_mul_16_16_expr(Expr::var("r"), Expr::u32(luma_r)),
-                                    super::fixed_mul_16_16_expr(Expr::var("g"), Expr::u32(luma_g)),
+                                    super::fixed_mul_16_16_unsigned_expr(Expr::var("r"), Expr::u32(luma_r)),
+                                    super::fixed_mul_16_16_unsigned_expr(Expr::var("g"), Expr::u32(luma_g)),
                                 ),
-                                super::fixed_mul_16_16_expr(Expr::var("b"), Expr::u32(luma_b)),
+                                super::fixed_mul_16_16_unsigned_expr(Expr::var("b"), Expr::u32(luma_b)),
                             ),
                         ));
 
@@ -169,12 +169,12 @@ pub fn filter_chain(
                                     &delta,
                                     Expr::select(
                                         Expr::ge(Expr::var(ch), Expr::var("luma")),
-                                        super::fixed_mul_16_16_expr(
+                                        super::fixed_mul_16_16_unsigned_expr(
                                             Expr::sub(Expr::var(ch), Expr::var("luma")),
                                             Expr::u32(sat_fp),
                                         ),
                                         // channel < luma: negative delta
-                                        super::fixed_mul_16_16_expr(
+                                        super::fixed_mul_16_16_unsigned_expr(
                                             Expr::sub(Expr::var("luma"), Expr::var(ch)),
                                             Expr::u32(sat_fp),
                                         ),
@@ -208,11 +208,11 @@ pub fn filter_chain(
                                 vec![Node::assign(
                                     ch,
                                     Expr::add(
-                                        super::fixed_mul_16_16_expr(
+                                        super::fixed_mul_16_16_unsigned_expr(
                                             Expr::var(ch),
                                             Expr::sub(Expr::u32(65536), Expr::u32(inv_fp)),
                                         ),
-                                        super::fixed_mul_16_16_expr(
+                                        super::fixed_mul_16_16_unsigned_expr(
                                             Expr::sub(Expr::u32(255), Expr::var(ch)),
                                             Expr::u32(inv_fp),
                                         ),

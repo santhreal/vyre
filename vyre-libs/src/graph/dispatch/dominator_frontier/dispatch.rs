@@ -5,7 +5,7 @@ use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::dominator_frontier::{
+use crate::graph::dominator_frontier::{
     plan_dominator_frontier_launch, DominatorFrontierLaunchPlan,
 };
 

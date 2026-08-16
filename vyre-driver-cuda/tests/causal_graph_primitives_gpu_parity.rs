@@ -7,10 +7,10 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::adjustment_set::{
+use vyre_libs::graph::adjustment_set::{
     backdoor_descendants_check, backdoor_descendants_check_cpu,
 };
-use vyre_primitives::graph::do_calculus::{
+use vyre_libs::graph::do_calculus::{
     do_intervention_delete_incoming, do_intervention_delete_incoming_cpu,
 };
 

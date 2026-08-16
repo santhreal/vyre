@@ -11,21 +11,21 @@ use crate::dispatch_buffers::{
 };
 use crate::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::matching::{
+use crate::matching::{
     bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
     BRACKET_KIND_OTHER,
 };
-use vyre_primitives::matching::{
+use crate::matching::{
     dedup_regions_flag_program, region_dedup_dispatch_grid, region_sort_program, RegionTriple,
 };
-use vyre_primitives::matching::{
+use crate::matching::{
     dfa_compile, dfa_compile_with_budget, dfa_fingerprint, dfa_wire_bytes, nfa_to_dfa, CompiledDfa,
     DfaCompileError, DfaDedupBatch, DfaDedupResult, DfaDedupTable, NfaTables, NfaToDfaError,
 };
 use vyre_primitives::wire::pack_u32_slice;
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::matching::{
+use crate::matching::{
     bracket_match_cpu_ref as primitive_bracket_match, dedup_regions_cpu, dedup_regions_inplace,
     sort_regions_cpu,
 };
@@ -498,7 +498,7 @@ mod tests {
                 })
                 .expect("Fix: matching primitive should expose a region generator");
             match op_id {
-                vyre_primitives::matching::BRACKET_MATCH_OP_ID => {
+                crate::matching::BRACKET_MATCH_OP_ID => {
                     // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).
                     // `match_pairs` output(2) is backend-allocated (no input slot).
                     assert_eq!(

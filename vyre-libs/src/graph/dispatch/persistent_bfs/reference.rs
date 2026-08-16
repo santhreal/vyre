@@ -1,7 +1,7 @@
-use vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs;
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 #[cfg(test)]
-use vyre_primitives::graph::csr_closure_inputs::CsrGraphView;
-use vyre_primitives::graph::persistent_bfs::{
+use crate::graph::csr_closure_inputs::CsrGraphView;
+use crate::graph::persistent_bfs::{
     try_cpu_ref as try_reference_persistent_bfs, try_cpu_ref_converged, PersistentBfsConvergence,
 };
 

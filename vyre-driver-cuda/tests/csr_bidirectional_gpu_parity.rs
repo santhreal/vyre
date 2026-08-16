@@ -2,7 +2,7 @@
 
 #![cfg(test)]
 
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;

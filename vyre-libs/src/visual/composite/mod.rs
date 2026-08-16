@@ -28,7 +28,7 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
         vec![wrap_anonymous_region(
             OP_ID,
             vec![wrap_child_region(
-                vyre_primitives::visual::packed_rgba_map::OP_ID,
+                crate::visual::packed_rgba_map::OP_ID,
                 GeneratorRef {
                     name: OP_ID.to_string(),
                 },

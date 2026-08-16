@@ -4,7 +4,7 @@
 //! so a test that writes its own `flat_map(to_le_bytes)` loop is a second copy
 //! of a shipped primitive. The BF16 rounding has no production owner because
 //! only the typed contracts need it, so it is owned here.
-#![allow(unused_imports)]
+#![allow(unused_imports, unused_macros)]
 
 use vyre_primitives::wire::decode_u16_le_bytes_all;
 use vyre_reference::value::Value;

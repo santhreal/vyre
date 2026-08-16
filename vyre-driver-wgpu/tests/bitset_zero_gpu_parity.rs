@@ -6,7 +6,7 @@ use harness::bytes_u32;
 use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_primitives::bitset::zero::bitset_zero;
+use vyre_libs::bitset::zero::bitset_zero;
 
 #[test]
 fn wgpu_bitset_zero_parity_crosses_workgroup_lanes() {

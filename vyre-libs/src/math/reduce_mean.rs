@@ -7,7 +7,7 @@ use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduc
 #[cfg(test)]
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::math::reduce_mean";
 #[cfg(test)]

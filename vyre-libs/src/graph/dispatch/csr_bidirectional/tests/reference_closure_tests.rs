@@ -1,6 +1,6 @@
 use super::*;
-use vyre_primitives::graph::csr_closure_inputs::graphs;
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use crate::graph::csr_closure_inputs::graphs;
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 /// Adversarial: closure on disjoint components must not bridge
 /// across components. Seed in component A must not flag B.

@@ -18,7 +18,7 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
-use vyre_primitives::math::conv1d::{cpu_conv1d, gaussian_weights};
+use vyre_libs::math::conv1d::{cpu_conv1d, gaussian_weights};
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 

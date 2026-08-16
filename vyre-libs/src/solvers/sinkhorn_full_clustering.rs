@@ -5,11 +5,11 @@
 //! optimal transport plan between dispatch components, yielding a balanced
 //! soft assignment of nodes to clusters.
 //!
-//! Composes the `vyre_primitives::math::sinkhorn_iterate` primitive to run
+//! Composes the `crate::math::sinkhorn_iterate` primitive to run
 //! entirely on device without host round-trips.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
+use crate::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
 
 /// Stable op identifier for the full-clustering Sinkhorn iteration self-consumer.
 pub const OP_ID: &str = "vyre-libs::self_substrate::sinkhorn_full_clustering";

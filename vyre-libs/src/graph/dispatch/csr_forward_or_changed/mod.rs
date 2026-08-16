@@ -1,6 +1,6 @@
 //! In-place expand-with-change-flag substrate consumer.
 //!
-//! Wires `vyre_primitives::graph::csr_forward_or_changed` so iterative
+//! Wires `crate::graph::csr_forward_or_changed` so iterative
 //! dataflow loops can detect convergence in a single pass: the primitive returns the next
 //! frontier AND a boolean changed-flag. Used by reachability /
 //! liveness / reaching-defs fixpoint passes that previously had to
@@ -26,4 +26,4 @@ pub use reference::{
 };
 
 #[cfg(test)]
-pub(crate) use vyre_primitives::graph::csr_forward_or_changed::cpu_ref as csr_foc_cpu;
+pub(crate) use crate::graph::csr_forward_or_changed::cpu_ref as csr_foc_cpu;

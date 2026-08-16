@@ -1,5 +1,5 @@
 use super::{CachedBatchedPathProgram, CachedSinglePathProgram, PathReconstructGpuScratch};
-use vyre_primitives::graph::path_reconstruct::{
+use crate::graph::path_reconstruct::{
     plan_batched_path_reconstruct_dispatch, plan_path_reconstruct_dispatch,
     validate_batched_path_reconstruct_readback, validate_path_reconstruct_readback,
     BATCHED_LENS_BUFFER, BATCHED_PATHS_BUFFER, PATH_LEN_BUFFER, PATH_OUT_BUFFER,

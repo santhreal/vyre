@@ -40,7 +40,7 @@ use vyre_libs::scan::classic_ac::{
     build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce, classic_ac_compile,
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
-use vyre_primitives::matching::CompiledDfa;
+use vyre_libs::matching::CompiledDfa;
 
 /// The source file that owns the width table, relative to the crate root. Read at
 /// run time so the member set is the shipped enum rather than a copy of it.

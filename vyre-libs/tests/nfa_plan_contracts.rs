@@ -4,7 +4,7 @@
 #[test]
 fn nfa_plan_and_state_major_table_encode_exactly_the_declared_edges() {
     use vyre_libs::scan::nfa::{build_transition_table, plan_shards, try_compile};
-    use vyre_primitives::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
+    use vyre_libs::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
 
     let pattern_sets: &[&[&str]] = &[
         &[],

@@ -42,7 +42,7 @@ use vyre_libs::scan::{
     build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce, fused_region_evidence_program,
     regex_admission_by_region_program, RegexReplayPolicy,
 };
-use vyre_primitives::matching::CompiledDfa;
+use vyre_libs::matching::CompiledDfa;
 
 const PATTERNS: [&[u8]; 4] = [b"alpha", b"beta", b"gamma", b"al"];
 const PATTERN_COUNT: u32 = 4;

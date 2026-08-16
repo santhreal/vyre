@@ -4,7 +4,7 @@
 //! math primitives without reimplementing the primitive algorithms here.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::{
+use crate::math::{
     dp_accountant::{gaussian_rdp_step, rdp_to_dp},
     fractional::{
         grunwald_letnikov_kernel, grunwald_letnikov_kernel_into, kernel_to_fixed_16_16,
@@ -15,7 +15,7 @@ use vyre_primitives::math::{
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::math::{
+use crate::math::{
     dp_accountant::gaussian_rdp_step_cpu,
     fractional::{fractional_derivative_cpu, fractional_derivative_cpu_into},
     preconditioner::{
@@ -59,7 +59,7 @@ pub fn dispatch_newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols
 /// record and the same extents and add nothing, and the only thing it could add
 /// is a restatement of the primitive's parameter list that is free to drift from
 /// it. The composition names the primitive; it does not repeat it.
-pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_iterate as dispatch_sinkhorn_iterate;
+pub use crate::math::sinkhorn_iterate::sinkhorn_iterate as dispatch_sinkhorn_iterate;
 
 /// Build a Gaussian RDP per-step dispatch.
 #[must_use]
@@ -201,27 +201,27 @@ pub fn reference_newton_schulz_inverse_sqrt_into(
 /// wrapper's whole body was its nine-parameter positional list, which is where a
 /// transposed `k`/`k_t` or `m`/`n` hides, unprovable from either side.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::math::sinkhorn_iterate::cpu_ref as reference_sinkhorn_quantized;
+pub use crate::math::sinkhorn_iterate::cpu_ref as reference_sinkhorn_quantized;
 
 /// CPU quantized Sinkhorn reference into caller storage.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::math::sinkhorn_iterate::cpu_ref_into as reference_sinkhorn_quantized_into;
+pub use crate::math::sinkhorn_iterate::cpu_ref_into as reference_sinkhorn_quantized_into;
 
 /// CPU f64 Sinkhorn-Knopp reference.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_iterate_f64 as reference_sinkhorn_f64;
+pub use crate::math::sinkhorn_iterate::sinkhorn_iterate_f64 as reference_sinkhorn_f64;
 
 /// CPU f64 Sinkhorn-Knopp reference into caller storage.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_iterate_f64_into as reference_sinkhorn_f64_into;
+pub use crate::math::sinkhorn_iterate::sinkhorn_iterate_f64_into as reference_sinkhorn_f64_into;
 
 /// CPU Sinkhorn row residual.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_row_residual as reference_sinkhorn_row_residual;
+pub use crate::math::sinkhorn_iterate::sinkhorn_row_residual as reference_sinkhorn_row_residual;
 
 /// CPU Sinkhorn column residual.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_col_residual as reference_sinkhorn_col_residual;
+pub use crate::math::sinkhorn_iterate::sinkhorn_col_residual as reference_sinkhorn_col_residual;
 
 /// CPU Gaussian RDP reference.
 #[must_use]
@@ -234,7 +234,7 @@ pub fn reference_gaussian_rdp_step(alpha: &[f64], sigma_squared: &[f64]) -> Vec<
 mod tests {
     use super::*;
     use vyre_foundation::ir::Node;
-    use vyre_primitives::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
+    use crate::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())

@@ -4,7 +4,7 @@ mod harness;
 
 use harness::{bytes_u32, live_backend, u32_bytes};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::decode::hex::{
+use vyre_libs::decode::hex::{
     hex_decode, hex_decode_reference_packed, hex_decode_table, hex_decoded_capacity,
     HEX_WORKGROUP_SIZE,
 };
@@ -20,7 +20,7 @@ fn hex_lanes() -> u32 {
 fn dispatch_hex(input: &[u8]) -> Vec<u32> {
     let backend = live_backend();
     let decoded_words = hex_decoded_capacity(input.len() as u32);
-    let program = hex_decode("input", "output", "table", input.len() as u32);
+    let program = hex_decode("input", "output", input.len() as u32);
     let mut config = DispatchConfig::default();
     config.grid_override = Some([decoded_words.div_ceil(hex_lanes()).max(1), 1, 1]);
     let outputs = backend

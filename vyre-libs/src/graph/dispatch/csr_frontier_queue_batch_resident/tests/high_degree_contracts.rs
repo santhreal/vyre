@@ -4,7 +4,7 @@ use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_que
 use crate::graph::dispatch::csr_frontier_queue_scratch::{
     resident_csr_queue_split_low_grid, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
-use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
+use crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 
 #[test]
 fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
