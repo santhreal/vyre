@@ -78,49 +78,6 @@ pub fn turboquant_attention(
         )
     };
 
-    if seq_len <= 8 && d_head <= 16 {
-        let mut stores = Vec::with_capacity(d_head as usize);
-        for dim in 0..d_head {
-            let mut acc = Expr::f32(0.0);
-            for i in 0..seq_len {
-                let mut score = Expr::f32(0.0);
-                for e in 0..d_head {
-                    score = Expr::add(
-                        score,
-                        Expr::mul(
-                            Expr::load(q, Expr::u32(e)),
-                            unpack_3bit(k_packed, Expr::u32(i * d_head + e)),
-                        ),
-                    );
-                }
-                acc = Expr::add(
-                    acc,
-                    Expr::mul(score, unpack_3bit(v_packed, Expr::u32(i * d_head + dim))),
-                );
-            }
-            stores.push(Node::store(out, Expr::u32(dim), acc));
-        }
-        return Program::wrapped(
-            vec![
-                BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d_head),
-                BufferDecl::storage(k_packed, 1, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(packed_words),
-                BufferDecl::storage(v_packed, 2, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(packed_words),
-                BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32)
-                    .with_count(d_head),
-            ],
-            [1, 1, 1],
-            vec![wrap_anonymous_region(
-                OP_ID,
-                vec![Node::if_then(
-                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                    stores,
-                )],
-            )],
-        );
-    }
-
     // Per output lane d: walk i in 0..seq_len, accumulate score*V.
     let t = Expr::InvocationId { axis: 0 };
 
