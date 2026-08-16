@@ -3469,6 +3469,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   hand-written matches ending in a catch-all, so a Node variant added with a
   body is descended into on the commit that declares it rather than treated as
   a leaf, and an unchanged scope is no longer rebuilt.
+- A strong barrier is narrowed to the address spaces its body touches, and that
+  decision was covered only by two pinned backend corpora. One of them was
+  stale: the WGSL golden carried the narrowed storage barrier while the SPIR-V
+  golden still pinned the memory-semantics word for the wider fence, so the
+  SPIR-V byte-stability test failed on a change nobody had made. The mapping is
+  now tested where it is decided, including the storage-only, scratch-only,
+  both, neither and nested-body cases and the refusal of relaxed and grid-wide
+  orderings, and the SPIR-V corpus is regenerated to the narrowed word.
 - `vyre_libs::math::bellman_shortest_path::BellmanBuffers` publishes
   `CANONICAL` and `TERSE` binding-name sets, matching the
   `SinkhornBuffers::CANONICAL` it already had. Four sites spelled the same six
@@ -4889,6 +4897,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   count pair up to 40.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
+- The `vyre-primitives::hardware::subgroup_add` intrinsic performed no subgroup
+  operation. It summed thirty-two memory neighbours in a serial loop, so every
+  lane re-read and re-added its whole subgroup out of storage, while
+  registering the hardware semantic for a subgroup add and documenting itself
+  as mapping to one. It now builds `Expr::subgroup_add`, the reduction the IR
+  already carries and all three emitters already lower, with the lane value in
+  a guarded local and the collective in uniform control flow so the
+  participating-lane set is defined. Values are unchanged: the reference oracle
+  and its three boundary cases are untouched and pass, including two subgroups
+  of thirty-two.
 - The registered witness programs for
   `vyre-primitives::hardware::subgroup_ballot` and
   `vyre-primitives::hardware::subgroup_shuffle` passed an unguarded buffer load
