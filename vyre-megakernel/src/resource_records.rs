@@ -219,6 +219,7 @@ pub(crate) fn build_resources(
                 ValueLifetime::Retained => ResourceLifetime::Retained,
                 ValueLifetime::Output => ResourceLifetime::Output,
             },
+            retained_predecessor: value.retained_successor_of.map(|id| ArtifactValueId(id.0)),
             first_stage: producer_stage,
             last_stage,
         });
