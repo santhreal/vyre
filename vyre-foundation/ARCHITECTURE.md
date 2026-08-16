@@ -15,12 +15,11 @@ The IR data model. `Program`, `Node`, `Expr`, `BufferDecl`,
 Optimizer passes: cse, dce, canonicalize, region_inline,
 const_fold, autotune, fuse_cse.
 
-### `pass_substrate/` (OFF-LIMITS  -  substrate hot-path wires in flight)
-Pass-scheduler substrate (PassScheduler + transitive_dependents).
-Currently mid-edit.
+### `pass_substrate/`
+Pass-scheduler substrate: `PassScheduler` wiring and `transitive_dependents`.
 
-### `optimizer/scheduler.rs` (OFF-LIMITS)
-PassScheduler core. Currently mid-edit.
+### `optimizer/scheduler/`
+`PassScheduler` core: pass ordering and the dependency walk it orders from.
 
 ### `execution_plan/`
 Cross-pass plan: `fuse_programs`, `fuse_programs_vec`,
@@ -52,7 +51,7 @@ The CPU-reference oracle. Every op declares its CPU semantics
 here; the conform suite measures every backend's output against
 this.
 
-### `algebra/composition.rs`
+### `composition.rs`
 This module owns region-chain composition metadata. `tag_program` wraps an
 existing `Program` under a parent operation without rebuilding its buffer
 table or losing `entry_op_id`, launch geometry, or self-composition metadata.

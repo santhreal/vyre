@@ -1,7 +1,5 @@
 # tests/SKILL.md  -  vyre-driver-spirv
 
-Read `../../.internals/skills/testing/SKILL.md` first for the category contract.
-
 ## Purpose
 
 `vyre-driver-spirv` is the target adapter and runtime owner for SPIR-V devices.

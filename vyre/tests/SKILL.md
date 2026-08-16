@@ -1,7 +1,5 @@
 # tests/SKILL.md: vyre facade
 
-Read `../../.internals/skills/testing/SKILL.md` first for the category contract.
-
 ## Purpose
 
 The `vyre` package is the stable public facade for semantic IR, whole-program

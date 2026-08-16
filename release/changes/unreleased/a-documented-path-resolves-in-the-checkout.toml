@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The docs-references gate now reads every tracked Markdown file rather than the root, .github and docs pages only, resolves a relative path against the crate that owns the document as well as the workspace root, and exempts historical records; the crate CONFIG, ARCHITECTURE, AUTHORING and README pages that cited a deleted script, an op corpus that never existed, or a module that moved are repointed at what the checkout carries."

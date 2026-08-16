@@ -46,6 +46,7 @@ use std::process;
 use toml::Value;
 use walkdir::WalkDir;
 
+pub mod backend_vocabulary;
 pub mod source_scan;
 
 /// Category A owner: every composition, meaning anything that returns a
@@ -173,6 +174,9 @@ pub struct Workspace {
     pub source_files: Vec<String>,
     /// Module paths the committed public-API snapshots publish.
     pub published_modules: Vec<String>,
+    /// Every glob re-export of another workspace crate, as file, owning crate
+    /// identifier, line and re-exported path.
+    pub foreign_glob_reexports: Vec<(String, String, u32, String)>,
 }
 
 /// Read the workspace rooted at `root` into the structural model.
@@ -189,6 +193,8 @@ pub fn scan(root: &Path) -> Workspace {
     let module_files = scan_module_files(root, &crate_roots);
     let published_modules = scan_published_modules(root);
     let source_files = scan_source_files(root, &crate_roots);
+    let foreign_glob_reexports =
+        backend_vocabulary::scan_foreign_glob_reexports(root, &crate_roots);
     Workspace {
         members,
         registrations,
@@ -201,6 +207,7 @@ pub fn scan(root: &Path) -> Workspace {
         module_files,
         source_files,
         published_modules,
+        foreign_glob_reexports,
     }
 }
 
@@ -208,6 +215,11 @@ pub fn scan(root: &Path) -> Workspace {
 ///
 /// `run` and the workspace contract tests share this one path so the gate and
 /// its proving tests can never disagree about what the rule is.
+///
+/// The neutral-vocabulary rule takes `root` rather than the model: it streams the
+/// production text of the crates in its roster and keeps only what matched, so
+/// reading every one of those lines into [`Workspace`] first would hold most of
+/// the workspace in memory to report a handful of lines.
 #[must_use]
 pub fn violations(root: &Path) -> Vec<String> {
     let workspace = scan(root);
@@ -231,6 +243,10 @@ pub fn violations(root: &Path) -> Vec<String> {
     ));
     failures.extend(numbered_sibling_failures(&workspace.source_files));
     failures.extend(directory_stutter_failures(&workspace.source_files));
+    failures.extend(backend_vocabulary::foreign_glob_reexport_failures(
+        &workspace.foreign_glob_reexports,
+    ));
+    failures.extend(backend_vocabulary::neutral_vocabulary_failures(root));
     failures
 }
 
@@ -282,7 +298,9 @@ pub fn run(args: &[String]) {
              (Category C) registers an operation, when one semantic operation is \
              registered under two identities, when a concept has more than one home, \
              when a src/ module file sits beside a directory of its own name, when a \
-             module name states no contract, or when the workspace roster drifts."
+             module name states no contract, when a crate glob re-exports another \
+             crate's items, when production source of a substrate-neutral crate names \
+             a concrete backend, or when the workspace roster drifts."
         );
         return;
     }
@@ -292,7 +310,7 @@ pub fn run(args: &[String]) {
 
     if failures.is_empty() {
         println!(
-            "crate-structure: roster, operation identity, concept homes, and module layout agree"
+            "crate-structure: roster, operation identity, concept homes, module layout, and neutral vocabulary agree"
         );
         return;
     }
@@ -305,8 +323,9 @@ pub fn run(args: &[String]) {
         "Fix: move the operation to its category owner ({CATEGORY_A_CRATE} for Category A, \
          {CATEGORY_C_CRATE} for Category C), delete the duplicate registration, move a \
          module file that sits beside its own directory to that directory's mod.rs, rename \
-         a module that states no contract for what it holds, and update \
-         docs/ARCHITECTURE.md plus docs/CRATE_OWNERSHIP.toml in the same change."
+         a module that states no contract for what it holds, name the owner instead of \
+         re-exporting it, state the neutral concept instead of one vendor's product, and \
+         update docs/ARCHITECTURE.md plus docs/CRATE_OWNERSHIP.toml in the same change."
     );
     process::exit(1);
 }
@@ -1165,6 +1184,37 @@ pub fn cfg_test_module_declarations(text: &str) -> Vec<String> {
         }
     }
     names
+}
+
+/// For each line of `text`, whether it sits inside a `#[cfg(test)]`-gated item.
+///
+/// A third view of the same spans [`strip_cfg_test_items`] and [`cfg_test_items`]
+/// read, for a caller that reports a line number. Stripping the text first would
+/// shift every line after the first test module, so a finding would name a line
+/// the reader cannot open, and rebuilding the mapping from the stripped text is
+/// how the two views drift.
+///
+/// A line the spans cover only partly counts as test text: the attribute and the
+/// item's opening line hold no production code, and the closing line holds a
+/// brace.
+#[must_use]
+pub fn cfg_test_line_mask(text: &str) -> Vec<bool> {
+    let mut mask = vec![false; text.lines().count()];
+    for (start, end) in cfg_test_spans(text) {
+        let first = line_index(text, start);
+        let last = line_index(text, end.saturating_sub(1).max(start));
+        for line in first..=last {
+            if let Some(flag) = mask.get_mut(line) {
+                *flag = true;
+            }
+        }
+    }
+    mask
+}
+
+/// The zero-based line `offset` falls on, counted from the newlines before it.
+fn line_index(text: &str, offset: usize) -> usize {
+    text[..offset.min(text.len())].matches('\n').count()
 }
 
 /// Byte spans of every test-gated item, attribute included, in source order.

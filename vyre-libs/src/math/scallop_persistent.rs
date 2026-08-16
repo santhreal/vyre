@@ -4,20 +4,66 @@ use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+/// Buffer wiring and matrix geometry every lineage fixpoint body shares.
+///
+/// The four bodies (single-word or wide, workgroup-local or grid-sync) differ
+/// only in which of these fields they consume and in which phase bodies they
+/// splice, so they read one value instead of restating a nine-argument list
+/// four times. Deriving `cells`, `words` and `cell_chunks` here also keeps the
+/// cell-versus-word distinction in one place: a lane owns a cell, a buffer
+/// holds words, and the two differ by a factor of `w`.
+#[derive(Clone, Copy)]
+pub(crate) struct LineageFixpoint<'a> {
+    /// `n * n * w` word buffer holding the current relation matrix.
+    pub state: &'a str,
+    /// Ping-pong target of the same shape as `state`.
+    pub next: &'a str,
+    /// Static join-rule adjacency of the same shape as `state`.
+    pub join_rules: &'a str,
+    /// One-word convergence flag.
+    pub changed: &'a str,
+    /// Matrix dimension; the relation is `n` by `n` cells.
+    pub n: u32,
+    /// `u32` bitset words per relation cell.
+    pub w: u32,
+    /// Lanes in the launch workgroup.
+    pub lanes: u32,
+    /// Fixpoint iteration cap.
+    pub max_iterations: u32,
+}
+
+impl LineageFixpoint<'_> {
+    /// Relation cells. One lane owns one cell.
+    pub(crate) fn cells(&self) -> u32 {
+        self.n.saturating_mul(self.n)
+    }
+
+    /// Words in each of the three matrix buffers.
+    pub(crate) fn words(&self) -> u32 {
+        self.cells().saturating_mul(self.w)
+    }
+
+    /// Cells one lane walks per iteration when the matrix has more cells than
+    /// the workgroup has lanes.
+    fn cell_chunks(&self) -> u32 {
+        self.cells().div_ceil(self.lanes.max(1)).max(1)
+    }
+}
+
 fn workgroup_lineage_loop(
+    spec: &LineageFixpoint<'_>,
     iteration_var: &'static str,
     chunk_var: &'static str,
-    changed: &str,
-    max_iterations: u32,
-    cell_chunks: u32,
-    lane: Expr,
     transfer_body: Vec<Node>,
     compare_body: Vec<Node>,
 ) -> Vec<Node> {
+    let lane = Expr::InvocationId { axis: 0 };
+    let changed = spec.changed;
+    let cell_chunks = spec.cell_chunks();
     vec![Node::loop_for(
         iteration_var,
         Expr::u32(0),
-        Expr::u32(max_iterations),
+        Expr::u32(spec.max_iterations),
         vec![
             Node::if_then(
                 Expr::eq(lane, Expr::u32(0)),
@@ -47,49 +93,29 @@ fn workgroup_lineage_loop(
     )]
 }
 
-pub(crate) fn single_word_lineage_body(
-    state: &str,
-    next: &str,
-    join_rules: &str,
-    changed: &str,
-    n: u32,
-    cells: u32,
-    max_iterations: u32,
-    lanes: u32,
-) -> Vec<Node> {
-    let lane = Expr::InvocationId { axis: 0 };
-    let cell_chunks = cells.div_ceil(lanes).max(1);
+pub(crate) fn single_word_lineage_body(spec: &LineageFixpoint<'_>) -> Vec<Node> {
+    let cells = spec.cells();
     let cell = Expr::add(
-        Expr::mul(Expr::var("__sj_chunk"), Expr::u32(lanes)),
-        lane.clone(),
+        Expr::mul(Expr::var("__sj_chunk"), Expr::u32(spec.lanes)),
+        Expr::InvocationId { axis: 0 },
     );
     workgroup_lineage_loop(
+        spec,
         "__sj_iter",
         "__sj_chunk",
-        changed,
-        max_iterations,
-        cell_chunks,
-        lane,
-        single_word_transfer_body(state, next, join_rules, n, cells, cell.clone()),
-        single_word_compare_body(state, next, changed, cells, cell),
+        single_word_transfer_body(spec.state, spec.next, spec.join_rules, spec.n, cells, cell.clone()),
+        single_word_compare_body(spec.state, spec.next, spec.changed, cells, cell),
     )
 }
 
-pub(crate) fn single_word_lineage_grid_sync_body(
-    state: &str,
-    next: &str,
-    join_rules: &str,
-    changed: &str,
-    n: u32,
-    cells: u32,
-    max_iterations: u32,
-) -> Vec<Node> {
+pub(crate) fn single_word_lineage_grid_sync_body(spec: &LineageFixpoint<'_>) -> Vec<Node> {
     let lane = Expr::InvocationId { axis: 0 };
+    let cells = spec.cells();
     let mut body = Vec::new();
-    for iter in 0..max_iterations {
+    for iter in 0..spec.max_iterations {
         body.push(Node::if_then(
             Expr::eq(lane.clone(), Expr::u32(0)),
-            vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
+            vec![Node::store(spec.changed, Expr::u32(0), Expr::u32(0))],
         ));
         // Each phase body opens with its own `let __sj_cell`. The
         // workgroup path (single_word_lineage_body) isolates them in
@@ -100,22 +126,22 @@ pub(crate) fn single_word_lineage_grid_sync_body(
         // stays at region level between them so it still synchronizes
         // the whole grid between the transfer and compare phases.
         body.push(Node::Block(single_word_transfer_body(
-            state,
-            next,
-            join_rules,
-            n,
+            spec.state,
+            spec.next,
+            spec.join_rules,
+            spec.n,
             cells,
             lane.clone(),
         )));
         body.push(grid_sync_barrier());
         body.push(Node::Block(single_word_compare_body(
-            state,
-            next,
-            changed,
+            spec.state,
+            spec.next,
+            spec.changed,
             cells,
             lane.clone(),
         )));
-        if iter + 1 < max_iterations {
+        if iter + 1 < spec.max_iterations {
             body.push(grid_sync_barrier());
         }
     }
@@ -219,32 +245,26 @@ fn single_word_compare_body(
     ]
 }
 
-pub(crate) fn wide_lineage_body(
-    state: &str,
-    next: &str,
-    join_rules: &str,
-    changed: &str,
-    n: u32,
-    w: u32,
-    cells: u32,
-    max_iterations: u32,
-    lanes: u32,
-) -> Vec<Node> {
-    let lane = Expr::InvocationId { axis: 0 };
-    let cell_chunks = cells.div_ceil(lanes).max(1);
+pub(crate) fn wide_lineage_body(spec: &LineageFixpoint<'_>) -> Vec<Node> {
+    let cells = spec.cells();
     let cell = Expr::add(
-        Expr::mul(Expr::var("__sjw_chunk"), Expr::u32(lanes)),
-        lane.clone(),
+        Expr::mul(Expr::var("__sjw_chunk"), Expr::u32(spec.lanes)),
+        Expr::InvocationId { axis: 0 },
     );
     workgroup_lineage_loop(
+        spec,
         "__sjw_iter",
         "__sjw_chunk",
-        changed,
-        max_iterations,
-        cell_chunks,
-        lane,
-        wide_transfer_body(state, next, join_rules, n, w, cells, cell.clone()),
-        wide_compare_body(state, next, changed, w, cells, cell),
+        wide_transfer_body(
+            spec.state,
+            spec.next,
+            spec.join_rules,
+            spec.n,
+            spec.w,
+            cells,
+            cell.clone(),
+        ),
+        wide_compare_body(spec.state, spec.next, spec.changed, spec.w, cells, cell),
     )
 }
 
@@ -409,46 +429,38 @@ fn wide_compare_body(
     ]
 }
 
-pub(crate) fn wide_lineage_grid_sync_body(
-    state: &str,
-    next: &str,
-    join_rules: &str,
-    changed: &str,
-    n: u32,
-    w: u32,
-    cells: u32,
-    max_iterations: u32,
-) -> Vec<Node> {
+pub(crate) fn wide_lineage_grid_sync_body(spec: &LineageFixpoint<'_>) -> Vec<Node> {
     let lane = Expr::InvocationId { axis: 0 };
+    let cells = spec.cells();
     let mut body = Vec::new();
-    for iter in 0..max_iterations {
+    for iter in 0..spec.max_iterations {
         body.push(Node::if_then(
             Expr::eq(lane.clone(), Expr::u32(0)),
-            vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
+            vec![Node::store(spec.changed, Expr::u32(0), Expr::u32(0))],
         ));
         // See single_word_lineage_grid_sync_body: each phase opens with
         // its own `let __sjw_cell`; wrap each in a Block so the two are
         // not V032-colliding siblings, keeping the grid-sync barrier at
         // region level between the transfer and compare phases.
         body.push(Node::Block(wide_transfer_body(
-            state,
-            next,
-            join_rules,
-            n,
-            w,
+            spec.state,
+            spec.next,
+            spec.join_rules,
+            spec.n,
+            spec.w,
             cells,
             lane.clone(),
         )));
         body.push(grid_sync_barrier());
         body.push(Node::Block(wide_compare_body(
-            state,
-            next,
-            changed,
-            w,
+            spec.state,
+            spec.next,
+            spec.changed,
+            spec.w,
             cells,
             lane.clone(),
         )));
-        if iter + 1 < max_iterations {
+        if iter + 1 < spec.max_iterations {
             body.push(grid_sync_barrier());
         }
     }
@@ -464,19 +476,23 @@ fn workgroup_barrier() -> Node {
 /// The Program envelope every lineage fixpoint op dispatches through.
 ///
 /// Slot order is the wiring contract: the ping-pong state pair, the convergence
-/// flag, then the static join-rule matrix. `words` is the element count of a
-/// relation matrix, so a single-word op passes `n * n` and a wide op passes
-/// `n * n * w`.
+/// flag, then the static join-rule matrix. Every matrix buffer holds
+/// [`LineageFixpoint::words`] elements, so the single-word and wide forms share
+/// one envelope.
 pub(crate) fn lineage_fixpoint_program(
     op_id: &str,
-    state: &str,
-    next: &str,
-    join_rules: &str,
-    changed: &str,
-    words: u32,
+    spec: &LineageFixpoint<'_>,
     workgroup_size: [u32; 3],
     body: Vec<Node>,
 ) -> Program {
+    let LineageFixpoint {
+        state,
+        next,
+        join_rules,
+        changed,
+        ..
+    } = *spec;
+    let words = spec.words();
     Program::wrapped(
         vec![
             BufferDecl::storage(state, 0, BufferAccess::ReadWrite, DataType::U32).with_count(words),

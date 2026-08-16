@@ -24,8 +24,8 @@ use vyre_foundation::ir::{
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts, Digest, ExternalFacts,
-    SearchBudget, TargetEntryPoint, TargetResourceAccess, TargetResourceBinding,
+    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts, Digest,
+    ExternalFacts, SearchBudget, TargetEntryPoint, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
 

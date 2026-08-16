@@ -3,14 +3,14 @@ use super::{
     find_matching_delimiter, find_matching_delimiter_into, load_u32, search_next_token,
     search_next_token_into, search_prev_token, store_words, write_words,
 };
-use crate::parsing::python::lex::{
-    TOK_ASYNC, TOK_CLASS, TOK_COLON, TOK_COMMA, TOK_DEF, TOK_FROM, TOK_IDENTIFIER, TOK_IMPORT,
-    TOK_LBRACKET, TOK_LPAREN, TOK_RBRACKET, TOK_WITH,
-};
 use crate::parsing::python::{
     DEF_RECORD_WORDS, IMPORT_RECORD_WORDS, INVALID_POS, WITH_RECORD_WORDS,
 };
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_spec::python_token::{
+    TOK_ASYNC, TOK_CLASS, TOK_COLON, TOK_COMMA, TOK_DEF, TOK_FROM, TOK_IDENTIFIER, TOK_IMPORT,
+    TOK_LBRACKET, TOK_LPAREN, TOK_RBRACKET, TOK_RPAREN, TOK_WITH,
+};
 
 const STRUCTURE_OP_ID: &str = "vyre-libs::parsing::python312_extract_structure";
 const IMPORTS_OP_ID: &str = "vyre-libs::parsing::python312_extract_imports";
@@ -152,7 +152,7 @@ pub fn python312_extract_structure(
                     tok_types,
                     haystack_len,
                     TOK_LPAREN,
-                    crate::parsing::python::lex::TOK_RPAREN,
+                    TOK_RPAREN,
                 ))
                 .collect(),
             ),
@@ -461,7 +461,7 @@ fn structure_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
             (0, TOK_DEF, 3),
             (4, TOK_IDENTIFIER, 1),
             (5, TOK_LPAREN, 1),
-            (6, crate::parsing::python::lex::TOK_RPAREN, 1),
+            (6, TOK_RPAREN, 1),
             (7, TOK_COLON, 1),
         ],
         16,
