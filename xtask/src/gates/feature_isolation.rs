@@ -161,6 +161,15 @@ pub struct Row {
     /// alone. Required on `blocked`, forbidden on `compiles`.
     #[serde(default)]
     pub reason: Option<String>,
+    /// Whether a sweep ever compiled this selection and saw this outcome.
+    ///
+    /// Absent means no. A row is the record of a measurement, and without this
+    /// the record cannot tell a measured outcome from one typed into the file
+    /// or carried forward past a sweep that never ran it. `compiles` is the
+    /// dangerous direction: it exempts the selection from the axis, so an
+    /// unmeasured `compiles` is a green row asserting something nobody checked.
+    #[serde(default)]
+    pub measured: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -430,6 +439,11 @@ fn is_real_reason(reason: &str) -> bool {
 /// This is the fast half of the gate. It reads no cargo output, so it is the
 /// half that can run on every change, and it is what makes a new feature red by
 /// default instead of unjudged.
+///
+/// It also asks whether a row was ever compiled at all. Without that question
+/// the fast half validates only the shape of a row, so a `compiles` outcome
+/// typed into the file, or inherited past a sweep that never ran the selection,
+/// reads exactly like a measured one and exempts the selection for good.
 #[must_use]
 pub fn agreement_failures(pairs: &[Pair], rows: &[Row]) -> Vec<String> {
     let mut failures = Vec::new();
@@ -473,6 +487,17 @@ pub fn agreement_failures(pairs: &[Pair], rows: &[Row]) -> Vec<String> {
                     feature: row.feature.clone(),
                 }
                 .label()
+            ));
+        }
+        if !row.measured {
+            failures.push(format!(
+                "`{}` records `{}` with no `measured = true`; no sweep ever compiled it, so the outcome is a claim rather than a record. Run the sweep",
+                Pair {
+                    member: row.member.clone(),
+                    feature: row.feature.clone(),
+                }
+                .label(),
+                row.outcome
             ));
         }
     }
@@ -604,14 +629,32 @@ pub fn first_error(stdout: &str) -> Option<String> {
     None
 }
 
+/// Arguments the sweep passes cargo to compile one pair.
+///
+/// `--lib` and not `--all-targets`. The question is whether the crate's own
+/// source compiles under the selection, and a test or bench target drags in
+/// dev-dependencies. Cargo unifies features across that graph, so a
+/// dev-dependency that depends on this crate with its full feature set turns
+/// on the very feature the probe removed, and the missing edge compiles. Every
+/// break this axis exists to catch is invisible to `--all-targets`.
+#[must_use]
+pub fn check_args(pair: &Pair) -> Vec<String> {
+    let mut args = vec![
+        "check".to_string(),
+        "--locked".to_string(),
+        "-p".to_string(),
+        pair.member.clone(),
+    ];
+    args.extend(pair.cargo_flags());
+    args.push("--lib".to_string());
+    args.push("--message-format=json".to_string());
+    args
+}
+
 /// Compile one pair once.
 fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, GateError> {
     let mut command = Command::new(cargo);
-    command
-        .current_dir(root)
-        .args(["check", "--locked", "-p", &pair.member])
-        .args(pair.cargo_flags())
-        .args(["--all-targets", "--message-format=json"]);
+    command.current_dir(root).args(check_args(pair));
     let output = command.output().map_err(|error| {
         GateError::new(
             format!("cannot run `{cargo} check` for `{}`: {error}", pair.label()),
@@ -675,6 +718,12 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
          # needs, which fixes the crate for a downstream consumer and not only for\n\
          # this sweep.\n\
          #\n\
+         # `measured = true` says a sweep compiled the selection and saw that\n\
+         # outcome. A row without it was never compiled, and a `compiles` row\n\
+         # without it is a green exemption nobody checked, so it is a failure.\n\
+         # Only the sweep writes the column; typing it in claims a measurement\n\
+         # that did not happen.\n\
+         #\n\
          # Regenerate: `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write`.\n\
          # Record only what has no row yet: add `--only-unrecorded`.\n\
          # Check agreement: `cargo run -p xtask --bin xtask -- feature-isolation`.\n",
@@ -691,14 +740,16 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
             .find(|(observed_pair, _)| observed_pair == pair)
             .map(|(_, observation)| observation)
         else {
+            // Not compiled in this sweep. Whatever is written here is inherited,
+            // so `measured` comes from the recorded row and is never minted.
             match recorded {
-                Some(row) if row.outcome == COMPILES => {
-                    text.push_str(&format!("outcome = \"{COMPILES}\"\n"));
-                }
                 Some(row) => {
                     text.push_str(&format!("outcome = \"{}\"\n", row.outcome));
                     if let Some(reason) = row.reason.as_deref() {
                         text.push_str(&format!("reason = {}\n", quote(reason)));
+                    }
+                    if row.measured {
+                        text.push_str("measured = true\n");
                     }
                 }
                 None => {
@@ -713,6 +764,7 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
         };
         if observation.compiles {
             text.push_str(&format!("outcome = \"{COMPILES}\"\n"));
+            text.push_str("measured = true\n");
             continue;
         }
         text.push_str(&format!("outcome = \"{BLOCKED}\"\n"));
@@ -729,6 +781,7 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
             )
         });
         text.push_str(&format!("reason = {}\n", quote(&reason)));
+        text.push_str("measured = true\n");
     }
     text
 }
@@ -946,6 +999,7 @@ mod tests {
             outcome: outcome.to_string(),
             reason: (outcome == BLOCKED)
                 .then(|| "the vendored driver has no Linux build".to_string()),
+            measured: true,
         };
         let rows = vec![
             row("vyre-pass-engine", "all-solvers", COMPILES),

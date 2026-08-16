@@ -17,18 +17,28 @@ use std::fs;
 use std::path::Path;
 
 use xtask::gates::feature_isolation::{
-    agreement_failures, derive_pairs, first_error, load_rows, render, Observation, Pair, Row,
-    BASELINE, DEFAULTS,
+    agreement_failures, check_args, derive_pairs, first_error, load_rows, render, Observation,
+    Pair, Row, BASELINE, DEFAULTS,
 };
 
 use super::workspace_sources::workspace_root;
 
+/// A row as the sweep writes it: an outcome a compile actually produced.
 fn row(member: &str, feature: &str, outcome: &str, reason: Option<&str>) -> Row {
+    Row {
+        measured: true,
+        ..unmeasured_row(member, feature, outcome, reason)
+    }
+}
+
+/// A row nothing compiled: what a hand-typed entry looks like.
+fn unmeasured_row(member: &str, feature: &str, outcome: &str, reason: Option<&str>) -> Row {
     Row {
         member: member.to_string(),
         feature: feature.to_string(),
         outcome: outcome.to_string(),
         reason: reason.map(str::to_string),
+        measured: false,
     }
 }
 
@@ -324,6 +334,122 @@ fn a_write_merges_observations_over_recorded_rows_and_drops_stale_ones() {
     assert!(
         rendered.contains("feature = \"fresh\"\noutcome = \"blocked\"\nreason = \"UNREVIEWED: never observed\""),
         "a selection with neither an observation nor a row must be written as unreviewed, not as passing: {rendered}"
+    );
+}
+
+/// WHY: the record is a record of measurements, and nothing distinguished one
+/// from an outcome typed into the file. `agreement_failures` validated the
+/// shape of a row, never whether a compile had ever produced it, so a hand
+/// written `compiles` exempted a selection from the axis for good and the fast
+/// half of the gate could not fail on it. Both outcomes are covered: `blocked`
+/// is the same claim in the other direction and its reason keeps the next
+/// break in that selection exempt too.
+#[test]
+fn a_row_no_sweep_ever_compiled_fails_whichever_outcome_it_claims() {
+    let pairs = vec![pair("crate-a", "gpu")];
+    let constraint = "the CUDA driver API is not linkable on this runner";
+
+    for outcome in ["compiles", "blocked"] {
+        let reason = (outcome == "blocked").then_some(constraint);
+        let unmeasured =
+            agreement_failures(&pairs, &[unmeasured_row("crate-a", "gpu", outcome, reason)]);
+        assert!(
+            unmeasured
+                .iter()
+                .any(|failure| failure.contains("no `measured = true`")),
+            "a `{outcome}` row nothing compiled must fail: {unmeasured:?}"
+        );
+        assert_eq!(
+            agreement_failures(&pairs, &[row("crate-a", "gpu", outcome, reason)]),
+            Vec::<String>::new(),
+            "the same `{outcome}` row with a measurement behind it must pass"
+        );
+    }
+}
+
+/// WHY: a narrowed sweep re-writes the whole file from rows it did not observe.
+/// Writing `measured = true` onto one of those would mint a measurement that
+/// never happened, which is exactly the claim the column exists to refuse. A
+/// row carries its own provenance across a write: an inherited measured row
+/// stays measured, an inherited unmeasured row stays unmeasured, and only an
+/// observation in this sweep mints the column.
+#[test]
+fn a_write_never_mints_a_measurement_for_a_selection_it_did_not_compile() {
+    let axis = vec![
+        pair("crate-a", DEFAULTS),
+        pair("crate-a", "gpu"),
+        pair("crate-a", "cpu"),
+    ];
+    let observed = vec![(
+        pair("crate-a", DEFAULTS),
+        Observation {
+            compiles: true,
+            first_error: None,
+        },
+    )];
+    let previous = vec![
+        row("crate-a", "gpu", "compiles", None),
+        unmeasured_row("crate-a", "cpu", "compiles", None),
+    ];
+
+    let rendered = render(&axis, &observed, &previous);
+
+    assert!(
+        rendered.contains("feature = \"(default)\"\noutcome = \"compiles\"\nmeasured = true"),
+        "the selection this sweep compiled must be recorded as measured: {rendered}"
+    );
+    assert!(
+        rendered.contains("feature = \"gpu\"\noutcome = \"compiles\"\nmeasured = true"),
+        "an inherited row that was measured before stays measured: {rendered}"
+    );
+    let cpu = rendered
+        .split("[[pair]]\n")
+        .find(|block| block.contains("feature = \"cpu\""))
+        .expect("Fix: the axis selection must be rendered");
+    assert!(
+        !cpu.contains("measured"),
+        "an inherited row nothing ever compiled must not gain a measurement: {cpu}"
+    );
+}
+
+/// WHY: the sweep compiled `--all-targets`, which builds the test and bench
+/// targets and therefore the dev-dependency graph. Cargo unifies features
+/// across that graph, so a dev-dependency depending on the crate under test
+/// with its full feature set switches on the feature the probe just removed,
+/// and the missing edge compiles. Every break the axis exists to catch was
+/// invisible. The probe asks about the crate's own source, so it compiles the
+/// library target and nothing else.
+#[test]
+fn the_sweep_compiles_the_library_target_and_not_the_dev_dependency_graph() {
+    for feature in [BASELINE, DEFAULTS, "gpu"] {
+        let args = check_args(&pair("crate-a", feature));
+        assert!(
+            args.contains(&"--lib".to_string()),
+            "the probe must compile the library target for `{feature}`: {args:?}"
+        );
+        assert!(
+            !args.iter().any(|arg| arg == "--all-targets"),
+            "compiling all targets pulls in dev-dependencies, which unify the feature away: {args:?}"
+        );
+        assert!(
+            args.contains(&"--locked".to_string()),
+            "the probe must resolve the committed lockfile: {args:?}"
+        );
+    }
+    assert_eq!(
+        check_args(&pair("crate-a", "gpu")),
+        vec![
+            "check",
+            "--locked",
+            "-p",
+            "crate-a",
+            "--no-default-features",
+            "--features",
+            "gpu",
+            "--lib",
+            "--message-format=json",
+        ],
+        "the probe must ask for exactly the selection and nothing more"
     );
 }
 
