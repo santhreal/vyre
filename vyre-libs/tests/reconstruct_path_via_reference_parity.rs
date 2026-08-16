@@ -1,5 +1,5 @@
 //! End-to-end parity for `graph::path_reconstruct::reconstruct_path_via`: the parent-pointer path walk
-//! through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the `path_reconstruct` IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -16,7 +16,7 @@
 use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
 use vyre_primitives::graph::path_reconstruct::cpu_ref;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

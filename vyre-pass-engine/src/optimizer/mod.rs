@@ -11,74 +11,32 @@
 //! `Region` bodies in prefix DFS, each with its own scope frame, and gives
 //! every visited Node a graph-node id.
 //!
+//! Host-side rewrites over the returned Program are IR structure, not
+//! encoded-order dispatch, so they live in `vyre_foundation::transform`:
+//! const propagation, dead-branch elimination, and loop-invariant code motion.
+//! Cross-scope CSE stays here, in `cse_via_encoded`, because it reads the
+//! canonical ids the dispatched CSE kernel produced.
+//!
 //! Dispatch belongs to the caller. Every `*_via_encoded` entry point takes a
 //! `vyre_foundation::program_dispatch::ProgramDispatcher`, so one pass runs
-//! against `vyre_libs::graph::dispatch::cpu_oracle` under `cpu-parity` and
-//! against a backend dispatcher in production, from the same Program.
+//! against `vyre_driver_reference::ReferenceEvalDispatcher` in the parity suites
+//! and against a backend dispatcher in production, from the same Program.
 
 mod arena_cursor;
 mod arena_kernel;
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;
-pub mod const_prop;
-pub mod cross_scope_cse;
 pub mod cse_via_encoded;
 pub mod dce_program;
 pub mod dce_via_encoded;
-pub mod dead_branch;
 pub mod encode;
 pub mod expr_arena;
-pub mod licm;
 pub mod pattern_match_via_encoded;
 pub mod pipeline;
 pub mod pipeline_resident;
 pub mod pipeline_resident_decode;
 mod rewrite_walk;
 pub mod validate_via_encoded;
-
-use vyre_foundation::ir::Expr;
-
-pub(crate) fn expr_no_atomic(expr: &Expr) -> bool {
-    match expr {
-        Expr::Atomic { .. } | Expr::Opaque(_) => false,
-        Expr::BinOp { left, right, .. } => expr_no_atomic(left) && expr_no_atomic(right),
-        Expr::UnOp { operand, .. } => expr_no_atomic(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => expr_no_atomic(cond) && expr_no_atomic(true_val) && expr_no_atomic(false_val),
-        Expr::Fma { a, b, c } => expr_no_atomic(a) && expr_no_atomic(b) && expr_no_atomic(c),
-        Expr::Load { index, .. } => expr_no_atomic(index),
-        Expr::Cast { value, .. } => expr_no_atomic(value),
-        Expr::Call { args, .. } => args.iter().all(expr_no_atomic),
-        Expr::SubgroupBallot { cond } => expr_no_atomic(cond),
-        Expr::SubgroupShuffle { value, lane } => expr_no_atomic(value) && expr_no_atomic(lane),
-        Expr::SubgroupReduce { value, .. } => expr_no_atomic(value),
-        _ => true,
-    }
-}
-
-fn rewrite_program_entry(
-    program: &vyre_foundation::ir::Program,
-    rewrite: impl FnOnce(&[vyre_foundation::ir::Node]) -> Vec<vyre_foundation::ir::Node>,
-) -> vyre_foundation::ir::Program {
-    use vyre_foundation::ir::Node;
-
-    let new_entry = match program.entry() {
-        [Node::Region {
-            generator,
-            source_region,
-            body,
-        }] => vec![Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: std::sync::Arc::new(rewrite(body)),
-        }],
-        entry => rewrite(entry),
-    };
-    program.with_rewritten_entry(new_entry)
-}
 
 fn build_encoded_analysis_program(
     expr_count: u32,

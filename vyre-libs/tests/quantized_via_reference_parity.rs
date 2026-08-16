@@ -1,5 +1,5 @@
 //! End-to-end parity for the `math::quantized_dispatch` scaled INT4 `_via` entry points through the
-//! shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
 //!
 //! Closes the quantized_dispatch mock-dispatcher-coherence family (see BACKLOG
 //! `BUG-quantized-dispatch-family-over-feeds-backend-allocated-output`). Every scaled consumer's
@@ -24,7 +24,7 @@ use vyre_primitives::math::quantized::{
     pack_i4x8_cpu,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

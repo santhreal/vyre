@@ -12,7 +12,7 @@
 
 use vyre_libs::solvers::tensor_train_compression::compress_cost_tensor_f32_via;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 /// Contract a TT-core chain to the scalar tensor value at multi-index `idx`.
 ///

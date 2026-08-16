@@ -19,8 +19,6 @@
 //! - `const_truth.rs`  -  partial constant evaluator for boolean expressions.
 //! - `const_loop_empty.rs`  -  detects statically empty loops.
 //! - `live_result.rs`  -  result bundle returned by liveness pruning.
-//! - `reachable_prefix.rs`  -  slice the node list up to first unconditional
-//!   `Return`.
 //! - `program_pass.rs`  -  the registered `DcePass` (ProgramPass impl).
 //!
 //! `expr_has_effect` is shared with CSE  -  single source of truth in
@@ -46,7 +44,7 @@ pub(crate) use live_result::LiveResult;
 /// The identifier set liveness propagates; the only place its type is named.
 pub(crate) use live_result::LiveSet;
 /// Return the node prefix reachable before an unconditional return.
-pub(crate) use reachable_prefix::reachable_prefix;
+pub(crate) use crate::transform::rewrite_walk::reachable_prefix;
 
 /// Iterative `Expr::Var` collector.
 pub mod collect_expr_refs;
@@ -64,9 +62,6 @@ pub(crate) mod engine;
 pub mod live_result;
 /// Registered `DcePass` (ProgramPass impl) for the engine.
 pub(crate) mod program_pass;
-/// Slice the node list up to the first unconditional `Return`.
-pub mod reachable_prefix;
-
 pub use engine::dce;
 pub use program_pass::DcePass;
 

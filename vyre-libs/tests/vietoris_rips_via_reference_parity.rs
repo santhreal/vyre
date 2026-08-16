@@ -16,7 +16,7 @@
 
 use vyre_libs::solvers::persistent_homology_loop_signature::region_loop_skeleton_fixed_via;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 /// Exact u32 replica of the `vietoris_rips_edge_filter` kernel: for the flat row-major `t = i*n + j`
 /// cell, emit `1` iff the cell is strictly upper-triangular (`i < j`) AND the fixed-point distance is

@@ -409,7 +409,7 @@ pub fn gpu_pipeline_resident(
     // at the scope start. Generalizes past `apply_cse_let_dedupe`
     // which only handled `let`-RHS pairs.
     t = std::time::Instant::now();
-    let post_cross = super::cross_scope_cse::apply_cross_scope_cse_with_lookup(
+    let post_cross = super::cse_via_encoded::apply_cross_scope_cse_with_lookup(
         &post_dedupe,
         &arena,
         canonical.as_slice(),
@@ -424,7 +424,7 @@ pub fn gpu_pipeline_resident(
     // Loop. Conservative: stops hoisting on first side-effecting
     // Node so observable behaviour is preserved.
     t = std::time::Instant::now();
-    let post_licm = super::licm::apply_licm(&post_cross);
+    let post_licm = vyre_foundation::transform::licm::apply_licm(&post_cross);
     if trace {
         eprintln!("[pl] licm: {} us", t.elapsed().as_micros());
     }
@@ -437,7 +437,7 @@ pub fn gpu_pipeline_resident(
     // x b` becomes `let a = 5; let b = 5; store x 5` after this
     // pass. Subsequent DCE drops `b` (and `a` if no other use).
     t = std::time::Instant::now();
-    let post_prop = super::const_prop::apply_const_prop(&post_licm);
+    let post_prop = vyre_foundation::transform::const_prop::apply_const_prop(&post_licm);
     if trace {
         eprintln!("[pl] const_prop: {} us", t.elapsed().as_micros());
     }
@@ -449,7 +449,7 @@ pub fn gpu_pipeline_resident(
     // the surviving branch into the parent scope so DCE sees a
     // flatter Program.
     t = std::time::Instant::now();
-    let post_dbe = super::dead_branch::apply_dead_branch(&post_prop);
+    let post_dbe = vyre_foundation::transform::dead_branch::apply_dead_branch(&post_prop);
     if trace {
         eprintln!("[pl] dead_branch: {} us", t.elapsed().as_micros());
     }

@@ -17,8 +17,6 @@ pub mod alias_registry;
 /// integration test whose `[[test]]` row already declares `cpu-parity`, so the
 /// gate costs nothing and `vyre-libs/tests/host_dispatch_is_parity_only.rs`
 /// keeps it that way.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub mod cpu_oracle;
 pub mod csr_bidirectional;
 pub mod csr_forward_or_changed;
 pub mod csr_frontier_queue_batch_memory;

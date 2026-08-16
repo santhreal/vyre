@@ -5,9 +5,8 @@
 //! from a default build is a fallback whether or not anything currently takes
 //! it: the type is public, so a consumer constructs it and runs off the device
 //! with no error, no telemetry and no probe failure. This is not hypothetical.
-//! `vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher` was an ungated
-//! `pub mod` in a production crate for the whole of 0.7, and every one of its
-//! callers was a test.
+//! `vyre-libs` shipped a graph-primitive oracle dispatcher as an ungated
+//! `pub mod` for the whole of 0.7, and every one of its callers was a test.
 //!
 //! This closes the class rather than that instance. The implementor set is read
 //! out of the tree at run time, so a host dispatcher added to a crate nobody
@@ -46,9 +45,11 @@ fn no_production_crate_outside_the_oracle_ships_a_host_dispatcher() {
     let root = checkout_root();
     let offenders: BTreeMap<String, Vec<String>> = implementors(&root)
         .into_iter()
-        .filter(|(path, types)| {
-            is_host_dispatcher_offender(path) && types.iter().any(|name| is_host_type(name))
+        .filter(|(path, declared)| {
+            is_host_dispatcher_offender(path)
+                && (declared.reaches_interpreter || declared.types.iter().any(|n| is_host_type(n)))
         })
+        .map(|(path, declared)| (path, declared.types))
         .collect();
 
     let offending: BTreeSet<&String> = offenders.keys().collect();
@@ -66,7 +67,7 @@ fn no_production_crate_outside_the_oracle_ships_a_host_dispatcher() {
 fn the_walk_actually_reaches_the_dispatchers_it_judges() {
     let root = checkout_root();
     let found = implementors(&root);
-    let total: usize = found.values().map(Vec::len).sum();
+    let total: usize = found.values().map(|declared| declared.types.len()).sum();
     assert!(
         total >= MINIMUM_IMPLEMENTORS,
         "Fix: the source walk found {total} `ProgramDispatcher` implementors, \
@@ -90,7 +91,7 @@ fn the_judgement_admits_the_oracle_and_the_parity_gate_and_nothing_else() {
         "a test module never reaches a default build"
     );
     assert!(
-        is_host_dispatcher_offender("vyre-libs/src/graph/dispatch/cpu_oracle.rs"),
+        is_host_dispatcher_offender("vyre-libs/src/graph/dispatch/oracle.rs"),
         "an ungated production module is the defect this closes"
     );
     assert!(
@@ -126,23 +127,38 @@ fn is_host_dispatcher_offender(path: &str) -> bool {
 /// A file whose declaring module is gated on a parity feature or on `test` is
 /// omitted, because it is not reachable from a default build and reachability is
 /// the property under judgement.
-fn implementors(root: &Path) -> BTreeMap<String, Vec<String>> {
+fn implementors(root: &Path) -> BTreeMap<String, Declared> {
     let mut found = BTreeMap::new();
     for path in tracked_sources(root) {
         let Ok(text) = std::fs::read_to_string(root.join(&path)) else {
             continue;
         };
-        let declared: Vec<String> = text
+        let types: Vec<String> = text
             .lines()
             .filter_map(|line| implemented_type(line.trim()))
             .map(str::to_string)
             .collect();
-        if declared.is_empty() || is_parity_gated(&text) || declaration_is_gated(root, &path) {
+        if types.is_empty() || is_parity_gated(&text) || declaration_is_gated(root, &path) {
             continue;
         }
-        found.insert(path, declared);
+        let reaches_interpreter = reaches_the_interpreter(&text);
+        found.insert(
+            path,
+            Declared {
+                types,
+                reaches_interpreter,
+            },
+        );
     }
     found
+}
+
+/// What one source file declares about dispatch.
+struct Declared {
+    /// Every type it implements `ProgramDispatcher` for.
+    types: Vec<String>,
+    /// Whether it also calls the host interpreter.
+    reaches_interpreter: bool,
 }
 
 /// The type name in an `impl ProgramDispatcher for T` line, if that is the line.
@@ -157,14 +173,25 @@ fn implemented_type(line: &str) -> Option<&str> {
 
 /// Whether a dispatcher name says it executes on the host.
 ///
-/// The trait is how every backend is reached, so the name is the only thing that
-/// separates a device dispatcher from a host one. This workspace spells a host
-/// implementation with `Cpu`, `Host` or `Oracle` in the type name, and the
-/// naming rule is itself enforced by the neutral-vocabulary gate.
+/// This workspace spells a host implementation with `Cpu`, `Host` or `Oracle` in
+/// the type name, and the naming rule is itself enforced by the neutral-vocabulary
+/// gate. A name is not enough on its own: a dispatcher named for what it wraps
+/// rather than for where it runs carries none of those markers and still executes
+/// on the host, which is why [`reaches_the_interpreter`] is checked beside this.
 fn is_host_type(name: &str) -> bool {
     ["Cpu", "Host", "Oracle"]
         .iter()
         .any(|marker| name.contains(marker))
+}
+
+/// Whether the file that declares an implementor also calls the host interpreter.
+///
+/// The definitive signal, and independent of naming: `vyre_reference::reference_eval`
+/// is the one entry point that executes a Program on the CPU, so a file holding
+/// both an `impl ProgramDispatcher` and a call to it dispatches on the host
+/// whatever its type is called.
+fn reaches_the_interpreter(text: &str) -> bool {
+    text.contains("reference_eval")
 }
 
 /// Whether the file's own inner attributes put it behind a test or parity gate.
@@ -183,9 +210,9 @@ fn is_parity_cfg(line: &str) -> bool {
 /// Whether the `mod` statement that brings this file into the crate is gated.
 ///
 /// This, not the file's own attributes, is where the gate belongs and where it
-/// actually was: `cpu_oracle.rs` carries no `cfg` of its own and is excluded from
-/// a default build entirely by the attribute on `pub mod cpu_oracle;` in its
-/// parent. A check that read only the file would call the fixed tree broken and
+/// usually sits: a parity module carries no `cfg` of its own and is excluded from
+/// a default build entirely by the attribute on the `pub mod` line in its parent.
+/// A check that read only the file would call a correctly gated tree broken and
 /// send the next reader to add a redundant inner attribute.
 fn declaration_is_gated(root: &Path, path: &str) -> bool {
     let path = Path::new(path);

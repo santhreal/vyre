@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::conv1d_latency_smoothing::smooth_latency_trace_via`, the Gaussian 1D
-//! convolution latency smoother (through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`]).
+//! convolution latency smoother (through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`]).
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the `conv1d_program` IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -20,7 +20,7 @@
 use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
 use vyre_primitives::math::conv1d::{cpu_conv1d, gaussian_weights};
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;
 

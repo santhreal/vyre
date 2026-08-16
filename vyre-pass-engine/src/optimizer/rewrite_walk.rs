@@ -12,88 +12,13 @@
 //! is IR structure, owned by [`vyre_foundation::transform::rewrite_walk`], and
 //! this module is a [`NodeRewrite`] policy over it. Two things are genuinely
 //! the encoder's and stay here: the post-order Expr counter, which must advance
-//! exactly as `expr_arena::encode_expr` did, and the scope truncation at the
-//! first `Return`, which is what the encoder emitted a node for.
+//! exactly as `expr_arena::encode_expr` did. Scope truncation at the first
+//! `Return` is IR structure too and lives beside the node walk.
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
-
-/// The nodes of one scope the encoder emitted ids for.
-///
-/// Nodes after the first `Return` were never encoded, so no verdict is indexed
-/// for them. Every walk over a scope truncates here, and until this was one
-/// function four of them repeated the truncation beside their own loop.
-pub(super) fn reachable_prefix(body: &[Node]) -> &[Node] {
-    &body[..super::encode::reachable_prefix_len(body)]
-}
-
-/// Drive `rewrite` over one scope for its effects, discarding the rebuilt nodes.
-///
-/// A counting pass reads its answer out of the policy, not out of the tree, so
-/// it must still visit exactly the positions the rewriting pass will visit.
-pub(super) fn visit_scope<R: NodeRewrite>(body: &[Node], rewrite: &mut R) {
-    for node in reachable_prefix(body) {
-        rewrite_walk::rewrite_node(node, rewrite);
-    }
-}
-
-/// Append one rewritten scope onto `out`.
-///
-/// A node the policy reports unchanged is cloned rather than rebuilt, which is
-/// what keeps an untouched scope from being deep-copied.
-pub(super) fn extend_with_rewritten_scope<R: NodeRewrite>(
-    body: &[Node],
-    rewrite: &mut R,
-    out: &mut Vec<Node>,
-) {
-    let reachable = reachable_prefix(body);
-    out.reserve(reachable.len());
-    for node in reachable {
-        out.push(rewrite_walk::rewrite_node(node, rewrite).unwrap_or_else(|| node.clone()));
-    }
-}
-
-/// Rewrite one scope, reporting `None` when nothing in it changed.
-///
-/// The shared node walk is borrow-preserving: a node whose positions all report
-/// no change returns `None` rather than a rebuilt clone. A scope walk that
-/// discards that answer and rebuilds anyway deep-copies the whole subtree on
-/// every pass, including the passes that rewrote nothing. Truncation counts as
-/// a change, because the nodes past the first `Return` were never encoded and
-/// must not survive.
-pub(super) fn rewrite_scope_opt<R: NodeRewrite>(
-    body: &[Node],
-    rewrite: &mut R,
-) -> Option<Vec<Node>> {
-    let reachable = reachable_prefix(body);
-    let mut out: Option<Vec<Node>> = None;
-    for (index, node) in reachable.iter().enumerate() {
-        match rewrite_walk::rewrite_node(node, rewrite) {
-            None => {
-                if let Some(out) = out.as_mut() {
-                    out.push(node.clone());
-                }
-            }
-            Some(rewritten) => {
-                out.get_or_insert_with(|| {
-                    let mut sink = Vec::with_capacity(reachable.len());
-                    sink.extend_from_slice(&reachable[..index]);
-                    sink
-                })
-                .push(rewritten);
-            }
-        }
-    }
-    if out.is_none() && reachable.len() != body.len() {
-        return Some(reachable.to_vec());
-    }
-    out
-}
-
-/// Rewrite one scope into a fresh body.
-pub(super) fn rewrite_scope<R: NodeRewrite>(body: &[Node], rewrite: &mut R) -> Vec<Node> {
-    rewrite_scope_opt(body, rewrite).unwrap_or_else(|| reachable_prefix(body).to_vec())
-}
+use vyre_foundation::transform::rewrite_walk::{
+    rewrite_program_entry, rewrite_scope, rewrite_scope_opt, NodeRewrite,
+};
 
 /// Rewrite every Expr in `program` in encoder order.
 ///
@@ -108,7 +33,7 @@ where
         rewrite_expr,
         counter: 0,
     };
-    super::rewrite_program_entry(program, |body| rewrite_scope(body, &mut walk))
+    rewrite_program_entry(program, |body| rewrite_scope(body, &mut walk))
 }
 
 /// Rebuild `expr` bottom-up, then hand the rebuilt Expr and its arena id to

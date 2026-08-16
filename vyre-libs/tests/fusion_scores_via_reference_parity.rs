@@ -1,5 +1,5 @@
 //! End-to-end parity for `scheduling::spectral_schedule::fusion_scores_fixed_via`, the Chebyshev
-//! spectral-fusion-score filter `f(L̂)·v`: through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! spectral-fusion-score filter `f(L̂)·v`: through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the `chebyshev_filter` IR is not run through a faithful dispatch boundary by any
@@ -22,7 +22,7 @@
 use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
 use vyre_primitives::graph::chebyshev_filter::chebyshev_filter_cpu;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

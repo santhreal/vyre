@@ -98,7 +98,7 @@ scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/pa
 "c-parser" = ["matching-substring", "matching-dfa", "matching-nfa", "vyre-primitives/parsing", "vyre-primitives/predicate"]
 "go-parser" = []
 "python-parser" = ["vyre-primitives/parsing"]
-"test-fixtures" = ["dep:vyre-reference"]
+"test-fixtures" = []
 security = ["vyre-primitives/label", "vyre-primitives/predicate"]
 
 [dependencies]
@@ -118,9 +118,6 @@ thiserror.workspace = true
 tracing.workspace = true
 regex-syntax = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
-# `test_support::ReferenceEvalDispatcher` executes programs through the CPU
-# reference interpreter. Optional so only `test-fixtures` builds link it.
-vyre-reference = { workspace = true, optional = true }
 libm.workspace = true
 rustc-hash.workspace = true
 blake3.workspace = true
@@ -154,7 +151,18 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # manifest. Path-only, and dev-only: cargo strips it from the published
 # manifest, so it adds no publish-ordering constraint.
 structure-gate = { path = "../structure-gate" }
+# The advertised minimal example compiles a libs composition into a megakernel
+# artifact. Path-only and dev-only: cargo strips it from the published manifest,
+# and the megakernel depends only on vyre-foundation and vyre-lower, so this adds
+# no cycle and no publish-ordering constraint.
+vyre-megakernel = { path = "../vyre-megakernel" }
 
+# The example the generated crate contract advertises. Named explicitly so the
+# contract picks this one rather than whichever filename sorts first.
+[[example]]
+name = "prefix_sum_megakernel"
+path = "examples/prefix_sum_megakernel.rs"
+required-features = ["math-scan"]
 
 [package.metadata.docs.rs]
 all-features = true
