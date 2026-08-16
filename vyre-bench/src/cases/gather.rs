@@ -3,17 +3,16 @@
 use crate::cases::micro::{MicroCase, MicroWork};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-pub(crate) static GATHER: MicroCase = MicroCase {
-    id: "foundation.gather.u32.1m",
-    name: "Gather U32 1M",
-    summary: "Indexed u32 gather over 1M lanes",
-    tags: &["memory-bound", "indexed"],
-    contract: None,
+pub(crate) static GATHER: MicroCase = MicroCase::new(
+    "foundation.gather.u32.1m",
+    "Gather U32 1M",
+    "Indexed u32 gather over 1M lanes",
+    &["memory-bound", "indexed"],
     program,
     fixture,
     reference,
-    work: MicroWork::Flops(1_000_000),
-};
+    MicroWork::Flops(1_000_000),
+);
 
 fn program() -> Program {
     let count = 1_000_000u32;

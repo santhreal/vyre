@@ -24,16 +24,14 @@ fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual = persistent_bfs::cpu_ref(
-            CsrClosureInputs {
-                graph: CsrGraphView {
-                    node_count,
-                    edge_offsets: &offsets,
-                    edge_targets: &targets,
-                    edge_kind_mask: &masks,
-                },
+            CsrClosureInputs::new(
+                node_count,
+                &offsets,
+                &targets,
+                &masks,
                 allow_mask,
                 max_iters,
-            },
+            ),
             &frontier,
         );
         assert_eq!(actual, expected, "Fix: persistent_bfs volume case {case}");

@@ -38,18 +38,10 @@ pub fn reserve_vec_additional<T>(
         .map_err(|source| reserve_error(context, additional, item, source, fix))
 }
 
-/// Ensure a [`Vec`] can hold `target_capacity` items without changing length,
-/// returning the standard allocation error for domain-specific adapters.
-///
-/// # Errors
-///
-/// Returns [`TryReserveError`] when allocation fails.
-pub fn try_reserve_vec_to_capacity<T>(
-    vec: &mut Vec<T>,
-    target_capacity: usize,
-) -> Result<(), TryReserveError> {
-    vyre_foundation::allocation::try_reserve_vec_to_capacity(vec, target_capacity)
-}
+pub use vyre_foundation::allocation::{
+    try_reserve_hash_map_to_capacity, try_reserve_hash_set_to_capacity,
+    try_reserve_vec_to_capacity,
+};
 
 /// Ensure a [`Vec`] can hold `target_capacity` items without changing length.
 ///
@@ -110,41 +102,6 @@ where
         .map_err(|source| reserve_error(context, target_capacity, item, source, fix))
 }
 
-/// Ensure a [`HashMap`] can hold `target_capacity` entries without changing
-/// length, returning the standard allocation error for domain-specific
-/// adapters.
-///
-/// # Errors
-///
-/// Returns [`TryReserveError`] when allocation fails.
-pub fn try_reserve_hash_map_to_capacity<K, V, S>(
-    map: &mut HashMap<K, V, S>,
-    target_capacity: usize,
-) -> Result<(), TryReserveError>
-where
-    K: Eq + Hash,
-    S: BuildHasher,
-{
-    vyre_foundation::allocation::try_reserve_hash_map_to_capacity(map, target_capacity)
-}
-
-/// Ensure a [`HashSet`] can hold `target_capacity` entries without changing
-/// length, returning the standard allocation error for domain-specific
-/// adapters.
-///
-/// # Errors
-///
-/// Returns [`TryReserveError`] when allocation fails.
-pub fn try_reserve_hash_set_to_capacity<T, S>(
-    set: &mut HashSet<T, S>,
-    target_capacity: usize,
-) -> Result<(), TryReserveError>
-where
-    T: Eq + Hash,
-    S: BuildHasher,
-{
-    vyre_foundation::allocation::try_reserve_hash_set_to_capacity(set, target_capacity)
-}
 
 /// Ensure a [`HashMap`] can hold `target_capacity` entries without changing
 /// length.

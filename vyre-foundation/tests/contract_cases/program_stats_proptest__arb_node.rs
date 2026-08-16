@@ -12,26 +12,19 @@ fn arb_program() -> BoxedStrategy<Program> {
 
 #[inline]
 fn mark_datatype_bits(ty: &DataType, bits: &mut u32) {
-    match ty {
-        DataType::F16 => *bits |= CAP_F16,
-        DataType::BF16 => *bits |= CAP_BF16,
-        DataType::F64 => *bits |= CAP_F64,
-        DataType::Tensor | DataType::TensorShaped { .. } => *bits |= CAP_TENSOR_OPS,
-        _ => {}
-    }
+    *bits |= match ty {
+        DataType::F16 => CAP_F16,
+        DataType::BF16 => CAP_BF16,
+        DataType::F64 => CAP_F64,
+        DataType::Tensor | DataType::TensorShaped { .. } => CAP_TENSOR_OPS,
+        _ => 0,
+    };
 }
 
 fn is_subgroup_intrinsic_id(op_id: &str) -> bool {
-    const MARKERS: &[&str] = &[
-        "subgroup_",
-        "::subgroup::",
-        "::subgroup",
-        "wave_",
-        "::wave::",
-        "warp_",
-        "::warp::",
-    ];
-    MARKERS.iter().any(|marker| op_id.contains(marker))
+    ["subgroup_", "::subgroup", "wave_", "::wave", "warp_", "::warp"]
+        .into_iter()
+        .any(|pattern| op_id.contains(pattern))
 }
 
 #[allow(clippy::only_used_in_recursion)]
@@ -214,13 +207,10 @@ fn manual_compute_stats(program: &Program) -> ProgramStats {
     let mut capability_bits = 0u32;
     let mut static_storage_bytes = 0u64;
 
-    for decl in program.buffers().iter() {
-        let count = decl.count();
-        if count != 0 {
-            if let Some(elem) = decl.element().size_bytes() {
-                static_storage_bytes =
-                    static_storage_bytes.saturating_add(u64::from(count) * elem as u64);
-            }
+    for decl in program.buffers() {
+        if let Some(elem) = decl.element().size_bytes().filter(|_| decl.count() != 0) {
+            static_storage_bytes =
+                static_storage_bytes.saturating_add(u64::from(decl.count()) * elem as u64);
         }
         mark_datatype_bits(&decl.element(), &mut capability_bits);
     }

@@ -34,6 +34,7 @@ use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
 mod artifact_fixtures;
 
 use artifact_fixtures::{compile_graph, contract, entry_point, graph_over, neutral_artifact};
+use vyre_test_support::pass_programs::{add_program, copy_program};
 
 const FRAME_HEADER_BYTES: usize = 10;
 const FRAME_DIGEST_BYTES: usize = 32;
@@ -873,39 +874,6 @@ fn symbol_contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContra
     }
 }
 
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::load(input, Expr::u32(0)),
-        )],
-    )
-}
-
-fn add_program(left: &str, right: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(left, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(right, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(output, 2, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::add(
-                Expr::load(left, Expr::u32(0)),
-                Expr::load(right, Expr::u32(0)),
-            ),
-        )],
-    )
-}
 
 /// Three nodes over three caller-supplied values, producing an invocation
 /// intermediate, a retained successor, and one graph output.

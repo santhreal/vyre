@@ -214,31 +214,18 @@ fn generated_try_cpu_ref_into_with_scratch_matches_allocating_reference() {
         }
         let allow_mask = if case % 3 == 0 { 1 } else { 0xFFFF_FFFF };
         let max_iters = (case % 11) as u32;
-        let expected = try_cpu_ref(
-            CsrClosureInputs {
-                graph: CsrGraphView {
-                    node_count,
-                    edge_offsets: &offsets,
-                    edge_targets: &targets,
-                    edge_kind_mask: &masks,
-                },
-                allow_mask,
-                max_iters,
-            },
-            &seed,
-        )
-        .expect("Fix: generated persistent BFS graph must be valid for allocating oracle.");
+        let inputs = CsrClosureInputs::new(
+            node_count,
+            &offsets,
+            &targets,
+            &masks,
+            allow_mask,
+            max_iters,
+        );
+        let expected = try_cpu_ref(inputs, &seed)
+            .expect("Fix: generated persistent BFS graph must be valid for allocating oracle.");
         let changed = try_cpu_ref_into_with_scratch(
-            CsrClosureInputs {
-                graph: CsrGraphView {
-                    node_count,
-                    edge_offsets: &offsets,
-                    edge_targets: &targets,
-                    edge_kind_mask: &masks,
-                },
-                allow_mask,
-                max_iters,
-            },
+            inputs,
             &seed,
             &mut frontier,
             &mut scratch,
@@ -360,34 +347,18 @@ fn converged_changed_flag_matches_sticky_oracle_on_generated_chains() {
             seed[0] = 1;
         }
         for max_iters in [0_u32, 1, 2, node_count, node_count.saturating_add(2)] {
-            let (sticky_frontier, sticky_changed) = try_cpu_ref(
-                CsrClosureInputs {
-                    graph: CsrGraphView {
-                        node_count,
-                        edge_offsets: &offsets,
-                        edge_targets: &targets,
-                        edge_kind_mask: &masks,
-                    },
-                    allow_mask: 0xFFFF_FFFF,
-                    max_iters,
-                },
-                &seed,
-            )
-            .expect("Fix: generated valid chain must run under the sticky oracle.");
-            let (converged_frontier, outcome) = try_cpu_ref_converged(
-                CsrClosureInputs {
-                    graph: CsrGraphView {
-                        node_count,
-                        edge_offsets: &offsets,
-                        edge_targets: &targets,
-                        edge_kind_mask: &masks,
-                    },
-                    allow_mask: 0xFFFF_FFFF,
-                    max_iters,
-                },
-                &seed,
-            )
-            .expect("Fix: generated valid chain must run under the convergence oracle.");
+            let inputs = CsrClosureInputs::new(
+                node_count,
+                &offsets,
+                &targets,
+                &masks,
+                0xFFFF_FFFF,
+                max_iters,
+            );
+            let (sticky_frontier, sticky_changed) = try_cpu_ref(inputs, &seed)
+                .expect("Fix: generated valid chain must run under the sticky oracle.");
+            let (converged_frontier, outcome) = try_cpu_ref_converged(inputs, &seed)
+                .expect("Fix: generated valid chain must run under the convergence oracle.");
             assert_eq!(
                 converged_frontier, sticky_frontier,
                 "node_count={node_count} max_iters={max_iters}: frontiers must match"

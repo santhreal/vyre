@@ -40,6 +40,24 @@ pub struct CsrGraphView<'a> {
     pub edge_kind_mask: &'a [u32],
 }
 
+impl<'a> CsrGraphView<'a> {
+    /// Construct a new view over the four CSR graph arrays.
+    #[must_use]
+    pub const fn new(
+        node_count: u32,
+        edge_offsets: &'a [u32],
+        edge_targets: &'a [u32],
+        edge_kind_mask: &'a [u32],
+    ) -> Self {
+        Self {
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+        }
+    }
+}
+
 /// A CSR closure's graph, edge filter and iteration budget.
 ///
 /// The seed frontier travels as its own argument because the planning entry
@@ -55,6 +73,23 @@ pub struct CsrClosureInputs<'a> {
 }
 
 impl<'a> CsrClosureInputs<'a> {
+    /// Construct new closure inputs from raw graph components, allow mask, and iteration budget.
+    #[must_use]
+    pub const fn new(
+        node_count: u32,
+        edge_offsets: &'a [u32],
+        edge_targets: &'a [u32],
+        edge_kind_mask: &'a [u32],
+        allow_mask: u32,
+        max_iters: u32,
+    ) -> Self {
+        Self {
+            graph: CsrGraphView::new(node_count, edge_offsets, edge_targets, edge_kind_mask),
+            allow_mask,
+            max_iters,
+        }
+    }
+
     /// Closure inputs over `graph` whose edge filter admits every edge kind.
     ///
     /// A test or planner that is not exercising the filter still has to pick a

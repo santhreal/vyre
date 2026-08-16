@@ -332,16 +332,14 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual_bfs = persistent_bfs::cpu_ref(
-            CsrClosureInputs {
-                graph: CsrGraphView {
-                    node_count,
-                    edge_offsets: &offsets,
-                    edge_targets: &targets,
-                    edge_kind_mask: &masks,
-                },
+            CsrClosureInputs::new(
+                node_count,
+                &offsets,
+                &targets,
+                &masks,
                 allow_mask,
                 max_iters,
-            },
+            ),
             &frontier,
         );
         assert_eq!(actual_bfs, expected_bfs, "case={case} persistent_bfs");
@@ -363,16 +361,14 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         //    live accumulator and is order-dependent for multi-hop chains, but the CONVERGED
         //    set is unique regardless of pass order.
         let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
-            CsrClosureInputs {
-                graph: CsrGraphView {
-                    node_count,
-                    edge_offsets: &offsets,
-                    edge_targets: &targets,
-                    edge_kind_mask: &masks,
-                },
+            CsrClosureInputs::new(
+                node_count,
+                &offsets,
+                &targets,
+                &masks,
                 allow_mask,
                 max_iters,
-            },
+            ),
             &frontier,
         );
         let expected = oracle_backward_closure(
@@ -548,16 +544,14 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual = bfs_expand(
-            CsrClosureInputs {
-                graph: CsrGraphView {
-                    node_count,
-                    edge_offsets: &offsets,
-                    edge_targets: &targets,
-                    edge_kind_mask: &masks,
-                },
+            CsrClosureInputs::new(
+                node_count,
+                &offsets,
+                &targets,
+                &masks,
                 allow_mask,
                 max_iters,
-            },
+            ),
             &frontier,
         );
         assert_eq!(
