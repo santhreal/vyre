@@ -2,6 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use crate::BackendError;
 
@@ -67,14 +68,27 @@ pub struct AotLauncherEmitter {
 
 inventory::collect!(AotLauncherEmitter);
 
+/// Every linked launcher emitter, keyed by the target that owns it.
+///
+/// Registrations are link-time constants, so the walk happens once and every
+/// later lookup is a probe of the frozen index.
+static LAUNCHER_EMITTERS: LazyLock<BTreeMap<AotTargetId, &'static AotLauncherEmitter>> =
+    LazyLock::new(|| {
+        let mut emitters = BTreeMap::new();
+        for emitter in inventory::iter::<AotLauncherEmitter> {
+            assert!(
+                emitters.insert(emitter.target.clone(), emitter).is_none(),
+                "duplicate aot launcher emitter for target `{}`; keep one emitter per target",
+                emitter.target
+            );
+        }
+        emitters
+    });
+
 /// Return every linked launcher emitter.
 #[must_use]
 pub fn registered_aot_launcher_emitters() -> Vec<&'static AotLauncherEmitter> {
-    let emitter_count = inventory::iter::<AotLauncherEmitter>.into_iter().count();
-    let mut emitters = Vec::new();
-    let _ = emitters.try_reserve_exact(emitter_count);
-    emitters.extend(inventory::iter::<AotLauncherEmitter>);
-    emitters
+    LAUNCHER_EMITTERS.values().copied().collect()
 }
 
 /// Emit target-owned launcher files through the linked emitter matching `target`.
@@ -88,10 +102,7 @@ pub fn emit_aot_launcher_target(
     target: &AotTargetId,
     request: &AotLauncherRequest<'_>,
 ) -> Result<AotLauncherFiles, BackendError> {
-    let Some(emitter) = inventory::iter::<AotLauncherEmitter>
-        .into_iter()
-        .find(|emitter| &emitter.target == target)
-    else {
+    let Some(emitter) = LAUNCHER_EMITTERS.get(target).copied() else {
         return Err(BackendError::UnsupportedFeature {
             name: format!("aot launcher target `{target}`"),
             backend: "vyre-driver".to_string(),

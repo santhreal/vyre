@@ -5,6 +5,9 @@
 //! library tier and its bounded convergence metadata to conformance and
 //! documentation consumers.
 
+use std::collections::BTreeMap;
+use std::sync::LazyLock;
+
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
 
 /// Iterate over canonical library composition registrations.
@@ -35,8 +38,25 @@ pub struct ConvergenceContract {
 
 inventory::collect!(ConvergenceContract);
 
+/// Every linked convergence contract, keyed by the operation it bounds.
+///
+/// Registrations are link-time constants, so the walk happens once and a lookup
+/// is a probe rather than a scan of every registration.
+static CONTRACTS: LazyLock<BTreeMap<&'static str, &'static ConvergenceContract>> =
+    LazyLock::new(|| {
+        let mut contracts = BTreeMap::new();
+        for contract in inventory::iter::<ConvergenceContract> {
+            assert!(
+                contracts.insert(contract.op_id, contract).is_none(),
+                "duplicate convergence contract for `{}`; keep one iteration ceiling per operation",
+                contract.op_id
+            );
+        }
+        contracts
+    });
+
 /// Look up convergence metadata.
 #[must_use]
 pub fn convergence_contract(op_id: &str) -> Option<&'static ConvergenceContract> {
-    inventory::iter::<ConvergenceContract>().find(|contract| contract.op_id == op_id)
+    CONTRACTS.get(op_id).copied()
 }
