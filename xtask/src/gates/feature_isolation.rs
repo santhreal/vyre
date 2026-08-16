@@ -1219,6 +1219,18 @@ const COMPILE_FIX: &str = "give the feature the missing edge in its own [feature
 /// What a default build reaching a host oracle costs, and how to close it.
 const ORACLE_FIX: &str = "drop the cpu-parity edge from the feature that names it and gate the oracle call with cfg(any(test, feature = \"cpu-parity\")) instead; a default build must not compile a CPU reference implementation into the shipped library";
 
+/// What a run that compiled nothing on purpose judged.
+fn declaration_note(pairs: usize) -> String {
+    format!(
+        "{pairs} declared pair(s) agree with the manifests; this run compiled none of them, so it judges the declarations only"
+    )
+}
+
+/// What a sweep compiled out of the axis it set out to measure.
+fn sweep_note(compiled: usize, pairs: usize) -> String {
+    format!("{compiled} of {pairs} declared pair(s) compiled by this run")
+}
+
 /// Holds every feature selection the manifests declare to its recorded compile outcome.
 pub struct FeatureIsolation;
 
@@ -1351,10 +1363,7 @@ impl Gate for FeatureIsolation {
         );
 
         if !sweep {
-            report.note(format!(
-                "{} declared pair(s) agree with the manifests; this run compiled none of them, so it judges the declarations only",
-                pairs.len()
-            ));
+            report.note(declaration_note(pairs.len()));
             return Ok(report);
         }
 
@@ -1365,11 +1374,7 @@ impl Gate for FeatureIsolation {
             unmeasured_failures(&pairs, &observed),
             MEASUREMENT_FIX,
         );
-        report.note(format!(
-            "{} of {} declared pair(s) compiled by this run",
-            observed.len(),
-            pairs.len()
-        ));
+        report.note(sweep_note(observed.len(), pairs.len()));
         Ok(report)
     }
 }
