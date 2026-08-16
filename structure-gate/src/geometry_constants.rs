@@ -85,28 +85,14 @@ pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
 }
 
 fn is_ident_defined_on_line(line: &str, ident: &str) -> bool {
-    if let Some(pos) = line.find(ident) {
-        let before = &line[..pos];
-        let after = &line[pos + ident.len()..];
-
-        // Check if it's a const definition: preceded by `const ` (possibly with pub)
-        let is_const_def = before.trim_end().ends_with("const")
-            || before.contains("const ")
-            || before.contains("const\t");
-
-        let before_boundary = before
-            .chars()
-            .last()
-            .map_or(true, |c| !c.is_alphanumeric() && c != '_');
-        let after_boundary = after
-            .chars()
-            .next()
-            .map_or(true, |c| !c.is_alphanumeric() && c != '_');
-
-        is_const_def && before_boundary && after_boundary
-    } else {
-        false
+    let mut tokens = line.split_whitespace();
+    while let Some(token) = tokens.next() {
+        if token != "const" {
+            continue;
+        }
+        return tokens.next().and_then(|name| name.split(':').next()) == Some(ident);
     }
+    false
 }
 #[cfg(test)]
 mod tests {
@@ -114,15 +100,40 @@ mod tests {
 
     #[test]
     fn identifies_banned_constant_declarations() {
-        assert!(is_ident_defined_on_line("pub const BLOCK_LANES: u32 = 1024;", "BLOCK_LANES"));
-        assert!(is_ident_defined_on_line("const REDUCE_MEAN_TILE: u32 = 256;", "REDUCE_MEAN_TILE"));
-        assert!(is_ident_defined_on_line("const DOT_TILE: u32 = 256;", "DOT_TILE"));
-        assert!(is_ident_defined_on_line("pub(crate) const PORTABLE_WORKGROUP_INVOCATIONS: u32 = 256;", "PORTABLE_WORKGROUP_INVOCATIONS"));
+        assert!(is_ident_defined_on_line(
+            "pub const BLOCK_LANES: u32 = 1024;",
+            "BLOCK_LANES"
+        ));
+        assert!(is_ident_defined_on_line(
+            "const REDUCE_MEAN_TILE: u32 = 256;",
+            "REDUCE_MEAN_TILE"
+        ));
+        assert!(is_ident_defined_on_line(
+            "const DOT_TILE: u32 = 256;",
+            "DOT_TILE"
+        ));
+        assert!(is_ident_defined_on_line(
+            "pub(crate) const PORTABLE_WORKGROUP_INVOCATIONS: u32 = 256;",
+            "PORTABLE_WORKGROUP_INVOCATIONS"
+        ));
 
         // Non-definitions / uses / comments should not match
-        assert!(!is_ident_defined_on_line("let lanes = BLOCK_LANES;", "BLOCK_LANES"));
-        assert!(!is_ident_defined_on_line("fn use_block_lanes(size: u32) {}", "BLOCK_LANES"));
-        assert!(!is_ident_defined_on_line("const OTHER_CONSTANT: u32 = 123;", "BLOCK_LANES"));
+        assert!(!is_ident_defined_on_line(
+            "let lanes = BLOCK_LANES;",
+            "BLOCK_LANES"
+        ));
+        assert!(!is_ident_defined_on_line(
+            "fn use_block_lanes(size: u32) {}",
+            "BLOCK_LANES"
+        ));
+        assert!(!is_ident_defined_on_line(
+            "const OTHER_CONSTANT: u32 = 123;",
+            "BLOCK_LANES"
+        ));
+        assert!(!is_ident_defined_on_line(
+            "pub const SOFT_MAX_N: u32 = PORTABLE_WORKGROUP_INVOCATIONS * PORTABLE_WORKGROUP_INVOCATIONS;",
+            "PORTABLE_WORKGROUP_INVOCATIONS"
+        ));
     }
 
     #[test]
@@ -135,6 +146,9 @@ mod tests {
                 break;
             }
         }
-        assert!(found, "Reintroduced geometry constant must be caught by gate");
+        assert!(
+            found,
+            "Reintroduced geometry constant must be caught by gate"
+        );
     }
 }
