@@ -11,27 +11,21 @@
 
 use xtask::gates::public_api::roster;
 use xtask::gates::scan::Tree;
+use xtask::operator_binary::{help_requested, Usage};
 
-fn print_help() {
-    println!("Print publishable workspace packages as `directory:package` rows.");
-    println!();
-    println!("Usage: publishable_packages");
-    println!();
-    println!("Exit codes:");
-    println!("  0  the roster was printed");
-    println!("  1  the workspace could not be read, or publishes nothing");
-    println!("  2  command-line arguments are invalid");
-}
+const USAGE: Usage = Usage {
+    name: "publishable_packages",
+    summary: "Print publishable workspace packages as `directory:package` rows.",
+    exit_codes: &[
+        (0, "the roster was printed"),
+        (1, "the workspace could not be read, or publishes nothing"),
+        (2, "command-line arguments are invalid"),
+    ],
+};
 
 fn main() {
-    let mut args = std::env::args().skip(1);
-    if let Some(arg) = args.next() {
-        if matches!(arg.as_str(), "-h" | "--help") && args.next().is_none() {
-            print_help();
-            return;
-        }
-        eprintln!("Fix: unknown argument `{arg}`. Use `publishable_packages --help`.");
-        std::process::exit(2);
+    if help_requested(&USAGE) {
+        return;
     }
     let root = xtask::checkout::checkout_root();
     let tree = match Tree::open(&root) {

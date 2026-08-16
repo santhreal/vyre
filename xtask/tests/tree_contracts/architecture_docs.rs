@@ -1,6 +1,6 @@
 //! Current architecture documentation coherence tests.
 //!
-//! WHY: `docs/ARCHITECTURE.md` is prose about six live authorities, and prose
+//! WHY: the architecture document is prose about six live authorities, and prose
 //! drifts from all six without a compile error. Each case here poisons exactly
 //! one authority or one phrase in a fixture workspace and asserts the
 //! `architecture-contract` gate reports it, plus one case over the real checkout

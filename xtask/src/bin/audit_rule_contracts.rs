@@ -7,28 +7,22 @@
 
 use std::fs;
 
+use xtask::operator_binary::{help_requested, Usage};
 use xtask::rule_tree;
 
-fn print_help() {
-    println!("Audit launch-rule contracts and truth-test directories.");
-    println!();
-    println!("Usage: audit_rule_contracts");
-    println!();
-    println!("Exit codes:");
-    println!("  0  every rule contract and truth-test directory exists");
-    println!("  1  the rule tree is unavailable or a contract is incomplete");
-    println!("  2  command-line arguments are invalid");
-}
+const USAGE: Usage = Usage {
+    name: "audit_rule_contracts",
+    summary: "Audit launch-rule contracts and truth-test directories.",
+    exit_codes: &[
+        (0, "every rule contract and truth-test directory exists"),
+        (1, "the rule tree is unavailable or a contract is incomplete"),
+        (2, "command-line arguments are invalid"),
+    ],
+};
 
 fn main() {
-    let mut args = std::env::args().skip(1);
-    if let Some(arg) = args.next() {
-        if matches!(arg.as_str(), "-h" | "--help") && args.next().is_none() {
-            print_help();
-            return;
-        }
-        eprintln!("Fix: unknown argument `{arg}`. Use `audit_rule_contracts --help`.");
-        std::process::exit(2);
+    if help_requested(&USAGE) {
+        return;
     }
     let launch_dir = rule_tree::launch_dir();
     if !launch_dir.exists() {

@@ -29,6 +29,7 @@ pub mod generated_document;
 pub mod hash;
 pub mod json_document;
 pub mod manifest_walk;
+pub mod operator_binary;
 pub mod output_arg;
 pub mod release;
 pub mod rule_tree;

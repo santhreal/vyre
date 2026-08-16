@@ -1,4 +1,4 @@
-//! `docs/ARCHITECTURE.md` agrees with the live authorities it describes.
+//! The architecture document agrees with the live authorities it describes.
 //!
 //! The architecture document is prose about the workspace manifests, the release
 //! train, the generated operation schema, the backend probe evidence, the crate
