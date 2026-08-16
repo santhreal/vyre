@@ -2,7 +2,7 @@
 //!
 //! This module wires `reduce_count` and
 //! `graph::adaptive_traverse::adaptive_sparse_dense_step` into resident
-//! CUDA-ready sequences. Traversal semantics stay in `vyre-primitives`; this
+//! device-ready sequences. Traversal semantics stay in `vyre-primitives`; this
 //! facade owns resident scratch, layout identity, and stable public re-exports.
 
 #[cfg(any(test, feature = "cpu-parity"))]

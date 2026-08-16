@@ -50,9 +50,7 @@ pub(crate) fn validate_binop_operands(
                 {
                     errors.push(err("V084", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` received left=`{l}`, right=`{r}`. 64-bit integer arithmetic is outside vyre-foundation's cross-backend arithmetic contract"
-                    ), format!(
-                        "express the operation as a U32 pair with explicit carry/borrow, or use a backend-specific op whose schema declares native 64-bit arithmetic."
-                    )));
+                    ), "express the operation as a U32 pair with explicit carry/borrow, or use a backend-specific op whose schema declares native 64-bit arithmetic.".to_string()));
                 }
 
                 if matches!(
@@ -63,9 +61,7 @@ pub(crate) fn validate_binop_operands(
                     errors.push(err("V085", ValidationPhase::Type, ValidationLocation::Program, format!(
                             "Saturating arithmetic `{op:?}` received left=`{l}`, right=`{r}`; legal set is only U32 in the current lowering"
                         )
-                            .to_string(), format!(
-                            "cast both operands to U32, or clamp explicitly for I32/F32."
-                        )
+                            .to_string(), "cast both operands to U32, or clamp explicitly for I32/F32.".to_string()
                             .to_string()));
                 }
 
@@ -73,9 +69,7 @@ pub(crate) fn validate_binop_operands(
                     errors.push(err("V086", ValidationPhase::Type, ValidationLocation::Program, format!(
                             "AbsDiff has left=`{l}`, right=`{r}` and can overflow (i32::MIN - i32::MAX invokes target-text signed-integer UB)"
                         )
-                            .to_string(), format!(
-                            "cast operands to U32 before AbsDiff, or rewrite as an explicit branch."
-                        )
+                            .to_string(), "cast operands to U32 before AbsDiff, or rewrite as an explicit branch.".to_string()
                             .to_string()));
                 }
             }
@@ -84,9 +78,7 @@ pub(crate) fn validate_binop_operands(
                     if matches!(ty, DataType::Bool) {
                         errors.push(err("V087", ValidationPhase::Type, ValidationLocation::Program, format!(
                             "binary operation `{op:?}` {side} operand has type `{ty}`, but numeric arithmetic expects one of `u32`, `i32`, or `f32`"
-                        ), format!(
-                            "cast the operand to U32 or I32 before arithmetic, or rewrite to avoid mixing logical and arithmetic operators."
-                        )));
+                        ), "cast the operand to U32 or I32 before arithmetic, or rewrite to avoid mixing logical and arithmetic operators.".to_string()));
                     }
                 }
             }
@@ -99,9 +91,7 @@ pub(crate) fn validate_binop_operands(
                 if both_numeric && l != r {
                     errors.push(err("V088", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` operands have mismatched numeric types: left=`{l}`, right=`{r}` (legal set: U32, I32, F32)"
-                    ), format!(
-                        "cast one operand so both sides share a type (target-text has no implicit promotion)."
-                    )));
+                    ), "cast one operand so both sides share a type (target-text has no implicit promotion).".to_string()));
                 }
             }
         }
@@ -119,9 +109,7 @@ pub(crate) fn validate_binop_operands(
                     if !matches!(ty, DataType::U32 | DataType::I32) {
                         errors.push(err("V089", ValidationPhase::Type, ValidationLocation::Program, format!(
                             "binary operation `Mod` {side} operand must be `u32` or `i32`, got `{ty}`. Legal set for Mod is integer-only"
-                        ), format!(
-                            "cast both operands to the same integer type before modulo."
-                        )));
+                        ), "cast both operands to the same integer type before modulo.".to_string()));
                     }
                 }
             }
@@ -132,9 +120,7 @@ pub(crate) fn validate_binop_operands(
                 {
                     errors.push(err("V090", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `Mod` operands have mismatched integer types: left=`{left}`, right=`{right}`"
-                    ), format!(
-                        "cast one operand so both sides share the same integer type."
-                    )));
+                    ), "cast one operand so both sides share the same integer type.".to_string()));
                 }
             }
         }
@@ -144,23 +130,17 @@ pub(crate) fn validate_binop_operands(
                 if !matches!(l, DataType::U32 | DataType::I32) {
                     errors.push(err("V091", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` left operand has type `{l}`; legal integer set is `u32` or `i32`"
-                    ), format!(
-                        "cast the left operand to U32 or I32."
-                    )));
+                    ), "cast the left operand to U32 or I32.".to_string()));
                 }
                 if !matches!(r, DataType::U32 | DataType::I32) {
                     errors.push(err("V092", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` right operand has type `{r}`; legal integer set is `u32` or `i32`"
-                    ), format!(
-                        "cast the right operand to U32 or I32."
-                    )));
+                    ), "cast the right operand to U32 or I32.".to_string()));
                 }
                 if l != r {
                     errors.push(err("V093", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` operands have mismatched integer types: left=`{l}`, right=`{r}`. Integer operands must match and belong to `u32` or `i32`"
-                    ), format!(
-                        "cast both operands to the same integer type."
-                    )));
+                    ), "cast both operands to the same integer type.".to_string()));
                 }
             }
         }
@@ -173,9 +153,7 @@ pub(crate) fn validate_binop_operands(
                     if !matches!(ty, DataType::U32) {
                         errors.push(err("V094", ValidationPhase::Type, ValidationLocation::Program, format!(
                             "binary operation `{op:?}` {side} operand has type `{ty}`; shift/rotate operands must be `u32`"
-                        ), format!(
-                            "cast the operand to U32 before shifting/rotating."
-                        )));
+                        ), "cast the operand to U32 before shifting/rotating.".to_string()));
                     }
                 }
             }
@@ -187,9 +165,7 @@ pub(crate) fn validate_binop_operands(
                     if !matches!(ty, DataType::U32 | DataType::Bool) {
                         errors.push(err("V095", ValidationPhase::Type, ValidationLocation::Program, format!(
                             "binary operation `{op:?}` {side} operand has type `{ty}`; logical And/Or operands must be `u32` or `bool`"
-                        ), format!(
-                            "cast the operand to U32 or Bool."
-                        )));
+                        ), "cast the operand to U32 or Bool.".to_string()));
                     }
                 }
             }
@@ -200,9 +176,7 @@ pub(crate) fn validate_binop_operands(
                 if l != r {
                     errors.push(err("V096", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary comparison `{op:?}` operands have mismatched types: left=`{l}`, right=`{r}`. Comparisons require matching types"
-                    ), format!(
-                        "cast both operands to the same type before comparing."
-                    )));
+                    ), "cast both operands to the same type before comparing.".to_string()));
                 }
             }
         }
@@ -241,24 +215,18 @@ pub(crate) fn validate_unop_operand(
                 if matches!(ty, DataType::I32) {
                     errors.push(err("V098", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `Negate` operand has type `{ty}`, but legal total Negate types are `u32` and `f32`; raw i32 negation has the i32::MIN overflow case"
-                    ), format!(
-                        "use `0 - x` for wrapping i32 negation, cast to U32 before Negate, or guard with Select(i32::MIN, 0, -x)."
-                    )));
+                    ), "use `0 - x` for wrapping i32 negation, cast to U32 before Negate, or guard with Select(i32::MIN, 0, -x).".to_string()));
                 } else if !matches!(ty, DataType::U32 | DataType::F32) {
                     errors.push(err("V099", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `{op:?}` operand has type `{ty}`, but legal set is U32, I32, or F32"
-                    ), format!(
-                        "cast or rewrite the operand to U32/I32/F32."
-                    )));
+                    ), "cast or rewrite the operand to U32/I32/F32.".to_string()));
                 }
             }
             crate::ir_inner::model::spec_types::UnOp::LogicalNot => {
                 if !matches!(ty, DataType::U32 | DataType::Bool) {
                     errors.push(err("V100", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `LogicalNot` operand has type `{ty}`; legal set is `u32` or `bool`"
-                    ), format!(
-                        "cast or rewrite the operand to produce U32 or Bool."
-                    )));
+                    ), "cast or rewrite the operand to produce U32 or Bool.".to_string()));
                 }
             }
             crate::ir_inner::model::spec_types::UnOp::BitNot
@@ -274,9 +242,7 @@ pub(crate) fn validate_unop_operand(
                 if !matches!(ty, DataType::U32 | DataType::I32 | DataType::U64) {
                     errors.push(err("V101", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `{op:?}` operand has type `{ty}`; legal integer set is `u32`, `i32`, or `u64`"
-                    ), format!(
-                        "cast or rewrite the operand to produce U32, I32, or U64."
-                    )));
+                    ), "cast or rewrite the operand to produce U32, I32, or U64.".to_string()));
                 }
             }
             crate::ir_inner::model::spec_types::UnOp::Sin
@@ -307,9 +273,7 @@ pub(crate) fn validate_unop_operand(
                 if ty != DataType::F32 {
                     errors.push(err("V102", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `{op:?}` operand has type `{ty}`; legal set for math ops is `f32`"
-                    ), format!(
-                        "cast or rewrite the operand to produce F32."
-                    )));
+                    ), "cast or rewrite the operand to produce F32.".to_string()));
                 }
             }
             crate::ir_inner::model::spec_types::UnOp::Unpack4Low
@@ -326,17 +290,13 @@ pub(crate) fn validate_unop_operand(
                 if !matches!(ty, DataType::U32 | DataType::I32) {
                     errors.push(err("V103", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `{op:?}` operand has type `{ty}`; unpack ops require a 32-bit integer (`u32` or `i32`) word"
-                    ), format!(
-                        "cast or rewrite the operand to produce U32 or I32."
-                    )));
+                    ), "cast or rewrite the operand to produce U32 or I32.".to_string()));
                 }
             }
             _ => {
                 errors.push(err("V104", ValidationPhase::Type, ValidationLocation::Program, format!(
                     "unary operation `{op:?}` is not recognized"
-                ), format!(
-                    "use a known UnOp variant from this enum (`Negate`, `LogicalNot`, `BitNot`, `Popcount`, `Clz`, `Ctz`, `ReverseBits`, `Sin`, `Cos`, `Exp`, `Log`, `Log2`, `Exp2`, `Tan`, `Acos`, `Asin`, `Atan`, `Tanh`, `Sinh`, `Cosh`, `Abs`, `Sqrt`, `InverseSqrt`, `Reciprocal`, `Floor`, `Ceil`, `Round`, `Trunc`, `Sign`, `IsNan`, `IsInf`, `IsFinite`, `Unpack4Low`, `Unpack4High`, `Unpack8Low`, `Unpack8High`)."
-                )));
+                ), "use a known UnOp variant from this enum (`Negate`, `LogicalNot`, `BitNot`, `Popcount`, `Clz`, `Ctz`, `ReverseBits`, `Sin`, `Cos`, `Exp`, `Log`, `Log2`, `Exp2`, `Tan`, `Acos`, `Asin`, `Atan`, `Tanh`, `Sinh`, `Cosh`, `Abs`, `Sqrt`, `InverseSqrt`, `Reciprocal`, `Floor`, `Ceil`, `Round`, `Trunc`, `Sign`, `IsNan`, `IsInf`, `IsFinite`, `Unpack4Low`, `Unpack4High`, `Unpack8Low`, `Unpack8High`).".to_string()));
             }
         }
     }

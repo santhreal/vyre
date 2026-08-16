@@ -59,7 +59,8 @@ pub(crate) fn check_barrier(
             format!(
                 "barrier uses memory ordering `{ordering:?}`, but barriers must synchronize memory"
             ),
-            format!("use Acquire, Release, AcqRel, or SeqCst; use no barrier at all for Relaxed."),
+            "use Acquire, Release, AcqRel, or SeqCst; use no barrier at all for Relaxed."
+                .to_string(),
         ));
     }
 }

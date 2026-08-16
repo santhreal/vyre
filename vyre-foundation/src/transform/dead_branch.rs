@@ -24,19 +24,20 @@
 
 use std::sync::Arc;
 
-use super::expr_no_atomic;
-use vyre_foundation::ir::{Expr, Node, Program};
+use crate::ir::{Expr, Node, Program};
+use crate::optimizer::passes::expr_is_atomic_free;
+use crate::transform::rewrite_walk::{reachable_prefix, rewrite_program_entry};
 
 /// Apply dead-branch elimination. Returns a new Program with every
 /// constant-cond `Node::If` collapsed to its surviving branch.
 pub fn apply_dead_branch(program: &Program) -> Program {
-    super::rewrite_program_entry(program, rewrite_scope)
+    rewrite_program_entry(program, rewrite_scope)
 }
 
 fn rewrite_scope(body: &[Node]) -> Vec<Node> {
-    let prefix_len = super::encode::reachable_prefix_len(body);
-    let mut out: Vec<Node> = Vec::with_capacity(prefix_len);
-    for node in &body[..prefix_len] {
+    let reachable = reachable_prefix(body);
+    let mut out: Vec<Node> = Vec::with_capacity(reachable.len());
+    for node in reachable {
         match node {
             Node::If {
                 cond,
@@ -54,14 +55,14 @@ fn rewrite_scope(body: &[Node]) -> Vec<Node> {
                     // side effects → drop the entire If. `cond` Loads
                     // are read-only in vyre, so the only side-effect
                     // gate is `Atomic`.
-                    if new_then.is_empty() && new_otherwise.is_empty() && expr_no_atomic(cond) {
+                    if new_then.is_empty() && new_otherwise.is_empty() && expr_is_atomic_free(cond) {
                         continue;
                     }
                     // Both arms structurally equal + cond has no
                     // observable side effects → splice one copy of
                     // the body into the parent scope. Catches
                     // `if c { do_X(); } else { do_X(); }`.
-                    if new_then == new_otherwise && expr_no_atomic(cond) {
+                    if new_then == new_otherwise && expr_is_atomic_free(cond) {
                         out.extend(new_then);
                         continue;
                     }
@@ -104,7 +105,7 @@ fn rewrite_scope(body: &[Node]) -> Vec<Node> {
                 // (so evaluating them once vs. zero times has no
                 // observable effect), drop the entire loop. Loads
                 // are read-only and are considered safe to drop.
-                if inner.is_empty() && expr_no_atomic(from) && expr_no_atomic(to) {
+                if inner.is_empty() && expr_is_atomic_free(from) && expr_is_atomic_free(to) {
                     continue;
                 }
                 out.push(Node::loop_for(var.clone(), from.clone(), to.clone(), inner));

@@ -415,15 +415,14 @@ where
 // ---- Classification + helpers ----------------------------------------------
 
 /// Length of the prefix of `entry` up to and including the first
-/// `Node::Return`, or `entry.len()` if no Return is present. Mirrors
-/// `eliminate_unreachable` in the foundation CPU DCE.
+/// `Node::Return`, or `entry.len()` if no Return is present.
+///
+/// The truncation itself is IR structure and belongs to
+/// [`vyre_foundation::transform::rewrite_walk::reachable_prefix`]. This is the
+/// length the encoder indexes with, over the same prefix.
+#[must_use]
 pub fn reachable_prefix_len(entry: &[Node]) -> usize {
-    for (i, node) in entry.iter().enumerate() {
-        if matches!(node, Node::Return) {
-            return i + 1;
-        }
-    }
-    entry.len()
+    vyre_foundation::transform::rewrite_walk::reachable_prefix(entry).len()
 }
 
 fn classify_node(node: &Node) -> u32 {

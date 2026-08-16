@@ -1,13 +1,13 @@
 {
-  "source_fingerprint": "git:5fbdf485448464734f4ead389186fd1484d72045:dirty=true:worktree=e14d88987331c4aa680e80d972ebc3f6c5b6de677b1048fb49068052e603f64d",
+  "source_fingerprint": "git:028468ef38df1f7bc6dc444b64ad75d54e91bfa2:dirty=true:worktree=b408d73d6d4b951c92d99f9a8f535fad9f26d545aed114e1c402dba362e18276",
   "schema_version": 5,
-  "op_count": 359,
-  "distinct_op_count": 359,
-  "catalog_required_op_count": 359,
-  "catalog_covered_op_count": 359,
+  "op_count": 363,
+  "distinct_op_count": 363,
+  "catalog_required_op_count": 363,
+  "catalog_covered_op_count": 363,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1077,
-  "supported_release_backend_row_count": 1077,
+  "release_backend_row_count": 1089,
+  "supported_release_backend_row_count": 1089,
   "release_backend_rows": [
     "vyre-primitives::bitset::and:reference:supported",
     "vyre-primitives::bitset::and:cuda:supported",
@@ -849,9 +849,15 @@
     "vyre-libs::parsing::c11_build_vast_nodes_v2:reference:supported",
     "vyre-libs::parsing::c11_build_vast_nodes_v2:cuda:supported",
     "vyre-libs::parsing::c11_build_vast_nodes_v2:wgpu:supported",
+    "vyre-libs::parsing::c11_builtin_declaration_kind_for_row:reference:supported",
+    "vyre-libs::parsing::c11_builtin_declaration_kind_for_row:cuda:supported",
+    "vyre-libs::parsing::c11_builtin_declaration_kind_for_row:wgpu:supported",
     "vyre-libs::parsing::c11_classify_vast_node_kinds:reference:supported",
     "vyre-libs::parsing::c11_classify_vast_node_kinds:cuda:supported",
     "vyre-libs::parsing::c11_classify_vast_node_kinds:wgpu:supported",
+    "vyre-libs::parsing::c11_enclosing_function_lparen_for_row:reference:supported",
+    "vyre-libs::parsing::c11_enclosing_function_lparen_for_row:cuda:supported",
+    "vyre-libs::parsing::c11_enclosing_function_lparen_for_row:wgpu:supported",
     "vyre-libs::parsing::c11_extract_calls:reference:supported",
     "vyre-libs::parsing::c11_extract_calls:cuda:supported",
     "vyre-libs::parsing::c11_extract_calls:wgpu:supported",
@@ -864,6 +870,12 @@
     "vyre-libs::parsing::c11_gnu_inline_asm_pass:reference:supported",
     "vyre-libs::parsing::c11_gnu_inline_asm_pass:cuda:supported",
     "vyre-libs::parsing::c11_gnu_inline_asm_pass:wgpu:supported",
+    "vyre-libs::parsing::c11_identifier_row_hash:reference:supported",
+    "vyre-libs::parsing::c11_identifier_row_hash:cuda:supported",
+    "vyre-libs::parsing::c11_identifier_row_hash:wgpu:supported",
+    "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack:reference:supported",
+    "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack:cuda:supported",
+    "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack:wgpu:supported",
     "vyre-libs::parsing::c11_lex_digraphs:reference:supported",
     "vyre-libs::parsing::c11_lex_digraphs:cuda:supported",
     "vyre-libs::parsing::c11_lex_digraphs:wgpu:supported",
@@ -40569,6 +40581,147 @@
       "blockers": []
     },
     {
+      "op_id": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
       "op_id": "vyre-libs::parsing::c11_classify_vast_node_kinds",
       "backend": "reference",
       "status": "supported",
@@ -40664,6 +40817,147 @@
     },
     {
       "op_id": "vyre-libs::parsing::c11_classify_vast_node_kinds",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
       "backend": "wgpu",
       "status": "supported",
       "test_paths": [
@@ -41228,6 +41522,288 @@
     },
     {
       "op_id": "vyre-libs::parsing::c11_gnu_inline_asm_pass",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_identifier_row_hash",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_identifier_row_hash",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_identifier_row_hash",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
       "backend": "wgpu",
       "status": "supported",
       "test_paths": [
@@ -51722,9 +52298,9 @@
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
   "duplicate_op_ids": [],
-  "fixture_required_count": 359,
-  "fixture_input_count": 359,
-  "expected_output_count": 359,
+  "fixture_required_count": 363,
+  "fixture_input_count": 363,
+  "expected_output_count": 363,
   "dispatch_backends": [
     "cuda",
     "spirv",
@@ -52694,7 +53270,21 @@
       "tolerance_ulp": 0
     },
     {
+      "id": "vyre-libs::parsing::c11_builtin_declaration_kind_for_row",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
       "id": "vyre-libs::parsing::c11_classify_vast_node_kinds",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::parsing::c11_enclosing_function_lparen_for_row",
       "requires_fixture": true,
       "has_test_inputs": true,
       "has_expected_output": true,
@@ -52723,6 +53313,20 @@
     },
     {
       "id": "vyre-libs::parsing::c11_gnu_inline_asm_pass",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::parsing::c11_identifier_row_hash",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::parsing::c11_identifier_row_hash_packed_haystack",
       "requires_fixture": true,
       "has_test_inputs": true,
       "has_expected_output": true,

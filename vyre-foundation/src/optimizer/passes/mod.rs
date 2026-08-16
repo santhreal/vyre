@@ -41,6 +41,58 @@ pub(crate) fn expr_is_observably_free_for_reexecution(
     expr_is_observably_free_with(expr, false, allow_subgroup_identity)
 }
 
+/// Whether `expr` contains no `Atomic` and no `Opaque` anywhere.
+///
+/// A weaker question than [`expr_is_observably_free_for_reexecution`], and a
+/// different one: a `Load`, a `Call` or a subgroup op is allowed here, because
+/// the rewrites that ask this are deleting or hoisting a whole expression
+/// within one invocation rather than re-evaluating it at a new program point.
+/// What they cannot do is discard a memory mutation or an extension whose
+/// effects the IR does not model, which is exactly these two variants.
+///
+/// Exhaustive with no catch-all arm: a new `Expr` variant fails to compile here
+/// rather than reading as atomic-free and letting a rewrite drop its operands.
+pub fn expr_is_atomic_free(expr: &crate::ir::Expr) -> bool {
+    use crate::ir::Expr;
+    match expr {
+        Expr::Atomic { .. } | Expr::Opaque(_) => false,
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::BufferRef { .. }
+        | Expr::BufLen { .. } => true,
+        Expr::BinOp { left, right, .. } => expr_is_atomic_free(left) && expr_is_atomic_free(right),
+        Expr::UnOp { operand, .. } => expr_is_atomic_free(operand),
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            expr_is_atomic_free(cond)
+                && expr_is_atomic_free(true_val)
+                && expr_is_atomic_free(false_val)
+        }
+        Expr::Fma { a, b, c } => {
+            expr_is_atomic_free(a) && expr_is_atomic_free(b) && expr_is_atomic_free(c)
+        }
+        Expr::Load { index, .. } => expr_is_atomic_free(index),
+        Expr::Cast { value, .. } => expr_is_atomic_free(value),
+        Expr::Call { args, .. } => args.iter().all(expr_is_atomic_free),
+        Expr::SubgroupBallot { cond } => expr_is_atomic_free(cond),
+        Expr::SubgroupShuffle { value, lane } => {
+            expr_is_atomic_free(value) && expr_is_atomic_free(lane)
+        }
+        Expr::SubgroupReduce { value, .. } => expr_is_atomic_free(value),
+    }
+}
+
 pub(crate) fn expr_is_observably_free_with(
     expr: &crate::ir::Expr,
     allow_buffer_metadata: bool,

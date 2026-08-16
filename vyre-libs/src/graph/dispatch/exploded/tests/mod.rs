@@ -1,7 +1,7 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
 use std::sync::Mutex;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::exploded::build_cpu_reference;
 use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, ExplodedIfdsCase};
@@ -13,7 +13,7 @@ use ifds_doubles::{canonical_expected, RecordingIfdsOracle};
 
 /// The readback shapes below are deliberately malformed, so the dispatcher
 /// asserts nothing about its inputs; what is under test is the decoder's
-/// validation. Production parity uses `CpuOracleDispatcher`.
+/// validation. Production parity uses `ReferenceEvalDispatcher`.
 const MALFORMED_IFDS_CONTRACT: &str = "malformed exploded-IFDS readback";
 
 /// Every declared exploded-IFDS group has a substrate arm, and every case in it
@@ -41,7 +41,7 @@ fn substrate_exploded_ifds_arms_cover_every_declared_case_group() {
 
 /// The dispatched path decodes to exactly what the host reference builds.
 fn assert_via_dispatch_matches_reference(cases: &[ExplodedIfdsCase]) {
-    let dispatcher = CpuOracleDispatcher::new();
+    let dispatcher = ReferenceEvalDispatcher;
     for case in cases {
         let expected = canonical_expected(
             case.num_procs,
@@ -155,7 +155,7 @@ fn round_trip_dense_is_identity() {
 
 #[test]
 fn via_decodes_exact_csr_outputs_into_reused_buffers() {
-    let dispatcher = CpuOracleDispatcher::new();
+    let dispatcher = ReferenceEvalDispatcher;
     let intra = [(0, 0, 1)];
     let expected = canonical_expected(1, 2, 1, &intra, &[], &[], &[]);
     let mut row_ptr = Vec::with_capacity(4);
@@ -183,7 +183,7 @@ fn via_decodes_exact_csr_outputs_into_reused_buffers() {
 #[test]
 fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
     let dispatcher = RecordingIfdsOracle {
-        inner: CpuOracleDispatcher::new(),
+        inner: ReferenceEvalDispatcher,
         intra_src_blocks: Mutex::new(Vec::new()),
     };
     let mut scratch = IfdsCsrGpuScratch::default();
@@ -233,7 +233,7 @@ fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
 
 #[test]
 fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
-    let dispatcher = CpuOracleDispatcher::new();
+    let dispatcher = ReferenceEvalDispatcher;
     let mut scratch = IfdsCsrGpuScratch::default();
     let mut row_ptr = Vec::with_capacity(3);
     let mut col_idx = Vec::with_capacity(1);
@@ -348,7 +348,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
 #[test]
 fn empty_via_path_does_not_materialize_program_or_dispatch() {
-    let dispatcher = CpuOracleDispatcher::new();
+    let dispatcher = ReferenceEvalDispatcher;
     let mut scratch = IfdsCsrGpuScratch::default();
     let mut row_ptr = vec![99];
     let mut col_idx = vec![88];

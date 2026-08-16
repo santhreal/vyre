@@ -6,7 +6,7 @@
 //!
 //! This replaces ad-hoc cache invalidation with formal causal analysis.
 
-use crate::analysis::dataflow_fixpoint::reachability_closure_via_into;
+use crate::prelude::reachability_closure_via_into;
 #[cfg(test)]
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{

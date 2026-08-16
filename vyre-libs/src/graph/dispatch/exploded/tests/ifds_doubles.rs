@@ -23,7 +23,7 @@ pub(super) fn canonical_expected(
 }
 
 pub(super) struct RecordingIfdsOracle {
-    pub(super) inner: CpuOracleDispatcher,
+    pub(super) inner: ReferenceEvalDispatcher,
     pub(super) intra_src_blocks: Mutex<Vec<Vec<u32>>>,
 }
 

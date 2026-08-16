@@ -57,6 +57,9 @@
 /// Domain-neutral byte-range ordering predicates.
 pub mod range_ordering;
 
+/// The declared seam one Tier 3 dialect crosses to compose another.
+pub mod prelude;
+
 /// `TensorRef`  -  typed buffer-argument wrapper used by every Cat-A
 /// composition for dtype + shape + name-uniqueness validation.
 pub(crate) mod tensor_ref;

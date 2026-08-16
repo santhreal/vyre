@@ -452,6 +452,14 @@ pub const REVIEWED_DISTINCT_OPERATIONS: &[(&str, &str, &str)] = &[
          whatever the arithmetic is; one is four complex butterflies over f32 twiddles, the other \
          is the BLAKE3 four-word mixing of add, xor and rotate over u32",
     ),
+    (
+        "vyre-primitives::graph::dominator_tree_intersect_step",
+        "vyre-primitives::math::softmax_step",
+        "a lane-zero guard around one serial pass that accumulates into a binding and a second \
+         serial pass that stores per element; the softmax divides every element by the sum it \
+         just totalled, and the relaxation sweep walks a predecessor CSR and intersects two idom \
+         parents by climbing the deeper one, which no division expresses",
+    ),
 ];
 
 /// Reason two registered operations were reviewed and kept apart, read in both

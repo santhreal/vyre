@@ -1,6 +1,6 @@
 //! End-to-end parity for `math::qsvt_matrix_function_fusion::transport_residual_fixed_via`, the QSVT
 //! `f(M)·v` Chebyshev matrix-function filter (negative-truncator transport residual), through the shared
-//! faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! this is the SIGNED-coefficient companion to `fusion_scores_via_reference_parity`. Both dispatch the SAME
@@ -22,7 +22,7 @@
 use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
 use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

@@ -13,10 +13,7 @@ pub(super) fn walk_body_preorder<'a>(nodes: &'a [Node], visit: &mut impl FnMut(&
     let mut stack: Vec<&'a Node> = nodes.iter().rev().collect();
     while let Some(node) = stack.pop() {
         visit(node);
-        for body in vyre_foundation::visit::child_bodies(node)
-            .into_iter()
-            .rev()
-        {
+        for body in vyre_foundation::visit::child_bodies(node).into_iter().rev() {
             stack.extend(body.iter().rev());
         }
     }

@@ -221,7 +221,7 @@ fn run_target_query(
             ));
         }
     }
-    report.note(format!("  Bar: ≥ 0.95 = duplicate, ≥ 0.80 = very similar, ≥ 0.50 = same family, < 0.20 = unrelated."));
+    report.note("  Bar: ≥ 0.95 = duplicate, ≥ 0.80 = very similar, ≥ 0.50 = same family, < 0.20 = unrelated.".to_string());
     Ok(())
 }
 

@@ -753,6 +753,36 @@ tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
+family = "vyre-primitives::graph::dominator_tree_depth"
+tier = "intrinsic"
+owners = ["vyre-primitives/src/graph"]
+ops = ["vyre-primitives::graph::dominator_tree_depth"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-primitives::graph::dominator_tree_intersect_step"
+tier = "intrinsic"
+owners = ["vyre-primitives/src/graph"]
+ops = ["vyre-primitives::graph::dominator_tree_intersect_step"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
 family = "vyre-primitives::graph::functor_apply"
 tier = "intrinsic"
 owners = ["vyre-primitives/src/graph"]

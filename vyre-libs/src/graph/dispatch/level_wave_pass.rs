@@ -62,7 +62,7 @@ pub fn build_callee_before_caller_program(
 ///
 /// The no-argument form declares ONLY `depth_buf` (binding 0), so a `step_body`
 /// that touches any per-function buffer emits IR referencing an undeclared name
-/// (the no-shadowing/undeclared validator, and the CUDA backend, reject it). A
+/// (the no-shadowing/undeclared validator, and a native backend, reject it). A
 /// real interprocedural pass reads the function under visit and writes its
 /// analysis/rewrite result, so it MUST declare those buffers: pass them as
 /// `extra_buffers`, each with a distinct binding index `>= 1` that the `step_body`

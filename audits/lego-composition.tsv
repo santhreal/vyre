@@ -238,6 +238,8 @@ vyre-primitives::graph::csr_frontier_degree_sum	0.000000000000
 vyre-primitives::graph::csr_queue_strided_forward_traverse	0.000000000000
 vyre-primitives::graph::dominator_frontier	0.000000000000
 vyre-primitives::graph::dominator_tree	0.911111111111
+vyre-primitives::graph::dominator_tree_depth	0.000000000000
+vyre-primitives::graph::dominator_tree_intersect_step	0.000000000000
 vyre-primitives::graph::functor_apply	0.000000000000
 vyre-primitives::graph::monoidal_compose	0.000000000000
 vyre-primitives::graph::motif	0.000000000000
