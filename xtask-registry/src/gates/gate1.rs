@@ -1,71 +1,25 @@
 //! `cargo xtask gate1`  -  Gate 1 complexity-budget enforcement.
 //!
-//! The composition policy states the rule; this gate enforces the half of it
-//! that is countable. An op is either small enough to read whole, or mostly
-//! made of other registered ops. Nothing in between. Reuse count is policy the
-//! author applies, not a number this gate can read off a program.
+//! The composition policy states the rule; this gate owns the half of it that
+//! is countable. An operation is either small enough to read whole, or mostly
+//! made of other registered operations. Nothing in between. Reuse count is
+//! policy the author applies, not a number a gate can read off a program.
 //!
-//! For every registered op (vyre-libs + vyre-primitives inventories):
+//! For every registered operation, `composition_budget::measure` counts the
+//! nodes, the loops and the share of nodes that are calls to another registered
+//! operation, and the verdict is either the raw budget or that share. The
+//! diagnostic lists the inline loops and uncomposed region bodies an author
+//! would have to extract, so the report names the work rather than the number.
 //!
-//! 1. Build the op's `Program`.
-//! 2. Walk the entry-body Node tree:
-//!    - `total_nodes`  -  recursive node count.
-//!    - `loops`  -  count of `Node::Loop`.
-//!    - `composed_nodes`  -  count of nodes that are, or live inside, a
-//!      `Node::Region { source_region: Some(_), .. }` (i.e. the Region
-//!      was constructed by composing another registered op rather than
-//!      being an anonymous local wrapper). A region that names a
-//!      composition is composition, so it counts itself: an operation that
-//!      tags its own entry region used to read as one uncomposed node, and
-//!      making every operation name itself lowered the measured fraction of
-//!      every operation that took the fix.
-//! 3. Pass if EITHER:
-//!    - Under raw budget: `loops <= 4 AND total_nodes <= 200`, OR
-//!    - Adequate composition: `composed_nodes / total_nodes >= 0.6`.
-//!
-//! On fail, the diagnostic lists the inline sub-blocks (the loops /
-//! large Block / If branches that aren't wrapped in a child Region)
-//! so an author can see exactly what should have been a primitive
-//! call.
-//!
-//! Exit code 0 = all ops pass. Exit code 1 = ≥ 1 op fails (CI signal).
+//! `abstraction-gate` reads the same walk for a different question: whether
+//! every child region names a building block that exists. The budget is
+//! reported once, here.
 
-use vyre::ir::{Node, Program};
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
-const LOOP_BUDGET: usize = 4;
-const NODE_BUDGET: usize = 200;
-const COMPOSED_FRACTION_THRESHOLD: f64 = 0.6;
-
-/// Per-op gate-1 verdict.
-#[derive(Debug)]
-struct Verdict {
-    op_id: String,
-    total_nodes: usize,
-    loops: usize,
-    composed_nodes: usize,
-    inline_hot_spots: Vec<String>,
-}
-
-impl Verdict {
-    fn passes(&self) -> bool {
-        if self.loops <= LOOP_BUDGET && self.total_nodes <= NODE_BUDGET {
-            return true;
-        }
-        if self.total_nodes == 0 {
-            return true;
-        }
-        let composed_fraction = self.composed_nodes as f64 / self.total_nodes as f64;
-        composed_fraction >= COMPOSED_FRACTION_THRESHOLD
-    }
-
-    fn composed_fraction_pct(&self) -> f64 {
-        if self.total_nodes == 0 {
-            return 100.0;
-        }
-        100.0 * self.composed_nodes as f64 / self.total_nodes as f64
-    }
-}
+use crate::gates::composition_budget::{
+    self, Counts, COMPOSED_FRACTION_THRESHOLD, LOOP_BUDGET, NODE_BUDGET,
+};
 
 /// Entry point for the `gate1` subcommand.
 /// Enforces the Gate 1 complexity budget over every registered operation.
@@ -82,156 +36,103 @@ impl Gate for Gate1 {
 
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
-        let mut verdicts: Vec<Verdict> = Vec::new();
-        for entry in vyre_registry_link::operation::live_operation_registry().iter() {
-            let Some(program) = entry.program() else {
-                report.find(Finding::new(
-                    format!(
-                        "registered operation `{}` provides no neutral builder, so its complexity cannot be judged",
-                        entry.id
-                    ),
-                    "register a neutral builder for it, or withdraw the registration",
-                ));
-                continue;
-            };
-            verdicts.push(verdict_for(entry.id, &program));
-        }
-        verdicts.sort_by(|left, right| left.op_id.cmp(&right.op_id));
+        let ops = composition_budget::collect_ops(&mut report);
+        let ids = composition_budget::registered_ids(&ops);
+        let mut audited: Vec<(String, Counts)> = ops
+            .iter()
+            .map(|op| {
+                (
+                    op.id.clone(),
+                    composition_budget::measure(&op.program, &ids, &mut |_| {}),
+                )
+            })
+            .collect();
+        audited.sort_by(|left, right| left.0.cmp(&right.0));
 
         report.note(format!(
             "budget: loops <= {LOOP_BUDGET} and nodes <= {NODE_BUDGET}, or composed_fraction >= {:.0}%",
             COMPOSED_FRACTION_THRESHOLD * 100.0
         ));
-        report.note(format!("{} operation(s) audited", verdicts.len()));
-        for verdict in &verdicts {
+        report.note(format!("{} operation(s) audited", audited.len()));
+        for (op_id, counts) in &audited {
             report.note(format!(
-                "{:<60}  loops={:<3} nodes={:<5} composed={:>5.1}%",
-                verdict.op_id,
-                verdict.loops,
-                verdict.total_nodes,
-                verdict.composed_fraction_pct()
+                "{op_id:<60}  loops={:<3} nodes={:<5} composed={:>5.1}%",
+                counts.loops,
+                counts.total_nodes,
+                counts.composed_fraction_pct()
             ));
-            if verdict.passes() {
+            if counts.passes() {
                 continue;
             }
-            let fix = if verdict.inline_hot_spots.is_empty() {
-                "factor the inline work into a registered primitive call through vyre_foundation::composition::wrap_child_region"
-                    .to_string()
-            } else {
-                format!(
-                    "extract each inline hot spot into a vyre-primitives operation and call it through vyre_foundation::composition::wrap_child_region: {}",
-                    verdict.inline_hot_spots.join(", ")
-                )
-            };
-            report.find(Finding::new(
-                format!(
-                    "operation `{}` is over the Gate 1 budget: loops={} (budget {LOOP_BUDGET}), nodes={} (budget {NODE_BUDGET}), composed={:.1}% (need {:.0}%)",
-                    verdict.op_id,
-                    verdict.loops,
-                    verdict.total_nodes,
-                    verdict.composed_fraction_pct(),
-                    COMPOSED_FRACTION_THRESHOLD * 100.0
-                ),
-                fix,
-            ));
+            report.find(over_budget(op_id, counts));
         }
         Ok(report)
     }
 }
 
-fn verdict_for(op_id: &'static str, program: &Program) -> Verdict {
-    let mut state = WalkState::default();
-    for node in program.entry() {
-        walk(node, false, &mut state);
-    }
-    Verdict {
-        op_id: op_id.to_string(),
-        total_nodes: state.total_nodes,
-        loops: state.loops,
-        composed_nodes: state.composed_nodes,
-        inline_hot_spots: state.inline_hot_spots,
-    }
+/// The finding for one operation that is neither small nor composed.
+fn over_budget(op_id: &str, counts: &Counts) -> Finding {
+    let fix = if counts.inline_hot_spots.is_empty() {
+        "factor the inline work into a registered operation and call it through vyre_foundation::composition::wrap_child_region"
+            .to_string()
+    } else {
+        format!(
+            "extract each inline hot spot into a registered operation and call it through vyre_foundation::composition::wrap_child_region: {}",
+            counts.inline_hot_spots.join(", ")
+        )
+    };
+    Finding::new(
+        format!(
+            "operation `{op_id}` is over the Gate 1 budget: loops={} (budget {LOOP_BUDGET}), nodes={} (budget {NODE_BUDGET}), composed={:.1}% (need {:.0}%)",
+            counts.loops,
+            counts.total_nodes,
+            counts.composed_fraction_pct(),
+            COMPOSED_FRACTION_THRESHOLD * 100.0
+        ),
+        fix,
+    )
 }
 
-#[derive(Default)]
-struct WalkState {
-    total_nodes: usize,
-    loops: usize,
-    composed_nodes: usize,
-    inline_hot_spots: Vec<String>,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/// Walk a node, counting it and recursing.
-///
-/// `inside_composed_region` propagates downward: once we enter a
-/// `Region { source_region: Some(_), .. }`, every node beneath counts
-/// toward `composed_nodes`. Anonymous regions (`source_region: None`)
-/// do NOT promote their children to composed  -  they're local wrappers,
-/// not composition. A region that names a composition counts itself, because
-/// naming the operation behind a region is what composition is.
-fn walk(node: &Node, inside_composed_region: bool, state: &mut WalkState) {
-    state.total_nodes += 1;
-    let names_a_composition = matches!(
-        node,
-        Node::Region {
-            source_region: Some(_),
-            ..
-        }
-    );
-    if inside_composed_region || names_a_composition {
-        state.composed_nodes += 1;
+    /// WHY: the finding an author reads has to name the inline work, not only
+    /// the share it produced, or the only actionable half of the diagnostic is
+    /// the one the walk collected and dropped.
+    #[test]
+    fn the_finding_names_the_inline_work_it_collected() {
+        let counts = Counts {
+            total_nodes: 300,
+            loops: 9,
+            composed_nodes: 0,
+            inline_hot_spots: vec!["inline loop with 4 body nodes".to_string()],
+        };
+
+        let finding = over_budget("owner::op", &counts);
+
+        assert!(finding.message.contains("loops=9"), "{finding:?}");
+        assert!(finding.message.contains("composed=0.0%"), "{finding:?}");
+        assert!(
+            finding.fix.contains("inline loop with 4 body nodes"),
+            "{finding:?}"
+        );
     }
 
-    match node {
-        Node::Region {
-            source_region,
-            body,
-            generator,
-        } => {
-            let now_composed = inside_composed_region || source_region.is_some();
-            for child in body.iter() {
-                walk(child, now_composed, state);
-            }
-            // Hot spot: an anonymous Region with > 50 inline nodes  -
-            // either factor the body into a registered primitive or
-            // mark the source_region.
-            if !inside_composed_region && source_region.is_none() && body.len() > 50 {
-                state.inline_hot_spots.push(format!(
-                    "anonymous Region `{}` with {} top-level body nodes",
-                    generator.as_str(),
-                    body.len()
-                ));
-            }
-        }
-        Node::Loop { body, .. } => {
-            state.loops += 1;
-            for child in body {
-                walk(child, inside_composed_region, state);
-            }
-            if !inside_composed_region {
-                state.inline_hot_spots.push(format!(
-                    "inline `Node::Loop` with {} body nodes",
-                    body.len()
-                ));
-            }
-        }
-        Node::Block(children) => {
-            for child in children {
-                walk(child, inside_composed_region, state);
-            }
-        }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for child in then {
-                walk(child, inside_composed_region, state);
-            }
-            for child in otherwise {
-                walk(child, inside_composed_region, state);
-            }
-        }
-        // Leaves  -  Let, Assign, Store, Return, Barrier, IndirectDispatch,
-        // AsyncLoad, AsyncWait, Opaque  -  count themselves and stop.
-        _ => {}
+    /// WHY: an operation whose bulk is inline but whose loops all sit inside a
+    /// composed subtree collects no hot spot, and the fix still has to say what
+    /// to do.
+    #[test]
+    fn a_finding_with_no_hot_spot_still_states_the_action() {
+        let counts = Counts {
+            total_nodes: 300,
+            loops: 9,
+            composed_nodes: 0,
+            inline_hot_spots: Vec::new(),
+        };
+
+        let finding = over_budget("owner::op", &counts);
+
+        assert!(finding.fix.contains("wrap_child_region"), "{finding:?}");
     }
 }

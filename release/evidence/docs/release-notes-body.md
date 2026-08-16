@@ -3881,6 +3881,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   different contract: it also collapses negative zero and flushes subnormals to
   positive zero, which loses sign. The two test-side restatements also stay,
   each now saying why: a judge that calls the code it judges proves nothing.
+- The Gate 1 budget is measured once, by `gate1`, over
+  `xtask-registry::gates::composition_budget`. Two gates walked the region tree
+  with their own copy of the count and disagreed about what composition is: one
+  credited every node inside a region carrying a `source_region`, which a phase
+  wrapper around inlined code also carries, so
+  `vyre-primitives::graph::dominator_tree` read as 91.1 percent composed there
+  and as 0.0 percent in the other walk. The reading that could not fail was the
+  one wired to the pin, so nine operations over the loop and node budget stood
+  green. A node now counts as composed when it is a call to another registered
+  operation or sits inside one, `abstraction-gate` keeps the boundary questions
+  and reports the budget no longer, and the shared walk takes its child bodies
+  from `vyre_foundation::visit::child_bodies` rather than a hand-written
+  variant list that counted a new nesting variant as a leaf.
 - Tiled reductions share one program skeleton. reduce_mean, rms_norm,
   layer_norm and softmax each hand-built the same reduce-then-publish shape
   (bind the lane, accumulate with a stride, reduce through workgroup scratch,

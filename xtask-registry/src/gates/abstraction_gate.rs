@@ -1,20 +1,23 @@
-//! `cargo xtask abstraction-gate`  -  mandatory building-block enforcement.
+//! `cargo xtask abstraction-gate`  -  registered building-block boundaries.
 //!
-//! This is the fast local/CI gate that keeps the abstraction thesis
-//! mechanical. It verifies that named composition edges point at
-//! registered building blocks and that large ops are either small
-//! enough to remain leaves or mostly composed from registered children.
+//! This gate reads the edges of a composition: every child region an operation
+//! wraps has to name a building block that is registered, and every parent it
+//! cites has to be an operation that exists. A region naming a block nobody
+//! submitted is an edge to nothing, and the composition it claims cannot be
+//! walked, fused or reused.
+//!
+//! Size is a different question and `gate1` owns it, over the same walk in
+//! `composition_budget`. Reporting the budget here as well gave the tree two
+//! counts of one rule, which disagreed: a phase wrapper carrying a
+//! `source_region` read as composition on one side and as inlined work on the
+//! other.
 
 use std::collections::BTreeSet;
 
-use vyre::ir::{Node, Program};
 use vyre_foundation::composition::is_anonymous_generator;
-use vyre_foundation::visit::child_bodies;
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
-const LOOP_BUDGET: usize = 4;
-const NODE_BUDGET: usize = 200;
-const COMPOSED_FRACTION_THRESHOLD: f64 = 0.6;
+use crate::gates::composition_budget::{self, ChildRegion};
 
 /// Entry point for the `abstraction-gate` subcommand.
 /// Enforces the registered building-block boundaries of every registered operation.
@@ -31,25 +34,14 @@ impl Gate for AbstractionGate {
 
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
-        let ops = collect_ops(&mut report);
-        let ids: BTreeSet<String> = ops.iter().map(|op| op.id.clone()).collect();
+        let ops = composition_budget::collect_ops(&mut report);
+        let ids = composition_budget::registered_ids(&ops);
         let mut failures = BTreeSet::new();
 
         for op in &ops {
-            let mut state = WalkState::default();
-            for node in op.program.entry() {
-                walk(node, false, &ids, &mut state, &mut failures, &op.id);
-            }
-
-            if !within_budget(&state) {
-                failures.insert(format!(
-                    "ABSTRACTION-BUDGET: `{}` has loops={} nodes={} registered-composed={:.1}%. Fix: extract reusable phases into registered Tier 2.5 primitives and wrap them with `vyre_foundation::composition::wrap_child_region`.",
-                    op.id,
-                    state.loops,
-                    state.total_nodes,
-                    state.composed_fraction_pct(),
-                ));
-            }
+            composition_budget::measure(&op.program, &ids, &mut |child| {
+                failures.extend(boundary_failures(&op.id, &child, &ids));
+            });
 
             if op.id.starts_with("vyre-primitives::")
                 && (op.test_inputs_missing || op.expected_output_missing)
@@ -61,10 +53,7 @@ impl Gate for AbstractionGate {
             }
         }
 
-        report.note(format!(
-            "{} registered building block(s) checked",
-            ops.len()
-        ));
+        report.note(format!("{} registered building block(s) checked", ops.len()));
         for failure in &failures {
             report.find(violation(failure));
         }
@@ -87,137 +76,42 @@ fn violation(text: &str) -> Finding {
     }
 }
 
-struct OpInfo {
-    id: String,
-    program: Program,
-    test_inputs_missing: bool,
-    expected_output_missing: bool,
-}
-
-fn collect_ops(report: &mut Report) -> Vec<OpInfo> {
-    let mut ops = Vec::new();
-    for entry in vyre_registry_link::operation::live_operation_registry().iter() {
-        let Some(program) = entry.program() else {
-            report.find(Finding::new(
-                format!(
-                    "registered operation `{}` provides no neutral builder, so its composition cannot be audited",
-                    entry.id
-                ),
-                "register a neutral builder for it, or withdraw the registration",
-            ));
-            continue;
-        };
-        ops.push(OpInfo {
-            id: entry.id.to_string(),
-            program,
-            test_inputs_missing: entry.test_inputs.is_none(),
-            expected_output_missing: entry.expected_output.is_none(),
-        });
-    }
-    ops
-}
-
-#[derive(Default)]
-struct WalkState {
-    total_nodes: usize,
-    loops: usize,
-    registered_composed_nodes: usize,
-}
-
-impl WalkState {
-    fn composed_fraction_pct(&self) -> f64 {
-        if self.total_nodes == 0 {
-            return 100.0;
-        }
-        100.0 * self.registered_composed_nodes as f64 / self.total_nodes as f64
-    }
-}
-
-fn within_budget(state: &WalkState) -> bool {
-    if state.loops <= LOOP_BUDGET && state.total_nodes <= NODE_BUDGET {
-        return true;
-    }
-    if state.total_nodes == 0 {
-        return true;
-    }
-    let composed_fraction = state.registered_composed_nodes as f64 / state.total_nodes as f64;
-    composed_fraction >= COMPOSED_FRACTION_THRESHOLD
-}
-
-fn walk(
-    node: &Node,
-    inside_registered_child: bool,
-    ids: &BTreeSet<String>,
-    state: &mut WalkState,
-    failures: &mut BTreeSet<String>,
+/// What is wrong with the edges one child region declares.
+///
+/// Composition stamps `source_region` onto every entry region it reparents, so
+/// a `source_region` by itself does not mean the author declared an edge to a
+/// building block. An anonymous generator says outright that no operation is
+/// behind it, and demanding a registration for one asks for an op that must not
+/// exist; `vyre_foundation::composition` owns which prefixes mean that.
+fn boundary_failures(
     owner_id: &str,
-) {
-    state.total_nodes += 1;
-    if inside_registered_child {
-        state.registered_composed_nodes += 1;
+    child: &ChildRegion<'_>,
+    ids: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut failures = Vec::new();
+    let Some(parent) = child.source_region else {
+        return failures;
+    };
+    let generator = child.generator;
+    if generator.contains("::") && !child.registered && !is_anonymous_generator(generator) {
+        failures.push(format!(
+            "UNREGISTERED-CHILD: `{owner_id}` wraps `{generator}` as a child region, but no canonical SemanticOperation exists for that building block. Fix: submit it from the owning Tier 2.5/Tier 3 crate, or rename it `anonymous::{generator}` when it is a phase boundary inside one operation rather than a building block."
+        ));
     }
-
-    let mut child_is_registered = false;
-    match node {
-        Node::Region {
-            generator,
-            source_region,
-            ..
-        } => {
-            let generator_name = generator.as_str();
-            child_is_registered = source_region.is_some() && ids.contains(generator_name);
-            // Composition stamps `source_region` onto every entry region it
-            // reparents, so a source_region by itself does not mean the author
-            // declared an edge to a building block. An anonymous generator says
-            // outright that no operation is behind it, and demanding a
-            // registration for one asks for an op that must not exist.
-            // `algebra::composition` owns which prefixes mean that.
-            if source_region.is_some()
-                && generator_name.contains("::")
-                && !child_is_registered
-                && !is_anonymous_generator(generator_name)
-            {
-                failures.insert(format!(
-                    "UNREGISTERED-CHILD: `{owner_id}` wraps `{generator_name}` as a child region, but no canonical SemanticOperation exists for that building block. Fix: submit it from the owning Tier 2.5/Tier 3 crate, or rename it `anonymous::{generator_name}` when it is a phase boundary inside one operation rather than a building block."
-                ));
-            }
-            if let Some(parent) = source_region {
-                if parent.name.contains("::") && !ids.contains(parent.name.as_str()) {
-                    failures.insert(format!(
-                        "UNKNOWN-PARENT: `{owner_id}` child `{generator_name}` cites source_region `{}` which is not a registered op id.",
-                        parent.name
-                    ));
-                }
-            }
-        }
-        Node::Loop { .. } => state.loops += 1,
-        _ => {}
+    if parent.name.contains("::") && !ids.contains(parent.name.as_str()) {
+        failures.push(format!(
+            "UNKNOWN-PARENT: `{owner_id}` child `{generator}` cites source_region `{}` which is not a registered op id.",
+            parent.name
+        ));
     }
-
-    // Which variants carry children is `child_bodies`' decision. A hand-written
-    // arm list here would declare every variant it was not told about a leaf,
-    // so the gate would silently stop descending into a new nesting variant
-    // instead of failing.
-    for body in child_bodies(node) {
-        for child in body {
-            walk(
-                child,
-                inside_registered_child || child_is_registered,
-                ids,
-                state,
-                failures,
-                owner_id,
-            );
-        }
-    }
+    failures
 }
 
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use vyre::ir::GeneratorRef;
-    use vyre::ir::{Expr, Ident};
+    use vyre::ir::{Expr, GeneratorRef, Ident, Node, Program};
 
     use super::*;
 
@@ -231,11 +125,14 @@ mod tests {
         }
     }
 
+    /// Every boundary failure the walk finds under `node`.
     fn findings(node: &Node, registered: &[&str]) -> BTreeSet<String> {
         let ids: BTreeSet<String> = registered.iter().map(|id| (*id).to_string()).collect();
-        let mut state = WalkState::default();
+        let program = Program::wrapped(Vec::new(), [1, 1, 1], vec![node.clone()]);
         let mut failures = BTreeSet::new();
-        walk(node, false, &ids, &mut state, &mut failures, "owner::op");
+        composition_budget::measure(&program, &ids, &mut |region| {
+            failures.extend(boundary_failures("owner::op", &region, &ids));
+        });
         failures
     }
 
@@ -297,23 +194,18 @@ mod tests {
         }
     }
 
-    /// WHY: an anonymous child is anonymous, not composed. Counting it as
-    /// registered composition would let a wrapper buy budget headroom by
-    /// wrapping its own body.
+    /// WHY: a parent nobody registered means the composition cites an operation
+    /// that does not exist, which is unwalkable in the other direction.
     #[test]
-    fn an_anonymous_child_does_not_count_as_registered_composition() {
-        for prefix in vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES {
-            let generator = format!("{prefix}vyre-libs::security::flows_to");
-            let node = child(&generator, "vyre-libs::security::flows_to");
-            let ids: BTreeSet<String> = ["vyre-libs::security::flows_to".to_string()].into();
-            let mut state = WalkState::default();
-            let mut failures = BTreeSet::new();
-            walk(&node, false, &ids, &mut state, &mut failures, "owner::op");
-            assert_eq!(
-                state.registered_composed_nodes, 0,
-                "a `{prefix}` child must not be counted as registered composition"
-            );
-        }
+    fn a_child_citing_an_unregistered_parent_is_reported() {
+        let node = child("vyre-libs::security::flows_to", "vyre-libs::security::ghost");
+        let failures = findings(&node, &["vyre-libs::security::flows_to"]);
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.starts_with("UNKNOWN-PARENT")),
+            "got {failures:?}"
+        );
     }
 
     /// WHY: the walk used to derive child structure itself, with a `_ => {}`

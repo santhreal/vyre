@@ -104,14 +104,19 @@ caller is a hard failure.
 tree and passes an op when either half holds:
 
 1. Under raw budget: four loops or fewer and 200 nodes or fewer.
-2. Composed: nodes inside a region carrying a `source_region` are at
-   least 60 percent of total nodes.
+2. Composed: nodes inside a region whose generator is a registered op id
+   are at least 60 percent of total nodes.
 
-Wrapping a region around inlined code does not satisfy the second half.
-The body has to call registered primitive ops, because only a child
-region built by composing another registered op carries a
-`source_region`. On failure the diagnostic lists the inline sub-blocks
-that should have been primitive calls.
+Wrapping a region around inlined code does not satisfy the second half. A
+phase boundary inside one op is named with the `anonymous::` prefix and
+carries a `source_region` naming its own op, so a `source_region` alone
+says nothing about composition; the generator has to name another
+registered op. On failure the diagnostic lists the inline sub-blocks that
+should have been primitive calls.
+
+`gate1` owns the budget. `abstraction-gate` reads the same walk for the
+boundary question: whether every child region names a building block that
+is registered, and whether every cited parent is an op that exists.
 
 `./cargo_full run --bin xtask -- lego-audit` is the stricter pass: IR
 fingerprint no-reinvention, depth of composition, primitive coverage, and
