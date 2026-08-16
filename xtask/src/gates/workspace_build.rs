@@ -23,6 +23,19 @@ struct Diagnostic {
     message: String,
 }
 
+/// What one cargo invocation produced.
+///
+/// The two answers are kept apart because they mean opposite things. `found` is
+/// what the compiler said about the source. `unmeasured` names a file the build
+/// needed and did not find under its own build directory, which says the run
+/// never reached the source at all.
+struct Run {
+    /// Error diagnostics the compiler emitted.
+    found: Vec<Diagnostic>,
+    /// A build-directory path the run named that is no longer there.
+    unmeasured: Option<String>,
+}
+
 /// Run one cargo invocation and return the diagnostics it emitted.
 ///
 /// `--message-format=json` is the only reason this is reliable: a gate that
@@ -34,7 +47,7 @@ struct Diagnostic {
 /// that it had not run, so the workspace was neither clippy-clean nor dirty for
 /// as long as it stood. Nothing here sets a build-affecting flag or variable,
 /// because build configuration is declared once in `.cargo/config.toml`.
-fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Vec<Diagnostic>, GateError> {
+fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Run, GateError> {
     let cargo = crate::cargo_runner::binary(root);
     let (cargo_arguments, driver_arguments) = split_at_driver(arguments);
     let output = Command::new(&cargo)
@@ -94,11 +107,21 @@ fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Vec<Diagnostic>, GateE
             message: text,
         });
     }
+    // A build directory deleted under a running compile fails with a diagnostic
+    // naming a file that is not there. The run measured nothing, so it is
+    // classified before the status is judged: reporting it as a compile error
+    // would blame the source for the state of the disk, and reporting the
+    // status as an unexplained failure would do the same in one line.
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let unmeasured = crate::cargo_runner::unmeasured(&stderr).or_else(|| {
+        found
+            .iter()
+            .find_map(|diagnostic| crate::cargo_runner::unmeasured(&diagnostic.message))
+    });
     // A failing status with no parsed diagnostic is still a failure, and it is
     // the one shape a diagnostic-counting gate can report as clean. That is the
     // gate-that-cannot-fail defect, so the status is judged too.
-    if !output.status.success() && found.is_empty() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+    if unmeasured.is_none() && !output.status.success() && found.is_empty() {
         return Err(GateError::new(
             format!(
                 "`cargo {}` exited {} and emitted no diagnostic: {}",
@@ -109,13 +132,25 @@ fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Vec<Diagnostic>, GateE
             "run the same cargo command by hand and fix what it reports",
         ));
     }
-    Ok(found)
+    Ok(Run { found, unmeasured })
 }
 
 /// Turn the diagnostics of one cargo invocation into a report.
 fn report_diagnostics(root: &Path, arguments: &[&str], fix: &str) -> Result<Report, GateError> {
     let mut report = Report::clean();
-    for diagnostic in diagnostics(root, arguments)? {
+    let run = diagnostics(root, arguments)?;
+    if let Some(missing) = run.unmeasured {
+        report.find(Finding::new(
+            format!(
+                "`cargo {}` measured nothing: the build named `{missing}`, which the build directory does not carry",
+                arguments.join(" ")
+            ),
+            "run the gate again against an intact build directory; a compile whose own inputs were deleted under it reports the state of the disk, and the source it was pointed at was never read",
+        ));
+        report.note(format!("cargo {}", arguments.join(" ")));
+        return Ok(report);
+    }
+    for diagnostic in run.found {
         report.find(match (diagnostic.file, diagnostic.line) {
             (Some(file), Some(line)) => Finding::at(file, line, diagnostic.message, fix),
             (Some(file), None) => Finding::in_file(file, diagnostic.message, fix),
@@ -282,6 +317,16 @@ impl Gate for WorkspaceTests {
         })?;
         let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
         text.push_str(&String::from_utf8_lossy(&output.stderr));
+        if let Some(missing) = crate::cargo_runner::unmeasured(&text) {
+            report.find(Finding::new(
+                format!(
+                    "the test run measured nothing: it named `{missing}`, which the build directory does not carry"
+                ),
+                "run the gate again against an intact build directory; a test binary whose own inputs were deleted under it never ran the tests, and a failure read from it names the disk rather than a test",
+            ));
+            report.note(format!("tested {}", packages.join(", ")));
+            return Ok(report);
+        }
         for line in text.lines() {
             let trimmed = line.trim();
             let Some(rest) = trimmed.strip_prefix("test ") else {

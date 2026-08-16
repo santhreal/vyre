@@ -133,6 +133,16 @@ impl Gate for CrossTarget {
                      behind a host-only crate"
                         .to_string(),
                 )),
+                TripleResult::Unmeasured(missing) => report.find(located(
+                    origin.as_ref(),
+                    format!(
+                        "target {triple} was not measured: the build named `{missing}`, which the \
+                         build directory does not carry"
+                    ),
+                    "run the gate again against an intact build directory; a compile whose own \
+                     inputs were deleted under it says nothing about the target it was pointed at"
+                        .to_string(),
+                )),
             }
         }
 
@@ -164,6 +174,9 @@ enum TripleResult {
     Clean,
     NotInstalled,
     Failed(String),
+    /// The compile named a build-directory file that is not there, so nothing
+    /// about this triple was measured.
+    Unmeasured(String),
 }
 
 /// Compile [`PRODUCT_CRATES`] for one triple.
@@ -188,6 +201,9 @@ fn check_triple(root: &Path, triple: &str) -> TripleResult {
         return TripleResult::Clean;
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
+    if let Some(missing) = xtask::cargo_runner::unmeasured(&stderr) {
+        return TripleResult::Unmeasured(missing);
+    }
     if stderr.contains("may not be installed") || stderr.contains("rustup target add") {
         return TripleResult::NotInstalled;
     }

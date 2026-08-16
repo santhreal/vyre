@@ -206,6 +206,15 @@ fn compile_failure(
         return Ok(None);
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
+    if let Some(missing) = cargo_runner::unmeasured(&stderr) {
+        return Ok(Some(Finding::new(
+            format!(
+                "{} was not measured on {version}: the build named `{missing}`, which the build directory does not carry",
+                pair.label()
+            ),
+            "run the sweep again against an intact build directory; a compile whose own inputs were deleted under it says nothing about the selection it was pointed at",
+        )));
+    }
     Ok(Some(Finding::new(
         format!(
             "{} does not compile on {version}: {}",

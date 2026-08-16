@@ -332,6 +332,15 @@ fn cargo_findings(root: &Path, subject: &str, arguments: &[&str]) -> Vec<Finding
     };
     let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
     text.push_str(&String::from_utf8_lossy(&output.stderr));
+    if let Some(missing) = crate::cargo_runner::unmeasured(&text) {
+        return vec![Finding::in_file(
+            subject,
+            format!(
+                "`{invocation}` measured nothing: it named `{missing}`, which the build directory does not carry"
+            ),
+            "run the gate again against an intact build directory; a build whose own inputs were deleted under it never reached the example it was pointed at",
+        )];
+    }
     let mut findings: Vec<Finding> = text
         .lines()
         .filter_map(|line| line.trim().strip_prefix("test "))
