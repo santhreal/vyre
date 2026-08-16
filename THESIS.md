@@ -50,7 +50,7 @@ parity, adversarial, scale, and lifecycle evidence appropriate to its risk.
 
 ## Source map
 
-- `README.md` is the crate-placement charter.
+- `docs/architecture/crates.md` states what each crate owns.
 - `docs/ARCHITECTURE.md` is the short page the architecture gate checks.
 - `docs/CRATE_OWNERSHIP.toml` defines crate ownership and allowed edges.
 - `docs/optimization/OWNERSHIP.toml` and `docs/optimization/OP_MATRIX.toml`

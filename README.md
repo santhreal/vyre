@@ -5,10 +5,9 @@ IR, it compiles the whole graph into one immutable artifact, emits that
 artifact as a target payload in PTX, WGSL, SPIR-V or MSL, and runs it on the
 device.
 
-Nothing in vyre computes on the host. The single exception is
-`vyre-reference`, an interpreter that exists to be the oracle every backend
-is proved byte-identical against. A host path that produces a user's answer
-is a product failure, not a fallback.
+Nothing in vyre computes on the host. The exception is `vyre-reference`, an
+interpreter that exists to be the oracle every backend is proved
+byte-identical against. It is not a backend and not a fallback.
 
 ## Install
 
