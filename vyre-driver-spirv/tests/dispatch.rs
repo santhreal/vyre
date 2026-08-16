@@ -159,3 +159,27 @@ fn spirv_device_buffer_api_rejects_host_shim_fallback() {
 fn spirv_backend_id_is_stable() {
     assert_eq!(vyre_driver_spirv::SPIRV_BACKEND_ID, "spirv");
 }
+
+#[test]
+fn spirv_rejects_cooperative_dispatch() {
+    let backend = require_vulkan_backend();
+    let program = elementwise_add_program(16);
+    let a = vec![1u32; 16];
+    let b = vec![2u32; 16];
+    let mut config = DispatchConfig::default();
+    config.cooperative = true;
+    let error = backend
+        .dispatch(
+            &program,
+            &[u32_values_to_bytes(&a), u32_values_to_bytes(&b)],
+            &config,
+        )
+        .expect_err("Fix: SPIR-V must reject cooperative dispatch with UnsupportedFeature");
+    match error {
+        vyre_driver::BackendError::UnsupportedFeature { name, backend } => {
+            assert!(name.contains("cooperative"), "got {name}");
+            assert_eq!(backend, vyre_driver_spirv::SPIRV_BACKEND_ID);
+        }
+        other => panic!("expected UnsupportedFeature, got {other:?}"),
+    }
+}

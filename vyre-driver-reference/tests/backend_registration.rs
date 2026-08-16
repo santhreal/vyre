@@ -31,3 +31,26 @@ fn cpu_ref_registers_as_dispatch_backend() {
         "Fix: cpu-ref backend output must match reference interpreter bytes."
     );
 }
+
+#[test]
+fn cpu_ref_rejects_cooperative_dispatch() {
+    let backend = acquire(vyre_driver_reference::CPU_REF_BACKEND_ID)
+        .expect("Fix: cpu-ref backend registration must construct without host hardware.");
+    let program = Program::wrapped(
+        vec![u32_out_buffer("out", 0)],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
+    );
+    let mut config = vyre_driver::DispatchConfig::default();
+    config.cooperative = true;
+    let error = backend
+        .dispatch(&program, &[], &config)
+        .expect_err("Fix: cpu-ref backend must reject cooperative dispatch with UnsupportedFeature");
+    match error {
+        vyre_driver::BackendError::UnsupportedFeature { name, backend } => {
+            assert!(name.contains("cooperative"), "got {name}");
+            assert_eq!(backend, vyre_driver_reference::CPU_REF_BACKEND_ID);
+        }
+        other => panic!("expected UnsupportedFeature, got {other:?}"),
+    }
+}
