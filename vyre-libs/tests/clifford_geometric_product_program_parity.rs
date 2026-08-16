@@ -13,30 +13,12 @@
 //! BIT-EXACT (no tolerance): every component is a multiple of 0.5, so each product is an exact multiple of
 //! 0.25 and every sum stays well below 2^23, exactly representable in 16.16. The fixed IR must therefore
 //! reproduce the f64 reference to the BIT.
-#![cfg(feature = "geom")]
+#![cfg(all(feature = "geom", feature = "test-fixtures"))]
 
 use vyre_libs::geom::clifford::clifford2_product;
+use vyre_libs::test_parity_oracles::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
-
-const FIXED_ONE: f64 = 65536.0;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
-
-/// Encode a signed half-integer f64 as two's-complement 16.16.
-fn to_fixed(v: f64) -> u32 {
-    (v * FIXED_ONE).round() as i64 as u32
-}
-
-/// Decode a two's-complement 16.16 word to the signed value it encodes.
-fn from_fixed(v: u32) -> f64 {
-    f64::from(v as i32) / FIXED_ONE
-}
 
 /// A signed half-integer in {-3, -2.5, …, 3}.
 fn signed_half(state: &mut u32) -> f64 {

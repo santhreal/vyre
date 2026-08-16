@@ -18,6 +18,21 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 pub use vyre_primitives::wire::pack_u32_slice as u32_bytes;
 
+/// The 16.16 fixed-point unit, `1.0`.
+pub const FIXED_ONE: u32 = 1 << 16;
+
+/// Encode `v` as a two's-complement 16.16 word, rounded to nearest.
+#[must_use]
+pub fn to_fixed(v: f64) -> u32 {
+    (v * f64::from(FIXED_ONE)).round() as i64 as u32
+}
+
+/// Decode a two's-complement 16.16 word to the signed value it encodes.
+#[must_use]
+pub fn from_fixed(v: u32) -> f64 {
+    f64::from(v as i32) / f64::from(FIXED_ONE)
+}
+
 /// Concatenate `programs` into one program with a shared workgroup size.
 ///
 /// Buffers and entry nodes are appended in argument order, which is the
@@ -84,6 +99,11 @@ fn signed_fixed_with_mask(state: &mut u32, magnitude_mask: u32) -> u32 {
 /// Generate a signed 16.16 sample in approximately `[-8, 8)`.
 pub fn signed_fixed_19(state: &mut u32) -> u32 {
     signed_fixed_with_mask(state, 0x0007_FFFF)
+}
+
+/// Generate a signed 16.16 sample in approximately `[-4, 4)`.
+pub fn signed_fixed_18(state: &mut u32) -> u32 {
+    signed_fixed_with_mask(state, 0x0003_FFFF)
 }
 
 /// Generate a signed 16.16 sample in approximately `[-2, 2)`.

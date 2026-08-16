@@ -33,7 +33,7 @@ pub use vyre_aot::TargetResourceAccess
 pub use vyre_aot::TargetResourceBinding
 pub use vyre_aot::TargetResourceMemory
 pub vyre_aot::BundleError::Brotli(alloc::string::String)
-pub vyre_aot::BundleError::CanonicalArtifact(vyre_megakernel::CompileError)
+pub vyre_aot::BundleError::CanonicalArtifact(vyre_megakernel::error::CompileError)
 pub vyre_aot::BundleError::InvalidArtifact(alloc::string::String)
 pub vyre_aot::BundleError::Io(std::io::error::Error)
 pub vyre_aot::BundleError::Json(serde_json::error::Error)
@@ -41,7 +41,7 @@ pub vyre_aot::BundleError::Launcher(vyre_aot::LauncherError)
 pub vyre_aot::BundleError::Lzma(alloc::string::String)
 pub vyre_aot::CompileError::ArtifactLayout(alloc::string::String)
 pub vyre_aot::CompileError::CanonicalArtifact
-pub vyre_aot::CompileError::CanonicalArtifact::source: vyre_megakernel::CompileError
+pub vyre_aot::CompileError::CanonicalArtifact::source: vyre_megakernel::error::CompileError
 pub vyre_aot::CompileError::CanonicalArtifact::stage: &'static str
 pub vyre_aot::CompileError::ProgramPreparation(alloc::string::String)
 pub vyre_aot::CompileError::TargetCompilation(alloc::string::String)
@@ -67,7 +67,7 @@ pub vyre_aot::Manifest::target_payload_format: alloc::string::String
 pub vyre_aot::Manifest::weights_compression: alloc::string::String
 pub vyre_aot::Manifest::weights_file: alloc::string::String
 pub vyre_aot::Manifest::weights_sha256_hex: alloc::string::String
-pub vyre_aot::cache::RuntimeCacheError::CanonicalArtifact(vyre_megakernel::CompileError)
+pub vyre_aot::cache::RuntimeCacheError::CanonicalArtifact(vyre_megakernel::error::CompileError)
 pub vyre_aot::cache::RuntimeCacheError::Io
 pub vyre_aot::cache::RuntimeCacheError::Io::path: std::path::PathBuf
 pub vyre_aot::cache::RuntimeCacheError::Io::source: std::io::error::Error

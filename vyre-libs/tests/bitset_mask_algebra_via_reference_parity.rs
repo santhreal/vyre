@@ -23,13 +23,7 @@ use vyre_libs::encoding::bitset_mask_algebra::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 #[test]
 fn word_parallel_and_or_xor_not_via_match_cpu_ref() {

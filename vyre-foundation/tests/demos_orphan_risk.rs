@@ -13,7 +13,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use vyre_test_support::monorepo::vyre_workspace_root;
+use vyre_test_support::monorepo::{vyre_workspace_root, vyre_workspace_rosters};
 
 /// Directory names under `examples/` that carry at least one file.
 fn example_directories(examples: &Path) -> BTreeSet<String> {
@@ -34,33 +34,6 @@ fn example_directories(examples: &Path) -> BTreeSet<String> {
         .collect()
 }
 
-/// The `[workspace]` table of the root manifest.
-fn workspace_table(root: &Path) -> toml::Table {
-    let text = std::fs::read_to_string(root.join("Cargo.toml"))
-        .expect("the workspace root carries a manifest");
-    let document: toml::Table = text.parse().expect("the root manifest is valid TOML");
-    document
-        .get("workspace")
-        .and_then(toml::Value::as_table)
-        .cloned()
-        .expect("the root manifest declares a workspace")
-}
-
-/// The strings of one `[workspace]` array.
-fn workspace_paths(workspace: &toml::Table, key: &str) -> BTreeSet<String> {
-    workspace
-        .get(key)
-        .and_then(toml::Value::as_array)
-        .map(|entries| {
-            entries
-                .iter()
-                .filter_map(toml::Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
 #[test]
 fn every_example_directory_is_excluded_from_the_workspace() {
     let root = vyre_workspace_root();
@@ -69,17 +42,15 @@ fn every_example_directory_is_excluded_from_the_workspace() {
         !directories.is_empty(),
         "the checkout tracks no example, so this contract has no subject"
     );
-    let workspace = workspace_table(&root);
-    let excluded = workspace_paths(&workspace, "exclude");
-    let members = workspace_paths(&workspace, "members");
+    let rosters = vyre_workspace_rosters();
 
     let mut violations = Vec::new();
     for name in &directories {
         let path = format!("examples/{name}");
-        if !excluded.contains(&path) {
+        if !rosters.excluded.contains(&path) {
             violations.push(format!("{path} is missing from workspace exclude"));
         }
-        if members.contains(&path) {
+        if rosters.members.contains(&path) {
             violations.push(format!("{path} is a workspace member"));
         }
     }

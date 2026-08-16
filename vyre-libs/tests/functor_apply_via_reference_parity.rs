@@ -19,13 +19,7 @@ use vyre_libs::reasoning::functorial_pass_composition::{
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 #[test]
 fn apply_pass_functor_via_matches_host_over_generated_mappings() {

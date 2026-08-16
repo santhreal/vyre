@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Parity suites, backend materializers and the gate tooling each take their shared routine from one definition instead of a per-file copy."

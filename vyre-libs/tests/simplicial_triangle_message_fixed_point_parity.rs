@@ -20,30 +20,12 @@
 //! BIT-EXACT: all features are exact 16.16 values (`k / 65536` for a bounded integer `k`), so the u32
 //! two's-complement sum `k_jk - k_ik + k_ij` (kept within i32 range) reinterpreted as i32 equals the
 //! exact f64 boundary value (no tolerance).
-#![cfg(feature = "topology")]
+#![cfg(all(feature = "topology", feature = "test-fixtures"))]
 
+use vyre_libs::test_parity_oracles::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_libs::topology::simplicial::simplicial_triangle_message;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
-
-const FIXED_ONE: f64 = 65536.0;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
-
-/// Encode an exact 16.16 f64 (a multiple of `1/65536`) to its u32 two's-complement word.
-fn to_fixed(v: f64) -> u32 {
-    (v * FIXED_ONE).round() as i64 as u32
-}
-
-/// Decode a 16.16 u32 word (two's-complement) back to f64.
-fn from_fixed(u: u32) -> f64 {
-    f64::from(u as i32) / FIXED_ONE
-}
 
 /// A signed exact-16.16 feature in roughly `[-32.0, 32.0)`: a bounded integer numerator over 65536,
 /// optionally negated. The magnitude stays small enough that a 3-term boundary sum never leaves i32

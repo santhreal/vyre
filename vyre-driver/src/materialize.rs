@@ -24,7 +24,7 @@ use vyre_megakernel::{
 
 use crate::{
     BackendError, BindingPlan, BindingRole, BindingSet, BoundResource, Completion, Device,
-    DeviceIdentity, DispatchConfig, Resource, Submission, TimedDispatchResult,
+    DeviceIdentity, DispatchConfig, ResidentOwner, Resource, Submission, TimedDispatchResult,
 };
 
 /// Build the shared "recompile the payload" rejection.
@@ -214,36 +214,67 @@ pub struct MaterializerDevice {
     revoked: Option<Arc<AtomicBool>>,
 }
 
+/// What a backend resolves before it can name the device it admits artifacts for.
+///
+/// Every backend spelled the same three resolutions ahead of its descriptor:
+/// build the payload format from an extension and a version, mint a resident
+/// owner generation, and read the compilation profile. Four copies of that
+/// sequence are four places for the format rejection to lose the backend name.
+pub struct DeviceSpec<'a> {
+    /// Stable registered backend identifier.
+    pub backend: &'static str,
+    /// Backend-local physical or logical device identifier.
+    pub device: String,
+    /// Payload file extension this backend admits.
+    pub format_extension: &'a str,
+    /// Payload format version this backend admits.
+    pub format_version: u16,
+    /// Immutable compilation profile of the acquired device.
+    pub profile: TargetProfile,
+}
+
 impl MaterializerDevice {
-    /// Describe a device that stays healthy for the life of the materializer.
-    #[must_use]
-    pub fn new(
-        identity: DeviceIdentity,
-        format: TargetPayloadFormat,
-        profile: TargetProfile,
-    ) -> Self {
-        Self {
-            identity,
-            format,
-            profile,
-            revoked: None,
-        }
+    /// Resolve a device that stays healthy for the life of the materializer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`compile_error`] naming `spec.backend` when the extension and
+    /// version do not form a payload format, and whatever
+    /// [`ResidentOwner::new`] rejects when no generation can be minted.
+    pub fn acquire(spec: DeviceSpec<'_>) -> Result<Self, BackendError> {
+        Self::resolve(spec, None)
     }
 
-    /// Describe a device whose generation is invalidated when `revoked` is set.
-    #[must_use]
-    pub fn revocable(
-        identity: DeviceIdentity,
-        format: TargetPayloadFormat,
-        profile: TargetProfile,
+    /// Resolve a device whose generation is invalidated when `revoked` is set.
+    ///
+    /// # Errors
+    ///
+    /// Rejects exactly what [`MaterializerDevice::acquire`] rejects.
+    pub fn acquire_revocable(
+        spec: DeviceSpec<'_>,
         revoked: Arc<AtomicBool>,
-    ) -> Self {
-        Self {
-            identity,
+    ) -> Result<Self, BackendError> {
+        Self::resolve(spec, Some(revoked))
+    }
+
+    /// Build the descriptor both acquisition paths report.
+    fn resolve(
+        spec: DeviceSpec<'_>,
+        revoked: Option<Arc<AtomicBool>>,
+    ) -> Result<Self, BackendError> {
+        let format = TargetPayloadFormat::new(spec.format_extension, spec.format_version)
+            .map_err(|error| compile_error(spec.backend, error))?;
+        let generation = ResidentOwner::new()?.get();
+        Ok(Self {
+            identity: DeviceIdentity {
+                backend: spec.backend,
+                device: spec.device,
+                generation,
+            },
             format,
-            profile,
-            revoked: Some(revoked),
-        }
+            profile: spec.profile,
+            revoked,
+        })
     }
 
     /// Describe what `backend_id` accepts, for [`admit`].

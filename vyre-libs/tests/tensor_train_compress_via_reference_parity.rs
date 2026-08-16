@@ -13,6 +13,7 @@
 use vyre_libs::solvers::tensor_train_compression::compress_cost_tensor_f32_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 /// Contract a TT-core chain to the scalar tensor value at multi-index `idx`.
 ///
@@ -64,13 +65,6 @@ fn rel_error(recon: &[f64], original: &[f32]) -> f64 {
         den += f64::from(*o) * f64::from(*o);
     }
     num.sqrt() / den.sqrt().max(1e-9)
-}
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
 }
 
 #[test]

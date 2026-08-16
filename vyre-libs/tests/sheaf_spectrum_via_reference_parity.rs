@@ -14,6 +14,7 @@
 use vyre_libs::solvers::sheaf_spectral_clustering::dominant_spectrum_fixed_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::xorshift32 as xorshift;
 
 const ONE_FP: u32 = 1 << 16;
 
@@ -32,13 +33,6 @@ fn exact(restriction_diag_fixed: &[u32]) -> (u32, Vec<u32>) {
         .map(|j| if j == argmax { ONE_FP } else { 0 })
         .collect();
     (max_r, v)
-}
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
 }
 
 #[test]

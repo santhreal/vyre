@@ -3,16 +3,16 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use vyre_driver::materialize::{
-    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
+    self, DeviceSpec, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
     MaterializerDevice, ResidentInstance,
 };
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
-    CompiledPipeline, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Resource, Submission,
+    CompiledPipeline, Device, DeviceIdentity, DispatchConfig, Resource, Submission,
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload};
 
 use crate::descriptor_mapping::descriptor_bind_group;
 use crate::pipeline::WgpuPipeline;
@@ -279,24 +279,20 @@ fn device_lost_error(identity: &DeviceIdentity) -> BackendError {
 pub(crate) fn materializer_for_backend(
     backend: WgpuBackend,
 ) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-    let format = TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION)
-        .map_err(|error| materialize::compile_error(WGPU_BACKEND_ID, error))?;
-    let profile = crate::target_compiler::target_profile()?;
-    let generation = ResidentOwner::new()?.get();
     let device = backend.adapter_name.to_string();
     let lost = Arc::clone(&backend.device_lost);
     Ok(Box::new(WgpuMaterializer {
         backend,
-        descriptor: MaterializerDevice::revocable(
-            DeviceIdentity {
+        descriptor: MaterializerDevice::acquire_revocable(
+            DeviceSpec {
                 backend: WGPU_BACKEND_ID,
                 device,
-                generation,
+                format_extension: "wgsl",
+                format_version: WGPU_TARGET_FORMAT_VERSION,
+                profile: crate::target_compiler::target_profile()?,
             },
-            format,
-            profile,
             Arc::clone(&lost),
-        ),
+        )?,
         lost,
     }))
 }

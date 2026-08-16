@@ -13,28 +13,12 @@
 //! BIT-EXACT (no tolerance): stalks/restriction are half-integers and damping ∈ {0.25, 0.5}, so
 //! `damping·r·s` is an exact multiple of 0.0625 with small magnitude, exactly representable in 16.16, so
 //! the fixed IR must reproduce the f64 formula `s − damping·r·s` to the bit.
-#![cfg(feature = "graph")]
+#![cfg(all(feature = "graph", feature = "test-fixtures"))]
 
 use vyre_libs::graph::sheaf::sheaf_diffusion_step;
+use vyre_libs::test_parity_oracles::{from_fixed, to_fixed, xorshift32 as xorshift};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
-
-const FIXED_ONE: f64 = 65536.0;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
-
-fn to_fixed(v: f64) -> u32 {
-    (v * FIXED_ONE).round() as i64 as u32
-}
-
-fn from_fixed(v: u32) -> f64 {
-    f64::from(v as i32) / FIXED_ONE
-}
 
 /// A signed half-integer in {-3, -2.5, …, 3}.
 fn signed_half(state: &mut u32) -> f64 {
