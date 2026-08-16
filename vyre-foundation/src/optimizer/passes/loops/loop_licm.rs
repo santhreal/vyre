@@ -57,9 +57,7 @@
 //!   pass invocation through the recursion.
 
 use crate::ir::{BufferAccess, Expr, Ident, Node, Program};
-use crate::optimizer::passes::{
-    expr_is_observably_free_for_reexecution, expr_is_reexecutable_over_read_only_loads,
-};
+use crate::optimizer::passes::expr_is_reexecutable_over_read_only_loads;
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::count_bound_names;
@@ -127,7 +125,7 @@ fn read_only_buffers(program: &Program) -> FxHashSet<Ident> {
         .buffers()
         .iter()
         .filter(|buffer| matches!(buffer.access, BufferAccess::ReadOnly))
-        .map(|buffer| Ident::from(buffer.name.as_str()))
+        .map(|buffer| Ident::new(std::sync::Arc::clone(&buffer.name)))
         .collect()
 }
 
@@ -417,8 +415,8 @@ mod tests {
     fn references_helpers_see_a_var_inside_a_shuffle_lane() {
         // The invariance helpers must report a mutated var referenced ANYWHERE
         // in the expression, including a `SubgroupShuffle`'s lane operand. The
-        // hoist gate also independently refuses any shuffle today (via
-        // `expr_is_observably_free_for_reexecution`), so a dropped lane is currently masked; this
+        // hoist gate also independently refuses any shuffle today (the
+        // re-execution predicate does), so a dropped lane is currently masked; this
         // guards the helpers' own completeness so a future uniform-shuffle hoist
         // cannot silently treat a lane-dependent value as loop-invariant.
         let mut mutated: FxHashSet<Ident> = FxHashSet::default();

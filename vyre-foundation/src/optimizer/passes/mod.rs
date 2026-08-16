@@ -21,6 +21,9 @@
 //! backend can inherit before target emission.
 //!
 
+use crate::ir::Ident;
+use rustc_hash::FxHashSet;
+
 pub mod algebraic;
 pub mod cleanup;
 pub(crate) mod driver;
