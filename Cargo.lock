@@ -3926,10 +3926,14 @@ dependencies = [
 name = "vyre-test-support"
 version = "0.7.2"
 dependencies = [
+ "inventory",
+ "serde",
+ "serde_json",
  "smallvec",
  "structure-gate",
  "tempfile",
  "vyre-foundation",
+ "vyre-reference",
  "vyre-spec",
 ]
 

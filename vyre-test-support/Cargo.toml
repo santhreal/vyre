@@ -21,7 +21,7 @@ default = []
 # into the dev graph of whichever crate enables it, and most consumers of this
 # crate only want the source-text closure enumerator or the flat element list.
 # The fixtures build inline shapes with smallvec, so it joins the graph too.
-ir-fixtures = ["dep:vyre-foundation", "dep:smallvec"]
+ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference"]
 
 [dependencies]
 # The one owner of "which checkout am I reporting on". Resolved from the working
@@ -37,6 +37,10 @@ vyre-foundation = { workspace = true, optional = true }
 # else, so the cost of carrying it unconditionally is nil.
 vyre-spec = { workspace = true }
 smallvec = { workspace = true, optional = true }
+vyre-reference = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+inventory = { workspace = true }
 
 [dev-dependencies]
 tempfile.workspace = true
@@ -53,4 +57,28 @@ required-features = ["ir-fixtures"]
 
 [[test]]
 name = "cast_parity_tables"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "expr_variant_coverage"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "memory_order_coverage"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "operation_registration_coverage"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "extension_variant_coverage"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "adversarial_and_mutation_contracts"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "differential_matrix_contracts"
 required-features = ["ir-fixtures"]
