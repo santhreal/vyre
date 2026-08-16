@@ -22,16 +22,6 @@ use crate::target_compiler::{
 use crate::{WgpuBackend, WGPU_BACKEND_ID};
 use vyre_lower::TRAP_SIDECAR_NAME;
 
-/// Rejection for a host dispatch that skipped a declared output slot.
-fn omitted_output(output_index: usize, name: &str) -> BackendError {
-    materialize::omitted_output("WGSL target module", output_index, name)
-}
-
-/// Rejection for a resident dispatch that skipped a declared output slot.
-fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
-    materialize::omitted_output("WGPU resident target module", output_index, name)
-}
-
 /// Resident-path rejection text. This backend names an unproduced or
 /// unpreserved resident value without its lifetime class, where the host path
 /// names the class; every other rejection is the neutral wording.
@@ -193,19 +183,45 @@ impl MaterializedInstance for WgpuArtifactInstance {
         &self.modules
     }
 
-    fn omitted_output(&self) -> fn(usize, &str) -> BackendError {
-        omitted_output
+    fn module_label(&self) -> &'static str {
+        "WGSL target module"
     }
 
-    fn launch(
+    /// Borrow bound bytes into the order this backend's target bindings declare.
+    ///
+    /// The input order comes from the emitted descriptor slots rather than the
+    /// binding plan, because a slot the target module declares but the plan does
+    /// not require is bound empty instead of rejected.
+    fn gather<'state>(
         &self,
         module: &Self::Module,
         _plan: &BindingPlan,
+        state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<Vec<&'state [u8]>, BackendError> {
+        let mut inputs = Vec::with_capacity(module.input_slots.len());
+        for slot in &module.input_slots {
+            let value = self.core.value_for_buffer(&slot.name)?;
+            match state.get(&value) {
+                Some(bytes) => inputs.push(bytes.as_slice()),
+                None if !slot.required => inputs.push(&[]),
+                None => {
+                    return Err(materialize::invalid_module(&format!(
+                        "canonical artifact value {} for target binding `{}` is unbound",
+                        value.0, slot.name
+                    )));
+                }
+            }
+        }
+        Ok(inputs)
+    }
+
+    fn dispatch(
+        &self,
+        module: &Self::Module,
+        inputs: &[&[u8]],
         config: &DispatchConfig,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
     ) -> Result<TimedDispatchResult, BackendError> {
-        let inputs = self.gather_slot_inputs(module, state)?;
-        match module.pipeline.dispatch_borrowed_timed(&inputs, config) {
+        match module.pipeline.dispatch_borrowed_timed(inputs, config) {
             Err(_) if self.lost.load(Ordering::Acquire) => {
                 Err(device_lost_error(&self.core.device))
             }
@@ -215,12 +231,14 @@ impl MaterializedInstance for WgpuArtifactInstance {
 }
 
 impl ResidentInstance for WgpuArtifactInstance {
+    vyre_driver::resident_pipeline_launch!();
+
     fn multi_module_feature(&self) -> &str {
         "WGPU resident submission for multi-module artifacts"
     }
 
-    fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError {
-        omitted_resident_output
+    fn resident_module_label(&self) -> &'static str {
+        "WGPU resident target module"
     }
 
     fn resident_messages(&self) -> &InstanceMessages {
@@ -246,48 +264,6 @@ impl ResidentInstance for WgpuArtifactInstance {
                 ))
             },
         )
-    }
-
-    fn launch_resident(
-        &self,
-        module: &Self::Module,
-        ordered: &[Resource],
-        config: &DispatchConfig,
-    ) -> Result<TimedDispatchResult, BackendError> {
-        CompiledPipeline::dispatch_persistent_handles_timed(
-            module.pipeline.as_ref(),
-            ordered,
-            config,
-        )
-    }
-}
-
-impl WgpuArtifactInstance {
-    /// Borrow bound bytes into the order this backend's target bindings declare.
-    ///
-    /// The input order comes from the emitted descriptor slots rather than the
-    /// binding plan, because a slot the target module declares but the plan does
-    /// not require is bound empty instead of rejected.
-    fn gather_slot_inputs<'state>(
-        &self,
-        module: &WgpuExecutableModule,
-        state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
-    ) -> Result<Vec<&'state [u8]>, BackendError> {
-        let mut inputs = Vec::with_capacity(module.input_slots.len());
-        for slot in &module.input_slots {
-            let value = self.core.value_for_buffer(&slot.name)?;
-            match state.get(&value) {
-                Some(bytes) => inputs.push(bytes.as_slice()),
-                None if !slot.required => inputs.push(&[]),
-                None => {
-                    return Err(materialize::invalid_module(&format!(
-                        "canonical artifact value {} for target binding `{}` is unbound",
-                        value.0, slot.name
-                    )));
-                }
-            }
-        }
-        Ok(inputs)
     }
 }
 

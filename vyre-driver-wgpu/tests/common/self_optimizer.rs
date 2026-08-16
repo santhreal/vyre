@@ -1,7 +1,7 @@
 //! Wgpu adapter for the self-hosted optimizer, and the two IR shapes its
 //! end-to-end suites assert against.
 //!
-//! `vyre_self_substrate::optimizer` drives every GPU pass through
+//! `vyre_pass_engine::optimizer` drives every GPU pass through
 //! [`ProgramDispatcher`]. Satisfying that trait from a live `WgpuBackend` is one
 //! implementation, not one per suite.
 

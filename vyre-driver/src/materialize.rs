@@ -595,7 +595,7 @@ impl InstanceCore {
         program: &Program,
         produced: Vec<Vec<u8>>,
         state: &mut BTreeMap<ArtifactValueId, Vec<u8>>,
-        missing: fn(usize, &str) -> BackendError,
+        missing: impl Fn(usize, &str) -> BackendError,
     ) -> Result<(), BackendError> {
         let mut produced: Vec<Option<Vec<u8>>> = produced.into_iter().map(Some).collect();
         for binding in &plan.bindings {
@@ -790,7 +790,7 @@ impl InstanceCore {
         modules: &[M],
         mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
         invocation_grid: Option<[u32; 3]>,
-        omitted: fn(usize, &str) -> BackendError,
+        omitted: impl Fn(usize, &str) -> BackendError,
         mut dispatch: impl FnMut(
             &M,
             &BindingPlan,
@@ -814,7 +814,7 @@ impl InstanceCore {
                 module.program(),
                 dispatched.outputs,
                 &mut state,
-                omitted,
+                &omitted,
             )?;
         }
         self.completion(&state, has_device_timing.then_some(device_ns))
@@ -862,7 +862,7 @@ impl InstanceCore {
         plan: &BindingPlan,
         program: &Program,
         dispatched: TimedDispatchResult,
-        omitted: fn(usize, &str) -> BackendError,
+        omitted: impl Fn(usize, &str) -> BackendError,
         messages: &InstanceMessages,
     ) -> Result<Completion, BackendError> {
         let device_ns = dispatched.device_ns;
@@ -960,49 +960,73 @@ pub trait MaterializedInstance {
     /// Every module of the compiler-selected plan, in dispatch order.
     fn modules(&self) -> &[Self::Module];
 
-    /// Rejection for a declared output slot a launch never produced.
+    /// Label naming this backend's target module in an omitted-output
+    /// rejection.
     ///
-    /// The sentence is [`omitted_output`]; what a backend supplies is the label
-    /// naming its own target module.
-    fn omitted_output(&self) -> fn(usize, &str) -> BackendError;
+    /// The sentence is [`omitted_output`]; the label is the only part the
+    /// backends disagreed on, and every one of them had wrapped that one string
+    /// in its own free function to hand the loop a rejection.
+    fn module_label(&self) -> &'static str;
 
-    /// Launch one module over caller-owned bytes.
+    /// Launch one module over its borrowed input bytes.
     ///
-    /// `plan` and `config` are the binding plan of `module` and its dispatch
-    /// config with the submission grid already applied. The bytes to bind are
-    /// in `state`, keyed by canonical artifact value; most backends read them
-    /// through [`InstanceCore::gather_inputs`], and one whose target module
-    /// declares its own binding order reads them through its own walk.
+    /// `inputs` is in the order [`Self::gather`] produced and `config` is the
+    /// module's dispatch config with the submission grid already applied.
     ///
     /// # Errors
     ///
     /// Returns whatever the launch reports.
-    fn launch(
+    fn dispatch(
+        &self,
+        module: &Self::Module,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError>;
+
+    /// Borrow one module's inputs out of the bound state.
+    ///
+    /// The default is the input order the binding plan declares, which is what
+    /// a launch that binds from the Program reads. A backend whose target
+    /// module declares its own binding order overrides this and walks that
+    /// order instead.
+    ///
+    /// # Errors
+    ///
+    /// Returns `unmapped_buffer` for a buffer outside the artifact ABI, and the
+    /// unbound-input rejection for a declared input whose value is not bound.
+    fn gather<'state>(
         &self,
         module: &Self::Module,
         plan: &BindingPlan,
-        config: &DispatchConfig,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
-    ) -> Result<TimedDispatchResult, BackendError>;
+        state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<Vec<&'state [u8]>, BackendError> {
+        self.core()
+            .gather_inputs(plan, module.program(), state, unbound_input)
+    }
 
     /// Dispatch every module over caller-owned bytes and complete the state.
     ///
     /// # Errors
     ///
-    /// Returns whatever [`Self::launch`] reports, the omitted-output rejection
-    /// for a declared output no module produced, and the instance's completion
-    /// rejections when execution left a declared value behind.
+    /// Returns whatever [`Self::gather`] and [`Self::dispatch`] report, the
+    /// omitted-output rejection for a declared output no module produced, and
+    /// the instance's completion rejections when execution left a declared
+    /// value behind.
     fn execute_host(
         &self,
         state: BTreeMap<ArtifactValueId, Vec<u8>>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
+        let label = self.module_label();
         self.core().execute_modules(
             self.modules(),
             state,
             invocation_grid,
-            self.omitted_output(),
-            |module, plan, config, state| self.launch(module, plan, config, state),
+            |output_index, name| omitted_output(label, output_index, name),
+            |module, plan, config, state| {
+                let inputs = self.gather(module, plan, state)?;
+                self.dispatch(module, &inputs, config)
+            },
         )
     }
 
@@ -1038,8 +1062,9 @@ pub trait ResidentInstance: MaterializedInstance {
     /// Refused capability when a resident submission names more than one module.
     fn multi_module_feature(&self) -> &str;
 
-    /// Rejection for a declared output slot a resident launch never produced.
-    fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError;
+    /// Label naming this backend's resident target module in an omitted-output
+    /// rejection.
+    fn resident_module_label(&self) -> &'static str;
 
     /// Completion rejections for the resident path.
     ///
@@ -1108,11 +1133,12 @@ pub trait ResidentInstance: MaterializedInstance {
         let mut config = module.config().clone();
         override_grid(&mut config, invocation_grid);
         let dispatched = self.launch_resident(module, &ordered, &config)?;
+        let label = self.resident_module_label();
         core.resident_completion(
             &plan,
             module.program(),
             dispatched,
-            self.omitted_resident_output(),
+            |output_index, name| omitted_output(label, output_index, name),
             self.resident_messages(),
         )
     }
@@ -1233,6 +1259,40 @@ macro_rules! materializer_passthrough {
             resource: $crate::Resource,
         ) -> ::std::result::Result<(), $crate::BackendError> {
             $crate::VyreBackend::free_resident(&self.$backend, resource)
+        }
+    };
+}
+
+/// Answer [`ResidentInstance::launch_resident`] from a module field named
+/// `pipeline` that implements [`crate::CompiledPipeline`].
+///
+/// A resident launch through a compiled pipeline is one call taking the ordered
+/// handles and the config the shared path already built, so the backends whose
+/// module holds a pipeline wrote the same body. A backend whose module holds
+/// something else writes the method by hand.
+///
+/// ```ignore
+/// impl ResidentInstance for CudaArtifactInstance {
+///     vyre_driver::resident_pipeline_launch!();
+///
+///     fn multi_module_feature(&self) -> &str { /* per backend */ }
+///     fn resident_module_label(&self) -> &'static str { /* per backend */ }
+/// }
+/// ```
+#[macro_export]
+macro_rules! resident_pipeline_launch {
+    () => {
+        fn launch_resident(
+            &self,
+            module: &Self::Module,
+            ordered: &[$crate::Resource],
+            config: &$crate::DispatchConfig,
+        ) -> ::std::result::Result<$crate::TimedDispatchResult, $crate::BackendError> {
+            $crate::CompiledPipeline::dispatch_persistent_handles_timed(
+                module.pipeline.as_ref(),
+                ordered,
+                config,
+            )
         }
     };
 }

@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -6,18 +5,13 @@ use vyre_driver::materialize::{
     self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, DeviceIdentity,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DeviceIdentity,
     DispatchConfig, ResidentOwner, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, TargetPayload, TargetPayloadFormat};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
-
-/// Rejection for a dispatch that skipped a declared output slot.
-fn omitted_output(output_index: usize, name: &str) -> BackendError {
-    materialize::omitted_output("SPIR-V target module", output_index, name)
-}
 
 /// First word of every well-formed SPIR-V module.
 const SPIRV_MAGIC: u32 = 0x0723_0203;
@@ -108,20 +102,16 @@ impl MaterializedInstance for SpirvArtifactInstance {
         &self.modules
     }
 
-    fn omitted_output(&self) -> fn(usize, &str) -> BackendError {
-        omitted_output
+    fn module_label(&self) -> &'static str {
+        "SPIR-V target module"
     }
 
-    fn launch(
+    fn dispatch(
         &self,
         module: &Self::Module,
-        plan: &BindingPlan,
+        inputs: &[&[u8]],
         config: &DispatchConfig,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
     ) -> Result<TimedDispatchResult, BackendError> {
-        let inputs =
-            self.core
-                .gather_inputs(plan, &module.program, state, materialize::unbound_input)?;
         let started = Instant::now();
         // SAFETY: `native` owns a live Vulkan device for the entire instance;
         // words were validated as aligned SPIR-V and Program metadata came
@@ -131,7 +121,7 @@ impl MaterializedInstance for SpirvArtifactInstance {
                 &self.native,
                 &module.program,
                 &module.words,
-                &inputs,
+                inputs,
                 config,
             )
         }?;

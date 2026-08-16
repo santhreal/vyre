@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use vyre_driver::materialize::{
@@ -6,11 +5,11 @@ use vyre_driver::materialize::{
     MaterializerDevice, ResidentInstance,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, CompiledPipeline,
-    DeviceIdentity, DispatchConfig, Resource, ResidentOwner, Submission, TimedDispatchResult,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, CompiledPipeline,
+    DeviceIdentity, DispatchConfig, ResidentOwner, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, TargetPayload, TargetPayloadFormat};
 
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
@@ -27,16 +26,6 @@ const MESSAGES: InstanceMessages = InstanceMessages {
     },
     ..materialize::NEUTRAL_MESSAGES
 };
-
-/// Rejection for a host dispatch that skipped a declared output slot.
-fn omitted_output(output_index: usize, name: &str) -> BackendError {
-    materialize::omitted_output("CUDA target module", output_index, name)
-}
-
-/// Rejection for a resident dispatch that skipped a declared output slot.
-fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
-    materialize::omitted_output("CUDA resident target module", output_index, name)
-}
 
 pub(crate) struct CudaMaterializer {
     backend: CudaBackend,
@@ -130,44 +119,29 @@ impl MaterializedInstance for CudaArtifactInstance {
         &self.modules
     }
 
-    fn omitted_output(&self) -> fn(usize, &str) -> BackendError {
-        omitted_output
+    fn module_label(&self) -> &'static str {
+        "CUDA target module"
     }
 
-    fn launch(
+    fn dispatch(
         &self,
         module: &Self::Module,
-        plan: &BindingPlan,
+        inputs: &[&[u8]],
         config: &DispatchConfig,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
     ) -> Result<TimedDispatchResult, BackendError> {
-        let inputs =
-            self.core
-                .gather_inputs(plan, &module.program, state, materialize::unbound_input)?;
-        module.pipeline.dispatch_borrowed_timed(&inputs, config)
+        module.pipeline.dispatch_borrowed_timed(inputs, config)
     }
 }
 
 impl ResidentInstance for CudaArtifactInstance {
+    vyre_driver::resident_pipeline_launch!();
+
     fn multi_module_feature(&self) -> &str {
         "CUDA resident submission for multi-module artifacts"
     }
 
-    fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError {
-        omitted_resident_output
-    }
-
-    fn launch_resident(
-        &self,
-        module: &Self::Module,
-        ordered: &[Resource],
-        config: &DispatchConfig,
-    ) -> Result<TimedDispatchResult, BackendError> {
-        CompiledPipeline::dispatch_persistent_handles_timed(
-            module.pipeline.as_ref(),
-            ordered,
-            config,
-        )
+    fn resident_module_label(&self) -> &'static str {
+        "CUDA resident target module"
     }
 }
 

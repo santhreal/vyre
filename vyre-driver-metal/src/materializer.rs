@@ -2,7 +2,6 @@ use vyre_driver::{ArtifactMaterializer, BackendError};
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod native {
-    use std::collections::BTreeMap;
     use std::sync::Arc;
 
     use vyre_driver::materialize::{
@@ -10,26 +9,15 @@ mod native {
         ResidentInstance,
     };
     use vyre_driver::{
-        ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
-        DeviceIdentity, DispatchConfig, ResidentOwner, Resource, Submission, TimedDispatchResult,
-        VyreBackend,
+        ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DeviceIdentity,
+        DispatchConfig, ResidentOwner, Resource, Submission, TimedDispatchResult, VyreBackend,
     };
     use vyre_foundation::ir::Program;
-    use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
+    use vyre_megakernel::{Artifact, TargetPayload, TargetPayloadFormat};
 
     use crate::runtime::{MetalBackend, MetalTargetModule};
     use crate::target_compiler::METAL_TARGET_FORMAT_VERSION;
     use crate::METAL_BACKEND_ID;
-
-    /// Rejection for a dispatch that skipped a declared output slot.
-    fn omitted_output(output_index: usize, name: &str) -> BackendError {
-        materialize::omitted_output("Metal target module", output_index, name)
-    }
-
-    /// Rejection for a resident dispatch that skipped a declared output slot.
-    fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
-        materialize::omitted_output("Metal resident target module", output_index, name)
-    }
 
     pub(super) struct MetalMaterializer {
         backend: Arc<MetalBackend>,
@@ -124,22 +112,18 @@ mod native {
             &self.modules
         }
 
-        fn omitted_output(&self) -> fn(usize, &str) -> BackendError {
-            omitted_output
+        fn module_label(&self) -> &'static str {
+            "Metal target module"
         }
 
-        fn launch(
+        fn dispatch(
             &self,
             module: &Self::Module,
-            plan: &BindingPlan,
+            inputs: &[&[u8]],
             config: &DispatchConfig,
-            state: &BTreeMap<ArtifactValueId, Vec<u8>>,
         ) -> Result<TimedDispatchResult, BackendError> {
-            let inputs =
-                self.core
-                    .gather_inputs(plan, &module.program, state, materialize::unbound_input)?;
             self.backend
-                .dispatch_target_module(&module.module, &module.program, &inputs, config)
+                .dispatch_target_module(&module.module, &module.program, inputs, config)
         }
     }
 
@@ -152,8 +136,8 @@ mod native {
             "Metal resident submission for multi-module artifacts"
         }
 
-        fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError {
-            omitted_resident_output
+        fn resident_module_label(&self) -> &'static str {
+            "Metal resident target module"
         }
 
         fn launch_resident(
