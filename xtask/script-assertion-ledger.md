@@ -569,7 +569,7 @@ Exits nonzero on:
 - empty registry
 - missing representative case
 - missing cache contract file or test name
-- unregistered --case reference
+- a case id passed to the runner that the registry does not contain
 
 ### `scripts/lib/check_feature_msrv.py`
 

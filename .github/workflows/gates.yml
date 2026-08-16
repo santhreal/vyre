@@ -10,7 +10,11 @@ jobs:
     name: Every registered gate
     runs-on: ubuntu-latest
     steps:
+      # docs-coupling compares this head against the base branch, so this job
+      # reads history rather than one tree. Every other job here clones shallow.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
 
       # Runs every registered gate and holds each to the number pinned in
@@ -214,22 +218,3 @@ jobs:
       # to a header check. No GPU: SPIR-V emission is pure computation.
       - name: Validated SPIR-V emission
         run: bash scripts/check_spirv_parity_perf_gate.sh
-
-  docs-coupling:
-    name: Docs coupling
-    runs-on: ubuntu-latest
-    steps:
-      # The rule compares this head against the base branch, so it needs the
-      # base ref's history. Every other job here reads one tree and clones
-      # shallow.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-
-      # A source change that moves a documented behavior and leaves the owning
-      # document alone passes every other gate in this workflow, because each of
-      # them reads the tree as it stands and this one reads what the change did.
-      - name: Documented behavior moves with its document
-        run: ./cargo_full run -p xtask -- docs-coupling
