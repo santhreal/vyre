@@ -158,11 +158,11 @@ mod tests {
     fn prefix_sum_boundary_large_path_is_parallel_multi_block() {
         let program = scan_prefix_sum("input", "output", 1025);
         assert_top_region_generator(&program, OP_ID);
-        // The width is owned by `multi_block_prefix_scan`, which declares the portable invocation
-        // floor. Restating a number here would pin the test to a width the scan no longer uses.
+        // The unlowered builder uses the portable width. Backend-specific
+        // callers select a wider admitted width through launch geometry.
         assert_eq!(
             program.workgroup_size(),
-            [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1]
+            [vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS, 1, 1,]
         );
         assert!(
             !contains_loop(&program),
@@ -185,7 +185,7 @@ mod tests {
             assert_top_region_generator(&program, OP_ID);
             assert_eq!(
                 program.workgroup_size(),
-                [crate::reduce::multi_block_prefix_scan::BLOCK_LANES, 1, 1],
+                [vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS, 1, 1,],
                 "n={n}"
             );
             assert!(

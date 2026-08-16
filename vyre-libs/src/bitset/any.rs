@@ -18,15 +18,6 @@ use crate::reduce::workgroup_tree::{max_u32_child, WorkgroupReductionScope};
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::bitset::any";
 
-/// Lanes the walk runs on.
-///
-/// The portable invocation width, not the composer's default: this program is fused into the
-/// security flow compositions beside the elementwise bitset arms and the CSR frontier step, which
-/// both declare that width, and fusion refuses to widen an arm that synchronizes its workgroup. So
-/// every arm of that fusion states the same number, and states it by naming the constant that owns
-/// it.
-const ANY_LANES: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
-
 /// Workgroup scratch the lane verdicts reduce through, one u32 entry per lane.
 const ANY_SCRATCH: &str = "bitset_any_scratch";
 
@@ -53,7 +44,7 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
             Expr::is_first_workgroup(),
             vec![for_each_index(
                 words,
-                ANY_LANES,
+                PORTABLE_WORKGROUP_INVOCATIONS,
                 "w",
                 vec![Node::if_then(
                     Expr::eq(Expr::var("found"), Expr::u32(0)),
@@ -73,7 +64,7 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
     // bit, which is the answer, and it costs a log-depth tree instead of a second serial pass.
     body.push(max_u32_child(
         OP_ID,
-        ANY_LANES,
+        PORTABLE_WORKGROUP_INVOCATIONS,
         ANY_SCRATCH,
         WorkgroupReductionScope::FirstWorkgroup,
     ));
@@ -92,9 +83,9 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
             BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::workgroup(ANY_SCRATCH, ANY_LANES, DataType::U32),
+            BufferDecl::workgroup(ANY_SCRATCH, PORTABLE_WORKGROUP_INVOCATIONS, DataType::U32),
         ],
-        [ANY_LANES, 1, 1],
+        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
         vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
