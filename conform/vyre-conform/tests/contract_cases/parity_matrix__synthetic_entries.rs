@@ -38,9 +38,14 @@ inventory::submit! {
     .with_category("conform")
 }
 
+/// Op id of the coverage bundle, named once so the entry, the validation exemption
+/// and the wire round-trip test cannot name different programs.
+pub(crate) const SYNTHETIC_BUNDLE_OP_ID: &str =
+    "vyre-conform::synthetic::expr_variant_contract_bundle";
+
 pub(crate) fn synthetic_entries() -> Vec<UnifiedEntry> {
     vec![UnifiedEntry {
-        id: "vyre-conform::synthetic::expr_variant_contract_bundle",
+        id: SYNTHETIC_BUNDLE_OP_ID,
         build: synthetic_expr_variant_contract_program,
         test_inputs: Some(synthetic_scalar_inputs),
         expected_output: Some(synthetic_zero_output),
@@ -94,7 +99,7 @@ pub(crate) fn expr_variant_rows(
 ) -> BTreeMap<&'static str, Vec<&'static str>> {
     let mut rows = BTreeMap::<&'static str, BTreeSet<&'static str>>::new();
     for entry in entries {
-        let variants = expr_variants_in_program(entry.program());
+        let variants = expr_variants_in_program(&entry.program());
         for variant in variants {
             rows.entry(variant).or_default().insert(entry.id);
         }
@@ -104,7 +109,7 @@ pub(crate) fn expr_variant_rows(
         .collect()
 }
 
-fn expr_variants_in_program(program: Program) -> BTreeSet<&'static str> {
+pub(crate) fn expr_variants_in_program(program: &Program) -> BTreeSet<&'static str> {
     let mut variants = BTreeSet::new();
     for node in program.entry() {
         collect_expr_variants_from_node(node, &mut variants);
@@ -282,9 +287,17 @@ fn collect_expr_variants(expr: &vyre::ir::Expr, variants: &mut BTreeSet<&'static
     }
 }
 
-pub(crate) fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
-    if op_id == "vyre-conform::synthetic::expr_variant_contract_bundle" {
-        return;
+/// Reject a program the semantic validator refuses, before it reaches a backend.
+///
+/// The coverage bundle is exempt: it exists to carry every `Expr` variant in one
+/// program, including a call whose callee is a signature-only registration, and
+/// the validator resolves a call through its callee's program. What the bundle
+/// owes the matrix instead is the wire round trip
+/// [`super::parity_matrix_program::the_synthetic_opaque_extension_round_trips_through_the_wire`]
+/// asserts and the execution every backend gives it.
+pub(crate) fn validate_program(op_id: &str, program: &Program) -> Result<(), String> {
+    if op_id == SYNTHETIC_BUNDLE_OP_ID {
+        return Ok(());
     }
     let backend_capabilities = BackendCapabilities {
         // This pass validates semantic IR shape. Registered target compilation
@@ -303,29 +316,28 @@ pub(crate) fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRun
         ValidationOptions::default().with_backend_capabilities(backend_capabilities),
     )
     .errors;
-    assert!(
-        errors.is_empty(),
-        "Fix: {} validation failed before parity run: {:?}",
-        op_id,
+    if errors.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "validation failed before the parity run: {:?}",
         errors
             .into_iter()
             .map(|error| error.message().to_string())
             .collect::<Vec<_>>()
-    );
+    ))
 }
 
-pub(crate) fn assert_region_chain(op_id: &str, program: &Program) {
-    let first = program.entry().first().unwrap_or_else(|| {
-        panic!(
-            "Fix: {} built an empty Program; the semantic operation builder must return a region-wrapped body.",
-            op_id
-        )
-    });
-    match first {
-        Node::Region { .. } => {}
-        other => panic!(
-            "Fix: {} top-level entry node must be Node::Region to preserve the region chain invariant, got {other:?}.",
-            op_id
+/// Reject a program whose top-level entry node is not a region.
+pub(crate) fn check_region_chain(program: &Program) -> Result<(), String> {
+    match program.entry().first() {
+        Some(Node::Region { .. }) => Ok(()),
+        Some(other) => Err(format!(
+            "top-level entry node must be Node::Region to preserve the region chain invariant, got {other:?}"
+        )),
+        None => Err(
+            "built an empty Program; the semantic operation builder must return a region-wrapped body"
+                .to_string(),
         ),
     }
 }
@@ -360,11 +372,12 @@ pub(crate) fn compare_outputs(
     }
 }
 
-pub(crate) fn hash_program(program: &Program) -> Hash {
-    let wire = program.to_wire().unwrap_or_else(|error| {
-        panic!("Fix: failed to encode Program wire image for parity hash: {error}")
-    });
-    blake3::hash(&wire)
+/// Wire-image identity of `program`, used to prove a dispatch left it unmodified.
+pub(crate) fn hash_program(program: &Program) -> Result<Hash, String> {
+    program
+        .to_wire()
+        .map(|wire| blake3::hash(&wire))
+        .map_err(|error| format!("failed to encode the Program wire image: {error}"))
 }
 
 pub(crate) fn hash_buffers(buffers: &[Vec<u8>]) -> Hash {
@@ -390,6 +403,34 @@ pub(crate) fn format_divergences(divergences: &[Divergence]) -> String {
             divergence.detail
         ));
     }
+    message
+}
+
+/// Report every operation the sweep could not measure, and every disagreement it
+/// did measure, in one message.
+///
+/// One report per run, not one panic per operation: a run that aborts on the
+/// first broken operation says nothing about the rest of the registry, and the
+/// counters printed alongside it would describe a sweep that never happened.
+pub(crate) fn format_summary_failures(summary: &Summary) -> String {
+    let mut message = format!(
+        "parity matrix: {} operation(s) could not be measured and {} divergence(s) were recorded across {} operation(s).\n",
+        summary.failures.len(),
+        summary.divergences.len(),
+        summary.ops_total
+    );
+    for failure in &summary.failures {
+        message.push_str(&format!(
+            "unmeasured op_id={} backend={} stage={} detail={}\n",
+            failure.op_id, failure.backend, failure.stage, failure.detail
+        ));
+    }
+    if !summary.divergences.is_empty() {
+        message.push_str(&format_divergences(&summary.divergences));
+    }
+    message.push_str(
+        "Fix: repair each operation or backend named above; every line is one independent defect.\n",
+    );
     message
 }
 
