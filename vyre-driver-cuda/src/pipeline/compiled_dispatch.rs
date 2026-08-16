@@ -124,15 +124,6 @@ impl CompiledPipeline for CudaCompiledPipeline {
         &self.id
     }
 
-    fn dispatch(
-        &self,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let borrowed = vyre_driver::borrowed_input_slices(inputs, "cuda compiled borrowed input")?;
-        self.dispatch_borrowed(&borrowed, config)
-    }
-
     fn dispatch_borrowed(
         &self,
         inputs: &[&[u8]],

@@ -243,7 +243,7 @@ mod tests {
 
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-    type FakeRun = dyn Fn(&[Vec<u8>]) -> Result<Vec<Vec<u8>>, BackendError> + Send + Sync;
+    type FakeRun = dyn Fn(&[&[u8]]) -> Result<Vec<Vec<u8>>, BackendError> + Send + Sync;
 
     struct FakePipeline {
         id: String,
@@ -257,9 +257,9 @@ mod tests {
             &self.id
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
-            inputs: &[Vec<u8>],
+            inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             (self.run)(inputs)
@@ -301,7 +301,7 @@ mod tests {
     fn empty_matrix_is_rejected() {
         let pipeline: Arc<dyn CompiledPipeline> = Arc::new(FakePipeline {
             id: "fake".into(),
-            run: Arc::new(|inputs| Ok(inputs.to_vec())),
+            run: Arc::new(|inputs| Ok(inputs.iter().map(|row| row.to_vec()).collect())),
         });
         let reference = ReferenceExecutor::new(|_, inputs| Ok(inputs.to_vec()));
 
@@ -321,7 +321,7 @@ mod tests {
     fn exhaustive_matrix_passes_matching_outputs() {
         let pipeline: Arc<dyn CompiledPipeline> = Arc::new(FakePipeline {
             id: "fake".into(),
-            run: Arc::new(|inputs| Ok(inputs.to_vec())),
+            run: Arc::new(|inputs| Ok(inputs.iter().map(|row| row.to_vec()).collect())),
         });
         let reference = ReferenceExecutor::new(|_, inputs| Ok(inputs.to_vec()));
 
@@ -343,11 +343,11 @@ mod tests {
         let pipeline: Arc<dyn CompiledPipeline> = Arc::new(FakePipeline {
             id: "fake".into(),
             run: Arc::new(move |inputs| {
-                seen_clone.lock().unwrap().push(inputs[0].clone());
-                if inputs[0] == hidden_witness {
+                seen_clone.lock().unwrap().push(inputs[0].to_vec());
+                if inputs[0] == hidden_witness.as_slice() {
                     Ok(vec![0_u32.to_le_bytes().to_vec()])
                 } else {
-                    Ok(inputs.to_vec())
+                    Ok(inputs.iter().map(|row| row.to_vec()).collect())
                 }
             }),
         });

@@ -758,10 +758,10 @@ mod tests {
             OPS.get_or_init(HashSet::new)
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<OutputBuffers, BackendError> {
             Ok(vec![encode_counter_tail(SpeculationReport::from_counts(

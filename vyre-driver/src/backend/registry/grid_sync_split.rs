@@ -271,18 +271,35 @@ mod tests {
     use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 
-    /// The owned-dispatch stub every borrowed-path probe below needs.
+    /// Rejects the owned dispatch entry point for a probe that serves the borrowed one.
     ///
-    /// `VyreBackend::dispatch` has no default body, so a probe that only wants
-    /// to observe the borrowed path still has to declare it. Six probes wrote
-    /// the same twelve lines with a different message, and the two async
-    /// dispatch suites in `tests/` wrote them again.
+    /// The probe implements [`VyreBackend::dispatch_borrowed`] itself; overriding
+    /// the owned default with a rejection is what proves a caller reached the
+    /// borrowed path rather than being staged into owned rows.
     macro_rules! reject_owned_dispatch {
         ($why:literal) => {
             fn dispatch(
                 &self,
                 _program: &Program,
                 _inputs: &[Vec<u8>],
+                _config: &DispatchConfig,
+            ) -> Result<Vec<Vec<u8>>, BackendError> {
+                Err(BackendError::new($why))
+            }
+        };
+    }
+
+    /// Rejects both dispatch entry points for a probe that observes another method.
+    ///
+    /// [`VyreBackend::dispatch_borrowed`] is required, so a probe that dispatches
+    /// no program at all still declares it, and the owned default would otherwise
+    /// forward into it.
+    macro_rules! reject_dispatch {
+        ($why:literal) => {
+            fn dispatch_borrowed(
+                &self,
+                _program: &Program,
+                _inputs: &[&[u8]],
                 _config: &DispatchConfig,
             ) -> Result<Vec<Vec<u8>>, BackendError> {
                 Err(BackendError::new($why))
@@ -467,7 +484,7 @@ mod tests {
             "resident-upload-probe"
         }
 
-        reject_owned_dispatch!("resident upload forwarding test must not dispatch programs.");
+        reject_dispatch!("resident upload forwarding test must not dispatch programs.");
 
         fn upload_resident_at_many(
             &self,
@@ -521,7 +538,7 @@ mod tests {
             "resident-sequence-probe"
         }
 
-        reject_owned_dispatch!("resident sequence forwarding test must not dispatch owned inputs.");
+        reject_dispatch!("resident sequence forwarding test must not dispatch any inputs.");
 
         fn dispatch_resident_repeated_sequence_read_ranges_into(
             &self,
@@ -690,7 +707,7 @@ mod tests {
             "capability-probe"
         }
 
-        reject_owned_dispatch!("capability forwarding test must not dispatch programs.");
+        reject_dispatch!("capability forwarding test must not dispatch programs.");
 
         fn cooperative_grid_sync_fits(
             &self,

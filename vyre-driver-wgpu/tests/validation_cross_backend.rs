@@ -35,10 +35,10 @@ impl VyreBackend for ReducedBackend {
     fn id(&self) -> &'static str {
         self.id
     }
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &vyre::Program,
-        _inputs: &[Vec<u8>],
+        _inputs: &[&[u8]],
         _config: &vyre_driver::DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
         Err(vyre_driver::BackendError::new(

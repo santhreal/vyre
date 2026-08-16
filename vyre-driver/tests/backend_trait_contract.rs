@@ -30,10 +30,10 @@ impl VyreBackend for MinimalBackend {
         "minimal"
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &Program,
-        _inputs: &[Vec<u8>],
+        _inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         Ok(vec![])
@@ -71,10 +71,10 @@ impl VyreBackend for FullBackend {
     fn version(&self) -> &'static str {
         "0.6.0-test"
     }
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &Program,
-        _inputs: &[Vec<u8>],
+        _inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         Ok(vec![])

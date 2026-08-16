@@ -16,9 +16,27 @@ pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
     /// pipeline was reused vs recompiled.
     fn id(&self) -> &str;
 
-    /// Dispatch the precompiled pipeline with new inputs.
+    /// Dispatch the precompiled pipeline with borrowed input buffers.
     ///
-    /// Bit-identical to `VyreBackend::dispatch(self.program, inputs, config)`.
+    /// This is the dispatch every backend implements, because a backend that can
+    /// bind caller memory must not be handed rows it has to own first. The owned
+    /// form below is the convenience over it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when the backend cannot complete dispatch.
+    /// The error message always includes a `Fix: ` remediation section.
+    fn dispatch_borrowed(
+        &self,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<Vec<Vec<u8>>, BackendError>;
+
+    /// Dispatch the precompiled pipeline with caller-owned input buffers.
+    ///
+    /// Bit-identical to [`CompiledPipeline::dispatch_borrowed`] over the same
+    /// bytes: the rows are borrowed, never copied. Both production backends wrote
+    /// this body themselves before it lived here.
     ///
     /// # Errors
     ///
@@ -28,29 +46,10 @@ pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
         &self,
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError>;
-
-    /// Dispatch the precompiled pipeline with borrowed input buffers.
-    ///
-    /// Backends may override this to bind caller-owned byte slices directly.
-    /// The default allocates the owned input vector once, preserving the
-    /// existing [`CompiledPipeline::dispatch`] contract for current backends.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BackendError`] when the backend cannot complete dispatch.
-    fn dispatch_borrowed(
-        &self,
-        inputs: &[&[u8]],
-        config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let owned = crate::backend::clone_borrowed_inputs_for_dispatch(
-            inputs,
-            "compiled pipeline input staging",
-        )?;
-        let outputs = self.dispatch(&owned, config)?;
-        crate::observability::record_dispatch_io(inputs, &outputs);
-        Ok(outputs)
+        let borrowed =
+            crate::backend::borrowed_input_slices(inputs, "compiled pipeline input staging")?;
+        self.dispatch_borrowed(&borrowed, config)
     }
 
     /// Dispatch with backend-owned timing.

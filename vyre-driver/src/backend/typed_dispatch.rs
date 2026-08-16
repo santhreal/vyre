@@ -256,13 +256,13 @@ mod tests {
             OPS.get_or_init(HashSet::new)
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            inputs: &[Vec<u8>],
+            inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(inputs.to_vec())
+            Ok(inputs.iter().map(|row| row.to_vec()).collect())
         }
     }
 

@@ -43,14 +43,14 @@ impl VyreBackend for CountingBackend {
         "counting"
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &Program,
-        inputs: &[Vec<u8>],
+        inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         self.dispatch_calls.fetch_add(1, Ordering::Relaxed);
-        Ok(inputs.to_vec())
+        Ok(inputs.iter().map(|row| row.to_vec()).collect())
     }
 }
 
@@ -64,10 +64,10 @@ impl VyreBackend for FailingBackend {
         "failing"
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &Program,
-        _inputs: &[Vec<u8>],
+        _inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         Err(BackendError::new(
@@ -102,10 +102,10 @@ impl VyreBackend for ResidentBackend {
         "resident-counting"
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &Program,
-        _inputs: &[Vec<u8>],
+        _inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         Err(BackendError::new(

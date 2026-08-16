@@ -383,10 +383,10 @@ mod tests {
             "grid-sync-resident-reuse"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("test uses dispatch_resident_timed")
@@ -509,10 +509,10 @@ mod tests {
             "grid-sync-resident-device"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("resident fixpoint test uses resident dispatch")

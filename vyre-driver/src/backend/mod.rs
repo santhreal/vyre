@@ -77,37 +77,6 @@ pub mod sealed {
     pub trait Sealed {}
 }
 
-pub(crate) fn clone_borrowed_inputs_for_dispatch(
-    inputs: &[&[u8]],
-    field: &'static str,
-) -> Result<smallvec::SmallVec<[Vec<u8>; 8]>, BackendError> {
-    let mut owned = smallvec::SmallVec::<[Vec<u8>; 8]>::new();
-    vyre_foundation::allocation::try_reserve_smallvec_to_capacity(&mut owned, inputs.len())
-        .map_err(|error| {
-        BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: failed to reserve {field} for {} borrowed input buffer(s): {error}. Use a backend-native borrowed dispatch path or shard the dispatch.",
-                inputs.len()
-            ),
-        }
-    })?;
-    for (index, input) in inputs.iter().enumerate() {
-        let mut cloned = Vec::new();
-        crate::allocation::try_reserve_vec_to_capacity(&mut cloned, input.len()).map_err(
-            |error| {
-            BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: failed to reserve {field} bytes for borrowed input {index} with length {}: {error}. Keep hot inputs resident on the GPU or shard the dispatch.",
-                    input.len()
-                ),
-            }
-        })?;
-        cloned.extend_from_slice(input);
-        owned.push(cloned);
-    }
-    Ok(owned)
-}
-
 /// Borrow caller-owned input buffers as dispatch slices with checked SmallVec allocation.
 ///
 /// Backend compiled-pipeline implementations use this at the `dispatch(Vec<u8>)`

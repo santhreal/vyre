@@ -725,36 +725,6 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         vyre_driver::default_supported_ops_with_trap()
     }
 
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-        let _span = tracing::trace_span!(
-            "vyre.dispatch",
-            backend = "wgpu",
-            inputs = inputs.len(),
-            label = tracing::field::Empty,
-        );
-        let _enter = _span.enter();
-        if let Some(label) = config.label.as_deref() {
-            _span.record("label", label);
-        }
-        let borrowed = borrowed_slices_from_owned_inputs(inputs);
-        let start = Instant::now();
-        let result = self
-            .dispatch_borrowed_async(program, &borrowed, config)?
-            .await_owned();
-        tracing::trace!(
-            target: "vyre.dispatch",
-            elapsed_us = elapsed_micros_u64(start, "borrowed-path dispatch")?,
-            inputs = inputs.len(),
-            "dispatch completed (borrowed-path; clone-free)"
-        );
-        result
-    }
-
     fn dispatch_borrowed(
         &self,
         program: &Program,

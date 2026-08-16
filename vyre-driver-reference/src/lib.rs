@@ -33,10 +33,10 @@ impl VyreBackend for CpuRefBackend {
         env!("CARGO_PKG_VERSION")
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         program: &Program,
-        inputs: &[Vec<u8>],
+        inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         let values = reference_values(program, inputs)?;
@@ -82,7 +82,7 @@ impl VyreBackend for CpuRefBackend {
     }
 }
 
-fn reference_values(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Value>, BackendError> {
+fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, BackendError> {
     // `is_backend_allocated_output` is the SINGLE cross-backend contract in
     // vyre-foundation, shared verbatim with the reference interpreter, do NOT re-inline
     // it here (drift would make this backend disagree with the interpreter on outputs).
@@ -92,15 +92,15 @@ fn reference_values(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Value>,
         if buffer.access() == BufferAccess::Workgroup {
             continue;
         }
-        let bytes = if buffer.is_backend_allocated_output() {
-            synthesized_zero_buffer(buffer, "backend-allocated output")?
+        let bytes: Arc<[u8]> = if buffer.is_backend_allocated_output() {
+            Arc::from(synthesized_zero_buffer(buffer, "backend-allocated output")?)
         } else if let Some(input) = inputs.get(next_input) {
             next_input += 1;
-            input.clone()
+            Arc::from(*input)
         } else {
-            synthesized_zero_buffer(buffer, "missing input")?
+            Arc::from(synthesized_zero_buffer(buffer, "missing input")?)
         };
-        values.push(Value::Bytes(Arc::from(bytes)));
+        values.push(Value::Bytes(bytes));
     }
     if next_input != inputs.len() {
         return Err(BackendError::new(format!(

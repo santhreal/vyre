@@ -202,10 +202,10 @@ fn default_backend_validation_rejects_distributed_collectives() {
             default_supported_ops()
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(Vec::new())

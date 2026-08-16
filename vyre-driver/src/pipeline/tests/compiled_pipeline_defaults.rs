@@ -66,12 +66,12 @@ fn compiled_pipeline_default_into_records_dispatch_telemetry() {
             "compiled-telemetry"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
-            inputs: &[Vec<u8>],
+            inputs: &[&[u8]],
             _: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(inputs.to_vec())
+            Ok(inputs.iter().map(|row| row.to_vec()).collect())
         }
     }
 
@@ -108,16 +108,6 @@ fn compiled_pipeline_borrowed_batch_into_reuses_output_slots() {
     impl CompiledPipeline for BatchDefaultPipeline {
         fn id(&self) -> &str {
             "batch-default-into"
-        }
-
-        fn dispatch(
-            &self,
-            _: &[Vec<u8>],
-            _: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Err(BackendError::new(
-                "batch into default test should use dispatch_borrowed. Fix: keep borrowed batch default zero-copy until each single dispatch.",
-            ))
         }
 
         fn dispatch_borrowed(
@@ -174,9 +164,9 @@ fn compiled_pipeline_persistent_handle_into_default_reuses_output_slots() {
             "persistent-default-into"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
-            _: &[Vec<u8>],
+            _: &[&[u8]],
             _: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Err(BackendError::new(
@@ -229,9 +219,9 @@ fn compiled_pipeline_persistent_defaults_fail_explicitly_without_host_fallback()
             "unsupported-persistent"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
-            _: &[Vec<u8>],
+            _: &[&[u8]],
             _: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             panic!("persistent defaults must not route through host-buffer dispatch")

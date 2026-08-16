@@ -349,10 +349,10 @@ mod tests {
             "grid-sync-reuse-checking"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("test uses dispatch_borrowed_into")
@@ -429,10 +429,10 @@ mod tests {
             "grid-sync-incrementing"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("test uses dispatch_borrowed_into")
@@ -626,10 +626,10 @@ mod tests {
             "grid-sync-owned-final-reserve"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("test uses dispatch_borrowed_into")
@@ -720,10 +720,10 @@ mod tests {
             "grid-sync-intermediate-reuse"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("test uses dispatch_borrowed_into")
@@ -802,10 +802,10 @@ mod tests {
             "grid-sync-slot-storing"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("test uses dispatch_borrowed_into")
@@ -915,10 +915,10 @@ mod tests {
             "grid-sync-saturating"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             unreachable!("test uses dispatch_borrowed_into")

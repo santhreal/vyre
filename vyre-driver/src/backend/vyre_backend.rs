@@ -119,14 +119,16 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         program: &Program,
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError>;
+    ) -> Result<Vec<Vec<u8>>, BackendError> {
+        let borrowed = crate::backend::borrowed_input_slices(inputs, "backend input staging")?;
+        self.dispatch_borrowed(program, &borrowed, config)
+    }
 
     /// Executes the program with borrowed input buffers.
     ///
-    /// Backends may override this method to avoid staging borrowed bytes into
-    /// owned `Vec<u8>` buffers. The default is non-breaking: it performs one
-    /// owned vector allocation for the call and delegates to
-    /// [`VyreBackend::dispatch`].
+    /// This is the dispatch every backend implements. A backend binds caller
+    /// memory, so a row it never has to own is the contract: the owned form
+    /// above borrows the rows it was handed and calls this.
     ///
     /// # Errors
     ///
@@ -136,13 +138,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let owned =
-            crate::backend::clone_borrowed_inputs_for_dispatch(inputs, "backend input staging")?;
-        let outputs = self.dispatch(program, &owned, config)?;
-        crate::observability::record_dispatch_io(inputs, &outputs);
-        Ok(outputs)
-    }
+    ) -> Result<Vec<Vec<u8>>, BackendError>;
 
     /// Executes a borrowed-input dispatch and returns backend-owned timing.
     ///
@@ -1101,10 +1097,10 @@ mod tests {
             "telemetry-test"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![vec![1, 2], vec![3, 4]])
@@ -1122,10 +1118,10 @@ mod tests {
             "sequence-timing-test"
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(Vec::new())

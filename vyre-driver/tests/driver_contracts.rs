@@ -75,10 +75,10 @@ fn empty_capability_set_rejects_any_program_with_nodes() {
             static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
             EMPTY.get_or_init(HashSet::new)
         }
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![])
@@ -158,10 +158,10 @@ fn validation_rejects_unsupported_operation() {
             static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
             EMPTY.get_or_init(HashSet::new)
         }
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![])
@@ -217,10 +217,10 @@ fn external_fixture_drives_validation_rejection() {
             static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
             EMPTY.get_or_init(HashSet::new)
         }
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![])

@@ -89,16 +89,6 @@ impl VyreBackend for SpirvBackendRegistration {
         env!("CARGO_PKG_VERSION")
     }
 
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        self.dispatch_borrowed(program, &borrowed, config)
-    }
-
     fn dispatch_borrowed(
         &self,
         program: &Program,

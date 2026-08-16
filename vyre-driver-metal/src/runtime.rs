@@ -932,16 +932,6 @@ impl VyreBackend for MetalBackend {
         }
     }
 
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let borrowed = vyre_driver::borrowed_input_slices(inputs, "metal inputs")?;
-        self.dispatch_borrowed(program, &borrowed, config)
-    }
-
     fn dispatch_borrowed(
         &self,
         program: &Program,

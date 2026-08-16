@@ -12,10 +12,10 @@ impl VyreBackend for GridLimitBackend {
         "grid-limit-test"
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &Program,
-        _inputs: &[Vec<u8>],
+        _inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         Ok(Vec::new())

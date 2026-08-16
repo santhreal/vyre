@@ -482,16 +482,6 @@ impl VyreBackend for CudaBackendRegistration {
         env!("CARGO_PKG_VERSION")
     }
 
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        self.validate_program_for_dispatch(program)?;
-        self.inner.dispatch(program, inputs, config)
-    }
-
     fn dispatch_async(
         &self,
         program: &Program,
