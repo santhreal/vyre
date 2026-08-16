@@ -557,3 +557,17 @@ impl OrderFixture {
         self.blockers.borrow().clone()
     }
 }
+
+/// The authoritative gate descriptor must declare exactly the canonical package-readiness artifact.
+#[test]
+fn authoritative_descriptor_declares_exact_package_readiness_artifacts() {
+    let descriptor = crate::gate_metadata::descriptor_by_name("package-readiness");
+    let mut expected: Vec<&str> = vec![super::ARTIFACT];
+    expected.sort_unstable();
+    let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+    actual.sort_unstable();
+    assert_eq!(
+        actual, expected,
+        "package-readiness gate descriptor must declare exactly the canonical publish readiness evidence artifact"
+    );
+}

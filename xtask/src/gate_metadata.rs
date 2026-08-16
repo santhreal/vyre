@@ -961,7 +961,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "workspace manifests",
-        artifacts: &["release/evidence/packages/package-readiness.json"],
+        artifacts: &["release/evidence/package/publish-readiness.json"],
         prerequisites: &[],
         proof: "crate::release::package_readiness::archive_contracts::malformed_package_content_evidence_reports_every_failed_invariant",
     },
