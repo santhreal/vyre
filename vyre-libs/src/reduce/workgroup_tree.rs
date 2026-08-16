@@ -8,7 +8,6 @@
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::GeneratorRef;
-use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for an f32 workgroup sum over a scratch buffer.
