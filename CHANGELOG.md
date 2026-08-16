@@ -1031,9 +1031,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `vyre_libs::graph::csr_forward_or_changed`,
   `vyre_libs::graph::csr_backward_or_changed` and
   `vyre_libs::graph::persistent_bfs` now receives them instead of seven or nine
-  positional slots. Neither struct has a constructor: a struct literal is the
+  positional slots. `CsrGraphView` has no constructor: a struct literal is the
   only way to build one, so a transposed buffer is a compile error rather than
-  a wrong closure. The dispatcher-backed consumers in
+  a wrong closure, and `CsrClosureInputs` provides
+  `CsrClosureInputs::allow_all` for unrestricted edge filtering. The
+  dispatcher-backed consumers in
   `vyre_libs::graph::dispatch::csr_bidirectional`,
   `vyre_libs::graph::dispatch::csr_forward_or_changed` and
   `vyre_libs::graph::dispatch::persistent_bfs` take the same bundle, so the
@@ -1232,7 +1234,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   The volume sweep runner had a three-crate list that left one tracked volume
   wave in no shard, and a shard index outside the shard count selected nothing
   and exited 0.
-- User-facing crate READMEs, `docs/ARCHITECTURE.md`, `GOAL.md`, `THESIS.md`,
+- User-facing crate READMEs, `docs/ARCHITECTURE.md`, `THESIS.md`,
   `CONTRIBUTING.md`, and the ownership/guide registries follow the workspace
   `README.md` charter. `vyre-libs` owns every composition, including
   compiler-internal domains. `vyre-primitives` owns only uncomposable
@@ -1462,18 +1464,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registry coverage, internal dependency versions, the feature-isolated MSRV
   sweep, and the oracle-matrix sweeps with their volume waves. Each step names
   the class it closes and why no other workflow sees it.
-- The fixed CSR graphs the closure contracts are written against have one
-  owner, `vyre_libs::graph::csr_closure_inputs::graphs`, and an unrestricted
-  edge filter has one spelling,
-  `vyre_libs::graph::csr_closure_inputs::CsrClosureInputs::allow_all`. The
-  four-node chain and the four-node diamond were rebuilt from three array
-  literals at each call site, four crate-local `linear_graph` helpers returned
-  the chain as an owned triple so a caller had to keep `off`, `tgt` and `msk`
-  alive to borrow a view from them, and more than thirty call sites restated
-  the whole seven-field closure group only to set the allow mask to every kind.
-  `CsrGraphShape` owns the arrays with `'static` lifetime and borrows itself as
-  the view, so a contract now names the shape it means instead of agreeing with
-  its siblings by coincidence.
 - The generated CSR sweep shape stream has one owner: five copies of the same
   seeded generator across the primitive and substrate volume matrices are
   replaced by a single declared shape table with named hostile groups, and a
@@ -3331,6 +3321,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   as library API; a consumer reaches the same oracles at
   vyre_test_support::fixed_point, which is a dev-dependency and not part of any
   shipped binary.
+- Retired `GOAL.md`. Its roadmap and compiler boundary rules are canonically
+  owned by `docs/ARCHITECTURE.md`, `docs/CRATE_OWNERSHIP.toml`, and crate
+  architecture documentation.
 - Routing has no host arm. `PolicyRoute::CpuSimd`, `RoutingDecision::CpuSimd`,
   `ExecutionPolicy::use_cpu_fast_path` and the two host fast-path thresholds
   that only fed it are gone, and `ExecutionPolicy::route` no longer takes a
@@ -4024,19 +4017,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `api::metric::elapsed_ns` narrows every measured nanosecond count, replacing
   three spellings across 35 sites in 28 files: a bare `as u64` cast, a
   `min(u64::MAX)` clamp, and a `try_from().unwrap_or()`. The bare cast wrapped,
-  so a span past about 18.4 seconds reported as a short one and the slowest
-  sample read as the fastest. `cases::honest_case` owns the suite list,
-  metadata and memory floor every honest case declares; `search.binary.u32.1m`
-  had omitted the smoke suite from its own copy of that list and was never
-  smoke-tested. `cases::reference_sample::run_against_reference` accounts both
-  halves of a reference comparison, closing two records that published a
-  baseline carrying only a wall time and one that read the baseline's
-  written-byte total off the device output.
-  `cases::release_workloads::resident_batch` owns resident batch dispatch and
-  its metric points, replacing two hardcoded reset-byte constants with the
-  uploaded payload length and routing the metadata condition workload through
-  the shared run assembly it had bypassed, which is where it had been silently
-  omitting its throughput metrics. `api::case::prepared_as` and
+  so a span past about 584 years reported as a short one and the slowest sample
+  read as the fastest. `cases::honest_case` owns the suite list, metadata and
+  memory floor every honest case declares; `search.binary.u32.1m` had omitted
+  the smoke suite from its own copy of that list and was never smoke-tested.
+  `cases::reference_sample::run_against_reference` accounts both halves of a
+  reference comparison, closing two records that published a baseline carrying
+  only a wall time and one that read the baseline's written-byte total off the
+  device output. `cases::release_workloads::resident_batch` owns resident batch
+  dispatch and its metric points, replacing two hardcoded reset-byte constants
+  with the uploaded payload length and routing the metadata condition workload
+  through the shared run assembly it had bypassed, which is where it had been
+  silently omitting its throughput metrics. `api::case::prepared_as` and
   `api::case::prepared_as_mut` own borrowing a prepared payload as its own type
   and own the wording when it is the wrong type. Sixteen cases hand-rolled that
   downcast; the read-only and mutable flavours meant nine copies survived a
@@ -4048,7 +4040,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The timed CPU reference in `vyre-bench` has one owner,
   `vyre-bench/src/cases/reference_sample.rs`, and it saturates. Eleven cases
   hand-rolled the same timer and seven of them cast `Duration::as_nanos()`
-  straight to `u64`, so a reference slower than roughly 18 seconds was reported
+  straight to `u64`, so a reference slower than roughly 584 years was reported
   as a small number instead of a large one, inverting the speedup it was
   compared against.
 - A benchmark performance contract may only name a CPU baseline this checkout
