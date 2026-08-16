@@ -1,12 +1,71 @@
 //! Kernel-boundary binding layout behavior: the reserved trap sidecar
-//! binding, plus memory-class and visibility predicates.
+//! binding and its tag-code table, plus memory-class and visibility
+//! predicates.
 
-use super::{BindingVisibility, MemoryClass};
+use super::{BindingVisibility, KernelBody, KernelOpKind, MemoryClass, Name};
+use crate::error::LowerError;
+use rustc_hash::FxHashSet;
 
 /// Reserved binding name for trap diagnostics.
 pub const TRAP_SIDECAR_NAME: &str = "__vyre_descriptor_trap_sidecar";
 /// Number of words in the trap-diagnostic sidecar.
 pub const TRAP_SIDECAR_WORDS: u32 = 4;
+
+/// Stable numeric code paired with the source tag it stands for.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DescriptorTrapTag {
+    /// 1-based code written into sidecar word 2 by the trapping kernel.
+    pub code: u32,
+    /// Source trap tag the code decodes to.
+    pub tag: Name,
+}
+
+/// Assign every distinct `KernelOpKind::Trap` tag in `body` a stable 1-based
+/// code, own ops before child bodies, first occurrence winning.
+///
+/// This is the only definition of that numbering. Every emitter that writes a
+/// code into the sidecar and every host that decodes one reads it here, so a
+/// code means the same tag on every backend. Code 0 is reserved for "no trap",
+/// which is why the table is 1-based.
+///
+/// # Errors
+///
+/// Returns an error when the distinct-tag count exceeds `u32`.
+pub fn descriptor_trap_tags(body: &KernelBody) -> Result<Vec<DescriptorTrapTag>, LowerError> {
+    fn walk(
+        body: &KernelBody,
+        seen: &mut FxHashSet<Name>,
+        out: &mut Vec<DescriptorTrapTag>,
+    ) -> Result<(), LowerError> {
+        for op in &body.ops {
+            let KernelOpKind::Trap { tag } = &op.kind else {
+                continue;
+            };
+            if !seen.insert(Name::clone(tag)) {
+                continue;
+            }
+            let code = u32::try_from(out.len().saturating_add(1)).map_err(|_| {
+                LowerError::UnsupportedConstruct(
+                    "kernel body declares more distinct trap tags than a u32 code can carry. Fix: split the kernel body so each part stays under the code limit."
+                        .to_owned(),
+                )
+            })?;
+            out.push(DescriptorTrapTag {
+                code,
+                tag: Name::clone(tag),
+            });
+        }
+        for child in &body.child_bodies {
+            walk(child, seen, out)?;
+        }
+        Ok(())
+    }
+
+    let mut seen = FxHashSet::default();
+    let mut out = Vec::new();
+    walk(body, &mut seen, &mut out)?;
+    Ok(out)
+}
 
 impl MemoryClass {
     /// True iff this memory class is visible across workgroups

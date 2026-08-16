@@ -142,6 +142,9 @@ pub struct ProductionSession {
     /// Shared so a bounded submission can own a reference while the caller keeps
     /// this handle.
     session: Arc<ArtifactSession>,
+    /// Shared for the same reason: the bounded submission projects its outputs in
+    /// this Program's buffer declaration order, not in canonical ABI slot order.
+    program: Arc<Program>,
     op_id: String,
     backend: &'static str,
     /// Set once a bounded step was abandoned on expiry.
@@ -166,13 +169,14 @@ impl ProductionSession {
     ) -> Result<Self, ProductionError> {
         let op_id = program.entry_op_id().unwrap_or(UNNAMED_OP_ID).to_string();
         let backend = registration.id;
-        let owned_program = program.clone();
+        let owned_program = Arc::new(program.clone());
+        let compiled_program = Arc::clone(&owned_program);
         let session = run_bounded_step(
             "compilation",
             &op_id,
             backend,
             PRODUCTION_STEP_DEADLINE,
-            move || compile_artifact_session(&owned_program, registration),
+            move || compile_artifact_session(&compiled_program, registration),
         )?;
         let neutral = session.artifact()?;
         let payload = session.payload()?;
@@ -180,6 +184,7 @@ impl ProductionSession {
             neutral,
             payload,
             session: Arc::new(session),
+            program: owned_program,
             op_id,
             backend,
             abandoned: AtomicBool::new(false),
@@ -239,6 +244,7 @@ impl ProductionSession {
         // cannot borrow the caller's input slices.
         let owned = inputs.iter().map(|bytes| bytes.to_vec()).collect::<Vec<_>>();
         let session = Arc::clone(&self.session);
+        let program = Arc::clone(&self.program);
         let outcome = run_bounded_step(
             step,
             &self.op_id,
@@ -256,7 +262,7 @@ impl ProductionSession {
                     }
                     None => session.submit_host_inputs(&borrowed)?,
                 };
-                Ok(session.ordered_outputs(&completion)?)
+                Ok(session.program_outputs(&program, &completion)?)
             },
         );
         if matches!(outcome, Err(ProductionError::Deadline { .. })) {

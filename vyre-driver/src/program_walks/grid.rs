@@ -101,6 +101,50 @@ pub fn infer_dispatch_grid_for_count(
     ])
 }
 
+/// Refuse a launch grid that exceeds the target's per-axis workgroup ceiling.
+///
+/// Every graphics-derived target publishes a maximum workgroup count PER AXIS
+/// that is far below `u32::MAX`, and a dispatch past it is not a slow launch: the
+/// API rejects the command, and a rejection inside a recorded command buffer
+/// surfaces as a validation abort rather than as a value this crate can return.
+/// So the grid is judged against the ceiling the device reported, before the
+/// command is recorded, and the refusal names the axis, the extent asked for and
+/// the ceiling, because those three are what a caller needs to reshape the launch.
+///
+/// `max_per_axis == 0` means the caller has no ceiling to enforce (no device was
+/// probed), and the grid passes: inventing one here would refuse launches the
+/// target accepts.
+///
+/// This does NOT fold the excess into the other axes. Folding changes which
+/// invocation id a lane observes, so it is only sound for a program whose lane
+/// addressing is linear across the whole grid, and that is a property of the
+/// emitted kernel rather than of the launch. Until a target declares that
+/// property, an over-wide grid is refused with the reason.
+///
+/// # Errors
+///
+/// Returns when any axis of `grid` exceeds `max_per_axis`.
+pub fn admit_dispatch_grid(
+    grid: [u32; 3],
+    max_per_axis: u32,
+    backend_id: &str,
+) -> Result<[u32; 3], BackendError> {
+    if max_per_axis == 0 {
+        return Ok(grid);
+    }
+    for (axis, extent) in grid.iter().copied().enumerate() {
+        if extent > max_per_axis {
+            let axis_name = ["x", "y", "z"][axis];
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: dispatch grid {grid:?} asks for {extent} workgroups on axis {axis_name}, above the {max_per_axis} that `{backend_id}` reported as its per-axis maximum. Reshape the launch so no axis exceeds {max_per_axis}: give the program a larger workgroup, split the work into several dispatches, or set DispatchConfig::grid_override to a shape whose axes all fit. A program cannot declare a grid the target rejects."
+                ),
+            });
+        }
+    }
+    Ok(grid)
+}
+
 fn ceil_div_u64(value: u64, divisor: u64) -> Result<u32, BackendError> {
     let divided = value.div_ceil(divisor).max(1);
     u32::try_from(divided).map_err(|_| {

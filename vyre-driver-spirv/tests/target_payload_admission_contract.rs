@@ -245,3 +245,66 @@ fn admission_attributes_bundle_corruption_to_the_acquiring_backend() {
         other => panic!("expected KernelCompileFailed, got {other:?}"),
     }
 }
+
+/// WHY: closes the class "two parallel per-group lists in one payload are paired
+/// by position, and nothing states the orders agree". `admit` zipped the bundle's
+/// modules, the artifact's fusion records and the payload's entries. The bundle
+/// canonically sorts its modules by `(stage, group)`, the fusion records are in
+/// the artifact's own plan order, and the entries are in the order the target
+/// compiler emitted them, so all three pairings rested on three orders happening
+/// to agree. The one check that could have caught an entry paired with the wrong
+/// module compared entry names, and every entry a compiler emits is named `main`,
+/// so a reordered entry list admitted and each module ran with another module's
+/// grid, workgroup extent and resource bindings.
+///
+/// The fix is resolution rather than a refusal: order carries no meaning once each
+/// module names the record and entry it belongs to, so a reordered list must still
+/// pair correctly rather than be rejected. This distinguishes the two by giving
+/// the two entries different grids, which is the value admission reads out of an
+/// entry and hands to dispatch.
+///
+/// Does not catch: an entry whose grid or bindings are wrong for the group it is
+/// correctly paired with. Node identity proves which group an entry describes, not
+/// that the description is right; that is the target compiler's contract. It also
+/// leaves two of admission's resolution failures unproven, because a sealed
+/// payload cannot carry them: `TargetPayload::new` runs `validate_entries`, which
+/// already refuses a duplicate entry node and an entry node absent from the
+/// artifact. Reaching those arms would need a payload that never sealed.
+#[test]
+fn admission_pairs_an_entry_with_its_own_module_whatever_the_entry_order() {
+    let (artifact, payload) = spirv().compiled_two_stage();
+    let mut entries = payload.entries().to_vec();
+    assert_eq!(
+        entries.len(),
+        2,
+        "the two-stage fixture must offer exactly two entries to permute"
+    );
+    // Distinct grids, so a module paired with the wrong entry is observable. The
+    // emitted grids may well be equal, which is what made position look harmless.
+    entries[0].grid_size = [7, 1, 1];
+    entries[1].grid_size = [9, 1, 1];
+    let expected_grid = entries
+        .iter()
+        .map(|entry| (entry.node, entry.grid_size))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    entries.reverse();
+    let perturbed = repack(&artifact, &payload, &bundle_of(&payload), entries);
+
+    let admitted = materialize::admit(&artifact, &perturbed, target(&perturbed))
+        .expect("a reordered entry list still names which group each entry describes");
+
+    assert_eq!(admitted.len(), artifact.fusion().len());
+    for module in &admitted {
+        let node = *module
+            .image
+            .nodes
+            .first()
+            .expect("an admitted module carries its group's member nodes");
+        assert_eq!(
+            module.config.dispatch_grid,
+            expected_grid.get(&node).copied(),
+            "module for node {node:?} must carry the grid of the entry that names that node"
+        );
+        assert_eq!(module.config.grid_override, module.config.dispatch_grid);
+    }
+}

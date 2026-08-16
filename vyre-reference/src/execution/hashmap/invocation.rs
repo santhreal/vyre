@@ -9,7 +9,7 @@ use super::{
     step::step_round_robin,
     sync::{live_waiting_count, release_barrier_if_ready, verify_uniform_control_flow},
 };
-use crate::execution::async_transfer::AsyncTransfer;
+use crate::execution::async_transfer::{AsyncTransfer, PendingAsyncTransfers};
 use crate::ReferenceError;
 use crate::{
     value::Value,
@@ -118,7 +118,7 @@ pub(crate) struct HashmapInvocation<'a> {
     pub(crate) waiting_at_barrier: bool,
     pub(crate) uniform_checks: Vec<(usize, bool)>,
     pub(crate) frames: Vec<Frame<'a>>,
-    pub(crate) pending_async: FxHashMap<Arc<str>, AsyncTransfer>,
+    pub(crate) pending_async: PendingAsyncTransfers,
     pub(crate) op_cache: crate::execution::call::OpCache,
 }
 
@@ -131,7 +131,7 @@ impl<'a> HashmapInvocation<'a> {
             returned: false,
             waiting_at_barrier: false,
             uniform_checks: Vec::new(),
-            pending_async: FxHashMap::default(),
+            pending_async: PendingAsyncTransfers::new(),
             op_cache: FxHashMap::default(),
             frames: vec![Frame::Nodes {
                 nodes: entry,
@@ -149,19 +149,11 @@ impl<'a> HashmapInvocation<'a> {
         tag: &str,
         transfer: AsyncTransfer,
     ) -> Result<(), ReferenceError> {
-        if self.pending_async.contains_key(tag) {
-            return Err(ReferenceError::new(format!(
-                "async transfer tag `{tag}` was started more than once before a matching wait. Fix: reuse the tag only after AsyncWait completes."
-            )));
-        }
-        self.pending_async.insert(Arc::from(tag), transfer);
-        Ok(())
+        self.pending_async.begin(tag, transfer)
     }
 
     pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
-        self.pending_async.remove(tag).ok_or_else(|| ReferenceError::new(format!(
-            "async wait for tag `{tag}` has no matching async transfer. Fix: emit AsyncLoad or AsyncStore before AsyncWait."
-        )))
+        self.pending_async.finish(tag)
     }
 }
 
@@ -235,17 +227,8 @@ pub(crate) fn run_invocations(
             return Err(ReferenceError::new("program violates uniform-control-flow rule: not every live invocation reached the same barrier. Fix: move Barrier to uniform control flow."));
         }
     }
-    if let Some((invocation, tag)) = invocations.iter().find_map(|invocation| {
-        invocation
-            .pending_async
-            .keys()
-            .next()
-            .map(|tag| (invocation, tag))
-    }) {
-        return Err(ReferenceError::new(format!(
-            "invocation {:?} completed with async transfer tag `{tag}` still pending. Fix: add AsyncWait for every AsyncLoad/AsyncStore tag before Return or end-of-program.",
-            invocation.ids
-        )));
+    for invocation in invocations.iter() {
+        invocation.pending_async.assert_drained(invocation.ids)?;
     }
     Ok(())
 }

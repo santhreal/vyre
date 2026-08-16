@@ -649,6 +649,10 @@ impl CudaDeviceCaps {
             supports_specialization_constants: false,
             supports_f16: self.hardware_supports_f16(),
             supports_bf16: self.hardware_supports_bf16(),
+            // True because the emitter writes a trap record into the module-scope
+            // sidecar and every launch path reads it back after synchronizing. See
+            // `CudaDeviceCaps::program_validation_caps`; the two records must
+            // report the same answer.
             supports_trap_propagation: true,
             supports_tensor_cores: self.hardware_supports_tensor_cores(),
             has_mul_high: true,

@@ -548,11 +548,11 @@ impl CudaBackend {
                 start.elapsed().as_millis()
             );
         }
-        let pending = (|| {
+        let enqueue_result = (|| {
             let EnqueueRecording {
                 allocations: allocations_ref,
-                host_transfers: host_transfers_ref,
                 launch_resources: launch_resources_ref,
+                ..
             } = guards.recording()?;
 
             enqueue_host_uploads_async(&host_uploads, stream_raw)?;
@@ -623,21 +623,28 @@ impl CudaBackend {
             }
             let mut params_ref = params_buf_ptr;
             let mut kernel_args = Self::kernel_args(&mut ptr_values, &mut params_ref)?;
-            // Take this module's grid-barrier counter for the whole launch
-            // sequence. The lease resolves the counter once and BLOCKS while a
-            // cooperative launch of the same module is still in flight; see
-            // `GridBarrierGate` for why concurrent sharing corrupts or hangs it.
-            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
-            // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream before freeing
-            // the gate, so a launch failure cannot leave a grid spinning while the
-            // next sequence resets the counter underneath it.
-            grid_barrier.launch_then_release(
+            // Take this module's module-scope globals for the whole launch
+            // sequence. The lease resolves them once and BLOCKS while another
+            // launch of the same module is still in flight; see
+            // `ModuleGlobalsGate` for why concurrent sharing corrupts or hangs.
+            let module_globals =
+                self.lease_module_globals(program, prepared, ptx_src, module_key)?;
+            // `launch_then_defer_release` runs the launches and hands the lease
+            // back instead of ending it. The module-scope globals are live for the
+            // kernel's whole EXECUTION, and this path returns before that, so
+            // ending the lease here would synchronize the stream: the one thing an
+            // asynchronous submission must not do. The pending handle owns the
+            // completion event, so it is what ends the lease.
+            //
+            // The enqueue is split at the launch rather than continuing under the
+            // lease so that a failure in the readback enqueue below cannot drop the
+            // lease ahead of the cleanup synchronize.
+            let (_, deferred_module_globals) = module_globals.launch_then_defer_release(
                 stream_raw,
-                "host dispatch grid-sync launch",
-                |grid_barrier| {
+                "host dispatch launch",
+                |module_globals| {
                     self.replay_fixpoint_launches(
-                        grid_barrier,
+                        module_globals,
                         func,
                         &mut kernel_args,
                         prepared,
@@ -648,6 +655,30 @@ impl CudaBackend {
             if trace {
                 tracing::debug!("[cuda-trace] +{}ms launch", start.elapsed().as_millis());
             }
+            Ok(deferred_module_globals)
+        })();
+        // Every fallible step that runs under the lease is inside the closure
+        // above, so an error here means the lease was already ended: either it was
+        // never taken, or `launch_then_defer_release` released it with the
+        // synchronize a failed launch needs.
+        let deferred_module_globals = match enqueue_result {
+            Ok(lease) => lease,
+            Err(error) => {
+                return Err(guards.abandon(
+                    error,
+                    &self.telemetry,
+                    stream_raw,
+                    "cuStreamSynchronize (host dispatch error cleanup)",
+                    "enqueue",
+                ));
+            }
+        };
+        let pending = (|| {
+            let EnqueueRecording {
+                allocations: allocations_ref,
+                host_transfers: host_transfers_ref,
+                launch_resources: launch_resources_ref,
+            } = guards.recording()?;
 
             let mut readback_bytes = 0_u64;
             let mut readback_operations = 0_u64;
@@ -790,16 +821,24 @@ impl CudaBackend {
                 ))
             }
         })();
-        if let Err(error) = pending {
-            return Err(guards.abandon(
-                error,
-                &self.telemetry,
-                stream_raw,
-                "cuStreamSynchronize (host dispatch error cleanup)",
-                "enqueue",
-            ));
+        match pending {
+            Ok(pending) => Ok(pending.holding_module_globals(deferred_module_globals)),
+            Err(error) => {
+                let abandoned = guards.abandon(
+                    error,
+                    &self.telemetry,
+                    stream_raw,
+                    "cuStreamSynchronize (host dispatch readback enqueue cleanup)",
+                    "readback enqueue",
+                );
+                // Dropped AFTER the abandon synchronized the stream, so the gate is
+                // freed only once the grid cannot still be running. The trap record
+                // is not read: this dispatch produced no answer, and the failure
+                // worth reporting is the one that stopped the readback enqueue.
+                drop(deferred_module_globals);
+                Err(abandoned)
+            }
         }
-        pending
     }
 
     /// Dispatch a vyre Program on this CUDA device.

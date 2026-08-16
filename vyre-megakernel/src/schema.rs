@@ -1,6 +1,8 @@
 //! The canonical artifact schema: every versioned record, and the immutable
 //! container that frames them.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::DataType;
 
@@ -70,6 +72,33 @@ pub struct ResourceRecord {
     /// Last barrier stage needing the value.
     pub last_stage: u32,
 }
+
+/// One resource name claimed by two canonical values.
+///
+/// Carried as its own type rather than a formatted error so each consumer can
+/// report it in the error vocabulary of its own boundary while the detection
+/// stays with the resource set.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResourceNameCollision {
+    /// The reused resource name.
+    pub name: String,
+    /// The value the name reached first.
+    pub first: ArtifactValueId,
+    /// The value that reused the name.
+    pub second: ArtifactValueId,
+}
+
+impl std::fmt::Display for ResourceNameCollision {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "artifact resource name `{}` names both value {} and value {}. Fix: resource names carry descriptor binding identity, so one artifact must not reuse a name for two values.",
+            self.name, self.first.0, self.second.0
+        )
+    }
+}
+
+impl std::error::Error for ResourceNameCollision {}
 
 /// Aggregate checked resource envelope.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -323,6 +352,31 @@ impl Artifact {
         &self.payload.resources
     }
 
+    /// Canonical value identity for every resource name.
+    ///
+    /// A resource name carries descriptor binding identity, so an artifact that
+    /// gave one name to two values would let a consumer bind the wrong buffer.
+    /// Detection lives here because the resource set is the owner of value
+    /// identity: a consumer that built its own lookup would have to repeat the
+    /// check, and the two that did disagreed about whether it was an error.
+    pub fn canonical_value_by_name(
+        &self,
+    ) -> Result<BTreeMap<&str, ArtifactValueId>, ResourceNameCollision> {
+        let mut by_name = BTreeMap::<&str, ArtifactValueId>::new();
+        for resource in self.resources() {
+            if let Some(previous) = by_name.insert(resource.name.as_str(), resource.value) {
+                if previous != resource.value {
+                    return Err(ResourceNameCollision {
+                        name: resource.name.clone(),
+                        first: previous,
+                        second: resource.value,
+                    });
+                }
+            }
+        }
+        Ok(by_name)
+    }
+
     /// Checked aggregate resource envelope.
     #[must_use]
     pub const fn resource_envelope(&self) -> ResourceEnvelope {
@@ -398,14 +452,155 @@ impl Artifact {
                 "use the canonical bytes emitted by Artifact::to_bytes",
             ));
         }
-        Ok(Self {
+        let artifact = Self {
             payload,
             digest: Digest(decoded.digest),
-        })
+        };
+        // A compiled artifact cannot carry a duplicate resource name because graph
+        // value names are unique, so this is a check on decoded bytes rather than on
+        // this crate's own output. Refusing here keeps every consumer's name lookup
+        // total: without it a tampered artifact resolves a descriptor binding to
+        // whichever of the two values the consumer's map happened to keep.
+        artifact.canonical_value_by_name().map_err(|collision| {
+            failure(
+                CompilerFailureKind::MalformedArtifact,
+                "artifact.body.resources",
+                collision.to_string(),
+                "emit one resource record per canonical value name",
+            )
+        })?;
+        Ok(artifact)
     }
 }
 
 pub(crate) fn encode_payload(payload: &ArtifactPayload) -> Result<frame::Framed, CompileError> {
     let body = serde_json::to_vec(payload).map_err(serialization_failure)?;
     frame::ARTIFACT.encode(payload.schema_version, &body)
+}
+
+// Inline: the tamper this suite needs is a re-framed `ArtifactPayload`, and both
+// `ArtifactPayload` and `frame::ARTIFACT` are crate-private. Recomputing the frame
+// from its documented layout in an integration test would put a second copy of the
+// digest domain outside the module that owns it.
+#[cfg(test)]
+mod tests {
+    //! WHY: a resource name carries descriptor binding identity, so an artifact that
+    //! gives one name to two values lets a consumer bind the wrong buffer. Before
+    //! this check the two consumers of the name lookup disagreed: the target
+    //! compiler refused the collision while the runtime's `program_outputs` built a
+    //! map that silently kept whichever value came last and projected it as the
+    //! program output. Both now read `Artifact::canonical_value_by_name`, and decode
+    //! refuses the bytes outright so neither has to be trusted to check.
+    //!
+    //! Does not catch: a collision reaching a consumer through some path that builds
+    //! an `Artifact` without `from_bytes`. Nothing in the workspace does, because the
+    //! compiler derives resources from graph value names and `ProgramGraph` already
+    //! refuses a duplicate name, but a future constructor would need the same check.
+
+    use super::*;
+    use crate::cost::CostBreakdown;
+
+    fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
+        ArtifactPayload {
+            schema_version: ARTIFACT_SCHEMA_VERSION,
+            nodes: Vec::new(),
+            dependencies: Vec::new(),
+            selected_plan: SelectedPlan {
+                fusion: Vec::new(),
+                barriers: Vec::new(),
+                materializations: Vec::new(),
+                candidates_explored: 0,
+                search_budget: SearchBudget::new(1, 1, 0, 0, 1),
+                search_work: SearchWork::default(),
+                selection_cost: CostBreakdown::default(),
+                pruned_fusions: Vec::new(),
+                execution: ExecutionMode::Static,
+                measurement: PlanMeasurement::Unbudgeted,
+            },
+            abi: ArtifactAbi {
+                resources: Vec::new(),
+                entries: Vec::new(),
+            },
+            resources,
+            resource_envelope: ResourceEnvelope {
+                total_bytes: 0,
+                peak_live_bytes: 0,
+            },
+            geometry: Vec::new(),
+            provenance: Provenance {
+                source_graph: Digest([0; 32]),
+                request: Digest([0; 32]),
+                compiler_version: env!("CARGO_PKG_VERSION").to_string(),
+            },
+        }
+    }
+
+    fn resource(name: &str, value: u32) -> ResourceRecord {
+        ResourceRecord {
+            value: ArtifactValueId(value),
+            name: name.to_string(),
+            element_count: 1,
+            byte_count: 4,
+            lifetime: ResourceLifetime::Output,
+            first_stage: 0,
+            last_stage: 0,
+        }
+    }
+
+    fn decode(resources: Vec<ResourceRecord>) -> Result<Artifact, CompileError> {
+        let payload = payload(resources);
+        let framed = encode_payload(&payload).expect("fixture payload must frame");
+        Artifact::from_bytes(&framed.bytes)
+    }
+
+    #[test]
+    fn one_name_for_two_values_is_refused_at_decode() {
+        let error = decode(vec![resource("out", 1), resource("out", 2)])
+            .expect_err("a name claimed by two values must not decode");
+
+        assert_eq!(
+            error.diagnostic.code.as_str(),
+            CompilerFailureKind::MalformedArtifact.as_str()
+        );
+        let message = error.diagnostic.message.as_ref();
+        assert!(
+            message.contains("`out`") && message.contains("value 1") && message.contains("value 2"),
+            "the diagnostic must name the reused name and both values it claims: {message}"
+        );
+    }
+
+    #[test]
+    fn one_name_repeated_for_one_value_is_not_a_collision() {
+        let artifact = decode(vec![resource("out", 1), resource("out", 1)])
+            .expect("a repeated record for one value names one binding");
+
+        let by_name = artifact
+            .canonical_value_by_name()
+            .expect("no name claims two values");
+        assert_eq!(by_name.get("out").copied(), Some(ArtifactValueId(1)));
+    }
+
+    #[test]
+    fn every_resource_name_resolves_to_its_own_value() {
+        let names = ["a", "b", "c"];
+        let records = names
+            .iter()
+            .enumerate()
+            .map(|(index, name)| resource(name, index as u32 + 7))
+            .collect::<Vec<_>>();
+        let artifact = decode(records.clone()).expect("distinct names must decode");
+
+        let by_name = artifact
+            .canonical_value_by_name()
+            .expect("distinct names cannot collide");
+        assert_eq!(by_name.len(), records.len());
+        for record in &records {
+            assert_eq!(
+                by_name.get(record.name.as_str()).copied(),
+                Some(record.value),
+                "`{}` must resolve to its own value",
+                record.name
+            );
+        }
+    }
 }

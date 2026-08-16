@@ -32,6 +32,9 @@ fn emit_ptx_module(
                 minor: profile.generation() as u32 % 10,
             },
             subgroup_size: profile.subgroup_size().max(1),
+            // No caller setting reaches this route, so the exact form of
+            // `InverseSqrt` and `Reciprocal` is the one to prefer. The ops PTX
+            // can only approximate no longer consult this field.
             ulp_budget: None,
             cooperative_grid_sync: true,
         },

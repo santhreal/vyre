@@ -151,6 +151,8 @@ pub mod target_dialect;
 pub mod trace_jit_policy;
 /// Backend-neutral checked transfer accounting policy.
 pub mod transfer_accounting;
+/// Device-side trap record layout shared by every backend that reports one.
+pub mod trap_record;
 /// Backend-neutral autotuner framework.
 pub mod tuner;
 /// Shared validation caches and launch-geometry contracts.
@@ -274,13 +276,13 @@ pub use pipeline::{
 };
 pub use program_walks::{auto_grid, enforce_output_budget, output_binding_layouts_into};
 pub use program_walks::{
-    coerce_to_pow2_with_tail_mask, dispatch_element_count, dispatch_element_count_for_program,
-    dispatch_param_words_into, element_size_bytes, enforce_actual_output_budget,
-    find_indirect_dispatch, infer_dispatch_grid, infer_dispatch_grid_for_count,
-    output_binding_layout, output_binding_layout_parts, output_binding_layouts,
-    output_layout_from_program, try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words,
-    try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout, OutputLayout,
-    TailMaskPolicy,
+    admit_dispatch_grid, coerce_to_pow2_with_tail_mask, dispatch_element_count,
+    dispatch_element_count_for_program, dispatch_param_words_into, element_size_bytes,
+    enforce_actual_output_budget, find_indirect_dispatch, infer_dispatch_grid,
+    infer_dispatch_grid_for_count, output_binding_layout, output_binding_layout_parts,
+    output_binding_layouts, output_layout_from_program, try_coerce_to_pow2_with_tail_mask,
+    try_dispatch_param_words, try_dispatch_param_words_into, IndirectDispatch,
+    OutputBindingLayout, OutputLayout, TailMaskPolicy,
 };
 pub use registry::DEPRECATED_OP_CODE;
 pub use registry::{

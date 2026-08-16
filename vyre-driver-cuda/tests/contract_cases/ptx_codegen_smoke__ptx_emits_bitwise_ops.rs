@@ -278,8 +278,45 @@ fn ptx_uses_strict_inverse_sqrt_without_ulp_budget() {
     );
 }
 
+/// WHY: closes, on this route, the class "the PTX emitter refuses a program for
+/// want of a `ulp_budget` it cannot usefully choose". PTX has no exact `tanh`,
+/// so a budget selects nothing for it; gating admission on the budget meant
+/// every route had to pass a positive value, and the artifact route that did
+/// not took 21 registered ops out of the conformance certificate on cuda.
+///
+/// The invariant over the whole `UnOp` space lives with the emitter that owns
+/// the decision, in `vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs`.
+/// What this asserts is that the direct CUDA dispatch route inherits it.
+///
+/// Does not catch: a budget that changes the emitted numbers beyond the parity
+/// window, which the conformance comparator owns.
 #[test]
-fn ptx_requires_ulp_budget_for_approximate_transcendentals() {
+fn a_ulp_budget_still_selects_the_approximate_form_where_both_exist() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::F32).with_count(1),
+            BufferDecl::output("out", 1, DataType::F32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::inverse_sqrt(Expr::load("input", Expr::u32(0))),
+        )],
+    );
+    let mut budgeted = default_config();
+    budgeted.ulp_budget = Some(64);
+    let secondary_text = program_to_ptx(&program, &budgeted)
+        .expect("Fix: a budgeted inverse-sqrt must lower to PTX.");
+    assert!(
+        secondary_text.contains("rsqrt.approx.f32"),
+        "Fix: a positive ULP budget must select the approximate reciprocal-sqrt where PTX offers \
+         both forms; got:\n{secondary_text}"
+    );
+}
+
+#[test]
+fn an_approximate_only_transcendental_lowers_without_any_budget() {
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::F32).with_count(1),
@@ -295,20 +332,11 @@ fn ptx_requires_ulp_budget_for_approximate_transcendentals() {
             },
         )],
     );
-    let err = program_to_ptx(&program, &default_config())
-        .expect_err("Fix: CUDA tanh must reject implicit approximate lowering.");
-    assert!(
-        err.contains("tanh") && err.contains("ulp_budget") && err.contains("Fix:"),
-        "Fix: approximate-transcendental rejection must name the op and remediation; got: {err}"
-    );
-
-    let mut config = default_config();
-    config.ulp_budget = Some(64);
-    let secondary_text = program_to_ptx(&program, &config)
-        .expect("Fix: explicit ULP budget must permit approximate tanh PTX.");
+    let secondary_text = program_to_ptx(&program, &default_config())
+        .expect("Fix: PTX has no exact tanh, so the only lowering must not need a budget.");
     assert!(
         secondary_text.contains("tanh.approx.f32"),
-        "Fix: budgeted tanh lowering must use the PTX fast approximation; got:\n{secondary_text}"
+        "Fix: tanh must lower to the one instruction PTX has; got:\n{secondary_text}"
     );
 }
 
