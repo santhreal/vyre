@@ -61,7 +61,10 @@ impl Gate for ProptestCoverage {
         ));
         if carrying < FLOOR {
             report.find(Finding::new(
-                format!("property-test coverage is {} file(s) below the floor of {FLOOR}", FLOOR - carrying),
+                format!(
+                    "property-test coverage is {} file(s) below the floor of {FLOOR}",
+                    FLOOR - carrying
+                ),
                 "restore the deleted property test; lower the floor in \
                  xtask/src/gates/proptest_coverage.rs only with a stated reason for why the \
                  coverage is no longer needed",

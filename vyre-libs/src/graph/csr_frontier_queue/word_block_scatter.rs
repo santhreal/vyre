@@ -106,11 +106,10 @@ fn frontier_word_queue_scatter_program(
     let words = bitset_words(node_count);
     let block_lanes = 1024_u32;
     let num_blocks = words.div_ceil(block_lanes).max(1);
-    let total_partials =
-        match checked_frontier_u32_product(num_blocks, block_lanes, op_id) {
-            Ok(total_partials) => total_partials,
-            Err(error) => return invalid_frontier_queue_sizing_program(op_id, queue_len, error),
-        };
+    let total_partials = match checked_frontier_u32_product(num_blocks, block_lanes, op_id) {
+        Ok(total_partials) => total_partials,
+        Err(error) => return invalid_frontier_queue_sizing_program(op_id, queue_len, error),
+    };
     let tail_bits = node_count & 31;
     let tail_mask = if tail_bits == 0 {
         u32::MAX
@@ -149,10 +148,7 @@ fn frontier_word_queue_scatter_program(
         ),
         Node::let_bind(
             "fwq_block",
-            Expr::div(
-                Expr::var("fwq_word_idx"),
-                Expr::u32(1024),
-            ),
+            Expr::div(Expr::var("fwq_word_idx"), Expr::u32(1024)),
         ),
         Node::let_bind(
             "fwq_word",

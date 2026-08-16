@@ -1,6 +1,6 @@
-use vyre_spec::c11_token::*;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::c11_token::*;
 
 /// Topological CFG Assembly (Agent A - Frontend)
 ///

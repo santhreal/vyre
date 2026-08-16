@@ -253,7 +253,13 @@ impl CseCtx {
                     body: std::sync::Arc::new(nodes),
                 }
             }
-            Node::TileLoad { tile, tile_type, buffer, origin, layout } => {
+            Node::TileLoad {
+                tile,
+                tile_type,
+                buffer,
+                origin,
+                layout,
+            } => {
                 self.clear_observed_state();
                 let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
                 Node::TileLoad {
@@ -264,7 +270,11 @@ impl CseCtx {
                     layout: layout.clone(),
                 }
             }
-            Node::TileStore { buffer, origin, tile } => {
+            Node::TileStore {
+                buffer,
+                origin,
+                tile,
+            } => {
                 self.clear_observed_state();
                 let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
                 Node::TileStore {
@@ -278,7 +288,12 @@ impl CseCtx {
                 a: a.clone(),
                 b: b.clone(),
             },
-            Node::TileReduce { out, tile, op, axis } => Node::TileReduce {
+            Node::TileReduce {
+                out,
+                tile,
+                op,
+                axis,
+            } => Node::TileReduce {
                 out: out.clone(),
                 tile: tile.clone(),
                 op: *op,

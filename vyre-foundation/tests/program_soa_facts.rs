@@ -465,8 +465,7 @@ fn buffers_provably_distinct_for_distinct_names() {
 /// A buffer trivially aliases itself.
 #[test]
 fn buffers_provably_distinct_rejects_same_name() {
-    let facts =
-        ProgramFacts::build(&program(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]));
+    let facts = ProgramFacts::build(&program(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]));
     assert!(!facts.buffers_provably_distinct("a", "a"));
 }
 
@@ -475,8 +474,7 @@ fn buffers_provably_distinct_rejects_same_name() {
 /// honest.
 #[test]
 fn buffers_provably_distinct_rejects_phantom_name() {
-    let facts =
-        ProgramFacts::build(&program(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]));
+    let facts = ProgramFacts::build(&program(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]));
     assert!(!facts.buffers_provably_distinct("a", "phantom"));
 }
 
@@ -499,8 +497,7 @@ fn buffer_does_not_escape_when_read_only() {
 /// A buffer that's stored to escapes (host reads back).
 #[test]
 fn buffer_escapes_when_stored_to() {
-    let facts =
-        ProgramFacts::build(&program(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]));
+    let facts = ProgramFacts::build(&program(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]));
     assert!(facts.buffer_escapes("a"));
 }
 

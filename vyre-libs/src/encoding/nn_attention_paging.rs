@@ -4,7 +4,6 @@
 //! self-substrate use sites that compose those primitives into inference-path
 //! dispatch stages.
 
-use vyre_foundation::ir::{Expr, Node, Program};
 use crate::nn::{
     attention_passes::{
         attention_max_pass, attention_max_pass_program, attention_sum_pass,
@@ -16,6 +15,7 @@ use crate::nn::{
         quest_zero_fill, quest_zero_fill_body,
     },
 };
+use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Emit the reusable max-score body for a single query row.
 #[must_use]

@@ -501,15 +501,16 @@ impl ArtifactSession {
             .state
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let canonical = state
-            .admitted
-            .neutral()
-            .canonical_value_by_name()
-            .map_err(|collision| {
-                ArtifactSessionError::from(BackendError::InvalidProgram {
-                    fix: collision.to_string(),
-                })
-            })?;
+        let canonical =
+            state
+                .admitted
+                .neutral()
+                .canonical_value_by_name()
+                .map_err(|collision| {
+                    ArtifactSessionError::from(BackendError::InvalidProgram {
+                        fix: collision.to_string(),
+                    })
+                })?;
         let buffers = program.buffers();
         program
             .output_buffer_indices()

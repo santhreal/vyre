@@ -26,9 +26,9 @@ use crate::builder::{
     strided_writeback_child, BuildOptions,
 };
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 /// Canonical op id; matches the region generator name so conformance
 /// certificates stay self-describing.

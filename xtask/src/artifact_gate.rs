@@ -102,8 +102,7 @@ impl Inspection {
     /// them so a reader of the file sees what was found, and the gate reports
     /// them too, so committing a blocked artifact does not buy silence.
     pub fn blocked(&mut self, artifact: &str, message: impl Into<String>, fix: impl Into<String>) {
-        self.findings
-            .push(Finding::in_file(artifact, message, fix));
+        self.findings.push(Finding::in_file(artifact, message, fix));
     }
 
     /// Render `value` as an owned artifact, recording a serializer failure.
@@ -234,7 +233,11 @@ fn records_provenance(path: &Path) -> bool {
 /// the same recording and keeps the tree it was recorded from. Regenerating
 /// therefore leaves an unchanged artifact untouched instead of re-attributing
 /// it to whatever tree happened to run the gate.
-fn write_artifact(root: &Path, artifact: &Generated, fingerprint: Result<&str, &String>) -> Vec<Finding> {
+fn write_artifact(
+    root: &Path,
+    artifact: &Generated,
+    fingerprint: Result<&str, &String>,
+) -> Vec<Finding> {
     let content = if records_provenance(&artifact.path) {
         let committed = read_committed(root, &artifact.path).ok();
         let recorded = committed.as_deref().map(split_provenance);
@@ -298,10 +301,17 @@ fn stamp_provenance(
             "Record evidence from a checkout git can identify. An artifact that names no tree proves nothing about one.",
         )
     })?;
-    if let Some(issue) = crate::source_provenance::issues(fingerprint).into_iter().next() {
+    if let Some(issue) = crate::source_provenance::issues(fingerprint)
+        .into_iter()
+        .next()
+    {
         return Err(Finding::in_file(
             path.to_path_buf(),
-            format!("`{}` was not written because the {}", path.display(), issue.predicate()),
+            format!(
+                "`{}` was not written because the {}",
+                path.display(),
+                issue.predicate()
+            ),
             "Record evidence from a checkout whose state git can state exactly.",
         ));
     }
@@ -315,7 +325,9 @@ fn stamp_provenance(
             "Render the artifact as an object with a `source_fingerprint` head, or move it out of release/evidence.",
         ));
     };
-    Ok(format!("{{\n  \"{PROVENANCE_KEY}\": \"{fingerprint}\",\n{rest}"))
+    Ok(format!(
+        "{{\n  \"{PROVENANCE_KEY}\": \"{fingerprint}\",\n{rest}"
+    ))
 }
 
 /// The key a recorded artifact names its tree under, at the head of the object.
@@ -337,7 +349,10 @@ pub fn split_provenance(committed: &str) -> (Option<&str>, String) {
     let Some(end) = rest.find("\",\n") else {
         return (None, committed.to_string());
     };
-    (Some(&rest[..end]), format!("{{\n{}", &rest[end + "\",\n".len()..]))
+    (
+        Some(&rest[..end]),
+        format!("{{\n{}", &rest[end + "\",\n".len()..]),
+    )
 }
 
 /// Read the committed copy of `path`, bounded.
@@ -488,7 +503,10 @@ mod tests {
             Vec::new(),
             "Fix: documentation is read beside its source and names no recorded tree."
         );
-        assert!(dir.path().join("docs/optimization/OP_MATRIX.toml").is_file());
+        assert!(dir
+            .path()
+            .join("docs/optimization/OP_MATRIX.toml")
+            .is_file());
     }
 
     #[test]
@@ -503,7 +521,11 @@ mod tests {
             &[Generated::text(ARTIFACT, body)],
             true,
         );
-        assert_eq!(findings, Vec::new(), "Fix: a clean checkout can be recorded.");
+        assert_eq!(
+            findings,
+            Vec::new(),
+            "Fix: a clean checkout can be recorded."
+        );
         let recorded = std::fs::read_to_string(dir.path().join(ARTIFACT))
             .expect("Fix: the recorder wrote the artifact.");
         assert!(

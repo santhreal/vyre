@@ -6,14 +6,27 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::serial::wire::decode::from_wire;
 use vyre_foundation::serial::wire::encode::to_wire;
-use vyre_foundation::validate::{
-    validate_with_options, BackendCapabilities, ValidationOptions,
-};
+use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
 
 fn sample_tile_program() -> Program {
-    let tile_a = Tile::new(DataType::F32, vec![16, 16], Layout::RowMajor, Residency::Register);
-    let tile_b = Tile::new(DataType::F32, vec![16, 16], Layout::ColumnMajor, Residency::Subgroup);
-    let tile_acc = Tile::new(DataType::F32, vec![16, 16], Layout::RowMajor, Residency::Register);
+    let tile_a = Tile::new(
+        DataType::F32,
+        vec![16, 16],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+    let tile_b = Tile::new(
+        DataType::F32,
+        vec![16, 16],
+        Layout::ColumnMajor,
+        Residency::Subgroup,
+    );
+    let tile_acc = Tile::new(
+        DataType::F32,
+        vec![16, 16],
+        Layout::RowMajor,
+        Residency::Register,
+    );
 
     Program::wrapped(
         vec![
@@ -24,8 +37,20 @@ fn sample_tile_program() -> Program {
         [32, 1, 1],
         vec![
             Node::tile_decl("acc", tile_acc),
-            Node::tile_load("t_a", tile_a, "in_a", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor),
-            Node::tile_load("t_b", tile_b, "in_b", vec![Expr::u32(0), Expr::u32(0)], Layout::ColumnMajor),
+            Node::tile_load(
+                "t_a",
+                tile_a,
+                "in_a",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::RowMajor,
+            ),
+            Node::tile_load(
+                "t_b",
+                tile_b,
+                "in_b",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::ColumnMajor,
+            ),
             Node::tile_matmul("acc", "t_a", "t_b"),
             Node::tile_reduce("max_val", "acc", SubgroupReduceOp::Max, 1),
             Node::tile_elementwise(
@@ -173,14 +198,25 @@ fn tile_program_rejects_register_overflow() {
 
 #[test]
 fn tile_program_rejects_write_only_load_and_read_only_store() {
-    let tile = Tile::new(DataType::F32, vec![4, 4], Layout::RowMajor, Residency::Register);
+    let tile = Tile::new(
+        DataType::F32,
+        vec![4, 4],
+        Layout::RowMajor,
+        Residency::Register,
+    );
     let prog_bad_load = Program::wrapped(
         vec![
             BufferDecl::storage("wo_buf", 0, BufferAccess::WriteOnly, DataType::F32).with_count(16),
             BufferDecl::output("out", 1, DataType::F32).with_count(16),
         ],
         [32, 1, 1],
-        vec![Node::tile_load("t", tile.clone(), "wo_buf", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor)],
+        vec![Node::tile_load(
+            "t",
+            tile.clone(),
+            "wo_buf",
+            vec![Expr::u32(0), Expr::u32(0)],
+            Layout::RowMajor,
+        )],
     );
     let res_load = validate_with_options(&prog_bad_load, ValidationOptions::default());
     assert!(!res_load.is_ok());
@@ -204,7 +240,12 @@ fn tile_program_rejects_write_only_load_and_read_only_store() {
 fn tile_encoder_rejects_over_limit_extents() {
     use vyre_foundation::serial::wire::MAX_TENSOR_RANK;
     let huge_extents = vec![1u32; MAX_TENSOR_RANK + 1];
-    let tile = Tile::new(DataType::F32, huge_extents, Layout::RowMajor, Residency::Register);
+    let tile = Tile::new(
+        DataType::F32,
+        huge_extents,
+        Layout::RowMajor,
+        Residency::Register,
+    );
     let prog = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
         [1, 1, 1],

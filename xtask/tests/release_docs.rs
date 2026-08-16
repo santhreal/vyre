@@ -172,7 +172,8 @@ fn two_independently_written_fragments_both_reach_the_changelog() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
     fs::write(
-        temp.path().join("release/changes/unreleased/second-change.toml"),
+        temp.path()
+            .join("release/changes/unreleased/second-change.toml"),
         "category = \"Changed\"\ntext = \"The second author's change is recorded too.\"\n",
     )
     .expect("Fix: second fixture fragment must be writable");
@@ -206,7 +207,8 @@ fn an_unstaged_fragment_reaches_the_changelog() {
         "Fix: the fixture must initialise as a repository"
     );
     fs::write(
-        temp.path().join("release/changes/unreleased/never-staged.toml"),
+        temp.path()
+            .join("release/changes/unreleased/never-staged.toml"),
         "category = \"Added\"\ntext = \"The unstaged fragment is still a change.\"\n",
     )
     .expect("Fix: unstaged fixture fragment must be writable");
@@ -238,9 +240,8 @@ fn check_rejects_generated_changelog_drift() {
 
     let output = run_gate(temp.path(), "--check");
     assert!(!output.status.success());
-    assert!(reported(&output).contains(
-        "the generated release content disagrees with the fragments and the train"
-    ));
+    assert!(reported(&output)
+        .contains("the generated release content disagrees with the fragments and the train"));
 }
 
 /// Prevents a package from publishing under two versions or repositories in one release train.
@@ -269,8 +270,9 @@ fn an_external_action_without_an_id_fails_closed() {
 
     let output = run_gate(temp.path(), "--write");
     assert!(!output.status.success());
-    assert!(reported(&output)
-        .contains("an approval-gated external action has no id, or two share one"));
+    assert!(
+        reported(&output).contains("an approval-gated external action has no id, or two share one")
+    );
 }
 
 /// The train declares one entry per action the launch contract needs.
@@ -327,7 +329,8 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     // newline-free token would rewrite that line too and the swap would prove
     // nothing about ordering.
     let candidate = "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\" -m \"$VYRE_RELEASE_TAG_VYRE_RC\"\n";
-    let prepublish = "./cargo_full run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
+    let prepublish =
+        "./cargo_full run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
     let reordered = launch
         .replace(candidate, "__VYRE_RELEASE_ORDER_SWAP__")
         .replace(prepublish, candidate)
@@ -410,7 +413,9 @@ fn two_branches_appending_a_fragment_merge_with_both_fragments_intact() {
     .expect("Fix: the shared-file control must be writable");
     git(shared.path(), &["add", "--all"]);
     git(shared.path(), &["commit", "--quiet", "-m", "shared base"]);
-    let shared_base = git(shared.path(), &["rev-parse", "HEAD"]).trim().to_string();
+    let shared_base = git(shared.path(), &["rev-parse", "HEAD"])
+        .trim()
+        .to_string();
     append_fragment_on_branch(
         shared.path(),
         &shared_base,

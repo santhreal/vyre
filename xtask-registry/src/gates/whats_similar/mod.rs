@@ -69,9 +69,7 @@ impl Gate for WhatsSimilar {
     }
 
     fn usage(&self) -> &'static [&'static str] {
-        &[
-            "--op-id ID narrows the comparison to one registered operation",
-        ]
+        &["--op-id ID narrows the comparison to one registered operation"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

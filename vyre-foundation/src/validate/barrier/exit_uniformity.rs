@@ -229,7 +229,9 @@ fn analyze_exit_node(
             ExitProof::NONE
         }
         Node::TileElementwise { body, .. } => analyze_exit_sequence(body, state, path_uniform),
-        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => ExitProof::NONE,
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {
+            ExitProof::NONE
+        }
         Node::Opaque(_) => {
             state.unknown_write = true;
             ExitProof::NONE

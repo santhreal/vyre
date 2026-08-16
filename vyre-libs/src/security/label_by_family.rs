@@ -1,9 +1,9 @@
 //! `label_by_family`  -  Tier-3 shim over
 //! [`crate::label::resolve_family`].
 
+use crate::label::resolve_family::resolve_family;
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
-use crate::label::resolve_family::resolve_family;
 
 const OP_ID: &str = "vyre-libs::security::label_by_family";
 

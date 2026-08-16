@@ -45,7 +45,9 @@ fn trap_tags(program: &Program) -> Vec<String> {
 
 #[test]
 fn an_empty_candidate_set_traps_instead_of_indexing_below_zero() {
-    let tags = trap_tags(&nucleus_select("selected", "weights", "uniform", "token", 0, 0.9));
+    let tags = trap_tags(&nucleus_select(
+        "selected", "weights", "uniform", "token", 0, 0.9,
+    ));
     assert_eq!(
         tags.len(),
         1,
@@ -61,7 +63,10 @@ fn an_empty_candidate_set_traps_instead_of_indexing_below_zero() {
 #[test]
 fn a_single_candidate_still_builds_a_real_draw() {
     assert!(
-        trap_tags(&nucleus_select("selected", "weights", "uniform", "token", 1, 0.9)).is_empty(),
+        trap_tags(&nucleus_select(
+            "selected", "weights", "uniform", "token", 1, 0.9
+        ))
+        .is_empty(),
         "one candidate is the smallest drawable set and must not trap"
     );
 }

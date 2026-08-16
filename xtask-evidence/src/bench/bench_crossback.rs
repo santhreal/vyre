@@ -60,7 +60,8 @@ const GAP_COLUMNS: &str = "| case | backend | declared by |\n\
 
 const NO_GAPS: &str = "Every backend a case contract declares carries a measurement.\n";
 
-const REGENERATE: &str = "Run `./cargo_full run --bin xtask -- bench-crossback --write` and commit \
+const REGENERATE: &str =
+    "Run `./cargo_full run --bin xtask -- bench-crossback --write` and commit \
                           the table. It is derived from the committed evidence, so the two agree \
                           or one of them is stale.";
 
@@ -168,7 +169,10 @@ fn collect(root: &Path, report: &mut Report) -> Result<BTreeMap<String, Case>, G
         })?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.extension().is_some_and(|extension| extension == "json"))
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "json")
+        })
         .collect();
     artifacts.sort();
 
@@ -465,14 +469,26 @@ mod tests {
     #[test]
     fn two_backends_measuring_one_case_render_one_comparison() {
         let (cases, report) = read(&[
-            ("a.json", artifact("cuda", "case.one", 200_000.0, &["cuda", "wgpu"])),
-            ("b.json", artifact("wgpu", "case.one", 800_000.0, &["cuda", "wgpu"])),
+            (
+                "a.json",
+                artifact("cuda", "case.one", 200_000.0, &["cuda", "wgpu"]),
+            ),
+            (
+                "b.json",
+                artifact("wgpu", "case.one", 800_000.0, &["cuda", "wgpu"]),
+            ),
         ]);
         assert_eq!(report.findings, Vec::new());
         assert_eq!(cases.len(), 1);
         let table = render(&cases);
-        assert!(table.contains("| `case.one` | cuda | 0.200 | 1.000 |"), "{table}");
-        assert!(table.contains("| `case.one` | wgpu | 0.800 | 4.000 |"), "{table}");
+        assert!(
+            table.contains("| `case.one` | cuda | 0.200 | 1.000 |"),
+            "{table}"
+        );
+        assert!(
+            table.contains("| `case.one` | wgpu | 0.800 | 4.000 |"),
+            "{table}"
+        );
         assert!(table.contains(NO_GAPS), "{table}");
     }
 
@@ -483,11 +499,23 @@ mod tests {
     #[test]
     fn evidence_with_no_measurement_cannot_render_a_clean_table() {
         let (cases, _) = read(&[]);
-        assert_eq!(cases.values().map(|case| case.measured.len()).sum::<usize>(), 0);
+        assert_eq!(
+            cases
+                .values()
+                .map(|case| case.measured.len())
+                .sum::<usize>(),
+            0
+        );
         let mut named = artifact("cuda", "case.one", 200_000.0, &["cuda"]);
         named["cases"][0]["wall_ns"] = json!(null);
         let (cases, report) = read(&[("a.json", named)]);
-        assert_eq!(cases.values().map(|case| case.measured.len()).sum::<usize>(), 0);
+        assert_eq!(
+            cases
+                .values()
+                .map(|case| case.measured.len())
+                .sum::<usize>(),
+            0
+        );
         assert_eq!(report.findings.len(), 1);
     }
 
@@ -509,7 +537,11 @@ mod tests {
                 .expect("artifact is an object")
                 .remove(path[0]);
             let (cases, report) = read(&[("a.json", document)]);
-            assert_eq!(report.findings.len(), 1, "removing {path:?} reported nothing");
+            assert_eq!(
+                report.findings.len(),
+                1,
+                "removing {path:?} reported nothing"
+            );
             assert!(
                 report.findings[0].message.contains(expected),
                 "{}",
@@ -534,7 +566,11 @@ mod tests {
                     .remove("selected_backend");
             }
             let (_, report) = read(&[("a.json", document)]);
-            assert_eq!(report.findings.len(), 1, "removing {field} reported nothing");
+            assert_eq!(
+                report.findings.len(),
+                1,
+                "removing {field} reported nothing"
+            );
             assert!(
                 report.findings[0].message.contains(expected),
                 "{}",
@@ -549,7 +585,11 @@ mod tests {
     fn a_non_positive_or_infinite_reading_is_not_a_measurement() {
         for wall_ns in [0.0, -1.0, f64::INFINITY, f64::NAN] {
             let (_, report) = read(&[("a.json", artifact("cuda", "case.one", wall_ns, &["cuda"]))]);
-            assert_eq!(report.findings.len(), 1, "wall_ns {wall_ns} reported nothing");
+            assert_eq!(
+                report.findings.len(),
+                1,
+                "wall_ns {wall_ns} reported nothing"
+            );
         }
     }
 
@@ -567,10 +607,16 @@ mod tests {
         assert_eq!(report.findings, Vec::new());
         assert_eq!(
             gaps(&cases),
-            vec![("case.one", "metal", "a.json"), ("case.one", "wgpu", "a.json")]
+            vec![
+                ("case.one", "metal", "a.json"),
+                ("case.one", "wgpu", "a.json")
+            ]
         );
         let table = render(&cases);
-        assert!(table.contains("| `case.one` | metal | `a.json` |"), "{table}");
+        assert!(
+            table.contains("| `case.one` | metal | `a.json` |"),
+            "{table}"
+        );
         assert!(!table.contains(NO_GAPS), "{table}");
     }
 
@@ -581,8 +627,14 @@ mod tests {
     #[test]
     fn a_rendered_table_audits_clean_and_one_edited_cell_does_not() {
         let (cases, _) = read(&[
-            ("a.json", artifact("cuda", "case.one", 200_000.0, &["cuda", "wgpu"])),
-            ("b.json", artifact("wgpu", "case.one", 800_000.0, &["cuda", "wgpu"])),
+            (
+                "a.json",
+                artifact("cuda", "case.one", 200_000.0, &["cuda", "wgpu"]),
+            ),
+            (
+                "b.json",
+                artifact("wgpu", "case.one", 800_000.0, &["cuda", "wgpu"]),
+            ),
         ]);
         let rendered = render(&cases);
         let directory = tempfile::tempdir().expect("temporary directory");
@@ -597,7 +649,10 @@ mod tests {
         let mut report = Report::clean();
         audit_table(&path, &rendered, &mut report);
         assert_eq!(report.findings.len(), 1);
-        assert_eq!(report.findings[0].line, Some(first_divergence(&tampered, &rendered)));
+        assert_eq!(
+            report.findings[0].line,
+            Some(first_divergence(&tampered, &rendered))
+        );
     }
 
     /// WHY: the previous table lived in a gitignored directory, so the absent
@@ -618,7 +673,10 @@ mod tests {
     /// prefix, or panicking on a short one, both defeat that.
     #[test]
     fn a_shortened_fingerprint_keeps_its_prefix_and_survives_a_short_value() {
-        assert_eq!(short("source-tree-v1:0123456789abcdef"), "source-tree-v1:0123456789ab");
+        assert_eq!(
+            short("source-tree-v1:0123456789abcdef"),
+            "source-tree-v1:0123456789ab"
+        );
         assert_eq!(short("source-tree-v1:abc"), "source-tree-v1:abc");
         assert_eq!(short("0123456789abcdef"), "0123456789ab");
         assert_eq!(short(""), "");

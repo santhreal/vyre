@@ -51,10 +51,9 @@ fn declared_selections() -> BTreeMap<String, (BTreeSet<String>, bool)> {
     table
         .iter()
         .map(|(name, spec)| {
-            let features: BTreeSet<String> =
-                xtask::toml_text::string_array(spec.get("features"))
-                    .into_iter()
-                    .collect();
+            let features: BTreeSet<String> = xtask::toml_text::string_array(spec.get("features"))
+                .into_iter()
+                .collect();
             let default_features = spec
                 .get("default-features")
                 .and_then(toml::Value::as_bool)

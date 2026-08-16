@@ -455,10 +455,12 @@ mod tests {
     fn publish_slot_rejects_inflight_slot() {
         let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
         // Publish once (now status = PUBLISHED).
-        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1]).unwrap();
+        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1])
+            .unwrap();
         // Try to publish again  -  slot is PUBLISHED (not EMPTY/DONE).
-        let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[2])
-            .expect_err("must reject publishing to an in-flight slot");
+        let err =
+            ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[2])
+                .expect_err("must reject publishing to an in-flight slot");
         assert!(
             err.to_string().contains("not publishable"),
             "unexpected error: {err}"
@@ -468,8 +470,9 @@ mod tests {
     #[test]
     fn publish_slot_rejects_out_of_bounds() {
         let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
-        let err = ResidentWorkQueue::publish_slot(&mut ring, 99, 1, protocol::opcode::STORE_U32, &[1])
-            .expect_err("must reject slot_idx beyond ring capacity");
+        let err =
+            ResidentWorkQueue::publish_slot(&mut ring, 99, 1, protocol::opcode::STORE_U32, &[1])
+                .expect_err("must reject slot_idx beyond ring capacity");
         assert!(
             err.to_string().contains("slot_idx exceeds ring slot count"),
             "unexpected error: {err}"
@@ -480,9 +483,14 @@ mod tests {
     fn publish_slot_rejects_too_many_args() {
         let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
         let too_many = vec![0u32; ARGS_PER_SLOT as usize + 1];
-        let err =
-            ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &too_many)
-                .expect_err("must reject args exceeding ARGS_PER_SLOT");
+        let err = ResidentWorkQueue::publish_slot(
+            &mut ring,
+            0,
+            1,
+            protocol::opcode::STORE_U32,
+            &too_many,
+        )
+        .expect_err("must reject args exceeding ARGS_PER_SLOT");
         assert!(
             err.to_string().contains("too many args for one slot"),
             "unexpected error: {err}"
@@ -493,10 +501,12 @@ mod tests {
     fn publish_slot_allows_republish_after_done() {
         let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
         // Publish, then manually mark as DONE.
-        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1]).unwrap();
+        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1])
+            .unwrap();
         write_word(&mut ring, 0, STATUS_WORD as usize, slot::DONE);
         // Should succeed  -  DONE slots are recyclable.
-        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::ATOMIC_ADD, &[2]).unwrap();
+        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::ATOMIC_ADD, &[2])
+            .unwrap();
         let op = read_word(&ring, 0, OPCODE_WORD as usize);
         assert_eq!(op, protocol::opcode::ATOMIC_ADD);
     }
@@ -504,7 +514,8 @@ mod tests {
     #[test]
     fn ring_slot_transition_state_machine_accepts_legal_lifecycle() {
         let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
-        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1]).unwrap();
+        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1])
+            .unwrap();
 
         let previous =
             ResidentWorkQueue::transition_slot_status(&mut ring, 0, RingSlotTransition::Claim)
@@ -518,12 +529,14 @@ mod tests {
         assert_eq!(previous, slot::CLAIMED);
         assert_eq!(read_word(&ring, 0, STATUS_WORD as usize), slot::DONE);
 
-        ResidentWorkQueue::publish_slot(&mut ring, 1, 1, protocol::opcode::STORE_U32, &[2]).unwrap();
+        ResidentWorkQueue::publish_slot(&mut ring, 1, 1, protocol::opcode::STORE_U32, &[2])
+            .unwrap();
         ResidentWorkQueue::transition_slot_status(&mut ring, 1, RingSlotTransition::Cancel)
             .expect("Fix: unclaimed published slots must be cancellable");
         assert_eq!(read_word(&ring, 1, STATUS_WORD as usize), slot::EMPTY);
 
-        ResidentWorkQueue::publish_slot(&mut ring, 2, 1, protocol::opcode::STORE_U32, &[3]).unwrap();
+        ResidentWorkQueue::publish_slot(&mut ring, 2, 1, protocol::opcode::STORE_U32, &[3])
+            .unwrap();
         ResidentWorkQueue::transition_slot_status(&mut ring, 2, RingSlotTransition::Fault)
             .expect("Fix: in-flight published slots must transition to FAULT");
         assert_eq!(read_word(&ring, 2, STATUS_WORD as usize), slot::FAULT);
@@ -541,19 +554,22 @@ mod tests {
         );
         assert_eq!(read_word(&ring, 0, STATUS_WORD as usize), slot::EMPTY);
 
-        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1]).unwrap();
+        ResidentWorkQueue::publish_slot(&mut ring, 0, 1, protocol::opcode::STORE_U32, &[1])
+            .unwrap();
         ResidentWorkQueue::transition_slot_status(&mut ring, 0, RingSlotTransition::Claim).unwrap();
         let before = ring.clone();
-        let err = ResidentWorkQueue::transition_slot_status(&mut ring, 0, RingSlotTransition::Cancel)
-            .expect_err("CLAIMED slots are worker-owned and cannot be cancelled by host");
+        let err =
+            ResidentWorkQueue::transition_slot_status(&mut ring, 0, RingSlotTransition::Cancel)
+                .expect_err("CLAIMED slots are worker-owned and cannot be cancelled by host");
         assert!(
             err.to_string().contains("cancel requires an unclaimed"),
             "Fix: illegal cancel error must name ownership boundary, got: {err}"
         );
         assert_eq!(ring, before);
 
-        let err = ResidentWorkQueue::transition_slot_status(&mut ring, 1, RingSlotTransition::Publish)
-            .expect_err("status-only publish is forbidden");
+        let err =
+            ResidentWorkQueue::transition_slot_status(&mut ring, 1, RingSlotTransition::Publish)
+                .expect_err("status-only publish is forbidden");
         assert!(
             err.to_string().contains("publish_slot"),
             "Fix: status-only publish rejection must direct callers to payload-safe APIs, got: {err}"
@@ -624,7 +640,8 @@ mod tests {
 
     #[test]
     fn validate_control_bytes_rejects_too_short() {
-        let err = validate_control_bytes(&[0u8; 4]).expect_err("must reject undersized control buffer");
+        let err =
+            validate_control_bytes(&[0u8; 4]).expect_err("must reject undersized control buffer");
         assert!(
             err.to_string().contains("expected at least"),
             "unexpected error: {err}"
@@ -650,7 +667,8 @@ mod tests {
 
     #[test]
     fn validate_debug_log_bytes_rejects_wrong_size() {
-        let err = validate_debug_log_bytes(&[0u8; 4]).expect_err("must reject undersized debug log");
+        let err =
+            validate_debug_log_bytes(&[0u8; 4]).expect_err("must reject undersized debug log");
         assert!(
             err.to_string().contains("expected exactly"),
             "unexpected error: {err}"
@@ -659,7 +677,8 @@ mod tests {
 
     #[test]
     fn validate_debug_log_bytes_accepts_valid() {
-        let log = ResidentWorkQueue::encode_empty_debug_log(protocol::debug::RECORD_CAPACITY).unwrap();
+        let log =
+            ResidentWorkQueue::encode_empty_debug_log(protocol::debug::RECORD_CAPACITY).unwrap();
         validate_debug_log_bytes(&log).expect("Fix: valid debug log must pass validation");
     }
 
@@ -809,7 +828,8 @@ mod tests {
             let mut words = Vec::new();
 
             ResidentWorkQueue::encode_work_items_ring_words_into(4, 7, &first, &mut words).unwrap();
-            ResidentWorkQueue::encode_work_items_ring_words_into(4, 7, &second, &mut words).unwrap();
+            ResidentWorkQueue::encode_work_items_ring_words_into(4, 7, &second, &mut words)
+                .unwrap();
 
             assert_eq!(
                 read_word_words(&words, 0, STATUS_WORD as usize),

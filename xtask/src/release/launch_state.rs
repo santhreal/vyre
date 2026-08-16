@@ -44,10 +44,22 @@ struct PrepublishGates {
 /// which is the worst kind of evidence: a reader saw four passes and there was
 /// nothing behind them. Each is now the state of that gate's own artifact.
 const PREPUBLISH_GATES: &[(&str, &str)] = &[
-    ("version-matrix", "release/evidence/version/version-matrix.json"),
-    ("metadata-matrix", "release/evidence/metadata/metadata-matrix.json"),
-    ("feature-matrix", "release/evidence/metadata/feature-matrix.json"),
-    ("package-readiness", "release/evidence/package/publish-readiness.json"),
+    (
+        "version-matrix",
+        "release/evidence/version/version-matrix.json",
+    ),
+    (
+        "metadata-matrix",
+        "release/evidence/metadata/metadata-matrix.json",
+    ),
+    (
+        "feature-matrix",
+        "release/evidence/metadata/feature-matrix.json",
+    ),
+    (
+        "package-readiness",
+        "release/evidence/package/publish-readiness.json",
+    ),
 ];
 
 #[derive(Debug, Serialize)]
@@ -162,7 +174,9 @@ fn prepublish_gate_status(
         inspection.blocked(
             ARTIFACT,
             format!("prepublish gate `{gate}` has written no `{artifact}`"),
-            format!("Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact."),
+            format!(
+                "Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact."
+            ),
         );
         return "missing";
     };
@@ -398,8 +412,11 @@ mod tests {
         let root = dir.path();
         for (_, artifact) in super::PREPUBLISH_GATES {
             let path = root.join(artifact);
-            std::fs::create_dir_all(path.parent().expect("Fix: artifact paths carry a directory."))
-                .expect("Fix: create prepublish artifact directory fixture.");
+            std::fs::create_dir_all(
+                path.parent()
+                    .expect("Fix: artifact paths carry a directory."),
+            )
+            .expect("Fix: create prepublish artifact directory fixture.");
             std::fs::write(&path, "{\"blockers\": []}\n")
                 .expect("Fix: write prepublish artifact fixture.");
         }

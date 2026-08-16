@@ -104,9 +104,7 @@ fn assert_clean(entry: Vec<Node>, why: &str) {
     let owned = async_codes();
     let reported = codes(entry);
     assert!(
-        !reported
-            .iter()
-            .any(|found| owned.contains(&found.as_str())),
+        !reported.iter().any(|found| owned.contains(&found.as_str())),
         "{why}: {reported:?}"
     );
 }
@@ -132,7 +130,12 @@ fn a_second_store_under_a_tag_in_flight_is_rejected() {
 #[test]
 fn a_start_after_the_wait_is_accepted() {
     assert_clean(
-        vec![load("stage0"), wait("stage0"), load("stage0"), wait("stage0")],
+        vec![
+            load("stage0"),
+            wait("stage0"),
+            load("stage0"),
+            wait("stage0"),
+        ],
         "the tag is free once its copy has been waited",
     );
 }

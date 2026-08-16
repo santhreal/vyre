@@ -449,7 +449,12 @@ fn explicit_targets(
 }
 
 /// The tracked `*.rs` files cargo would pick up implicitly from one directory.
-fn implicit_targets(tree: &Tree, crate_path: &str, directory: &str, kind: &'static str) -> Vec<Target> {
+fn implicit_targets(
+    tree: &Tree,
+    crate_path: &str,
+    directory: &str,
+    kind: &'static str,
+) -> Vec<Target> {
     let prefix = format!("{crate_path}/{directory}/");
     let mut targets: Vec<Target> = tree
         .paths()
@@ -631,11 +636,7 @@ fn render_guide(
         ]);
     }
 
-    lines.extend([
-        String::new(),
-        "## Cargo targets".to_string(),
-        String::new(),
-    ]);
+    lines.extend([String::new(), "## Cargo targets".to_string(), String::new()]);
     if targets.is_empty() {
         lines.push(
             "Cargo declares no executable, library, test, example, or benchmark target."
@@ -659,11 +660,7 @@ fn render_guide(
         }
     }
 
-    lines.extend([
-        String::new(),
-        "## Test classes".to_string(),
-        String::new(),
-    ]);
+    lines.extend([String::new(), "## Test classes".to_string(), String::new()]);
     lines.extend(fields.test_classes.iter().map(|item| format!("- {item}")));
     lines.extend([
         String::new(),

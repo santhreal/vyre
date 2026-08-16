@@ -9,7 +9,6 @@ use vyre_libs::graph::motif::{
     MOTIF_WORKGROUP_SIZE, TWO_EDGE_PATH_MOTIF,
 };
 
-
 #[test]
 fn try_cpu_ref_into_rejects_bad_motif_endpoint_without_clobbering_witness() {
     let mut witness = vec![9, 8, 7];

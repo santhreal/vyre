@@ -1080,7 +1080,8 @@ impl vyre_foundation::geometry::GeometryStrategy for dyn VyreBackend {
         requirements: &vyre_foundation::geometry::GeometryRequirements,
         problem_elements: u32,
     ) -> Vec<vyre_foundation::geometry::LaunchGeometry> {
-        self.device_profile().rank_geometries(requirements, problem_elements)
+        self.device_profile()
+            .rank_geometries(requirements, problem_elements)
     }
 }
 

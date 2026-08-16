@@ -27,6 +27,7 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::visit::for_each_node;
+use vyre_libs::matching::CompiledDfa;
 use vyre_libs::scan::classic_ac::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
@@ -42,7 +43,6 @@ use vyre_libs::scan::{
     build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce, fused_region_evidence_program,
     regex_admission_by_region_program, RegexReplayPolicy,
 };
-use vyre_libs::matching::CompiledDfa;
 
 const PATTERNS: [&[u8]; 4] = [b"alpha", b"beta", b"gamma", b"al"];
 const PATTERN_COUNT: u32 = 4;

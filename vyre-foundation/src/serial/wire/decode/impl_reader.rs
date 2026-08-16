@@ -655,7 +655,10 @@ impl Reader<'_> {
                     permutation.push(self.u32()?);
                 }
                 let period = self.u32()?;
-                Ok(crate::ir::Layout::Swizzled { permutation, period })
+                Ok(crate::ir::Layout::Swizzled {
+                    permutation,
+                    period,
+                })
             }
             other => Err(format!(
                 "Fix: unknown tile layout tag {other}; use a compatible serializer."

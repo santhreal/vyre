@@ -2,12 +2,12 @@ use super::{CachedToposortProgram, ToposortGpuScratch};
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::toposort::{
     plan_toposort_csr_dispatch, validate_toposort_csr_order, ToposortCsrDispatchPlan,
     ToposortCsrError, ToposortCsrStaticInputKey, TOPOSORT_INDEGREE_SCRATCH_BUFFER,
     TOPOSORT_ORDER_OUT_BUFFER, TOPOSORT_QUEUE_SCRATCH_BUFFER,
 };
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Topologically sort a dependency graph through the dispatcher using the
 /// primitive-native CSR representation.

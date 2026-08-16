@@ -11,15 +11,15 @@
 #![forbid(unsafe_code)]
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_libs::graph::csr_backward_or_changed;
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_forward_or_changed;
 use vyre_libs::graph::dispatch::csr_bidirectional::reference_bidirectional_step;
 use vyre_libs::graph::dispatch::csr_forward_or_changed::reference_forward_step_with_change_flag;
 use vyre_libs::graph::dispatch::exploded::{
     build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
 };
 use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
-use vyre_libs::graph::csr_backward_or_changed;
-use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-use vyre_libs::graph::csr_forward_or_changed;
 use vyre_libs::graph::exploded::build_cpu_reference;
 use vyre_libs::graph::motif::{self, MotifEdge};
 use vyre_libs::graph::path_reconstruct;

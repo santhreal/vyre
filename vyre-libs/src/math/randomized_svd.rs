@@ -81,8 +81,10 @@ pub fn try_randomized_projection_step(
     }
 
     let a_cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} A input"), m, n)?;
-    let omega_cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
-    let cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
+    let omega_cells =
+        crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
+    let cells =
+        crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // i = t / l, j = t % l

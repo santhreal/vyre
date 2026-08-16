@@ -9,8 +9,8 @@
 //! [`FLOWS_TO_MASK`] predicate, so the only thing that can differ is the op id
 //! the region carries.
 
-use vyre_foundation::ir::Program;
 use crate::graph::program_graph::ProgramGraphShape;
+use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::{
     forward_reach_fixture_expected, forward_reach_fixture_inputs, security_flow_program,

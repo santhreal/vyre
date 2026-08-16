@@ -1,8 +1,8 @@
 //! Regex compile ASCII class contracts.
 #![cfg(feature = "matching-regex")]
 
-use vyre_libs::scan::{compile_regex_set, RegexCompileError};
 use vyre_libs::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
+use vyre_libs::scan::{compile_regex_set, RegexCompileError};
 
 fn transition_mask(compiled: &vyre_libs::scan::CompiledRegexSet, state: u32, byte: u8) -> u32 {
     let idx = state as usize * 256 * LANES_PER_SUBGROUP + byte as usize * LANES_PER_SUBGROUP;

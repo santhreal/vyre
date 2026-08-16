@@ -502,7 +502,8 @@ pub fn render(
             SUPERSEDED => {
                 text.push_str(&format!(
                     "superseded_by = \"{}\"\n",
-                    row.map(|row| row.superseded_by.as_str()).unwrap_or_default()
+                    row.map(|row| row.superseded_by.as_str())
+                        .unwrap_or_default()
                 ));
                 text.push_str(&format!(
                     "gate = \"{}\"\n",
@@ -610,7 +611,10 @@ pub fn findings(
         for gate in subset.gates {
             if !gate_names.contains(gate) {
                 findings.push(Finding::new(
-                    format!("subset `{}` names `{gate}`, which is not a registered gate", subset.name),
+                    format!(
+                        "subset `{}` names `{gate}`, which is not a registered gate",
+                        subset.name
+                    ),
                     "register the gate, or take the name out of the subset",
                 ));
             }
@@ -618,7 +622,10 @@ pub fn findings(
         if !names.subsets.contains_key(subset.name) {
             findings.push(Finding::new(
                 format!("no workflow runs subset `{}`", subset.name),
-                format!("run `xtask gates --subset {}` from a workflow, or delete the subset", subset.name),
+                format!(
+                    "run `xtask gates --subset {}` from a workflow, or delete the subset",
+                    subset.name
+                ),
             ));
         }
     }
@@ -799,7 +806,10 @@ fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> V
                 } else if !gate_names.contains(&row.gate.as_str()) {
                     findings.push(Finding::in_file(
                         REGISTRY,
-                        format!("`{}` names gate `{}`, which is not registered", row.path, row.gate),
+                        format!(
+                            "`{}` names gate `{}`, which is not registered",
+                            row.path, row.gate
+                        ),
                         "name the gate that carries the checks, or leave the field empty",
                     ));
                 } else if successor == Some(LIVE)
@@ -836,10 +846,7 @@ fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> V
 fn external_findings(root: &Path, registry: &Registry, names: &WorkflowNames) -> Vec<Finding> {
     let mut findings = Vec::new();
     let directory = root.join("scripts");
-    for (parent, scripts) in [
-        (WORKFLOWS, &names.scripts),
-        (PAUSED, &names.paused_scripts),
-    ] {
+    for (parent, scripts) in [(WORKFLOWS, &names.scripts), (PAUSED, &names.paused_scripts)] {
         for (file, line, script) in scripts {
             if script.contains('*') {
                 if !SCRIPT_GLOBS.contains(&script.as_str()) {
@@ -931,7 +938,14 @@ fn write(root: &Path) -> Result<Report, GateError> {
     };
     let gates = subcommands::registry();
     let gate_names: Vec<&str> = gates.iter().map(|gate| gate.name()).collect();
-    let text = render(&gate_names, &subsets, &workflows, &externals, &recorded, &files);
+    let text = render(
+        &gate_names,
+        &subsets,
+        &workflows,
+        &externals,
+        &recorded,
+        &files,
+    );
     let path = registry_path(root);
     fs::write(&path, text).map_err(|error| GateError {
         message: format!("cannot write {}: {error}", path.display()),
@@ -972,12 +986,7 @@ impl Gate for CiRegistry {
         let names = workflow_names(&ctx.root);
         let gates = subcommands::registry();
         let gate_names: Vec<&str> = gates.iter().map(|gate| gate.name()).collect();
-        let mut report = Report::with_findings(findings(
-            &ctx.root,
-            &registry,
-            &names,
-            &gate_names,
-        ));
+        let mut report = Report::with_findings(findings(&ctx.root, &registry, &names, &gate_names));
         report.note(format!(
             "{} gate row(s), {} external row(s), {} workflow row(s), {} subset(s), {} workflow file(s) read",
             registry.gate.len(),
@@ -1029,9 +1038,15 @@ mod tests {
             &mut scanned,
             "docs-ci.yml",
             7,
-            &format!("        run: ./cargo_full run -p xtask --bin xtask -- {RUNNER} --subset docs"),
+            &format!(
+                "        run: ./cargo_full run -p xtask --bin xtask -- {RUNNER} --subset docs"
+            ),
         );
-        assert!(!scanned.invoked.contains_key(RUNNER), "{:?}", scanned.invoked);
+        assert!(
+            !scanned.invoked.contains_key(RUNNER),
+            "{:?}",
+            scanned.invoked
+        );
         assert_eq!(
             scanned.subsets.get("docs"),
             Some(&BTreeSet::from(["docs-ci.yml".to_string()]))
@@ -1227,7 +1242,8 @@ mod tests {
             &scanned,
         );
         assert!(
-            messages(&undeclared).contains("a workflow runs `-p structure-gate`, which no row declares"),
+            messages(&undeclared)
+                .contains("a workflow runs `-p structure-gate`, which no row declares"),
             "{}",
             messages(&undeclared)
         );
@@ -1261,16 +1277,12 @@ mod tests {
         fs::create_dir_all(root.join("scripts")).expect("the fixture tree is created");
         fs::write(root.join("scripts/present.sh"), "#!/bin/sh\n").expect("the script is written");
         let mut scanned = WorkflowNames::default();
-        scanned.scripts.push((
-            "gates.yml".to_string(),
-            7,
-            "present.sh".to_string(),
-        ));
-        scanned.scripts.push((
-            "gates.yml".to_string(),
-            9,
-            "departed.sh".to_string(),
-        ));
+        scanned
+            .scripts
+            .push(("gates.yml".to_string(), 7, "present.sh".to_string()));
+        scanned
+            .scripts
+            .push(("gates.yml".to_string(), 9, "departed.sh".to_string()));
         let declaration = Registry {
             schema_version: SCHEMA_VERSION,
             gate: Vec::new(),
@@ -1349,9 +1361,10 @@ mod tests {
         row.reason = "the build path names a directory the checkout does not carry".to_string();
         row.returns_when = "the path names the book this repository ships".to_string();
         declaration.workflow.push(row);
-        declaration
-            .workflow
-            .push(workflow_row(&format!("{PAUSED}/restored.yml"), PAUSED_STATE));
+        declaration.workflow.push(workflow_row(
+            &format!("{PAUSED}/restored.yml"),
+            PAUSED_STATE,
+        ));
         let stale = workflow_findings(&root, &declaration, &[]);
         fs::remove_dir_all(&root).ok();
         assert!(
@@ -1472,7 +1485,10 @@ mod tests {
         declaration.workflow.push(unprotected);
 
         let found = messages(&workflow_findings(&root, &declaration, &["catalog"]));
-        assert!(found.contains("which the checkout does not carry"), "{found}");
+        assert!(
+            found.contains("which the checkout does not carry"),
+            "{found}"
+        );
         assert!(found.contains("names gate `not-a-gate`"), "{found}");
         assert!(found.contains("records no uncovered class"), "{found}");
 
@@ -1503,7 +1519,10 @@ mod tests {
             &wrong_lane,
             &["catalog", "docs-check"],
         ));
-        assert!(unrun.contains("and that workflow does not run it"), "{unrun}");
+        assert!(
+            unrun.contains("and that workflow does not run it"),
+            "{unrun}"
+        );
 
         let mut declaration = registry(Vec::new());
         declaration.workflow.push(live());
@@ -1601,8 +1620,14 @@ mod tests {
             referenced_script("        run: bash scripts/gate.sh # see scripts/other.sh."),
             Some("gate.sh")
         );
-        assert_eq!(referenced_script("      # all on scripts/cargo_runner.sh."), None);
-        assert_eq!(referenced_script("      # see scripts/check_feature_msrv.sh"), None);
+        assert_eq!(
+            referenced_script("      # all on scripts/cargo_runner.sh."),
+            None
+        );
+        assert_eq!(
+            referenced_script("      # see scripts/check_feature_msrv.sh"),
+            None
+        );
         assert_eq!(referenced_script("        run: cargo test"), None);
         assert_eq!(token("dep-drift --strict"), "dep-drift");
         assert_eq!(token("--nocapture"), "--nocapture");

@@ -10,9 +10,9 @@
 #![cfg(feature = "math")]
 
 use vyre_libs::math::symmetric_eigen_jacobi::symmetric_eigen_jacobi;
-use vyre_test_support::fixed_point::xorshift32 as xorshift;
 use vyre_primitives::wire::{decode_f32_le_bytes_all as unpack_f32, pack_f32_slice as pack_f32};
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// Uniform f32 in [-2, 2) from the PRNG.
 fn rand_f32(state: &mut u32) -> f32 {

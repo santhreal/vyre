@@ -53,7 +53,10 @@ impl Gate for AbstractionGate {
             }
         }
 
-        report.note(format!("{} registered building block(s) checked", ops.len()));
+        report.note(format!(
+            "{} registered building block(s) checked",
+            ops.len()
+        ));
         for failure in &failures {
             report.find(violation(failure));
         }
@@ -196,7 +199,10 @@ mod tests {
     /// that does not exist, which is unwalkable in the other direction.
     #[test]
     fn a_child_citing_an_unregistered_parent_is_reported() {
-        let node = child("vyre-libs::security::flows_to", "vyre-libs::security::ghost");
+        let node = child(
+            "vyre-libs::security::flows_to",
+            "vyre-libs::security::ghost",
+        );
         let failures = findings(&node, &["vyre-libs::security::flows_to"]);
         assert!(
             failures

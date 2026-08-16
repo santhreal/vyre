@@ -10,8 +10,8 @@ use super::payload::{
     read_dense_quantization_zero_point, read_hints,
 };
 use super::{DecodedMetadata, LebReader};
-use crate::ir_inner::model::program::{LinearType, ShapePredicate};
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::ir_inner::model::program::{LinearType, ShapePredicate};
 use crate::serial::wire::decode::{invariants, reject_reserved_extension_id};
 use crate::serial::wire::framing::{MAX_SHAPE_PREDICATE_DEPTH, WIRE_FORMAT_VERSION};
 use crate::serial::wire::tags::access_from_tag::access_from_tag;

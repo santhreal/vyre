@@ -1,6 +1,6 @@
-use vyre_spec::c11_token::*;
 use crate::parsing::core::ast::node::*;
 use vyre_foundation::ir::Expr;
+use vyre_spec::c11_token::*;
 
 pub(super) fn is_value_token(token: Expr) -> Expr {
     eq_any2(token, TOK_INTEGER, TOK_IDENTIFIER)

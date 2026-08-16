@@ -8,16 +8,14 @@
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::level_wave::level_wave_dispatch_grid;
 #[cfg(test)]
 use crate::graph::sum_product_circuit::sum_product_evaluate_cpu;
-use crate::graph::sum_product_circuit::{
-    sum_product_depths, sum_product_evaluate_leveled,
-};
+use crate::graph::sum_product_circuit::{sum_product_depths, sum_product_evaluate_leveled};
 #[cfg(test)]
 use crate::math::conformal::conformal_threshold_cpu;
 use crate::math::conformal::{conformal_threshold, try_conformal_rank};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for probabilistic runtime prediction.
 #[derive(Debug, Default)]

@@ -177,4 +177,3 @@ fn collect_dependency_names(table: &toml::Table, optional_only: bool, out: &mut 
         }
     }
 }
-

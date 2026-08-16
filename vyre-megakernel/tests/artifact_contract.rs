@@ -175,12 +175,7 @@ fn fusion_pair_graph(
     consumer_workgroup: [u32; 3],
     producer_pin: GeometryPin,
 ) -> ProgramGraph {
-    fn pair_program(
-        input: &str,
-        output: &str,
-        workgroup: [u32; 3],
-        pin: GeometryPin,
-    ) -> Program {
+    fn pair_program(input: &str, output: &str, workgroup: [u32; 3], pin: GeometryPin) -> Program {
         let mut buffers = vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
             BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
@@ -227,7 +222,12 @@ fn fusion_pair_graph(
     graph
         .add_node(
             "consumer",
-            pair_program("intermediate", "output", consumer_workgroup, GeometryPin::None),
+            pair_program(
+                "intermediate",
+                "output",
+                consumer_workgroup,
+                GeometryPin::None,
+            ),
             vec![GraphInput {
                 buffer: "intermediate".into(),
                 value: intermediate[0],

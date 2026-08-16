@@ -50,7 +50,7 @@ const LITERAL_RULES: &[Step] = &[
     literal("is_mul", Right, U32(1), REPLACE_WITH_LEFT), // (Mul ?x 1) → ?x
     literal("is_mul", Left, U32(0), REPLACE_WITH_LIT_ZERO), // (Mul 0 ?x) → 0u32
     literal("is_mul", Right, U32(0), REPLACE_WITH_LIT_ZERO), // (Mul ?x 0) → 0u32
-    literal("is_sub", Right, U32(0), REPLACE_WITH_LEFT),  // (Sub ?x 0) → ?x
+    literal("is_sub", Right, U32(0), REPLACE_WITH_LEFT), // (Sub ?x 0) → ?x
     // A mask of every bit is identity; a mask of none is zero.
     literal("is_bitand", Right, U32(u32::MAX), REPLACE_WITH_LEFT), // (BitAnd ?x MAX) → ?x
     literal("is_bitand", Left, U32(u32::MAX), REPLACE_WITH_RIGHT), // (BitAnd MAX ?x) → ?x

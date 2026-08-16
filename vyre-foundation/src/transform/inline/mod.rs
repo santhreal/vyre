@@ -8,8 +8,8 @@ use crate::error::{IrError as Error, IrResult as Result};
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::program::{BufferDecl, Program};
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::ir_inner::model::program::{BufferDecl, Program};
 use rustc_hash::FxHashMap as HashMap;
 
 /// Resolve an operation id to the canonical IR program for that operation.

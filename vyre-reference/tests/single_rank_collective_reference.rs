@@ -1,10 +1,10 @@
 //! Reference-oracle coverage for substrate-neutral single-rank collectives.
 
 mod wire_words;
-use wire_words::{bytes_to_u32, u32_bytes};
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
+use wire_words::{bytes_to_u32, u32_bytes};
 
 fn copy_program(node: Node, count: u32) -> Program {
     Program::wrapped(

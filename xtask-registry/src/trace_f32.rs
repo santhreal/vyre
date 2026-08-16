@@ -34,9 +34,7 @@ impl Gate for TraceF32 {
     }
 
     fn usage(&self) -> &'static [&'static str] {
-        &[
-            "--op-id ID narrows the run to one registered operation",
-        ]
+        &["--op-id ID narrows the run to one registered operation"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {

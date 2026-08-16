@@ -4,7 +4,15 @@ use super::{
     ResidentAdaptiveSparseQueueGraph, ResidentAdaptiveTraversalGraph,
 };
 
+use crate::bitset::zero::bitset_zero;
 use crate::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
+use crate::graph::adaptive_traverse::{
+    adaptive_four_russians_dense_step as primitive_adaptive_four_russians_dense_step,
+    adaptive_sparse_dense_step as primitive_adaptive_sparse_dense_step,
+    plan_adaptive_resident_auto_step, plan_adaptive_resident_frontier_step,
+    plan_adaptive_resident_sparse_queue_step, AdaptiveResidentFrontierPlan,
+    AdaptiveTraversalPlanCacheKey,
+};
 use crate::graph::dispatch::csr_frontier_queue_programs::{
     resident_csr_queue_atomic_word_scan_program, resident_csr_queue_block_offsets_program,
     resident_csr_queue_clear_frontier_out_program, resident_csr_queue_len_init_program,
@@ -23,18 +31,10 @@ use crate::graph::dispatch::dispatch_bridge::{
     alloc_resident_buffers, resident_sequence_single_u32_output_into,
 };
 use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
+use crate::reduce::count::reduce_count;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-use crate::bitset::zero::bitset_zero;
-use crate::graph::adaptive_traverse::{
-    adaptive_four_russians_dense_step as primitive_adaptive_four_russians_dense_step,
-    adaptive_sparse_dense_step as primitive_adaptive_sparse_dense_step,
-    plan_adaptive_resident_auto_step, plan_adaptive_resident_frontier_step,
-    plan_adaptive_resident_sparse_queue_step, AdaptiveResidentFrontierPlan,
-    AdaptiveTraversalPlanCacheKey,
-};
-use crate::reduce::count::reduce_count;
 
 /// Buffer adaptive traversal stages its own frontier upload into.
 const ADAPTIVE_FRONTIER_IN: &str = "frontier_in";

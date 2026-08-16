@@ -289,8 +289,7 @@ impl CaptureGuard {
         label: &'static str,
         null_message: &'static str,
     ) -> Result<GraphGuard, BackendError> {
-        let graph =
-            end_cuda_graph_capture(self.stream, self.context.clone(), label, null_message);
+        let graph = end_cuda_graph_capture(self.stream, self.context.clone(), label, null_message);
         self.disarm();
         graph
     }

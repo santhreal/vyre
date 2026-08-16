@@ -59,11 +59,11 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::sheaf::sheaf_diffusion_step;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::sheaf::{sheaf_diffusion_step_cpu, sheaf_diffusion_step_cpu_into};
+use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for fixed-point sheaf diffusion.
 #[derive(Debug, Default)]

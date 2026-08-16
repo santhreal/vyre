@@ -11,9 +11,7 @@
 //! path here shares every decision with apart from the id lookup itself.
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_foundation::ir::{
-    BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program,
-};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_pass_engine::optimizer::cse_via_encoded::{apply_cross_scope_cse, gpu_cse_canonicals};
 
 /// `src[0] + src[1]`, the repeated operand the hoist is supposed to find.

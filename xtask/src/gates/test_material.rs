@@ -115,7 +115,11 @@ impl Gate for TestMaterialPlacement {
                     ));
                 }
             }
-            if let Some(targets) = member.manifest.get("target").and_then(toml::Value::as_table) {
+            if let Some(targets) = member
+                .manifest
+                .get("target")
+                .and_then(toml::Value::as_table)
+            {
                 for (triple, table) in targets {
                     for name in SHIPPING_TABLES {
                         if names_support(table.get(*name)) {
@@ -229,7 +233,9 @@ fn module_name(file: &str) -> Option<String> {
         return None;
     }
     if stem == "mod" {
-        let parent = directory.rsplit_once('/').map_or(directory, |split| split.1);
+        let parent = directory
+            .rsplit_once('/')
+            .map_or(directory, |split| split.1);
         return (parent != "src").then(|| parent.to_string());
     }
     Some(stem.to_string())
@@ -467,7 +473,10 @@ fn references(
             .or_default()
             .push((index, true));
         for export in &candidate.exports {
-            wanted.entry(export.as_str()).or_default().push((index, false));
+            wanted
+                .entry(export.as_str())
+                .or_default()
+                .push((index, false));
         }
     }
     let shipping: Vec<String> = publishable
@@ -565,7 +574,11 @@ fn reachable_crates(member: &Member) -> BTreeSet<String> {
         .iter()
         .filter_map(|table| member.manifest.get(*table))
         .collect();
-    if let Some(targets) = member.manifest.get("target").and_then(toml::Value::as_table) {
+    if let Some(targets) = member
+        .manifest
+        .get("target")
+        .and_then(toml::Value::as_table)
+    {
         for platform in targets.values() {
             tables.extend(
                 DEPENDENCY_TABLES
@@ -595,8 +608,8 @@ fn identifiers(code: &str) -> Vec<&str> {
     let bytes = code.as_bytes();
     let mut start = None;
     for index in 0..=bytes.len() {
-        let word = index < bytes.len()
-            && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_');
+        let word =
+            index < bytes.len() && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_');
         match (word, start) {
             (true, None) => start = Some(index),
             (false, Some(from)) => {
@@ -646,9 +659,13 @@ mod tests {
 
     #[test]
     fn a_multi_line_cfg_above_a_declaration_is_read_whole() {
-        let text = "#[cfg(any(\n    feature = \"graph\",\n    feature = \"nn\"\n))]\npub mod fixtures;\n";
+        let text =
+            "#[cfg(any(\n    feature = \"graph\",\n    feature = \"nn\"\n))]\npub mod fixtures;\n";
         let attributes = declaration(text, "fixtures").expect("the declaration is found");
-        assert!(attributes.contains("feature = \"graph\""), "got {attributes}");
+        assert!(
+            attributes.contains("feature = \"graph\""),
+            "got {attributes}"
+        );
         assert!(!is_test_only_attribute(&attributes), "got {attributes}");
         assert_eq!(
             features(&attributes),
@@ -667,7 +684,10 @@ mod tests {
         )
         .expect("the declaration is found");
         assert!(!is_test_only_attribute(&optional));
-        assert_eq!(features(&optional), BTreeSet::from(["test-fixtures".to_string()]));
+        assert_eq!(
+            features(&optional),
+            BTreeSet::from(["test-fixtures".to_string()])
+        );
     }
 
     #[test]

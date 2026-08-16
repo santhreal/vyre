@@ -164,10 +164,12 @@ pub(crate) fn arb_expr_with(opaque_leaf: BoxedStrategy<Expr>) -> BoxedStrategy<E
                     index: Box::new(index),
                 }
             ),
-            (arb_bin_op(), inner.clone(), inner.clone()).prop_map(|(op, left, right)| Expr::BinOp {
-                op,
-                left: Box::new(left),
-                right: Box::new(right),
+            (arb_bin_op(), inner.clone(), inner.clone()).prop_map(|(op, left, right)| {
+                Expr::BinOp {
+                    op,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                }
             }),
             (arb_un_op(), inner.clone()).prop_map(|(op, operand)| Expr::UnOp {
                 op,

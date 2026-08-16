@@ -133,18 +133,19 @@ mod tests {
     use super::super::protocol::slot;
     use super::queue_words::try_queue_word_index;
     use super::{
-        claim_io_requests_into, complete_io_request, complete_io_requests_batch, encode_empty_io_queue,
-        io_completion_poll_body, io_op, io_status, io_word, try_claim_io_requests_into,
-        try_encode_empty_io_queue_into, try_poll_io_requests, try_poll_io_requests_into,
-        ResidentIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS,
+        claim_io_requests_into, complete_io_request, complete_io_requests_batch,
+        encode_empty_io_queue, io_completion_poll_body, io_op, io_status, io_word,
+        try_claim_io_requests_into, try_encode_empty_io_queue_into, try_poll_io_requests,
+        try_poll_io_requests_into, ResidentIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS,
     };
     use crate::PipelineError;
 
     #[test]
     fn empty_io_queue_has_no_requests() {
         let buf = encode_empty_io_queue(4).unwrap();
-        let reqs = try_poll_io_requests(&buf)
-            .expect("Fix: empty aligned queue must poll; restore this invariant before continuing.");
+        let reqs = try_poll_io_requests(&buf).expect(
+            "Fix: empty aligned queue must poll; restore this invariant before continuing.",
+        );
         assert!(reqs.is_empty());
     }
 
@@ -552,8 +553,9 @@ mod tests {
         // On 32-bit, usize is 4 bytes. slot_idx=u32::MAX (4294967295) * IO_SLOT_WORDS=8
         // = 34359738360 which overflows u32::MAX (4294967295), so try_queue_word_index
         // returns Err instead of Ok(0) from the old unwrap_or.
-        let err = try_queue_word_index(u32::MAX, 0)
-            .expect_err("on 32-bit, try_queue_word_index(u32::MAX, 0) must Err on overflow, not Ok(0)");
+        let err = try_queue_word_index(u32::MAX, 0).expect_err(
+            "on 32-bit, try_queue_word_index(u32::MAX, 0) must Err on overflow, not Ok(0)",
+        );
         match &err {
             PipelineError::Backend(msg) => {
                 assert!(
@@ -631,9 +633,9 @@ mod tests {
 
         // Attempt to publish into a slot beyond the queue's capacity, this must
         // return QueueFull from the bounds guard without touching any queue storage.
-        let err = queue
-            .publish_slot(IO_SLOT_COUNT, 99, 4096, 42)
-            .expect_err("publishing beyond slot_count must return QueueFull, not silently redirect");
+        let err = queue.publish_slot(IO_SLOT_COUNT, 99, 4096, 42).expect_err(
+            "publishing beyond slot_count must return QueueFull, not silently redirect",
+        );
         assert!(
             matches!(err, PipelineError::QueueFull { .. }),
             "out-of-bounds publish must return QueueFull, got {err:?}"

@@ -111,8 +111,7 @@ pub fn semiring_gemm_via_with_scratch_into(
         )));
     }
 
-    let program =
-        crate::math::semiring_gemm::semiring_gemm("a", "b", "c", m, n, k, semiring);
+    let program = crate::math::semiring_gemm::semiring_gemm("a", "b", "c", m, n, k, semiring);
     ensure_input_slots(&mut scratch.inputs, 3);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], a);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], b);

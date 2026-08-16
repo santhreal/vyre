@@ -143,4 +143,3 @@ fn generated_bytes(seed: u32) -> Vec<u8> {
         })
         .collect()
 }
-

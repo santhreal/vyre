@@ -18,8 +18,8 @@
 use crate::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::math::tensor_train_decompose::tensor_train_decompose_step;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Compressed cost tensor in tensor-train form.
 ///

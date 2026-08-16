@@ -51,7 +51,11 @@ pub(crate) fn validate_schema(
         .collect();
     for op in &schema.operations {
         if !accepted_tiers.contains(op.tier.as_str()) {
-            let named = accepted_tiers.iter().copied().collect::<Vec<_>>().join(", ");
+            let named = accepted_tiers
+                .iter()
+                .copied()
+                .collect::<Vec<_>>()
+                .join(", ");
             errors.push(format!(
                 "operation `{}` records tier `{}`; the accepted spellings are {named}",
                 op.id, op.tier
@@ -252,7 +256,10 @@ fn divergences(schema: &OperationSchema, expected: &OperationSchema) -> Vec<Stri
         for (field, differs) in [
             ("signature", op.signature != current.signature),
             ("oracle contract", op.oracle != current.oracle),
-            ("backend support", op.backend_support != current.backend_support),
+            (
+                "backend support",
+                op.backend_support != current.backend_support,
+            ),
             ("target facets", op.target_facets != current.target_facets),
             ("laws", op.laws != current.laws),
             (
