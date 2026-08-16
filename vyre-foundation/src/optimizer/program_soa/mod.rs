@@ -39,7 +39,6 @@
 //! - Not the GPU-resident A10 representation. The columns live in
 //!   host memory; a future GPU mirror is a separate module.
 
-
 mod build;
 mod facts;
 mod kind;

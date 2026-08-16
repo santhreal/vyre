@@ -292,11 +292,10 @@ impl Gate for HotPathScan {
         let mut code_lines_by_file: BTreeMap<String, usize> = BTreeMap::new();
         let mut error_path_by_file: BTreeMap<String, usize> = BTreeMap::new();
         let mut scanned = 0usize;
-        let mut missing: Vec<String> = Vec::new();
+        let missing = missing_hot_path_files(&entries, root);
         for entry in &entries {
             let path = root.join(&entry.file);
             if !path.exists() {
-                missing.push(entry.file.clone());
                 continue;
             }
             scanned += 1;
@@ -569,6 +568,20 @@ fn collect_budget_deltas(
         );
     }
     deltas
+}
+
+/// Which roster rows name a path that is not in the tree, in roster order.
+///
+/// A row is a contract that a file is on a measured path. When the code moves
+/// the row stops naming anything, and a budget over a file that does not exist
+/// is a budget that can never be exceeded, so the roster reads as held while
+/// the code it covered is unscanned.
+fn missing_hot_path_files(entries: &[HotPathEntry], root: &Path) -> Vec<String> {
+    entries
+        .iter()
+        .filter(|entry| !root.join(&entry.file).exists())
+        .map(|entry| entry.file.clone())
+        .collect()
 }
 
 fn unowned_hot_path_files(
@@ -1196,5 +1209,55 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         assert_eq!(rows[0].file, "vyre-foundation/src/optimizer/big.rs");
         assert_eq!(rows[0].owner_lane, "foundation_optimizer");
         assert!(rows[0].formats_per_kloc > 0);
+    }
+
+    /// WHY: a row whose file moved names nothing, and a budget over a file that
+    /// is not there can never be exceeded, so the roster reports a budget held
+    /// over code nobody scanned. Splitting one module into three left exactly
+    /// that row behind.
+    #[test]
+    fn a_roster_row_naming_no_file_is_reported_and_one_naming_a_file_is_not() {
+        let dir = tempfile::TempDir::new().unwrap();
+        std::fs::create_dir_all(dir.path().join("vyre-lower/src")).unwrap();
+        std::fs::write(dir.path().join("vyre-lower/src/pre_emit.rs"), "fn a() {}\n").unwrap();
+        let entries = vec![
+            roster_row("vyre-lower/src/pre_emit.rs"),
+            roster_row("vyre-lower/src/gone.rs"),
+        ];
+
+        assert_eq!(
+            missing_hot_path_files(&entries, dir.path()),
+            vec!["vyre-lower/src/gone.rs".to_string()]
+        );
+    }
+
+    /// WHY: the roster in this tree is the one the gate holds the tree to, and
+    /// a stale row there is a hole in every budget it lists. The row set is
+    /// read from the file so a row added tomorrow is covered too.
+    #[test]
+    fn every_hot_path_row_in_this_tree_names_a_file_on_disk() {
+        let root = crate::checkout::checkout_root();
+        let entries = load_config(&root.join("docs/optimization/HOT_PATHS.toml")).unwrap();
+        assert!(!entries.is_empty());
+
+        let missing = missing_hot_path_files(&entries, &root);
+
+        assert!(
+            missing.is_empty(),
+            "docs/optimization/HOT_PATHS.toml names {missing:?}, which the tree does not have"
+        );
+    }
+
+    fn roster_row(file: &str) -> HotPathEntry {
+        HotPathEntry {
+            file: file.to_string(),
+            reason: String::new(),
+            max_findings: None,
+            max_allocation_findings: None,
+            max_clone_findings: None,
+            max_lock_findings: None,
+            max_sleep_findings: None,
+            max_panic_findings: None,
+        }
     }
 }

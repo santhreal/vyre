@@ -29,7 +29,6 @@
 //! consecutive rows touches one cache line per column (4 columns
 //! × 4 bytes × 32 lanes = 512 bytes per warp).
 
-
 mod apply;
 mod bridge;
 mod device_image;
