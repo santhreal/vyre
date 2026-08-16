@@ -27,6 +27,7 @@ pub mod hot_path;
 pub mod hot_path_scan;
 pub mod hygiene_matrix;
 pub mod implementation_family;
+pub mod inventory_walk;
 pub mod layering;
 pub mod lego_quick;
 pub mod lint_hygiene;
@@ -75,13 +76,13 @@ pub static GATES: &[&dyn Gate] = &[
     &frozen_contract::ReadbackRing,
     &gpu_loudness::GpuLoudness,
     &hot_path::BlockingWait,
-    &hot_path::InventoryWalk,
     &hot_path::NestedRows,
     &hot_path::ReserveArgument,
     &hot_path::UnboundedCache,
     &hot_path::UnboundedRead,
     &hot_path_scan::HotPathScan,
     &hygiene_matrix::HygieneMatrix,
+    &inventory_walk::InventoryWalk,
     &layering::Layering,
     &layering::NeutralCrates,
     &lego_quick::LegoQuick,

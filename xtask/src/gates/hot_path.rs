@@ -183,65 +183,6 @@ impl Gate for UnboundedRead {
     }
 }
 
-/// Per-dispatch registry walks.
-pub struct InventoryWalk;
-
-impl Gate for InventoryWalk {
-    fn name(&self) -> &'static str {
-        "hot-path-inventory"
-    }
-
-    fn help(&self) -> &'static str {
-        "inventory::iter on production dispatch trees"
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let tree = Tree::open(&ctx.root)?;
-        scan::ratchet(
-            &tree,
-            &Rule {
-                // Four of these were single files that became directories during
-                // the module splits, and the wgpu pipeline needs both spellings
-                // because a directory root does not cover the sibling file.
-                roots: &[
-                    "vyre-driver/src/backend",
-                    "vyre-driver/src/pipeline",
-                    "vyre-driver-wgpu/src/async_dispatch.rs",
-                    "vyre-driver-wgpu/src/engine",
-                    "vyre-driver-wgpu/src/lib.rs",
-                    "vyre-driver-wgpu/src/pipeline/mod.rs",
-                    "vyre-driver-wgpu/src/pipeline",
-                    "vyre-driver-wgpu/src/runtime",
-                    "vyre-driver-cuda/src",
-                    "vyre-driver-spirv/src",
-                    "vyre-runtime/src",
-                ],
-                skip: &is_test_path,
-                line: &is_inventory_call,
-                // Init-only sites, each documenting in-file why a registry walk is
-                // acceptable there.
-                reviewed: &[
-                    "vyre-driver/src/registry/registry.rs",
-                    "vyre-driver/src/registry/migration.rs",
-                    "vyre-driver/src/backend/dialect_supported_ops.rs",
-                    "vyre-driver/src/backend/registry.rs",
-                    "vyre-driver/src/backend/registry/inventory_streams.rs",
-                    "vyre-driver/src/backend/registry/acquire.rs",
-                    "vyre-foundation/src/optimizer/mod.rs",
-                ],
-                reviewed_line: None,
-                statement: None,
-                message: "per-dispatch registry walk",
-                fix: "route the lookup through the registry's frozen OnceLock index",
-                unreviewed_message: "registry walk outside the reviewed init-only sites",
-                unreviewed_fix: "serve the lookup from the frozen index, or if the site is \
-                                 init-only add it to the reviewed list in this gate and \
-                                 document the invariant in a nearby comment",
-            },
-        )
-    }
-}
-
 /// Reserve calls that pass remaining capacity instead of additional length.
 ///
 /// `try_reserve` takes additional capacity relative to `len()`. Deriving the
@@ -321,19 +262,6 @@ fn block_uses_capacity(lines: &[&str], start: usize) -> (bool, usize) {
     (block.contains(".capacity()"), end)
 }
 
-/// A registry walk written as a call rather than quoted in prose.
-///
-/// The text before the call carries no path separator, which is what excludes a
-/// line comment and a doc comment without excluding a call nested in an
-/// expression.
-fn is_inventory_call(line: &str) -> bool {
-    let trimmed = line.trim_start();
-    let Some(at) = trimmed.find("inventory::iter::<") else {
-        return false;
-    };
-    !trimmed[..at].contains('/')
-}
-
 /// Test trees are not the dispatch path.
 fn is_test_path(path: &Path) -> bool {
     let path = path.to_string_lossy();
@@ -345,19 +273,6 @@ mod tests {
     use super::*;
     use crate::gate::GateCtx;
     use crate::gates::fixture_checkout;
-
-    /// WHY: the shell rule was `^[[:space:]]*[^/]*inventory::iter::<`, and the
-    /// only reason it worked was that a comment introduces a `/` before the
-    /// symbol. A predicate that only checked for the symbol would report every
-    /// doc comment that names the contract.
-    #[test]
-    fn a_quoted_registry_walk_is_not_a_call() {
-        assert!(is_inventory_call("    let ops = inventory::iter::<Op>();"));
-        assert!(is_inventory_call("for op in inventory::iter::<Op>() {"));
-        assert!(!is_inventory_call("// inventory::iter::<Op> is forbidden here"));
-        assert!(!is_inventory_call("/// See inventory::iter::<Op>."));
-        assert!(!is_inventory_call("    //! inventory::iter::<Op>"));
-    }
 
     /// WHY: the under-reserve defect is only visible across lines, because the
     /// argument expression is usually wrapped. A single-line check found none of
