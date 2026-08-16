@@ -102,6 +102,9 @@ pub mod metadata_category;
 /// Monotonicity direction (increasing / decreasing / none) for op outputs.
 /// Specification element.
 pub mod monotonic_direction;
+/// Versioned numeric semantics table and datatype conversion helpers.
+/// Specification element.
+pub mod numeric_semantics;
 /// Operation contract: capability requirements, determinism, cost hints.
 /// Specification element.
 pub mod op_contract;
@@ -218,6 +221,16 @@ pub use metadata_category::MetadataCategory;
 /// See [`monotonic_direction::MonotonicDirection`].
 /// Specification element.
 pub use monotonic_direction::MonotonicDirection;
+/// See [`numeric_semantics::NumericSemantics`].
+/// Specification element.
+pub use numeric_semantics::{
+    dequantize_grouped_f32, f32_to_f8e4m3, f32_to_f8e5m2, f32_to_fp4, f32_to_nf4,
+    f8e4m3_decode_table, f8e4m3_to_f32, f8e5m2_decode_table, f8e5m2_to_f32, fp4_to_f32, i32_to_i4,
+    i4_to_i32, nf4_to_f32, numeric_semantics_for, FP4_DECODE_TABLE, I4_DECODE_TABLE,
+    NF4_QUANTILE_TABLE, NUMERIC_SEMANTICS_SCHEMA_VERSION, InfinityBehavior, NanBehavior,
+    NumericFormat, NumericSemantics, OverflowBehavior, RoundingMode, SaturationBehavior,
+    SignedZeroBehavior, SubnormalBehavior,
+};
 /// See [`op_contract::OperationContract`] and its component types.
 pub use op_contract::{
     CapabilityId, CostHint, DeterminismClass, OperationContract, SideEffectClass,
