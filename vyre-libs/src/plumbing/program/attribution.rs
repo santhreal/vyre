@@ -11,7 +11,9 @@
 //! table and reset the metadata flags, both of which the caller already has
 //! correct.
 
-use vyre_foundation::composition::{single_invocation, wrap_child_region};
+#[cfg(feature = "llm")]
+use vyre_foundation::composition::single_invocation;
+use vyre_foundation::composition::wrap_child_region;
 use vyre_foundation::ir::{GeneratorRef, Node, Program};
 
 /// `program`'s body, re-emitted as one child region of `parent_op_id` named
@@ -37,6 +39,7 @@ pub(crate) fn attribute_child_nodes(
 /// This is the shape for an arm of a fused composition, where the fused entry
 /// already carries the parent's own region. A composition whose entry is one
 /// selected operation wraps the nodes in its own anonymous region instead.
+#[cfg(feature = "llm")]
 pub(crate) fn attribute_child(parent_op_id: &str, child_op_id: &str, program: Program) -> Program {
     let nodes = attribute_child_nodes(parent_op_id, child_op_id, &program);
     program.with_rewritten_wrapped_entry(nodes)
@@ -51,6 +54,7 @@ pub(crate) fn attribute_child(parent_op_id: &str, child_op_id: &str, program: Pr
 /// The gate names the invocation the body belongs to. Fusion reads the gate
 /// too: an invocation-gated store makes the arm a grid-sync writer, so the
 /// arms that consume its result wait for it.
+#[cfg(feature = "llm")]
 pub(crate) fn attribute_serial_child(
     parent_op_id: &str,
     child_op_id: &str,
