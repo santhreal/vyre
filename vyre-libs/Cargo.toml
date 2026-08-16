@@ -683,6 +683,11 @@ path = "tests/nn_attention_clone_family_ir_invariance.rs"
 required-features = ["nn-attention"]
 
 [[test]]
+name = "attention_layout_dispatch_grid"
+path = "tests/attention_layout_dispatch_grid.rs"
+required-features = ["llm"]
+
+[[test]]
 name = "recurrent_gated_delta_contract"
 path = "tests/recurrent_gated_delta_contract.rs"
 required-features = ["nn-attention"]

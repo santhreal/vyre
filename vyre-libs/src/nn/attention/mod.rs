@@ -23,8 +23,9 @@ pub use gated_delta_chunked::chunked_gated_delta;
 pub use gated_delta_spec::GatedDeltaSpec;
 pub use gqa_attention::{gqa_attention, gqa_attention_causal, gqa_attention_causal_typed};
 pub use layout::{
-    attention_head_to_token, attention_token_to_head, kv_cache_append, AttentionPermuteSpec,
-    KvCacheAppendError, KvCacheAppendSpec,
+    attention_head_to_token, attention_layout_dispatch_grid, attention_token_to_head,
+    kv_cache_append, AttentionPermuteSpec, KvCacheAppendError, KvCacheAppendSpec,
+    ATTENTION_LAYOUT_WORKGROUP_SIZE,
 };
 pub use mla::{mla_compress_kv, mla_decode};
 pub use partial_rope::{partial_rope, partial_rope_at_offset, partial_rope_at_offset_typed};

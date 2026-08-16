@@ -16,8 +16,8 @@ use thiserror::Error;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::nn::attention::layout::{
-    block_index, check_layout_dims, checked_elements, layout_move_program, IndexMap, LayoutMove,
-    LayoutReject, RowMajor,
+    attention_layout_dispatch_grid, block_index, check_layout_dims, checked_elements,
+    layout_move_program, IndexMap, LayoutMove, LayoutReject, RowMajor,
 };
 
 /// Canonical op id of the paged gather.
@@ -136,8 +136,22 @@ impl PagedKvCache<'_> {
         Ok((
             elements(&[self.blocks, self.heads, self.block_tokens, self.head_dim])?,
             elements(&[self.sequences, self.blocks_per_sequence])?,
-            elements(&[self.sequences, self.heads, tokens, self.head_dim])?,
+            self.moved_elements(tokens)?,
         ))
+    }
+
+    /// Elements a move of `tokens` tokens per sequence touches.
+    ///
+    /// The guarded domain of both moves and the grid that launches them come
+    /// from here, so a launch cannot cover a different number of elements from
+    /// the one the guard admits.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` when the count overflows `u32` indexing.
+    fn moved_elements(&self, tokens: u32) -> Result<u32, PagedKvError> {
+        checked_elements(&[self.sequences, self.heads, tokens, self.head_dim])
+            .ok_or(PagedKvError::ElementCountOverflow)
     }
 
     /// Flat cache index of the element at logical `token` of `sequence`, head
@@ -243,6 +257,24 @@ pub fn paged_kv_append(
             destination,
         },
     }))
+}
+
+/// Dispatch grid for a paged move of `tokens` tokens per sequence.
+///
+/// The append is a scatter: it guards on the chunk and declares the whole cache
+/// as its write buffer, so a launch sized from the declared buffers fires one
+/// lane per cache element to move one decoded token. Both moves are launched
+/// over the elements they touch, which is what makes the paged append cost the
+/// chunk rather than the cache.
+///
+/// # Errors
+///
+/// Returns `Err` when the moved element count overflows `u32` indexing.
+pub fn paged_kv_dispatch_grid(
+    spec: &PagedKvCache<'_>,
+    tokens: u32,
+) -> Result<[u32; 3], PagedKvError> {
+    Ok(attention_layout_dispatch_grid(spec.moved_elements(tokens)?))
 }
 
 /// The two-block, two-token cache both registration fixtures address.
