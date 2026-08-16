@@ -19,8 +19,9 @@ use vyre_primitives::nn::attention_passes::{
 use crate::builder::{check_tensors, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 use vyre_primitives::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, direct_score_expr, flush_tiny, positive_denominator,
+    bounded_exp_arg, bounded_score, direct_score_expr, positive_denominator,
 };
+use vyre_primitives::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::nn::attention";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::attention_reference";
