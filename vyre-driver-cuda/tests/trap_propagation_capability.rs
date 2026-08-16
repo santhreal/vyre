@@ -25,7 +25,8 @@
 //! `trap_readback_launch_coverage`), whether the recorded lane and address are the
 //! trapping ones, and any other capability this profile advertises.
 
-use vyre_driver_cuda::CudaBackend;
+use vyre_driver::VyreBackend;
+use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_lower::TRAP_SIDECAR_NAME;
@@ -83,7 +84,12 @@ fn cuda_advertises_trap_propagation_only_when_its_ptx_records_a_trap() {
 
     let backend = CudaBackend::acquire()
         .expect("Fix: CudaBackend::acquire must succeed on a GPU-required machine.");
-    let advertised = backend.device_profile().supports_trap_propagation;
+    // Read through the registration, because that is the profile the runtime
+    // admits a program against: `CudaBackend` itself is the device handle and does
+    // not answer capability questions.
+    let advertised = CudaBackendRegistration::new(backend)
+        .device_profile()
+        .supports_trap_propagation;
 
     assert_eq!(
         records_trap, advertised,

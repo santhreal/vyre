@@ -5,8 +5,7 @@ use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program
 use vyre_lower::{KernelDescriptor, MemoryClass};
 
 use crate::{
-    Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileError,
-    FusionGroupId,
+    Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, CompileError, FusionGroupId,
     FusionRecord, ResourceLifetime, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
     TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
