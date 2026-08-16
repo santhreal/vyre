@@ -183,25 +183,15 @@ fn elide_in_node_with_ctx(node: Node, loop_ctx: Option<(&str, u32)>, changed: &m
             }
         }
         Node::Block(body) => Node::Block(elide_in_sequence(body, loop_ctx, changed)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            // A Region is a fresh scope  -  drop the loop_ctx because the
-            // inner body's loop var is in a different binding scope.
-            let body_vec = elide_in_sequence(body_vec, None, changed);
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(body_vec),
-            }
-        }
-        other => other,
+        // A `Region` is a fresh scope, and so is every other body-bearing
+        // variant this match does not name: the inner body's loop variable is
+        // a different binding, so the enclosing loop context does not reach
+        // it. `map_body` owns which slots exist, so a new nesting variant is
+        // rewritten instead of handed back untouched, which keeps this
+        // transform reaching exactly as far as the analysis below.
+        other => visit::node_map::map_body(other, &mut |body| {
+            elide_in_sequence(body, None, changed)
+        }),
     }
 }
 
@@ -248,11 +238,10 @@ fn has_redundant_guard_with_ctx(node: &Node, loop_ctx: Option<(&str, u32)>) -> b
         Node::Block(body) => body
             .iter()
             .any(|n| has_redundant_guard_with_ctx(n, loop_ctx)),
-        Node::Region { body, .. } => body.iter().any(|n| has_redundant_guard_with_ctx(n, None)),
-        // A variant this match does not name may still carry child bodies.
-        // `child_bodies` owns which slots exist, so a new nesting variant is
-        // searched instead of skipped. It carries no loop context: only the
-        // arms above establish one.
+        // A `Region` is a fresh scope, and so is every other body-bearing
+        // variant this match does not name. `child_bodies` owns which slots
+        // exist, so a new nesting variant is searched instead of skipped. It
+        // carries no loop context: only the arms above establish one.
         _ => visit::child_bodies(node)
             .into_iter()
             .flatten()

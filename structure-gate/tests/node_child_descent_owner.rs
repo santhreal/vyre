@@ -83,13 +83,26 @@ use structure_gate::workspace_root;
 /// file exists to prevent.
 const NODE_ENUM_SOURCE: &str = "vyre-foundation/src/ir_inner/model/generated.rs";
 
-/// Call paths that mean "somebody else enumerated the variants for me".
-const OWNER_CALLS: [&str; 5] = [
+/// Calls that mean "somebody else enumerated the variants for me".
+///
+/// Each name is a function whose own match over `Node` is exhaustive, so a
+/// variant added to the enum fails to compile there instead of falling into a
+/// catch-all. `map_body`, `map_children` and `map_bodies_cow` are on the list
+/// because they take their slots from `child_bodies_mut` and `rewrite_node`
+/// rather than from a list of their own.
+///
+/// Matched as a call and not as a substring: `rewrite_nodes(then)` names a
+/// pass-local helper, and reading it as `rewrite_node` exempted the walk that
+/// called it from the property this file holds.
+const OWNER_CALLS: [&str; 8] = [
     "child_bodies",
     "child_bodies_mut",
     "rewrite_node",
     "rewrite_body",
     "any_descendant",
+    "map_body",
+    "map_children",
+    "map_bodies_cow",
 ];
 
 /// Sites that still derive child structure themselves, with the subsystem that
@@ -511,6 +524,44 @@ fn walk(node: &Node) -> bool {
          is the shape it exists to encourage"
     );
 
+    let mapped = "\
+fn rewrite(node: Node) -> Node {
+    match node {
+        Node::Loop { body, .. } => Node::Block(body.iter().map(rewrite).collect()),
+        _ => map_body(node, &mut |body| body.iter().map(rewrite).collect()),
+    }
+}
+";
+    assert!(
+        blocks_in(mapped, &slots).is_empty(),
+        "Fix: the scanner reports a walk whose catch-all hands the remaining variants to the \
+         owning body map. That map reads its slots from `child_bodies_mut`, so the catch-all is \
+         a decision about what to do and no longer a claim about what a variant contains"
+    );
+
+    let local_helper = "\
+fn rewrite_nodes(nodes: &[Node]) -> Vec<Node> {
+    nodes.iter().map(rewrite).collect()
+}
+
+fn rewrite(node: &Node) -> Node {
+    match node {
+        Node::If { then, otherwise, .. } => Node::If {
+            cond: Expr::LitU32(0),
+            then: rewrite_nodes(then),
+            otherwise: rewrite_nodes(otherwise),
+        },
+        _ => node.clone(),
+    }
+}
+";
+    assert_eq!(
+        blocks_in(local_helper, &slots).len(),
+        1,
+        "Fix: a pass-local helper whose name merely starts with an owner's name exempted the \
+         hand-written descent that calls it. An owner counts only when it is called"
+    );
+
     let exhaustive = "\
 fn walk(node: &Node) -> bool {
     match node {
@@ -586,6 +637,62 @@ fn the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks() {
         missing_tuple.is_empty(),
         "Fix: `Node` carries a tuple body on {missing_tuple:?} that `child_bodies` does not \
          destructure"
+    );
+}
+
+/// Every name that exempts a walk still resolves to a function in the traversal
+/// surface.
+///
+/// WHY: the exemption is a name match, so a renamed or deleted owner does not
+/// break this file. It stops matching, every walk that calls it is reported,
+/// and the roster fills with rows for code that was converted correctly. The
+/// opposite is worse: a name kept on the list after the function moved out of
+/// the traversal surface exempts whatever pass-local helper later takes the
+/// spelling. The declaration is searched for under `visit/`, which owns the
+/// enumerations, plus the rewrite walk that owns the borrow-preserving rebuild,
+/// and the file set is read from the tree so a new owner file counts on the run
+/// that adds it.
+#[test]
+fn every_owner_call_names_a_function_in_the_traversal_surface() {
+    let root = workspace_root();
+    let surface = [
+        "vyre-foundation/src/visit/",
+        "vyre-foundation/src/transform/rewrite_walk.rs",
+    ];
+    let mut declared: BTreeSet<String> = BTreeSet::new();
+    for (relative, text) in rust_sources_with_text(&root) {
+        let normalised = relative.replace('\\', "/");
+        if !surface.iter().any(|home| normalised.starts_with(home)) {
+            continue;
+        }
+        let source = mask_comments_and_strings(&text);
+        for call in OWNER_CALLS {
+            let declaration = format!("fn {call}");
+            let mut cursor = 0;
+            while let Some(offset) = source[cursor..].find(&declaration) {
+                let start = cursor + offset;
+                cursor = start + declaration.len();
+                if !source[cursor..]
+                    .as_bytes()
+                    .first()
+                    .copied()
+                    .is_some_and(is_word_byte)
+                {
+                    declared.insert(call.to_string());
+                }
+            }
+        }
+    }
+    let absent: Vec<&&str> = OWNER_CALLS
+        .iter()
+        .filter(|call| !declared.contains(*call))
+        .collect();
+    assert!(
+        absent.is_empty(),
+        "Fix: {absent:?} exempt a walk from this gate and name no function under {surface:?}. \
+         Either the owner was renamed, in which case correct the entry, or it left the \
+         traversal surface, in which case delete the entry so the spelling stops exempting \
+         anything."
     );
 }
 
@@ -758,12 +865,37 @@ fn blocks_in(text: &str, slots: &ChildSlots) -> Vec<usize> {
         let binders = child_body_binders(body, slots);
         if has_top_level_wildcard_arm(body)
             && recurses_on_a_binder(body, &binders)
-            && !OWNER_CALLS.iter().any(|call| body.contains(call))
+            && !takes_children_from_an_owner(body)
         {
             reported.push(source[..start].matches('\n').count() + 1);
         }
     }
     reported
+}
+
+/// True when `body` hands a node to one of the owner walks.
+///
+/// The name has to appear as a call: as a bare substring, `rewrite_nodes(then)`
+/// reads as `rewrite_node` and a local helper spelled like an owner exempts the
+/// walk that calls it. A longer name is a different function, and a longer
+/// owner (`child_bodies_mut`) is on the roster under its own spelling.
+fn takes_children_from_an_owner(body: &str) -> bool {
+    let bytes = body.as_bytes();
+    OWNER_CALLS.iter().any(|call| {
+        let mut cursor = 0;
+        while let Some(offset) = body[cursor..].find(call) {
+            let start = cursor + offset;
+            cursor = start + call.len();
+            let before_is_word = start
+                .checked_sub(1)
+                .is_some_and(|previous| is_word_byte(bytes[previous]));
+            let after = body[cursor..].trim_start();
+            if !before_is_word && after.starts_with('(') {
+                return true;
+            }
+        }
+        false
+    })
 }
 
 /// Offset of the opening brace when the scrutinee is a node, else `None`.
