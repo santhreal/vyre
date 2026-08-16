@@ -225,6 +225,10 @@ proptest.workspace = true
 naga.workspace = true
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
+# The shipped-build oracle gate resolves the dependency graph a consumer
+# compiles out of the manifests themselves, so it parses TOML rather than
+# restating any part of that graph in Rust.
+toml.workspace = true
 vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # The device-residency ownership gate derives its crate roster from the root
 # manifest. Path-only, and dev-only: cargo strips it from the published
