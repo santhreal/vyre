@@ -12,6 +12,11 @@ use super::evidence::{
 use super::read_text_bounded;
 
 const SCAN_CONFORMANCE_MATRIX: &str = "docs/optimization/SCAN_CONFORMANCE_MATRIX.toml";
+/// Regex semantics a release must report on. This is a release decision about
+/// what the scan matrix has to answer for, not a fact about linked code, and it
+/// is closed both ways: a row naming a semantics outside this set is a finding,
+/// and a member with no row is a finding, so neither adding nor deleting a row
+/// escapes the requirement.
 const REQUIRED_SCAN_CONFORMANCE_SEMANTICS: &[&str] = &[
     "leftmost_semantics",
     "overlapping_matches",
@@ -21,6 +26,9 @@ const REQUIRED_SCAN_CONFORMANCE_SEMANTICS: &[&str] = &[
     "streaming_chunks",
     "unsupported_constructs",
 ];
+/// Engines every scan row must report a status for. A release decision about
+/// which engines are compared, closed both ways: a row missing one of these is a
+/// finding, and a row naming an engine outside the set is a finding.
 const REQUIRED_SCAN_CONFORMANCE_ENGINES: &[&str] = &[
     "cpu_ref",
     "cuda",
@@ -30,6 +38,8 @@ const REQUIRED_SCAN_CONFORMANCE_ENGINES: &[&str] = &[
     "hyperscan",
     "vectorscan",
 ];
+/// The only statuses a scan row may claim. A status outside this vocabulary is a
+/// finding, so the set cannot be widened by writing a new word in the matrix.
 const ALLOWED_SCAN_ENGINE_SUPPORT: &[&str] =
     &["supported", "unsupported", "not_applicable", "experimental"];
 
