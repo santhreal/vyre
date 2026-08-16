@@ -31,7 +31,8 @@ use toml::Value;
 
 use crate::crate_ownership::{REGISTRY as OWNERSHIP_REGISTRY, Registry};
 use crate::source_scan::mask_comments_and_strings;
-use crate::{cfg_test_line_mask, read_source_bounded, relative, source_tree_files};
+use crate::cfg_test::cfg_test_line_mask;
+use crate::{read_source_bounded, relative, source_tree_files};
 
 /// The contract data, inside the directory of the crate that owns the rule.
 const DATA_FILE: &str = "backend-vocabulary.toml";

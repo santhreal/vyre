@@ -553,7 +553,7 @@ enum Token {
 
 /// Tokenise source, dropping comments and keeping literal bodies.
 ///
-/// Comments and literals are skipped through `structure_gate::opaque_span`, the
+/// Comments and literals are skipped through `structure_gate::source_scan::opaque_span`, the
 /// one owner of what is not code, so a `mod` inside a doc comment or a string
 /// never reads as a declaration.
 fn tokenize(text: &str) -> Vec<Token> {
@@ -565,7 +565,7 @@ fn tokenize(text: &str) -> Vec<Token> {
             at += 1;
             continue;
         }
-        if let Some(span) = structure_gate::opaque_span(text, at) {
+        if let Some(span) = structure_gate::source_scan::opaque_span(text, at) {
             if span > 0 {
                 let mut end = (at + span).min(text.len());
                 while end < text.len() && !text.is_char_boundary(end) {

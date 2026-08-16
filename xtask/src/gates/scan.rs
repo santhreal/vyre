@@ -642,7 +642,7 @@ pub fn is_comment(line: &str) -> bool {
 /// for, so a rule that reads raw lines reports itself. Blanking literals removes
 /// that class without an exemption naming the detector. Comments stay because
 /// several rules read prose, and the span walk belongs to
-/// `structure_gate::opaque_span`, which is the one owner of what is not code.
+/// `structure_gate::source_scan::opaque_span`, which is the one owner of what is not code.
 ///
 /// Byte length and line structure are preserved, so a line number taken from the
 /// masked text names the same line in the file.
@@ -655,7 +655,7 @@ pub fn mask_literals(text: &str) -> String {
             at += 1;
             continue;
         }
-        match structure_gate::opaque_span(text, at) {
+        match structure_gate::source_scan::opaque_span(text, at) {
             Some(span) if span > 0 => {
                 let mut end = (at + span).min(text.len());
                 while end < text.len() && !text.is_char_boundary(end) {

@@ -13,8 +13,6 @@ use std::path::{Path, PathBuf};
 
 use walkdir::{DirEntry, WalkDir};
 
-use crate::opaque_span;
-
 /// Every `.rs` file under `root`, sorted, with a path relative to `root` and
 /// its contents.
 ///
@@ -170,4 +168,152 @@ pub fn mask_comments_and_strings(text: &str) -> String {
         at += ch.len_utf8();
     }
     masked
+}
+
+/// Byte length of the span starting at `at` whose interior is not code: a line
+/// or block comment, a string, a char literal, or any prefixed or raw form of
+/// those. `None` when ordinary code starts there.
+///
+/// The gate reads source text without compiling it, so nothing else
+/// distinguishes a comma inside `", "` from an argument separator.
+pub fn opaque_span(text: &str, at: usize) -> Option<usize> {
+    let rest = &text[at..];
+    if let Some(body) = rest.strip_prefix("//") {
+        return Some(2 + body.find('\n').map_or(body.len(), |end| end + 1));
+    }
+    if rest.starts_with("/*") {
+        return Some(block_comment_len(rest));
+    }
+    if rest.starts_with('"') {
+        return Some(escaped_string_len(rest));
+    }
+    if rest.starts_with('\'') {
+        return char_literal_len(rest);
+    }
+    prefixed_literal_len(text, at)
+}
+
+/// Byte length of the block comment starting at `rest`, which nests in Rust.
+fn block_comment_len(rest: &str) -> usize {
+    let bytes = rest.as_bytes();
+    let mut depth = 0usize;
+    let mut offset = 0usize;
+    while offset + 1 < bytes.len() {
+        if bytes[offset] == b'/' && bytes[offset + 1] == b'*' {
+            depth += 1;
+            offset += 2;
+        } else if bytes[offset] == b'*' && bytes[offset + 1] == b'/' {
+            depth -= 1;
+            offset += 2;
+            if depth == 0 {
+                return offset;
+            }
+        } else {
+            offset += 1;
+        }
+    }
+    rest.len()
+}
+
+/// Byte length of the backslash-escaped string starting at `rest`.
+///
+/// An unterminated literal consumes the remaining text: the alternative is to
+/// resume scanning inside a string, where every delimiter is misread.
+fn escaped_string_len(rest: &str) -> usize {
+    let bytes = rest.as_bytes();
+    let mut offset = 1usize;
+    while offset < bytes.len() {
+        match bytes[offset] {
+            b'\\' => offset += 2,
+            b'"' => return offset + 1,
+            _ => offset += 1,
+        }
+    }
+    rest.len()
+}
+
+/// Byte length of the char literal starting at `rest`, or `None` when the quote
+/// opens a lifetime or a loop label instead.
+fn char_literal_len(rest: &str) -> Option<usize> {
+    let body = &rest[1..];
+    if let Some(escape) = body.strip_prefix('\\') {
+        let escaped = if escape.starts_with('u') {
+            escape.find('}')? + 1
+        } else {
+            escape.chars().next()?.len_utf8()
+        };
+        return Some(2 + escaped + escape[escaped..].find('\'')? + 1);
+    }
+    let literal = body.chars().next()?.len_utf8();
+    body[literal..].starts_with('\'').then_some(literal + 2)
+}
+
+/// Byte length of a literal carrying a `r`, `b` or `c` prefix, including every
+/// raw form. `None` when the bytes are an ordinary identifier such as `bytes`
+/// or `crc32`.
+fn prefixed_literal_len(text: &str, at: usize) -> Option<usize> {
+    let bytes = text.as_bytes();
+    if at > 0 && (bytes[at - 1].is_ascii_alphanumeric() || bytes[at - 1] == b'_') {
+        return None;
+    }
+    let rest = &text[at..];
+    let prefix = rest
+        .bytes()
+        .take(2)
+        .take_while(|byte| matches!(*byte, b'r' | b'b' | b'c'))
+        .count();
+    if prefix == 0 {
+        return None;
+    }
+    let body = &rest[prefix..];
+    if rest[..prefix].contains('r') {
+        let hashes = body.bytes().take_while(|byte| *byte == b'#').count();
+        let quoted = &body[hashes..];
+        if !quoted.starts_with('"') {
+            return None;
+        }
+        return Some(prefix + hashes + raw_string_len(quoted, hashes));
+    }
+    if body.starts_with('"') {
+        return Some(prefix + escaped_string_len(body));
+    }
+    if body.starts_with('\'') {
+        return char_literal_len(body).map(|len| prefix + len);
+    }
+    None
+}
+
+/// Byte length of the raw string opening at `quoted`, closed by a quote
+/// followed by `hashes` hash marks. Raw strings honour no escape.
+fn raw_string_len(quoted: &str, hashes: usize) -> usize {
+    let bytes = quoted.as_bytes();
+    let mut offset = 1usize;
+    while offset < bytes.len() {
+        if bytes[offset] == b'"'
+            && quoted[offset + 1..]
+                .bytes()
+                .take_while(|byte| *byte == b'#')
+                .count()
+                >= hashes
+        {
+            return offset + 1 + hashes;
+        }
+        offset += 1;
+    }
+    quoted.len()
+}
+
+/// Byte offsets of code in `text`, with comments and literals skipped.
+pub fn code_offsets(text: &str) -> impl Iterator<Item = usize> + '_ {
+    let mut skip_to = 0usize;
+    text.char_indices().filter_map(move |(at, _)| {
+        if at < skip_to {
+            return None;
+        }
+        if let Some(span) = opaque_span(text, at) {
+            skip_to = at + span.max(1);
+            return None;
+        }
+        Some(at)
+    })
 }
