@@ -51,6 +51,42 @@ mod substitution;
 #[cfg(test)]
 mod test_fixtures;
 
+/// What a loop header proves about whether the body runs.
+///
+/// Two rewrites need opposite halves of this answer and each used to read the
+/// bounds itself. `loop_trip_zero_eliminate` drops a loop it proves never
+/// entered; `loop_licm` may only speculate a memory read out of a loop it
+/// proves is entered. One reader keeps the two from disagreeing about what a
+/// header proves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LoopEntry {
+    /// The body never runs.
+    Never,
+    /// The body runs at least once.
+    AtLeastOnce,
+    /// The header does not say. Every rule here fails closed on this.
+    Unknown,
+}
+
+/// What the bounds of one `Node::Loop` prove about entry.
+///
+/// Only literal bounds prove anything. A bound that is a variable, a load or
+/// any computed expression is `Unknown`, because a header that depends on a
+/// runtime value proves nothing at compile time.
+pub(crate) fn loop_entry(from: &crate::ir::Expr, to: &crate::ir::Expr) -> LoopEntry {
+    use crate::ir::Expr;
+    let empty = match (from, to) {
+        (Expr::LitU32(first), Expr::LitU32(last)) => first >= last,
+        (Expr::LitI32(first), Expr::LitI32(last)) => first >= last,
+        _ => return LoopEntry::Unknown,
+    };
+    if empty {
+        LoopEntry::Never
+    } else {
+        LoopEntry::AtLeastOnce
+    }
+}
+
 /// Every scalar name an expression anywhere in `nodes` reads, name-sorted.
 ///
 /// This is the read set every loop restructuring pass asks about before it
