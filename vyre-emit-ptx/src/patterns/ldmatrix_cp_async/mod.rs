@@ -18,7 +18,7 @@
 //! conditions above describe what one `cp.async` instruction can actually
 //! issue, and the gate on them is a compute-capability question.
 
-pub mod schedule;
+mod schedule;
 pub use schedule::{
     plan_double_buffer_schedule, AccumulatorLiveness, DoubleBufferSchedule, EpilogueOverlap,
     PingPongPlan, PipelineStageOp, ScheduleError, WaitGroupPolicy,
