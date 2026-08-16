@@ -10,5 +10,7 @@
 pub(crate) mod attribution;
 pub(crate) mod descriptor;
 
-#[cfg(any(feature = "reduce", feature = "text", feature = "llm"))]
+// `text` is not named: it enables `reduce`, and `reduce` is what the module's
+// callers there compile under.
+#[cfg(any(feature = "reduce", feature = "llm"))]
 pub(crate) mod outputs;

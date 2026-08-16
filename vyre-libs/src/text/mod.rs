@@ -12,15 +12,8 @@ pub(crate) mod byte_histogram;
 /// Byte classifier  -  host 256-entry lookup table classifies each source byte.
 pub(crate) mod char_class;
 /// Histogram-based encoding classifier.
-#[cfg(feature = "reduce")]
 pub(crate) mod encoding_classify;
 /// Line-number-per-byte index for diagnostic-producing parsers.
-///
-/// Behind `reduce`, like `encoding_classify`: the pipeline scans line-start
-/// flags through `reduce::multi_block_prefix_scan`, so the module does not
-/// compile without it. The `text` feature enables `reduce`, and this gate is
-/// what makes the module honest for a build that reaches `text` without it.
-#[cfg(feature = "reduce")]
 pub(crate) mod line_index;
 /// UTF-8 shape counters over byte histograms.
 pub(crate) mod utf8_shape_counts;
@@ -33,7 +26,6 @@ pub use byte_histogram::{
     byte_histogram_256, byte_histogram_256_body, byte_histogram_256_child, byte_histogram_256_u8,
     byte_histogram_256_u8_child, BYTE_HISTOGRAM_256_OP_ID,
 };
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub use char_class::reference_char_class;
 pub use char_class::{
     build_char_class_table, char_class, char_class_dispatch_grid, char_class_u8, CHAR_CLASS_OP_ID,
@@ -42,27 +34,17 @@ pub use char_class::{
     C_HASH, C_LT, C_MINUS, C_NEWLINE, C_OPEN_BRACE, C_OPEN_BRACKET, C_OPEN_PAREN, C_OTHER,
     C_PERCENT, C_PIPE, C_PLUS, C_QUOTE, C_SEMICOLON, C_SLASH, C_STAR, C_TILDE, C_WS,
 };
-#[cfg(feature = "reduce")]
 pub use encoding_classify::{
     classify_from_histogram, encoding_classify, encoding_classify_body, encoding_classify_child,
     ENCODING_CLASSIFY_OP_ID, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY,
     ENC_ISO8859_1, ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
 };
-#[cfg(feature = "reduce")]
-pub use line_index::line_index;
-#[cfg(all(
-    feature = "reduce",
-    any(test, feature = "cpu-parity", feature = "text")
-))]
-pub use line_index::reference_line_index;
-#[cfg(feature = "reduce")]
-pub use line_index::{line_index_u8, LINE_INDEX_OP_ID};
+pub use line_index::{line_index, line_index_u8, reference_line_index, LINE_INDEX_OP_ID};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use utf8_shape_counts::reference_utf8_shape_counts;
 pub use utf8_shape_counts::{
     utf8_shape_counts, utf8_shape_counts_body, utf8_shape_counts_child, UTF8_SHAPE_COUNTS_OP_ID,
 };
-#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub use utf8_validate::reference_utf8_validate;
 pub use utf8_validate::{
     utf8_validate, utf8_validate_dispatch_grid, utf8_validate_u8, UTF8_ASCII, UTF8_CONT,

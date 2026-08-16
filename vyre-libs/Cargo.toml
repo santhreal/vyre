@@ -53,6 +53,8 @@ full = [
     "parsing-kernels",
     "text",
     "bitset", "reduce", "label", "predicate", "fixpoint", "graph",
+    "representation",
+    "builder-ops",
     "geom", "opt", "topology",
 ]
 cpu-parity = ["vyre-primitives/cpu-parity"]
@@ -105,6 +107,14 @@ crypto = ["crypto-blake3"]
 # to find, because the oracle modules re-enabled whatever a domain forgot.
 decode = ["matching-kernels", "text"]
 text = ["reduce"]
+# `representation` gates `src/representation`, which reaches nothing else in
+# the crate: the unpack kernel is built from bare IR.
+representation = []
+# `builder-ops` gates the two shared child regions the builder registers as
+# catalog entries of their own. The skeletons behind them are ungated, so a
+# dialect composes `build_indexed_map` and `strided_accumulate_child` without
+# naming this feature.
+"builder-ops" = []
 logical = ["bitset"]
 rule = ["dep:regex"]
 
@@ -155,7 +165,9 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
 # not: it compiled the host oracles into every default build and masked the
 # edges the sweep is for.
 "matching-substring" = ["matching-dfa", "matching-kernels"]
-"matching-dfa" = ["matching-kernels"]
+# `matching-dfa` names `text` because `scan/post_process.rs` folds
+# `text::reference_byte_histogram` into `shannon_entropy_bits_per_byte`.
+"matching-dfa" = ["matching-kernels", "text"]
 "matching-nfa" = ["matching-dfa", "nfa"]
 "matching-regex" = ["matching-nfa", "dep:regex-syntax"]
 "intern" = ["hash"]
