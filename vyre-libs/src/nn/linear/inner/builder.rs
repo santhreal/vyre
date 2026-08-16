@@ -3,9 +3,9 @@
 use vyre_foundation::composition::{tag_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::prelude::MatmulBias;
 use crate::{
     builder::{check_tensors, BuildOptions},
-    math::linalg::MatmulBias,
     tensor_ref::{TensorRef, TensorRefError},
 };
 

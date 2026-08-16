@@ -1,7 +1,7 @@
 //! End-to-end parity for the COMPOSITE
 //! `math::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via`, the
 //! Fisher-preconditioned fixed-point autotune gradient, through the shared faithful
-//! [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! [`vyre_driver_reference::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the two constituent kernels are each parity-covered in isolation (softmax normalization by
@@ -25,9 +25,12 @@
 
 use vyre_libs::solvers::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via;
 
+use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::test_support::{
-    fixed_matvec, fixed_mul as fixed_mul_16_16, signed_fixed_17 as signed_fisher,
-    xorshift32 as xorshift, ReferenceEvalDispatcher,
+    fixed_matvec,
+    fixed_mul as fixed_mul_16_16,
+    signed_fixed_17 as signed_fisher,
+    xorshift32 as xorshift,
 };
 
 const FIXED_ONE: u32 = 1 << 16;

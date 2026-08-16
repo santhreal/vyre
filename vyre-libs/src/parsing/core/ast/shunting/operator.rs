@@ -1,4 +1,4 @@
-use crate::parsing::c::lex::tokens::*;
+use vyre_spec::c11_token::*;
 use crate::parsing::core::ast::node::*;
 use vyre_foundation::ir::Expr;
 

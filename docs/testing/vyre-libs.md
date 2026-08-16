@@ -24,13 +24,15 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 ## Feature sets
 
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
-- Available manifest features: `analysis`, `c-parser`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
+- Available manifest features: `analysis`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
+| `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | None | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
+| `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | `math-scan` | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
 | `example` | `select1_optimizer_parity` | `vyre-libs/examples/select1_optimizer_parity.rs` | None | `./cargo_full test -p vyre-libs --example select1_optimizer_parity` |
 | `lib` | `vyre_libs` | `vyre-libs/src/lib.rs` | None | `./cargo_full test -p vyre-libs` |
 | `test` | `ac_count_suffix3_naga_validation` | `vyre-libs/tests/ac_count_suffix3_naga_validation.rs` | None | `./cargo_full test -p vyre-libs --test ac_count_suffix3_naga_validation` |
@@ -39,7 +41,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `algebra_lattice_semiring_contracts` | `vyre-libs/tests/algebra_lattice_semiring_contracts.rs` | None | `./cargo_full test -p vyre-libs --test algebra_lattice_semiring_contracts` |
 | `test` | `analysis_fact_schema` | `vyre-libs/tests/analysis_fact_schema.rs` | None | `./cargo_full test -p vyre-libs --test analysis_fact_schema` |
 | `test` | `ast_shunting_yard` | `vyre-libs/tests/ast_shunting_yard.rs` | None | `./cargo_full test -p vyre-libs --test ast_shunting_yard` |
-| `test` | `ast_shunting_yard` | `vyre-libs/tests/ast_shunting_yard.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test ast_shunting_yard` |
 | `test` | `attention_head_to_token_contract` | `vyre-libs/tests/attention_head_to_token_contract.rs` | None | `./cargo_full test -p vyre-libs --test attention_head_to_token_contract` |
 | `test` | `attention_head_to_token_contract` | `vyre-libs/tests/attention_head_to_token_contract.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test attention_head_to_token_contract` |
 | `test` | `bellman_shortest_path_via_reference_parity` | `vyre-libs/tests/bellman_shortest_path_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test bellman_shortest_path_via_reference_parity` |
@@ -54,126 +55,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `blake3_kat` | `vyre-libs/tests/blake3_kat.rs` | None | `./cargo_full test -p vyre-libs --test blake3_kat` |
 | `test` | `blake3_wrong_size` | `vyre-libs/tests/blake3_wrong_size.rs` | None | `./cargo_full test -p vyre-libs --test blake3_wrong_size` |
 | `test` | `buffer_name_cross_family` | `vyre-libs/tests/buffer_name_cross_family.rs` | None | `./cargo_full test -p vyre-libs --test buffer_name_cross_family` |
-| `test` | `c11_ast_corpus_complete_constructs` | `vyre-libs/tests/c11_ast_corpus_complete_constructs.rs` | None | `./cargo_full test -p vyre-libs --test c11_ast_corpus_complete_constructs` |
-| `test` | `c11_ast_corpus_complete_constructs` | `vyre-libs/tests/c11_ast_corpus_complete_constructs.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c11_ast_corpus_complete_constructs` |
-| `test` | `c11_build_vast_nodes` | `vyre-libs/tests/c11_build_vast_nodes.rs` | None | `./cargo_full test -p vyre-libs --test c11_build_vast_nodes` |
-| `test` | `c11_build_vast_nodes` | `vyre-libs/tests/c11_build_vast_nodes.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c11_build_vast_nodes` |
-| `test` | `c11_function_extractor_contracts` | `vyre-libs/tests/c11_function_extractor_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c11_function_extractor_contracts` |
-| `test` | `c11_function_extractor_contracts` | `vyre-libs/tests/c11_function_extractor_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c11_function_extractor_contracts` |
-| `test` | `c11_keyword` | `vyre-libs/tests/c11_keyword.rs` | None | `./cargo_full test -p vyre-libs --test c11_keyword` |
-| `test` | `c11_keyword` | `vyre-libs/tests/c11_keyword.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c11_keyword` |
-| `test` | `c11_lexer_ir_identity` | `vyre-libs/tests/c11_lexer_ir_identity.rs` | None | `./cargo_full test -p vyre-libs --test c11_lexer_ir_identity` |
-| `test` | `c11_lexer_ir_identity` | `vyre-libs/tests/c11_lexer_ir_identity.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c11_lexer_ir_identity` |
-| `test` | `c11_lexer_naga_validation` | `vyre-libs/tests/c11_lexer_naga_validation.rs` | None | `./cargo_full test -p vyre-libs --test c11_lexer_naga_validation` |
-| `test` | `c11_lexer_naga_validation` | `vyre-libs/tests/c11_lexer_naga_validation.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c11_lexer_naga_validation` |
-| `test` | `c11_parser_typedef_contracts` | `vyre-libs/tests/c11_parser_typedef_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c11_parser_typedef_contracts` |
-| `test` | `c11_parser_typedef_contracts` | `vyre-libs/tests/c11_parser_typedef_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c11_parser_typedef_contracts` |
-| `test` | `c11_statement_bounds_long_statement_span` | `vyre-libs/tests/c11_statement_bounds_long_statement_span.rs` | None | `./cargo_full test -p vyre-libs --test c11_statement_bounds_long_statement_span` |
-| `test` | `c_annotate_typedef_oracle_parity` | `vyre-libs/tests/c_annotate_typedef_oracle_parity.rs` | None | `./cargo_full test -p vyre-libs --test c_annotate_typedef_oracle_parity` |
-| `test` | `c_ast_asm_extended_operand_goto_label_pg_lowering_contracts` | `vyre-libs/tests/c_ast_asm_extended_operand_goto_label_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_asm_extended_operand_goto_label_pg_lowering_contracts` |
-| `test` | `c_ast_asm_extended_operand_goto_label_pg_lowering_contracts` | `vyre-libs/tests/c_ast_asm_extended_operand_goto_label_pg_lowering_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_asm_extended_operand_goto_label_pg_lowering_contracts` |
-| `test` | `c_ast_c99_for_do_macro_e2e` | `vyre-libs/tests/c_ast_c99_for_do_macro_e2e.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_c99_for_do_macro_e2e` |
-| `test` | `c_ast_c99_for_do_macro_e2e` | `vyre-libs/tests/c_ast_c99_for_do_macro_e2e.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_c99_for_do_macro_e2e` |
-| `test` | `c_ast_compound_literal_designated_init_nested_pg_lowering_contracts` | `vyre-libs/tests/c_ast_compound_literal_designated_init_nested_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_compound_literal_designated_init_nested_pg_lowering_contracts` |
-| `test` | `c_ast_compound_literal_designated_init_nested_pg_lowering_contracts` | `vyre-libs/tests/c_ast_compound_literal_designated_init_nested_pg_lowering_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_compound_literal_designated_init_nested_pg_lowering_contracts` |
-| `test` | `c_ast_container_of_e2e` | `vyre-libs/tests/c_ast_container_of_e2e.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_container_of_e2e` |
-| `test` | `c_ast_container_of_e2e` | `vyre-libs/tests/c_ast_container_of_e2e.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_container_of_e2e` |
-| `test` | `c_ast_declaration_advanced_contracts` | `vyre-libs/tests/c_ast_declaration_advanced_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_declaration_advanced_contracts` |
-| `test` | `c_ast_declaration_advanced_contracts` | `vyre-libs/tests/c_ast_declaration_advanced_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_declaration_advanced_contracts` |
-| `test` | `c_ast_declaration_container_nodes` | `vyre-libs/tests/c_ast_declaration_container_nodes.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_declaration_container_nodes` |
-| `test` | `c_ast_declaration_container_nodes` | `vyre-libs/tests/c_ast_declaration_container_nodes.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_declaration_container_nodes` |
-| `test` | `c_ast_declarator_matrix_contracts` | `vyre-libs/tests/c_ast_declarator_matrix_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_declarator_matrix_contracts` |
-| `test` | `c_ast_declarator_matrix_contracts` | `vyre-libs/tests/c_ast_declarator_matrix_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_declarator_matrix_contracts` |
-| `test` | `c_ast_expression_operator_ambiguity_contracts` | `vyre-libs/tests/c_ast_expression_operator_ambiguity_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_ambiguity_contracts` |
-| `test` | `c_ast_expression_operator_ambiguity_contracts` | `vyre-libs/tests/c_ast_expression_operator_ambiguity_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_ambiguity_contracts` |
-| `test` | `c_ast_expression_operator_builtin_contracts` | `vyre-libs/tests/c_ast_expression_operator_builtin_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_builtin_contracts` |
-| `test` | `c_ast_expression_operator_builtin_contracts` | `vyre-libs/tests/c_ast_expression_operator_builtin_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_builtin_contracts` |
-| `test` | `c_ast_expression_operator_postfix_contracts` | `vyre-libs/tests/c_ast_expression_operator_postfix_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_postfix_contracts` |
-| `test` | `c_ast_expression_operator_postfix_contracts` | `vyre-libs/tests/c_ast_expression_operator_postfix_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_postfix_contracts` |
-| `test` | `c_ast_expression_operator_precedence_contracts` | `vyre-libs/tests/c_ast_expression_operator_precedence_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_precedence_contracts` |
-| `test` | `c_ast_expression_operator_precedence_contracts` | `vyre-libs/tests/c_ast_expression_operator_precedence_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_expression_operator_precedence_contracts` |
-| `test` | `c_ast_expression_precedence_e2e` | `vyre-libs/tests/c_ast_expression_precedence_e2e.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_expression_precedence_e2e` |
-| `test` | `c_ast_expression_precedence_e2e` | `vyre-libs/tests/c_ast_expression_precedence_e2e.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_expression_precedence_e2e` |
-| `test` | `c_ast_expression_shape_gaps_e2e` | `vyre-libs/tests/c_ast_expression_shape_gaps_e2e.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_expression_shape_gaps_e2e` |
-| `test` | `c_ast_expression_shape_gaps_e2e` | `vyre-libs/tests/c_ast_expression_shape_gaps_e2e.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_expression_shape_gaps_e2e` |
-| `test` | `c_ast_gnu_asm_decomposition_and_attribute_kinds` | `vyre-libs/tests/c_ast_gnu_asm_decomposition_and_attribute_kinds.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_gnu_asm_decomposition_and_attribute_kinds` |
-| `test` | `c_ast_gnu_asm_decomposition_and_attribute_kinds` | `vyre-libs/tests/c_ast_gnu_asm_decomposition_and_attribute_kinds.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_gnu_asm_decomposition_and_attribute_kinds` |
-| `test` | `c_ast_gnu_attribute_statement_pg_lowering_contracts` | `vyre-libs/tests/c_ast_gnu_attribute_statement_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_gnu_attribute_statement_pg_lowering_contracts` |
-| `test` | `c_ast_gnu_attribute_statement_pg_lowering_contracts` | `vyre-libs/tests/c_ast_gnu_attribute_statement_pg_lowering_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_gnu_attribute_statement_pg_lowering_contracts` |
-| `test` | `c_ast_gnu_builtin_control_flow_pg_lowering_contracts` | `vyre-libs/tests/c_ast_gnu_builtin_control_flow_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_gnu_builtin_control_flow_pg_lowering_contracts` |
-| `test` | `c_ast_gnu_builtin_control_flow_pg_lowering_contracts` | `vyre-libs/tests/c_ast_gnu_builtin_control_flow_pg_lowering_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_gnu_builtin_control_flow_pg_lowering_contracts` |
-| `test` | `c_ast_gnu_builtin_vast_contracts` | `vyre-libs/tests/c_ast_gnu_builtin_vast_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_gnu_builtin_vast_contracts` |
-| `test` | `c_ast_gnu_builtin_vast_contracts` | `vyre-libs/tests/c_ast_gnu_builtin_vast_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_gnu_builtin_vast_contracts` |
-| `test` | `c_ast_linux_corpus_macro_builtin_and_qualifier_contracts` | `vyre-libs/tests/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_linux_corpus_macro_builtin_and_qualifier_contracts` |
-| `test` | `c_ast_linux_corpus_macro_builtin_and_qualifier_contracts` | `vyre-libs/tests/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_linux_corpus_macro_builtin_and_qualifier_contracts` |
-| `test` | `c_ast_linux_grade_gnu_and_c11_construct_coverage` | `vyre-libs/tests/c_ast_linux_grade_gnu_and_c11_construct_coverage.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_linux_grade_gnu_and_c11_construct_coverage` |
-| `test` | `c_ast_linux_grade_gnu_and_c11_construct_coverage` | `vyre-libs/tests/c_ast_linux_grade_gnu_and_c11_construct_coverage.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_linux_grade_gnu_and_c11_construct_coverage` |
-| `test` | `c_ast_linux_style_raw_source_contracts` | `vyre-libs/tests/c_ast_linux_style_raw_source_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_linux_style_raw_source_contracts` |
-| `test` | `c_ast_linux_style_raw_source_contracts` | `vyre-libs/tests/c_ast_linux_style_raw_source_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_linux_style_raw_source_contracts` |
-| `test` | `c_ast_parity_matrix_contracts` | `vyre-libs/tests/c_ast_parity_matrix_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_parity_matrix_contracts` |
-| `test` | `c_ast_parity_matrix_contracts` | `vyre-libs/tests/c_ast_parity_matrix_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_parity_matrix_contracts` |
-| `test` | `c_ast_pg_expression_shape_e2e` | `vyre-libs/tests/c_ast_pg_expression_shape_e2e.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_pg_expression_shape_e2e` |
-| `test` | `c_ast_pg_expression_shape_e2e` | `vyre-libs/tests/c_ast_pg_expression_shape_e2e.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_pg_expression_shape_e2e` |
-| `test` | `c_ast_pg_lowering_deep_contracts` | `vyre-libs/tests/c_ast_pg_lowering_deep_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_pg_lowering_deep_contracts` |
-| `test` | `c_ast_pg_lowering_deep_contracts` | `vyre-libs/tests/c_ast_pg_lowering_deep_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_pg_lowering_deep_contracts` |
-| `test` | `c_ast_sema_scope_cast_decl_redecl_field_contracts` | `vyre-libs/tests/c_ast_sema_scope_cast_decl_redecl_field_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_cast_decl_redecl_field_contracts` |
-| `test` | `c_ast_sema_scope_cast_decl_redecl_field_contracts` | `vyre-libs/tests/c_ast_sema_scope_cast_decl_redecl_field_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_cast_decl_redecl_field_contracts` |
-| `test` | `c_ast_sema_scope_function_parameter_prototype_contracts` | `vyre-libs/tests/c_ast_sema_scope_function_parameter_prototype_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_function_parameter_prototype_contracts` |
-| `test` | `c_ast_sema_scope_function_parameter_prototype_contracts` | `vyre-libs/tests/c_ast_sema_scope_function_parameter_prototype_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_function_parameter_prototype_contracts` |
-| `test` | `c_ast_sema_scope_tag_enum_label_contracts` | `vyre-libs/tests/c_ast_sema_scope_tag_enum_label_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_tag_enum_label_contracts` |
-| `test` | `c_ast_sema_scope_tag_enum_label_contracts` | `vyre-libs/tests/c_ast_sema_scope_tag_enum_label_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_tag_enum_label_contracts` |
-| `test` | `c_ast_sema_scope_typedef_shadow_restore_contracts` | `vyre-libs/tests/c_ast_sema_scope_typedef_shadow_restore_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_typedef_shadow_restore_contracts` |
-| `test` | `c_ast_sema_scope_typedef_shadow_restore_contracts` | `vyre-libs/tests/c_ast_sema_scope_typedef_shadow_restore_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_sema_scope_typedef_shadow_restore_contracts` |
-| `test` | `c_ast_semantic_gaps_linux_grade` | `vyre-libs/tests/c_ast_semantic_gaps_linux_grade.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_semantic_gaps_linux_grade` |
-| `test` | `c_ast_semantic_gaps_linux_grade` | `vyre-libs/tests/c_ast_semantic_gaps_linux_grade.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_semantic_gaps_linux_grade` |
-| `test` | `c_ast_switch_case_complex_body_pg_lowering_contracts` | `vyre-libs/tests/c_ast_switch_case_complex_body_pg_lowering_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_ast_switch_case_complex_body_pg_lowering_contracts` |
-| `test` | `c_ast_switch_case_complex_body_pg_lowering_contracts` | `vyre-libs/tests/c_ast_switch_case_complex_body_pg_lowering_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_ast_switch_case_complex_body_pg_lowering_contracts` |
-| `test` | `c_conditional_range_policy` | `vyre-libs/tests/c_conditional_range_policy.rs` | None | `./cargo_full test -p vyre-libs --test c_conditional_range_policy` |
-| `test` | `c_declaration_follower_token_matrix_guard` | `vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs` | None | `./cargo_full test -p vyre-libs --test c_declaration_follower_token_matrix_guard` |
-| `test` | `c_global_typedef_annotate_parity` | `vyre-libs/tests/c_global_typedef_annotate_parity.rs` | None | `./cargo_full test -p vyre-libs --test c_global_typedef_annotate_parity` |
-| `test` | `c_lexer_preprocessor_hash_contracts` | `vyre-libs/tests/c_lexer_preprocessor_hash_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_lexer_preprocessor_hash_contracts` |
-| `test` | `c_lexer_preprocessor_hash_contracts` | `vyre-libs/tests/c_lexer_preprocessor_hash_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_lexer_preprocessor_hash_contracts` |
-| `test` | `c_lexer_regular_variant_parity` | `vyre-libs/tests/c_lexer_regular_variant_parity.rs` | None | `./cargo_full test -p vyre-libs --test c_lexer_regular_variant_parity` |
-| `test` | `c_lower_semantic_graph_control_resolution_parity` | `vyre-libs/tests/c_lower_semantic_graph_control_resolution_parity.rs` | None | `./cargo_full test -p vyre-libs --test c_lower_semantic_graph_control_resolution_parity` |
-| `test` | `c_packed_haystack_semantic_parity` | `vyre-libs/tests/c_packed_haystack_semantic_parity.rs` | None | `./cargo_full test -p vyre-libs --test c_packed_haystack_semantic_parity` |
-| `test` | `c_packed_haystack_semantic_parity` | `vyre-libs/tests/c_packed_haystack_semantic_parity.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_packed_haystack_semantic_parity` |
-| `test` | `c_parser_hostile_malformed_stream_contracts` | `vyre-libs/tests/c_parser_hostile_malformed_stream_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_parser_hostile_malformed_stream_contracts` |
-| `test` | `c_parser_hostile_malformed_stream_contracts` | `vyre-libs/tests/c_parser_hostile_malformed_stream_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_parser_hostile_malformed_stream_contracts` |
-| `test` | `c_parser_pipeline_lexer_adversarial_contracts` | `vyre-libs/tests/c_parser_pipeline_lexer_adversarial_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_parser_pipeline_lexer_adversarial_contracts` |
-| `test` | `c_parser_pipeline_lexer_adversarial_contracts` | `vyre-libs/tests/c_parser_pipeline_lexer_adversarial_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_parser_pipeline_lexer_adversarial_contracts` |
-| `test` | `c_parser_pipeline_malformed_stream_contracts` | `vyre-libs/tests/c_parser_pipeline_malformed_stream_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_parser_pipeline_malformed_stream_contracts` |
-| `test` | `c_parser_pipeline_malformed_stream_contracts` | `vyre-libs/tests/c_parser_pipeline_malformed_stream_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_parser_pipeline_malformed_stream_contracts` |
-| `test` | `c_preprocess_certificates` | `vyre-libs/tests/c_preprocess_certificates.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_certificates` |
-| `test` | `c_preprocess_classified_memory_cache_contract` | `vyre-libs/tests/c_preprocess_classified_memory_cache_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_classified_memory_cache_contract` |
-| `test` | `c_preprocess_dedup_guard` | `vyre-libs/tests/c_preprocess_dedup_guard.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_dedup_guard` |
-| `test` | `c_preprocess_dedup_guard` | `vyre-libs/tests/c_preprocess_dedup_guard.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_preprocess_dedup_guard` |
-| `test` | `c_preprocess_directive_count_contract` | `vyre-libs/tests/c_preprocess_directive_count_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_directive_count_contract` |
-| `test` | `c_preprocess_directive_count_contract` | `vyre-libs/tests/c_preprocess_directive_count_contract.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_preprocess_directive_count_contract` |
-| `test` | `c_preprocess_directive_staging_allocation_contract` | `vyre-libs/tests/c_preprocess_directive_staging_allocation_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_directive_staging_allocation_contract` |
-| `test` | `c_preprocess_dynamic_macro_expansion_contracts` | `vyre-libs/tests/c_preprocess_dynamic_macro_expansion_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_dynamic_macro_expansion_contracts` |
-| `test` | `c_preprocess_dynamic_macro_expansion_contracts` | `vyre-libs/tests/c_preprocess_dynamic_macro_expansion_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_preprocess_dynamic_macro_expansion_contracts` |
-| `test` | `c_preprocess_dynamic_macro_optimizer_idempotence_contract` | `vyre-libs/tests/c_preprocess_dynamic_macro_optimizer_idempotence_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_dynamic_macro_optimizer_idempotence_contract` |
-| `test` | `c_preprocess_dynamic_macro_optimizer_idempotence_contract` | `vyre-libs/tests/c_preprocess_dynamic_macro_optimizer_idempotence_contract.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_preprocess_dynamic_macro_optimizer_idempotence_contract` |
-| `test` | `c_preprocess_gpu_buffer_allocation_contract` | `vyre-libs/tests/c_preprocess_gpu_buffer_allocation_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_gpu_buffer_allocation_contract` |
-| `test` | `c_preprocess_gpu_resident_state_contracts` | `vyre-libs/tests/c_preprocess_gpu_resident_state_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_gpu_resident_state_contracts` |
-| `test` | `c_preprocess_gpu_resident_state_contracts` | `vyre-libs/tests/c_preprocess_gpu_resident_state_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_preprocess_gpu_resident_state_contracts` |
-| `test` | `c_preprocess_macro_expansion_cache_contract` | `vyre-libs/tests/c_preprocess_macro_expansion_cache_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_macro_expansion_cache_contract` |
-| `test` | `c_preprocess_macro_table_allocation_contract` | `vyre-libs/tests/c_preprocess_macro_table_allocation_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_macro_table_allocation_contract` |
-| `test` | `c_preprocess_named_macro_expansion_contracts` | `vyre-libs/tests/c_preprocess_named_macro_expansion_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_named_macro_expansion_contracts` |
-| `test` | `c_preprocess_named_macro_expansion_contracts` | `vyre-libs/tests/c_preprocess_named_macro_expansion_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_preprocess_named_macro_expansion_contracts` |
-| `test` | `c_preprocess_pipeline_contracts` | `vyre-libs/tests/c_preprocess_pipeline_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_pipeline_contracts` |
-| `test` | `c_preprocess_pipeline_contracts` | `vyre-libs/tests/c_preprocess_pipeline_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_preprocess_pipeline_contracts` |
-| `test` | `c_preprocess_prefix_scan_allocation_contract` | `vyre-libs/tests/c_preprocess_prefix_scan_allocation_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_prefix_scan_allocation_contract` |
-| `test` | `c_preprocess_replacement_token_cache_contract` | `vyre-libs/tests/c_preprocess_replacement_token_cache_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_preprocess_replacement_token_cache_contract` |
-| `test` | `c_reference_decode_contracts` | `vyre-libs/tests/c_reference_decode_contracts.rs` | None | `./cargo_full test -p vyre-libs --test c_reference_decode_contracts` |
-| `test` | `c_reference_decode_contracts` | `vyre-libs/tests/c_reference_decode_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_reference_decode_contracts` |
-| `test` | `c_sema_scope_optimizer_idempotence_contract` | `vyre-libs/tests/c_sema_scope_optimizer_idempotence_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_sema_scope_optimizer_idempotence_contract` |
-| `test` | `c_sema_scope_optimizer_idempotence_contract` | `vyre-libs/tests/c_sema_scope_optimizer_idempotence_contract.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_sema_scope_optimizer_idempotence_contract` |
-| `test` | `c_typedef_annotation_row_contract_gate` | `vyre-libs/tests/c_typedef_annotation_row_contract_gate.rs` | None | `./cargo_full test -p vyre-libs --test c_typedef_annotation_row_contract_gate` |
-| `test` | `c_typedef_annotation_row_contract_gate` | `vyre-libs/tests/c_typedef_annotation_row_contract_gate.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_typedef_annotation_row_contract_gate` |
-| `test` | `c_typedef_precomputed_variant_parity` | `vyre-libs/tests/c_typedef_precomputed_variant_parity.rs` | None | `./cargo_full test -p vyre-libs --test c_typedef_precomputed_variant_parity` |
-| `test` | `c_vast_classify_wire_depth_contract` | `vyre-libs/tests/c_vast_classify_wire_depth_contract.rs` | None | `./cargo_full test -p vyre-libs --test c_vast_classify_wire_depth_contract` |
-| `test` | `c_vast_classify_wire_depth_contract` | `vyre-libs/tests/c_vast_classify_wire_depth_contract.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test c_vast_classify_wire_depth_contract` |
 | `test` | `cat_a_conform` | `vyre-libs/tests/cat_a_conform.rs` | None | `./cargo_full test -p vyre-libs --test cat_a_conform` |
 | `test` | `categorical_laws_proptest` | `vyre-libs/tests/categorical_laws_proptest.rs` | None | `./cargo_full test -p vyre-libs --test categorical_laws_proptest` |
 | `test` | `categorical_laws_proptest` | `vyre-libs/tests/categorical_laws_proptest.rs` | `cpu-parity`, `reasoning`, `test-fixtures` | `./cargo_full test -p vyre-libs --test categorical_laws_proptest` |
@@ -220,38 +101,10 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `fuzz_target_inventory` | `vyre-libs/tests/fuzz_target_inventory.rs` | None | `./cargo_full test -p vyre-libs --test fuzz_target_inventory` |
 | `test` | `gated_rms_norm_contract` | `vyre-libs/tests/gated_rms_norm_contract.rs` | None | `./cargo_full test -p vyre-libs --test gated_rms_norm_contract` |
 | `test` | `gated_rms_norm_contract` | `vyre-libs/tests/gated_rms_norm_contract.rs` | `nn-norm` | `./cargo_full test -p vyre-libs --test gated_rms_norm_contract` |
-| `test` | `gemini_c_ast_contracts` | `vyre-libs/tests/gemini_c_ast_contracts.rs` | None | `./cargo_full test -p vyre-libs --test gemini_c_ast_contracts` |
-| `test` | `gemini_c_ast_contracts` | `vyre-libs/tests/gemini_c_ast_contracts.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gemini_c_ast_contracts` |
 | `test` | `go_channel_creation_parity` | `vyre-libs/tests/go_channel_creation_parity.rs` | None | `./cargo_full test -p vyre-libs --test go_channel_creation_parity` |
 | `test` | `go_frontend_corpus` | `vyre-libs/tests/go_frontend_corpus.rs` | None | `./cargo_full test -p vyre-libs --test go_frontend_corpus` |
 | `test` | `go_tokenizer_semantics` | `vyre-libs/tests/go_tokenizer_semantics.rs` | None | `./cargo_full test -p vyre-libs --test go_tokenizer_semantics` |
-| `test` | `gpu_char_constant_scan_roundtrip` | `vyre-libs/tests/gpu_char_constant_scan_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_char_constant_scan_roundtrip` |
-| `test` | `gpu_char_constant_scan_roundtrip` | `vyre-libs/tests/gpu_char_constant_scan_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_char_constant_scan_roundtrip` |
 | `test` | `gpu_columnar_string_ingress` | `vyre-libs/tests/gpu_columnar_string_ingress.rs` | None | `./cargo_full test -p vyre-libs --test gpu_columnar_string_ingress` |
-| `test` | `gpu_comment_strip_mask_roundtrip` | `vyre-libs/tests/gpu_comment_strip_mask_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_comment_strip_mask_roundtrip` |
-| `test` | `gpu_comment_strip_mask_roundtrip` | `vyre-libs/tests/gpu_comment_strip_mask_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_comment_strip_mask_roundtrip` |
-| `test` | `gpu_define_parse_roundtrip` | `vyre-libs/tests/gpu_define_parse_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_define_parse_roundtrip` |
-| `test` | `gpu_define_parse_roundtrip` | `vyre-libs/tests/gpu_define_parse_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_define_parse_roundtrip` |
-| `test` | `gpu_directive_metadata_roundtrip` | `vyre-libs/tests/gpu_directive_metadata_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_directive_metadata_roundtrip` |
-| `test` | `gpu_directive_metadata_roundtrip` | `vyre-libs/tests/gpu_directive_metadata_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_directive_metadata_roundtrip` |
-| `test` | `gpu_if_expression_roundtrip` | `vyre-libs/tests/gpu_if_expression_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_if_expression_roundtrip` |
-| `test` | `gpu_if_expression_roundtrip` | `vyre-libs/tests/gpu_if_expression_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_if_expression_roundtrip` |
-| `test` | `gpu_ifdef_value_roundtrip` | `vyre-libs/tests/gpu_ifdef_value_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_ifdef_value_roundtrip` |
-| `test` | `gpu_ifdef_value_roundtrip` | `vyre-libs/tests/gpu_ifdef_value_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_ifdef_value_roundtrip` |
-| `test` | `gpu_include_parse_roundtrip` | `vyre-libs/tests/gpu_include_parse_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_include_parse_roundtrip` |
-| `test` | `gpu_include_parse_roundtrip` | `vyre-libs/tests/gpu_include_parse_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_include_parse_roundtrip` |
-| `test` | `gpu_int_literal_scan_roundtrip` | `vyre-libs/tests/gpu_int_literal_scan_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_int_literal_scan_roundtrip` |
-| `test` | `gpu_int_literal_scan_roundtrip` | `vyre-libs/tests/gpu_int_literal_scan_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_int_literal_scan_roundtrip` |
-| `test` | `gpu_pipeline_driver_roundtrip` | `vyre-libs/tests/gpu_pipeline_driver_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_pipeline_driver_roundtrip` |
-| `test` | `gpu_pipeline_driver_roundtrip` | `vyre-libs/tests/gpu_pipeline_driver_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_pipeline_driver_roundtrip` |
-| `test` | `gpu_pipeline_extract_payloads_roundtrip` | `vyre-libs/tests/gpu_pipeline_extract_payloads_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_pipeline_extract_payloads_roundtrip` |
-| `test` | `gpu_pipeline_extract_payloads_roundtrip` | `vyre-libs/tests/gpu_pipeline_extract_payloads_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_pipeline_extract_payloads_roundtrip` |
-| `test` | `gpu_pipeline_filter_roundtrip` | `vyre-libs/tests/gpu_pipeline_filter_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_pipeline_filter_roundtrip` |
-| `test` | `gpu_pipeline_filter_roundtrip` | `vyre-libs/tests/gpu_pipeline_filter_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_pipeline_filter_roundtrip` |
-| `test` | `gpu_pipeline_lex_classify_roundtrip` | `vyre-libs/tests/gpu_pipeline_lex_classify_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_pipeline_lex_classify_roundtrip` |
-| `test` | `gpu_pipeline_lex_classify_roundtrip` | `vyre-libs/tests/gpu_pipeline_lex_classify_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_pipeline_lex_classify_roundtrip` |
-| `test` | `gpu_undef_parse_roundtrip` | `vyre-libs/tests/gpu_undef_parse_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test gpu_undef_parse_roundtrip` |
-| `test` | `gpu_undef_parse_roundtrip` | `vyre-libs/tests/gpu_undef_parse_roundtrip.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test gpu_undef_parse_roundtrip` |
 | `test` | `gqa_attention_primitive_composition_contracts` | `vyre-libs/tests/gqa_attention_primitive_composition_contracts.rs` | None | `./cargo_full test -p vyre-libs --test gqa_attention_primitive_composition_contracts` |
 | `test` | `gqa_attention_primitive_composition_contracts` | `vyre-libs/tests/gqa_attention_primitive_composition_contracts.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test gqa_attention_primitive_composition_contracts` |
 | `test` | `graph_single_source_contracts` | `vyre-libs/tests/graph_single_source_contracts.rs` | None | `./cargo_full test -p vyre-libs --test graph_single_source_contracts` |
@@ -267,7 +120,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `integration` | `vyre-libs/tests/integration.rs` | None | `./cargo_full test -p vyre-libs --test integration` |
 | `test` | `integration` | `vyre-libs/tests/integration.rs` | `hash`, `matching`, `math`, `nn-activation`, `nn-linear` | `./cargo_full test -p vyre-libs --test integration` |
 | `test` | `ir_aliasing` | `vyre-libs/tests/ir_aliasing.rs` | None | `./cargo_full test -p vyre-libs --test ir_aliasing` |
-| `test` | `ir_aliasing` | `vyre-libs/tests/ir_aliasing.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test ir_aliasing` |
+| `test` | `ir_aliasing` | `vyre-libs/tests/ir_aliasing.rs` | `decode`, `parsing` | `./cargo_full test -p vyre-libs --test ir_aliasing` |
 | `test` | `kfac_via_reference_parity` | `vyre-libs/tests/kfac_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test kfac_via_reference_parity` |
 | `test` | `kfac_via_reference_parity` | `vyre-libs/tests/kfac_via_reference_parity.rs` | `cpu-parity`, `solvers`, `test-fixtures` | `./cargo_full test -p vyre-libs --test kfac_via_reference_parity` |
 | `test` | `kv_cache_append_contract` | `vyre-libs/tests/kv_cache_append_contract.rs` | None | `./cargo_full test -p vyre-libs --test kv_cache_append_contract` |
@@ -334,7 +187,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `planar_rewrite_via_reference_parity` | `vyre-libs/tests/planar_rewrite_via_reference_parity.rs` | `cpu-parity`, `scheduling`, `test-fixtures` | `./cargo_full test -p vyre-libs --test planar_rewrite_via_reference_parity` |
 | `test` | `predict_impact_via_reference_parity` | `vyre-libs/tests/predict_impact_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test predict_impact_via_reference_parity` |
 | `test` | `predict_impact_via_reference_parity` | `vyre-libs/tests/predict_impact_via_reference_parity.rs` | `cpu-parity`, `reasoning`, `test-fixtures` | `./cargo_full test -p vyre-libs --test predict_impact_via_reference_parity` |
-| `test` | `preprocess_cpu_api_boundary` | `vyre-libs/tests/preprocess_cpu_api_boundary.rs` | None | `./cargo_full test -p vyre-libs --test preprocess_cpu_api_boundary` |
 | `test` | `primitive_surface_contracts` | `vyre-libs/tests/primitive_surface_contracts.rs` | None | `./cargo_full test -p vyre-libs --test primitive_surface_contracts` |
 | `test` | `primitive_vs_consumer` | `vyre-libs/tests/primitive_vs_consumer.rs` | None | `./cargo_full test -p vyre-libs --test primitive_vs_consumer` |
 | `test` | `primitive_vs_consumer` | `vyre-libs/tests/primitive_vs_consumer.rs` | `analysis`, `cpu-parity`, `encoding`, `test-fixtures` | `./cargo_full test -p vyre-libs --test primitive_vs_consumer` |
@@ -421,7 +273,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `solvers_dispatch_softmax_contract` | `vyre-libs/tests/solvers_dispatch_softmax_contract.rs` | None | `./cargo_full test -p vyre-libs --test solvers_dispatch_softmax_contract` |
 | `test` | `solvers_dispatch_softmax_contract` | `vyre-libs/tests/solvers_dispatch_softmax_contract.rs` | `solvers` | `./cargo_full test -p vyre-libs --test solvers_dispatch_softmax_contract` |
 | `test` | `source_span_witness_records` | `vyre-libs/tests/source_span_witness_records.rs` | None | `./cargo_full test -p vyre-libs --test source_span_witness_records` |
-| `test` | `statement_bounds_launch_contract` | `vyre-libs/tests/statement_bounds_launch_contract.rs` | None | `./cargo_full test -p vyre-libs --test statement_bounds_launch_contract` |
 | `test` | `string_diagram_via_reference_parity` | `vyre-libs/tests/string_diagram_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test string_diagram_via_reference_parity` |
 | `test` | `string_diagram_via_reference_parity` | `vyre-libs/tests/string_diagram_via_reference_parity.rs` | `cpu-parity`, `reasoning`, `test-fixtures` | `./cargo_full test -p vyre-libs --test string_diagram_via_reference_parity` |
 | `test` | `submodular_retention_via_reference_parity` | `vyre-libs/tests/submodular_retention_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test submodular_retention_via_reference_parity` |
@@ -447,15 +298,11 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `tensor_train_compress_via_reference_parity` | `vyre-libs/tests/tensor_train_compress_via_reference_parity.rs` | `cpu-parity`, `solvers`, `test-fixtures` | `./cargo_full test -p vyre-libs --test tensor_train_compress_via_reference_parity` |
 | `test` | `transport_residual_via_reference_parity` | `vyre-libs/tests/transport_residual_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test transport_residual_via_reference_parity` |
 | `test` | `transport_residual_via_reference_parity` | `vyre-libs/tests/transport_residual_via_reference_parity.rs` | `cpu-parity`, `solvers`, `test-fixtures` | `./cargo_full test -p vyre-libs --test transport_residual_via_reference_parity` |
-| `test` | `typedef_row_phase_witnesses` | `vyre-libs/tests/typedef_row_phase_witnesses.rs` | None | `./cargo_full test -p vyre-libs --test typedef_row_phase_witnesses` |
-| `test` | `typedef_row_phase_witnesses` | `vyre-libs/tests/typedef_row_phase_witnesses.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test typedef_row_phase_witnesses` |
 | `test` | `union_find_alias_via_reference_parity` | `vyre-libs/tests/union_find_alias_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test union_find_alias_via_reference_parity` |
 | `test` | `union_find_alias_via_reference_parity` | `vyre-libs/tests/union_find_alias_via_reference_parity.rs` | `cpu-parity`, `graph-dispatch`, `test-fixtures` | `./cargo_full test -p vyre-libs --test union_find_alias_via_reference_parity` |
 | `test` | `universal_harness` | `vyre-libs/tests/universal_harness.rs` | None | `./cargo_full test -p vyre-libs --test universal_harness` |
 | `test` | `unsafe_ffi_policies` | `vyre-libs/tests/unsafe_ffi_policies.rs` | None | `./cargo_full test -p vyre-libs --test unsafe_ffi_policies` |
 | `test` | `url_network_security_policies` | `vyre-libs/tests/url_network_security_policies.rs` | None | `./cargo_full test -p vyre-libs --test url_network_security_policies` |
-| `test` | `vast_builder_oob_guard_regression` | `vyre-libs/tests/vast_builder_oob_guard_regression.rs` | None | `./cargo_full test -p vyre-libs --test vast_builder_oob_guard_regression` |
-| `test` | `vast_builder_oob_guard_regression` | `vyre-libs/tests/vast_builder_oob_guard_regression.rs` | `c-parser` | `./cargo_full test -p vyre-libs --test vast_builder_oob_guard_regression` |
 | `test` | `vietoris_rips_via_reference_parity` | `vyre-libs/tests/vietoris_rips_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test vietoris_rips_via_reference_parity` |
 | `test` | `vietoris_rips_via_reference_parity` | `vyre-libs/tests/vietoris_rips_via_reference_parity.rs` | `cpu-parity`, `solvers`, `test-fixtures` | `./cargo_full test -p vyre-libs --test vietoris_rips_via_reference_parity` |
 | `test` | `visual_compositions` | `vyre-libs/tests/visual_compositions.rs` | None | `./cargo_full test -p vyre-libs --test visual_compositions` |

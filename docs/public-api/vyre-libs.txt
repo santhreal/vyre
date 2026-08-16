@@ -14,14 +14,14 @@ impl vyre_libs::ProgramDescriptor
 impl vyre_libs::TensorRef
 impl vyre_libs::math::linalg::Dot
 impl vyre_libs::math::linalg::Matmul
-impl vyre_libs::math::linalg::MatmulBias
-impl vyre_libs::math::linalg::MatmulBiasTiled
 impl vyre_libs::math::linalg::MatmulTiled
 impl vyre_libs::nn::linear::Linear
 impl vyre_libs::nn::norm::LayerNorm
 impl vyre_libs::parsing::lr_tables::Action
 impl vyre_libs::parsing::lr_tables::LrTables
 impl vyre_libs::parsing::source_cache::SourceHash
+impl vyre_libs::prelude::MatmulBias
+impl vyre_libs::prelude::MatmulBiasTiled
 impl<T> vyre_libs::parsing::source_cache::ParsedSourceLru<T>
 pub const fn vyre_libs::parsing::lr_tables::Action::pack(self) -> u32
 pub const fn vyre_libs::parsing::lr_tables::Action::unpack(word: u32) -> Self
@@ -176,17 +176,6 @@ pub fn vyre_libs::math::linalg::Matmul::new(a: vyre_libs::TensorRef, b: vyre_lib
 pub fn vyre_libs::math::linalg::Matmul::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::math::linalg::Matmul::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::math::linalg::Matmul::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::math::linalg::MatmulBias::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBias::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::math::linalg::MatmulTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
 pub fn vyre_libs::math::linalg::MatmulTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::math::linalg::MatmulTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
@@ -298,6 +287,10 @@ pub fn vyre_libs::nn::quant::q4_k_unpack(packed: &str, scales: &str, mins: &str,
 pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs::operation_catalog::ConvergenceContract>
 pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_libs::parsing::core::ast::binding::ast_binding_strength(tok_types: &str, out_depths: &str, out_strengths: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::parsing::core::ast::blocks::ast_cfg_blocks(tok_types: &str, _out_scope_parents: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_block_headers: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard_with_capacity(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str, token_capacity: u32, statement_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::lr_tables::LrTables::action_at(&self, state: u32, token: u32) -> vyre_libs::parsing::lr_tables::Action
 pub fn vyre_libs::parsing::lr_tables::LrTables::goto_at(&self, state: u32, nt: u32) -> u32
 pub fn vyre_libs::parsing::lr_tables::ParseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -311,6 +304,17 @@ pub fn vyre_libs::parsing::source_cache::ParsedSourceLru<T>::len(&self) -> usize
 pub fn vyre_libs::parsing::source_cache::ParsedSourceLru<T>::with_capacity(capacity: usize) -> Self
 pub fn vyre_libs::parsing::source_cache::SourceHash::of(source: &[u8], extra: &[u8]) -> Self
 pub fn vyre_libs::parsing::source_cache::source_len_u32_nonzero(source: &[u8]) -> u32
+pub fn vyre_libs::prelude::MatmulBias::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::prelude::MatmulBias::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
+pub fn vyre_libs::prelude::MatmulBias::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::prelude::MatmulBias::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBias::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::prelude::MatmulBiasTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::range_ordering::match_order(left_id: vyre_foundation::ir_inner::model::generated::Expr, right_id: vyre_foundation::ir_inner::model::generated::Expr, res_name: &str) -> (alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_foundation::ir_inner::model::generated::Expr)
 pub fn vyre_libs::representation::unpack_4bit_f32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::PostProcessError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -396,11 +400,15 @@ pub mod vyre_libs::operation_catalog
 pub mod vyre_libs::parsing
 pub mod vyre_libs::parsing::core
 pub mod vyre_libs::parsing::core::ast
+pub mod vyre_libs::parsing::core::ast::binding
+pub mod vyre_libs::parsing::core::ast::blocks
 pub mod vyre_libs::parsing::core::ast::node
+pub mod vyre_libs::parsing::core::ast::shunting
 pub mod vyre_libs::parsing::lr_tables
 pub mod vyre_libs::parsing::parallel_parse
 pub mod vyre_libs::parsing::source_cache
 pub mod vyre_libs::parsing::vast
+pub mod vyre_libs::prelude
 pub mod vyre_libs::range_ordering
 pub mod vyre_libs::representation
 pub mod vyre_libs::scan
@@ -423,6 +431,8 @@ pub struct vyre_libs::parsing::lr_tables::LrTables
 pub struct vyre_libs::parsing::lr_tables::Production
 pub struct vyre_libs::parsing::source_cache::ParsedSourceLru<T>
 pub struct vyre_libs::parsing::source_cache::SourceHash(pub [u8; 32])
+pub struct vyre_libs::prelude::MatmulBias
+pub struct vyre_libs::prelude::MatmulBiasTiled
 pub struct vyre_libs::scan::PostProcessedMatch
 pub struct vyre_libs::scan::classic_ac::ClassicAcAutomaton
 pub use vyre_libs::decode::ENC_ASCII

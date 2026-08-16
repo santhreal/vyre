@@ -22,7 +22,8 @@ use tempfile::TempDir;
 /// fails to initialize the checkout, because a gate test proves nothing against
 /// a tree that was not built.
 pub fn checkout(files: &[(&str, &str)]) -> (TempDir, PathBuf) {
-    let temporary = TempDir::new().expect("a temporary directory for the fixture checkout");
+    let temporary = TempDir::new()
+        .expect("a temporary directory for the fixture checkout. Fix: free space in the system temporary directory, or point TMPDIR at a writable filesystem");
     let root = temporary.path().to_path_buf();
     for (path, text) in files {
         let target = root.join(path);
@@ -37,7 +38,7 @@ pub fn checkout(files: &[(&str, &str)]) -> (TempDir, PathBuf) {
         .args(["init", "-q", "."])
         .current_dir(&root)
         .status()
-        .expect("git is available to initialize a fixture checkout");
+        .expect("git is available to initialize a fixture checkout. Fix: install git and put it on PATH; the fixture gates read a real checkout");
     assert!(
         status.success(),
         "git init failed in the fixture checkout, so no gate can read it"

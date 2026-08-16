@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-/// One branch candidate before CUDA launch compaction.
+/// One branch candidate before launch compaction.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct BranchArm {
     /// Stable branch id from the producer IR.
@@ -30,14 +30,14 @@ pub struct CompactedBranchArm {
     pub parameter_bytes: u32,
 }
 
-/// Deterministic CUDA branch-compaction plan.
+/// Deterministic branch-compaction plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BranchCompactionPlan {
     /// Non-empty arms in execution order.
     pub arms: Vec<CompactedBranchArm>,
     /// Total active predicate lanes retained.
     pub retained_lanes: u64,
-    /// Inactive predicate lanes eliminated before CUDA launch.
+    /// Inactive predicate lanes eliminated before launch.
     pub eliminated_lanes: u64,
     /// Bytes required by the compacted parameter slab.
     pub compacted_parameter_bytes: u32,
@@ -69,7 +69,7 @@ impl std::fmt::Display for BranchCompactionError {
         match self {
             Self::DuplicateBranch { id } => write!(
                 f,
-                "branch compaction received duplicate branch id {id}. Fix: preserve stable unique branch ids before CUDA launch planning."
+                "branch compaction received duplicate branch id {id}. Fix: preserve stable unique branch ids before launch planning."
             ),
             Self::ActiveExceedsTotal {
                 id,
@@ -81,7 +81,7 @@ impl std::fmt::Display for BranchCompactionError {
             ),
             Self::ParameterByteOverflow => write!(
                 f,
-                "branch compaction parameter slab overflowed u32 offsets. Fix: shard branch arms before CUDA launch planning."
+                "branch compaction parameter slab overflowed u32 offsets. Fix: shard branch arms before launch planning."
             ),
         }
     }

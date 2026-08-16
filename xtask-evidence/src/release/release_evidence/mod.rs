@@ -202,7 +202,13 @@ fn inspect(workspace_root: &Path) -> Inspection {
             artifact_statuses,
         });
     }
-    let run = release_evidence_run(workspace_root, records, &failures, &reports, &mut inspection);
+    let run = release_evidence_run(
+        workspace_root,
+        records,
+        &failures,
+        &reports,
+        &mut inspection,
+    );
     for blocker in &run.blockers {
         inspection.blocked(
             RELEASE_EVIDENCE_RUN_ARTIFACT,
@@ -294,6 +300,151 @@ fn release_evidence_run(
         blockers: combined_blockers,
         reports: reports.to_vec(),
     }
+}
+
+/// Judge a committed `release-evidence-run.json` against the schema this module
+/// writes and the command table it writes it from.
+///
+/// The census has one owner, so the field names it records and the rows it owes
+/// are spelled here and nowhere else. A second reader spelled them again and
+/// asked for `successful_commands`, `command_failures` and a per-command exit
+/// `status`. All three were retired when the sweep stopped spawning generators,
+/// so every generator read as failed and an absent counter printed as
+/// `u64::MAX`. The required rows are derived from `COMMANDS`, so a new required
+/// generator cannot leave a reader behind.
+pub fn judge_committed_run(run: &serde_json::Value, subject: &str, failures: &mut Vec<String>) {
+    let schema_version = run
+        .get("schema_version")
+        .and_then(serde_json::Value::as_u64);
+    if schema_version != Some(u64::from(RELEASE_EVIDENCE_RUN_SCHEMA_VERSION)) {
+        failures.push(format!(
+            "{subject} release-evidence-run declares schema_version {} but this tree writes {RELEASE_EVIDENCE_RUN_SCHEMA_VERSION}. Regenerate it with `xtask release-evidence --write`",
+            schema_version.map_or_else(|| "<missing>".to_string(), |version| version.to_string())
+        ));
+        return;
+    }
+    let required_rows = COMMANDS.iter().filter(|command| command.required).count();
+    for (field, expected) in [
+        ("total_commands", COMMANDS.len()),
+        ("command_count", COMMANDS.len()),
+        ("required_command_count", required_rows),
+        ("artifact_failures", 0),
+    ] {
+        match count_field(run, field) {
+            Some(count) if count == expected => {}
+            Some(count) => failures.push(format!(
+                "{subject} release-evidence-run reports {field} {count}, expected {expected}"
+            )),
+            None => failures.push(format!(
+                "{subject} release-evidence-run carries no {field}. Regenerate it with `xtask release-evidence --write`"
+            )),
+        }
+    }
+    let blockers = run
+        .get("blockers")
+        .and_then(serde_json::Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    for blocker in blockers {
+        failures.push(format!(
+            "{subject} release-evidence-run records blocker {}",
+            blocker.as_str().unwrap_or("<not a string>")
+        ));
+    }
+    let records = run
+        .get("commands")
+        .and_then(serde_json::Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    for command in COMMANDS.iter().filter(|command| command.required) {
+        let subcommand = command.subcommand();
+        let Some(record) = records.iter().find(|record| {
+            record
+                .get("args")
+                .and_then(serde_json::Value::as_array)
+                .and_then(|args| args.first())
+                .and_then(serde_json::Value::as_str)
+                == Some(subcommand)
+        }) else {
+            failures.push(format!(
+                "{subject} release-evidence-run is missing required generator `{subcommand}`"
+            ));
+            continue;
+        };
+        judge_committed_command(record, subject, subcommand, failures);
+    }
+}
+
+/// Judge one committed command record against the artifacts its generator owes.
+fn judge_committed_command(
+    record: &serde_json::Value,
+    subject: &str,
+    subcommand: &str,
+    failures: &mut Vec<String>,
+) {
+    let declared = record
+        .get("expected_artifacts")
+        .and_then(serde_json::Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    let statuses = record
+        .get("artifact_statuses")
+        .and_then(serde_json::Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    for expected in expected_artifacts_for_command(subcommand) {
+        if !declared
+            .iter()
+            .any(|artifact| artifact.as_str() == Some(*expected))
+        {
+            failures.push(format!(
+                "{subject} release-evidence-run generator `{subcommand}` does not declare expected artifact `{expected}`"
+            ));
+        }
+        let Some(status) = statuses.iter().find(|status| {
+            status
+                .get("path")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|path| path.ends_with(expected))
+        }) else {
+            failures.push(format!(
+                "{subject} release-evidence-run generator `{subcommand}` has no artifact status for `{expected}`"
+            ));
+            continue;
+        };
+        let exists = status
+            .get("exists")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let bytes = count_field(status, "bytes").unwrap_or(0);
+        let read_error = status.get("read_error").and_then(serde_json::Value::as_str);
+        let missing_provenance = ["source_fingerprint", "freshness_fingerprint"]
+            .into_iter()
+            .filter(|field| {
+                status
+                    .get(field)
+                    .and_then(serde_json::Value::as_str)
+                    .is_none()
+            })
+            .collect::<Vec<_>>();
+        if !exists || bytes == 0 || read_error.is_some() || !missing_provenance.is_empty() {
+            failures.push(format!(
+                "{subject} release-evidence-run generator `{subcommand}` artifact `{expected}` exists={exists} bytes={bytes} read_error={} missing={}",
+                read_error.unwrap_or("none"),
+                if missing_provenance.is_empty() {
+                    "none".to_string()
+                } else {
+                    missing_provenance.join(", ")
+                }
+            ));
+        }
+    }
+}
+
+/// Read one non-negative count, absent or non-numeric reported as `None` rather
+/// than defaulted, because a defaulted counter is what let a retired field name
+/// pass as a clean run.
+fn count_field(value: &serde_json::Value, field: &str) -> Option<usize> {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|count| usize::try_from(count).ok())
 }
 
 #[cfg(test)]
@@ -630,5 +781,162 @@ mod tests {
         assert_eq!(index.artifact_count, 1);
         assert_eq!(index.blockers.len(), 1);
         assert!(index.blockers[0].contains("source_fingerprint"));
+    }
+
+    /// A committed run in the shape this module writes, every artifact clean.
+    ///
+    /// Derived from `COMMANDS` at run time, so a new required generator changes
+    /// what every test below judges instead of leaving a written list behind.
+    fn clean_committed_run() -> serde_json::Value {
+        let commands = COMMANDS
+            .iter()
+            .map(|command| {
+                let expected = expected_artifacts_for_command(command.subcommand());
+                serde_json::json!({
+                    "args": command.args,
+                    "required": command.required,
+                    "expected_artifacts": expected,
+                    "mode": command.mode(),
+                    "artifact_statuses": expected
+                        .iter()
+                        .map(|path| serde_json::json!({
+                            "path": path,
+                            "exists": true,
+                            "bytes": 1,
+                            "read_error": serde_json::Value::Null,
+                            "source_fingerprint": "git:0000000000000000000000000000000000000000",
+                            "freshness_fingerprint": "source-tree-v1:0000",
+                            "blockers": [],
+                        }))
+                        .collect::<Vec<_>>(),
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::json!({
+            "schema_version": RELEASE_EVIDENCE_RUN_SCHEMA_VERSION,
+            "total_commands": COMMANDS.len(),
+            "command_count": COMMANDS.len(),
+            "required_command_count": COMMANDS.iter().filter(|command| command.required).count(),
+            "artifact_failures": 0,
+            "commands": commands,
+            "blockers": [],
+        })
+    }
+
+    fn judge(run: &serde_json::Value) -> Vec<String> {
+        let mut failures = Vec::new();
+        judge_committed_run(run, "subject", &mut failures);
+        failures
+    }
+
+    #[test]
+    fn a_run_in_the_shape_this_module_writes_is_clean() {
+        assert_eq!(judge(&clean_committed_run()), Vec::<String>::new());
+    }
+
+    /// The defect this judgment replaced: the reader asked for
+    /// `successful_commands`, `command_failures` and a per-command spawn
+    /// `status`, none of which schema 5 records. Absent counters defaulted, so
+    /// the reader reported eleven failures against a clean artifact and would
+    /// have reported none against a broken one.
+    #[test]
+    fn a_retired_schema_is_named_rather_than_judged_field_by_field() {
+        let mut run = clean_committed_run();
+        run["schema_version"] = serde_json::json!(4);
+        run["successful_commands"] = serde_json::json!(14);
+        run["command_failures"] = serde_json::json!(0);
+
+        let failures = judge(&run);
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].contains("schema_version 4"), "{failures:?}");
+        assert!(
+            failures[0].contains(&RELEASE_EVIDENCE_RUN_SCHEMA_VERSION.to_string()),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn an_absent_counter_is_reported_rather_than_defaulted() {
+        let mut run = clean_committed_run();
+        let object = run.as_object_mut().unwrap();
+        object.remove("artifact_failures");
+
+        let failures = judge(&run);
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("carries no artifact_failures"),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn a_missing_required_generator_is_reported_by_name() {
+        let required = COMMANDS
+            .iter()
+            .find(|command| command.required)
+            .map(EvidenceCommand::subcommand)
+            .unwrap();
+        let mut run = clean_committed_run();
+        let commands = run["commands"].as_array_mut().unwrap();
+        commands.retain(|record| record["args"][0].as_str() != Some(required));
+
+        let failures = judge(&run);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("missing required generator")
+                    && failure.contains(required)),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn an_artifact_the_generator_never_produced_is_reported() {
+        let mut run = clean_committed_run();
+        run["commands"][0]["artifact_statuses"][0]["exists"] = serde_json::json!(false);
+
+        let failures = judge(&run);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("exists=false")),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn an_artifact_without_provenance_is_reported() {
+        let mut run = clean_committed_run();
+        run["commands"][0]["artifact_statuses"][0]["freshness_fingerprint"] =
+            serde_json::Value::Null;
+
+        let failures = judge(&run);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("missing=freshness_fingerprint")),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn a_recorded_blocker_is_reported() {
+        let mut run = clean_committed_run();
+        run["blockers"] = serde_json::json!(["version-matrix owes version-matrix.json"]);
+
+        let failures = judge(&run);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("records blocker")
+                    && failure.contains("version-matrix.json")),
+            "{failures:?}"
+        );
     }
 }

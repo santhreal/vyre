@@ -149,7 +149,8 @@ fn drop_dead_stores(body: &[Node]) -> Option<Vec<Node>> {
     dropped_any.then(|| {
         body.iter()
             .zip(keep)
-            .filter_map(|(node, alive)| alive.then(|| node.clone()))
+            .filter(|(_, alive)| *alive)
+            .map(|(node, _)| node.clone())
             .collect()
     })
 }

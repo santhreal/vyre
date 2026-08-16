@@ -107,7 +107,7 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
     ValidationRule {
         code: "V023",
         phase: ValidationPhase::Expression,
-        invariant: "Cast to `Bytes` is unsupported in WGSL lowering",
+        invariant: "Cast to `Bytes` is unsupported in secondary text lowering",
         corrective_action: "Use buffer load/store directly for byte data.",
     },
     ValidationRule {

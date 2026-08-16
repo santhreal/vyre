@@ -1,4 +1,4 @@
-use crate::parsing::c::lex::tokens::{TOK_INTEGER, TOK_LPAREN};
+use vyre_spec::c11_token::{TOK_INTEGER, TOK_LPAREN};
 use crate::parsing::core::ast::node::{AST_CONST_INT, AST_VAR};
 use vyre_foundation::ir::{Expr, Node};
 

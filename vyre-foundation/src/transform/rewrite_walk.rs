@@ -27,7 +27,7 @@
 
 use std::sync::Arc;
 
-use crate::ir::{Expr, Ident, Node};
+use crate::ir::{Expr, Ident, Node, Program};
 
 /// What a rewriting walk does at each position of a [`Node`].
 ///
@@ -272,4 +272,109 @@ fn keep<T: Clone>(rewritten: Option<T>, original: &T) -> T {
 #[inline]
 fn keep_body(rewritten: Option<Vec<Node>>, original: &[Node]) -> Vec<Node> {
     rewritten.unwrap_or_else(|| original.to_vec())
+}
+
+/// The nodes of one scope up to and including the first `Node::Return`.
+///
+/// Everything after a `Return` is unreachable, so no rewrite carries it
+/// forward and no analysis indexes a verdict for it. One owner, because four
+/// walks repeated the truncation beside their own loop and a fifth forgot it.
+#[must_use]
+pub fn reachable_prefix(body: &[Node]) -> &[Node] {
+    let end = body
+        .iter()
+        .position(|node| matches!(node, Node::Return))
+        .map_or(body.len(), |index| index + 1);
+    &body[..end]
+}
+
+/// Drive `rewrite` over one scope for its effects, discarding the rebuilt nodes.
+///
+/// A counting pass reads its answer out of the policy, not out of the tree, so
+/// it must still visit exactly the positions the rewriting pass will visit.
+pub fn visit_scope<R: NodeRewrite>(body: &[Node], rewrite: &mut R) {
+    for node in reachable_prefix(body) {
+        rewrite_node(node, rewrite);
+    }
+}
+
+/// Append one rewritten scope onto `out`.
+///
+/// A node the policy reports unchanged is cloned rather than rebuilt, which is
+/// what keeps an untouched scope from being deep-copied.
+pub fn extend_with_rewritten_scope<R: NodeRewrite>(
+    body: &[Node],
+    rewrite: &mut R,
+    out: &mut Vec<Node>,
+) {
+    let reachable = reachable_prefix(body);
+    out.reserve(reachable.len());
+    for node in reachable {
+        out.push(rewrite_node(node, rewrite).unwrap_or_else(|| node.clone()));
+    }
+}
+
+/// Rewrite one scope, reporting `None` when nothing in it changed.
+///
+/// The node walk is borrow-preserving: a node whose positions all report no
+/// change returns `None` rather than a rebuilt clone. A scope walk that
+/// discards that answer and rebuilds anyway deep-copies the whole subtree on
+/// every pass, including the passes that rewrote nothing. Truncation counts as
+/// a change, because the unreachable tail must not survive.
+pub fn rewrite_scope_opt<R: NodeRewrite>(body: &[Node], rewrite: &mut R) -> Option<Vec<Node>> {
+    let reachable = reachable_prefix(body);
+    let mut out: Option<Vec<Node>> = None;
+    for (index, node) in reachable.iter().enumerate() {
+        match rewrite_node(node, rewrite) {
+            None => {
+                if let Some(out) = out.as_mut() {
+                    out.push(node.clone());
+                }
+            }
+            Some(rewritten) => {
+                out.get_or_insert_with(|| {
+                    let mut sink = Vec::with_capacity(reachable.len());
+                    sink.extend_from_slice(&reachable[..index]);
+                    sink
+                })
+                .push(rewritten);
+            }
+        }
+    }
+    if out.is_none() && reachable.len() != body.len() {
+        return Some(reachable.to_vec());
+    }
+    out
+}
+
+/// Rewrite one scope into a fresh body.
+pub fn rewrite_scope<R: NodeRewrite>(body: &[Node], rewrite: &mut R) -> Vec<Node> {
+    rewrite_scope_opt(body, rewrite).unwrap_or_else(|| reachable_prefix(body).to_vec())
+}
+
+/// Rewrite the program's entry scope, descending through a single wrapping
+/// `Node::Region`.
+///
+/// A composition-built Program wraps its whole body in one Region carrying the
+/// generator id, and a rewrite that replaced the entry with the rewritten body
+/// would drop that identity. Every scope rewrite therefore enters through here
+/// rather than calling `Program::with_rewritten_entry` directly.
+#[must_use]
+pub fn rewrite_program_entry(
+    program: &Program,
+    rewrite: impl FnOnce(&[Node]) -> Vec<Node>,
+) -> Program {
+    let new_entry = match program.entry() {
+        [Node::Region {
+            generator,
+            source_region,
+            body,
+        }] => vec![Node::Region {
+            generator: generator.clone(),
+            source_region: source_region.clone(),
+            body: Arc::new(rewrite(body)),
+        }],
+        entry => rewrite(entry),
+    };
+    program.with_rewritten_entry(new_entry)
 }

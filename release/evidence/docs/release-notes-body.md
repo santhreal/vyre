@@ -2374,6 +2374,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   with a `path` attribute pointing into `src/bin/`, which compiled the same
   layout rules twice and put a shared module in the directory reserved for
   binary roots. Both binaries now use `xtask::rule_tree`.
+- The C11 typedef annotation path now composes registered row phases instead of
+  inlining them: c11_identifier_row_hash,
+  c11_identifier_row_hash_packed_haystack,
+  c11_enclosing_function_lparen_for_row and
+  c11_builtin_declaration_kind_for_row are registered operations with reference
+  oracles, and one shared owner emits the phase program buffer contract.
 - Five domains left `vyre-primitives` for `vyre-libs`, because an operation
   belongs in `vyre-primitives` only when it cannot be composed, meaning it
   needs its own backend emitter arm and its own reference-interpreter arm. None

@@ -782,7 +782,7 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
         output_records,
         vec![
             presence_bit_write_node(presence, Some("rs_base")),
-            // No subgroup coalesce on the triple append: the CUDA backend cannot
+            // No subgroup coalesce on the triple append: one native backend cannot
             // lower subgroup ops and the dense-hit benefit is the presence
             // bitmap's job, not this fused path's.
             Node::if_then(

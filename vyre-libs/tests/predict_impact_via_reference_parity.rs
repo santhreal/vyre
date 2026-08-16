@@ -1,6 +1,6 @@
 //! End-to-end parity for the do-calculus change-impact COMPOSITES
 //! `logic::do_calculus_change_impact::{predict_impact_via, predict_impact_observation_form_via}`, through
-//! the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `do_calculus_surgery_via_reference_parity` covers the surgery PRIMITIVES (intervention_delete_incoming,
@@ -23,7 +23,7 @@ use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact_via,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

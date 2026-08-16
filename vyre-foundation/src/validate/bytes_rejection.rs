@@ -46,9 +46,7 @@ pub(crate) fn check_store(
     format!(
                 "store to non-writable buffer `{buffer}`"
             ),
-    format!(
-                "declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup."
-            )
+    "declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup.".to_string()
 ));
         }
         // L.1.18: V013 was historically enforced only on `Expr::Atomic`,
@@ -63,9 +61,7 @@ pub(crate) fn check_store(
     format!(
                 "store to buffer `{buffer}` with element type `bytes` is not supported"
             ),
-    format!(
-                "use a typed buffer (U32/I32/F32/…) for stores, or declare the buffer with `.with_bytes_extraction(true)` when this is a bytes-producing op such as decode.base64."
-            )
+    "use a typed buffer (U32/I32/F32/…) for stores, or declare the buffer with `.with_bytes_extraction(true)` when this is a bytes-producing op such as decode.base64.".to_string()
 ));
         }
     } else {
@@ -74,7 +70,7 @@ pub(crate) fn check_store(
             ValidationPhase::Memory,
             ValidationLocation::Program,
             format!("store to unknown buffer `{buffer}`"),
-            format!("declare it in Program::buffers."),
+            "declare it in Program::buffers.".to_string(),
         ));
     }
 }
@@ -108,7 +104,7 @@ pub(crate) fn check_load(
                 ValidationPhase::Memory,
                 ValidationLocation::Program,
                 format!("load from unknown buffer `{buffer}`"),
-                format!("declare it in Program::buffers."),
+                "declare it in Program::buffers.".to_string(),
             ));
         }
         // L.1.18: V013 coverage extends to `Expr::Load`  -  loading from
@@ -124,9 +120,7 @@ pub(crate) fn check_load(
     format!(
                 "load from buffer `{buffer}` with element type `bytes` is not supported"
             ),
-    format!(
-                "declare the buffer with a typed element (U32/I32/F32/…) or with `.with_bytes_extraction(true)` when the consuming op is a dedicated bytes-extraction op."
-            )
+    "declare the buffer with a typed element (U32/I32/F32/…) or with `.with_bytes_extraction(true)` when the consuming op is a dedicated bytes-extraction op.".to_string()
 ));
         }
         Some(_) => {}

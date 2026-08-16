@@ -1,6 +1,11 @@
 #![forbid(unsafe_code)]
 
-//! Registry adapter that exposes `vyre-reference` as a `VyreBackend`.
+//! Registry adapter that exposes `vyre-reference` as a `VyreBackend`, and the
+//! `ProgramDispatcher` bridge parity suites dispatch through.
+
+mod program_dispatch;
+
+pub use program_dispatch::ReferenceEvalDispatcher;
 
 use std::sync::Arc;
 

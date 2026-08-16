@@ -10,7 +10,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::graph::dispatch::csr_bidirectional::reference_bidirectional_step;
 use vyre_libs::graph::dispatch::csr_forward_or_changed::reference_forward_step_with_change_flag;
 use vyre_libs::graph::dispatch::exploded::{
@@ -606,7 +606,7 @@ fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
 
 #[test]
 fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
-    let dispatcher = CpuOracleDispatcher::new();
+    let dispatcher = ReferenceEvalDispatcher;
     let mut assertions = 0usize;
     for (case, (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill)) in
         ifds_cases(CASES_PER_FAMILY, 0x1F05_0005, 0xC2B2_AE35)

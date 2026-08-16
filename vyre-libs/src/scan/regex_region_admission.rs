@@ -6,7 +6,7 @@
 //! 153 asks for "a single launch" producing literal presence + literal positions
 //! + regex-DFA admission bits. But the existing two-family fusion
 //! (`GpuLiteralSet::scan_presence_and_positions_by_region`) is measured **~20x
-//! SLOWER** than the two separate scans (RTX 5090/wgpu/release), occupancy
+//! SLOWER** than the two separate scans (measured on the release profile of one discrete device and its secondary text backend), occupancy
 //! collapse from a 3×-inlined replay in a kernel that grows with each fused
 //! family (see that method's source + `tests/literal_set_presence_and_positions_gpu.rs`,
 //! whose own conclusion is "the lever is segmentation, not fusion"). Fusing a

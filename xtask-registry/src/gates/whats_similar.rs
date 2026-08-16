@@ -221,7 +221,7 @@ fn run_target_query(
             ));
         }
     }
-    report.note(format!("  Bar: ≥ 0.95 = duplicate, ≥ 0.80 = very similar, ≥ 0.50 = same family, < 0.20 = unrelated."));
+    report.note("  Bar: ≥ 0.95 = duplicate, ≥ 0.80 = very similar, ≥ 0.50 = same family, < 0.20 = unrelated.".to_string());
     Ok(())
 }
 
@@ -847,10 +847,6 @@ mod tests {
         assert_eq!(
             implementation_family_id("vyre-libs::nn::rms_norm"),
             implementation_family_id("vyre-libs::nn::softmax")
-        );
-        assert_eq!(
-            implementation_family_id("vyre-libs::parsing::c_sema_scope.scope"),
-            implementation_family_id("vyre-libs::parsing::c_sema_scope.identifier_intern")
         );
         assert!(known_distinct_implementation_family_id(
             "vyre-primitives::hardware::workgroup_barrier",

@@ -628,7 +628,7 @@ mod tests {
             "scan_automata"
         );
         assert_eq!(
-            registered_op_owner_lane("vyre-libs::parsing::c11"),
+            registered_op_owner_lane("vyre-libs::parsing::python312_lexer"),
             "parser_frontend"
         );
         assert_eq!(

@@ -1,5 +1,5 @@
 //! Loop-carrier detection: uncarriered assigns are flagged and carrier summaries match the descriptor walk.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use vyre_debug::fixtures::loop_carry_smoke;
 use vyre_debug::{carrier_summary, find_uncarriered_assigns};
 use vyre_foundation::ir::{Expr, Node};
@@ -60,7 +60,7 @@ fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
 
 #[test]
 fn carrier_summary_counts_match_descriptor_walk() {
-    let p = vyre_libs::parsing::c::lex::lexer::c11_lexer("hs", "tt", "ts", "tl", "tc", 4);
+    let p = vyre_libs::parsing::python::lex::python312_lexer("hs", "tt", "ts", "tl", "tc", 4);
     let desc = vyre_lower::lower_verified(&p)
         .map(|lowered| lowered.descriptor)
         .unwrap();
@@ -112,20 +112,37 @@ fn carrier_summary_counts_match_descriptor_walk() {
 
 #[test]
 fn carrier_summary_includes_function_locals() {
-    let p = vyre_libs::parsing::c::lex::lexer::c11_lexer("hs", "tt", "ts", "tl", "tc", 4);
+    let p = vyre_libs::parsing::python::lex::python312_lexer("hs", "tt", "ts", "tl", "tc", 4);
     let desc = vyre_lower::lower_verified(&p)
         .map(|lowered| lowered.descriptor)
         .unwrap();
     let summary = carrier_summary(&desc);
+    // Derive the expected names from the descriptor the summary just walked
+    // rather than pinning one lexer's variable spelling: a local recorded here
+    // is a naga local named after a carried variable, so every carrier name the
+    // walk found is the only vocabulary a local may be built from.
+    let carried = summary
+        .carrier_reads
+        .keys()
+        .chain(summary.carrier_writes.keys())
+        .chain(summary.carrier_finals.keys())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    assert!(
+        !carried.is_empty(),
+        "the lexer descriptor carries no loop variable, so this test proves nothing"
+    );
+    assert!(
+        !summary.function_locals.is_empty(),
+        "carrier_finals named {carried:?} but no emitted local was recorded"
+    );
     assert!(
         summary
             .function_locals
-            .contains(&"vyre_named_carry_tok_idx".to_string())
-            || summary.function_locals.contains(&"tok_idx".to_string())
-            || summary
-                .function_locals
-                .contains(&"tok_idx_carry".to_string()),
-        "Could not find expected local, got: {:?}",
+            .iter()
+            .any(|local| carried.iter().any(|name| local.contains(name.as_str()))),
+        "no recorded local names a carried variable; carried: {carried:?}, locals: {:?}",
         summary.function_locals
     );
 }

@@ -13,8 +13,9 @@ Not here: host reimplementations of passes that exist as compositions.
 
 Every entry point takes a
 `vyre_foundation::program_dispatch::ProgramDispatcher`. Parity tests run
-the pass against `vyre_libs::graph::dispatch::cpu_oracle`. Production
-runs the identical Program against a backend dispatcher.
+the pass against `vyre_driver_reference::ReferenceEvalDispatcher`, which
+executes the Program on the reference interpreter. Production runs the
+identical Program against a backend dispatcher.
 
 ## Dep direction
 
@@ -39,8 +40,7 @@ vyre-driver / vyre-runtime / vyre-driver-{cuda,wgpu}
   `const_fold_via_encoded`, `canonicalize_via_encoded`,
   `pattern_match_via_encoded`, `validate_via_encoded`, and the `dce_program`
   analysis Program they build on.
-- Host-side rewrites over the returned Program: `const_prop`,
-  `cross_scope_cse`, `dead_branch`, `licm`.
+- Cross-scope CSE over the returned Program: `cse_via_encoded`.
 - Sequencing: `pipeline`, `pipeline_resident`, `pipeline_resident_decode`.
 
 Nine module trees that used to live here (scheduling solvers, analysis, logic,

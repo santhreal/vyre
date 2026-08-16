@@ -51,10 +51,6 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `bitset_primitives_gpu_parity` | `vyre-driver-cuda/tests/bitset_primitives_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test bitset_primitives_gpu_parity` |
 | `test` | `buffer_argument_op_lowers` | `vyre-driver-cuda/tests/buffer_argument_op_lowers.rs` | None | `./cargo_full test -p vyre-driver-cuda --test buffer_argument_op_lowers` |
 | `test` | `byte_histogram_utf8_shape_gpu_parity` | `vyre-driver-cuda/tests/byte_histogram_utf8_shape_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test byte_histogram_utf8_shape_gpu_parity` |
-| `test` | `c_preprocess_filter_cuda` | `vyre-driver-cuda/tests/c_preprocess_filter_cuda.rs` | None | `./cargo_full test -p vyre-driver-cuda --test c_preprocess_filter_cuda` |
-| `test` | `c_preprocess_macro_expansion_cuda` | `vyre-driver-cuda/tests/c_preprocess_macro_expansion_cuda.rs` | None | `./cargo_full test -p vyre-driver-cuda --test c_preprocess_macro_expansion_cuda` |
-| `test` | `c_preprocess_payloads_cuda` | `vyre-driver-cuda/tests/c_preprocess_payloads_cuda.rs` | None | `./cargo_full test -p vyre-driver-cuda --test c_preprocess_payloads_cuda` |
-| `test` | `c_preprocess_tokenize_cuda` | `vyre-driver-cuda/tests/c_preprocess_tokenize_cuda.rs` | None | `./cargo_full test -p vyre-driver-cuda --test c_preprocess_tokenize_cuda` |
 | `test` | `capability_contracts` | `vyre-driver-cuda/tests/capability_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test capability_contracts` |
 | `test` | `causal_graph_primitives_gpu_parity` | `vyre-driver-cuda/tests/causal_graph_primitives_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test causal_graph_primitives_gpu_parity` |
 | `test` | `char_class_bracket_match_gpu_parity` | `vyre-driver-cuda/tests/char_class_bracket_match_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test char_class_bracket_match_gpu_parity` |

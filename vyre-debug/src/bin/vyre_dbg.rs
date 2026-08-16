@@ -8,7 +8,6 @@ use vyre_debug::{
     carrier_summary, diff_descriptors, dump_descriptor, dump_wgsl, find_dangling_refs,
     find_uncarriered_assigns, fixtures::loop_carry_smoke, ArtifactReport, DescriptorDumpOptions,
 };
-use vyre_foundation::ir::Expr;
 use vyre_foundation::ir::Program;
 const MAX_ARTIFACT_ENVELOPE_BYTES: u64 = 64 * 1024 * 1024;
 
@@ -91,7 +90,7 @@ enum Commands {
 fn get_program(name: &str, num_tokens: Option<usize>) -> Result<Program, String> {
     let tokens = num_tokens.unwrap_or(4);
     match name {
-        "c11_lexer" => Ok(vyre_libs::parsing::c::lex::lexer::c11_lexer(
+        "python312_lexer" => Ok(vyre_libs::parsing::python::lex::python312_lexer(
             "hs",
             "tt",
             "ts",
@@ -99,31 +98,6 @@ fn get_program(name: &str, num_tokens: Option<usize>) -> Result<Program, String>
             "tc",
             tokens as u32,
         )),
-        "c11_extract_calls" => Ok(vyre_libs::parsing::c::parse::structure::c11_extract_calls(
-            "tt",
-            "pp",
-            "fns",
-            Expr::u32(tokens as u32),
-            Expr::u32(tokens as u32),
-            "oc",
-            "cn",
-        )),
-        "c11_build_vast_nodes" => Ok(vyre_libs::parsing::c::parse::vast::c11_build_vast_nodes(
-            "tt",
-            "ts",
-            "tl",
-            Expr::u32(tokens as u32),
-            "vast",
-            "count",
-        )),
-        "c_lower_ast_to_pg_semantic_graph" => Ok(
-            vyre_libs::parsing::c::pipeline::stages::c_lower_ast_to_pg_semantic_graph(
-                "vast",
-                Expr::u32(tokens as u32),
-                "out_pg_nodes",
-                "out_pg_edges",
-            ),
-        ),
         "bracket_match" => Ok(vyre_primitives::matching::bracket_match(
             "k",
             "s",

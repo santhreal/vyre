@@ -348,26 +348,6 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::nn::softmax",
         "vyre-libs::builder::tiled_reduce",
     ),
-    (
-        "vyre-libs::parsing::c_sema_scope.scope",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.scope.brace",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.scope.function_parameters",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.decl",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
-    (
-        "vyre-libs::parsing::c_sema_scope.identifier_intern",
-        "vyre-libs::parsing::c_sema_scope_phase",
-    ),
 ];
 
 /// Family pairs that emit the same shape from deliberately separate builders.
@@ -451,6 +431,14 @@ pub const REVIEWED_DISTINCT_OPERATIONS: &[(&str, &str, &str)] = &[
         "straight-line unrolled arithmetic over a fixed small operand set has one fingerprint \
          whatever the arithmetic is; one is four complex butterflies over f32 twiddles, the other \
          is the BLAKE3 four-word mixing of add, xor and rotate over u32",
+    ),
+    (
+        "vyre-primitives::graph::dominator_tree_intersect_step",
+        "vyre-primitives::math::softmax_step",
+        "a lane-zero guard around one serial pass that accumulates into a binding and a second \
+         serial pass that stores per element; the softmax divides every element by the sum it \
+         just totalled, and the relaxation sweep walks a predecessor CSR and intersects two idom \
+         parents by climbing the deeper one, which no division expresses",
     ),
 ];
 

@@ -16,7 +16,7 @@
 
 use vyre_libs::encoding::vsa_fingerprint::{fingerprint_via, reference_fingerprint};
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

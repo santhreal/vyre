@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::multigrid_matroid_solver::matroid_solve_step_fixed_via`
-//! through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `jacobi_smooth_step`'s IR is run by NO `vyre-primitives/tests/*` file and the consumer's only
@@ -24,7 +24,7 @@
 
 use vyre_libs::solvers::multigrid_matroid_solver::matroid_solve_step_fixed_via;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::test_support::{fixed_mul, fixed_sdiv_by_positive as sdiv_by_positive};
 
 const FIXED_ONE: u32 = 1 << 16;

@@ -8,6 +8,24 @@ export CC="${CC:-gcc}"
 # Build parallelism is declared once, in .cargo/config.toml ([build] jobs).
 # An env var here would override that file for every invocation, which is how
 # this wrapper spent months serializing a 32-thread machine to one job.
+
+# Each checkout builds into its own directory under the shared archive root.
+# Cargo hashes a workspace member by its path relative to the workspace root,
+# so every checkout of this workspace computes the same unit hash for the same
+# member and one checkout's compiled artifact satisfies another's request. That
+# is not a cache hit, it is a different program: a build reported "Finished in
+# 3.68s" for a thirteen-minute compile and produced a binary containing none of
+# the source it was built from, and `target/debug/<bin>` is an unhashed uplift
+# path that whichever build finishes last owns outright. Gate results, trybuild
+# expectations and every `CARGO_BIN_EXE_*` test read through those paths.
+#
+# The directory is derived here rather than declared in .cargo/config.toml
+# because that file is tracked and therefore identical in every checkout, which
+# is the one thing it cannot be. It is derived from this script's own location,
+# so it is a property of the checkout rather than of the caller, and no command
+# line carries a build-affecting override.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/mnt/FlareTraining/santh-archive/cargo-target/$(basename -- "$script_dir")}"
+
 export VYRE_CARGO_RUNNER="${VYRE_CARGO_RUNNER:-$script_dir/cargo_full}"
 
 exec cargo "$@"
