@@ -1,9 +1,9 @@
-use crate::parsing::go::lex::{TOK_LBRACE, TOK_LPAREN, TOK_RBRACE, TOK_RPAREN, TOK_STRING};
 use crate::parsing::go::parse::token_predicates::{
     token_is_ident, token_is_keyword, token_len, token_start, token_type_eq,
 };
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::go_token::{TOK_LBRACE, TOK_LPAREN, TOK_RBRACE, TOK_RPAREN, TOK_STRING};
 
 /// Words per emitted Go declaration record.
 pub const GO_DECL_RECORD_WORDS: u32 = 5;

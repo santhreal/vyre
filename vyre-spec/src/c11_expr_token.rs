@@ -3,7 +3,7 @@
 //! The ids are the column order of the packed action table that
 //! `vyre_libs::parsing::lr_tables::c11_expr` ships, and the token ids a caller
 //! feeds the GPU parser, so they are a wire contract and are owned here.
-//! `vyre_libs::parsing::lr_tables` re-exports them.
+//! Every reader names this module.
 
 /// Identifier token id.
 pub const TOK_ID: u32 = 0;

@@ -1,12 +1,16 @@
 //! Prefix-sum scan  -  inclusive scan over a u32 buffer.
 //!
-//! Category A composition backed by Tier-2.5 scan primitives: a compact
-//! workgroup scan for one-block inputs and the multi-block scan for larger
-//! buffers.
+//! Category A composition and the one size contract over the Tier-2.5 scan
+//! primitives. `scan_prefix_sum` is where an element count picks an algorithm:
+//! at or under [`MAX_SINGLE_BLOCK_SCAN`] the compact workgroup scan, above it
+//! the multi-block chain. The primitives own the two bodies and neither of them
+//! chooses.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Program;
-use crate::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
+use crate::math::prefix_scan::{
+    prefix_scan_with_op_id, ScanKind, MAX_SINGLE_BLOCK_SCAN,
+};
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
@@ -26,7 +30,7 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
             "Fix: scan_prefix_sum requires n > 0.".to_string(),
         );
     }
-    if (1..=1024).contains(&n) {
+    if n <= MAX_SINGLE_BLOCK_SCAN {
         prefix_scan_with_op_id(input, output, n, ScanKind::InclusiveSum, OP_ID)
     } else {
         wrap_large_scan_program(multi_block_prefix_scan_sum_u32(input, output, n))
@@ -141,7 +145,7 @@ mod tests {
         assert_eq!(program.workgroup_size(), [1024, 1, 1]);
         assert!(
             !contains_loop(&program),
-            "large scan_prefix_sum must not route through prefix_scan_large's serial loop"
+            "large scan_prefix_sum must not route through a serial per-element loop"
         );
         assert!(
             !contains_invocation_zero_gate(&program),

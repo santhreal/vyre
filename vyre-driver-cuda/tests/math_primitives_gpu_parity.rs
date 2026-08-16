@@ -7,9 +7,8 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::math::prefix_scan::{
-    cpu_ref as prefix_cpu, prefix_scan, prefix_scan_large, ScanKind,
-};
+use vyre_libs::math::prefix_scan::{cpu_ref as prefix_cpu, prefix_scan, ScanKind};
+use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_libs::math::stream_compact::{cpu_ref as compact_cpu, stream_compact};
 use vyre_libs::reduce::multi_block_prefix_scan::BLOCK_LANES;
 
@@ -34,7 +33,7 @@ fn run_prefix_scan_large(input: &[u32]) -> Vec<u32> {
     use vyre::ir::BufferAccess;
 
     let n = input.len() as u32;
-    let program = prefix_scan_large("in", "out", n);
+    let program = scan_prefix_sum("in", "out", n);
     let mut inputs: Vec<Vec<u8>> = Vec::new();
     for buffer in program.buffers() {
         let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();

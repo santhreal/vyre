@@ -34,6 +34,7 @@ The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains
 | `example` | `vyre_emit_ptx_release_surface` | `vyre-emit-ptx/examples/vyre_emit_ptx_release_surface.rs` | None | `./cargo_full test -p vyre-emit-ptx --example vyre_emit_ptx_release_surface` |
 | `lib` | `vyre_emit_ptx` | `vyre-emit-ptx/src/lib.rs` | None | `./cargo_full test -p vyre-emit-ptx` |
 | `test` | `adversarial_emit_program_matrix` | `vyre-emit-ptx/tests/adversarial_emit_program_matrix.rs` | None | `./cargo_full test -p vyre-emit-ptx --test adversarial_emit_program_matrix` |
+| `test` | `barrier_scope_parity` | `vyre-emit-ptx/tests/barrier_scope_parity.rs` | None | `./cargo_full test -p vyre-emit-ptx --test barrier_scope_parity` |
 | `test` | `cross_emitter_parity` | `vyre-emit-ptx/tests/cross_emitter_parity.rs` | None | `./cargo_full test -p vyre-emit-ptx --test cross_emitter_parity` |
 | `test` | `emit_contracts` | `vyre-emit-ptx/tests/emit_contracts.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emit_contracts` |
 | `test` | `emitted_artifact_byte_stability` | `vyre-emit-ptx/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emitted_artifact_byte_stability` |

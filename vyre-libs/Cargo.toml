@@ -986,9 +986,19 @@ path = "tests/sweep_math_prefix_scan_exclusive_volume_oracle_matrix.rs"
 required-features = ["cpu-parity", "math-kernels"]
 
 [[test]]
-name = "proptest_prefix_scan_large"
-path = "tests/proptest_prefix_scan_large.rs"
+name = "prefix_scan_contract"
+path = "tests/prefix_scan_contract.rs"
 required-features = ["cpu-parity", "math-kernels"]
+
+[[test]]
+name = "scallop_join_grid_contract"
+path = "tests/scallop_join_grid_contract.rs"
+required-features = ["cpu-parity", "math-kernels", "fixpoint"]
+
+[[test]]
+name = "scan_prefix_sum_size_contract"
+path = "tests/scan_prefix_sum_size_contract.rs"
+required-features = ["cpu-parity", "math-scan"]
 
 [[test]]
 name = "sweep_decode_hex_primitives_volume_oracle_matrix"

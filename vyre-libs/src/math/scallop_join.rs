@@ -87,7 +87,7 @@ use vyre_foundation::ir::{DataType, Program};
 use crate::math::scallop_persistent::accumulate_lineage_words;
 use crate::math::scallop_persistent::{
     lineage_fixpoint_program, single_word_lineage_body, single_word_lineage_grid_sync_body,
-    wide_lineage_body, wide_lineage_grid_sync_body,
+    wide_lineage_body, wide_lineage_grid_sync_body, LineageFixpoint,
 };
 
 /// Canonical op id.
@@ -167,63 +167,26 @@ pub fn scallop_join(
         );
     }
 
-    let cells = n.saturating_mul(n);
-    let words = cells.saturating_mul(w);
-    let block_local = cells <= SCALLOP_JOIN_WORKGROUP_SIZE[0];
-
-    let body = match (w, block_local) {
-        (1, true) => single_word_lineage_body(
-            state,
-            next,
-            join_rules,
-            changed,
-            n,
-            words,
-            max_iterations,
-            SCALLOP_JOIN_WORKGROUP_SIZE[0],
-        ),
-        (1, false) => single_word_lineage_grid_sync_body(
-            state,
-            next,
-            join_rules,
-            changed,
-            n,
-            words,
-            max_iterations,
-        ),
-        (_, true) => wide_lineage_body(
-            state,
-            next,
-            join_rules,
-            changed,
-            n,
-            w,
-            cells,
-            max_iterations,
-            SCALLOP_JOIN_WORKGROUP_SIZE[0],
-        ),
-        (_, false) => wide_lineage_grid_sync_body(
-            state,
-            next,
-            join_rules,
-            changed,
-            n,
-            w,
-            cells,
-            max_iterations,
-        ),
-    };
-
-    lineage_fixpoint_program(
-        OP_ID,
+    let spec = LineageFixpoint {
         state,
         next,
         join_rules,
         changed,
-        words,
-        SCALLOP_JOIN_WORKGROUP_SIZE,
-        body,
-    )
+        n,
+        w,
+        lanes: SCALLOP_JOIN_WORKGROUP_SIZE[0],
+        max_iterations,
+    };
+    let block_local = spec.cells() <= SCALLOP_JOIN_WORKGROUP_SIZE[0];
+
+    let body = match (w, block_local) {
+        (1, true) => single_word_lineage_body(&spec),
+        (1, false) => single_word_lineage_grid_sync_body(&spec),
+        (_, true) => wide_lineage_body(&spec),
+        (_, false) => wide_lineage_grid_sync_body(&spec),
+    };
+
+    lineage_fixpoint_program(OP_ID, &spec, SCALLOP_JOIN_WORKGROUP_SIZE, body)
 }
 
 /// CPU reference. Iterates the Lineage-semiring join over `w`-word cells

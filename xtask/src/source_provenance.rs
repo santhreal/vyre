@@ -23,6 +23,21 @@ use std::process::Command;
 /// Largest file this module reads whole while digesting an untracked path.
 const MAX_UNTRACKED_FILE_BYTES: u64 = 64 * 1024 * 1024;
 
+/// The predicate every stale-source verdict is written with.
+///
+/// Five readers form this sentence and a sixth recognises it, so the words are
+/// declared once. Recognising the shape is what lets a gate answer a whole
+/// population of stale artifacts with the one command that re-measures them,
+/// instead of one finding per artifact the same re-measurement would close.
+pub const STALE_SOURCE_PREDICATE: &str = "does not match current workspace source";
+
+/// Whether a verdict says a recorded fingerprint names a tree that is no longer
+/// this one.
+#[must_use]
+pub fn is_stale_source_verdict(verdict: &str) -> bool {
+    verdict.contains(STALE_SOURCE_PREDICATE)
+}
+
 /// A way a recorded fingerprint fails to identify the source it names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SourceFingerprintIssue {

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Runtime barrier elision now takes child descent from the foundation rewrite walk and buffer-effect descent from visit::child_bodies instead of two hand-written matches ending in a catch-all, so a Node variant added with a body is descended into on the commit that declares it rather than treated as a leaf, and an unchanged scope is no longer rebuilt."

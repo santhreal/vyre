@@ -210,6 +210,7 @@ fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
         GateMode::LaunchComplete => "launch complete",
         GateMode::Prepublish => "prepublication",
     };
+    let stale = collapse_stale_source_verdicts(&mut failures);
     let mut report = Report::from_messages(
         failures,
         "Attach real evidence artifacts and close every manifest requirement.",
@@ -219,8 +220,65 @@ fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
         manifest.requirements.len(),
         manifest.release.vyre
     ));
+    for note in stale {
+        report.note(note);
+    }
     Ok(report)
 }
+
+/// The command that re-measures the release benchmark suite for one backend.
+const RE_MEASURE: &str = "cargo_full run -q -p xtask --bin xtask -- release-benchmarks --write --backend";
+
+/// Replace every stale-source verdict with the one command that answers them all.
+///
+/// A recorded benchmark names the tree it ran on, so one commit invalidates every
+/// artifact at once and each invalidated artifact then fails several checks: the
+/// freshness of its own fingerprint, the aggregate that cites it, the backend
+/// suite that inventories it. That was 164 of this gate's findings, and reading
+/// them cost the same as reading one, because a finding per artifact per check
+/// describes one action: re-measure on a release host. The verdicts are not
+/// discarded, they become notes, so the artifact list stays readable while the
+/// finding count says how many decisions are open rather than how many artifacts
+/// one decision touches.
+///
+/// The action is a command and not a hand edit. A fingerprint typed into a JSON
+/// file records a measurement that never happened, and there is no way to tell
+/// the two apart afterwards, so the only honest way to refresh one is to run the
+/// generator that stamps the tree it measured.
+fn collapse_stale_source_verdicts(failures: &mut Vec<String>) -> Vec<String> {
+    let stale: Vec<String> = failures
+        .iter()
+        .filter(|failure| xtask::source_provenance::is_stale_source_verdict(failure))
+        .cloned()
+        .collect();
+    if stale.is_empty() {
+        return Vec::new();
+    }
+    failures.retain(|failure| !xtask::source_provenance::is_stale_source_verdict(failure));
+    let artifacts: BTreeSet<String> = stale.iter().filter_map(|verdict| cited_artifact(verdict)).collect();
+    failures.push(format!(
+        "{} recorded verdict(s) over {} benchmark evidence artifact(s) name a source tree that is no longer this one; re-measure on a release host with `{RE_MEASURE} cuda` and `{RE_MEASURE} wgpu`",
+        stale.len(),
+        artifacts.len()
+    ));
+    let mut notes = vec![format!(
+        "stale benchmark evidence: {}",
+        artifacts.iter().cloned().collect::<Vec<_>>().join(", ")
+    )];
+    notes.extend(stale);
+    notes
+}
+
+/// The artifact a verdict is about: the first backtick-quoted `.json` path in it.
+fn cited_artifact(verdict: &str) -> Option<String> {
+    verdict
+        .split('`')
+        .skip(1)
+        .step_by(2)
+        .find(|quoted| quoted.ends_with(".json"))
+        .map(str::to_string)
+}
+
 pub(super) fn is_manifest_command_evidence(evidence: &str) -> bool {
     evidence.starts_with("cargo_full ")
 }
@@ -405,5 +463,94 @@ mod tests {
             unlisted.is_empty(),
             "Fix: list every produced artifact as evidence: {unlisted:?}"
         );
+    }
+
+    /// Stale-source verdicts collapse to one finding that names the re-measure
+    /// command, and every verdict survives as a note.
+    ///
+    /// The predicate comes from `xtask::source_provenance`, the same owner the
+    /// four producers format their message from, so a producer that reworded its
+    /// sentence without moving the owner cannot slip past this. The count is the
+    /// contract: many verdicts over many artifacts are one decision, and a
+    /// finding per artifact per check reported the same decision once per
+    /// artifact.
+    #[test]
+    fn stale_source_verdicts_collapse_to_one_finding() {
+        let predicate = xtask::source_provenance::STALE_SOURCE_PREDICATE;
+        let mut failures: Vec<String> = (0..7)
+            .map(|index| {
+                format!(
+                    "`release/evidence/benchmarks/suite-{index}.json` {predicate}, so its numbers are not this tree's"
+                )
+            })
+            .collect();
+        failures.push("`release/evidence/benchmarks/suite-0.json` fingerprint is missing".to_string());
+
+        let notes = collapse_stale_source_verdicts(&mut failures);
+
+        assert_eq!(
+            failures.len(),
+            2,
+            "Fix: seven stale verdicts and one unrelated failure must leave one collapsed finding beside the unrelated one: {failures:?}"
+        );
+        assert_eq!(
+            failures[0], "`release/evidence/benchmarks/suite-0.json` fingerprint is missing",
+            "Fix: a failure that is not a freshness verdict must survive unchanged"
+        );
+        let collapsed = &failures[1];
+        assert!(
+            collapsed.starts_with("7 recorded verdict(s) over 7 benchmark evidence artifact(s)"),
+            "Fix: the collapsed finding must state how many verdicts and artifacts it stands for: {collapsed}"
+        );
+        assert!(
+            collapsed.contains(&format!("{RE_MEASURE} cuda"))
+                && collapsed.contains(&format!("{RE_MEASURE} wgpu")),
+            "Fix: the collapsed finding must name the command that re-measures each backend: {collapsed}"
+        );
+        assert_eq!(
+            notes.len(),
+            8,
+            "Fix: the artifact list plus every collapsed verdict must survive as notes"
+        );
+        for index in 0..7 {
+            let artifact = format!("release/evidence/benchmarks/suite-{index}.json");
+            assert!(
+                notes[0].contains(&artifact),
+                "Fix: the artifact note must list every stale artifact, missing {artifact}"
+            );
+        }
+    }
+
+    /// Verdicts over one artifact collapse to one finding that counts the
+    /// artifact once.
+    ///
+    /// Three checks read the same recorded fingerprint, so the artifact count and
+    /// the verdict count are different numbers and a reader needs both to know
+    /// whether one re-measure closes the finding.
+    #[test]
+    fn repeated_verdicts_over_one_artifact_count_the_artifact_once() {
+        let predicate = xtask::source_provenance::STALE_SOURCE_PREDICATE;
+        let mut failures: Vec<String> = ["freshness", "aggregate", "suite inventory"]
+            .iter()
+            .map(|check| format!("{check}: `release/evidence/benchmarks/only.json` {predicate}"))
+            .collect();
+
+        collapse_stale_source_verdicts(&mut failures);
+
+        assert_eq!(failures.len(), 1);
+        assert!(
+            failures[0].starts_with("3 recorded verdict(s) over 1 benchmark evidence artifact(s)"),
+            "Fix: three verdicts over one artifact must count the artifact once: {}",
+            failures[0]
+        );
+    }
+
+    /// A run with no stale verdict changes nothing and adds no note.
+    #[test]
+    fn a_tree_with_fresh_evidence_is_left_alone() {
+        let mut failures = vec!["`release/evidence/benchmarks/a.json` is not listed by any requirement".to_string()];
+        let notes = collapse_stale_source_verdicts(&mut failures);
+        assert_eq!(failures.len(), 1);
+        assert!(notes.is_empty());
     }
 }

@@ -10,11 +10,11 @@
 #![cfg(feature = "go-parser")]
 
 use vyre::ir::Expr;
-use vyre_libs::parsing::go::lex::{TOK_IDENTIFIER, TOK_LPAREN};
 use vyre_libs::parsing::go::parse::ast_ops::go_extract_channel_creations;
 use vyre_libs::parsing::go::parse::structure::GO_SPAN_RECORD_WORDS;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
+use vyre_spec::go_token::{TOK_IDENTIFIER, TOK_LPAREN};
 
 /// One u32 word per source byte (the builder loads `haystack[start+off] & 0xFF`).
 fn expanded(source: &[u8]) -> Vec<u8> {
