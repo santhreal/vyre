@@ -5,7 +5,8 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_conform::lens::{self, LensOutcome};
+use vyre_conform::lens::outcome::LensOutcome;
+use vyre_conform::lens::{backend_parity, witness};
 
 fn report(op_id: &str, lens_name: &'static str, outcome: LensOutcome, failures: &mut Vec<String>) {
     match outcome {
@@ -25,7 +26,7 @@ fn every_op_passes_the_witness_lens() {
     let mut failures = Vec::with_capacity(failure_capacity);
     let mut passed = 0usize;
     for entry in entries {
-        let outcome = lens::witness(&entry);
+        let outcome = witness::run(&entry);
         if outcome.is_pass() {
             passed += 1;
         }
@@ -152,7 +153,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
     };
 
     let backend = build_registered_backend();
-    let outcome = lens::cpu_vs_backend(&entry, backend);
+    let outcome = backend_parity::run(&entry, backend);
     assert!(
         outcome.is_pass(),
         "cpu_vs_backend lens should accept small ULP divergence for sin(1.0), but got: {outcome:?}"
@@ -170,8 +171,7 @@ fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
             // The lens compares a backend against the CPU reference, so the
             // reference oracle would be compared against itself.
             !registration.reference_oracle
-                && vyre_driver::backend_dispatches(registration.id)
-                    .expect("valid backend registry")
+                && vyre_driver::backend_dispatches(registration.id).expect("valid backend registry")
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)
