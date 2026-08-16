@@ -579,6 +579,9 @@ pub(crate) fn audit_events_test_lock() -> std::sync::MutexGuard<'static, ()> {
         .expect("Fix: audit event test lock must not be poisoned")
 }
 
+// Inline: the suite drives the `#[cfg(test)]` `audit_events_test_lock`,
+// `clear_substrate_audit_events_for_test`, `record_substrate_audit_event_for_test`, which an
+// integration test does not compile.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -49,6 +49,7 @@ mod tests {
     use super::host_uploads::stage_resident_fill_payload;
     use super::sequence_slots::prepare_resident_sequence_fills;
 
+    // Inline: covers `borrowed`, which no integration test can name.
     #[cfg(test)]
     #[allow(clippy::module_inception)]
     mod tests {

@@ -152,6 +152,8 @@ pub fn plan_cuda_frontier_megakernel_execution_with_scratch(
     )
 }
 
+// Inline: `vyre_driver_cuda::megakernel_barrier_planner` is `pub(crate)`, so no integration test
+// can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::plan_cuda_frontier_megakernel_execution;

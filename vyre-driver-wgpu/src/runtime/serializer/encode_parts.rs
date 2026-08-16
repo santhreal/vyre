@@ -88,6 +88,7 @@ fn reserve_encoded_frame(out: &mut Vec<u8>, total: usize) -> Result<()> {
     })
 }
 
+// Inline: covers `MAGIC`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

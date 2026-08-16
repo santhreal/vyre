@@ -219,6 +219,7 @@ pub fn default_dispatch_with_device_buffers(
 /// Compile-time confirmation that the trait is dyn-safe.
 const _ASSERT_DYN_SAFE: Option<&dyn DeviceBuffer> = None;
 
+// Inline: covers `unsupported_device_buffer`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

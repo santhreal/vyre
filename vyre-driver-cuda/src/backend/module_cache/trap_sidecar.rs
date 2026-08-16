@@ -124,6 +124,8 @@ fn malformed(line: &str) -> BackendError {
     }
 }
 
+// Inline: covers `declares_trap_sidecar`, `trap_sidecar_from_module`, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
     use super::{declares_trap_sidecar, trap_sidecar_from_module};

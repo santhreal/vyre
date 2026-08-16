@@ -232,6 +232,8 @@ pub fn u32_binop_parity(
     u32_words(&bytes)
 }
 
+// Inline: `vyre_driver::parity_harness` is declared under `#[cfg(test)]`, so no integration test
+// can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{elementwise_program, u32_bytes, u32_words, u64_words, ParityInput};

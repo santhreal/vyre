@@ -476,6 +476,8 @@ where
     })
 }
 
+// Inline: `vyre_driver::speculate` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

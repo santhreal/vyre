@@ -234,6 +234,7 @@ fn measure_backend(
     Ok(samples[samples.len() / 2])
 }
 
+// Inline: covers `PGO_TIMED_ITERS`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

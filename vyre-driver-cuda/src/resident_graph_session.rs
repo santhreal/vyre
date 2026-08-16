@@ -390,6 +390,8 @@ pub fn format_validated_cuda_resident_graph_session_evidence_csv(
         .map_err(CudaResidentGraphSessionEvidenceError::Speedup)
 }
 
+// Inline: `vyre_driver_cuda::resident_graph_session` is `pub(crate)`, so no integration test can
+// reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

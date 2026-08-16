@@ -160,6 +160,8 @@ pub fn encode_nvme_read_sqe(
     buf
 }
 
+// Inline: `vyre_runtime::uring::gpudirect` is `private`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

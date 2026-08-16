@@ -778,6 +778,7 @@ fn group_resident_bytes(
     checked_add(with_scratch, output_bytes, "resident bytes with outputs")
 }
 
+// Inline: covers `take_reserved_query_bucket`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

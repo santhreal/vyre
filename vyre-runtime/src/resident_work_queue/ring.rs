@@ -291,6 +291,8 @@ impl RingConsumer for HostRing {
     }
 }
 
+// Inline: covers `STATUS_WORD_USIZE`, `publish`, `read_slot`, `slot_count` and 1 more item this
+// module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

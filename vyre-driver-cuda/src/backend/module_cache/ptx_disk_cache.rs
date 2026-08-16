@@ -229,6 +229,9 @@ pub(super) fn write_ptx_dump(
     Ok(path)
 }
 
+// Inline: covers `PTX_CACHE_TMP_COUNTER`, `PTX_SOURCE_CACHE_MAX_ARTIFACT_BYTES`,
+// `allocate_ptx_cache_tmp_id`, `validate_ptx_disk_cache_file_len`, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::Ordering;

@@ -959,6 +959,8 @@ impl Drop for CudaPendingDispatch {
     }
 }
 
+// Inline: covers `events`, `query_raw_stream_ready`, `raw`, `record` and 3 more items this module
+// keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{query_raw_stream_ready, synchronize_raw_stream};

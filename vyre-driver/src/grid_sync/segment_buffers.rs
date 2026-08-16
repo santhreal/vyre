@@ -312,6 +312,8 @@ fn collect_segment_expr_targets(
     });
 }
 
+// Inline: covers `segment_buffer_consumes_input`, `segment_input_names`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use super::*;

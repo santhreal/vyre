@@ -159,6 +159,9 @@ fn env_value_disables_default_true(value: &str) -> bool {
     matches!(value, "0" | "false" | "FALSE" | "off" | "OFF")
 }
 
+// Inline: covers `cached_flag`, `env_value_disables_default_true`,
+// `env_value_enables_explicit_true`, `parse_device_wait_timeout_secs`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use super::*;

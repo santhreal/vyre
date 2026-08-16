@@ -427,6 +427,8 @@ fn reserve_vec<T>(
 
 storage_reserve_failure_adapter!(MegakernelBarrierPlanError);
 
+// Inline: the suite grades against `crate::megakernel_fixtures`, which is gated on `cfg(any(test,
+// feature = "test-fixtures"))` and so is absent from an integration test build.
 #[cfg(test)]
 mod tests {
     use super::{

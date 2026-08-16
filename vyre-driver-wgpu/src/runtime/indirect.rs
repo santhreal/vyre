@@ -76,17 +76,3 @@ impl IndirectArgs {
 pub fn dispatch_indirect<'a>(pass: &mut wgpu::ComputePass<'a>, args: &'a IndirectArgs) {
     pass.dispatch_workgroups_indirect(&args.buffer, args.offset);
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn args_bytes_is_twelve() {
-        assert_eq!(INDIRECT_ARGS_BYTES, 12);
-    }
-
-    // Note: tests that actually construct IndirectArgs require a
-    // real wgpu::Buffer and hence a GPU. The full dispatch path is
-    // exercised from vyre-wgpu integration tests (`tests/indirect_dispatch.rs`).
-}

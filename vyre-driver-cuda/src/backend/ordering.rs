@@ -5,6 +5,8 @@ pub(crate) use vyre_driver::ordering::{
     DensePermutationDefect,
 };
 
+// Inline: `vyre_driver_cuda::backend` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{sort_unstable_by_key_if_needed, sort_unstable_if_needed};

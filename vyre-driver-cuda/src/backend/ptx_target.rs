@@ -82,6 +82,7 @@ fn probe_ptx_target_sm(target_sm: u32) -> Result<(), CUresult> {
     unload_cuda_module(module)
 }
 
+// Inline: covers `ptx_target_candidates`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::ptx_target_candidates;

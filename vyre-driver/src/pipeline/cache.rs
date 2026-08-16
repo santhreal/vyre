@@ -602,6 +602,8 @@ impl PipelineCacheMissReason {
     }
 }
 
+// Inline: `vyre_driver::pipeline` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod pipeline_cache_key_tests {
     use super::*;

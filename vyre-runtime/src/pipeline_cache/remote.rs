@@ -123,6 +123,8 @@ fn remote_metadata_allows(
     true
 }
 
+// Inline: covers `RemoteMetadataExpectation`, `remote_metadata_allows`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use super::*;

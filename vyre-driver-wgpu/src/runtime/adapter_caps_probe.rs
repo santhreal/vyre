@@ -171,6 +171,7 @@ fn backend_id_for(backend: wgpu::Backend) -> &'static str {
     }
 }
 
+// Inline: covers `backend_id_for`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

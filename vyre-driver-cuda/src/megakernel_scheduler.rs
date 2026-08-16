@@ -163,6 +163,8 @@ pub fn schedule_megakernel_from_cuda_samples_into(
     try_schedule_via_scale_aware_samples_into(samples, launch_overhead_ns, n_steps, dt, out)
 }
 
+// Inline: covers `dispatch_cost_ns`, `frontier_density`, `readback_bytes`, which no integration
+// test can name.
 #[cfg(test)]
 mod tests {
     use super::{

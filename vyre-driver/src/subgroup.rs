@@ -150,6 +150,8 @@ pub fn try_reduction_offsets_into(
     Ok(())
 }
 
+// Inline: `vyre_driver::subgroup` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -588,6 +588,7 @@ impl Drop for GraphHostBuffers {
     }
 }
 
+// Inline: covers `GraphHostBuffers`, `context`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::GraphHostBuffers;

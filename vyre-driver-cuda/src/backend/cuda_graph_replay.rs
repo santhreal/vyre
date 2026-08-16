@@ -723,6 +723,8 @@ impl CudaBackend {
     }
 }
 
+// Inline: covers `cached_graph_input`, `validate_cached_graph_input_index_map`,
+// `validate_cached_graph_output_index_map`, which no integration test can name.
 #[cfg(test)]
 mod source_contract_tests {
     use super::{

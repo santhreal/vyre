@@ -218,6 +218,7 @@ impl PipelineCacheCounters {
     }
 }
 
+// Inline: covers `PipelineCacheCounters`, `add`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::AtomicU64;

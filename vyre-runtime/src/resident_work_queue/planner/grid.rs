@@ -274,6 +274,8 @@ impl ResidentGridPlan {
     }
 }
 
+// Inline: covers `GRID_PLAN_CACHE_CAP`, `GeometryCacheKey`, `MegakernelPlannerCache`, which no
+// integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -50,6 +50,7 @@ pub(crate) fn compute_capability(target_sm: u32) -> vyre_emit_ptx::ComputeCapabi
     }
 }
 
+// Inline: covers `compute_capability`, `validate_and_analyze`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
