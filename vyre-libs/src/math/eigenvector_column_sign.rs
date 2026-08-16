@@ -15,7 +15,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -95,9 +95,7 @@ pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
 pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n: u32) -> Node {
     wrap_child_region(
         OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         eigenvector_column_sign_body(eigenvectors, n),
     )
 }

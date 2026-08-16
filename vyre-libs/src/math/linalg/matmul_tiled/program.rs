@@ -1,5 +1,5 @@
 use vyre_foundation::composition::{wrap_child_region, wrap_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use crate::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
 
@@ -162,9 +162,7 @@ pub(super) fn build_matmul_tiled_program(
         })?;
     let body = vec![wrap_child_region(
         SEMIRING_GEMM_OP_ID,
-        GeneratorRef {
-            name: generator.to_string(),
-        },
+        Ident::from(generator),
         kernel_body,
     )];
 

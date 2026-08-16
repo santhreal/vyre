@@ -860,7 +860,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         &mut self,
         _node: &Node,
         generator: &Ident,
-        _source_region: &Option<crate::ir_inner::model::expr::GeneratorRef>,
+        _source_region: &Option<crate::ir_inner::model::expr::Ident>,
         _body: &[Node],
     ) -> ControlFlow<Self::Break> {
         let depth = self.current_depth();

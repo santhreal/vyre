@@ -48,7 +48,7 @@ fn gqa_contains_dot_partial_children_owned_by_each_canonical_attention_pass() {
             let parent = source_region
                 .as_ref()
                 .expect("canonical dot-partial regions must record their attention-pass parent");
-            *dot_parents.entry(parent.name.clone()).or_default() += 1;
+            *dot_parents.entry(parent.as_str().to_string()).or_default() += 1;
         }
     });
 

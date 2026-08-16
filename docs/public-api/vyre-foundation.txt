@@ -597,8 +597,8 @@ pub fn vyre_foundation::composition::single_invocation_region(op_id: &str, body:
 pub fn vyre_foundation::composition::tag_program(parent_op_id: &str, program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::composition::trap_program(op_id: &str, output: core::option::Option<(&str, vyre_spec::data_type::DataType)>, message: impl core::convert::Into<alloc::string::String>) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::composition::wrap_anonymous_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
-pub fn vyre_foundation::composition::wrap_child_region(generator: &str, parent: vyre_foundation::ir::GeneratorRef, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
-pub fn vyre_foundation::composition::wrap_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>, source_region: core::option::Option<vyre_foundation::ir::GeneratorRef>) -> vyre_foundation::ir::Node
+pub fn vyre_foundation::composition::wrap_child_region(generator: &str, parent: vyre_foundation::ir::Ident, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
+pub fn vyre_foundation::composition::wrap_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>, source_region: core::option::Option<vyre_foundation::ir::Ident>) -> vyre_foundation::ir::Node
 pub fn vyre_foundation::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::Program
 pub fn vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)
 pub fn vyre_foundation::diagnostics::Diagnostic::error(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
@@ -2287,7 +2287,7 @@ pub fn vyre_foundation::visit::NodeVisitor::visit_indirect_dispatch(&mut self, n
 pub fn vyre_foundation::visit::NodeVisitor::visit_let(&mut self, node: &vyre_foundation::ir::Node, name: &vyre_foundation::ir::Ident, value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_loop(&mut self, node: &vyre_foundation::ir::Node, var: &vyre_foundation::ir::Ident, from: &vyre_foundation::ir::Expr, to: &vyre_foundation::ir::Expr, body: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_opaque_node(&mut self, node: &vyre_foundation::ir::Node, extension: &dyn vyre_foundation::ir::NodeExtension) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_foundation::visit::NodeVisitor::visit_region(&mut self, node: &vyre_foundation::ir::Node, generator: &vyre_foundation::ir::Ident, source_region: &core::option::Option<vyre_foundation::ir::GeneratorRef>, body: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::NodeVisitor::visit_region(&mut self, node: &vyre_foundation::ir::Node, generator: &vyre_foundation::ir::Ident, source_region: &core::option::Option<vyre_foundation::ir::Ident>, body: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_resume(&mut self, node: &vyre_foundation::ir::Node, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_return(&mut self, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_store(&mut self, node: &vyre_foundation::ir::Node, buffer: &vyre_foundation::ir::Ident, index: &vyre_foundation::ir::Expr, value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -2522,7 +2522,6 @@ pub struct vyre_foundation::extension::OpaqueExprResolver
 pub struct vyre_foundation::extension::OpaqueNodeResolver
 pub struct vyre_foundation::ir::BufferDecl
 pub struct vyre_foundation::ir::EvalError
-pub struct vyre_foundation::ir::GeneratorRef
 pub struct vyre_foundation::ir::GraphInput
 pub struct vyre_foundation::ir::GraphNodeId(pub u32)
 pub struct vyre_foundation::ir::GraphOutput
@@ -3068,7 +3067,6 @@ pub vyre_foundation::ir::Expr::UnOp::operand: alloc::boxed::Box<vyre_foundation:
 pub vyre_foundation::ir::Expr::Var(vyre_foundation::ir::Ident)
 pub vyre_foundation::ir::Expr::WorkgroupId
 pub vyre_foundation::ir::Expr::WorkgroupId::axis: u8
-pub vyre_foundation::ir::GeneratorRef::name: alloc::string::String
 pub vyre_foundation::ir::GraphInput::buffer: alloc::string::String
 pub vyre_foundation::ir::GraphInput::contract: vyre_foundation::ir::ValueContract
 pub vyre_foundation::ir::GraphInput::value: vyre_foundation::ir::GraphValueId
@@ -3155,7 +3153,7 @@ pub vyre_foundation::ir::Node::ReduceScatter::output: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Node::Region
 pub vyre_foundation::ir::Node::Region::body: alloc::sync::Arc<alloc::vec::Vec<vyre_foundation::ir::Node>>
 pub vyre_foundation::ir::Node::Region::generator: vyre_foundation::ir::Ident
-pub vyre_foundation::ir::Node::Region::source_region: core::option::Option<vyre_foundation::ir::GeneratorRef>
+pub vyre_foundation::ir::Node::Region::source_region: core::option::Option<vyre_foundation::ir::Ident>
 pub vyre_foundation::ir::Node::Resume
 pub vyre_foundation::ir::Node::Resume::tag: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Node::Return
@@ -3853,7 +3851,7 @@ pub vyre_foundation::optimizer::program_soa::NodeKind::Store
 pub vyre_foundation::optimizer::program_soa::NodeKind::Trap
 pub vyre_foundation::optimizer::program_soa::RegionMeta::generator: vyre_foundation::ir::Ident
 pub vyre_foundation::optimizer::program_soa::RegionMeta::node: vyre_foundation::optimizer::program_soa::NodeIndex
-pub vyre_foundation::optimizer::program_soa::RegionMeta::source_region: core::option::Option<vyre_foundation::ir::GeneratorRef>
+pub vyre_foundation::optimizer::program_soa::RegionMeta::source_region: core::option::Option<vyre_foundation::ir::Ident>
 pub vyre_foundation::optimizer::rewrite_proof::ProofSort::BitVec(u32)
 pub vyre_foundation::optimizer::rewrite_proof::ProofSort::Bool
 pub vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::after: vyre_foundation::optimizer::rewrite_proof::ProofExpr

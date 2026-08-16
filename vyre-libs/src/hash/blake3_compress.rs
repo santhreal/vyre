@@ -19,7 +19,7 @@
 //! to `vyre-libs::hash::blake3_compress`.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use crate::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
 
@@ -91,9 +91,7 @@ pub fn blake3_compress(
     // body size so construction is allocation-free without over-retaining
     // unused node slots.
     let mut body: Vec<Node> = Vec::with_capacity(BLAKE3_COMPRESS_BODY_NODE_COUNT);
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
 
     // -- Initialize state[0..8] = chaining_in[0..8]. -----------------
     for i in 0..8 {

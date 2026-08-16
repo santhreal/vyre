@@ -15,7 +15,7 @@
 //! [`cell_grid_fill`]: crate::visual::cell_grid::cell_grid_fill
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::cell_grid::{cell_lookup_nodes, GridShape};
@@ -109,9 +109,7 @@ pub fn glyph_grid_blend(
             OP_ID,
             vec![wrap_child_region(
                 crate::visual::packed_rgba_map::OP_ID,
-                GeneratorRef {
-                    name: OP_ID.to_string(),
-                },
+                Ident::from(OP_ID),
                 vec![
                     Node::let_bind("idx", Expr::gid_x()),
                     Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(pixels)), {

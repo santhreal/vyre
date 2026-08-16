@@ -31,7 +31,7 @@ backend, and (d) matches the CPU reference output byte-for-byte.
 ## Cross-crate contracts
 
 - Consumes `vyre::ir::*` (Program, Node, Expr, BufferDecl, DataType)
-- Consumes `vyre_foundation::ir_inner::model::expr::GeneratorRef`
+- Consumes `vyre_foundation::ir::Ident` as the parent name a composed region cites
 - Backend execution tests use `vyre-driver` registry capabilities only;
   concrete driver parity belongs to the owning driver crate.
 

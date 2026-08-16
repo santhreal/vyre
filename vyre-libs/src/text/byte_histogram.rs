@@ -2,7 +2,7 @@
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for the 256-bin byte histogram primitive.
@@ -93,9 +93,7 @@ fn byte_histogram_256_child_with_source_type(
 ) -> Node {
     wrap_child_region(
         BYTE_HISTOGRAM_256_OP_ID,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         byte_histogram_256_body(input, histogram, count),
     )
 }

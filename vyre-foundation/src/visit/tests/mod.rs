@@ -1,5 +1,5 @@
 use super::*;
-use crate::ir_inner::model::expr::{Expr, ExprNode, GeneratorRef, Ident};
+use crate::ir_inner::model::expr::{Expr, ExprNode, Ident};
 use crate::ir_inner::model::generated::Node;
 use crate::ir_inner::model::op_signature::{AtomicOp, BinOp, DataType, UnOp};
 use crate::memory_model::MemoryOrdering;

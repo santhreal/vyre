@@ -183,7 +183,7 @@ pub vyre_pass_engine::optimizer::encode::EncodedProgram::node_tags: alloc::vec::
 pub vyre_pass_engine::optimizer::encode::EncodedProgram::nodes: alloc::vec::Vec<u32>
 pub vyre_pass_engine::optimizer::encode::EncodedProgram::wrapping: core::option::Option<vyre_pass_engine::optimizer::encode::WrappingRegion>
 pub vyre_pass_engine::optimizer::encode::WrappingRegion::generator: vyre_foundation::ir_inner::model::expr::ident::Ident
-pub vyre_pass_engine::optimizer::encode::WrappingRegion::source_region: core::option::Option<vyre_foundation::ir_inner::model::expr::GeneratorRef>
+pub vyre_pass_engine::optimizer::encode::WrappingRegion::source_region: core::option::Option<vyre_foundation::ir_inner::model::expr::ident::Ident>
 pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg0: alloc::vec::Vec<u32>
 pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg1: alloc::vec::Vec<u32>
 pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg2: alloc::vec::Vec<u32>

@@ -9,7 +9,7 @@
 //! scalar row-loop reference remains available through [`attention_reference`].
 
 use vyre_foundation::composition::{trap_program, wrap_child_region, wrap_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::nn::attention_passes::{
     attention_max_pass, attention_sum_pass, attention_write_pass, ATTENTION_MAX_PASS_OP_ID,
@@ -550,9 +550,7 @@ fn attention_reference_program(
 ) -> Result<Program, TensorRefError> {
     let scale = 1.0f32 / (d as f32).sqrt();
     let scale_expr = Expr::f32(scale);
-    let parent = GeneratorRef {
-        name: generator.to_string(),
-    };
+    let parent = Ident::from(generator);
 
     // Per row i (query token):
     // 1) scores[j] = scale * dot(Q[i,:], K[j,:]) for j in 0..s

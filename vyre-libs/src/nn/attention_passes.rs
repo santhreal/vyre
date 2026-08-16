@@ -1,7 +1,7 @@
 //! Reusable attention passes built from the shared `dot_partial` primitive.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
@@ -56,9 +56,7 @@ pub fn attention_max_pass_bounded(
     query_base: Expr,
     key_base: Expr,
 ) -> Vec<Node> {
-    let parent = GeneratorRef {
-        name: ATTENTION_MAX_PASS_OP_ID.to_string(),
-    };
+    let parent = Ident::from(ATTENTION_MAX_PASS_OP_ID);
     vec![Node::loop_for(
         "j",
         Expr::u32(0),
@@ -187,9 +185,7 @@ pub fn attention_sum_pass_bounded(
     query_base: Expr,
     key_base: Expr,
 ) -> Vec<Node> {
-    let parent = GeneratorRef {
-        name: ATTENTION_SUM_PASS_OP_ID.to_string(),
-    };
+    let parent = Ident::from(ATTENTION_SUM_PASS_OP_ID);
     vec![Node::loop_for(
         "j",
         Expr::u32(0),
@@ -399,9 +395,7 @@ pub fn attention_write_pass_bounded_typed(
     output_base: Expr,
     output_dtype: DataType,
 ) -> Vec<Node> {
-    let parent = GeneratorRef {
-        name: ATTENTION_WRITE_PASS_OP_ID.to_string(),
-    };
+    let parent = Ident::from(ATTENTION_WRITE_PASS_OP_ID);
     vec![Node::loop_for(
         "t",
         Expr::u32(0),

@@ -21,7 +21,7 @@ pub(crate) mod elementwise;
 pub(crate) mod tiled_reduce;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::tensor_ref::{TensorRef, TensorRefError};
@@ -261,9 +261,7 @@ where
             vec![Node::store(output, dst_index, value)],
         ),
     ];
-    let parent = GeneratorRef {
-        name: op_id.to_string(),
-    };
+    let parent = Ident::from(op_id);
 
     Program::wrapped(
         buffers,
@@ -408,9 +406,7 @@ fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> Node
 fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec<Node>) -> Node {
     wrap_child_region(
         child_op_id,
-        GeneratorRef {
-            name: parent_op_id.to_string(),
-        },
+        Ident::from(parent_op_id),
         body,
     )
 }

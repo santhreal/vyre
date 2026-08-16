@@ -8,7 +8,7 @@
 use core::fmt;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
@@ -132,9 +132,7 @@ pub fn try_rank1_superblocks(
             RANK_SUPERBLOCKS_OP_ID,
             vec![wrap_child_region(
                 crate::graph::path_reconstruct::OP_ID,
-                GeneratorRef {
-                    name: RANK_SUPERBLOCKS_OP_ID.to_string(),
-                },
+                Ident::from(RANK_SUPERBLOCKS_OP_ID),
                 body,
             )],
         )],

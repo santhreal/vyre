@@ -28,7 +28,7 @@ pub mod ir {
             fold_unary_literal,
         };
     }
-    pub use crate::ir_inner::model::expr::{Expr, ExprNode, GeneratorRef, Ident};
+    pub use crate::ir_inner::model::expr::{Expr, ExprNode, Ident};
     pub use crate::ir_inner::model::generated::{
         expr_variant_name, node_variant_name, EXPR_VARIANT_NAMES, NODE_VARIANT_NAMES,
     };
