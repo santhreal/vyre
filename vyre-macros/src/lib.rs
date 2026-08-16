@@ -23,5 +23,3 @@ pub fn vyre_ast_registry(item: TokenStream) -> TokenStream {
 pub fn vyre_pass(args: TokenStream, item: TokenStream) -> TokenStream {
     pass::vyre_pass_impl(args, item)
 }
-#[cfg(test)]
-mod tests;

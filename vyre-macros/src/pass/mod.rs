@@ -388,3 +388,13 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
     }
     .into()
 }
+
+/// WHY: `PassArgs`, `MetadataEnum` and the three metadata tables are
+/// `pub(crate)` in a proc-macro crate. A proc-macro crate exports macros and
+/// nothing else, so no integration test under `tests/` can name them, and the
+/// attribute's own expansion cannot observe a rejected argument because a
+/// rejection is a compile error rather than a value. `tests/ui` pins the
+/// diagnostics a user sees; this module pins the parser those diagnostics come
+/// from.
+#[cfg(test)]
+mod tests;
