@@ -257,3 +257,226 @@ pub(super) fn query_scale_node(eps: f32, key_dim: u32) -> Node {
         ),
     )
 }
+
+/// The head decomposition both schedules open with, with `body` inside the
+/// dispatch guard.
+///
+/// One invocation owns one `[batch, value_head]` slot. The two schedules used
+/// to spell the same decomposition two ways, one dividing and subtracting and
+/// the other taking a remainder, so a head-layout change had two places to
+/// land. It has one now.
+pub(super) fn head_partition(
+    counts: &GatedDeltaCounts,
+    value_heads: u32,
+    body: Vec<Node>,
+) -> Vec<Node> {
+    let mut guarded = vec![
+        Node::let_bind(
+            "batch_index",
+            Expr::div(Expr::var("head_index"), Expr::u32(value_heads)),
+        ),
+        Node::let_bind(
+            "value_head",
+            Expr::rem(Expr::var("head_index"), Expr::u32(value_heads)),
+        ),
+        Node::let_bind(
+            "key_head",
+            Expr::div(Expr::var("value_head"), Expr::u32(counts.group)),
+        ),
+    ];
+    guarded.extend(body);
+    vec![
+        Node::let_bind("head_index", Expr::InvocationId { axis: 0 }),
+        Node::if_then(
+            Expr::lt(Expr::var("head_index"), Expr::u32(counts.head)),
+            guarded,
+        ),
+    ]
+}
+
+/// Copy the incoming matrix state into `state_output` so the schedule can
+/// update it in place and leave `state_input` readable.
+pub(super) fn init_state_copy(
+    state_input: &str,
+    state_output: &str,
+    key_dim: u32,
+    value_dim: u32,
+) -> Node {
+    Node::loop_for(
+        "state_key",
+        Expr::u32(0),
+        Expr::u32(key_dim),
+        vec![Node::loop_for(
+            "state_value",
+            Expr::u32(0),
+            Expr::u32(value_dim),
+            vec![Node::Store {
+                buffer: state_output.into(),
+                index: state_index(
+                    key_dim,
+                    value_dim,
+                    Expr::var("state_key"),
+                    Expr::var("state_value"),
+                ),
+                value: Expr::load(
+                    state_input,
+                    state_index(
+                        key_dim,
+                        value_dim,
+                        Expr::var("state_key"),
+                        Expr::var("state_value"),
+                    ),
+                ),
+            }],
+        )],
+    )
+}
+
+/// Accumulate one key row's squared magnitude and bind its L2 normalizer.
+///
+/// `prefix` names the four bindings this emits, so a schedule that needs the
+/// normalizer of several key rows at once keeps them apart. The recurrent
+/// schedule needs exactly one row per token and the chunked schedule needs the
+/// current, paired, state, and future rows of a tile.
+pub(super) fn key_norm_nodes(
+    key: &str,
+    sequence: u32,
+    key_heads: u32,
+    key_dim: u32,
+    eps: f32,
+    token: Expr,
+    prefix: &str,
+) -> Vec<Node> {
+    let sum = format!("{prefix}_key_sum");
+    let component = format!("{prefix}_key_component");
+    let dimension = format!("{prefix}_norm_dimension");
+    let scale = format!("{prefix}_key_scale");
+    vec![
+        Node::let_bind(sum.clone(), Expr::f32(0.0)),
+        Node::loop_for(
+            dimension.clone(),
+            Expr::u32(0),
+            Expr::u32(key_dim),
+            vec![
+                Node::let_bind(
+                    component.clone(),
+                    Expr::cast(
+                        DataType::F32,
+                        Expr::load(
+                            key,
+                            activation_index(
+                                "key_head",
+                                sequence,
+                                key_heads,
+                                key_dim,
+                                token,
+                                Expr::var(dimension),
+                            ),
+                        ),
+                    ),
+                ),
+                Node::assign(
+                    sum.clone(),
+                    Expr::add(
+                        Expr::var(sum.clone()),
+                        Expr::mul(Expr::var(component.clone()), Expr::var(component)),
+                    ),
+                ),
+            ],
+        ),
+        l2_scale_node(scale, &sum, eps),
+    ]
+}
+
+/// One L2-normalized key component, scaled by the binding `scale` names.
+pub(super) fn normalized_key(
+    key: &str,
+    sequence: u32,
+    key_heads: u32,
+    key_dim: u32,
+    token: Expr,
+    feature: Expr,
+    scale: &str,
+) -> Expr {
+    Expr::mul(
+        Expr::cast(
+            DataType::F32,
+            Expr::load(
+                key,
+                activation_index("key_head", sequence, key_heads, key_dim, token, feature),
+            ),
+        ),
+        Expr::var(scale),
+    )
+}
+
+/// Accumulate the query row's squared magnitude and bind `query_scale`.
+///
+/// The query normalizer carries the `1 / sqrt(key_dim)` logit factor, so it is
+/// a separate builder from [`key_norm_nodes`] rather than the same one under a
+/// different prefix.
+pub(super) fn query_norm_nodes(
+    query: &str,
+    sequence: u32,
+    key_heads: u32,
+    key_dim: u32,
+    eps: f32,
+    token: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind("query_sum", Expr::f32(0.0)),
+        Node::loop_for(
+            "query_norm_dimension",
+            Expr::u32(0),
+            Expr::u32(key_dim),
+            vec![
+                Node::let_bind(
+                    "query_component",
+                    Expr::cast(
+                        DataType::F32,
+                        Expr::load(
+                            query,
+                            activation_index(
+                                "key_head",
+                                sequence,
+                                key_heads,
+                                key_dim,
+                                token,
+                                Expr::var("query_norm_dimension"),
+                            ),
+                        ),
+                    ),
+                ),
+                Node::assign(
+                    "query_sum",
+                    Expr::add(
+                        Expr::var("query_sum"),
+                        Expr::mul(Expr::var("query_component"), Expr::var("query_component")),
+                    ),
+                ),
+            ],
+        ),
+        query_scale_node(eps, key_dim),
+    ]
+}
+
+/// One query component, normalized and carrying the attention-logit scale.
+pub(super) fn scaled_query(
+    query: &str,
+    sequence: u32,
+    key_heads: u32,
+    key_dim: u32,
+    token: Expr,
+    feature: Expr,
+) -> Expr {
+    Expr::mul(
+        Expr::cast(
+            DataType::F32,
+            Expr::load(
+                query,
+                activation_index("key_head", sequence, key_heads, key_dim, token, feature),
+            ),
+        ),
+        Expr::var("query_scale"),
+    )
+}
