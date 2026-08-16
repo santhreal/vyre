@@ -90,7 +90,7 @@ vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry
 # and to SPIR-V (explicit, not run-implied). PATH-ONLY (no version), like the `vyre`
 # dev-dep above: cargo strips path-only dev-deps at publish, so this never creates a
 # publish-ordering constraint, and `--edges=normal` keeps it out of the layering lint.
-# A CPU-reference parity test (`c_ast_expression_support`) compares against vyre-reference.
+# CPU-reference parity tests compare against vyre-reference.
 vyre-reference = { path = "../vyre-reference" }
 # GPU parity tests consume the canonical conformance library without enabling
 # its optional concrete-backend dependencies. PATH-ONLY keeps this unpublished
