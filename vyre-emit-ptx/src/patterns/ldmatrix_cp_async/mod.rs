@@ -18,6 +18,12 @@
 //! conditions above describe what one `cp.async` instruction can actually
 //! issue, and the gate on them is a compute-capability question.
 
+pub mod schedule;
+pub use schedule::{
+    plan_double_buffer_schedule, AccumulatorLiveness, DoubleBufferSchedule, EpilogueOverlap,
+    PingPongPlan, PipelineStageOp, ScheduleError, WaitGroupPolicy,
+};
+
 use serde::{Deserialize, Serialize};
 use vyre_lower::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
 use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};

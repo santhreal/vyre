@@ -6,7 +6,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for the 256-bin byte histogram primitive.
-pub const BYTE_HISTOGRAM_256_OP_ID: &str = "vyre-primitives::text::byte_histogram_256";
+pub const BYTE_HISTOGRAM_256_OP_ID: &str = "vyre-libs::text::byte_histogram_256";
 
 /// Build the reusable histogram body.
 #[must_use]

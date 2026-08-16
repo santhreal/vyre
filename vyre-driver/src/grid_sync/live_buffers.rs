@@ -80,40 +80,38 @@ pub(super) fn borrowed_grid_sync_inputs_by_name<'a>(
     Ok(borrowed)
 }
 
-/// Order-independent fingerprint of the EVOLVING accumulator state threaded
-/// between grid-sync segments.
-///
-/// Only `Owned` entries are hashed: a `Borrowed` entry is a caller input that
-/// is never written by any segment (constant for the whole split), so it cannot
-/// change between passes and excluding it keeps the fingerprint cheap. Each
-/// owned buffer mixes its NAME and its bytes (FNV-1a) so a value moving between
-/// buffers is observed, and the per-buffer hashes are XOR-combined so map
-/// iteration order does not affect the result. Two consecutive passes with an
-/// identical fingerprint prove the deterministic segment sequence reached a
-/// fixpoint (used to early-exit the outer iteration loop).
-pub(super) fn owned_accumulator_fingerprint(inputs: &HashMap<Ident, GridSyncInput<'_>>) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
-    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
-    let mut combined: u64 = 0;
+/// Exact state snapshot of evolving owned buffers threaded between grid-sync segments.
+pub(super) fn snapshot_owned_accumulators(
+    inputs: &HashMap<Ident, GridSyncInput<'_>>,
+) -> HashMap<Ident, Vec<u8>> {
+    let mut snapshot = HashMap::new();
     for (name, input) in inputs {
-        let GridSyncInput::Owned(bytes) = input else {
-            continue;
-        };
-        let mut hash = FNV_OFFSET;
-        for byte in name.as_str().as_bytes() {
-            hash ^= u64::from(*byte);
-            hash = hash.wrapping_mul(FNV_PRIME);
+        if let GridSyncInput::Owned(bytes) = input {
+            snapshot.insert(name.clone(), bytes.clone());
         }
-        // Separator so `name`+`bytes` cannot alias a different split.
-        hash ^= 0xff;
-        hash = hash.wrapping_mul(FNV_PRIME);
-        for byte in bytes.iter() {
-            hash ^= u64::from(*byte);
-            hash = hash.wrapping_mul(FNV_PRIME);
-        }
-        combined ^= hash;
     }
-    combined
+    snapshot
+}
+
+/// Exact byte comparison between previous and current evolving accumulator states.
+pub(super) fn owned_accumulators_equal(
+    prev: &HashMap<Ident, Vec<u8>>,
+    current: &HashMap<Ident, GridSyncInput<'_>>,
+) -> bool {
+    let current_owned_count = current
+        .values()
+        .filter(|v| matches!(v, GridSyncInput::Owned(_)))
+        .count();
+    if prev.len() != current_owned_count {
+        return false;
+    }
+    for (name, prev_bytes) in prev {
+        match current.get(name) {
+            Some(GridSyncInput::Owned(cur_bytes)) if cur_bytes == prev_bytes => {}
+            _ => return false,
+        }
+    }
+    true
 }
 
 pub(super) fn refresh_named_outputs<'a>(
@@ -282,5 +280,36 @@ mod tests {
             first_owned_ptr,
             "backend output slot should receive the previous owned input allocation for reuse"
         );
+    }
+    #[test]
+    fn exact_accumulator_state_comparison_covers_adversarial_cases() {
+        let mut inputs_a = HashMap::new();
+        inputs_a.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4]));
+        inputs_a.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01])); // Specific NaN payload
+        inputs_a.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
+
+        let snapshot = snapshot_owned_accumulators(&inputs_a);
+        assert!(owned_accumulators_equal(&snapshot, &inputs_a), "identical map must be equal");
+
+        // Reordered map insertion with identical bytes
+        let mut inputs_reordered = HashMap::new();
+        inputs_reordered.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
+        inputs_reordered.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01]));
+        inputs_reordered.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4]));
+        assert!(owned_accumulators_equal(&snapshot, &inputs_reordered), "reordered map with identical contents must be equal");
+
+        // Single bit change in NaN payload
+        let mut inputs_nan_drift = HashMap::new();
+        inputs_nan_drift.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4]));
+        inputs_nan_drift.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x02])); // 1 bit drift
+        inputs_nan_drift.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
+        assert!(!owned_accumulators_equal(&snapshot, &inputs_nan_drift), "NaN payload drift must be detected by exact comparison");
+
+        // Buffer length drift
+        let mut inputs_len_drift = HashMap::new();
+        inputs_len_drift.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4, 5]));
+        inputs_len_drift.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01]));
+        inputs_len_drift.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
+        assert!(!owned_accumulators_equal(&snapshot, &inputs_len_drift), "length drift must be detected");
     }
 }

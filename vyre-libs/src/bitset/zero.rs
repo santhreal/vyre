@@ -8,7 +8,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::zero";
+pub const OP_ID: &str = "vyre-libs::bitset::zero";
 
 /// Build a Program: `target[w] = 0` for `w` in `0..words`.
 #[must_use]

@@ -42,6 +42,12 @@ impl VyreBackend for CpuRefBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
+        if config.cooperative && !self.supports_grid_sync() {
+            return Err(BackendError::UnsupportedFeature {
+                name: "cpu-ref cooperative grid dispatch".to_string(),
+                backend: CPU_REF_BACKEND_ID.to_string(),
+            });
+        }
         let values = reference_values(program, inputs)?;
         // The interpreter infers its grid from buffer SHAPES, which cannot express
         // the per-invocation count of a byte-scan program (the haystack is packed

@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{numbered, Tree};
 
 /// The published baseline every bench-bearing crate is measured into.
@@ -33,21 +33,15 @@ const REQUIRED_FIELDS: &[&str] = &["machine:", "gpu:", "cpu:", "rustc:", "commit
 /// Every crate with a bench target has published numbers under `benches/RESULTS.md`.
 pub struct BenchBaselines;
 
-impl Gate for BenchBaselines {
-    fn name(&self) -> &'static str {
-        "bench-baselines"
-    }
-
-    fn help(&self) -> &'static str {
-        "Whether every crate with a bench target has a published baseline section"
-    }
-
+impl crate::gate::GateBehavior for BenchBaselines {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::default();
         if let Some(note) = tree.absence_note() {
             report.note(note);
         }
+        let packages = bench_bearing_packages(&tree)?;
+        report.cover_complete("bench-bearing packages", packages.len());
         if !tree.has(RESULTS) {
             report.find(Finding::in_file(
                 RESULTS,
@@ -66,7 +60,7 @@ impl Gate for BenchBaselines {
                 ));
             }
         }
-        for package in bench_bearing_packages(&tree)? {
+        for package in packages {
             if !has_section(&text, &package) {
                 report.find(Finding::in_file(
                     RESULTS,
@@ -154,15 +148,7 @@ const SMOKE_CASE: &str = "foundation.elementwise.add.1m";
 /// drift, and the published one is what a contributor reads.
 pub struct BenchSmokeRuntime;
 
-impl Gate for BenchSmokeRuntime {
-    fn name(&self) -> &'static str {
-        "bench-smoke-runtime"
-    }
-
-    fn help(&self) -> &'static str {
-        "Whether the canonical vyre-bench smoke suite runs inside its declared budget"
-    }
-
+impl crate::gate::GateBehavior for BenchSmokeRuntime {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let budget_ms = smoke_budget_ms(&tree.read_toml(PERF_TARGETS)?)?;
@@ -194,6 +180,7 @@ impl Gate for BenchSmokeRuntime {
         )?;
         let measured_ms = started.elapsed().as_millis();
         let mut report = Report::default();
+        report.cover_complete("runtime smoke benchmark", 1);
         if measured_ms > u128::from(budget_ms) {
             report.find(Finding::in_file(
                 PERF_TARGETS,
@@ -380,15 +367,7 @@ const REFERENCE_EXTENSIONS: &[&str] = &["yml", "yaml", "sh", "json", "toml", "md
 /// measures nothing.
 pub struct BenchCoverage;
 
-impl Gate for BenchCoverage {
-    fn name(&self) -> &'static str {
-        "bench-coverage"
-    }
-
-    fn help(&self) -> &'static str {
-        "Whether every measured benchmark dimension and every cited case is registered"
-    }
-
+impl crate::gate::GateBehavior for BenchCoverage {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let registered = registered_cases(&ctx.root)?;
@@ -460,6 +439,7 @@ fn registered_cases(root: &Path) -> Result<BTreeSet<String>, GateError> {
 /// Judge one tree against one registry listing.
 fn judge_coverage(tree: &Tree, registered: &BTreeSet<String>) -> Result<Report, GateError> {
     let mut report = Report::default();
+    report.cover_complete("registered benchmark cases", registered.len());
     if let Some(note) = tree.absence_note() {
         report.note(note);
     }
@@ -566,6 +546,7 @@ pub fn measured_dimensions() -> BTreeMap<&'static str, &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout;
 
     /// WHY: the rule is "a crate `cargo bench` can run a target for", and the

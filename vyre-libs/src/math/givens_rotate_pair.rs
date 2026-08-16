@@ -14,7 +14,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::givens_rotate_pair";
+pub const OP_ID: &str = "vyre-libs::math::givens_rotate_pair";
 
 /// Address of element `step` of the line starting at `base`.
 fn line_element(base: &Expr, stride: u32, step: &str) -> Expr {

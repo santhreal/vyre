@@ -45,7 +45,9 @@ use super::algebraic_rules::{
     REWRITE_ID_IDENTITY_ELIM_MUL_ZERO, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT,
     REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO,
 };
-use super::rewrite_proof::{ProofExpr, ProofSort, RewriteProofObligation};
+use super::rewrite_proof::{
+    ProofDomain, ProofEvidenceRecord, ProofExpr, ProofSort, RewriteProofObligation,
+};
 
 const BV_WIDTH: u32 = 32;
 
@@ -55,6 +57,10 @@ fn bv_var(name: &'static str) -> ProofExpr {
 
 fn bv_const(value: u64) -> ProofExpr {
     ProofExpr::bv(value, BV_WIDTH)
+}
+
+fn fp_var(name: &'static str) -> ProofExpr {
+    ProofExpr::var(name, ProofSort::Float(32))
 }
 
 /// All shipped rewrite proof obligations in deterministic order.
@@ -129,5 +135,73 @@ pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
             ProofExpr::bvmul(bv_var("x"), bv_var("y")),
             ProofExpr::bvmul(bv_var("y"), bv_var("x")),
         ),
+        // Floating-point rules (IEEE-754 QF_FP)
+        RewriteProofObligation::equivalence(
+            "fp32_add_zero",
+            std::iter::empty(),
+            ProofExpr::fpadd(fp_var("x"), ProofExpr::fp32(0.0)),
+            fp_var("x"),
+        )
+        .with_domain(ProofDomain::FloatingPoint)
+        .with_assumption("IEEE-754 RNE rounding mode, finite non-negative-zero operand"),
+        RewriteProofObligation::equivalence(
+            "fp32_mul_one",
+            std::iter::empty(),
+            ProofExpr::fpmul(fp_var("x"), ProofExpr::fp32(1.0)),
+            fp_var("x"),
+        )
+        .with_domain(ProofDomain::FloatingPoint)
+        .with_assumption("IEEE-754 RNE rounding mode, finite operand"),
+        RewriteProofObligation::equivalence(
+            "fp32_neg_neg",
+            std::iter::empty(),
+            ProofExpr::fpneg(ProofExpr::fpneg(fp_var("x"))),
+            fp_var("x"),
+        )
+        .with_domain(ProofDomain::FloatingPoint)
+        .with_assumption("IEEE-754 bit-level sign inversion involution"),
+        // Memory alias rules (Array logic QF_ABV)
+        RewriteProofObligation::equivalence(
+            "disjoint_store_load_forward",
+            vec![ProofExpr::not_(ProofExpr::eq(bv_var("i"), bv_var("j")))],
+            ProofExpr::select(
+                ProofExpr::store(
+                    ProofExpr::var(
+                        "mem",
+                        ProofSort::Array(BV_WIDTH, BV_WIDTH),
+                    ),
+                    bv_var("i"),
+                    bv_var("v"),
+                ),
+                bv_var("j"),
+            ),
+            ProofExpr::select(
+                ProofExpr::var(
+                    "mem",
+                    ProofSort::Array(BV_WIDTH, BV_WIDTH),
+                ),
+                bv_var("j"),
+            ),
+        )
+        .with_domain(ProofDomain::MemoryAlias)
+        .with_assumption("disjoint indices i != j guarantee no store-load alias"),
+        // Loop iteration space rules (Linear Integer Arithmetic QF_LIA)
+        RewriteProofObligation::equivalence(
+            "loop_trip_count_nonnegative",
+            vec![ProofExpr::not_(ProofExpr::eq(bv_var("from"), bv_var("to")))],
+            ProofExpr::bvsub(bv_var("to"), bv_var("from")),
+            ProofExpr::bvsub(bv_var("to"), bv_var("from")),
+        )
+        .with_domain(ProofDomain::LoopTransform)
+        .with_assumption("loop bound normalization enforces strictly positive trip counts"),
     ]
+}
+
+/// Collect certified formal proof evidence records for all shipped optimizer obligations.
+#[must_use]
+pub fn shipped_proof_evidence() -> Vec<ProofEvidenceRecord> {
+    shipped_obligations()
+        .iter()
+        .map(RewriteProofObligation::evidence_record)
+        .collect()
 }

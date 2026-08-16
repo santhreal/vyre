@@ -59,7 +59,7 @@ full = [
     "vfs",
 ]
 cpu-parity = ["vyre-primitives/cpu-parity"]
-
+test-fixtures = []
 # Kernel domains. Each one is a directory under `src/` holding reusable GPU
 # kernels with stable op ids, moved here from vyre-primitives. A domain names
 # only the domains its own source reaches, so enabling one never compiles a

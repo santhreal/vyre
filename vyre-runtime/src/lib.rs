@@ -102,6 +102,17 @@ pub mod artifact_admission;
 
 /// Backend-neutral immutable-resource and mutable-state residency.
 pub mod resource_residency;
+/// Radix prefix-cache lifecycle, immutable identity, and copy-on-write allocation.
+pub mod prefix_cache;
+/// Paged KV cache residency contracts and validation.
+pub mod paged_residency;
+/// Intra-device expert scheduling and inter-device token exchange.
+pub mod expert_scheduling;
+/// Multi-Token Prediction (MTP) speculative decoding and rollback coordination.
+pub mod mtp;
+
+/// Authenticated safetensors transfer lifecycle, residency composition, and integrity.
+pub mod safetensors_transfer;
 
 /// Resident work-queue protocols, scheduling policy, and runtime IO.
 pub mod resident_work_queue;
@@ -307,3 +318,7 @@ impl<'a> UringCompletionPump<'a> {
         Err(PipelineError::NotLinux)
     }
 }
+pub use safetensors_transfer::{
+    select_transfer_path, DeviceTransferCapabilities, PathSelectionDecision, SafetensorTransferPath,
+    TransferDescriptor, TransferError, TransferLifecycleEngine, TransferState,
+};

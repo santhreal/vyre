@@ -9,7 +9,7 @@ use crate::reduce::range_counts::range_counts_u32_child;
 use crate::text::utf8_shape_counts::{utf8_shape_counts_child, utf8_shape_counts_from_histogram};
 
 /// Canonical op id for histogram-based encoding classification.
-pub const ENCODING_CLASSIFY_OP_ID: &str = "vyre-primitives::text::encoding_classify";
+pub const ENCODING_CLASSIFY_OP_ID: &str = "vyre-libs::text::encoding_classify";
 /// Single-result workgroup for standalone histogram classification.
 pub const ENCODING_CLASSIFY_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 

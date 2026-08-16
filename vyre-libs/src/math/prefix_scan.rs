@@ -40,9 +40,9 @@ use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
 use vyre_primitives::ir_safe::clamped_load_to;
 
 /// Canonical op id for inclusive sum-scan.
-pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_inclusive_sum";
+pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-libs::math::prefix_scan_inclusive_sum";
 /// Canonical op id for exclusive sum-scan.
-pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_exclusive_sum";
+pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-libs::math::prefix_scan_exclusive_sum";
 
 /// Which scan variant to emit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

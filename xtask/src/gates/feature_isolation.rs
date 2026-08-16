@@ -55,7 +55,7 @@ use std::process::Command;
 
 use serde::Deserialize;
 
-use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::gate::{GateCtx, GateError, Report};
 use crate::toml_text::quote;
 
 /// Stand-in feature name for the per-member `--no-default-features` probe.
@@ -1325,15 +1325,7 @@ fn sweep_note(compiled: usize, pairs: usize) -> String {
 /// Holds every feature selection the manifests declare to its recorded compile outcome.
 pub struct FeatureIsolation;
 
-impl Gate for FeatureIsolation {
-    fn name(&self) -> &'static str {
-        "feature-isolation"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every feature selection the manifests declare to a decision; --write records the derived axis, --sweep compiles each pair and reports every selection it left unmeasured, --msrv compiles it on the advertised minimum supported Rust version, --member NAME and --only-unrecorded narrow the sweep, --list prints the axis"
-    }
-
+impl crate::gate::GateBehavior for FeatureIsolation {
     fn usage(&self) -> &'static [&'static str] {
         &[
             "--sweep compiles each declared selection instead of reading the recorded axis",
@@ -1344,13 +1336,10 @@ impl Gate for FeatureIsolation {
         ]
     }
 
-    fn generates(&self) -> bool {
-        true
-    }
-
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
         let mut report = Report::clean();
+        report.produced("xtask/feature-isolation.toml");
         let list = ctx.has("--list");
         let sweep = ctx.has("--sweep");
         let msrv = ctx.has("--msrv");
@@ -1399,6 +1388,7 @@ impl Gate for FeatureIsolation {
         let pairs = derive_pairs(root).map_err(|error| {
             GateError::new(error, "repair the manifests the axis is derived from")
         })?;
+        report.cover_complete("feature selections", pairs.len());
 
         // The agreement half always judges the whole axis: it costs milliseconds,
         // and a per-member view of a completeness check is not a completeness check.

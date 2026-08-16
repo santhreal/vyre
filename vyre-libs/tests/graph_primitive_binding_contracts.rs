@@ -34,7 +34,7 @@ use vyre_foundation::operation::OperationRegistry;
 fn graph_primitive_programs() -> Vec<(&'static str, Program)> {
     let programs: Vec<_> = OperationRegistry::global()
         .iter()
-        .filter(|op| op.id.starts_with("vyre-primitives::graph::"))
+        .filter(|op| op.id.starts_with("vyre-libs::graph::"))
         .filter_map(|op| op.program().map(|program| (op.id, program)))
         .collect();
     assert!(

@@ -144,11 +144,20 @@ fn cfg_test_spans_detailed(text: &str) -> Vec<CfgTestSpan> {
     const ATTR: &str = "#[cfg(";
     let mut spans = Vec::new();
     let mut search = 0usize;
-    while let Some(offset) = text[search..].find(ATTR) {
-        let attr_start = search + offset;
+    while search < text.len() {
+        if let Some(span) = opaque_span(text, search) {
+            search += span.get();
+            continue;
+        }
+        if !text[search..].starts_with(ATTR) {
+            search += 1;
+            continue;
+        }
+        let attr_start = search;
         let predicate_start = attr_start + ATTR.len() - 1;
         let Some(predicate_end) = match_delimited(text, predicate_start, b'(', b')') else {
-            break;
+            search += ATTR.len();
+            continue;
         };
         let predicate = &text[predicate_start + 1..predicate_end];
         if !mentions_test(predicate) || !compiles_with_test(predicate) {
@@ -156,10 +165,12 @@ fn cfg_test_spans_detailed(text: &str) -> Vec<CfgTestSpan> {
             continue;
         }
         let Some(attr_end) = text[predicate_end..].find(']').map(|at| predicate_end + at) else {
-            break;
+            search = predicate_end + 1;
+            continue;
         };
         let Some(item_end) = end_of_item(text, attr_end + 1) else {
-            break;
+            search = attr_end + 1;
+            continue;
         };
         spans.push(CfgTestSpan {
             start: attr_start,
@@ -230,6 +241,19 @@ pub(crate) fn requires_test(predicate: &str) -> bool {
     if let Some(rest) = predicate.strip_prefix("any(") {
         let parts = arguments(rest);
         return !parts.is_empty() && parts.iter().all(|part| requires_test(part));
+    }
+    if let Some(rest) = predicate.strip_prefix("not(") {
+        let parts = arguments(rest);
+        if parts.len() == 1 {
+            let inner = parts[0].trim();
+            if let Some(inner_rest) = inner.strip_prefix("not(") {
+                let inner_parts = arguments(inner_rest);
+                if inner_parts.len() == 1 {
+                    return requires_test(inner_parts[0]);
+                }
+            }
+        }
+        return false;
     }
     predicate == "test"
 }

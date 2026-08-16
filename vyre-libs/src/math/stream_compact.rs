@@ -10,7 +10,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::stream_compact";
+pub const OP_ID: &str = "vyre-libs::math::stream_compact";
 
 /// Build a stream-compaction Program.
 ///

@@ -17,7 +17,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Crate whose emitted SPIR-V is validated.
@@ -38,18 +38,11 @@ const PARITY: &str = "gpu_parity";
 /// Emitted SPIR-V is validated, not just shaped.
 pub struct SpirvParity;
 
-impl Gate for SpirvParity {
-    fn name(&self) -> &'static str {
-        "spirv-parity"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the SPIR-V parity suite behind the validator feature; --validate installs nothing and runs it"
-    }
-
+impl crate::gate::GateBehavior for SpirvParity {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("backend parity operations", tree.all_rust().len());
         let manifest_path = format!("{SPIRV_CRATE}/Cargo.toml");
         let manifest = tree.read_toml(&manifest_path)?;
 
@@ -127,18 +120,11 @@ impl Gate for SpirvParity {
 /// CUDA parity is proved on a live device, or not at all.
 pub struct CudaParity;
 
-impl Gate for CudaParity {
-    fn name(&self) -> &'static str {
-        "cuda-parity"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the CUDA driver to tracked parity targets; --device runs the crate's suite on a live NVIDIA GPU"
-    }
-
+impl crate::gate::GateBehavior for CudaParity {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("backend parity operations", tree.all_rust().len());
         let targets: BTreeSet<String> = tree
             .paths()
             .iter()

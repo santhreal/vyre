@@ -29,7 +29,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id for the update primitive.
-pub const UPDATE_OP_ID: &str = "vyre-primitives::hash::count_sketch_update";
+pub const UPDATE_OP_ID: &str = "vyre-libs::hash::count_sketch_update";
 
 /// Count-sketch CPU-reference validation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]

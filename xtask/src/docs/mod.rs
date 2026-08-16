@@ -13,12 +13,12 @@ pub mod docs_register;
 pub mod research_key;
 pub mod research_source_ledger;
 
-use crate::gate::Gate;
+use crate::gate::GateBehavior;
 
-/// Every gate this module owns.
-pub static GATES: &[&dyn Gate] = &[
-    &cli_docs::CliDocs,
-    &docs_check::DocsCheck,
-    &docs_coupling::DocsCoupling,
-    &docs_register::DocsRegister,
+/// Every documentation gate behavior implemented in this module.
+pub static GATES: &[(&str, &dyn GateBehavior)] = &[
+    ("cli-docs", &cli_docs::CliDocs),
+    ("docs-check", &docs_check::DocsCheck),
+    ("docs-coupling", &docs_coupling::DocsCoupling),
+    ("docs-register", &docs_register::DocsRegister),
 ];

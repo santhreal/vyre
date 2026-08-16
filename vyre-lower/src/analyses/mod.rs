@@ -5,6 +5,10 @@
 //! semantics or descriptor structure. Concrete emission strategy lives in the
 //! owning emitter or driver.
 
+pub mod affine_access_map;
+pub mod resource_bounds;
+pub mod target_metrics;
+
 pub(crate) mod access_kind;
 pub mod alias_facts;
 pub(crate) mod bank_conflict;
@@ -20,6 +24,7 @@ pub(crate) mod load_counts;
 pub(crate) mod op_histogram;
 pub(crate) mod reaching_def_facts;
 pub(crate) mod shared_mem_promote;
+pub mod shared_store_race;
 pub mod structured_walk;
 pub(crate) mod texture_promote;
 pub(crate) mod value_range;
@@ -149,9 +154,25 @@ pub use reaching_def_facts::import_descriptor_reaching_defs;
 pub use reaching_def_facts::{resolve_copy_alias, ReachingDefFactSet};
 pub use shared_mem_promote::{analyze as analyze_shared_mem_promote, PromotionPlan};
 pub use shared_mem_promote::{PromotionCandidate, DEFAULT_SHARED_BUDGET_BYTES};
+pub use shared_store_race::{analyze as analyze_shared_store_race, SharedStoreLegality, SharedStoreRaceReport, SharedStoreRaceSite};
 pub use texture_promote::TextureCandidate;
 pub use texture_promote::{analyze as analyze_texture_promote, TexturePromotionPlan};
 pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport};
 pub use workgroup_uniform::{analyze as analyze_workgroup_uniform, WorkgroupUniformReport};
 pub use workgroup_uniform::{BranchEmitHint, BranchHint};
 pub use workgroup_uniform::{BranchSite, BranchUniformity};
+pub use affine_access_map::{
+    AffineAccessMap, AffineMapError, ConsumerAbiRequirement, DimExtent, SliceSpec, StrideExpr,
+};
+pub use bank_conflict::{
+    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase,
+    AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation, PhaseConflictReport,
+    TargetBankGeometry,
+};
+pub use resource_bounds::{
+    verify_candidate_legality, CandidateLegalityReport, LegalityCheck, ResourceBounds,
+    RetainedFallbacks, TailHandling, TargetResourceLimits,
+};
+pub use target_metrics::{
+    rank_measured_candidates, CandidateRanking, TargetEmittedMetrics,
+};

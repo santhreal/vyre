@@ -47,13 +47,8 @@ pub(super) fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo
                 if a.children.contains(&b.id) || b.children.contains(&a.id) {
                     continue;
                 }
-                if same_implementation_family(&a.id, &b.id)
-                    || known_distinct_implementation_families(&a.id, &b.id)
-                    || reviewed_distinct_operations(&a.id, &b.id).is_some()
+                if crate::gates::lego_audit::no_reinvention::has_machine_checkable_distinction(a, b)
                 {
-                    continue;
-                }
-                if same_subdialect(&a.id, &b.id) {
                     continue;
                 }
                 let cos = structural_similarity(
@@ -128,5 +123,45 @@ mod tests {
         let pairs = operand_shape_duplicate_pairs(&ops);
         assert_eq!(pairs.len(), 1, "the pair past the key must still be found");
         assert!(pairs[0].0 >= OPERAND_DUP_MIN_COSINE);
+    }
+
+    /// WHY: Section 182.13.7 requires that same-subdialect operand-shape pairs without machine distinction cannot bypass.
+    #[test]
+    fn same_subdialect_operand_shape_without_machine_distinction_is_reported() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA3]);
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::math::foo", left),
+            op_with_fingerprint("vyre-libs::math::bar", right),
+        ];
+        let pairs = operand_shape_duplicate_pairs(&ops);
+        assert_eq!(
+            pairs.len(),
+            1,
+            "same-subdialect shape pair without machine distinction must be reported"
+        );
+    }
+
+    /// WHY: Section 182.13.6 allows machine-checkable distinct effects to close an operand shape candidate.
+    #[test]
+    fn distinct_effects_close_operand_shape_candidate() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA3]);
+        let mut a = op_with_fingerprint("vyre-libs::math::foo", left);
+        let mut b = op_with_fingerprint("vyre-libs::graph::bar", right);
+        a.effects.writes = true;
+        b.effects.writes = false;
+        let ops = vec![a, b];
+        let pairs = operand_shape_duplicate_pairs(&ops);
+        assert!(
+            pairs.is_empty(),
+            "distinct effects must close operand shape candidate"
+        );
     }
 }

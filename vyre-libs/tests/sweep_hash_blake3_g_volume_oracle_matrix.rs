@@ -1,3 +1,6 @@
+mod wire_words;
+use wire_words::oracle_blake3_g;
+
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
@@ -7,24 +10,6 @@ use vyre_libs::hash::blake3::{cpu_blake3_g, MSG_SCHEDULE};
 
 const CASES: usize = 16384;
 
-fn oracle_blake3_g(
-    state: &mut [u32; 16],
-    a: usize,
-    b: usize,
-    c: usize,
-    d: usize,
-    mx: u32,
-    my: u32,
-) {
-    state[a] = state[a].wrapping_add(state[b]).wrapping_add(mx);
-    state[d] = (state[d] ^ state[a]).rotate_right(16);
-    state[c] = state[c].wrapping_add(state[d]);
-    state[b] = (state[b] ^ state[c]).rotate_right(12);
-    state[a] = state[a].wrapping_add(state[b]).wrapping_add(my);
-    state[d] = (state[d] ^ state[a]).rotate_right(8);
-    state[c] = state[c].wrapping_add(state[d]);
-    state[b] = (state[b] ^ state[c]).rotate_right(7);
-}
 
 #[test]
 fn sweep_hash_blake3_g_volume_oracle_matrix() {

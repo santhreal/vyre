@@ -23,7 +23,7 @@ pub use reference_f64::{
 };
 
 /// Stable registry id for the iterative Sinkhorn primitive.
-pub const OP_ID: &str = "vyre-primitives::math::sinkhorn_iterate";
+pub const OP_ID: &str = "vyre-libs::math::sinkhorn_iterate";
 
 /// The ten buffer bindings one iterative-Sinkhorn program declares.
 ///

@@ -25,7 +25,7 @@ use std::path::Path;
 
 use toml::Value;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// The authority every row is read from.
@@ -124,23 +124,14 @@ pub struct WorkspaceState {
 /// The ownership registry and the two documents rendered from it.
 pub struct CrateOwnership;
 
-impl Gate for CrateOwnership {
-    fn name(&self) -> &'static str {
-        "crate-ownership"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the ownership registry to the workspace manifests and docs/CRATE_GRAPH.md and docs/OWNERSHIP.md to the registry; --write regenerates both"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for CrateOwnership {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.produced(GRAPH);
+        report.produced(OWNERSHIP);
         let records = load_registry(&tree, &mut report)?;
+        report.cover_complete("workspace crates", records.len());
         let state = workspace_state(&tree)?;
         report.findings.extend(contract_findings(&state, &records));
         report.note(format!(

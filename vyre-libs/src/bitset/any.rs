@@ -16,7 +16,7 @@ use crate::builder::cooperative::for_each_index;
 use crate::reduce::workgroup_tree::{max_u32_child, WorkgroupReductionScope};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::any";
+pub const OP_ID: &str = "vyre-libs::bitset::any";
 
 /// Workgroup scratch the lane verdicts reduce through, one u32 entry per lane.
 const ANY_SCRATCH: &str = "bitset_any_scratch";

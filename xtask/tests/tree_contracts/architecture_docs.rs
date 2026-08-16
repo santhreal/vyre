@@ -13,7 +13,7 @@ use std::process::Command;
 use serde_json::{json, Value};
 
 use super::workspace_sources::workspace_root;
-use xtask::gate::{Gate, GateCtx, Report};
+use xtask::gate::{GateBehavior, GateCtx, Report};
 use xtask::gates::architecture_contract::ArchitectureContract;
 
 fn judge(root: &Path) -> Report {

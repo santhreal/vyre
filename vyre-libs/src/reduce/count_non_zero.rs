@@ -5,7 +5,7 @@ use vyre_foundation::ir::Program;
 use super::atomic_scalar::{atomic_reduce_u32, AtomicReduceKind};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::reduce::count_non_zero";
+pub const OP_ID: &str = "vyre-libs::reduce::count_non_zero";
 
 /// Build a Program: `out[0] = |{ i | values[i] != 0 }|`.
 #[must_use]

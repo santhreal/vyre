@@ -514,4 +514,52 @@ mod tests {
         let body = region_body(result.program.entry());
         assert_eq!(count_loads_in_lets(&body), 1, "the Load must survive");
     }
+    #[test]
+    fn does_not_forward_across_intervening_call() {
+        // Store(a, 0, 5); Let(r, Call("mutating_op", [])); Let(x, Load(a, 0))
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(5)),
+            Node::let_bind(
+                "r",
+                Expr::Call {
+                    op_id: "test::foreign_op".into(),
+                    args: vec![],
+                },
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "intervening Call blocks store-to-load forwarding (fail-closed)"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(count_loads_in_lets(&body), 1, "the Load must survive");
+    }
+
+    #[test]
+    fn does_not_forward_across_intervening_nested_call() {
+        // Store(a, 0, 5); Let(r, Mul(2, Call("foreign_op", []))); Let(x, Load(a, 0))
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(5)),
+            Node::let_bind(
+                "r",
+                Expr::mul(
+                    Expr::u32(2),
+                    Expr::Call {
+                        op_id: "test::foreign_op".into(),
+                        args: vec![],
+                    },
+                ),
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "nested Call blocks store-to-load forwarding"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(count_loads_in_lets(&body), 1, "the Load must survive");
+    }
 }

@@ -31,7 +31,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{cfg_test_lines, is_test_only_attribute, scan_code, Member, Tree};
 
 /// Stem segments that make a file test material by name.
@@ -89,19 +89,12 @@ struct Reach {
 /// Test material in a shipping `src/` tree, and shipping edges to test support.
 pub struct TestMaterialPlacement;
 
-impl Gate for TestMaterialPlacement {
-    fn name(&self) -> &'static str {
-        "test-material-placement"
-    }
-
-    fn help(&self) -> &'static str {
-        "Whether a publishable crate's src tree ships test material, and whether any non-dev dependency names the test support crate"
-    }
-
+impl crate::gate::GateBehavior for TestMaterialPlacement {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let members = tree.member_manifests()?;
         let mut report = Report::clean();
+        report.cover_complete("workspace members", members.len());
 
         for member in &members {
             for table in SHIPPING_TABLES {

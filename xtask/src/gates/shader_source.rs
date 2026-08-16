@@ -15,7 +15,7 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// Shader syntax tokens that give away shader construction.
@@ -66,18 +66,11 @@ const RULE_SOURCE: &str = "xtask/src/gates/shader_source.rs";
 /// Shader text is emitted structurally, never assembled from string pieces.
 pub struct ShaderSource;
 
-impl Gate for ShaderSource {
-    fn name(&self) -> &'static str {
-        "shader-source"
-    }
-
-    fn help(&self) -> &'static str {
-        "shader text built from strings, and files parsing shader text"
-    }
-
+impl crate::gate::GateBehavior for ShaderSource {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("shader source files", tree.paths().len());
         if let Some(note) = tree.absence_note() {
             report.note(note);
         }

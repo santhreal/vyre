@@ -22,7 +22,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::fixpoint::bitset_fixpoint";
+pub const OP_ID: &str = "vyre-libs::fixpoint::bitset_fixpoint";
 
 /// Canonical changed-flag buffer for callers that drive this primitive to a
 /// fixpoint through an owner-defined typed loop.
@@ -176,7 +176,7 @@ pub fn bitset_fixpoint_warm_start(
 }
 
 /// Canonical op id for the warm-start variant.
-pub const OP_ID_WARM_START: &str = "vyre-primitives::fixpoint::bitset_fixpoint_warm_start";
+pub const OP_ID_WARM_START: &str = "vyre-libs::fixpoint::bitset_fixpoint_warm_start";
 
 /// Reference evaluation for the warm-start flow: emulates
 /// `current |= seed`, then returns `1` if the ORIGINAL (pre-warm)

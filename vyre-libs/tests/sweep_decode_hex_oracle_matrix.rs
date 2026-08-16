@@ -60,20 +60,13 @@ fn run_hex_decode(input: &[u8]) -> Vec<u32> {
 
 fn oracle_hex_table() -> [u32; 256] {
     let mut table = [0u32; 256];
-    let mut byte = b'0';
-    while byte <= b'9' {
-        table[byte as usize] = u32::from(byte - b'0');
-        byte += 1;
-    }
-    byte = b'A';
-    while byte <= b'F' {
-        table[byte as usize] = u32::from(byte - b'A' + 10);
-        byte += 1;
-    }
-    byte = b'a';
-    while byte <= b'f' {
-        table[byte as usize] = u32::from(byte - b'a' + 10);
-        byte += 1;
+    for (i, slot) in table.iter_mut().enumerate() {
+        *slot = match i as u8 {
+            b'0'..=b'9' => u32::from(i as u8 - b'0'),
+            b'A'..=b'F' => u32::from(i as u8 - b'A' + 10),
+            b'a'..=b'f' => u32::from(i as u8 - b'a' + 10),
+            _ => 0,
+        };
     }
     table
 }

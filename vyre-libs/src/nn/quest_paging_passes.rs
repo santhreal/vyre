@@ -10,11 +10,11 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for deterministic queue zero-fill.
-pub const QUEST_ZERO_FILL_OP_ID: &str = "vyre-primitives::nn::quest_zero_fill";
+pub const QUEST_ZERO_FILL_OP_ID: &str = "vyre-libs::nn::quest_zero_fill";
 /// Stable op id for query/page dot-product scoring.
-pub const QUEST_SCORE_PAGES_OP_ID: &str = "vyre-primitives::nn::quest_score_pages";
+pub const QUEST_SCORE_PAGES_OP_ID: &str = "vyre-libs::nn::quest_score_pages";
 /// Stable op id for deterministic top-k page selection.
-pub const QUEST_SELECT_TOP_K_OP_ID: &str = "vyre-primitives::nn::quest_select_top_k";
+pub const QUEST_SELECT_TOP_K_OP_ID: &str = "vyre-libs::nn::quest_select_top_k";
 
 /// Emit the body that zero-fills the full page queue.
 #[must_use]

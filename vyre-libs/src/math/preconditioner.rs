@@ -52,9 +52,9 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::newton_schulz_y_step";
+pub const OP_ID: &str = "vyre-libs::math::newton_schulz_y_step";
 /// Primitive op id for the fused f32 Newton-Schulz scalar polynomial.
-pub const POLY5_F32_OP_ID: &str = "vyre-primitives::math::newton_schulz_poly5_f32";
+pub const POLY5_F32_OP_ID: &str = "vyre-libs::math::newton_schulz_poly5_f32";
 
 /// Emit `y_next = (1/2) y_curr (3·I - zy)` per cell.
 ///

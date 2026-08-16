@@ -29,7 +29,7 @@ use crate::math::matrix_diagonal_extract::matrix_diagonal_extract_region;
 use crate::math::matrix_identity_fill::matrix_identity_fill_region;
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::symmetric_eigen_jacobi";
+pub const OP_ID: &str = "vyre-libs::math::symmetric_eigen_jacobi";
 
 /// Off-diagonal convergence threshold (f32). Sweeps stop rotating once the largest off-diagonal
 /// magnitude falls below this; matches the role of the f64 reference's `1e-12` but scaled to f32's

@@ -39,9 +39,9 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::sweep::RUNNER;
-use crate::subcommands::{self, SUBSETS};
+use crate::subcommands;
 
 /// The one declaration of every check CI runs.
 pub const REGISTRY: &str = "xtask/ci-registry.toml";
@@ -349,9 +349,9 @@ fn strip_yaml_comment(line: &str) -> &str {
 #[must_use]
 pub fn derived_subsets() -> BTreeMap<String, BTreeSet<String>> {
     let mut map: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for subset in SUBSETS {
+    for subset in subcommands::subsets() {
         for gate in subset.gates {
-            map.entry((*gate).to_string())
+            map.entry(gate.to_string())
                 .or_default()
                 .insert(subset.name.to_string());
         }
@@ -607,8 +607,9 @@ pub fn findings(
         }
     }
 
-    for subset in SUBSETS {
-        for gate in subset.gates {
+    let subsets = subcommands::subsets();
+    for subset in &subsets {
+        for gate in &subset.gates {
             if !gate_names.contains(gate) {
                 findings.push(Finding::new(
                     format!(
@@ -636,7 +637,7 @@ pub fn findings(
         ));
     }
     for name in names.subsets.keys() {
-        if !SUBSETS.iter().any(|subset| subset.name == name) {
+        if !subsets.iter().any(|subset| subset.name == name) {
             findings.push(Finding::new(
                 format!("a workflow runs `xtask gates --subset {name}`, which is not a registered subset"),
                 "correct the step, or register the subset",
@@ -957,6 +958,8 @@ fn write(root: &Path) -> Result<Report, GateError> {
         .filter(|row| !files.contains_key(row.path.as_str()))
         .count();
     let mut report = Report::clean();
+    report.cover_complete("ci registry rows", gate_names.len());
+    report.produced(REGISTRY);
     report.note(format!(
         "wrote {} gate row(s), {} external row(s) and {rows} workflow row(s) to {}",
         gate_names.len(),
@@ -969,15 +972,7 @@ fn write(root: &Path) -> Result<Report, GateError> {
 /// Hold every CI entry point to one declaration.
 pub struct CiRegistry;
 
-impl Gate for CiRegistry {
-    fn name(&self) -> &'static str {
-        "ci-registry"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold xtask/ci-registry.toml to the gate registry, the subsets and the workflow steps, in both directions"
-    }
-
+impl crate::gate::GateBehavior for CiRegistry {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         if ctx.write {
             return write(&ctx.root);
@@ -987,12 +982,14 @@ impl Gate for CiRegistry {
         let gates = subcommands::registry();
         let gate_names: Vec<&str> = gates.iter().map(|gate| gate.name()).collect();
         let mut report = Report::with_findings(findings(&ctx.root, &registry, &names, &gate_names));
+        report.cover_complete("ci registry rows", registry.gate.len());
+        report.produced(REGISTRY);
         report.note(format!(
             "{} gate row(s), {} external row(s), {} workflow row(s), {} subset(s), {} workflow file(s) read",
             registry.gate.len(),
             registry.external.len(),
             registry.workflow.len(),
-            SUBSETS.len(),
+            subcommands::subsets().len(),
             names
                 .invoked
                 .values()

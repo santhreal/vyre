@@ -60,6 +60,86 @@ pub mod collectives;
 /// shared by the compile-time planner cut and the dispatch-time split.
 pub mod grid_sync_split;
 
+/// Contract classification for foundation transformations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+pub enum TransformContractClass {
+    /// Required for backend execution and legal hardware representation.
+    RequiredLegalization,
+    /// Target-neutral algebraic and structural optimization.
+    CanonicalOptimization,
+    /// Explicitly requested by callers (e.g. autodiff).
+    CallerRequestedTransform,
+    /// Reusable structural traversal and AST walk mechanics.
+    SharedStructuralWalk,
+    /// Read-only inspection producing semantic facts without modifying IR.
+    Analysis,
+}
+
+/// Descriptor documenting a foundation transformation's contract and ownership.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TransformDescriptor {
+    /// Authoritative module or pass name.
+    pub name: &'static str,
+    /// Contract classification.
+    pub class: TransformContractClass,
+    /// Contract purpose and invariants.
+    pub description: &'static str,
+}
+
+/// Authoritative classification catalog for all foundation transform modules.
+pub const FOUNDATION_TRANSFORM_CLASSIFICATIONS: &[TransformDescriptor] = &[
+    TransformDescriptor {
+        name: "inline",
+        class: TransformContractClass::RequiredLegalization,
+        description: "Inlines compositional Expr::Call operations into callee bodies",
+    },
+    TransformDescriptor {
+        name: "grid_sync_split",
+        class: TransformContractClass::RequiredLegalization,
+        description: "Segments whole-grid synchronization barriers into sequential dispatches",
+    },
+    TransformDescriptor {
+        name: "const_prop",
+        class: TransformContractClass::CanonicalOptimization,
+        description: "Folds let-bound constants and propagates scalar literals",
+    },
+    TransformDescriptor {
+        name: "dead_branch",
+        class: TransformContractClass::CanonicalOptimization,
+        description: "Eliminates unreachable If branches with constant conditions",
+    },
+    TransformDescriptor {
+        name: "licm",
+        class: TransformContractClass::CanonicalOptimization,
+        description: "Hoists invariant bindings out of Loop bodies",
+    },
+    TransformDescriptor {
+        name: "collectives",
+        class: TransformContractClass::CanonicalOptimization,
+        description: "Rewrites collective communication patterns for device execution",
+    },
+    TransformDescriptor {
+        name: "autodiff",
+        class: TransformContractClass::CallerRequestedTransform,
+        description: "Reverse-mode automatic differentiation generating gradient programs",
+    },
+    TransformDescriptor {
+        name: "rewrite_walk",
+        class: TransformContractClass::SharedStructuralWalk,
+        description: "Unified structural AST rewrite traversal",
+    },
+    TransformDescriptor {
+        name: "subst",
+        class: TransformContractClass::SharedStructuralWalk,
+        description: "Induction-variable and let-binding substitution walk",
+    },
+    TransformDescriptor {
+        name: "parallelism",
+        class: TransformContractClass::Analysis,
+        description: "Shared-nothing parallel dispatch and divergence analysis",
+    },
+];
+
 /// One host-side IR rewrite the resident pipeline runs.
 pub struct HostRewrite {
     /// The module that owns the rewrite, which is also how a trace line and a

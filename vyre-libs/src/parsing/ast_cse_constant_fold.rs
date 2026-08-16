@@ -5,7 +5,7 @@ use vyre_foundation::ir::{Expr, Node};
 use super::ast_ops::{AST_ADD, AST_CONST_INT, AST_MUL};
 
 /// Stable op id for the constant-fold child region.
-pub const OP_ID: &str = "vyre-primitives::parsing::ast_cse_constant_fold";
+pub const OP_ID: &str = "vyre-libs::parsing::ast_cse_constant_fold";
 
 /// Emit the constant-folding phase for add/mul AST nodes.
 #[must_use]

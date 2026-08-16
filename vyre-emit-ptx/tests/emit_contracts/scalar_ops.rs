@@ -264,7 +264,7 @@ fn trap_emits_lane_exit() {
         .build();
     let r = emit(&kernel);
     let s = r.unwrap();
-    assert!(s.contains("// trap tag: t"));
+    assert!(s.contains("// vyre trap tag 1 t"));
     assert!(s.contains("bra $L_exit;"));
 }
 

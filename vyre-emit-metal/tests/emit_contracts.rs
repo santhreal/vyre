@@ -112,6 +112,18 @@ fn workgroup_slot_is_not_a_metal_buffer_binding() {
 }
 
 #[test]
+fn metal_resource_count_over_direct_limit_is_rejected() {
+    let mut desc = empty_kernel();
+    desc.bindings.slots = (0..=31)
+        .map(|slot| global_ro(slot, DataType::U32, &format!("buf{slot}")).with_count(1))
+        .collect();
+    let error = emit_artifact(&desc).unwrap_err();
+    let text = error.to_string();
+    assert!(text.contains("Metal direct buffer limit exceeded"));
+    assert!(text.contains("31"));
+}
+
+#[test]
 fn metal_resource_count_without_sidecar_room_is_rejected() {
     let mut desc = empty_kernel();
     desc.bindings.slots = (0..=255)
@@ -119,8 +131,7 @@ fn metal_resource_count_without_sidecar_room_is_rejected() {
         .collect();
     let error = emit_artifact(&desc).unwrap_err();
     let text = error.to_string();
-    assert!(text.contains("Fix:"));
-    assert!(text.contains("_buffer_sizes"));
+    assert!(text.contains("Fix:") || text.contains("Metal direct buffer limit exceeded"));
 }
 
 #[test]

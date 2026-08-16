@@ -48,4 +48,4 @@ pub use error::NfaToDfaError;
 pub use subset::{nfa_to_dfa, NfaTables};
 
 /// Canonical op id.
-pub(crate) const OP_ID: &str = "vyre-primitives::matching::nfa_to_dfa";
+pub(crate) const OP_ID: &str = "vyre-libs::matching::nfa_to_dfa";

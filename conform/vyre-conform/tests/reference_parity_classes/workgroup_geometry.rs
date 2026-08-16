@@ -1,6 +1,6 @@
 //! WHY: closes the class "a registered op declares a workgroup no target
 //! profile accepts", which took `(wgpu,
-//! vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum)` out of the
+//! vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum)` out of the
 //! conformance certificate with `target workgroup extent 1024 exceeds profile
 //! limit 256`. A workgroup extent is chosen when the op builds its program,
 //! before any backend is known, so an extent above the least-capable registered

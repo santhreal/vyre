@@ -19,7 +19,7 @@ use vyre_megakernel::{
     DeviceFacts, Digest, ExternalFacts, SearchBudget,
 };
 
-use graph_fixtures::copy_program;
+use graph_fixtures::{add_program, copy_program};
 
 mod graph_fixtures;
 
@@ -42,24 +42,6 @@ fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     }
 }
 
-fn add_program(left: &str, right: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(left, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(right, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(output, 2, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::add(
-                Expr::load(left, Expr::u32(0)),
-                Expr::load(right, Expr::u32(0)),
-            ),
-        )],
-    )
-}
 
 fn retained_program(input: &str, retained: &str) -> Program {
     Program::wrapped(

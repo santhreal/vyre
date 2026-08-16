@@ -13,7 +13,7 @@
 use std::io;
 use std::path::Path;
 
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::gate::{GateCtx, GateError, Report};
 
 use self::assemble::build;
 use self::schema::OperationSchema;
@@ -33,21 +33,9 @@ const MAX_SCHEMA_BYTES: u64 = 16_777_216;
 /// Holds the canonical live operation contract schema to the registry.
 pub struct OperationSchemaGate;
 
-impl Gate for OperationSchemaGate {
-    fn name(&self) -> &'static str {
-        "operation-schema"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the canonical live operation contract schema to the registry; --write regenerates it, --validate PATH judges one document"
-    }
-
+impl xtask::gate::GateBehavior for OperationSchemaGate {
     fn usage(&self) -> &'static [&'static str] {
         &["--validate PATH judges one schema document instead of the committed one"]
-    }
-
-    fn generates(&self) -> bool {
-        true
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -66,9 +54,9 @@ impl Gate for OperationSchemaGate {
             };
             if let Err(errors) = &live {
                 messages.push(format!(
-                    "the live registry does not assemble, so the document was judged on its own and not compared against it: {}",
-                    errors.join("; ")
-                ));
+                "the live registry does not assemble, so the document was judged on its own and not compared against it: {}",
+                errors.join("; ")
+            ));
             }
             let mut report = if messages.is_empty() {
                 Report::clean()
@@ -78,6 +66,8 @@ impl Gate for OperationSchemaGate {
                     "repair the document, or regenerate it from the registry with --write",
                 )
             };
+            report.cover_complete("validated operation contracts", candidate.operation_count);
+            report.produced(DEFAULT_OUTPUT);
             report.note(format!(
                 "{} live operation contract(s) in the validated document",
                 candidate.operation_count
@@ -87,15 +77,17 @@ impl Gate for OperationSchemaGate {
         let schema = match live {
             Ok(schema) => schema,
             Err(errors) => {
-                return Ok(Report::from_messages(
+                let mut report = Report::from_messages(
                     errors,
                     "repair the registration the schema rejects, then run the gate again",
-                ));
+                );
+                report.produced(DEFAULT_OUTPUT);
+                return Ok(report);
             }
         };
         let mut inspection = xtask::artifact_gate::Inspection::new();
         inspection.generates(DEFAULT_OUTPUT, &schema);
-        let mut report = xtask::artifact_gate::settle_inspection(ctx, self.name(), inspection);
+        let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
             "{} live operation contract(s)",
             schema.operation_count

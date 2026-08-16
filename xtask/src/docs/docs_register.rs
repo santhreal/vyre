@@ -35,7 +35,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 use crate::release::release_docs::GENERATED_RELEASE_DOCUMENTS;
 
@@ -130,15 +130,7 @@ struct Register {
 /// Holds every authored page to the documentation register.
 pub struct DocsRegister;
 
-impl Gate for DocsRegister {
-    fn name(&self) -> &'static str {
-        "docs-register"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every authored Markdown page to the register in docs/REGISTER.toml, keep host-local build configuration off the contributor-facing pages, and require every repository-root page to be declared in docs/DOCS.toml"
-    }
-
+impl crate::gate::GateBehavior for DocsRegister {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let register = load_register(&tree)?;
@@ -149,6 +141,7 @@ impl Gate for DocsRegister {
         let host_local = host_local_names(&tree, &register)?;
 
         let mut report = Report::clean();
+        report.cover_complete("authored pages", authored.len());
         for page in &authored {
             let text = tree.read(page)?;
             let judged = authored_lines(&text, &tree);
@@ -582,7 +575,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{opens_with, sentence_openings, DocsRegister, Match};
-    use crate::gate::{Gate, GateCtx, Report};
+    use crate::gate::{GateBehavior, GateCtx, Report};
     use crate::gates::fixture_checkout::checkout;
 
     /// A register carrying one group per match mode and one host-local group.

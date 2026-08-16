@@ -453,4 +453,25 @@ mod tests {
         sorted.dedup();
         assert_eq!(sorted.len(), ids.len(), "concurrent ids must be unique");
     }
+    #[test]
+    fn unregister_reclaims_slot_and_advances_generation_without_aba() {
+        let reg = TenantRegistry::new();
+        let h1 = reg.register("first").unwrap();
+        let id1 = h1.id();
+        let gen1 = h1.generation();
+        assert_eq!(gen1, 1);
+
+        // Unregister releases id
+        reg.unregister(id1).expect("unregister must succeed");
+
+        // Register again reclaims the recycled ID and increments generation
+        let h2 = reg.register("second").unwrap();
+        assert_eq!(h2.id(), id1, "recycled ID must match unregistered ID");
+        assert_eq!(h2.generation(), gen1 + 1, "generation must advance on slot recycling (ABA prevention)");
+
+        // Old handle is revoked and cannot publish
+        let mut ring = vec![0u8; 1024];
+        let err = h1.publish_slot(&mut ring, 0, 0, &[]).unwrap_err();
+        assert!(matches!(err, TenantError::Revoked { .. }));
+    }
 }

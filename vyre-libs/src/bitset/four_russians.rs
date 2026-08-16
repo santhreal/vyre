@@ -11,9 +11,9 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::four_russians_apply_byte_lut";
+pub const OP_ID: &str = "vyre-libs::bitset::four_russians_apply_byte_lut";
 /// Canonical op id for dense boolean matvec over byte-frontier tiles.
-pub const DENSE_MATVEC_OP_ID: &str = "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut";
+pub const DENSE_MATVEC_OP_ID: &str = "vyre-libs::bitset::four_russians_dense_matvec_byte_lut";
 /// Number of possible active-source subsets in one byte tile.
 pub const BYTE_TILE_STATES: u32 = 256;
 /// Number of source columns summarized by one byte tile.

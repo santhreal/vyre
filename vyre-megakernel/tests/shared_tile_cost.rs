@@ -72,6 +72,7 @@ fn device() -> DeviceFacts {
         256,
     )
     .with_occupancy(0, 48 * 1024)
+    .with_bandwidth_facts(1000, 1000)
 }
 
 fn plan(graph: ProgramGraph) -> vyre_megakernel::Artifact {

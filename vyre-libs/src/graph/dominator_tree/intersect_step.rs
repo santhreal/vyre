@@ -30,7 +30,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::program::IDOM_NONE;
 
 /// Canonical op id for one predecessor-intersection sweep.
-pub const OP_ID: &str = "vyre-primitives::graph::dominator_tree_intersect_step";
+pub const OP_ID: &str = "vyre-libs::graph::dominator_tree_intersect_step";
 
 /// Buffer name the standalone operation reports its movement through.
 const CHANGED_BUFFER: &str = "dt_changed";

@@ -46,12 +46,16 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `dispatch_grid_contracts` | `conform/vyre-conform/tests/dispatch_grid_contracts.rs` | None | `./cargo_full test -p vyre-conform --test dispatch_grid_contracts` |
 | `test` | `fp_parity_ul_policy_contracts` | `conform/vyre-conform/tests/fp_parity_ul_policy_contracts.rs` | None | `./cargo_full test -p vyre-conform --test fp_parity_ul_policy_contracts` |
 | `test` | `invariants` | `conform/vyre-conform/tests/invariants.rs` | None | `./cargo_full test -p vyre-conform --test invariants` |
+| `test` | `lens_buffer_state_contracts` | `conform/vyre-conform/tests/lens_buffer_state_contracts.rs` | None | `./cargo_full test -p vyre-conform --test lens_buffer_state_contracts` |
+| `test` | `lens_fixpoint_contracts` | `conform/vyre-conform/tests/lens_fixpoint_contracts.rs` | None | `./cargo_full test -p vyre-conform --test lens_fixpoint_contracts` |
 | `test` | `lens_parity` | `conform/vyre-conform/tests/lens_parity.rs` | None | `./cargo_full test -p vyre-conform --test lens_parity` |
 | `test` | `library_contracts` | `conform/vyre-conform/tests/library_contracts.rs` | None | `./cargo_full test -p vyre-conform --test library_contracts` |
 | `test` | `minimizer_contract` | `conform/vyre-conform/tests/minimizer_contract.rs` | None | `./cargo_full test -p vyre-conform --test minimizer_contract` |
 | `test` | `op_matrix_truth` | `conform/vyre-conform/tests/op_matrix_truth.rs` | None | `./cargo_full test -p vyre-conform --test op_matrix_truth` |
 | `test` | `parity_matrix` | `conform/vyre-conform/tests/parity_matrix.rs` | None | `./cargo_full test -p vyre-conform --test parity_matrix` |
 | `test` | `production_route` | `conform/vyre-conform/tests/production_route.rs` | None | `./cargo_full test -p vyre-conform --test production_route` |
+| `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes.rs` | None | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
+| `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes.rs` | `gpu` | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
 | `test` | `schema_compatibility` | `conform/vyre-conform/tests/schema_compatibility.rs` | None | `./cargo_full test -p vyre-conform --test schema_compatibility` |
 | `test` | `ulp_audit` | `conform/vyre-conform/tests/ulp_audit.rs` | None | `./cargo_full test -p vyre-conform --test ulp_audit` |
 

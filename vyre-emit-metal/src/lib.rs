@@ -88,6 +88,9 @@ pub enum EmitError {
     PreEmit(String),
 }
 
+/// Maximum direct buffer arguments supported per shader stage in Metal (indices 0..=30).
+pub const MAX_DIRECT_BUFFERS_PER_STAGE: usize = 31;
+
 /// ABI binding metadata stored in a Metal artifact.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MetalBindingMetadata {
@@ -408,14 +411,17 @@ fn metal_binding_indices(desc: &KernelDescriptor) -> Result<MetalBindingIndexMap
         let Some(group) = metal_resource_group(slot) else {
             continue;
         };
-        let metal_buffer_index =
-            u8::try_from(by_slot.len()).map_err(|error| EmitError::BindingMap {
+        if by_slot.len() >= MAX_DIRECT_BUFFERS_PER_STAGE {
+            return Err(EmitError::BindingMap {
                 group,
                 binding: slot.slot,
                 reason: format!(
-                    "too many resource-bound buffers for Metal's flat buffer namespace: {error}"
+                    "Metal direct buffer limit exceeded: descriptor declares {} buffers, exceeding the per-stage limit of {MAX_DIRECT_BUFFERS_PER_STAGE} (indices 0..=30, reserving 1 for Naga sizes sidecar)",
+                    by_slot.len() + 1
                 ),
-            })?;
+            });
+        }
+        let metal_buffer_index = by_slot.len() as u8;
         if by_slot.insert(slot.slot, metal_buffer_index).is_some() {
             return Err(EmitError::BindingMap {
                 group,

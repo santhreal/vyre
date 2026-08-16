@@ -7,8 +7,8 @@ use vyre_foundation::ir::{Ident, Program};
 
 use super::contains_grid_sync;
 use super::live_buffers::{
-    borrowed_grid_sync_inputs_by_name, collect_final_named_outputs, owned_accumulator_fingerprint,
-    refresh_named_outputs, GridSyncInput,
+    borrowed_grid_sync_inputs_by_name, collect_final_named_outputs, owned_accumulators_equal,
+    refresh_named_outputs, snapshot_owned_accumulators, GridSyncInput,
 };
 use super::segment_buffers::{
     original_input_names, original_output_names, plan_host_grid_sync_segments,
@@ -219,7 +219,7 @@ where
     // fixpoint, every remaining pass would re-dispatch the entire segment
     // sequence (hundreds of launches on a large fused program) for zero new
     // dataflow. Stop as soon as two consecutive passes produce the same state.
-    let mut prev_fingerprint: Option<u64> = None;
+    let mut prev_state: Option<HashMap<Ident, Vec<u8>>> = None;
     for _ in 0..iterations {
         for (segment_idx, segment) in segments.iter().enumerate() {
             let borrowed = borrowed_grid_sync_inputs_by_name(segment, &current_inputs)?;
@@ -233,11 +233,12 @@ where
             drop(borrowed);
             refresh_named_outputs(segment, &mut segment_outputs, &mut current_inputs)?;
         }
-        let fingerprint = owned_accumulator_fingerprint(&current_inputs);
-        if prev_fingerprint == Some(fingerprint) {
-            break;
+        if let Some(prev) = &prev_state {
+            if owned_accumulators_equal(prev, &current_inputs) {
+                break;
+            }
         }
-        prev_fingerprint = Some(fingerprint);
+        prev_state = Some(snapshot_owned_accumulators(&current_inputs));
     }
     collect_final_named_outputs(&final_output_names, &mut current_inputs, outputs)?;
     Ok(())

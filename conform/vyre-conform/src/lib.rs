@@ -17,6 +17,6 @@ pub use bundle_cert::issue::issue_bundle_cert;
 pub use bundle_cert::signature::verify_cert_signature_hex;
 pub use bundle_cert::verify::{verify_bundle_against_reference, verify_bundle_with_backend};
 pub use cert::{issue_certificate, verify_structural, CertificateError, IssueInput};
-pub use minimizer::CounterexampleMinimizer;
-pub use production::{ExecutionRoute, ProductionError, ProductionSession};
+pub use minimizer::{CounterexampleMinimizer, MinimizationBudget, MinimizerReport};
+pub use production::{ExecutionRoute, ProductionError, ProductionSession, ReplayCapsule};
 pub use prover::{LawProver, LawVerdict};

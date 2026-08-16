@@ -13,9 +13,15 @@ use super::handle::{tenant_registry_retry_idle, TenantHandle, TenantRuntimeCount
 use super::quota::TenantQuota;
 use super::{OPCODE_RANGE_PER_TENANT, TENANT_ID_MAX, TENANT_OPCODE_BASE};
 
+/// Maximum number of distinct opcode windows below SHUTDOWN.
+pub(super) const MAX_TENANT_OPCODE_WINDOWS: u32 =
+    (SHUTDOWN - TENANT_OPCODE_BASE) / OPCODE_RANGE_PER_TENANT;
+
 /// Thread-safe tenant registry. One per megakernel instance.
 pub struct TenantRegistry {
     tenants: DashMap<u32, TenantHandle>,
+    generations: DashMap<u32, u32>,
+    free_list: std::sync::Mutex<Vec<u32>>,
     next_id: AtomicU32,
 }
 
@@ -23,6 +29,8 @@ impl Default for TenantRegistry {
     fn default() -> Self {
         Self {
             tenants: DashMap::new(),
+            generations: DashMap::new(),
+            free_list: std::sync::Mutex::new(Vec::new()),
             next_id: AtomicU32::new(0),
         }
     }
@@ -97,58 +105,70 @@ impl TenantRegistry {
         label: impl Into<String>,
         quota: TenantQuota,
     ) -> Result<TenantHandle, TenantError> {
-        let mut registration_retries = 0u64;
-        let issued = vyre_driver::accounting::checked_atomic_update_u32_with_order(
-            &self.next_id,
-            Ordering::Relaxed,
-            Ordering::SeqCst,
-            Ordering::Relaxed,
-            |current| {
-                if current >= TENANT_ID_MAX {
-                    return Err(TenantError::RegistryFull { issued: current });
-                }
-                let id = current.max(1);
-                id.checked_add(1)
-                    .ok_or(TenantError::RegistryFull { issued: current })
-            },
-            |_, _| {
-                tenant_registry_retry_idle(registration_retries);
-                registration_retries = vyre_driver::accounting::checked_add_u64_lazy(
-                    registration_retries,
-                    1,
-                    || {
-                        TenantError::Pipeline(PipelineError::QueueFull {
-                            queue: "tenant",
-                            fix: "tenant registration retry counter overflowed u64; retry registration later",
-                        })
+        let (id, generation) = {
+            let mut free = self.free_list.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(recycled_id) = free.pop() {
+                let mut entry = self.generations.entry(recycled_id).or_insert(1);
+                *entry = entry.wrapping_add(1).max(1);
+                (recycled_id, *entry)
+            } else {
+                let mut registration_retries = 0u64;
+                let issued = vyre_driver::accounting::checked_atomic_update_u32_with_order(
+                    &self.next_id,
+                    Ordering::Relaxed,
+                    Ordering::SeqCst,
+                    Ordering::Relaxed,
+                    |current| {
+                        if current >= MAX_TENANT_OPCODE_WINDOWS || current >= TENANT_ID_MAX {
+                            return Err(TenantError::RegistryFull { issued: current });
+                        }
+                        let id = current.max(1);
+                        id.checked_add(1)
+                            .ok_or(TenantError::RegistryFull { issued: current })
+                    },
+                    |_, _| {
+                        tenant_registry_retry_idle(registration_retries);
+                        registration_retries = vyre_driver::accounting::checked_add_u64_lazy(
+                            registration_retries,
+                            1,
+                            || {
+                                TenantError::Pipeline(PipelineError::QueueFull {
+                                    queue: "tenant",
+                                    fix: "tenant registration retry counter overflowed u64; retry registration later",
+                                })
+                            },
+                        )?;
+                        Ok(())
                     },
                 )?;
-                Ok(())
-            },
-        )?;
-        let id = issued.max(1);
+                let id = issued.max(1);
+                self.generations.insert(id, 1);
+                (id, 1)
+            }
+        };
 
         let tenant_offset = vyre_driver::accounting::checked_mul_u32_value(
             id,
             OPCODE_RANGE_PER_TENANT,
-            TenantError::RegistryFull { issued },
+            TenantError::RegistryFull { issued: id },
         )?;
         let base_opcode = vyre_driver::accounting::checked_add_u32_value(
             TENANT_OPCODE_BASE,
             tenant_offset,
-            TenantError::RegistryFull { issued },
+            TenantError::RegistryFull { issued: id },
         )?;
         let top_opcode = vyre_driver::accounting::checked_add_u32_value(
             base_opcode,
             OPCODE_RANGE_PER_TENANT,
-            TenantError::RegistryFull { issued },
+            TenantError::RegistryFull { issued: id },
         )?;
-        if top_opcode == SHUTDOWN {
-            return Err(TenantError::RegistryFull { issued });
+        if top_opcode >= SHUTDOWN {
+            return Err(TenantError::RegistryFull { issued: id });
         }
         let handle = TenantHandle {
             state: Arc::new(TenantState {
                 id,
+                generation,
                 base_opcode,
                 opcode_cap: OPCODE_RANGE_PER_TENANT,
                 published_count: AtomicU64::new(0),
@@ -177,6 +197,8 @@ impl TenantRegistry {
         let (_, handle) = self.tenants.remove(&tenant_id)?;
         handle.state.revoked.store(1, Ordering::Release);
         handle.release_all_resource_reservations();
+        let mut free = self.free_list.lock().unwrap_or_else(|e| e.into_inner());
+        free.push(tenant_id);
         Some(handle)
     }
 

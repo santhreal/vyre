@@ -180,6 +180,8 @@ pub mod replay_capsule;
 pub mod monorepo;
 #[cfg(feature = "ir-fixtures")]
 pub mod pass_programs;
+#[cfg(feature = "ir-fixtures")]
+pub use pass_programs::overfire_grid;
 pub mod public_api;
 
 use std::collections::BTreeSet;

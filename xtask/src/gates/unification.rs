@@ -6,7 +6,7 @@
 //! two. A row whose declared paths have moved is unmeasurable, which is worse
 //! than a violation, so a missing path is itself a finding.
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{contains_word, Tree};
 
 /// One tracked unification: what a regression looks like, where to look, and how
@@ -85,18 +85,11 @@ const ROWS: &[Row] = &[
 /// Landed cross-crate unifications stay landed.
 pub struct Unification;
 
-impl Gate for Unification {
-    fn name(&self) -> &'static str {
-        "unification"
-    }
-
-    fn help(&self) -> &'static str {
-        "sites that would turn one owner of a unified surface back into two"
-    }
-
+impl crate::gate::GateBehavior for Unification {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("unification source files", tree.all_rust().len());
         for row in ROWS {
             let mut missing = false;
             for root in row.roots {
@@ -158,6 +151,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout;
 
     /// A git checkout carrying every root the rows scan, each holding one file.

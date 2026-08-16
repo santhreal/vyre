@@ -14,7 +14,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::graph::functor_apply";
+pub const OP_ID: &str = "vyre-libs::graph::functor_apply";
 
 /// Apply column-mapping functor to a source-instance row.
 /// `source_row[i]` becomes `target_row[mapping[i]]` for `i ∈ 0..n_cols`.

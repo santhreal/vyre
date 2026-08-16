@@ -5,7 +5,7 @@ use vyre_foundation::ir::Program;
 use super::atomic_scalar::{atomic_reduce_u32, AtomicReduceKind};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::reduce::sum";
+pub const OP_ID: &str = "vyre-libs::reduce::sum";
 
 /// Build a Program: `out[0] = (Σ values_i) mod 2^32`.
 #[must_use]

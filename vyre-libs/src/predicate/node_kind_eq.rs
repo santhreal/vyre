@@ -7,7 +7,7 @@ use crate::label::nodeset_filter::{nodeset_filter_cpu_ref, nodeset_filter_cpu_re
 use crate::label::nodeset_filter::{nodeset_filter_program, NodeSetFilter};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::predicate::node_kind_eq";
+pub const OP_ID: &str = "vyre-libs::predicate::node_kind_eq";
 
 /// Build a Program: `NodeSet = { v : nodes[v] == kind }`.
 #[must_use]

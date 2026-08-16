@@ -50,136 +50,196 @@ mod depth_of_composition;
 mod duplicates;
 pub(crate) mod exemptions;
 mod fingerprint;
-mod god_files;
 mod name_stem;
 mod no_reinvention;
 mod operand_shape;
 mod ops;
 mod primitive_coverage;
+mod semantic_organization;
 mod trend;
 
 use self::composability::*;
 use self::composition_chain::*;
 use self::cross_dialect::*;
 use self::depth_of_composition::*;
-use self::duplicates::*;
 use self::exemptions::*;
 use self::fingerprint::*;
 pub use self::fingerprint::{fingerprint_program, MIN_COMPARABLE_FINGERPRINT_BYTES};
-use self::god_files::*;
 use self::name_stem::*;
 use self::no_reinvention::*;
 use self::operand_shape::*;
 use self::ops::*;
 pub(crate) use self::ops::{collect_ops, OpInfo, Tier};
 use self::primitive_coverage::*;
+use self::semantic_organization::*;
 use self::trend::*;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io;
 use vyre::ir::{Expr, Node, Program};
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Coverage, Finding, GateCtx, GateError, Report};
 
 use xtask::gates::dedup_report::{
-    duplicate_family_report, duplicate_report_generator_command, duplicate_report_json_path,
-    duplicate_severity, registered_op_duplicate_family_id, registered_op_duplicate_subject,
-    registered_op_owner_lane, structural_similarity, write_duplicate_report_json,
+    duplicate_family_report, duplicate_severity, registered_op_duplicate_family_id,
+    registered_op_duplicate_subject, registered_op_owner_lane, structural_similarity,
     DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
-};
-use xtask::gates::implementation_family::{
-    known_distinct_implementation_families, reviewed_distinct_operations,
-    same_implementation_family, IMPLEMENTATION_FAMILY_ROWS, REVIEWED_DISTINCT_OPERATIONS,
 };
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
-/// Entry point for the `lego-audit` subcommand.
-/// Audits registered composition against the ten LEGO-block laws.
-pub struct LegoAudit;
+/// All 11 discrete registered LEGO law gates whose results LegoAudit aggregates.
+pub static LEGO_LAW_GATES: &[&dyn xtask::gate::GateBehavior] = &[
+    &LegoExemptionLiveness,
+    &LegoNoReinvention,
+    &LegoCompositionDepth,
+    &LegoPrimitiveCoverage,
+    &LegoCrossDialect,
+    &LegoCompositionChains,
+    &LegoTrend,
+    &LegoComposability,
+    &LegoNameStems,
+    &LegoOperandShapes,
+    &LegoSemanticOrganization,
+];
 
-impl Gate for LegoAudit {
-    fn name(&self) -> &'static str {
-        "lego-audit"
-    }
+/// Check 0: every exemption is live.
+pub struct LegoExemptionLiveness;
 
-    fn help(&self) -> &'static str {
-        "Hold registered composition to the ten composition laws; --write records the composition baseline"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+impl xtask::gate::GateBehavior for LegoExemptionLiveness {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = collect_ops(&mut report);
-        report.note(format!("{} op(s) audited", ops.len()));
-        if ctx.write {
-            write_composition_baseline(&ctx.root, &ops).map_err(|error| {
-                GateError::new(
-                    format!("failed to write the composition baseline: {error}"),
-                    "make audits/lego-composition.tsv writable, then run the gate again",
-                )
-            })?;
-            report.note("wrote the composition baseline");
-        }
-        if let Some(path) = ctx.flag("--duplicate-report-json") {
-            let path = duplicate_report_json_path(
-                "--duplicate-report-json",
-                Some(path),
-                "--duplicate-report-json requires a path",
-            )
-            .map_err(|error| {
-                GateError::new(error, "pass a writable path after --duplicate-report-json")
-            })?;
-            let generator_command = duplicate_report_generator_command("lego-audit", &path);
-            let duplicates = lego_duplicate_report(&ops, &generator_command);
-            write_duplicate_report_json(&path, &duplicates).map_err(|error| {
-                GateError::new(
-                    format!(
-                        "could not write the duplicate family report `{}`: {error}",
-                        path.display()
-                    ),
-                    "pass a writable path after --duplicate-report-json",
-                )
-            })?;
-            report.note(format!(
-                "wrote the duplicate family report to {}",
-                path.display()
-            ));
-        }
-
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_0_every_exemption_is_live(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 1: no private reimplementation of registered primitives.
+pub struct LegoNoReinvention;
+
+impl xtask::gate::GateBehavior for LegoNoReinvention {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_1_no_reinvention(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 2: depth of composition.
+pub struct LegoCompositionDepth;
+
+impl xtask::gate::GateBehavior for LegoCompositionDepth {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_2_depth_of_composition(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 3: primitive adoption coverage.
+pub struct LegoPrimitiveCoverage;
+
+impl xtask::gate::GateBehavior for LegoPrimitiveCoverage {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_3_primitive_coverage(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 4: cross-dialect reachthrough.
+pub struct LegoCrossDialect;
+
+impl xtask::gate::GateBehavior for LegoCrossDialect {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_4_cross_dialect_reachthrough(&mut report);
-        check_5_god_files(&mut report);
+        Ok(report)
+    }
+}
+
+/// Check 6: composition chain coverage.
+pub struct LegoCompositionChains;
+
+impl xtask::gate::GateBehavior for LegoCompositionChains {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_6_composition_chain_coverage(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 7: composition trend ratchet.
+pub struct LegoTrend;
+
+impl xtask::gate::GateBehavior for LegoTrend {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_7_trend(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 8: composability contract.
+pub struct LegoComposability;
+
+impl xtask::gate::GateBehavior for LegoComposability {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_8_composability(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 9: name stem collision.
+pub struct LegoNameStems;
+
+impl xtask::gate::GateBehavior for LegoNameStems {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_9_name_stem_collision(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 10: operand shape duplicate.
+pub struct LegoOperandShapes;
+
+impl xtask::gate::GateBehavior for LegoOperandShapes {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
         check_10_operand_shape_duplicate(&mut report, &ops);
         Ok(report)
     }
 }
 
-/// Enforces canonical primitive adoption and its recorded exceptions.
-pub struct PrimitiveAdmissionGate;
+/// Check 11: semantic organization and file roles.
+pub struct LegoSemanticOrganization;
 
-impl Gate for PrimitiveAdmissionGate {
-    fn name(&self) -> &'static str {
-        "primitive-admission-gate"
-    }
-
-    fn help(&self) -> &'static str {
-        "Enforce canonical primitive adoption and its recorded exceptions"
-    }
-
+impl xtask::gate::GateBehavior for LegoSemanticOrganization {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = collect_ops(&mut report);
-        report.note(format!("{} op(s) audited", ops.len()));
-        check_3_primitive_coverage(&mut report, &ops);
+        report.cover(Coverage::complete("registered operations", ops.len()));
+        check_semantic_organization(&mut report, &ops);
         Ok(report)
     }
 }
@@ -193,10 +253,20 @@ pub(crate) mod test_ops {
     pub(crate) fn op(id: &str, tier: Tier, children: &[&str]) -> OpInfo {
         OpInfo {
             id: id.to_string(),
+            source_file: String::new(),
+            category: None,
+            laws: BTreeSet::new(),
+            semantic_version: 1,
+            tolerance: 0,
+            effects: vyre_foundation::operation::OperationEffects::default(),
+            capabilities: String::new(),
+            required_caps: vyre_foundation::program_caps::RequiredCapabilities::default(),
+            callees: BTreeSet::new(),
             program: Program::empty(),
             tier,
             buffer_signature: Vec::new(),
             fingerprint: vec![1; 64],
+            semantic_fingerprint: [0; 32],
             own_nodes: 1,
             composed_nodes: 0,
             children: children.iter().map(|child| (*child).to_string()).collect(),

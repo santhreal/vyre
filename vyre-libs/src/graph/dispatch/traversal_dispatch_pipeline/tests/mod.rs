@@ -28,8 +28,8 @@ fn shape() -> ProgramGraphShape {
 
 const PARENT: &str = "vyre-libs::graph::dispatch::traversal_dispatch_pipeline";
 
-const CSR_FORWARD: &str = "vyre-primitives::graph::csr_forward_or_changed";
-const PERSISTENT_STEP: &str = "vyre-primitives::graph::persistent_bfs_step";
+const CSR_FORWARD: &str = "vyre-libs::graph::csr_forward_or_changed";
+const PERSISTENT_STEP: &str = "vyre-libs::graph::persistent_bfs_step";
 
 fn region_generator(node: &Node) -> &str {
     let Node::Region { generator, .. } = node else {
@@ -60,7 +60,7 @@ fn dispatch_programs_emit_expected_graph_primitives() {
         (
             "adaptive_dense_step",
             adaptive_dense_step("fin", "fout", "adj", 4),
-            "vyre-primitives::graph::adaptive_traverse_dense",
+            "vyre-libs::graph::adaptive_traverse_dense",
         ),
         (
             "csr_forward_or_changed_parallel",
@@ -93,7 +93,7 @@ fn dispatch_programs_emit_expected_graph_primitives() {
         (
             "csr_frontier_degree_sum",
             csr_frontier_degree_sum(shape()),
-            "vyre-primitives::graph::csr_frontier_degree_sum",
+            "vyre-libs::graph::csr_frontier_degree_sum",
         ),
         (
             "persistent_bfs_step",

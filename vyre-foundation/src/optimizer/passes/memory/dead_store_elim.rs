@@ -542,4 +542,55 @@ mod tests {
         let total: usize = result.program.entry().iter().map(count_stores).sum();
         assert_eq!(total, 2, "both stores survive");
     }
+    #[test]
+    fn keeps_first_store_when_intervening_node_contains_call() {
+        // Store(buf, 0, 1); Let(x, Call("some_op", [42])); Store(buf, 0, 2)
+        // The call fails closed and interferes with every buffer.
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::let_bind(
+                "x",
+                Expr::Call {
+                    op_id: "test::unknown_op".into(),
+                    args: vec![Expr::u32(42)],
+                },
+            ),
+            Node::store("buf", Expr::u32(0), Expr::u32(2)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "intervening Call must prevent dead-store elimination (fail-closed)"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(total, 2);
+    }
+
+    #[test]
+    fn keeps_first_store_when_intervening_node_contains_nested_call() {
+        // Store(buf, 0, 1); Let(x, Add(1, Call("nested_op", []))); Store(buf, 0, 2)
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::let_bind(
+                "x",
+                Expr::add(
+                    Expr::u32(1),
+                    Expr::Call {
+                        op_id: "test::nested_op".into(),
+                        args: vec![],
+                    },
+                ),
+            ),
+            Node::store("buf", Expr::u32(0), Expr::u32(2)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "nested Call must prevent dead-store elimination"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(total, 2);
+    }
 }

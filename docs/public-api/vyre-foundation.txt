@@ -414,11 +414,13 @@ pub const fn vyre_foundation::operation::OperationRegistration::category(&self) 
 pub const fn vyre_foundation::operation::OperationRegistration::geometry_requirements(&self) -> core::option::Option<vyre_foundation::geometry::GeometryRequirements>
 pub const fn vyre_foundation::operation::OperationRegistration::library(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::new(id: &'static str, tier: vyre_foundation::operation::OperationTier, build: core::option::Option<fn() -> vyre_foundation::ir::Program>, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::primitive(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::tolerance(&self) -> u32
 pub const fn vyre_foundation::operation::OperationRegistration::with_category(self, category: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_geometry_requirements(self, requirements: vyre_foundation::geometry::GeometryRequirements) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dialect_lookup::Signature) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::with_source_file(self, source_file: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_tolerance(self, tolerance: vyre_foundation::operation::TolerancePolicy) -> Self
 pub const fn vyre_foundation::operation::OperationTier::matrix_value(self) -> &'static str
 pub const fn vyre_foundation::operation::SemanticOperation::category(self) -> core::option::Option<&'static str>
@@ -3547,6 +3549,7 @@ pub vyre_foundation::operation::OperationRegistration::id: &'static str
 pub vyre_foundation::operation::OperationRegistration::laws: &'static [&'static str]
 pub vyre_foundation::operation::OperationRegistration::semantic_version: u32
 pub vyre_foundation::operation::OperationRegistration::signature: core::option::Option<vyre_foundation::dialect_lookup::Signature>
+pub vyre_foundation::operation::OperationRegistration::source_file: &'static str
 pub vyre_foundation::operation::OperationRegistration::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::OperationRegistration::tier: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::OperationRegistration::tolerance: vyre_foundation::operation::TolerancePolicy
@@ -3575,6 +3578,7 @@ pub vyre_foundation::operation::SemanticOperation::id: &'static str
 pub vyre_foundation::operation::SemanticOperation::laws: &'static [&'static str]
 pub vyre_foundation::operation::SemanticOperation::semantic_version: u32
 pub vyre_foundation::operation::SemanticOperation::signature: core::option::Option<&'static vyre_foundation::dialect_lookup::Signature>
+pub vyre_foundation::operation::SemanticOperation::source_file: &'static str
 pub vyre_foundation::operation::SemanticOperation::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::SemanticOperation::tier: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::SemanticOperation::tolerance: vyre_foundation::operation::TolerancePolicy

@@ -14,7 +14,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
+use xtask::gates::scan::Tree;
 
 use crate::bench::benchmark_evidence_semantics::{
     benchmark_evidence_blocker_issues, cuda_release_axes_source_artifact_issues,
@@ -35,30 +36,19 @@ const DEFAULT_EVIDENCE_DIR: &str = "release/evidence/benchmarks";
 /// Holds the quotable release axes to the CUDA evidence they claim to come from.
 pub(crate) struct BenchReleaseGate;
 
-impl Gate for BenchReleaseGate {
-    fn name(&self) -> &'static str {
-        "bench-release"
-    }
-
-    fn help(&self) -> &'static str {
-        "Judge the five canonical release axes recorded in \
-         release/evidence/benchmarks/bench-release-axes.json. Proves the axes file and the CUDA \
-         release suite beside it are readable, carry no blocker, pass the CUDA source-artifact \
-         validation that ties an axis to the run that produced it, and that every one of the \
-         five axes is present and parses as its declared numeric type. Reports the axis values \
-         as notes. Proves nothing about current performance: it runs no benchmark, and an axis \
-         recorded a month ago reads exactly the same as one recorded today."
-    }
-
+impl xtask::gate::GateBehavior for BenchReleaseGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut r = Report::clean();
+        let tree = Tree::open(&ctx.root)?;
+        r.cover_complete("benchmark evidence directories", tree.members()?.len());
         let evidence_dir = match evidence_dir(ctx) {
             Ok(directory) => directory,
             Err(message) => {
-                return Ok(Report::with_findings(vec![Finding::new(
-                    message,
-                    "Pass --evidence-dir with the directory holding the recorded release \
-                     benchmark artifacts.",
-                )]))
+                r.find(Finding::new(
+                message,
+                "Pass --evidence-dir with the directory holding the recorded release benchmark artifacts.",
+            ));
+                return Ok(r);
             }
         };
         Ok(judge(&evidence_dir))

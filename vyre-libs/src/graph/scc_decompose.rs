@@ -20,7 +20,7 @@ use crate::graph::frontier_bits::{bind_bit_address, bind_word, bit_is_set, BitAc
 use vyre_primitives::lane_grid;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::scc_decompose";
+pub const OP_ID: &str = "vyre-libs::graph::scc_decompose";
 /// Source-lane workgroup for SCC component stamping.
 pub const SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

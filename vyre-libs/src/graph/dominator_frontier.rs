@@ -18,7 +18,7 @@ use crate::bitset::bitset_words;
 use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::dominator_frontier";
+pub const OP_ID: &str = "vyre-libs::graph::dominator_frontier";
 
 /// Dominance-closure CSR offsets input binding.
 pub const DOMINATOR_FRONTIER_DOM_OFFSETS_BUFFER: u32 = 0;

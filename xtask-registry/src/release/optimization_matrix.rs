@@ -94,3 +94,52 @@ fn inspect() -> Inspection {
     inspection.generates(ARTIFACT, &matrix);
     inspection
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn optimization_matrix_detects_incomplete_catalog_entries() {
+        let mut inspection = Inspection::new();
+        let entry_with_empty_fields = OptimizationMatrixEntry {
+            pass: OptimizerPassRow {
+                id: "pass_a".to_string(),
+                kind: "pass",
+                owner: "",
+                phase: "phase".to_string(),
+                boundary: "boundary".to_string(),
+                requires: Vec::new(),
+                invalidates: Vec::new(),
+                capabilities: Vec::new(),
+                preserves_abi: true,
+                invariant: "invariant",
+                termination: "termination",
+                proof: "proof",
+                benchmark: "benchmark",
+            },
+            input: "input",
+            output: "output",
+        };
+
+        let entries = vec![entry_with_empty_fields];
+        if entries.iter().any(|entry| {
+            entry.pass.owner.is_empty()
+                || entry.pass.invariant.is_empty()
+                || entry.pass.proof.is_empty()
+                || entry.pass.benchmark.is_empty()
+        }) {
+            inspection.blocked(
+                ARTIFACT,
+                "optimizer catalog contains an entry without owner, invariant, proof, or benchmark"
+                    .to_string(),
+                "Fill in the missing field.",
+            );
+        }
+
+        let blocked = &inspection.findings;
+        assert_eq!(blocked.len(), 1);
+        assert!(blocked[0]
+            .message
+            .contains("without owner, invariant, proof, or benchmark"));
+    }
+}

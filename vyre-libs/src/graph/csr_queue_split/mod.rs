@@ -17,7 +17,7 @@ use crate::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
 
 /// Canonical op id for mixed low-row traversal and high-row compaction.
 pub const CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID: &str =
-    "vyre-primitives::graph::csr_queue_split_low_forward_traverse";
+    "vyre-libs::graph::csr_queue_split_low_forward_traverse";
 
 /// Workgroup shape for the low-row split pass.
 pub const CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];

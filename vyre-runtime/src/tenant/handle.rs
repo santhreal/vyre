@@ -49,6 +49,7 @@ pub(super) fn tenant_registry_retry_idle(retry: u64) {
 /// stay valid after the registry borrow drops.
 pub(super) struct TenantState {
     pub(super) id: u32,
+    pub(super) generation: u32,
     pub(super) base_opcode: u32,
     pub(super) opcode_cap: u32,
     /// Number of slots this tenant has ever published.
@@ -160,6 +161,12 @@ impl TenantHandle {
     #[must_use]
     pub fn id(&self) -> u32 {
         self.state.id
+    }
+
+    /// Epoch/generation allocated for this tenant identity.
+    #[must_use]
+    pub fn generation(&self) -> u32 {
+        self.state.generation
     }
 
     /// Human-readable label supplied at registration time.

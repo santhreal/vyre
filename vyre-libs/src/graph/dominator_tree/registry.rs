@@ -1,6 +1,10 @@
-use super::depth::{dominator_tree_depth, OP_ID as DEPTH_OP_ID};
-use super::intersect_step::{dominator_tree_intersect_step, OP_ID as INTERSECT_STEP_OP_ID};
-use super::program::{dominator_tree_program, IDOM_NONE, OP_ID};
+use super::depth::dominator_tree_depth;
+use super::intersect_step::dominator_tree_intersect_step;
+use super::program::{dominator_tree_program, IDOM_NONE};
+
+const OP_ID: &str = "vyre-libs::graph::dominator_tree";
+const DEPTH_OP_ID: &str = "vyre-libs::graph::dominator_tree_depth";
+const INTERSECT_STEP_OP_ID: &str = "vyre-libs::graph::dominator_tree_intersect_step";
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

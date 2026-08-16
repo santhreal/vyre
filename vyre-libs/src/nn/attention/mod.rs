@@ -8,6 +8,7 @@ mod gated_delta_spec;
 pub(crate) mod gqa_attention;
 pub(crate) mod layout;
 pub(crate) mod mla;
+pub mod paged_attention;
 pub(crate) mod partial_rope;
 pub(crate) mod planner;
 pub(crate) mod qk_gain;
@@ -30,6 +31,12 @@ pub use layout::{
     ATTENTION_LAYOUT_WORKGROUP_SIZE,
 };
 pub use mla::{mla_compress_kv, mla_decode};
+pub use paged_attention::{
+    paged_attention, paged_cache_append, PagedAttentionError, PagedAttentionSpec,
+    PagedCacheAppendError, PagedCacheAppendSpec, PAGED_ATTENTION_MAX_PASS_OP_ID,
+    PAGED_ATTENTION_OP_ID, PAGED_ATTENTION_SUM_PASS_OP_ID, PAGED_ATTENTION_WRITE_PASS_OP_ID,
+    PAGED_CACHE_APPEND_OP_ID,
+};
 pub use partial_rope::{partial_rope, partial_rope_at_offset, partial_rope_at_offset_typed};
 pub use planner::FLASH_ATTENTION_OUTPUT_TOLERANCE_ABS;
 pub use planner::{

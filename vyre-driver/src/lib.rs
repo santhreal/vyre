@@ -107,6 +107,8 @@ pub(crate) mod pipeline;
 /// reads/writes can fuse into one launch with a workgroup-bounded
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
+/// Backend-neutral peer-transfer capability contracts and checked accounting.
+pub mod peer_transfer;
 /// Read-only semantic operation projections, migrations, and policy.
 pub mod registry;
 /// Backend-neutral reservation policy adapters.
@@ -313,3 +315,7 @@ pub use subgroup::{
     reduction_offsets, reduction_offsets_into, try_reduction_offsets, try_reduction_offsets_into,
 };
 pub use subgroup::{SubgroupCaps, SubgroupOp};
+pub use peer_transfer::{
+    PeerAccessCapability, PeerLinkKind, PeerTopology, PeerTransferAccounting, PeerTransferError,
+    PeerTransferPlan, PeerTransferPlanner, PeerTransferRequest,
+};

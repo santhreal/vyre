@@ -1,4 +1,4 @@
-use super::layout::OP_ID;
+const OP_ID: &str = "vyre-libs::graph::persistent_bfs";
 use super::program::persistent_bfs;
 use crate::graph::program_graph::ProgramGraphShape;
 

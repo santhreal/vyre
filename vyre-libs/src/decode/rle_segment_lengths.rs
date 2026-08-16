@@ -1,7 +1,7 @@
 //! `rle_segment_lengths`  -  run-length-encoded segment-length scan with
 //! per-segment output start positions.
 //!
-//! Op id: `vyre-primitives::decode::rle_segment_lengths`. Soundness: `Exact`
+//! Op id: `vyre-libs::decode::rle_segment_lengths`. Soundness: `Exact`
 //! over the RLE segment header layout where each segment is a (length, value)
 //! pair packed into one u32. The CPU reference at the bottom of this file is
 //! the contract.
@@ -50,7 +50,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for region-chain audits and bench attribution.
-pub const OP_ID: &str = "vyre-primitives::decode::rle_segment_lengths";
+pub const OP_ID: &str = "vyre-libs::decode::rle_segment_lengths";
 
 /// Canonical binding indices.
 pub const BINDING_SEGMENTS_IN: u32 = 0;
@@ -768,7 +768,7 @@ mod tests {
 
     #[test]
     fn op_id_is_canonical_and_stable() {
-        assert_eq!(OP_ID, "vyre-primitives::decode::rle_segment_lengths");
+        assert_eq!(OP_ID, "vyre-libs::decode::rle_segment_lengths");
     }
 
     #[test]

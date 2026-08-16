@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Edition the parser reads files under.
@@ -29,15 +29,7 @@ const BATCH: usize = 200;
 /// Every tracked `.rs` file is reached from a declared cargo target.
 pub struct SourceReachability;
 
-impl Gate for SourceReachability {
-    fn name(&self) -> &'static str {
-        "source-reachability"
-    }
-
-    fn help(&self) -> &'static str {
-        "every tracked Rust file is compiled by a declared cargo target"
-    }
-
+impl crate::gate::GateBehavior for SourceReachability {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
@@ -47,6 +39,7 @@ impl Gate for SourceReachability {
             .filter(|path| extension_is(path, "rs"))
             .map(|path| as_key(path))
             .collect();
+        report.cover_complete("tracked Rust source files", sources.len());
         // A `#[path]` may name Rust that is not called `.rs`: vyre-aot compiles a
         // shipped template directly, so module resolution runs against every
         // tracked file rather than only the Rust-suffixed ones.
@@ -305,15 +298,7 @@ impl Gate for SourceReachability {
 /// carries, which is a file that could have been a module.
 pub struct IncludeIsNotAModule;
 
-impl Gate for IncludeIsNotAModule {
-    fn name(&self) -> &'static str {
-        "source-include-module"
-    }
-
-    fn help(&self) -> &'static str {
-        "include! of a tracked Rust file instead of a module declaration"
-    }
-
+impl crate::gate::GateBehavior for IncludeIsNotAModule {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
@@ -324,6 +309,7 @@ impl Gate for IncludeIsNotAModule {
             .filter(|path| extension_is(path, "rs"))
             .cloned()
             .collect();
+        report.cover_complete("tracked Rust source files", sources.len());
         report.note(format!("scanned {} tracked Rust file(s)", sources.len()));
         for source in &sources {
             let rel = as_key(source);
@@ -352,15 +338,7 @@ impl Gate for IncludeIsNotAModule {
 /// Every tracked `.rs` file is valid Rust syntax.
 pub struct SourceParses;
 
-impl Gate for SourceParses {
-    fn name(&self) -> &'static str {
-        "source-parses"
-    }
-
-    fn help(&self) -> &'static str {
-        "every tracked Rust file parses, scaffolding templates excepted"
-    }
-
+impl crate::gate::GateBehavior for SourceParses {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
@@ -370,6 +348,7 @@ impl Gate for SourceParses {
             .filter(|path| extension_is(path, "rs"))
             .map(|path| as_key(path))
             .collect();
+        report.cover_complete("tracked Rust source files", sources.len());
         if sources.is_empty() {
             return Err(GateError::new(
                 "no tracked .rs file found",
@@ -1178,6 +1157,7 @@ mod tests {
 #[cfg(test)]
 mod include_module_tests {
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout::checkout;
 
     /// WHY: the tree reached zero `include!` of hand-written Rust by converting

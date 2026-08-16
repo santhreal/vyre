@@ -19,7 +19,7 @@ const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 /// It carries the `anonymous::` prefix over the builder's own id because that
 /// id registers no canonical operation, and a child region naming an
 /// unregistered id claims a building block that does not exist.
-const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-primitives::math::prefix_scan_inclusive_sum";
+const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-libs::math::prefix_scan_inclusive_sum";
 
 /// Build a Program that computes the inclusive prefix sum of `input`
 /// into `output`, both sized `n`.

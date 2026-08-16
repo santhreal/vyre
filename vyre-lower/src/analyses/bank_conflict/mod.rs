@@ -30,10 +30,15 @@
 
 pub(crate) mod analysis;
 pub(crate) mod report;
+pub(crate) mod strategy;
 
 pub use analysis::{analyze, analyze_with_bank_count};
 pub use report::{BankAccessSite, BankConflictKind, BankConflictReport, ConflictSeverity};
-
+pub use strategy::{
+    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase,
+    AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation, PhaseConflictReport,
+    TargetBankGeometry,
+};
 /// Default bank count. This is a reasonable pessimistic default for
 /// discrete GPU substrates.
 pub const DEFAULT_BANK_COUNT: u32 = 32;

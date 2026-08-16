@@ -38,7 +38,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan;
 use crate::output_arg::read_text_bounded;
 use crate::toml_text::quote;
@@ -452,19 +452,7 @@ const ROW_FIX: &str = "record a row for every committed snapshot in xtask/public
 /// Holds every published item to one public path, per crate, against a pin.
 pub struct PublicApiPaths;
 
-impl Gate for PublicApiPaths {
-    fn name(&self) -> &'static str {
-        "public-api-paths"
-    }
-
-    fn help(&self) -> &'static str {
-        "one public path per published item, measured from the committed snapshots"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for PublicApiPaths {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let files = snapshots(&ctx.root)?;
         let rows = load_rows(&ctx.root).map_err(|error| GateError::new(error, ROW_FIX))?;
@@ -475,6 +463,8 @@ impl Gate for PublicApiPaths {
             .map(|member| (member.name, member.path))
             .collect();
         let mut report = Report::clean();
+        report.produced("xtask/public-api-paths.toml");
+        report.cover_complete("public api snapshot files", files.len());
         let mut measured = BTreeMap::new();
         let mut examples = BTreeMap::new();
         let mut shared_names = 0;

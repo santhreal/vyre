@@ -51,7 +51,7 @@ mod tests {
         let mut composed = op(
             "vyre-libs::nn::reviewed_orchestrator",
             Tier::T3,
-            &["vyre-primitives::nn::child"],
+            &["vyre-libs::nn::child"],
         );
         composed.own_nodes = 75;
         composed.composed_nodes = 25;
@@ -67,7 +67,7 @@ mod tests {
         let mut inlined = op(
             "vyre-libs::nn::inlined_orchestrator",
             Tier::T3,
-            &["vyre-primitives::nn::child"],
+            &["vyre-libs::nn::child"],
         );
         inlined.own_nodes = 76;
         inlined.composed_nodes = 24;

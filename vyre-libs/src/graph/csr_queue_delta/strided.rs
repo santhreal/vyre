@@ -12,7 +12,7 @@ use super::{
 
 /// Canonical op id for row-strided queue-to-queue delta CSR expansion.
 pub const CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID: &str =
-    "vyre-primitives::graph::csr_queue_delta_strided_enqueue";
+    "vyre-libs::graph::csr_queue_delta_strided_enqueue";
 
 /// Fixed lane team assigned to each queued source row in the strided delta path.
 pub const CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE: u32 =

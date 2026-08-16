@@ -380,6 +380,7 @@ impl ValidationError {
                 "https://docs.vyre.dev/validator-errors#{}",
                 self.code.as_str().to_ascii_lowercase()
             ))),
+            notes: Vec::new(),
         }
     }
 }

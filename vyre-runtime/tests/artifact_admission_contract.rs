@@ -35,6 +35,7 @@ use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
 mod artifact_fixtures;
 
 use artifact_fixtures::{compile_graph, contract, entry_point, graph_over, neutral_artifact};
+use vyre_test_support::pass_programs::{add_program, copy_program};
 
 const FRAME_HEADER_BYTES: usize = 10;
 const FRAME_DIGEST_BYTES: usize = 32;
@@ -936,6 +937,172 @@ fn resident_bindings_include_global_and_constant_target_resources() {
     );
 }
 
+/// WHY: resident binding maps by authenticated canonical value identity rather than
+/// vector index, so target slots emitted in non-canonical order bind their exact resource.
+#[test]
+fn resident_bindings_preserve_canonical_value_identity_with_reordered_target_slots() {
+    let neutral = resident_projection_artifact();
+    let reordered_bindings = vec![
+        TargetResourceBinding {
+            resource: ArtifactValueId(2),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Constant,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 1,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadWrite,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(1),
+            group: 0,
+            slot: 2,
+            memory: TargetResourceMemory::Constant,
+            access: TargetResourceAccess::ReadOnly,
+        },
+    ];
+    let payload = TargetPayload::new(
+        &neutral,
+        format("test.cache-target", 1),
+        profile("test.cache-target", 1),
+        vec![TargetEntryPoint {
+            name: "resident-projection".to_string(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [1, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: reordered_bindings,
+        }],
+        vec![7, 8, 9],
+    )
+    .expect("reordered resident projection payload must be valid");
+
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated resident projection must materialize");
+    let owner = ResidentOwner::new().expect("resident owner identity must be available");
+    let resources = [100, 200, 300].map(|id| Resource::Resident(owner.handle(id)));
+
+    let bindings = session
+        .resident_bindings(&resources)
+        .expect("resident resources must bind by canonical value identity");
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(0)),
+        Some(&BoundResource::Resident(resources[0].clone()))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(1)),
+        Some(&BoundResource::Resident(resources[1].clone()))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(2)),
+        Some(&BoundResource::Resident(resources[2].clone()))
+    );
+}
+
+/// WHY: program_resident_bindings binds non-shared buffers in program declaration
+/// order regardless of whether the order matches artifact ABI slot order.
+#[test]
+fn program_resident_bindings_maps_by_buffer_name_when_declarations_are_reordered() {
+    let neutral = resident_projection_artifact();
+    let payload = resident_projection_payload(&neutral);
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated resident projection must materialize");
+    let owner = ResidentOwner::new().expect("resident owner identity must be available");
+    let res_rule = Resource::Resident(owner.handle(50));
+    let res_out = Resource::Resident(owner.handle(60));
+    let res_pattern = Resource::Resident(owner.handle(70));
+
+    let reordered_program = Program::wrapped(
+        vec![
+            BufferDecl::read("rule_bitmap", 0, DataType::U32).with_count(8),
+            BufferDecl::read_write("out_flags", 1, DataType::U32).with_count(16),
+            BufferDecl::read("pattern_bitmap", 2, DataType::U32).with_count(8),
+        ],
+        [1, 1, 1],
+        Vec::new(),
+    );
+
+    let bindings = session
+        .program_resident_bindings(
+            &reordered_program,
+            &[res_rule.clone(), res_out.clone(), res_pattern.clone()],
+        )
+        .expect("program resident bindings must resolve by buffer name");
+
+    // rule_bitmap is value 2, out_flags is value 0, pattern_bitmap is value 1
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(2)),
+        Some(&BoundResource::Resident(res_rule))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(0)),
+        Some(&BoundResource::Resident(res_out))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(1)),
+        Some(&BoundResource::Resident(res_pattern))
+    );
+}
+
+/// WHY: resident bindings by name and value fail closed on unknown resources and conflicting duplicates.
+#[test]
+fn resident_bindings_fail_closed_on_duplicate_mismatch_and_unknown_names() {
+    let neutral = resident_projection_artifact();
+    let payload = resident_projection_payload(&neutral);
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated resident projection must materialize");
+    let owner = ResidentOwner::new().expect("resident owner identity must be available");
+    let res_a = Resource::Resident(owner.handle(1));
+    let res_b = Resource::Resident(owner.handle(2));
+    let res_c = Resource::Resident(owner.handle(3));
+
+    let by_name_ok = session.resident_bindings_by_name([
+        ("out_flags", &res_a),
+        ("pattern_bitmap", &res_b),
+        ("rule_bitmap", &res_c),
+    ]);
+    assert!(by_name_ok.is_ok());
+
+    let unknown_name = session.resident_bindings_by_name([
+        ("unknown_buffer", &res_a),
+        ("pattern_bitmap", &res_b),
+        ("rule_bitmap", &res_c),
+    ]);
+    let err = unknown_name.expect_err("unknown buffer name must fail closed");
+    assert!(err.to_string().contains("unknown_buffer"));
+
+    let by_val_ok = session.resident_bindings_by_value([
+        (ArtifactValueId(0), res_a.clone()),
+        (ArtifactValueId(1), res_b.clone()),
+        (ArtifactValueId(2), res_c.clone()),
+    ]);
+    assert!(by_val_ok.is_ok());
+
+    let unknown_val = session.resident_bindings_by_value([
+        (ArtifactValueId(99), res_a.clone()),
+        (ArtifactValueId(1), res_b.clone()),
+        (ArtifactValueId(2), res_c.clone()),
+    ]);
+    let err = unknown_val.expect_err("unknown value must fail closed");
+    assert!(err.to_string().contains("99"));
+
+    let duplicate_conflict = session.resident_bindings_by_value([
+        (ArtifactValueId(0), res_a),
+        (ArtifactValueId(0), res_b),
+        (ArtifactValueId(1), res_c.clone()),
+        (ArtifactValueId(2), res_c),
+    ]);
+    let err = duplicate_conflict.expect_err("conflicting duplicate value must fail closed");
+    assert!(err.to_string().contains("conflicting resident resources"));
+}
+
 /// WHY: bootstrap and recovery must authenticate and rematerialize without a compiler facet.
 #[test]
 fn artifact_session_bootstrap_and_recovery_use_only_materialization() {
@@ -1083,39 +1250,6 @@ fn fixed_contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContrac
     }
 }
 
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::load(input, Expr::u32(0)),
-        )],
-    )
-}
-
-fn add_program(left: &str, right: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(left, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(right, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(output, 2, BufferAccess::ReadWrite, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::u32(0),
-            Expr::add(
-                Expr::load(left, Expr::u32(0)),
-                Expr::load(right, Expr::u32(0)),
-            ),
-        )],
-    )
-}
 
 /// Three nodes over three caller-supplied values, producing an invocation
 /// intermediate, a retained successor, and one graph output.
