@@ -3724,6 +3724,7 @@ dependencies = [
  "smallvec",
  "structure-gate",
  "thiserror 2.0.19",
+ "toml",
  "tracing",
  "tree-sitter",
  "tree-sitter-go",
